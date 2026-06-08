@@ -13,8 +13,8 @@
 | **Fase 0** | Fundaciones (setup Next.js + Supabase + Render + diseño) | ✅ Completada (deploy pendiente del usuario) |
 | **Fase 1** | Vista Cliente + Multi-tenant (Plan 1 núcleo) | ✅ Completada |
 | **Fase 2** | Auth + Panel Admin del Restaurante (Plan 1 completo) | ✅ Completada |
-| **Fase 3** | Super Admin (panel maestro) | ⬜ Pendiente |
-| **Fase 4** | Pedidos en línea (Plan 2 Premium) | ⬜ Pendiente |
+| **Fase 3** | Super Admin (panel maestro) | ✅ Completada |
+| **Fase 4** | Pedidos en línea (Plan 2 Premium) | ✅ Completada |
 | **Fase 5** | Pulido, seguridad y lanzamiento | ⬜ Pendiente |
 
 Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
@@ -311,6 +311,88 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 4. Visitar `tudominio.com/login` → entrar → aterriza en `/super/restaurantes`.
 
 **Próximo paso:** **Fase 4** — Pedidos en línea (carrito, checkout, realtime, WhatsApp).
+
+---
+
+## Sesión 7 — 2026-06-08 — Fase 4: Pedidos en línea (Plan 2 Premium)
+
+**Objetivo:** implementar carrito de compras, checkout, gestión de pedidos en tiempo real y notificación WhatsApp.
+
+**Realizado:**
+
+- **SQL Migration `005_orders.sql`:**
+  - Tablas `orders` y `order_items` con CHECK constraints, FK cascades y precios CONGELADOS en `order_items`.
+  - Función SQL `generate_order_number(restaurant_id)` → formato `ORD-YYYY-NNNNN`.
+  - Índices compuestos para queries por restaurante + fecha y por estado.
+  - RLS: INSERT anónimo (clientes), SELECT/UPDATE restringido a OWNER/STAFF/SUPER_ADMIN.
+  - Nota embebida: activar Realtime en tabla `orders` desde el dashboard de Supabase.
+
+- **`src/types/index.ts`:** Añadidos `OrderStatus`, `Order`, `OrderItem`, `CartItem`.
+
+- **`src/lib/cart-context.tsx`:** React Context + localStorage para el carrito.
+  - Clave de storage por restaurante: `cart-{restaurantId}` (aislamiento multi-tenant).
+  - Funciones: `addItem`, `removeItem`, `updateQuantity`, `clearCart`, derivados `total` y `count`.
+  - Rehidratación desde localStorage en el primer montado.
+
+- **`src/lib/db/orders.ts`:** `getRestaurantOrders(restaurantId)` con join a `order_items` — carga los últimos 100 pedidos.
+
+- **`src/lib/actions/orders.ts`:** Server Actions:
+  - `createOrder` — valida restaurant, verifica `modules.orders = true`, llama a `generate_order_number`, inserta `orders` + `order_items`.
+  - `updateOrderStatus` — verifica rol del usuario, actualiza status, revalida `/admin/pedidos`.
+
+- **`src/components/menu-shell.tsx`:** Wrapper cliente que envuelve `CartProvider` + `MenuClient`. Recibe `restaurantId` y `ordersEnabled`.
+
+- **`src/components/menu-client.tsx`** (actualizado):
+  - Nueva prop `ordersEnabled`. Integra `useCart()`.
+  - `ProductModal`: botón "Agregar al carrito" (solo si `ordersEnabled`).
+  - `CartBar`: barra sticky al fondo, aparece cuando hay ítems en el carrito.
+  - `CartPanel`: bottom sheet con controles +/−/× por ítem, total y botón "Hacer pedido →" que navega a `/checkout`.
+
+- **`src/app/page.tsx`** (actualizado): usa `MenuShell` en lugar de `MenuClient`. Pasa `restaurantId` y `ordersEnabled` (derivado de `restaurant.modules.orders`).
+
+- **`src/app/checkout/page.tsx`:** Página del checkout (server). Resuelve el tenant desde el subdominio, verifica `modules.orders`, renderiza `<CartProvider><CheckoutForm /></CartProvider>`.
+
+- **`src/components/checkout-form.tsx`:** Formulario completo de checkout (client component):
+  - Muestra resumen del carrito (del context).
+  - Campos: tipo (PICKUP/DELIVERY), nombre, teléfono, dirección (condicional), notas.
+  - Estado: `form` → `submitting` → `success`.
+  - En success: muestra confirmación + botón WhatsApp (`wa.me`) con mensaje pre-llenado (número, ítems, total, notas).
+
+- **`src/components/admin/order-card.tsx`:** Tarjeta de pedido para el panel admin:
+  - Muestra número, cliente, teléfono, tipo, dirección, ítems con precios congelados, total, hora.
+  - Badge de estado con color por estado.
+  - Botones de avance de estado (flujo adaptado a PICKUP vs DELIVERY) y cancelar.
+  - Usa `useTransition` + `updateOrderStatus` server action.
+
+- **`src/components/admin/orders-panel.tsx`:** Panel en tiempo real (client component):
+  - Se suscribe a `postgres_changes` INSERT/UPDATE en `orders` vía Supabase Realtime.
+  - Chime de 3 notas (Web Audio API) al recibir nuevo pedido.
+  - Toast flotante con el número y nombre del cliente.
+  - Separa pedidos activos y historial del día.
+
+- **`src/app/admin/pedidos/page.tsx`:** Página del panel de pedidos. Carga pedidos iniciales con `getRestaurantOrders`, pasa a `OrdersPanel`.
+
+- **`src/components/admin/nav.tsx`** (actualizado): acepta `ordersEnabled` — muestra link "Pedidos" en el nav solo si el módulo está activo.
+
+- **`src/app/admin/layout.tsx`** (actualizado): extrae `currentRestaurant` (sea OWNER o SUPER_ADMIN con subdominio), deriva `ordersEnabled` y lo pasa al nav.
+
+**Decisiones clave:**
+
+- El carrito vive en localStorage con clave `cart-{restaurantId}`: aislamiento multi-tenant sin estado global.
+- Precios congelados en `order_items` al momento del INSERT — el precio mostrado en el carrito se preserva aunque el owner lo cambie después.
+- `createOrder` usa `createServiceClient()` (service_role) para la inserción — evita dependencia de sesión del cliente anónimo.
+- El checkout es una página del mismo subdominio (`/checkout`), por lo que el tenant se resuelve del middleware igual que el menú.
+- El botón WhatsApp en la confirmación abre `wa.me` con mensaje pre-llenado — MVP sin costo de API.
+- Realtime funciona con el cliente browser autenticado (OWNER logueado); requiere activar Realtime en la tabla `orders` en el dashboard de Supabase.
+
+**Para activar Fase 4:**
+1. Ejecutar `005_orders.sql` en el SQL Editor de Supabase.
+2. En Supabase dashboard: **Database → Replication** → activar Realtime en la tabla `orders`.
+3. Desde el Super Admin: cambiar el plan de un restaurante a PREMIUM y activar el módulo "Pedidos".
+4. Visitar el menú del restaurante → aparece "Agregar al carrito" en los productos.
+5. Panel admin → nav muestra "Pedidos" → actualizar estados en tiempo real.
+
+**Próximo paso:** **Fase 5** — Pulido, QR generator, seguridad, PWA y lanzamiento.
 
 ---
 

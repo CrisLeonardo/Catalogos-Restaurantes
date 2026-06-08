@@ -4,13 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminNav from '@/components/admin/nav';
+import type { Restaurant } from '@/types';
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Sin Supabase configurado → redirect al home (demo mode)
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -18,31 +18,27 @@ export default async function AdminLayout({
     redirect('/');
   }
 
-  // Verificar sesión activa
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Obtener contexto admin (profile + restaurant)
   const ctx = await getAdminContext();
   if (!ctx) redirect('/login');
 
   const { profile } = ctx;
-
-  // Obtener tenant actual desde subdominio
   const headersList = await headers();
-  const tenantSlug = headersList.get('x-tenant-slug');
+  const tenantSlug  = headersList.get('x-tenant-slug');
 
   let restaurantName = 'Panel admin';
+  let currentRestaurant: Restaurant | null = ctx.restaurant;
 
   if (profile.role === 'SUPER_ADMIN') {
-    // SUPER_ADMIN puede acceder al panel de cualquier restaurante
     if (tenantSlug) {
       const tenantData = await getRestaurantBySlug(tenantSlug);
       restaurantName = tenantData?.restaurant.name ?? 'Panel admin';
+      currentRestaurant = tenantData?.restaurant ?? null;
     }
   } else {
-    // OWNER / STAFF: deben pertenecer al tenant actual
     if (!profile.restaurant_id) redirect('/login');
 
     if (tenantSlug) {
@@ -50,16 +46,19 @@ export default async function AdminLayout({
       if (!tenantData || tenantData.restaurant.id !== profile.restaurant_id) {
         redirect('/');
       }
-      restaurantName = tenantData.restaurant.name;
+      restaurantName    = tenantData.restaurant.name;
+      currentRestaurant = tenantData.restaurant;
     } else {
-      // Sin subdominio: el dueño accede desde el dominio raíz (dev)
       restaurantName = ctx.restaurant?.name ?? 'Panel admin';
     }
   }
 
+  const modules = currentRestaurant?.modules as { orders?: boolean } | null;
+  const ordersEnabled = modules?.orders === true;
+
   return (
     <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
-      <AdminNav restaurantName={restaurantName} />
+      <AdminNav restaurantName={restaurantName} ordersEnabled={ordersEnabled} />
       <div style={{ flex: 1, padding: '24px 16px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         {children}
       </div>

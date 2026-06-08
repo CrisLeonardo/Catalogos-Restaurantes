@@ -53,3 +53,39 @@ export interface Profile {
   role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF';
   full_name: string | null;
 }
+
+export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'DELIVERED' | 'CANCEL';
+
+export interface Order {
+  id: string;
+  restaurant_id: string;
+  order_number: string;
+  customer_name: string;
+  customer_phone: string;
+  order_type: 'PICKUP' | 'DELIVERY';
+  address: string | null;
+  payment_method: string;
+  status: OrderStatus;
+  subtotal: number;
+  total: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  name_snapshot: string;
+  price_snapshot: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface CartItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image_url: string | null;
+}

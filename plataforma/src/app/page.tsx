@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { Glass } from '@/components/glass';
-import MenuClient from '@/components/menu-client';
+import MenuShell from '@/components/menu-shell';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getMenuData } from '@/lib/db/menu';
 import type { Category, Product } from '@/types';
@@ -52,6 +52,7 @@ export default async function Home() {
     if (!data) notFound();
 
     const menu = await getMenuData(data.restaurant.id);
+    const ordersEnabled = data.restaurant.modules?.orders === true;
 
     return (
       <MenuPage
@@ -59,6 +60,8 @@ export default async function Home() {
         tagline={data.restaurant.tagline}
         categories={menu.categories}
         products={menu.products}
+        restaurantId={data.restaurant.id}
+        ordersEnabled={ordersEnabled}
       />
     );
   }
@@ -70,6 +73,8 @@ export default async function Home() {
       tagline={DEMO.tagline}
       categories={DEMO.categories}
       products={DEMO.products}
+      restaurantId="demo"
+      ordersEnabled={false}
       isDemo
     />
   );
@@ -81,12 +86,16 @@ function MenuPage({
   tagline,
   categories,
   products,
+  restaurantId,
+  ordersEnabled,
   isDemo = false,
 }: {
   name: string;
   tagline: string | null;
   categories: Pick<Category, 'id' | 'name' | 'icon'>[];
   products: Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'tags'>[];
+  restaurantId: string;
+  ordersEnabled: boolean;
   isDemo?: boolean;
 }) {
   return (
@@ -141,7 +150,12 @@ function MenuPage({
 
       {/* ── Catálogo ──────────────────────────────────────── */}
       <div id="menu">
-        <MenuClient categories={categories} products={products} />
+        <MenuShell
+          categories={categories}
+          products={products}
+          restaurantId={restaurantId}
+          ordersEnabled={ordersEnabled}
+        />
       </div>
     </main>
   );

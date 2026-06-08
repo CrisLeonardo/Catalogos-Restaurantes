@@ -6,14 +6,16 @@ import LogoutButton from './logout-button';
 
 interface AdminNavProps {
   restaurantName: string;
+  ordersEnabled?: boolean;
 }
 
-export default function AdminNav({ restaurantName }: AdminNavProps) {
+export default function AdminNav({ restaurantName, ordersEnabled = false }: AdminNavProps) {
   const pathname = usePathname();
 
   const links = [
-    { href: '/admin/menu', label: 'Menú' },
-    { href: '/admin/perfil', label: 'Perfil' },
+    { href: '/admin/menu',    label: 'Menú' },
+    ...(ordersEnabled ? [{ href: '/admin/pedidos', label: 'Pedidos' }] : []),
+    { href: '/admin/perfil',  label: 'Perfil' },
   ];
 
   return (
@@ -68,8 +70,8 @@ export default function AdminNav({ restaurantName }: AdminNavProps) {
                 fontWeight: 500,
                 textDecoration: 'none',
                 background: active ? 'rgba(255,255,255,0.10)' : 'transparent',
-                color: active ? 'var(--u-text)' : 'var(--u-text-3)',
-                border: active ? '1px solid var(--u-hair-2)' : '1px solid transparent',
+                color:      active ? 'var(--u-text)' : 'var(--u-text-3)',
+                border:     active ? '1px solid var(--u-hair-2)' : '1px solid transparent',
                 transition: 'all 150ms',
               }}
             >
