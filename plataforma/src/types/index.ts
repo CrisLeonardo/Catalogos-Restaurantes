@@ -8,6 +8,7 @@ export interface Restaurant {
   status: 'active' | 'suspended';
   whatsapp_number: string | null;
   contact_email: string | null;
+  created_at: string;
 }
 
 export interface RestaurantTheme {

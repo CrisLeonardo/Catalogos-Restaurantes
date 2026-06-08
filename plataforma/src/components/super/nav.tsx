@@ -1,0 +1,75 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import LogoutButton from '@/components/admin/logout-button';
+
+export default function SuperNav() {
+  const pathname = usePathname();
+
+  const links = [
+    { href: '/super/restaurantes', label: 'Restaurantes' },
+    { href: '/super/metricas', label: 'Métricas' },
+  ];
+
+  return (
+    <header
+      className="glass-solid"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        borderRadius: 0,
+        borderLeft: 'none',
+        borderRight: 'none',
+        borderTop: 'none',
+        padding: '0 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        height: 52,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 700,
+          fontSize: 13,
+          letterSpacing: '-0.01em',
+          color: 'var(--brand-accent)',
+          flex: '0 0 auto',
+        }}
+      >
+        Super Admin
+      </span>
+
+      <nav style={{ display: 'flex', gap: 4, flex: 1 }}>
+        {links.map(({ href, label }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="press"
+              style={{
+                padding: '5px 12px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: 'none',
+                background: active ? 'rgba(255,255,255,0.10)' : 'transparent',
+                color: active ? 'var(--u-text)' : 'var(--u-text-3)',
+                border: active ? '1px solid var(--u-hair-2)' : '1px solid transparent',
+                transition: 'all 150ms',
+              }}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <LogoutButton />
+    </header>
+  );
+}

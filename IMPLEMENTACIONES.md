@@ -247,6 +247,73 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión 6 — 2026-06-08 — Fase 3: Super Admin (panel maestro)
+
+**Objetivo:** construir el panel `/super` que permite al SUPER_ADMIN crear y gestionar todos los restaurantes de la plataforma.
+
+**Realizado:**
+
+- **SQL Migration `004_super_admin.sql`:**
+  - Políticas RLS INSERT/DELETE para `restaurants` y `restaurant_themes` (SUPER_ADMIN).
+  - Políticas INSERT/UPDATE/SELECT para `profiles` (SUPER_ADMIN puede crear cuentas de owners).
+  - Índices globales `restaurants_created_idx` y `restaurants_status_plan_idx` para queries sin filtro de tenant.
+
+- **`src/lib/db/super-admin.ts`:** Data layer con `createServiceClient()` (bypasa RLS):
+  - `getAllRestaurants()` — todos los restaurantes con su tema (cacheado).
+  - `getRestaurantFullById(id)` — restaurante + tema por ID.
+  - `getGlobalMetrics()` — conteos totales: active, suspended, premium, catálogo.
+
+- **`src/lib/actions/super-admin.ts`:** Server Actions (todas verifican rol SUPER_ADMIN):
+  - `createRestaurant` — crea restaurante + tema por defecto; auto-genera slug del nombre.
+  - `updateRestaurantBasic` — edita nombre, slug, tagline, email, whatsapp, status.
+  - `updateRestaurantPlan` — cambia `plan_actual` y los módulos `orders`/`whatsapp_notify`.
+  - `updateRestaurantThemeSuper` — edita todos los campos de `restaurant_themes`.
+  - `deleteRestaurant` — elimina en cascada (categorías, productos, tema).
+
+- **`src/components/super/nav.tsx`:** Navbar del Super Admin (glass-solid, sticky, links: Restaurantes / Métricas, botón cerrar sesión).
+
+- **`src/components/super/restaurant-form.tsx`:** Formulario de creación (client component). Auto-genera slug al tipear el nombre; el usuario puede editarlo. Vista previa de URL.
+
+- **`src/components/super/restaurant-edit-form.tsx`:** Formulario de edición de info básica. Selector visual de estado (Activo / Suspendido) con toggle animado.
+
+- **`src/components/super/plan-editor.tsx`:** Selector de plan (CATALOGO / PREMIUM) con efecto visual de selección + toggles de módulos (Catálogo fijo, Pedidos, WhatsApp). Al seleccionar PREMIUM los módulos se habilitan automáticamente; al volver a CATÁLOGO se desactivan.
+
+- **`src/components/super/theme-editor.tsx`:** Editor de apariencia completo (logo upload, nombre de marca, 3 color pickers, selectors glass/portada/catálogo). Reutiliza `ImageUpload` de admin.
+
+- **Rutas del Super Admin:**
+  - `/super` → redirect a `/super/restaurantes`
+  - `/super/restaurantes` — lista de todos los restaurantes con badges de plan y estado.
+  - `/super/restaurantes/new` — onboarding de nuevo restaurante.
+  - `/super/restaurantes/[id]` — editor completo (Info + Plan + Apariencia + Zona peligrosa).
+  - `/super/metricas` — métricas globales (cards) + tabla completa de restaurantes.
+
+- **`src/app/super/layout.tsx`:** Guard que verifica role = SUPER_ADMIN; redirige a `/login` si no autenticado, a `/admin/menu` si autenticado pero sin el rol.
+
+- **Actualizado `src/lib/actions/auth.ts`:** Tras login, redirige SUPER_ADMIN a `/super/restaurantes` y OWNER/STAFF a `/admin/menu`.
+
+- **Actualizado `src/types/index.ts`:** Añadido campo `created_at: string` a la interfaz `Restaurant`.
+
+**Decisiones clave:**
+
+- Todas las operaciones del super admin usan `createServiceClient()` (service_role) para bypasear RLS sin depender de las políticas — más explícito y seguro.
+- La verificación de rol se hace en cada Server Action (no solo en el layout) para defensa en profundidad.
+- El slug se auto-genera en el cliente (JS) al tipear el nombre, eliminando fricción en el onboarding.
+- El plan editor auto-activa/desactiva módulos al cambiar el plan — coherencia sin esfuerzo para el admin.
+
+**Para activar Fase 3:**
+1. Ejecutar `004_super_admin.sql` en el SQL Editor de Supabase.
+2. Crear un usuario en Supabase Auth con el email del super admin.
+3. Insertar su perfil:
+   ```sql
+   insert into profiles (id, restaurant_id, role, full_name)
+   values ('<uid>', null, 'SUPER_ADMIN', 'Tu Nombre');
+   ```
+4. Visitar `tudominio.com/login` → entrar → aterriza en `/super/restaurantes`.
+
+**Próximo paso:** **Fase 4** — Pedidos en línea (carrito, checkout, realtime, WhatsApp).
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

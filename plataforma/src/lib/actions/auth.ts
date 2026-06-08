@@ -14,9 +14,23 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) return { error: 'Email o contraseña incorrectos.' };
+
+  // Redirigir según rol
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', signInData.user.id)
+    .single();
+
+  if (profile?.role === 'SUPER_ADMIN') {
+    redirect('/super/restaurantes');
+  }
 
   redirect('/admin/menu');
 }
