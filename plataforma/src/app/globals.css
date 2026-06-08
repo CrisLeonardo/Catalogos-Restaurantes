@@ -1,0 +1,214 @@
+/* ============================================================
+   PLATAFORMA — Sistema de diseño (liquid glass)
+   Portado del prototipo (tokens.css + urban.css).
+   Variables themeable por restaurante: --brand-*, --glass-*.
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* Fuentes display de marca (Geist va por next/font en layout.tsx) */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@400;500;600;700;800;900&family=Anton&display=swap');
+
+/* Exponer algunos tokens a Tailwind v4 (opcional) */
+@theme inline {
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-text: var(--brand-text);
+  --color-brand-accent: var(--brand-accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+:root {
+  /* ── Tipografía: familias ───────────────────────────────── */
+  --font-display: 'Unbounded', system-ui, sans-serif;
+  --font-poster:  'Anton', 'Arial Narrow', sans-serif;
+  --font-serif:   'Instrument Serif', 'Times New Roman', serif;
+  --ui-font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --ui-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── TEMA POR RESTAURANTE (defaults = urbano oscuro) ─────── */
+  /* Estas 3 variables son las que cambia el Super Admin por tenant. */
+  --brand-bg:     #0b0b0c;
+  --brand-bg-2:   #141416;
+  --brand-text:   #F5F3EF;
+  --brand-accent: #D97757;   /* coral por defecto */
+
+  /* Escala de texto derivada del fondo */
+  --u-text:    var(--brand-text);
+  --u-text-2:  rgba(245, 243, 239, 0.74);
+  --u-text-3:  rgba(245, 243, 239, 0.50);
+  --u-text-4:  rgba(245, 243, 239, 0.32);
+  --u-hair:    rgba(245, 243, 239, 0.10);
+  --u-hair-2:  rgba(245, 243, 239, 0.18);
+
+  /* ── LIQUID GLASS (default = translúcido) ───────────────── */
+  /* El Super Admin elige translucido | esmerilado | solido por tenant. */
+  --glass-blur:   13px;
+  --glass-sat:    150%;
+  --glass-fill:   rgba(255, 255, 255, 0.045);
+  --glass-fill-2: rgba(255, 255, 255, 0.085);
+  --glass-stroke: rgba(255, 255, 255, 0.14);
+  --glass-hi:     rgba(255, 255, 255, 0.42);
+
+  /* ── Escala tipográfica (móvil) ─────────────────────────── */
+  --fs-display-xl: 40px;  --lh-display-xl: 44px;
+  --fs-display:    28px;  --lh-display:    34px;
+  --fs-h1:         22px;  --lh-h1:         28px;
+  --fs-h2:         18px;  --lh-h2:         24px;
+  --fs-body:       15px;  --lh-body:       22px;
+  --fs-caption:    12px;  --lh-caption:    16px;
+
+  /* ── Espaciado / radios / sombras / motion ──────────────── */
+  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;  --space-8: 32px;
+  --radius-md: 10px;  --radius-lg: 14px;  --radius-xl: 20px;  --radius-2xl: 28px;  --radius-full: 9999px;
+  --ease-out:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-entry: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Presets de glass por intensidad (se aplican con data-glass en <html>) */
+:root[data-glass="translucido"] { --glass-blur: 13px; --glass-sat: 150%; --glass-fill: rgba(255,255,255,0.045); --glass-fill-2: rgba(255,255,255,0.085); }
+:root[data-glass="esmerilado"]  { --glass-blur: 22px; --glass-sat: 135%; --glass-fill: rgba(255,255,255,0.065); --glass-fill-2: rgba(255,255,255,0.11);  }
+:root[data-glass="solido"]      { --glass-blur: 30px; --glass-sat: 120%; --glass-fill: rgba(255,255,255,0.10);  --glass-fill-2: rgba(255,255,255,0.17);  }
+
+@media (min-width: 768px) {
+  :root {
+    --fs-display-xl: 56px; --lh-display-xl: 60px;
+    --fs-display:    36px; --lh-display:    42px;
+    --fs-h1:         28px; --lh-h1:         34px;
+  }
+}
+
+/* ── Reset / base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+
+html, body {
+  background: var(--brand-bg);
+  color: var(--u-text);
+  font-family: var(--ui-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+::selection { background: rgba(245, 243, 239, 0.85); color: #0b0b0c; }
+
+/* ============================================================
+   ASPHALT AMBIENCE — lo que el glass refracta
+   ============================================================ */
+.asphalt {
+  position: fixed; inset: 0; overflow: hidden; z-index: -1;
+  background:
+    radial-gradient(120% 90% at 18% 8%,  var(--brand-bg-2) 0%, transparent 55%),
+    radial-gradient(120% 90% at 88% 96%, var(--brand-bg-2) 0%, transparent 55%),
+    var(--brand-bg);
+}
+.asphalt::before, .asphalt::after {
+  content: ''; position: absolute; border-radius: 50%;
+  filter: blur(60px); opacity: 0.5; mix-blend-mode: screen;
+}
+.asphalt::before {
+  width: 60vmax; height: 60vmax; left: -10vmax; top: -20vmax;
+  background: radial-gradient(circle, rgba(255,255,255,0.10), transparent 60%);
+  animation: drift-a 26s var(--ease-out) infinite alternate;
+}
+.asphalt::after {
+  width: 50vmax; height: 50vmax; right: -8vmax; bottom: -16vmax;
+  background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 60%);
+  animation: drift-b 32s var(--ease-out) infinite alternate;
+}
+@keyframes drift-a { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(14vmax,10vmax,0) scale(1.25); } }
+@keyframes drift-b { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-12vmax,-8vmax,0) scale(1.2); } }
+
+/* ============================================================
+   GLASS SYSTEM
+   ============================================================ */
+.glass {
+  position: relative;
+  background: linear-gradient(145deg, var(--glass-fill-2), var(--glass-fill));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-stroke);
+  box-shadow:
+    inset 0 1px 0 var(--glass-hi),
+    inset 0 -1px 1px rgba(255,255,255,0.05),
+    0 10px 34px rgba(0,0,0,0.45);
+  border-radius: var(--radius-xl);
+}
+/* sheen especular — el "tell" del liquid glass (sigue al puntero via --mx/--my) */
+.glass::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 80% at var(--mx, 30%) var(--my, 0%), rgba(255,255,255,0.18), transparent 45%);
+  opacity: 0.9; transition: background 200ms var(--ease-out);
+}
+.glass-quiet {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+  border: 1px solid var(--u-hair);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 6px 20px rgba(0,0,0,0.35);
+  border-radius: var(--radius-lg);
+}
+.glass-solid {
+  position: relative;
+  background: linear-gradient(180deg, rgba(28,28,31,0.86), rgba(18,18,20,0.9));
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  backdrop-filter: blur(24px) saturate(120%);
+  border: 1px solid var(--u-hair);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 40px rgba(0,0,0,0.5);
+  border-radius: var(--radius-lg);
+}
+
+/* CTA "chip de luz" */
+.btn-white {
+  background: linear-gradient(180deg, #ffffff, #e9e6df);
+  color: #0b0b0c; border: none;
+  box-shadow: 0 6px 20px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+.btn-accent {
+  background: var(--brand-accent); color: #fff; border: none;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-accent) 35%, transparent);
+}
+
+/* ============================================================
+   TYPE HELPERS
+   ============================================================ */
+.t-display { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; line-height: 0.95; color: var(--u-text); }
+.t-serif   { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; color: var(--u-text); }
+.t-poster  { font-family: var(--font-poster); letter-spacing: 0.01em; text-transform: uppercase; color: var(--u-text); }
+.t-kicker  { font-family: var(--font-poster); text-transform: uppercase; letter-spacing: 0.14em; color: var(--u-text-3); }
+.t-mono    { font-family: var(--ui-font-mono); font-weight: 500; letter-spacing: -0.01em; }
+.t-mute    { color: var(--u-text-3); }
+
+/* ============================================================
+   ANIMACIONES (entrada solo con transform — nunca opacity:0 en reposo)
+   ============================================================ */
+@keyframes fade-up  { from { transform: translateY(12px); }  to { transform: translateY(0); } }
+@keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes pop-in  { 0% { transform: scale(0.93); } 60% { transform: scale(1.01); } 100% { transform: scale(1); } }
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
+  70%  { box-shadow: 0 0 0 14px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+.anim-fade-up  { animation: fade-up  560ms var(--ease-entry) both; }
+.anim-slide-up { animation: slide-up 320ms var(--ease-entry) both; }
+.anim-pop      { animation: pop-in   360ms var(--ease-entry) both; }
+
+/* Truncado a N líneas (para descripciones de productos en tarjetas) */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.press { transition: transform 90ms var(--ease-out); }
+.press:active { transform: scale(0.97); }
+
+button:focus { outline: none; }
+button:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+}

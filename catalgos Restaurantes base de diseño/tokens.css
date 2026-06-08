@@ -1,0 +1,258 @@
+/* ============================================================
+   DistLEOGIN — Design Tokens
+   Single source of truth for color, type, spacing, radii, shadow.
+   Load this file before any component CSS.
+   ============================================================ */
+
+/* ── Google Fonts: Geist + Instrument Serif + JetBrains Mono ── */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ============================================================
+   :root tokens
+   ============================================================ */
+:root {
+  /* ── Color: ink (text) ──────────────────────────────────── */
+  --ink:          #1F1E1D;
+  --ink-2:        #3D3A35;
+  --mute:         #6B6760;
+  --mute-2:       #9A9489;
+  --ink-inverse:  #F4EFE2;
+
+  /* ── Color: surface (backgrounds) ───────────────────────── */
+  --cream:        #FAF7F0;
+  --cream-2:      #F4EFE2;
+  --cream-3:      #ECE6D9;
+  --surface:      #FFFFFF;
+
+  /* ── Color: line (borders) ──────────────────────────────── */
+  --line:         #E8E2D5;
+  --line-2:       #D9D2C2;
+  --line-strong:  #B8AE99;
+
+  /* ── Color: brand (coral) ───────────────────────────────── */
+  --coral:        #D97757;
+  --coral-2:      #C25C3C;
+  --coral-3:      #A8482A;
+  --coral-soft:   #F4DCCB;
+  --coral-tint:   #FBEFE6;
+
+  /* ── Color: semantic ─────────────────────────────────────  */
+  --olive:        #5C7F4D;          /* positive: stock, paid, delivered */
+  --olive-2:      #466137;
+  --olive-soft:   #E5EDD9;
+  --olive-tint:   #F1F6E6;
+
+  --clay:         #B8693D;          /* warning: pending */
+  --clay-2:       #94501C;
+  --clay-soft:    #F6E4D2;
+  --clay-tint:    #FBF1E5;
+
+  --rust:         #A8412C;          /* danger: cancelled, error */
+  --rust-2:       #842F1F;
+  --rust-soft:    #F2D8D0;
+  --rust-tint:    #FAEAE4;
+
+  --indigo:       #3A5A8C;          /* info: confirmed, in-transit */
+  --indigo-2:     #2A4470;
+  --indigo-soft:  #DCE3EF;
+  --indigo-tint:  #ECF0F7;
+
+  /* ── Typography: families ───────────────────────────────── */
+  --font-sans:    'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif:   'Instrument Serif', 'Times New Roman', serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ── Typography: scale (mobile defaults) ────────────────── */
+  --fs-display-xl:    40px;     --lh-display-xl: 44px;
+  --fs-display:       28px;     --lh-display:    34px;
+  --fs-h1:            22px;     --lh-h1:         28px;
+  --fs-h2:            18px;     --lh-h2:         24px;
+  --fs-h3:            16px;     --lh-h3:         22px;
+  --fs-body:          15px;     --lh-body:       22px;
+  --fs-body-sm:       14px;     --lh-body-sm:    20px;
+  --fs-caption:       12px;     --lh-caption:    16px;
+  --fs-label:         11px;     --lh-label:      14px;
+  --fs-mono:          13px;     --lh-mono:       18px;
+
+  /* ── Spacing scale ──────────────────────────────────────── */
+  --space-0:     0px;
+  --space-1:     4px;
+  --space-2:     8px;
+  --space-3:    12px;
+  --space-4:    16px;
+  --space-5:    20px;
+  --space-6:    24px;
+  --space-8:    32px;
+  --space-10:   40px;
+  --space-12:   48px;
+  --space-16:   64px;
+  --space-20:   80px;
+  --space-24:   96px;
+
+  /* ── Radii ──────────────────────────────────────────────── */
+  --radius-sm:    6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ────────────────────────────────────────────── */
+  --shadow-xs:   0 1px 2px rgba(31,30,29,0.04);
+  --shadow-sm:   0 2px 8px rgba(31,30,29,0.06), 0 1px 2px rgba(31,30,29,0.04);
+  --shadow-md:   0 8px 24px rgba(31,30,29,0.08), 0 2px 6px rgba(31,30,29,0.05);
+  --shadow-lg:   0 20px 48px rgba(31,30,29,0.12), 0 4px 12px rgba(31,30,29,0.06);
+  --shadow-cta:  0 6px 18px rgba(217,119,87,0.30);
+  --shadow-inset:inset 0 1px 0 rgba(255,255,255,0.6);
+
+  /* ── Motion ─────────────────────────────────────────────── */
+  --ease-out:    cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-entry:  cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast:    120ms;
+  --dur-base:    200ms;
+  --dur-slow:    280ms;
+
+  /* ── Z-index ────────────────────────────────────────────── */
+  --z-nav:       10;
+  --z-sticky:    20;
+  --z-dropdown:  40;
+  --z-modal:     60;
+  --z-toast:     80;
+}
+
+/* ── Desktop type scale overrides ──────────────────────────── */
+@media (min-width: 768px) {
+  :root {
+    --fs-display-xl: 56px;  --lh-display-xl: 60px;
+    --fs-display:    36px;  --lh-display:    42px;
+    --fs-h1:         28px;  --lh-h1:         34px;
+    --fs-h2:         22px;  --lh-h2:         28px;
+    --fs-h3:         18px;  --lh-h3:         24px;
+    --fs-body:       16px;  --lh-body:       24px;
+  }
+}
+
+/* ============================================================
+   Base reset / page defaults
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--coral-soft); color: var(--ink); }
+
+/* ============================================================
+   Semantic typography elements
+   ============================================================ */
+
+.t-display-xl,
+h1.display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-display-xl);
+  line-height: var(--lh-display-xl);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.t-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+h1, .t-h1 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+h2, .t-h2 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+h3, .t-h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  color: var(--ink);
+}
+
+p, .t-body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink-2);
+}
+
+.t-body-sm {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--fs-body-sm);
+  line-height: var(--lh-body-sm);
+  color: var(--ink-2);
+}
+
+.t-caption {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--mute);
+}
+
+.t-label {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.t-mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-mono);
+  line-height: var(--lh-mono);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.t-mute   { color: var(--mute); }
+.t-ink    { color: var(--ink); }
+.t-coral  { color: var(--coral); }
+.t-olive  { color: var(--olive); }
+.t-clay   { color: var(--clay); }
+.t-rust   { color: var(--rust); }
+
+/* Currency helper — keeps "Q" tight against the number */
+.t-currency .currency-symbol {
+  font-weight: 500;
+  margin-right: 2px;
+  opacity: 0.7;
+}

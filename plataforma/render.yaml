@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: menuvivo
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      # Dominio raíz de la plataforma (sin https://, sin www)
+      # Ejemplo: midominio.com
+      - key: NEXT_PUBLIC_ROOT_DOMAIN
+        sync: false
+
+      # Supabase → Project Settings → API
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+
+      # Solo servidor — NO exponer al cliente
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
