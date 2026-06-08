@@ -12,7 +12,7 @@
 |------|-------------|--------|
 | **Fase 0** | Fundaciones (setup Next.js + Supabase + Render + diseño) | ✅ Completada (deploy pendiente del usuario) |
 | **Fase 1** | Vista Cliente + Multi-tenant (Plan 1 núcleo) | ✅ Completada |
-| **Fase 2** | Auth + Panel Admin del Restaurante (Plan 1 completo) | ⬜ Pendiente |
+| **Fase 2** | Auth + Panel Admin del Restaurante (Plan 1 completo) | ✅ Completada |
 | **Fase 3** | Super Admin (panel maestro) | ⬜ Pendiente |
 | **Fase 4** | Pedidos en línea (Plan 2 Premium) | ⬜ Pendiente |
 | **Fase 5** | Pulido, seguridad y lanzamiento | ⬜ Pendiente |
@@ -180,6 +180,70 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 6. Hacer deploy en Render y verificar `azucar-negra.tudominio.com`.
 
 **Próximo paso:** **Fase 2** — Supabase Auth + Panel Admin del restaurante (CRUD de categorías y productos, subida de fotos, toggle de disponibilidad).
+
+---
+
+## Sesión 5 — 2026-06-08 — Fase 2: Auth + Panel Admin del Restaurante
+
+**Objetivo:** Implementar login/logout, protección de rutas, y panel admin completo para que el dueño gestione su menú sin intervención del desarrollador.
+
+**Realizado:**
+
+- **SQL Migration `003_auth_admin_rls.sql`:**
+  - Funciones helper `get_my_restaurant_id()` / `get_my_role()` (security definer, no recursión RLS).
+  - Políticas RLS de escritura en `categories`, `products`, `restaurants`, `restaurant_themes` para OWNER / STAFF / SUPER_ADMIN.
+  - Bucket `restaurant-assets` en Supabase Storage (5 MB, JPEG/PNG/WebP/GIF).
+  - Storage policies: lectura pública + escritura restringida al `restaurant_id` del usuario.
+
+- **`src/lib/supabase/service.ts`:** Cliente con `service_role` para operaciones SUPER_ADMIN que bypasan RLS.
+
+- **`src/types/index.ts`:** Añadido tipo `Profile`.
+
+- **Server Actions:**
+  - `auth.ts`: `login()` (email + password → redirect `/admin/menu`), `logout()`.
+  - `categories.ts`: `createCategory`, `updateCategory`, `deleteCategory`, `toggleCategoryActive`, `moveCategoryUp/Down`.
+  - `products.ts`: `createProduct`, `updateProduct`, `deleteProduct`, `toggleProductAvailability`, `moveProductUp/Down`.
+  - `restaurant.ts`: `updateRestaurantInfo`, `updateRestaurantTheme`.
+  - Todas usan `resolveContext()`: detectan si el usuario es SUPER_ADMIN → usa `createServiceClient()`, si no → usa la sesión del usuario (con RLS).
+
+- **`src/lib/db/admin.ts`:** `getAdminContext()` (cacheado, user + profile + restaurant + theme) y `getAdminMenu(restaurantId)` (todas las categorías + productos sin filtrar is_active/is_available).
+
+- **Componentes (`src/components/admin/`):**
+  - `nav.tsx` (Client Component, `usePathname()` para nav activa, sticky header glass-solid).
+  - `logout-button.tsx` (form con Server Action).
+  - `category-manager.tsx`: lista de categorías con edición inline, toggle activo/inactivo, reordenar, + lista de productos por categoría con toggle de disponibilidad, reordenar, eliminar.
+  - `product-form.tsx`: formulario completo (nombre, precio, categoría, descripción, tags, disponibilidad toggle, subida de foto); usa `useActionState`.
+  - `profile-form.tsx`: info del restaurante + apariencia (colores con `input[type=color]`, controles segmentados para glass/portada/catálogo, logo upload).
+  - `image-upload.tsx`: subida directa al bucket desde el browser (usa `createClient()`), con preview inmediato y validación de tamaño.
+  - `delete-button.tsx`: confirma antes de eliminar vía `window.confirm()`.
+
+- **Rutas del panel admin:**
+  - `src/app/login/page.tsx`: Login glass, `useActionState`.
+  - `src/app/admin/layout.tsx`: Auth guard — verifica sesión activa, obtiene profile, valida que OWNER/STAFF pertenezca al tenant del subdominio actual; SUPER_ADMIN accede a cualquier tenant.
+  - `src/app/admin/page.tsx`: Redirect a `/admin/menu`.
+  - `src/app/admin/menu/page.tsx`: Lista de categorías + productos, botón "Nuevo producto".
+  - `src/app/admin/menu/productos/new/page.tsx`: Crear producto (hereda categoría del param `?cat=`).
+  - `src/app/admin/menu/productos/[id]/page.tsx`: Editar producto + eliminar.
+  - `src/app/admin/perfil/page.tsx`: Info + apariencia del restaurante.
+
+**Decisiones clave:**
+
+- SUPER_ADMIN sin `restaurant_id` en su perfil usa el tenant del subdominio + `createServiceClient()` para bypassing RLS.
+- La subida de imágenes es client-side (evita límite de tamaño de Server Actions); el path en Storage sigue el patrón `{restaurant_id}/{folder}/{timestamp}.{ext}`.
+- `revalidatePath('/admin/menu')` + `redirect()` en cada Server Action para mantener datos frescos sin cliente de estado global.
+- La edición inline de categorías y el toggle de disponibilidad usan `<form action={serverAction}>` (progressive enhancement, sin JS client-side para las acciones de escritura básicas).
+
+**Para activar Fase 2 en producción:**
+1. Ejecutar `003_auth_admin_rls.sql` en el SQL Editor de Supabase.
+2. Crear un usuario en Supabase Auth (dashboard → Authentication → Users → Invite user).
+3. Insertar el perfil del usuario:
+   ```sql
+   insert into profiles (id, restaurant_id, role, full_name)
+   values ('<auth_user_id>', '<restaurant_id>', 'RESTAURANT_OWNER', 'Tu Nombre');
+   ```
+4. Visitar `azucar-negra.tudominio.com/login` → ingresar credenciales → ya puedes gestionar el menú.
+
+**Próximo paso:** **Fase 3** — Super Admin (panel maestro: crear/editar restaurantes, gestionar planes y módulos, theming global).
 
 ---
 

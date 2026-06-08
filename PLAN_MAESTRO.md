@@ -3,7 +3,7 @@
 > **Nombre de trabajo:** *MenúVivo* (provisional — ajustable)
 > **Autor técnico:** Arquitectura definida en sesión de planificación
 > **Última actualización:** 2026-06-08
-> **Estado:** Fase 0 ✅ · Fase 1 ✅ → pendiente configurar Supabase en producción → Fase 2
+> **Estado:** Fase 0 ✅ · Fase 1 ✅ · Fase 2 ✅ → pendiente configurar Supabase + crear primer usuario → Fase 3
 
 ---
 

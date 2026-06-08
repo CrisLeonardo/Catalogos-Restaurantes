@@ -1,0 +1,101 @@
+import { redirect, notFound } from 'next/navigation';
+import Link from 'next/link';
+import { headers } from 'next/headers';
+import { getAdminContext, getAdminMenu, getProductById } from '@/lib/db/admin';
+import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import ProductForm from '@/components/admin/product-form';
+import DeleteButton from '@/components/admin/delete-button';
+import { deleteProduct } from '@/lib/actions/products';
+
+export const metadata = { title: 'Editar producto — Panel admin' };
+
+export default async function EditProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  const ctx = await getAdminContext();
+  if (!ctx) redirect('/login');
+
+  let restaurantId: string | null = null;
+
+  if (ctx.profile.role === 'SUPER_ADMIN') {
+    const headersList = await headers();
+    const slug = headersList.get('x-tenant-slug');
+    if (slug) {
+      const tenantData = await getRestaurantBySlug(slug);
+      restaurantId = tenantData?.restaurant.id ?? null;
+    }
+  } else {
+    restaurantId = ctx.profile.restaurant_id;
+  }
+
+  if (!restaurantId) redirect('/login');
+
+  const [product, { categories }] = await Promise.all([
+    getProductById(id, restaurantId),
+    getAdminMenu(restaurantId),
+  ]);
+
+  if (!product) notFound();
+
+  return (
+    <div className="anim-fade-up">
+      {/* Encabezado */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link
+            href="/admin/menu"
+            className="press"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid var(--u-hair)',
+              borderRadius: 'var(--radius-full)',
+              padding: '6px 14px',
+              fontSize: 13,
+              color: 'var(--u-text-2)',
+              textDecoration: 'none',
+            }}
+          >
+            ← Volver
+          </Link>
+          <h1
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: 20,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: 200,
+            }}
+          >
+            {product.name}
+          </h1>
+        </div>
+
+        <DeleteButton
+          action={deleteProduct}
+          hiddenFields={{ restaurantId, id: product.id }}
+          label="Eliminar"
+          confirm={`¿Eliminar "${product.name}" permanentemente?`}
+        />
+      </div>
+
+      <ProductForm
+        restaurantId={restaurantId}
+        categories={categories}
+        product={product}
+      />
+    </div>
+  );
+}

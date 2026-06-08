@@ -45,3 +45,10 @@ export interface Product {
   is_available: boolean;
   sort_order: number;
 }
+
+export interface Profile {
+  id: string;
+  restaurant_id: string | null;
+  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF';
+  full_name: string | null;
+}
