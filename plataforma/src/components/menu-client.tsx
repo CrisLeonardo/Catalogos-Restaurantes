@@ -397,7 +397,7 @@ function CartBar({ onOpen }: { onOpen: () => void }) {
 /* ── Cart Panel (bottom sheet) ─────────────────────────────── */
 
 function CartPanel({ onClose }: { onClose: () => void }) {
-  const { items, removeItem, updateQuantity, total } = useCart();
+  const { items, updateQuantity, total } = useCart();
 
   useEffect(() => {
     const prev = document.body.style.overflow;

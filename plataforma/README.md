@@ -5,23 +5,42 @@ Multi-tenant por subdominios. Diseño *liquid glass*.
 
 > Documentación de estrategia y fases en la carpeta superior:
 > `PLAN_MAESTRO.md`, `IMPLEMENTACIONES.md`, `ERRORES.md`.
+>
+> **Guías prácticas (carpeta superior):**
+> - `GUIA_ENTORNO_LOCAL.md` — cómo desarrollar en local (con Supabase + Docker).
+> - `GUIA_DESPLIEGUE.md` — cómo subir a Supabase (nube) + Render paso a paso.
 
 ---
 
 ## Arranque local
 
+**Opción rápida (solo ver la demo, sin base de datos):**
+
 ```bash
 cd plataforma
 npm install
-copy .env.local.example .env.local   # rellena tus claves de Supabase
-npm run dev                           # http://localhost:3000
+npm run dev                           # http://localhost:3000 (modo demo)
 ```
 
-> La demo funciona sin Supabase configurado (los clientes se omiten si no hay `.env.local`).
+> Sin `.env.local`, la app corre en **modo demo**: solo la portada de un restaurante.
+> Los paneles `/admin` y `/super` requieren Supabase.
+
+**Opción completa (todo funcional, con Supabase local en Docker):**
+
+```bash
+cd plataforma
+npm install
+npx supabase start                    # levanta Supabase en Docker + aplica migraciones
+# crea .env.local con las claves que imprime `supabase start` (ver GUIA_ENTORNO_LOCAL.md)
+node scripts/crear-super-admin.mjs admin@local.test Admin12345
+npm run dev
+```
+
+Detalle completo y troubleshooting en **`../GUIA_ENTORNO_LOCAL.md`**.
 
 Para probar **subdominios en local**, abre `http://azucar-negra.localhost:3000` (Chrome
-resuelve `*.localhost` sin configuración extra). El middleware detectará el slug `azucar-negra`
-y lo propagará como header `x-tenant-slug`.
+resuelve `*.localhost` sin configuración extra). El **proxy** (`src/proxy.ts`) detecta el slug
+`azucar-negra` y lo propaga como header `x-tenant-slug`.
 
 ---
 
@@ -67,7 +86,12 @@ plataforma/
 │   │   │   ├── client.ts     # cliente navegador (anon)
 │   │   │   └── server.ts     # cliente servidor (cookies)
 │   │   └── tenant.ts         # subdominio → slug del restaurante
-│   └── middleware.ts         # resuelve tenant + refresca sesión Supabase
+│   └── proxy.ts              # (Next.js 16) resuelve tenant + refresca sesión Supabase
+├── supabase/
+│   ├── migrations/           # 001..006 (esquema + RLS + storage + pedidos)
+│   └── setup_produccion.sql  # migraciones combinadas para pegar en la nube
+├── scripts/
+│   └── crear-super-admin.mjs # alta del Super Admin (local o nube)
 ├── .env.local.example
 └── .node-version             # 22
 ```

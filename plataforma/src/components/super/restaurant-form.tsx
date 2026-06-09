@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState, useEffect } from 'react';
+import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { createRestaurant, type SuperState } from '@/lib/actions/super-admin';
 
@@ -43,9 +43,11 @@ export default function RestaurantForm() {
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
 
-  useEffect(() => {
-    if (!slugEdited) setSlug(slugify(name));
-  }, [name, slugEdited]);
+  // El slug se deriva del nombre mientras el usuario no lo edite a mano.
+  function onNameChange(value: string) {
+    setName(value);
+    if (!slugEdited) setSlug(slugify(value));
+  }
 
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -58,7 +60,7 @@ export default function RestaurantForm() {
           required
           autoFocus
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => onNameChange(e.target.value)}
           placeholder="Azúcar Negra"
           style={inputStyle}
         />

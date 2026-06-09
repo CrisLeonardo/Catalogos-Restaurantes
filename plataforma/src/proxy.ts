@@ -3,12 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTenantSlug } from "@/lib/tenant";
 
 /**
- * Middleware (Edge):
+ * Proxy (Next.js 16 — antes llamado "middleware"):
  *  1. Resuelve el subdominio → slug del restaurante y lo propaga como
  *     header interno `x-tenant-slug` para que la app lo lea.
  *  2. Refresca la sesión de Supabase (si las variables están configuradas).
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // 1) Tenant desde el subdominio
   const host = request.headers.get("host");
   const slug = getTenantSlug(host);
@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
 
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  // 2) Refresco de sesión Supabase (solo si hay credenciales)
+  // 2) Refresco de sesión Supabase (solo si hay credenciales configuradas)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -29,7 +29,9 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value),
+          );
           response = NextResponse.next({ request: { headers: requestHeaders } });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),

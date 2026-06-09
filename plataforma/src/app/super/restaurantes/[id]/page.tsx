@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Glass } from '@/components/glass';
-import { getRestaurantFullById } from '@/lib/db/super-admin';
+import { getRestaurantFullById, getRestaurantUsers } from '@/lib/db/super-admin';
 import RestaurantEditForm from '@/components/super/restaurant-edit-form';
 import PlanEditor from '@/components/super/plan-editor';
 import ThemeEditor from '@/components/super/theme-editor';
+import RestaurantUsers from '@/components/super/restaurant-users';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteRestaurant } from '@/lib/actions/super-admin';
 
@@ -32,6 +33,7 @@ export default async function EditRestaurantePage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
+  const users = await getRestaurantUsers(id);
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -98,13 +100,17 @@ export default async function EditRestaurantePage({
           }}
         >
           {isNew
-            ? 'Restaurante creado. Configura el plan y el tema.'
+            ? 'Restaurante creado. Configura el plan, el tema y crea el acceso del dueño.'
             : saved === 'info'
             ? 'Información guardada.'
             : saved === 'plan'
             ? 'Plan y módulos guardados.'
             : saved === 'tema'
             ? 'Apariencia guardada.'
+            : saved === 'user'
+            ? 'Acceso creado. Entrega las credenciales al restaurante.'
+            : saved === 'pass'
+            ? 'Contraseña actualizada.'
             : 'Cambios guardados.'}
         </div>
       )}
@@ -136,7 +142,24 @@ export default async function EditRestaurantePage({
         )}
       </section>
 
-      {/* ── 4. Zona peligrosa ──────────────────────────────── */}
+      {/* ── 4. Acceso (usuarios) ───────────────────────────── */}
+      <section>
+        <SectionTitle>Acceso del restaurante</SectionTitle>
+        <p
+          style={{
+            fontSize: 13,
+            color: 'var(--u-text-4)',
+            marginTop: -8,
+            marginBottom: 14,
+          }}
+        >
+          Crea el usuario y contraseña con los que el dueño entrará a gestionar
+          su menú. Tú controlas estos accesos.
+        </p>
+        <RestaurantUsers restaurantId={row.id} slug={row.slug} users={users} />
+      </section>
+
+      {/* ── 5. Zona peligrosa ──────────────────────────────── */}
       <section>
         <SectionTitle>Zona peligrosa</SectionTitle>
         <Glass

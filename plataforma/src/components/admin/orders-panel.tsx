@@ -86,7 +86,7 @@ export default function OrdersPanel({ initialOrders, restaurantId }: Props) {
       .subscribe();
 
     return () => { channel.unsubscribe(); };
-  }, [restaurantId]);
+  }, [restaurantId, router]);
 
   const active    = orders.filter((o) => !['DELIVERED', 'CANCEL'].includes(o.status));
   const completed = orders.filter((o) =>  ['DELIVERED', 'CANCEL'].includes(o.status));

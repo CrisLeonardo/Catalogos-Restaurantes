@@ -31,10 +31,13 @@ export function CartProvider({
   const key = `cart-${restaurantId}`;
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Rehidratar desde localStorage una sola vez al montar
+  // Rehidratar desde localStorage una sola vez al montar.
+  // Intencional: el estado inicial debe ser [] en el servidor (SSR) y
+  // llenarse solo en el cliente, para evitar mismatch de hidratación.
   useEffect(() => {
     try {
       const stored = localStorage.getItem(key);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored) setItems(JSON.parse(stored));
     } catch {}
   }, [key]);

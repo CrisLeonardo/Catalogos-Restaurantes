@@ -4,10 +4,11 @@
    Variables themeable por restaurante: --brand-*, --glass-*.
    ============================================================ */
 
-@import "tailwindcss";
-
 /* Fuentes display de marca (Geist va por next/font en layout.tsx) */
+/* IMPORTANTE: @import externos deben ir antes de @import "tailwindcss" */
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@400;500;600;700;800;900&family=Anton&display=swap');
+
+@import "tailwindcss";
 
 /* Exponer algunos tokens a Tailwind v4 (opcional) */
 @theme inline {

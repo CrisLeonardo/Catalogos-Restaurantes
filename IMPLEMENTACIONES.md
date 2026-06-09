@@ -452,6 +452,68 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión 6 — 2026-06-08 — Alta de dueños + verificación end-to-end + guías
+
+**Objetivo:** Cerrar el hueco operativo que hacía sentir la plataforma "no funcional", verificar que TODO funciona de verdad (no solo que compila), y documentar el entorno local y el despliegue.
+
+**Diagnóstico inicial:** El código de las Fases 0-5 estaba completo y compilaba limpio (`build` ✓, `typecheck` ✓). Lo que faltaba era operativo:
+1. Sin `.env.local` + migraciones, la app solo mostraba la demo → daba la falsa impresión de "prototipo de un restaurante".
+2. **Hueco real de producto:** el Super Admin podía crear restaurantes pero **no podía crear el login del dueño** — había que hacerlo a mano en el dashboard de Supabase + SQL. Eso rompía el requerimiento "cada dueño con su propio panel, y yo administro cada restaurante".
+
+**Realizado:**
+
+- **Feature: Alta de usuarios del restaurante desde el Super Admin.**
+  - `src/lib/db/super-admin.ts`: nueva `getRestaurantUsers(restaurantId)` — lista dueños/staff resolviendo el email vía `auth.admin.getUserById` (service_role), ordenando dueños primero.
+  - `src/lib/actions/super-admin.ts`: tres acciones nuevas:
+    - `createRestaurantUser` — crea el usuario en Auth (`auth.admin.createUser`, email confirmado) y enlaza su `profile` con el restaurante y el rol. Rollback del usuario si falla el profile. Detecta email duplicado.
+    - `resetRestaurantUserPassword` — cambia la contraseña; verifica que el usuario sea de ESE restaurante y no un super admin.
+    - `deleteRestaurantUser` — borra el login (`auth.admin.deleteUser`; el profile cae por FK cascade); nunca toca super admins ni usuarios de otro restaurante.
+  - `src/components/super/restaurant-users.tsx` (nuevo) — UI glass: lista de accesos con badge de rol, botón "Contraseña" (reset inline con generador) y "Quitar"; formulario "Crear un acceso nuevo" (email, nombre, rol Dueño/Staff, contraseña con botón Generar) y aviso de copiar credenciales.
+  - `src/app/super/restaurantes/[id]/page.tsx`: nueva sección "Acceso del restaurante" + banners `saved=user` / `saved=pass`.
+  - Sin migración nueva: todo pasa por el service_role (bypassa RLS) y las políticas `profiles_*_super` de 004 ya existían.
+
+- **`scripts/crear-super-admin.mjs` (nuevo):** crea/actualiza el Super Admin de forma idempotente. Lee `.env.local` o variables de entorno (sirve para local y para la nube).
+
+- **Entorno local con Supabase + Docker:** se instaló el CLI de Supabase (`npx supabase`), `supabase init` + `supabase start` (stack completo en Docker), se aplicaron las 6 migraciones y se creó `.env.local` apuntando al stack local. Studio en `:54323`, API en `:54321`.
+
+- **Verificación end-to-end REAL (navegador + Supabase local, no mocks):**
+  1. Home demo renderiza ✓
+  2. Login ✓ → redirección por rol ✓
+  3. Super Admin lista restaurantes ✓
+  4. Crear dueño desde el panel ✓ (profile enlazado: `RESTAURANT_OWNER` → `azucar-negra`, verificado en SQL)
+  5. Dueño inicia sesión → entra a SU `/admin/menu` ✓
+  6. Seguridad: dueño intentando `/super` → redirigido a `/admin/menu` ✓
+  7. Vista de cliente `azucar-negra.localhost:3000` lee datos reales de la BD (no demo) ✓
+  8. Dueño crea producto → escritura vía RLS con su sesión ✓ (verificado y limpiado en SQL)
+
+- **`setup_produccion.sql` (nuevo):** combinación de las migraciones 001+003+004+005+006 (sin el demo) para pegar de una sola vez en el SQL Editor de la nube.
+
+- **Documentación nueva (raíz):**
+  - `GUIA_ENTORNO_LOCAL.md` — modelo mental app+Supabase, Docker explicado, rutina diaria, comandos, subdominios, troubleshooting.
+  - `GUIA_DESPLIEGUE.md` — Supabase nube → GitHub → Render (con Root Directory = `plataforma`) → dominio/Cloudflare wildcard → primer restaurante real → notas de plan gratuito.
+  - `plataforma/README.md` actualizado (middleware→proxy, arranque con Supabase local).
+
+**Decisiones clave:**
+
+- El alta de dueños usa **service_role** (no el JWT del usuario) porque crear usuarios en Auth es una operación administrativa. Se protege verificando `role = SUPER_ADMIN` antes de instanciar el service client (mismo patrón que el resto de acciones del super admin).
+- El CLI nuevo de Supabase entrega llaves en formato `sb_publishable_` / `sb_secret_` en vez de las JWT `anon`/`service_role`. **Ambos formatos funcionan** con `@supabase/supabase-js` 2.107 — confirmado en la prueba (login, RLS y Admin API operaron con las llaves nuevas).
+- En Render se usa un **Web Service manual con Root Directory = `plataforma`** en vez del Blueprint de `render.yaml`, porque el repo tiene la app en una subcarpeta (junto a los prototipos) y el Blueprint espera `render.yaml` en la raíz del repo.
+- La contraseña del dueño se teclea/genera en el cliente y el Super Admin la entrega manualmente (MVP). El aviso "cópiala ahora, no se vuelve a mostrar" evita confusiones; existe "Contraseña" (reset) si se pierde.
+
+- **Iconos PWA generados** ✅ — `scripts/gen-icons.mjs` (encoder PNG sin dependencias) crea `public/icon-192.png` y `icon-512.png` (fondo asfalto + círculo coral, maskable-safe). Resuelto el 404 de `/icon-192.png`. Reemplazables por el logo real.
+
+**Notas de entorno (Windows):**
+- `node`/`npm` en `C:\Program Files\nodejs\` no siempre en el PATH → `$env:Path = "C:\Program Files\nodejs;" + $env:Path`.
+- PowerShell con ExecutionPolicy `Restricted` bloquea `npm` (es un `.ps1`). Fix permanente: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`. Alternativa sin cambios: usar `npm.cmd`.
+
+**Pendiente / mejoras futuras:**
+- `next.config.ts` solo permite imágenes de `**.supabase.co` en `next/image`; para ver fotos servidas desde el Storage **local** habría que añadir el patrón `127.0.0.1:54321` (no afecta producción).
+- Email automático de bienvenida al dueño con sus credenciales (hoy se entregan a mano).
+
+**Próximo paso:** Seguir `GUIA_DESPLIEGUE.md` con el proyecto Supabase real y crear el Web Service en Render.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

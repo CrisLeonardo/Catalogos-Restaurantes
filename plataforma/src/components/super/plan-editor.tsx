@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState, useEffect } from 'react';
+import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import {
   updateRestaurantPlan,
@@ -26,15 +26,14 @@ export default function PlanEditor({ restaurant }: PlanEditorProps) {
   const [orders, setOrders] = useState(restaurant.modules.orders);
   const [whatsapp, setWhatsapp] = useState(restaurant.modules.whatsapp_notify);
 
-  useEffect(() => {
-    if (plan === 'PREMIUM') {
-      setOrders(true);
-      setWhatsapp(true);
-    } else {
-      setOrders(false);
-      setWhatsapp(false);
-    }
-  }, [plan]);
+  // Al elegir un plan, ajusta los módulos a su preset (el usuario aún puede
+  // afinarlos después con los toggles).
+  function selectPlan(p: 'CATALOGO' | 'PREMIUM') {
+    setPlan(p);
+    const on = p === 'PREMIUM';
+    setOrders(on);
+    setWhatsapp(on);
+  }
 
   return (
     <form
@@ -67,7 +66,7 @@ export default function PlanEditor({ restaurant }: PlanEditorProps) {
               <button
                 key={p}
                 type="button"
-                onClick={() => setPlan(p)}
+                onClick={() => selectPlan(p)}
                 className="press"
                 style={{
                   flex: 1,
