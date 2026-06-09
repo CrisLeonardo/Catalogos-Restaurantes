@@ -15,7 +15,7 @@
 | **Fase 2** | Auth + Panel Admin del Restaurante (Plan 1 completo) | ✅ Completada |
 | **Fase 3** | Super Admin (panel maestro) | ✅ Completada |
 | **Fase 4** | Pedidos en línea (Plan 2 Premium) | ✅ Completada |
-| **Fase 5** | Pulido, seguridad y lanzamiento | ⬜ Pendiente |
+| **Fase 5** | Pulido, seguridad y lanzamiento | ✅ Completada |
 
 Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
@@ -393,6 +393,62 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 5. Panel admin → nav muestra "Pedidos" → actualizar estados en tiempo real.
 
 **Próximo paso:** **Fase 5** — Pulido, QR generator, seguridad, PWA y lanzamiento.
+
+---
+
+## Sesión 8 — 2026-06-08 — Fase 5: Pulido, seguridad y lanzamiento
+
+**Objetivo:** hardening de seguridad, generador de QR, PWA/SEO, error boundaries y validaciones estrictas.
+
+**Realizado:**
+
+- **`src/lib/schemas.ts`:** Esquemas Zod para `orderItemSchema`, `customerSchema` y `createOrderSchema` (con refine para delivery + dirección). Tipado `CreateOrderInput` inferido de Zod.
+
+- **`src/lib/actions/orders.ts`** (actualizado): `createOrder` ahora acepta `unknown` y valida con `createOrderSchema.safeParse()` antes de ejecutar cualquier lógica. `updateOrderStatus` agrega validación del status contra la lista de valores válidos.
+
+- **`supabase/migrations/006_rls_hardening.sql`:** Defensa en profundidad a nivel de BD:
+  - `anon insert orders`: reemplaza política permisiva → ahora requiere `status='NEW'`, `payment_method='CASH'` y que el restaurante exista con `modules->>'orders' = 'true'`.
+  - `anon insert order_items`: requiere `quantity > 0`, `price_snapshot > 0` y que el pedido padre exista.
+  - Columna `updated_at` + trigger `orders_set_updated_at` para auditoría y Realtime.
+
+- **`next.config.ts`** (actualizado): headers HTTP de seguridad en todas las rutas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+
+- **`src/app/manifest.ts`:** PWA manifest (nombre, short_name, display standalone, colores del tema, iconos 192/512).
+
+- **`src/app/layout.tsx`** (actualizado): `export const viewport: Viewport` con `themeColor`, `initialScale` y `maximumScale`. Meta `apple-touch-icon`. Mantiene theming dinámico por restaurante.
+
+- **`src/app/page.tsx`** (actualizado): `generateMetadata` enriquecido con OpenGraph (`og:title`, `og:description`, `og:url`, `og:type`) y Twitter card. `robots: { index: true, follow: false }` para evitar indexación cruzada entre restaurantes.
+
+- **Error boundaries:**
+  - `src/app/error.tsx` — error global con botón "Intentar de nuevo".
+  - `src/app/admin/error.tsx` — error para el panel admin.
+  - `src/app/super/error.tsx` — error para Super Admin.
+  - Todos son Client Components con estilos glass coherentes.
+
+- **Generador de QR:**
+  - `src/app/api/qr/route.ts` — API route Node.js que recibe `?url=...`, valida que sea http/https, y retorna un SVG generado con el paquete `qrcode` (negro sobre blanco para máxima legibilidad en impresión).
+  - `src/components/admin/qr-display.tsx` — Client Component con: previsualización del QR, URL del menú con botón "Copiar", enlace de descarga como `.svg`, e instrucciones.
+  - `src/app/admin/qr/page.tsx` — Server Component que resuelve el restaurante del tenant actual (o del admin context si no hay subdominio), construye la URL del menú y pasa al QRDisplay.
+  - `src/components/admin/nav.tsx` (actualizado): añadido link "QR" al nav del admin.
+
+- **`package.json`** (actualizado): añadidos `qrcode ^1.5.4` y `zod ^3.24.0` a `dependencies`; `@types/qrcode ^1.5.5` a `devDependencies`.
+
+**Decisiones clave:**
+
+- Zod como única fuente de verdad para validación de pedidos: el schema en `schemas.ts` se usa tanto para validación en el Server Action como para el tipo TypeScript inferido.
+- El QR se genera en el servidor (API route Node.js, no Edge) para usar el módulo `qrcode` de Node. Se cachea 24 horas vía `Cache-Control`.
+- Los colores del QR son negro (#000) sobre blanco (#fff) — estándar para impresión y escaneo real. El contenedor en la UI tiene fondo blanco para garantizar legibilidad.
+- Los security headers no incluyen CSP (Content-Security-Policy) porque Next.js 16 requiere `unsafe-inline`/`unsafe-eval` para su runtime. Una CSP estricta con nonces puede añadirse como mejora futura.
+- La migración 006 usa `drop policy if exists` antes de recrear para ser idempotente.
+
+**Para activar Fase 5 en producción:**
+1. Ejecutar en el SQL Editor de Supabase: `006_rls_hardening.sql`.
+2. Instalar las nuevas dependencias: `cd plataforma && npm install`.
+3. Los iconos PWA (`/public/icon-192.png` y `icon-512.png`) deben crearse o copiarse en `plataforma/public/`. Sin ellos la PWA funciona pero sin icono personalizado.
+4. Hacer deploy del código actualizado en Render.
+5. El QR de cada restaurante está disponible en `/admin/qr` dentro del subdominio del restaurante.
+
+**Próximo paso:** **Piloto con el primer restaurante real** — onboarding desde `/super/restaurantes/new`, crear usuario OWNER, probar el flujo completo de pedido en producción.
 
 ---
 

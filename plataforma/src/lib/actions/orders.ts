@@ -3,24 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
+import { createOrderSchema } from '@/lib/schemas';
 import type { OrderStatus } from '@/types';
-
-export interface CreateOrderInput {
-  restaurantId: string;
-  items: {
-    productId: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }[];
-  customer: {
-    name: string;
-    phone: string;
-    type: 'PICKUP' | 'DELIVERY';
-    address?: string;
-    notes?: string;
-  };
-}
 
 export interface CreateOrderResult {
   success?: boolean;
@@ -30,21 +14,17 @@ export interface CreateOrderResult {
 }
 
 export async function createOrder(
-  input: CreateOrderInput,
+  rawInput: unknown,
 ): Promise<CreateOrderResult> {
-  const { restaurantId, items, customer } = input;
-
-  if (!restaurantId) return { error: 'Restaurante no válido.' };
-  if (!items.length)  return { error: 'El carrito está vacío.' };
-  if (!customer.name?.trim())  return { error: 'El nombre es requerido.' };
-  if (!customer.phone?.trim()) return { error: 'El teléfono es requerido.' };
-  if (customer.type === 'DELIVERY' && !customer.address?.trim()) {
-    return { error: 'La dirección es requerida para envío a domicilio.' };
+  const parsed = createOrderSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
+  const { restaurantId, items, customer } = parsed.data;
   const db = createServiceClient();
 
-  // Verificar que el restaurante existe y tiene pedidos habilitados
   const { data: restaurant } = await db
     .from('restaurants')
     .select('id, modules, status, whatsapp_number')
@@ -52,12 +32,13 @@ export async function createOrder(
     .single();
 
   if (!restaurant) return { error: 'Restaurante no encontrado.' };
-  if (restaurant.status !== 'active') return { error: 'El restaurante no está disponible.' };
+  if (restaurant.status !== 'active')
+    return { error: 'El restaurante no está disponible.' };
 
   const modules = restaurant.modules as { orders?: boolean } | null;
-  if (!modules?.orders) return { error: 'Este restaurante no acepta pedidos en línea.' };
+  if (!modules?.orders)
+    return { error: 'Este restaurante no acepta pedidos en línea.' };
 
-  // Número de pedido correlativo
   const { data: orderNumber } = await db.rpc('generate_order_number', {
     p_restaurant_id: restaurantId,
   });
@@ -67,17 +48,17 @@ export async function createOrder(
   const { data: order, error: orderError } = await db
     .from('orders')
     .insert({
-      restaurant_id: restaurantId,
-      order_number:  orderNumber ?? 'ORD-???',
-      customer_name:  customer.name.trim(),
-      customer_phone: customer.phone.trim(),
+      restaurant_id:  restaurantId,
+      order_number:   orderNumber ?? 'ORD-???',
+      customer_name:  customer.name,
+      customer_phone: customer.phone,
       order_type:     customer.type,
-      address:        customer.address?.trim() || null,
+      address:        customer.address ?? null,
       payment_method: 'CASH',
       status:         'NEW',
       subtotal,
       total:          subtotal,
-      notes:          customer.notes?.trim() || null,
+      notes:          customer.notes ?? null,
     })
     .select('id, order_number')
     .single();
@@ -106,6 +87,13 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
 ): Promise<{ error?: string }> {
+  if (!orderId) return { error: 'ID de pedido requerido.' };
+
+  const validStatuses: OrderStatus[] = [
+    'NEW', 'PREP', 'READY', 'TRANSIT', 'DELIVERED', 'CANCEL',
+  ];
+  if (!validStatuses.includes(status)) return { error: 'Estado inválido.' };
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autorizado.' };

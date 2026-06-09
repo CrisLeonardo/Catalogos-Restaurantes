@@ -35,10 +35,33 @@ export async function generateMetadata(): Promise<Metadata> {
   const data = await getRestaurantBySlug(slug);
   if (!data) return { title: 'Restaurante no encontrado' };
 
+  const name = data.restaurant.name;
+  const description =
+    data.restaurant.tagline ?? `Menú en línea de ${name}`;
+
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const menuUrl = rootDomain ? `https://${slug}.${rootDomain}` : undefined;
+
   return {
-    title: `${data.restaurant.name} — Menú`,
-    description:
-      data.restaurant.tagline ?? `Menú en línea de ${data.restaurant.name}`,
+    title: `${name} — Menú`,
+    description,
+    openGraph: {
+      title: `${name} — Menú`,
+      description,
+      url: menuUrl,
+      siteName: name,
+      locale: 'es_MX',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${name} — Menú`,
+      description,
+    },
+    robots: {
+      index: true,
+      follow: false,
+    },
   };
 }
 

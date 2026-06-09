@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { headers } from 'next/headers';
 import './globals.css';
@@ -10,6 +10,18 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 export const metadata: Metadata = {
   title: 'Menú en línea',
   description: 'Menús interactivos para restaurantes',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'MenúVivo',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0b0b0c',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default async function RootLayout({
@@ -20,7 +32,6 @@ export default async function RootLayout({
   const headersList = await headers();
   const slug = headersList.get('x-tenant-slug');
 
-  // Valores por defecto (también aplicados si no hay Supabase configurado)
   let glassIntensity = 'translucido';
   let brandVars: React.CSSProperties = {};
 
@@ -44,6 +55,9 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       style={brandVars}
     >
+      <head>
+        <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+      </head>
       <body className="min-h-full flex flex-col">
         <div className="asphalt" aria-hidden />
         {children}

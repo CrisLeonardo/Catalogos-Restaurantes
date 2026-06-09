@@ -16,6 +16,7 @@ export default function AdminNav({ restaurantName, ordersEnabled = false }: Admi
     { href: '/admin/menu',    label: 'Menú' },
     ...(ordersEnabled ? [{ href: '/admin/pedidos', label: 'Pedidos' }] : []),
     { href: '/admin/perfil',  label: 'Perfil' },
+    { href: '/admin/qr',      label: 'QR' },
   ];
 
   return (
