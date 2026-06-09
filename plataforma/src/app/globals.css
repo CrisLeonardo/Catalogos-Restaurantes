@@ -52,12 +52,14 @@
   --glass-hi:     rgba(255, 255, 255, 0.42);
 
   /* ── Escala tipográfica (móvil) ─────────────────────────── */
-  --fs-display-xl: 40px;  --lh-display-xl: 44px;
-  --fs-display:    28px;  --lh-display:    34px;
-  --fs-h1:         22px;  --lh-h1:         28px;
-  --fs-h2:         18px;  --lh-h2:         24px;
-  --fs-body:       15px;  --lh-body:       22px;
-  --fs-caption:    12px;  --lh-caption:    16px;
+  /* --font-scale lo inyecta el tema del tenant (config.fontScale). */
+  --font-scale: 1;
+  --fs-display-xl: calc(40px * var(--font-scale));  --lh-display-xl: calc(44px * var(--font-scale));
+  --fs-display:    calc(28px * var(--font-scale));  --lh-display:    calc(34px * var(--font-scale));
+  --fs-h1:         calc(22px * var(--font-scale));  --lh-h1:         calc(28px * var(--font-scale));
+  --fs-h2:         calc(18px * var(--font-scale));  --lh-h2:         calc(24px * var(--font-scale));
+  --fs-body:       calc(15px * var(--font-scale));  --lh-body:       calc(22px * var(--font-scale));
+  --fs-caption:    calc(12px * var(--font-scale));  --lh-caption:    calc(16px * var(--font-scale));
 
   /* ── Espaciado / radios / sombras / motion ──────────────── */
   --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;  --space-8: 32px;
@@ -73,9 +75,9 @@
 
 @media (min-width: 768px) {
   :root {
-    --fs-display-xl: 56px; --lh-display-xl: 60px;
-    --fs-display:    36px; --lh-display:    42px;
-    --fs-h1:         28px; --lh-h1:         34px;
+    --fs-display-xl: calc(56px * var(--font-scale)); --lh-display-xl: calc(60px * var(--font-scale));
+    --fs-display:    calc(36px * var(--font-scale)); --lh-display:    calc(42px * var(--font-scale));
+    --fs-h1:         calc(28px * var(--font-scale)); --lh-h1:         calc(34px * var(--font-scale));
   }
 }
 
@@ -119,6 +121,38 @@ html, body {
 }
 @keyframes drift-a { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(14vmax,10vmax,0) scale(1.25); } }
 @keyframes drift-b { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-12vmax,-8vmax,0) scale(1.2); } }
+
+/* Apagar los pools de luz (config.ambientGlow = false) */
+.asphalt[data-glow="0"]::before, .asphalt[data-glow="0"]::after { display: none; }
+
+/* Fondos alternativos (config.backgroundType) — todos capa fija detrás del contenido */
+.bg-layer { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+.bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
+/* velo sutil para legibilidad del texto sobre fotos */
+.bg-image::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--brand-bg) 55%, transparent) 0%,
+    color-mix(in srgb, var(--brand-bg) 30%, transparent) 40%,
+    color-mix(in srgb, var(--brand-bg) 72%, transparent) 100%);
+}
+
+/* Grano de concreto (config.grain) */
+.asphalt-grain {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  opacity: 0.05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Watermark gigante girando (config.watermark) — la URL va por estilo inline */
+.asphalt-mark {
+  position: fixed; width: 78vmin; height: 78vmin; left: 50%; top: 46%;
+  transform: translate(-50%,-50%); z-index: -1;
+  background-position: center; background-size: contain; background-repeat: no-repeat;
+  opacity: 0.04; pointer-events: none;
+  animation: mark-spin 120s linear infinite;
+}
+@keyframes mark-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
 
 /* ============================================================
    GLASS SYSTEM
@@ -167,8 +201,12 @@ html, body {
   box-shadow: 0 6px 20px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.9);
 }
 .btn-accent {
-  background: var(--brand-accent); color: #fff; border: none;
+  background: var(--brand-accent); color: var(--brand-on-accent, #fff); border: none;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-accent) 35%, transparent);
+}
+.btn-outline {
+  background: transparent; color: var(--u-text);
+  border: 1px solid var(--u-hair-2);
 }
 
 /* ============================================================
@@ -185,16 +223,70 @@ html, body {
    ANIMACIONES (entrada solo con transform — nunca opacity:0 en reposo)
    ============================================================ */
 @keyframes fade-up  { from { transform: translateY(12px); }  to { transform: translateY(0); } }
+@keyframes fade-in  { from { transform: translateY(7px); }  to { transform: translateY(0); } }
 @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes pop-in  { 0% { transform: scale(0.93); } 60% { transform: scale(1.01); } 100% { transform: scale(1); } }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes pulse-ring {
   0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
   70%  { box-shadow: 0 0 0 14px rgba(255,255,255,0); }
   100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
 }
 .anim-fade-up  { animation: fade-up  560ms var(--ease-entry) both; }
+.anim-fade-in  { animation: fade-in  500ms ease both; }
 .anim-slide-up { animation: slide-up 320ms var(--ease-entry) both; }
 .anim-pop      { animation: pop-in   360ms var(--ease-entry) both; }
+
+/* Scroll horizontal sin barra (carrusel de categorías) */
+.u-noscroll::-webkit-scrollbar { display: none; }
+.u-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* ============================================================
+   PANEL ADMIN — layout con sidebar (como el prototipo)
+   ============================================================ */
+.admin-shell { display: flex; min-height: 100svh; }
+.admin-sidebar {
+  width: 240px; flex-shrink: 0; border-right: 1px solid var(--u-hair);
+  display: flex; flex-direction: column; gap: 4px; padding: 18px 12px;
+  position: sticky; top: 0; height: 100svh;
+}
+.admin-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.admin-topbar {
+  min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 24px;
+  border-bottom: 1px solid var(--u-hair); position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--brand-bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.admin-content { padding: 24px; flex: 1; min-width: 0; }
+.admin-navlink {
+  display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 12px;
+  border: none; cursor: pointer; text-align: left; text-decoration: none;
+  color: var(--u-text-3); font-weight: 500; font-size: 14; transition: all 140ms;
+  background: transparent;
+}
+.admin-navlink:hover { background: rgba(255,255,255,0.04); color: var(--u-text-2); }
+.admin-navlink[data-active="1"] { background: rgba(255,255,255,0.09); color: var(--u-text); font-weight: 600; }
+
+@media (max-width: 820px) {
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar {
+    width: 100%; height: auto; position: sticky; top: 0; z-index: 30;
+    flex-direction: row; align-items: center; flex-wrap: wrap; gap: 6px;
+    border-right: none; border-bottom: 1px solid var(--u-hair); padding: 10px 14px;
+    background: color-mix(in srgb, var(--brand-bg) 90%, transparent);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  }
+  .admin-section { display: none; }
+  .admin-spacer { display: none !important; }
+  .admin-navlink { padding: 8px 11px; }
+  .admin-sidebar > .glass-quiet { margin-left: auto; padding: 7px 10px; }
+  .admin-topbar { position: static; }
+  .admin-content { padding: 16px; }
+}
+
+/* Pedidos: board (flex: 1) + sidebar de gráfica (300 px fijo) */
+.orders-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+@media (max-width: 1100px) { .orders-grid { grid-template-columns: 1fr; } }
 
 /* Truncado a N líneas (para descripciones de productos en tarjetas) */
 .line-clamp-2 {

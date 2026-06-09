@@ -7,8 +7,6 @@ import { redirect } from 'next/navigation';
 
 export type CatState = { error: string } | null;
 
-/** Resuelve el restaurantId del usuario autenticado.
- *  SUPER_ADMIN recibe el restaurantId del formulario (hiddenfield). */
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,6 +31,13 @@ async function resolveContext(formData: FormData) {
   return { db, restaurantId, role: profile.role };
 }
 
+function revalidateAll() {
+  revalidatePath('/admin/menu');
+  revalidatePath('/admin/categorias');
+}
+
+/* ── Legacy actions (usadas por CategoryManager — mantienen redirect) ──────── */
+
 export async function createCategory(prevState: CatState, formData: FormData): Promise<CatState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
@@ -40,7 +45,6 @@ export async function createCategory(prevState: CatState, formData: FormData): P
   const name = (formData.get('name') as string)?.trim();
   if (!name) return { error: 'El nombre es requerido.' };
 
-  // Calcular sort_order: máximo actual + 1
   const { data: existing } = await ctx.db
     .from('categories')
     .select('sort_order')
@@ -59,7 +63,7 @@ export async function createCategory(prevState: CatState, formData: FormData): P
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/menu');
+  revalidateAll();
   redirect('/admin/menu');
 }
 
@@ -79,7 +83,7 @@ export async function updateCategory(prevState: CatState, formData: FormData): P
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/menu');
+  revalidateAll();
   redirect('/admin/menu');
 }
 
@@ -95,7 +99,7 @@ export async function deleteCategory(formData: FormData) {
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
-  revalidatePath('/admin/menu');
+  revalidateAll();
 }
 
 export async function toggleCategoryActive(formData: FormData) {
@@ -111,7 +115,7 @@ export async function toggleCategoryActive(formData: FormData) {
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
-  revalidatePath('/admin/menu');
+  revalidateAll();
 }
 
 export async function moveCategoryUp(formData: FormData) {
@@ -137,7 +141,7 @@ export async function moveCategoryUp(formData: FormData) {
     ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', prev.id),
   ]);
 
-  revalidatePath('/admin/menu');
+  revalidateAll();
 }
 
 export async function moveCategoryDown(formData: FormData) {
@@ -163,5 +167,79 @@ export async function moveCategoryDown(formData: FormData) {
     ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', next.id),
   ]);
 
-  revalidatePath('/admin/menu');
+  revalidateAll();
+}
+
+/* ── Modal actions (sin redirect, para CategoriesPanel en /admin/categorias) ─ */
+
+export type CatModalState = { success: true } | { error: string } | null;
+
+export async function createCategoryModal(
+  prevState: CatModalState,
+  formData: FormData,
+): Promise<CatModalState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const name = (formData.get('name') as string)?.trim();
+  if (!name) return { error: 'El nombre es requerido.' };
+
+  const { data: existing } = await ctx.db
+    .from('categories')
+    .select('sort_order')
+    .eq('restaurant_id', ctx.restaurantId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+
+  const sort_order = existing?.[0]?.sort_order != null ? existing[0].sort_order + 1 : 0;
+
+  const { error } = await ctx.db.from('categories').insert({
+    restaurant_id: ctx.restaurantId,
+    name,
+    icon: (formData.get('icon') as string) || null,
+    sort_order,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateAll();
+  return { success: true };
+}
+
+export async function updateCategoryModal(
+  prevState: CatModalState,
+  formData: FormData,
+): Promise<CatModalState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const id = formData.get('id') as string;
+  const name = (formData.get('name') as string)?.trim();
+  if (!name) return { error: 'El nombre es requerido.' };
+
+  const { error } = await ctx.db
+    .from('categories')
+    .update({ name, icon: (formData.get('icon') as string) || null })
+    .eq('id', id)
+    .eq('restaurant_id', ctx.restaurantId);
+
+  if (error) return { error: error.message };
+
+  revalidateAll();
+  return { success: true };
+}
+
+export async function deleteCategoryModal(formData: FormData) {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return;
+
+  const id = formData.get('id') as string;
+
+  await ctx.db
+    .from('categories')
+    .delete()
+    .eq('id', id)
+    .eq('restaurant_id', ctx.restaurantId);
+
+  revalidateAll();
 }

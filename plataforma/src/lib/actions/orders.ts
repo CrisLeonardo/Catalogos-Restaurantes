@@ -22,7 +22,7 @@ export async function createOrder(
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer } = parsed.data;
+  const { restaurantId, items, customer, deliveryFee } = parsed.data;
   const db = createServiceClient();
 
   const { data: restaurant } = await db
@@ -44,6 +44,8 @@ export async function createOrder(
   });
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const fee = customer.type === 'DELIVERY' ? (deliveryFee ?? 0) : 0;
+  const total = subtotal + fee;
 
   const { data: order, error: orderError } = await db
     .from('orders')
@@ -57,7 +59,8 @@ export async function createOrder(
       payment_method: 'CASH',
       status:         'NEW',
       subtotal,
-      total:          subtotal,
+      delivery_fee:   fee,
+      total,
       notes:          customer.notes ?? null,
     })
     .select('id, order_number')

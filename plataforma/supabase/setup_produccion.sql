@@ -47,7 +47,11 @@ create table if not exists restaurant_themes (
                      check (catalog_view in ('grid', 'list')),
   glass_intensity  text not null default 'translucido'
                      check (glass_intensity in ('translucido', 'esmerilado', 'solido')),
-  background_image text
+  background_image text,
+  -- Motor de personalización (migración 007): overrides parciales + CSS propio
+  config           jsonb not null default '{}'::jsonb,
+  content          jsonb not null default '{}'::jsonb,
+  custom_css       text
 );
 
 -- Categorías del menú
@@ -71,6 +75,7 @@ create table if not exists products (
   description   text,
   price         numeric(10,2) not null,
   image_url     text,
+  icon          text,
   tags          text[],
   is_available  bool not null default true,
   sort_order    int  not null default 0,
@@ -393,6 +398,7 @@ create table if not exists orders (
   status         text          not null default 'NEW'
                                check (status in ('NEW','PREP','READY','TRANSIT','DELIVERED','CANCEL')),
   subtotal       numeric(10,2) not null,
+  delivery_fee   numeric(10,2) not null default 0,
   total          numeric(10,2) not null,
   notes          text,
   created_at     timestamptz   not null default now()
@@ -574,4 +580,13 @@ create trigger orders_set_updated_at
   before update on orders
   for each row
   execute function set_updated_at();
+
+
+-- ============ 007_theme_engine.sql (ALTER — ya incluido en CREATE TABLE arriba) ============
+-- Las columnas config/content/custom_css ya están en la definición de restaurant_themes.
+
+-- ============ 008_delivery_fee_product_icon.sql ============
+-- Si corrés este archivo en una BD existente (actualización), aplicad estas líneas:
+alter table orders   add column if not exists delivery_fee numeric(10,2) not null default 0;
+alter table products add column if not exists icon         text;
 

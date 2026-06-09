@@ -31,6 +31,7 @@ export const createOrderSchema = z
       .min(1, 'El carrito está vacío')
       .max(50, 'Demasiados ítems'),
     customer: customerSchema,
+    deliveryFee: z.number().min(0).max(10_000).default(0),
   })
   .refine(
     (data) =>

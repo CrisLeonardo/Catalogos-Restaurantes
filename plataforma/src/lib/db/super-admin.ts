@@ -21,13 +21,22 @@ export type GlobalMetrics = {
   catalogo: number;
 };
 
+// PostgREST trata el embed restaurant_themes como UNO-A-UNO (restaurant_id es
+// PK y FK a la vez), así que lo devuelve como objeto (o null), NO como array.
+// Normalizamos a array para que `row.restaurant_themes[0]` funcione siempre.
+function normalizeThemes(row: Record<string, unknown>): RestaurantRow {
+  const rt = row.restaurant_themes;
+  row.restaurant_themes = rt ? (Array.isArray(rt) ? rt : [rt]) : [];
+  return row as unknown as RestaurantRow;
+}
+
 export const getAllRestaurants = cache(async (): Promise<RestaurantRow[]> => {
   const db = createServiceClient();
   const { data } = await db
     .from('restaurants')
     .select('*, restaurant_themes(*)')
     .order('created_at', { ascending: false });
-  return (data ?? []) as RestaurantRow[];
+  return (data ?? []).map((r) => normalizeThemes(r as Record<string, unknown>));
 });
 
 export const getRestaurantFullById = cache(
@@ -38,7 +47,7 @@ export const getRestaurantFullById = cache(
       .select('*, restaurant_themes(*)')
       .eq('id', id)
       .single();
-    return (data as RestaurantRow) ?? null;
+    return data ? normalizeThemes(data as Record<string, unknown>) : null;
   },
 );
 

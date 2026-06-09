@@ -8,6 +8,11 @@ import ThemeEditor from '@/components/super/theme-editor';
 import RestaurantUsers from '@/components/super/restaurant-users';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteRestaurant } from '@/lib/actions/super-admin';
+import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+
+// El editor del Super Admin debe leer SIEMPRE el estado fresco de la BD
+// (no caché de route): tras guardar el tema, debe reflejar lo guardado.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
@@ -34,6 +39,10 @@ export default async function EditRestaurantePage({
 
   const theme = row.restaurant_themes[0] ?? null;
   const users = await getRestaurantUsers(id);
+  const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
+    brandName: row.name,
+    tagline: row.tagline,
+  });
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -130,16 +139,12 @@ export default async function EditRestaurantePage({
       {/* ── 3. Apariencia ──────────────────────────────────── */}
       <section>
         <SectionTitle>Apariencia</SectionTitle>
-        {theme ? (
-          <ThemeEditor restaurant={row} theme={theme} />
-        ) : (
-          <Glass variant="quiet" style={{ padding: 20 }}>
-            <p className="t-mute" style={{ fontSize: 14 }}>
-              Sin tema configurado. Guarda el restaurante para inicializar el
-              tema.
-            </p>
-          </Glass>
-        )}
+        <ThemeEditor
+          restaurantId={row.id}
+          config={resolved.config}
+          content={resolved.content}
+          customCss={resolved.customCss}
+        />
       </section>
 
       {/* ── 4. Acceso (usuarios) ───────────────────────────── */}

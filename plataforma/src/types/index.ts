@@ -23,6 +23,10 @@ export interface RestaurantTheme {
   catalog_view: 'grid' | 'list';
   glass_intensity: 'translucido' | 'esmerilado' | 'solido';
   background_image: string | null;
+  // Motor de personalización (migración 007): overrides parciales + CSS propio.
+  config: Record<string, unknown> | null;
+  content: Record<string, unknown> | null;
+  custom_css: string | null;
 }
 
 export interface Category {
@@ -42,6 +46,7 @@ export interface Product {
   description: string | null;
   price: number;
   image_url: string | null;
+  icon: string | null;
   tags: string[] | null;
   is_available: boolean;
   sort_order: number;
@@ -67,6 +72,7 @@ export interface Order {
   payment_method: string;
   status: OrderStatus;
   subtotal: number;
+  delivery_fee: number;
   total: number;
   notes: string | null;
   created_at: string;

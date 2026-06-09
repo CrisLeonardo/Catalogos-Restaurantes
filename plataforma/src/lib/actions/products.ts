@@ -61,6 +61,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     description: (formData.get('description') as string)?.trim() || null,
     price: parseFloat(priceRaw),
     image_url: (formData.get('image_url') as string) || null,
+    icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
     is_available: formData.get('is_available') === 'true',
     sort_order,
@@ -90,6 +91,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       description: (formData.get('description') as string)?.trim() || null,
       price: parseFloat(priceRaw),
       image_url: (formData.get('image_url') as string) || null,
+      icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
       is_available: formData.get('is_available') === 'true',
     })
@@ -191,4 +193,82 @@ export async function moveProductDown(formData: FormData) {
   ]);
 
   revalidatePath('/admin/menu');
+}
+
+/* ── Modal actions (sin redirect, retornan { success } para uso en modales) ── */
+
+export type ProductModalState = { success: true } | { error: string } | null;
+
+export async function createProductModal(
+  prevState: ProductModalState,
+  formData: FormData,
+): Promise<ProductModalState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const name = (formData.get('name') as string)?.trim();
+  const priceRaw = formData.get('price') as string;
+  if (!name) return { error: 'El nombre es requerido.' };
+  if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
+
+  const { data: existing } = await ctx.db
+    .from('products')
+    .select('sort_order')
+    .eq('restaurant_id', ctx.restaurantId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+
+  const sort_order = existing?.[0]?.sort_order != null ? existing[0].sort_order + 1 : 0;
+
+  const { error } = await ctx.db.from('products').insert({
+    restaurant_id: ctx.restaurantId,
+    category_id: (formData.get('category_id') as string) || null,
+    name,
+    description: (formData.get('description') as string)?.trim() || null,
+    price: parseFloat(priceRaw),
+    image_url: (formData.get('image_url') as string) || null,
+    icon: (formData.get('icon') as string) || null,
+    tags: parseTags(formData.get('tags') as string),
+    is_available: formData.get('is_available') === 'true',
+    sort_order,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/menu');
+  return { success: true };
+}
+
+export async function updateProductModal(
+  prevState: ProductModalState,
+  formData: FormData,
+): Promise<ProductModalState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const id = formData.get('id') as string;
+  const name = (formData.get('name') as string)?.trim();
+  const priceRaw = formData.get('price') as string;
+  if (!name) return { error: 'El nombre es requerido.' };
+  if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
+
+  const { error } = await ctx.db
+    .from('products')
+    .update({
+      category_id: (formData.get('category_id') as string) || null,
+      name,
+      description: (formData.get('description') as string)?.trim() || null,
+      price: parseFloat(priceRaw),
+      image_url: (formData.get('image_url') as string) || null,
+      icon: (formData.get('icon') as string) || null,
+      tags: parseTags(formData.get('tags') as string),
+      is_available: formData.get('is_available') === 'true',
+    })
+    .eq('id', id)
+    .eq('restaurant_id', ctx.restaurantId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/menu');
+  return { success: true };
 }

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getRestaurantOrders } from '@/lib/db/orders';
+import { getRestaurantOrders, getOrderStats } from '@/lib/db/orders';
 import OrdersPanel from '@/components/admin/orders-panel';
 
 export default async function PedidosPage() {
@@ -31,32 +31,10 @@ export default async function PedidosPage() {
 
   if (!restaurantId) redirect('/admin/menu');
 
-  const orders = await getRestaurantOrders(restaurantId);
+  const [orders, stats] = await Promise.all([
+    getRestaurantOrders(restaurantId),
+    getOrderStats(restaurantId),
+  ]);
 
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)' }}>
-          Pedidos
-        </h1>
-        <span
-          style={{
-            padding: '4px 12px',
-            borderRadius: 'var(--radius-full)',
-            fontSize: 11, fontWeight: 700,
-            background: 'rgba(255,255,255,0.08)',
-            color: 'var(--u-text-3)',
-            border: '1px solid var(--u-hair)',
-          }}
-        >
-          Tiempo real
-        </span>
-      </div>
-
-      <OrdersPanel
-        initialOrders={orders}
-        restaurantId={restaurantId}
-      />
-    </>
-  );
+  return <OrdersPanel initialOrders={orders} restaurantId={restaurantId} stats={stats} />;
 }

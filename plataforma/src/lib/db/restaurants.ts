@@ -1,10 +1,13 @@
 import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
+import { resolveTheme, type ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
 export type RestaurantWithTheme = {
   restaurant: Restaurant;
   theme: RestaurantTheme;
+  /** Tema ya resuelto (defaults ← legacy ← config ← override por código). */
+  resolved: ResolvedTheme;
 };
 
 /**
@@ -38,9 +41,15 @@ export const getRestaurantBySlug = cache(
       .eq('restaurant_id', restaurant.id)
       .single();
 
+    const themeRow = (theme as RestaurantTheme) ?? defaultTheme(restaurant.id as string);
+
     return {
       restaurant: restaurant as Restaurant,
-      theme: (theme as RestaurantTheme) ?? defaultTheme(restaurant.id as string),
+      theme: themeRow,
+      resolved: resolveTheme(themeRow, slug, {
+        brandName: restaurant.name as string,
+        tagline: restaurant.tagline as string | null,
+      }),
     };
   }
 );
@@ -58,5 +67,8 @@ function defaultTheme(restaurantId: string): RestaurantTheme {
     catalog_view: 'grid',
     glass_intensity: 'translucido',
     background_image: null,
+    config: null,
+    content: null,
+    custom_css: null,
   };
 }

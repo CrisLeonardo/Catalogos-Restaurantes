@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { CartProvider } from '@/lib/cart-context';
+import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import CheckoutForm from '@/components/checkout-form';
 
@@ -14,18 +15,20 @@ export default async function CheckoutPage() {
   const data = await getRestaurantBySlug(slug);
   if (!data) notFound();
 
-  const { restaurant } = data;
+  const { restaurant, resolved } = data;
   const modules = restaurant.modules as { orders?: boolean } | null;
 
   if (!modules?.orders || restaurant.status !== 'active') notFound();
 
   return (
-    <CartProvider restaurantId={restaurant.id}>
-      <CheckoutForm
-        restaurantId={restaurant.id}
-        restaurantName={restaurant.name}
-        whatsappNumber={restaurant.whatsapp_number}
-      />
-    </CartProvider>
+    <ThemeProvider config={resolved.config} content={resolved.content}>
+      <CartProvider restaurantId={restaurant.id}>
+        <CheckoutForm
+          restaurantId={restaurant.id}
+          restaurantName={restaurant.name}
+          whatsappNumber={restaurant.whatsapp_number}
+        />
+      </CartProvider>
+    </ThemeProvider>
   );
 }

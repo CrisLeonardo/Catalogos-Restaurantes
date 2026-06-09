@@ -55,6 +55,9 @@ export default async function AdminPerfilPage({
     catalog_view: 'grid',
     glass_intensity: 'translucido',
     background_image: null,
+    config: null,
+    content: null,
+    custom_css: null,
   };
 
   return (

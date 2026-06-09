@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import AdminNav from '@/components/admin/nav';
+import AdminShell from '@/components/admin/shell';
 import type { Restaurant } from '@/types';
 
 export default async function AdminLayout({
@@ -31,12 +31,16 @@ export default async function AdminLayout({
 
   let restaurantName = 'Panel admin';
   let currentRestaurant: Restaurant | null = ctx.restaurant;
+  let logoUrl: string | null = null;
+  let zone = '';
 
   if (profile.role === 'SUPER_ADMIN') {
     if (tenantSlug) {
       const tenantData = await getRestaurantBySlug(tenantSlug);
       restaurantName = tenantData?.restaurant.name ?? 'Panel admin';
       currentRestaurant = tenantData?.restaurant ?? null;
+      logoUrl = tenantData?.resolved.config.logoUrl ?? null;
+      zone = tenantData?.resolved.config.zone ?? '';
     }
   } else {
     if (!profile.restaurant_id) redirect('/login');
@@ -48,6 +52,8 @@ export default async function AdminLayout({
       }
       restaurantName    = tenantData.restaurant.name;
       currentRestaurant = tenantData.restaurant;
+      logoUrl = tenantData.resolved.config.logoUrl ?? null;
+      zone = tenantData.resolved.config.zone ?? '';
     } else {
       restaurantName = ctx.restaurant?.name ?? 'Panel admin';
     }
@@ -57,11 +63,13 @@ export default async function AdminLayout({
   const ordersEnabled = modules?.orders === true;
 
   return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
-      <AdminNav restaurantName={restaurantName} ordersEnabled={ordersEnabled} />
-      <div style={{ flex: 1, padding: '24px 16px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
-        {children}
-      </div>
-    </div>
+    <AdminShell
+      restaurantName={restaurantName}
+      ordersEnabled={ordersEnabled}
+      logoUrl={logoUrl}
+      zone={zone}
+    >
+      {children}
+    </AdminShell>
   );
 }

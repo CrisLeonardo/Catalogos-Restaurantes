@@ -4,8 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 
 export type SuperState = { error: string } | null;
+export type SaveThemeResult = { error?: string; ok?: boolean };
 
 async function verifySuperAdmin() {
   const supabase = await createClient();
@@ -181,6 +183,58 @@ export async function updateRestaurantThemeSuper(
   revalidatePath('/super/restaurantes');
   revalidatePath(`/super/restaurantes/${restaurantId}`);
   redirect(`/super/restaurantes/${restaurantId}?saved=tema`);
+}
+
+/**
+ * Motor de personalización: guarda el tema completo (config + content + custom_css).
+ * Recibe objetos serializables directamente (no FormData) desde el editor cliente.
+ * Sincroniza además las columnas legacy para la lista y compatibilidad.
+ */
+export async function saveRestaurantTheme(input: {
+  restaurantId: string;
+  config: ThemeConfig;
+  content: ThemeContent;
+  customCss: string;
+}): Promise<SaveThemeResult> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+
+  const { restaurantId, config, content, customCss } = input;
+  if (!restaurantId) return { error: 'Restaurante inválido.' };
+
+  const legacyPortada = ['spotlight', 'poster', 'stack'].includes(config.portadaVariant)
+    ? config.portadaVariant
+    : 'spotlight';
+
+  // upsert: crea la fila de tema si el restaurante aún no tiene una.
+  const { error } = await db
+    .from('restaurant_themes')
+    .upsert(
+      {
+        restaurant_id: restaurantId,
+        config,
+        content,
+        custom_css: customCss?.trim() ? customCss : null,
+        // Sincronía legacy (lista del super admin + compatibilidad de lectura)
+        brand_name: config.brandName || null,
+        logo_url: config.logoUrl || null,
+        color_primary: config.colorAccent,
+        color_bg: config.colorBg,
+        color_text: config.colorText,
+        font_display: config.fontDisplay,
+        portada_style: legacyPortada,
+        catalog_view: config.catalogView,
+        glass_intensity: config.glassIntensity,
+        background_image: config.backgroundImage,
+      },
+      { onConflict: 'restaurant_id' },
+    );
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/super/restaurantes/${restaurantId}`);
+  revalidatePath('/super/restaurantes');
+  return { ok: true };
 }
 
 export async function deleteRestaurant(formData: FormData) {
