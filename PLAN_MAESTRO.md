@@ -1,7 +1,8 @@
 # PLAN MAESTRO — Plataforma SaaS de Menús Interactivos para Restaurantes
 
-> **Nombre de trabajo:** *MenúVivo* (provisional — ajustable)
-> **Autor técnico:** Arquitectura definida en sesión de planificación
+> **Empresa / plataforma:** **Leogin** (tú, el dueño del SaaS y Super Admin).
+> **Restaurantes:** tus clientes (ej. *Azúcar Negra* es solo un ejemplo de restaurante a quien ofrecer el servicio).
+> **Cliente final:** el comensal, que ve el menú **con el nombre del restaurante**, no "Leogin".
 > **Última actualización:** 2026-06-08
 > **Estado:** Fase 0 ✅ · Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ · Fase 4 ✅ · Fase 5 ✅ → Piloto
 

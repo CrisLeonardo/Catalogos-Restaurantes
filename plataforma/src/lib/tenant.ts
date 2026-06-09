@@ -14,6 +14,33 @@ const ROOT_DOMAINS = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000")
   .map((d) => d.trim().toLowerCase().split(":")[0]) // quita el puerto
   .filter(Boolean);
 
+/**
+ * Slug reservado para la demo pública de Leogin.
+ * `demo.midominio.com` siempre muestra un menú de ejemplo (datos en código),
+ * funcione o no la base de datos. Sirve para enseñar a prospectos cómo se
+ * vería su restaurante. NO debe usarse como slug de un restaurante real.
+ */
+export const DEMO_SLUG = "demo";
+
+/** Primer ROOT_DOMAIN configurado, con puerto si lo trae (para armar URLs). */
+export function rootDomainForUrls(): string {
+  return (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000")
+    .split(",")[0]
+    .trim();
+}
+
+/**
+ * URL absoluta a un subdominio (tenant o demo).
+ *   subdomainUrl("demo")          → http://demo.localhost:3000   (local)
+ *   subdomainUrl("azucar-negra")  → https://azucar-negra.leogin.com (prod)
+ */
+export function subdomainUrl(sub: string): string {
+  const root = rootDomainForUrls();
+  const isLocal = root.includes("localhost") || root.startsWith("127.");
+  const proto = isLocal ? "http" : "https";
+  return `${proto}://${sub}.${root}`;
+}
+
 export function getTenantSlug(host: string | null | undefined): string | null {
   if (!host) return null;
   const hostname = host.toLowerCase().split(":")[0]; // quita el puerto

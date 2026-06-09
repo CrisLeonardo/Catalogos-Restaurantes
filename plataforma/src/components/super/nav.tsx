@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/admin/logout-button';
+import { LeoginMark } from '@/components/leogin-logo';
 
 export default function SuperNav() {
   const pathname = usePathname();
@@ -30,17 +31,19 @@ export default function SuperNav() {
         height: 52,
       }}
     >
-      <span
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 700,
-          fontSize: 13,
-          letterSpacing: '-0.01em',
-          color: 'var(--brand-accent)',
-          flex: '0 0 auto',
-        }}
-      >
-        Super Admin
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+        <LeoginMark size={22} />
+        <span
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: '-0.01em',
+            color: 'var(--brand-accent)',
+          }}
+        >
+          Super Admin
+        </span>
       </span>
 
       <nav style={{ display: 'flex', gap: 4, flex: 1 }}>

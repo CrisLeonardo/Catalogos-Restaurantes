@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { Glass } from '@/components/glass';
+import LeoginLogo from '@/components/leogin-logo';
 import { login, type AuthState } from '@/lib/actions/auth';
 
 const emptyState: AuthState = null;
@@ -33,12 +34,9 @@ export default function LoginPage() {
       <div className="anim-fade-up" style={{ width: '100%', maxWidth: 360 }}>
         {/* Logo / título */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <h1
-            className="t-display"
-            style={{ fontSize: 32, marginBottom: 8 }}
-          >
-            MenúVivo
-          </h1>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <LeoginLogo size={40} />
+          </div>
           <p className="t-mute" style={{ fontSize: 14 }}>
             Acceso al panel de administración
           </p>

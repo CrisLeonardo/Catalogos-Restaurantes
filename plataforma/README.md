@@ -14,16 +14,17 @@ Multi-tenant por subdominios. Diseño *liquid glass*.
 
 ## Arranque local
 
-**Opción rápida (solo ver la demo, sin base de datos):**
+**Opción rápida (ver la landing y la demo, sin base de datos):**
 
 ```bash
 cd plataforma
 npm install
-npm run dev                           # http://localhost:3000 (modo demo)
+npm run dev
 ```
 
-> Sin `.env.local`, la app corre en **modo demo**: solo la portada de un restaurante.
-> Los paneles `/admin` y `/super` requieren Supabase.
+> - `http://localhost:3000` → **landing comercial de Leogin** (vende el servicio).
+> - `http://demo.localhost:3000` → **menú demo** de ejemplo (datos en código, sin BD).
+> - Los paneles `/admin` y `/super` requieren Supabase.
 
 **Opción completa (todo funcional, con Supabase local en Docker):**
 
@@ -77,9 +78,11 @@ plataforma/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx        # fuentes, fondo asphalt, glass por defecto
-│   │   ├── page.tsx          # demo Fase 0: portada Spotlight + catálogo cuadrícula
+│   │   ├── page.tsx          # raíz→landing Leogin · `demo`→menú demo · slug→menú del tenant
+│   │   ├── manifest.ts       # PWA dinámico (nombre = restaurante en su subdominio)
 │   │   └── globals.css       # sistema de diseño liquid glass (themeable)
 │   ├── components/
+│   │   ├── landing.tsx       # landing comercial de Leogin (dominio raíz)
 │   │   └── glass.tsx         # <Glass> con sheen, <Price>, <Tag>
 │   ├── lib/
 │   │   ├── supabase/

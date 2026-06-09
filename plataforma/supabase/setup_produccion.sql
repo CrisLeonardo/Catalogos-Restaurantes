@@ -1,5 +1,5 @@
 -- ====================================================================
---  MenuVivo - SETUP DE PRODUCCION (esquema completo)
+--  Leogin - SETUP DE PRODUCCION (esquema completo)
 --  Pega TODO este archivo en: Supabase Dashboard -> SQL Editor -> Run
 --  Combina las migraciones 001, 003, 004, 005 y 006 (sin datos demo).
 --  Ejecutalo UNA vez en una base de datos NUEVA.

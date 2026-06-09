@@ -1,4 +1,4 @@
-# Guía del entorno LOCAL — MenúVivo
+# Guía del entorno LOCAL — Leogin
 
 > Cómo trabajar la plataforma en tu computadora antes de subir nada a producción.
 > Escrita el 2026-06-08. Acompaña a `GUIA_DESPLIEGUE.md`.

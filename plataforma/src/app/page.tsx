@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import MenuShell from '@/components/menu-shell';
+import LeoginLanding from '@/components/landing';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getMenuData } from '@/lib/db/menu';
+import { DEMO_SLUG } from '@/lib/tenant';
 import type { Category, Product } from '@/types';
 
-/* ── Datos de demo para el dominio raíz (sin slug de tenant) ── */
+/* ── Datos de la demo pública (subdominio `demo`) ──────────── */
 const DEMO = {
   name: 'Azúcar Negra',
   tagline: 'Cafetería con sabor a calle',
@@ -30,7 +33,20 @@ const DEMO = {
 /* ── Metadata dinámica por restaurante ─────────────────────── */
 export async function generateMetadata(): Promise<Metadata> {
   const slug = (await headers()).get('x-tenant-slug');
-  if (!slug) return { title: 'Menú en línea — Demo' };
+
+  // Dominio raíz → landing de Leogin
+  if (!slug) {
+    return {
+      title: 'Leogin — Menús digitales para restaurantes',
+      description:
+        'Convierte el menú de tu restaurante en una experiencia web rápida y espectacular, con panel de administración y pedidos en línea.',
+    };
+  }
+
+  // Subdominio `demo` → menú de ejemplo
+  if (slug === DEMO_SLUG) {
+    return { title: 'Demo — Leogin', description: 'Así se ve un restaurante con Leogin.' };
+  }
 
   const data = await getRestaurantBySlug(slug);
   if (!data) return { title: 'Restaurante no encontrado' };
@@ -69,36 +85,39 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   const slug = (await headers()).get('x-tenant-slug');
 
-  // Modo tenant: buscar en Supabase
-  if (slug) {
-    const data = await getRestaurantBySlug(slug);
-    if (!data) notFound();
+  // Dominio raíz (sin subdominio) → landing comercial de Leogin
+  if (!slug) return <LeoginLanding />;
 
-    const menu = await getMenuData(data.restaurant.id);
-    const ordersEnabled = data.restaurant.modules?.orders === true;
-
+  // Subdominio `demo` → menú de ejemplo (datos en código, siempre disponible)
+  if (slug === DEMO_SLUG) {
     return (
       <MenuPage
-        name={data.restaurant.name}
-        tagline={data.restaurant.tagline}
-        categories={menu.categories}
-        products={menu.products}
-        restaurantId={data.restaurant.id}
-        ordersEnabled={ordersEnabled}
+        name={DEMO.name}
+        tagline={DEMO.tagline}
+        categories={DEMO.categories}
+        products={DEMO.products}
+        restaurantId="demo"
+        ordersEnabled={false}
+        isDemo
       />
     );
   }
 
-  // Modo demo: dominio raíz
+  // Tenant real: buscar en Supabase
+  const data = await getRestaurantBySlug(slug);
+  if (!data) notFound();
+
+  const menu = await getMenuData(data.restaurant.id);
+  const ordersEnabled = data.restaurant.modules?.orders === true;
+
   return (
     <MenuPage
-      name={DEMO.name}
-      tagline={DEMO.tagline}
-      categories={DEMO.categories}
-      products={DEMO.products}
-      restaurantId="demo"
-      ordersEnabled={false}
-      isDemo
+      name={data.restaurant.name}
+      tagline={data.restaurant.tagline}
+      categories={menu.categories}
+      products={menu.products}
+      restaurantId={data.restaurant.id}
+      ordersEnabled={ordersEnabled}
     />
   );
 }
@@ -122,13 +141,39 @@ function MenuPage({
   isDemo?: boolean;
 }) {
   return (
-    <main
-      className="anim-fade-up"
-      style={{
-        width: '100%', maxWidth: 440,
-        margin: '0 auto', padding: '28px 16px 64px',
-      }}
-    >
+    <>
+      {/* ── Barra de demo (solo en el subdominio `demo`) ──── */}
+      {isDemo && (
+        <div
+          className="glass-solid"
+          style={{
+            position: 'sticky', top: 0, zIndex: 50,
+            borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
+            padding: '8px 16px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', gap: 10, fontSize: 12.5,
+          }}
+        >
+          <span className="t-mute">Demo de Leogin · así se vería tu restaurante</span>
+          <Link
+            href="/"
+            className="press"
+            style={{
+              color: 'var(--brand-accent)', fontWeight: 600,
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+          >
+            Crea el tuyo →
+          </Link>
+        </div>
+      )}
+
+      <main
+        className="anim-fade-up"
+        style={{
+          width: '100%', maxWidth: 440,
+          margin: '0 auto', padding: '28px 16px 64px',
+        }}
+      >
       {/* ── Portada Spotlight ─────────────────────────────── */}
       <section style={{ position: 'relative', marginBottom: 28 }}>
         {/* Glow de acento detrás de la tarjeta */}
@@ -142,11 +187,6 @@ function MenuPage({
           }}
         />
         <Glass style={{ padding: '28px 22px', textAlign: 'center' }}>
-          {isDemo && (
-            <div className="t-kicker" style={{ fontSize: 9.5, marginBottom: 14 }}>
-              Demo del sistema de diseño
-            </div>
-          )}
           <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)' }}>
             {name}
           </h1>
@@ -180,6 +220,7 @@ function MenuPage({
           ordersEnabled={ordersEnabled}
         />
       </div>
-    </main>
+      </main>
+    </>
   );
 }

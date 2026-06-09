@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'MenúVivo',
+    title: 'Leogin',
   },
 };
 
@@ -55,9 +55,6 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       style={brandVars}
     >
-      <head>
-        <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
-      </head>
       <body className="min-h-full flex flex-col">
         <div className="asphalt" aria-hidden />
         {children}

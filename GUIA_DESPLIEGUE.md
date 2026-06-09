@@ -1,4 +1,4 @@
-# Guía de DESPLIEGUE — MenúVivo a producción
+# Guía de DESPLIEGUE — Leogin a producción
 
 > De tu PC al internet, paso a paso. Supabase (nube) + Render + dominio.
 > Escrita el 2026-06-08. Acompaña a `GUIA_ENTORNO_LOCAL.md`.

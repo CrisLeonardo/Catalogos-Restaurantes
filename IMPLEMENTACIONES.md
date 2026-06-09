@@ -514,6 +514,39 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión 9 — 2026-06-08 — Marca Leogin + landing comercial en el dominio raíz
+
+**Objetivo:** corregir una confusión de identidad. **Leogin** es la empresa/plataforma (el SaaS, donde tú eres Super Admin). *Azúcar Negra* era solo un restaurante de ejemplo. El dominio raíz mostraba el menú demo de Azúcar Negra en vez de la página comercial de Leogin.
+
+**Realizado:**
+- **Dominio raíz = landing comercial de Leogin.** Nuevo `src/components/landing.tsx` (hero, features, "cómo funciona", planes Catálogo/Premium, CTA "Solicita tu demo", footer). `src/app/page.tsx` ahora rutea: **raíz → landing** · **`demo` → menú demo** · **slug → menú del tenant** (BD).
+- **Demo movida a subdominio `demo`** (`demo.tudominio.com` / `demo.localhost:3000`): el menú de Azúcar Negra usa datos en código y **funciona siempre, aunque no haya BD**. Incluye barra superior "Demo de Leogin · Crea el tuyo →" que vuelve a la landing. Slug `demo` reservado en `src/lib/tenant.ts` (`DEMO_SLUG`).
+- **Renombrado MenúVivo → Leogin** en superficies de plataforma: login (`/login`), `appleWebApp.title` (layout) y manifest PWA.
+- **Manifest PWA dinámico** (`src/app/manifest.ts`): en el subdominio de un restaurante el nombre instalable es **el del restaurante** (el comensal instala "Azúcar Negra", no "Leogin"); en raíz/demo es "Leogin".
+- **CTA de contacto configurable** por env: `NEXT_PUBLIC_CONTACT_WHATSAPP` (abre `wa.me`) o `NEXT_PUBLIC_CONTACT_EMAIL` (mailto). Documentado en `.env.local.example`.
+- Helpers nuevos en `tenant.ts`: `DEMO_SLUG`, `rootDomainForUrls()`, `subdomainUrl()`.
+- **Logo PROVISIONAL de Leogin** (a reemplazar por el original): monograma "L" sobre tile coral con degradado. `src/components/leogin-logo.tsx` (`<LeoginLogo>` marca+wordmark · `<LeoginMark>` solo marca), usado en landing (header/footer), login y nav del Super Admin. Iconos: `public/logo-mark.svg`, `src/app/icon.svg` (favicon, auto-inyectado), `src/app/apple-icon.tsx` (PNG real vía `next/og` ImageResponse, sin dependencias). Manifest PWA apunta a `logo-mark.svg`. **Para cambiarlo:** edita `LeoginMark` + esos 3 archivos de icono.
+
+**Decisiones clave:**
+- El **cliente final nunca ve "Leogin"**: ve el nombre del restaurante (sale de la BD, lo controla el Super Admin al crear/editar el restaurante). La marca "Leogin" solo aparece en superficies de plataforma (landing, login, panel).
+- La **arquitectura multi-tenant no cambió** — ya era la correcta. Lo único conceptualmente mal era qué se mostraba en el raíz.
+
+**Verificación (server local corriendo, vía HTTP con Host header):**
+- `localhost:3000` → landing Leogin (hero, "Planes", "Ver demo en vivo"); **ya NO** muestra el menú de Azúcar Negra. ✓
+- `demo.localhost:3000` → menú Azúcar Negra con barra "Demo de Leogin". ✓
+- `/login` → dice "Leogin", ya no "MenúVivo". ✓
+- `/manifest.webmanifest`: raíz `{"name":"Leogin"}` · demo `{"name":"Azúcar Negra"}`. ✓
+- `npm run typecheck` y `npm run lint` limpios. ✓
+
+**Pendiente / mejoras futuras:**
+- **Logo definitivo de Leogin** (el actual es provisional: monograma "L" coral). Reemplazar `LeoginMark` + `public/logo-mark.svg` + `src/app/icon.svg` + `src/app/apple-icon.tsx`.
+- (Opcional) PWA del tenant con el logo del restaurante (`logo_url`) en vez de la marca Leogin.
+- Definir dominio definitivo (ej. `leogin.com`) y fijar `NEXT_PUBLIC_ROOT_DOMAIN` en Render + wildcard en Cloudflare (recordar incluir `demo.` y `www.`).
+
+**Próximo paso:** Decidir dominio definitivo y desplegar (ver `GUIA_DESPLIEGUE.md`).
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título
