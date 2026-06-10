@@ -21,11 +21,11 @@ export default function ThemeBackground({ config }: { config?: ThemeConfig }) {
           style={{ background: config.backgroundGradient ?? 'var(--brand-bg)' }}
         />
       )}
-      {config.backgroundType === 'image' && config.backgroundImage && (
+      {config.backgroundType === 'image' && (
         <div
-          className="bg-layer bg-image"
+          className={config.backgroundImage ? 'bg-layer bg-image' : 'bg-layer'}
           aria-hidden
-          style={{ backgroundImage: `url("${config.backgroundImage}")` }}
+          style={config.backgroundImage ? { backgroundImage: `url("${config.backgroundImage}")` } : { background: 'var(--brand-bg)' }}
         />
       )}
 

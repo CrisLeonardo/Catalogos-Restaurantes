@@ -68,7 +68,7 @@ function OpenBadge({ isOpen }: { isOpen: boolean }) {
 }
 
 const heroWrap: CSSProperties = {
-  position: 'relative', minHeight: '88vh', display: 'flex', flexDirection: 'column',
+  position: 'relative', minHeight: '100svh', display: 'flex', flexDirection: 'column',
   alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 22, padding: '40px 8px',
 };
 

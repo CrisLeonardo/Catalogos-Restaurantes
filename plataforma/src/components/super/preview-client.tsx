@@ -20,6 +20,14 @@ import { buildThemeVars, buildFontsHref } from '@/lib/theme/resolve';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
+/** Oculta el ThemeBackground estático renderizado por layout.tsx (server-side)
+ *  para que la capa dinámica actualizada por BroadcastChannel sea la única visible. */
+function hideStaticBackground() {
+  document.querySelectorAll<HTMLElement>(
+    'body > .asphalt, body > .bg-layer, body > .asphalt-grain, body > .asphalt-mark',
+  ).forEach((el) => { el.style.display = 'none'; });
+}
+
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
 
@@ -61,6 +69,10 @@ export default function PreviewClient({
     customCss: initialCss,
   });
 
+  /* Al montar: ocultar el ThemeBackground estático de layout.tsx para que
+     el dinámico (actualizado por BroadcastChannel) sea el único visible. */
+  useEffect(() => { hideStaticBackground(); }, []);
+
   /* Canal con el editor: pedimos el estado actual al conectar ("hello")
      y aplicamos cada estado que llegue. */
   useEffect(() => {
@@ -75,6 +87,17 @@ export default function PreviewClient({
     ch.postMessage({ type: 'hello' });
     return () => ch.close();
   }, [previewId]);
+
+  /* Sincronizar data-glass, data-scheme y CSS vars en <html> con cada
+     cambio de config, para que los selectores CSS de globals.css reflejen
+     el estado del editor (glass intensity, color scheme, etc.). */
+  useEffect(() => {
+    const html = document.documentElement;
+    html.setAttribute('data-glass', state.config.glassIntensity);
+    html.setAttribute('data-scheme', state.config.scheme);
+    const vars = buildThemeVars(state.config);
+    Object.entries(vars).forEach(([k, v]) => html.style.setProperty(k, v));
+  }, [state.config]);
 
   /* La vista previa es solo para mirar: bloquear navegación interna
      (p.ej. "Ir a pagar" → /checkout no existe fuera del subdominio). */
