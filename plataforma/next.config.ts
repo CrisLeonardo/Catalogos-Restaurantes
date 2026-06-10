@@ -24,8 +24,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: "/((?!preview/).*)",
         headers: securityHeaders,
+      },
+      {
+        // Allow preview pages to be embedded in iframes
+        source: "/preview/:path*",
+        headers: securityHeaders.filter((h) => h.key !== "X-Frame-Options"),
       },
     ];
   },

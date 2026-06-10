@@ -3,8 +3,9 @@
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import ImageUpload from './image-upload';
+import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
 import { createProduct, updateProduct, type ProductState } from '@/lib/actions/products';
-import type { Category, Product } from '@/types';
+import type { Category, Product, ProductOptionGroup } from '@/types';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -22,6 +23,9 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [state, formAction, isPending] = useActionState(action, emptyState);
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
+  const [options, setOptions] = useState<ProductOptionGroup[]>(
+    Array.isArray(product?.options) ? product!.options! : [],
+  );
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -51,6 +55,7 @@ export default function ProductForm({ restaurantId, categories, product, default
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
       <input type="hidden" name="image_url" value={imageUrl} />
       <input type="hidden" name="is_available" value={String(isAvailable)} />
+      <input type="hidden" name="options" value={JSON.stringify(cleanOptions(options))} />
 
       {/* Foto */}
       <Glass variant="quiet" style={{ padding: 16 }}>
@@ -138,6 +143,15 @@ export default function ProductForm({ restaurantId, categories, product, default
         <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, display: 'block' }}>
           Separadas por coma
         </span>
+      </Glass>
+
+      {/* Variantes / extras */}
+      <Glass variant="quiet" style={{ padding: 16 }}>
+        <label style={labelStyle}>Variantes y extras</label>
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 10px' }}>
+          Tamaños, extras con precio… el cliente los elige al pedir.
+        </p>
+        <OptionsEditor value={options} onChange={setOptions} />
       </Glass>
 
       {/* Disponibilidad */}

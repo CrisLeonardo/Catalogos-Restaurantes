@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { HourInterval, WeeklyHours } from '@/lib/hours';
 
 export type RestaurantState = { error: string } | null;
 
@@ -58,6 +59,13 @@ export async function updateRestaurantInfo(
   redirect('/admin/perfil?saved=1');
 }
 
+/**
+ * Apariencia del DUEÑO (modelo "Leonardo diseña"): el dueño solo controla
+ * su logo y el color de acento. Se escribe en `config` (JSONB), que es lo
+ * que el resolver realmente lee — las columnas legacy se sincronizan solo
+ * para la lista del Super Admin. Así sus cambios ya no quedan enmascarados
+ * por el editor completo del Super Admin.
+ */
 export async function updateRestaurantTheme(
   prevState: RestaurantState,
   formData: FormData,
@@ -65,19 +73,112 @@ export async function updateRestaurantTheme(
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
 
-  const { error } = await ctx.db
+  const logoUrl = (formData.get('logo_url') as string) || null;
+  const colorAccent = (formData.get('color_primary') as string)?.trim();
+  if (colorAccent && !/^#[0-9a-fA-F]{3,8}$/.test(colorAccent)) {
+    return { error: 'Color inválido.' };
+  }
+
+  // Merge sobre el config existente: NO pisar el diseño del Super Admin.
+  const { data: row } = await ctx.db
     .from('restaurant_themes')
+    .select('config')
+    .eq('restaurant_id', ctx.restaurantId)
+    .single();
+
+  const config = {
+    ...((row?.config as Record<string, unknown>) ?? {}),
+    logoUrl,
+    ...(colorAccent ? { colorAccent } : {}),
+  };
+
+  const payload = {
+    config,
+    // Sincronía legacy (el punto de color en la lista del Super Admin).
+    logo_url: logoUrl,
+    ...(colorAccent ? { color_primary: colorAccent } : {}),
+  };
+
+  // El dueño solo tiene política RLS de UPDATE sobre su tema; el insert
+  // (fila aún inexistente) solo ocurre vía Super Admin (service role).
+  const { error } = row
+    ? await ctx.db
+        .from('restaurant_themes')
+        .update(payload)
+        .eq('restaurant_id', ctx.restaurantId)
+    : await ctx.db
+        .from('restaurant_themes')
+        .upsert({ restaurant_id: ctx.restaurantId, ...payload }, { onConflict: 'restaurant_id' });
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/perfil');
+  revalidatePath('/');
+  redirect('/admin/perfil?saved=1');
+}
+
+/* ── Operación: horarios, pausa de pedidos, zona horaria ──── */
+
+function parseHours(raw: string | null): { hours: WeeklyHours | null } | { error: string } {
+  if (!raw?.trim()) return { hours: null };
+  let obj: unknown;
+  try {
+    obj = JSON.parse(raw);
+  } catch {
+    return { error: 'Horario inválido.' };
+  }
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return { error: 'Horario inválido.' };
+  }
+
+  const out: WeeklyHours = {};
+  for (const [day, list] of Object.entries(obj as Record<string, unknown>)) {
+    if (!/^[0-6]$/.test(day) || !Array.isArray(list)) return { error: 'Horario inválido.' };
+    const intervals: HourInterval[] = [];
+    for (const iv of list) {
+      if (!Array.isArray(iv) || iv.length !== 2) return { error: 'Horario inválido.' };
+      const [open, close] = iv as [unknown, unknown];
+      if (
+        typeof open !== 'string' || typeof close !== 'string' ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(open) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(close)
+      ) {
+        return { error: 'Las horas deben tener formato HH:MM.' };
+      }
+      intervals.push([open, close]);
+    }
+    if (intervals.length > 0) out[day as keyof WeeklyHours] = intervals;
+  }
+  // Sin ningún día con horario = "sin horario configurado" (siempre abierto).
+  return { hours: Object.keys(out).length > 0 ? out : null };
+}
+
+export async function updateRestaurantOps(
+  prevState: RestaurantState,
+  formData: FormData,
+): Promise<RestaurantState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const parsed = parseHours(formData.get('hours') as string | null);
+  if ('error' in parsed) return { error: parsed.error };
+
+  const timezone = (formData.get('timezone') as string)?.trim() || 'America/Guatemala';
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+  } catch {
+    return { error: 'Zona horaria inválida.' };
+  }
+
+  const { error } = await ctx.db
+    .from('restaurants')
     .update({
-      brand_name: (formData.get('brand_name') as string)?.trim() || null,
-      logo_url: (formData.get('logo_url') as string) || null,
-      color_primary: formData.get('color_primary') as string,
-      color_bg: formData.get('color_bg') as string,
-      color_text: formData.get('color_text') as string,
-      glass_intensity: formData.get('glass_intensity') as string,
-      portada_style: formData.get('portada_style') as string,
-      catalog_view: formData.get('catalog_view') as string,
+      hours: parsed.hours,
+      timezone,
+      orders_paused: formData.get('orders_paused') === 'true',
+      pause_message: (formData.get('pause_message') as string)?.trim() || null,
     })
-    .eq('restaurant_id', ctx.restaurantId);
+    .eq('id', ctx.restaurantId);
 
   if (error) return { error: error.message };
 

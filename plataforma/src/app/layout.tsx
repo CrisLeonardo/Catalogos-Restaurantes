@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { headers } from 'next/headers';
 import './globals.css';
+import ThemeBackground from '@/components/theme-background';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import {
   resolveTheme,
@@ -10,7 +11,6 @@ import {
   buildFontsHref,
   type ResolvedTheme,
 } from '@/lib/theme/resolve';
-import type { ThemeConfig } from '@/lib/theme/defaults';
 import { DEMO_SLUG } from '@/lib/tenant';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -26,12 +26,24 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: '#0b0b0c',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-};
+// La barra del navegador toma el color de fondo del tenant (en plataforma
+// queda el oscuro por defecto).
+export async function generateViewport(): Promise<Viewport> {
+  const slug = (await headers()).get('x-tenant-slug');
+  let themeColor = '#0b0b0c';
+  if (slug === DEMO_SLUG) {
+    themeColor = resolveTheme({ brand_name: 'Azúcar Negra' }, DEMO_SLUG).config.colorBg;
+  } else if (slug) {
+    const data = await getRestaurantBySlug(slug);
+    if (data) themeColor = data.resolved.config.colorBg;
+  }
+  return {
+    themeColor,
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -91,39 +103,3 @@ export default async function RootLayout({
   );
 }
 
-/* Fondo según config.backgroundType. Sin tenant → asphalt por defecto. */
-function ThemeBackground({ config }: { config?: ThemeConfig }) {
-  if (!config) return <div className="asphalt" aria-hidden />;
-
-  return (
-    <>
-      {config.backgroundType === 'asphalt' && (
-        <div className="asphalt" data-glow={config.ambientGlow ? '1' : '0'} aria-hidden />
-      )}
-      {config.backgroundType === 'gradient' && (
-        <div
-          className="bg-layer"
-          aria-hidden
-          style={{ background: config.backgroundGradient ?? 'var(--brand-bg)' }}
-        />
-      )}
-      {config.backgroundType === 'image' && config.backgroundImage && (
-        <div
-          className="bg-layer bg-image"
-          aria-hidden
-          style={{ backgroundImage: `url("${config.backgroundImage}")` }}
-        />
-      )}
-      {/* backgroundType === 'solid' → el body ya usa var(--brand-bg) */}
-
-      {config.grain && <div className="asphalt-grain" aria-hidden />}
-      {config.watermark && (config.markUrl || config.logoUrl) && (
-        <div
-          className="asphalt-mark"
-          aria-hidden
-          style={{ backgroundImage: `url("${config.markUrl ?? config.logoUrl}")` }}
-        />
-      )}
-    </>
-  );
-}

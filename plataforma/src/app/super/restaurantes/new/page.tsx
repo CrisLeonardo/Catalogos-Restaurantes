@@ -23,12 +23,17 @@ export default function NewRestaurantePage() {
           Nuevo restaurante
         </h1>
         <p className="t-mute" style={{ fontSize: 14, marginTop: 6 }}>
-          Completa la información básica. Podrás configurar el plan y el tema
-          después.
+          Completa la información básica. A la derecha ves cómo se vería el
+          sitio; podrás configurar el plan y el tema después.
         </p>
       </div>
 
-      <RestaurantForm />
+      {/* full-bleed para que el formulario y la vista previa quepan lado a lado */}
+      <div className="bleed">
+        <div className="bleed-inner">
+          <RestaurantForm />
+        </div>
+      </div>
     </div>
   );
 }

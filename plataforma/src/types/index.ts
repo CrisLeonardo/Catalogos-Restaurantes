@@ -1,3 +1,5 @@
+import type { WeeklyHours } from '@/lib/hours';
+
 export interface Restaurant {
   id: string;
   slug: string;
@@ -8,6 +10,11 @@ export interface Restaurant {
   status: 'active' | 'suspended';
   whatsapp_number: string | null;
   contact_email: string | null;
+  // Operación (migración 009)
+  timezone: string;
+  hours: WeeklyHours | null;
+  orders_paused: boolean;
+  pause_message: string | null;
   created_at: string;
 }
 
@@ -38,6 +45,26 @@ export interface Category {
   is_active: boolean;
 }
 
+/* ── Variantes / extras de producto (migración 009) ───────── */
+
+export interface ProductOptionChoice {
+  id: string;
+  name: string;
+  /** Cuánto suma (o resta) al precio base. */
+  priceDelta: number;
+}
+
+export interface ProductOptionGroup {
+  id: string;
+  name: string;            // "Tamaño", "Extras"…
+  type: 'single' | 'multi';
+  /** Solo single: el comensal DEBE elegir una opción. */
+  required?: boolean;
+  /** Solo multi: máximo de opciones (0/ausente = sin límite). */
+  max?: number;
+  choices: ProductOptionChoice[];
+}
+
 export interface Product {
   id: string;
   restaurant_id: string;
@@ -48,6 +75,7 @@ export interface Product {
   image_url: string | null;
   icon: string | null;
   tags: string[] | null;
+  options: ProductOptionGroup[] | null;
   is_available: boolean;
   sort_order: number;
 }
@@ -75,7 +103,15 @@ export interface Order {
   delivery_fee: number;
   total: number;
   notes: string | null;
+  public_token: string;
   created_at: string;
+}
+
+/** Opción elegida congelada en el pedido. */
+export interface OrderItemOption {
+  group: string;
+  choice: string;
+  priceDelta: number;
 }
 
 export interface OrderItem {
@@ -86,12 +122,27 @@ export interface OrderItem {
   price_snapshot: number;
   quantity: number;
   subtotal: number;
+  options_snapshot: OrderItemOption[] | null;
+}
+
+/* ── Carrito ──────────────────────────────────────────────── */
+
+export interface CartItemOption {
+  groupId: string;
+  groupName: string;
+  choiceId: string;
+  choiceName: string;
+  priceDelta: number;
 }
 
 export interface CartItem {
+  /** Línea única: mismo producto con opciones distintas = líneas distintas. */
+  lineId: string;
   productId: string;
   name: string;
+  /** Precio unitario FINAL (base + deltas de opciones). */
   price: number;
   quantity: number;
   image_url: string | null;
+  options?: CartItemOption[];
 }

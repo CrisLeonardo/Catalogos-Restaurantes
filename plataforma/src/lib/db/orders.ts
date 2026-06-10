@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { localDateKey } from '@/lib/hours';
 import type { Order, OrderItem } from '@/types';
 
 export type OrderWithItems = Order & { items: OrderItem[] };
@@ -24,53 +25,72 @@ export interface OrderStats {
   series:   DaySale[];
   topToday: TopProduct[];
   totalLast14: number;
+  /** KPIs de HOY según la zona horaria del restaurante (no "últimos 100"). */
+  todaySales: number;
+  todayOrders: number;
+  todayTicket: number;
 }
 
-export async function getOrderStats(restaurantId: string): Promise<OrderStats> {
+/**
+ * Estadísticas de ventas. TODOS los cortes de día usan la zona horaria del
+ * restaurante: un pedido de las 7 p.m. en Guatemala cuenta para ese día,
+ * aunque en UTC ya sea el siguiente.
+ */
+export async function getOrderStats(
+  restaurantId: string,
+  timezone: string = 'America/Guatemala',
+): Promise<OrderStats> {
   const db = createServiceClient();
 
-  // 14-day window (day -13 to today)
+  // Ventana de 14 días: margen de 1 día extra para cubrir el desfase UTC↔local.
   const since = new Date();
-  since.setDate(since.getDate() - 13);
+  since.setDate(since.getDate() - 14);
   since.setHours(0, 0, 0, 0);
 
-  const [ordersRes, itemsRes] = await Promise.all([
-    db
-      .from('orders')
-      .select('created_at, total')
-      .eq('restaurant_id', restaurantId)
-      .neq('status', 'CANCEL')
-      .gte('created_at', since.toISOString()),
-    // Today's items via a join filter — fetch orders first, then items
-    db
-      .from('orders')
-      .select('id')
-      .eq('restaurant_id', restaurantId)
-      .neq('status', 'CANCEL')
-      .gte('created_at', todayStart()),
-  ]);
+  const { data } = await db
+    .from('orders')
+    .select('id, created_at, total')
+    .eq('restaurant_id', restaurantId)
+    .neq('status', 'CANCEL')
+    .gte('created_at', since.toISOString());
 
-  // Build 14-day bar series
-  const rawOrders = ordersRes.data ?? [];
-  const todayIds  = (itemsRes.data ?? []).map((o: { id: string }) => o.id);
+  const rawOrders = data ?? [];
+  const now = new Date();
+  const todayKey = localDateKey(now, timezone);
 
+  // Total por día local (clave YYYY-MM-DD en la zona del restaurante).
+  const byDay = new Map<string, number>();
+  const todayIds: string[] = [];
+  let todaySales = 0;
+  for (const o of rawOrders) {
+    const key = localDateKey(new Date(o.created_at as string), timezone);
+    byDay.set(key, (byDay.get(key) ?? 0) + Number(o.total));
+    if (key === todayKey) {
+      todayIds.push(o.id as string);
+      todaySales += Number(o.total);
+    }
+  }
+
+  // Serie de 14 días terminando hoy (en hora local del restaurante).
   const series: DaySale[] = [];
-  const today = new Date();
+  let totalLast14 = 0;
   for (let i = 13; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(today.getDate() - i);
-    const dateStr  = d.toISOString().slice(0, 10);
-    const dayTotal = rawOrders
-      .filter((o) => o.created_at.startsWith(dateStr))
-      .reduce((s, o) => s + Number(o.total), 0);
-    const short = d.toLocaleDateString('es', { weekday: 'short' });
-    const label = short.charAt(0).toUpperCase() + short.slice(1, 2);
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = localDateKey(d, timezone);
+    const dayTotal = byDay.get(key) ?? 0;
+    totalLast14 += dayTotal;
+    let label: string;
+    try {
+      const short = d.toLocaleDateString('es', { weekday: 'short', timeZone: timezone });
+      label = short.charAt(0).toUpperCase() + short.slice(1, 2);
+    } catch {
+      label = '·';
+    }
     series.push({ label, total: dayTotal, isToday: i === 0 });
   }
 
-  const totalLast14 = rawOrders.reduce((s, o) => s + Number(o.total), 0);
-
-  // Top products today
+  // Top de productos de hoy.
   let topToday: TopProduct[] = [];
   if (todayIds.length > 0) {
     const { data: items } = await db
@@ -88,11 +108,13 @@ export async function getOrderStats(restaurantId: string): Promise<OrderStats> {
       .slice(0, 5);
   }
 
-  return { series, topToday, totalLast14 };
-}
-
-function todayStart(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
+  const todayOrders = todayIds.length;
+  return {
+    series,
+    topToday,
+    totalLast14,
+    todaySales,
+    todayOrders,
+    todayTicket: todayOrders > 0 ? todaySales / todayOrders : 0,
+  };
 }

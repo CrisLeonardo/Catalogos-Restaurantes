@@ -44,10 +44,12 @@ function BrandMark({ size = 96 }: { size?: number }) {
   );
 }
 
-function OpenBadge() {
+function OpenBadge({ isOpen }: { isOpen: boolean }) {
   const config = useThemeConfig();
   const content = useThemeContent();
-  const text = [content.portada.badgeOpen, config.zone].filter(Boolean).join(' · ');
+  const label = isOpen ? content.portada.badgeOpen : content.portada.badgeClosed;
+  const text = [label, config.zone].filter(Boolean).join(' · ');
+  const dotColor = isOpen ? 'var(--u-text)' : '#f87171';
   return (
     <span
       style={{
@@ -58,7 +60,7 @@ function OpenBadge() {
       }}
     >
       {config.portadaShowStatus && (
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--u-text)', boxShadow: '0 0 8px var(--u-text)', animation: config.animations ? 'pulse-ring 2.2s infinite' : undefined }} />
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: dotColor, boxShadow: `0 0 8px ${dotColor}`, animation: config.animations && isOpen ? 'pulse-ring 2.2s infinite' : undefined }} />
       )}
       {text}
     </span>
@@ -70,7 +72,7 @@ const heroWrap: CSSProperties = {
   alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 22, padding: '40px 8px',
 };
 
-export default function Portada() {
+export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   const config = useThemeConfig();
   const content = useThemeContent();
   if (config.portadaVariant === 'none') return null;
@@ -103,7 +105,7 @@ export default function Portada() {
           )}
         </div>
         <div className={anim ? 'anim-fade-up' : ''} style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', width: '100%', maxWidth: 320 }}>
-          {config.portadaShowBadge && <OpenBadge />}
+          {config.portadaShowBadge && <OpenBadge isOpen={isOpen} />}
           <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} style={{ marginTop: 4 }}>
             {content.portada.cta}
           </PrimaryButton>
@@ -117,7 +119,7 @@ export default function Portada() {
     return (
       <section style={{ ...heroWrap, alignItems: 'stretch', textAlign: 'left' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {config.portadaShowBadge ? <OpenBadge /> : <span />}
+          {config.portadaShowBadge ? <OpenBadge isOpen={isOpen} /> : <span />}
           {config.portadaShowLogo && <BrandMark size={46} />}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -156,7 +158,7 @@ export default function Portada() {
         ))}
       </div>
       <div style={{ width: '100%', maxWidth: 360 }}>
-        {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge /></div>}
+        {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge isOpen={isOpen} /></div>}
         <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu}>{content.portada.cta}</PrimaryButton>
       </div>
     </section>

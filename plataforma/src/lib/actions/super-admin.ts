@@ -36,6 +36,21 @@ function slugify(text: string): string {
     .slice(0, 60);
 }
 
+// Subdominios que no pueden ser de un restaurante: `demo` es la demo pública
+// de Leogin y `www` se trata como dominio raíz en lib/tenant.ts.
+const RESERVED_SLUGS = ['demo', 'www', 'admin', 'api', 'app', 'super', 'preview', 'login'];
+
+/** Valida un slug de subdominio; devuelve mensaje de error o null si es válido. */
+function validateSlug(slug: string): string | null {
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+    return 'El slug solo puede tener minúsculas, números y guiones (sin espacios ni acentos).';
+  }
+  if (RESERVED_SLUGS.includes(slug)) {
+    return `El slug "${slug}" está reservado por la plataforma. Elige otro.`;
+  }
+  return null;
+}
+
 export async function createRestaurant(
   prevState: SuperState,
   formData: FormData,
@@ -47,8 +62,10 @@ export async function createRestaurant(
   if (!name) return { error: 'El nombre es requerido.' };
 
   const slug =
-    (formData.get('slug') as string)?.trim() || slugify(name);
+    (formData.get('slug') as string)?.trim().toLowerCase() || slugify(name);
   if (!slug) return { error: 'No se pudo generar un slug válido.' };
+  const slugError = validateSlug(slug);
+  if (slugError) return { error: slugError };
 
   const { data: restaurant, error: rErr } = await db
     .from('restaurants')
@@ -94,8 +111,10 @@ export async function updateRestaurantBasic(
   const name = (formData.get('name') as string)?.trim();
   if (!name) return { error: 'El nombre es requerido.' };
 
-  const slug = (formData.get('slug') as string)?.trim();
+  const slug = (formData.get('slug') as string)?.trim().toLowerCase();
   if (!slug) return { error: 'El slug es requerido.' };
+  const slugError = validateSlug(slug);
+  if (slugError) return { error: slugError };
 
   const { error } = await db
     .from('restaurants')
@@ -235,6 +254,164 @@ export async function saveRestaurantTheme(input: {
   revalidatePath(`/super/restaurantes/${restaurantId}`);
   revalidatePath('/super/restaurantes');
   return { ok: true };
+}
+
+/* ── Plantillas de tema ─────────────────────────────────────
+   Guardas un diseño que te gustó y lo aplicas a otro restaurante
+   en un clic. Acelera el flujo "Leonardo diseña". */
+
+export interface ThemeTemplate {
+  id: string;
+  name: string;
+  config: ThemeConfig;
+  content: ThemeContent;
+  custom_css: string | null;
+  created_at: string;
+}
+
+export async function listThemeTemplates(): Promise<ThemeTemplate[]> {
+  const db = await verifySuperAdmin();
+  if (!db) return [];
+  const { data } = await db
+    .from('theme_templates')
+    .select('*')
+    .order('created_at', { ascending: false });
+  return (data ?? []) as ThemeTemplate[];
+}
+
+export async function saveThemeTemplate(input: {
+  name: string;
+  config: ThemeConfig;
+  content: ThemeContent;
+  customCss: string;
+}): Promise<{ error?: string; template?: ThemeTemplate }> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+
+  const name = input.name?.trim();
+  if (!name) return { error: 'Ponle un nombre a la plantilla.' };
+  if (name.length > 80) return { error: 'Nombre demasiado largo.' };
+
+  const { data, error } = await db
+    .from('theme_templates')
+    .insert({
+      name,
+      config: input.config,
+      content: input.content,
+      custom_css: input.customCss?.trim() ? input.customCss : null,
+    })
+    .select('*')
+    .single();
+
+  if (error) return { error: error.message };
+  return { template: data as ThemeTemplate };
+}
+
+export async function deleteThemeTemplate(id: string): Promise<{ error?: string }> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+  const { error } = await db.from('theme_templates').delete().eq('id', id);
+  return error ? { error: error.message } : {};
+}
+
+/* ── Duplicar restaurante ───────────────────────────────────
+   Copia tema + categorías + productos a un restaurante nuevo
+   (suspendido, sin usuarios) para arrancar un cliente en minutos. */
+
+export async function duplicateRestaurant(formData: FormData) {
+  const db = await verifySuperAdmin();
+  if (!db) return;
+
+  const id = formData.get('id') as string;
+  if (!id) return;
+
+  const [{ data: source }, { data: theme }, { data: categories }, { data: products }] =
+    await Promise.all([
+      db.from('restaurants').select('*').eq('id', id).single(),
+      db.from('restaurant_themes').select('*').eq('restaurant_id', id).single(),
+      db.from('categories').select('*').eq('restaurant_id', id).order('sort_order'),
+      db.from('products').select('*').eq('restaurant_id', id).order('sort_order'),
+    ]);
+
+  if (!source) return;
+
+  // Slug único: base-copia, base-copia-2, …
+  const base = `${source.slug}-copia`.slice(0, 56);
+  let slug = base;
+  for (let n = 2; n < 50; n++) {
+    const { data: clash } = await db
+      .from('restaurants')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (!clash) break;
+    slug = `${base}-${n}`;
+  }
+
+  const { data: copy, error: copyErr } = await db
+    .from('restaurants')
+    .insert({
+      name: `${source.name} (copia)`,
+      slug,
+      tagline: source.tagline,
+      plan_actual: source.plan_actual,
+      modules: source.modules,
+      // Suspendido: no queda público hasta que lo actives a propósito.
+      status: 'suspended',
+      whatsapp_number: source.whatsapp_number,
+      contact_email: source.contact_email,
+      timezone: source.timezone,
+      hours: source.hours,
+      orders_paused: false,
+      pause_message: source.pause_message,
+    })
+    .select('id')
+    .single();
+
+  if (copyErr || !copy) return;
+
+  if (theme) {
+    const themeCopy = { ...theme, restaurant_id: copy.id };
+    await db.from('restaurant_themes').insert(themeCopy);
+  }
+
+  // Categorías (mapa id viejo → nuevo) y luego productos remapeados.
+  const catMap = new Map<string, string>();
+  for (const cat of categories ?? []) {
+    const { data: newCat } = await db
+      .from('categories')
+      .insert({
+        restaurant_id: copy.id,
+        name: cat.name,
+        icon: cat.icon,
+        sort_order: cat.sort_order,
+        is_active: cat.is_active,
+      })
+      .select('id')
+      .single();
+    if (newCat) catMap.set(cat.id as string, newCat.id as string);
+  }
+
+  if (products && products.length > 0) {
+    await db.from('products').insert(
+      products.map((p) => ({
+        restaurant_id: copy.id,
+        category_id: p.category_id ? catMap.get(p.category_id as string) ?? null : null,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image_url: p.image_url,
+        icon: p.icon,
+        tags: p.tags,
+        options: p.options,
+        is_available: p.is_available,
+        sort_order: p.sort_order,
+      })),
+    );
+  }
+
+  revalidatePath('/super/restaurantes');
+  redirect(`/super/restaurantes/${copy.id}?new=1`);
 }
 
 export async function deleteRestaurant(formData: FormData) {

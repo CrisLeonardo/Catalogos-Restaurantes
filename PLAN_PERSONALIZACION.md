@@ -234,7 +234,7 @@ Agrupado por pantalla: `portada, catalog, product, cart, checkout, confirmation,
 
 **TODOs pendientes (no perder):**
 - [ ] **Aplicar migración 007+008 en la NUBE** cuando se despliegue (pegar `setup_produccion.sql` completo o aplicar 007+008 por separado vía SQL Editor).
-- [ ] (Futuro, opcional) Editor en vivo (tweaks-panel) sobre el sitio del cliente.
+- [x] Editor en vivo sobre el sitio del cliente. ✅ 2026-06-09 (ver sesión "Vista previa en vivo").
 
 **TODOs completados esta sesión:**
 - [x] `nav.tsx` muerto borrado.
@@ -247,3 +247,30 @@ Agrupado por pantalla: `portada, catalog, product, cart, checkout, confirmation,
 - [x] `build` prod limpio (21 rutas).
 
 - **Próximo paso al retomar:** Deploy en la nube (aplicar migración 007+008) O editor en vivo (tweaks-panel).
+
+### 2026-06-09 — Vista previa en vivo + auditoría
+- ✅ **VISTA PREVIA EN VIVO** (lo que pedía el TODO "editor en vivo"):
+  - Ruta `/preview/[id]` (solo Super Admin): renderiza el menú real del restaurante; si no
+    tiene productos usa el menú de ejemplo (badge "Menú de ejemplo"). `id=new` → preview
+    de la pantalla de creación.
+  - `preview-client.tsx`: aplica el tema (vars + fuentes + fondo + custom_css) y escucha
+    `BroadcastChannel('leogin-preview:<id>')` → cada cambio del editor se ve AL INSTANTE
+    sin guardar. Truco clave: wrapper con `isolation:isolate` para que las capas de fondo
+    (z-index -1) funcionen dentro de la página.
+  - `preview-pane.tsx`: marco de teléfono + iframe + toggle móvil/ancho + **"Abrir en
+    ventana"** (misma señal por canal → para mostrarle al cliente en otra pantalla).
+  - Editor de tema y formulario de creación ahora en grid 2 columnas (`.bleed` rompe el
+    max-width de 800 del super layout; `html{overflow-x:clip}`).
+- ✅ **Fixes de auditoría**:
+  - `createOrder` ya NO confía en precios/envío del cliente: lee precios reales de la BD,
+    valida pertenencia al restaurante + disponibilidad, y resuelve `deliveryFee` del tema.
+  - Slugs reservados (`demo`, `www`, `admin`, …) + validación de formato al crear/editar restaurante.
+  - `formatAmount` con try/catch: un locale inválido ya no rompe el sitio del tenant.
+  - Link "Crea el tuyo →" de la DemoBar ahora apunta al dominio raíz (antes recargaba la demo).
+  - Datos demo movidos a `src/lib/demo-menu.ts` (compartidos por demo y previews).
+  - `ThemeBackground` extraído a `src/components/theme-background.tsx` (layout + preview).
+- ✅ `typecheck` + `lint` + `build` prod limpios (23 rutas).
+- 📋 Auditoría completa de bugs/funciones nuevas entregada en el chat (pedidos KPI "hoy"
+  mezcla 100 pedidos históricos, timezone UTC en gráfica 14 días, moneda hardcodeada en
+  panel admin Q/$, etc.). `api/setup-super` borrado a petición del usuario (usar
+  `scripts/crear-super-admin.mjs` en su lugar).

@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import OrderCard from '@/components/admin/order-card';
+import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
+import { exportOrdersCsv } from '@/lib/actions/orders';
+import { localDateKey } from '@/lib/hours';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
@@ -11,6 +13,8 @@ interface Props {
   initialOrders: OrderWithItems[];
   restaurantId:  string;
   stats:         OrderStats;
+  currency:      PanelCurrency;
+  timezone:      string;
 }
 
 function chime() {
@@ -33,14 +37,22 @@ function chime() {
   } catch {}
 }
 
-function q(n: number) {
-  return 'Q ' + n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Formatea un monto con la moneda REAL del restaurante (no "Q" fijo). */
+export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
+  let num: string;
+  try {
+    num = n.toLocaleString(c.locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  } catch {
+    num = n.toLocaleString('es-GT', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-export default function OrdersPanel({ initialOrders, restaurantId, stats }: Props) {
+export default function OrdersPanel({ initialOrders, restaurantId, stats, currency, timezone }: Props) {
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isExporting, startExport] = useTransition();
   const orders = initialOrders;
 
   function showToast(msg: string) {
@@ -75,21 +87,41 @@ export default function OrdersPanel({ initialOrders, restaurantId, stats }: Prop
     return () => { channel.unsubscribe(); };
   }, [restaurantId, router]);
 
-  const active    = orders.filter((o) => !['DELIVERED', 'CANCEL'].includes(o.status));
-  const completed = orders.filter((o) =>  ['DELIVERED', 'CANCEL'].includes(o.status));
+  function downloadCsv() {
+    startExport(async () => {
+      const res = await exportOrdersCsv(restaurantId, 30);
+      if (res.error || !res.csv) {
+        showToast(res.error ?? 'No se pudo exportar.');
+        return;
+      }
+      const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.filename ?? 'pedidos.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
 
-  const valid     = orders.filter((o) => o.status !== 'CANCEL');
-  const ventasHoy = valid.reduce((t, o) => t + Number(o.total), 0);
-  const ticket    = valid.length ? ventasHoy / valid.length : 0;
-  const enPrep    = orders.filter((o) => o.status === 'NEW' || o.status === 'PREP').length;
+  const todayKey  = localDateKey(new Date(), timezone);
+  const active    = orders.filter((o) => !['DELIVERED', 'CANCEL'].includes(o.status));
+  // "Cerrados hoy" de verdad: solo los terminados HOY (hora del restaurante).
+  const completedToday = orders.filter(
+    (o) =>
+      ['DELIVERED', 'CANCEL'].includes(o.status) &&
+      localDateKey(new Date(o.created_at), timezone) === todayKey,
+  );
+
+  const enPrep = orders.filter((o) => o.status === 'NEW' || o.status === 'PREP').length;
 
   return (
     <>
-      {/* KPIs */}
+      {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 22 }}>
-        <Kpi label="Ventas hoy" value={q(ventasHoy)} sub={`${valid.length} pedidos`} hero />
-        <Kpi label="Pedidos hoy" value={String(orders.length)} sub={`${active.length} activos`} />
-        <Kpi label="Ticket promedio" value={q(ticket)} sub="por pedido" />
+        <Kpi label="Ventas hoy" value={fmtMoney(stats.todaySales, currency)} sub={`${stats.todayOrders} pedidos`} hero />
+        <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} sub={`${active.length} activos`} />
+        <Kpi label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} sub="por pedido" />
         <Kpi label="En preparación" value={String(enPrep)} sub="en la barra" />
       </div>
 
@@ -122,23 +154,37 @@ export default function OrdersPanel({ initialOrders, restaurantId, stats }: Prop
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 28 }}>
-              {active.map((order) => <OrderCard key={order.id} order={order} />)}
+              {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} />)}
             </div>
           )}
-          {completed.length > 0 && (
+          {completedToday.length > 0 && (
             <>
               <h2 className="t-poster" style={{ fontSize: 20, marginBottom: 12 }}>Cerrados hoy</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, opacity: 0.62 }}>
-                {completed.map((order) => <OrderCard key={order.id} order={order} />)}
+                {completedToday.map((order) => <OrderCard key={order.id} order={order} currency={currency} />)}
               </div>
             </>
           )}
         </div>
 
-        {/* Right: gráfica + top */}
+        {/* Right: gráfica + top + export */}
         <aside style={{ width: '100%', minWidth: 0 }}>
-          <SalesChart series={stats.series} totalLast14={stats.totalLast14} />
+          <SalesChart series={stats.series} totalLast14={stats.totalLast14} currency={currency} />
           {stats.topToday.length > 0 && <TopToday items={stats.topToday} />}
+          <button
+            onClick={downloadCsv}
+            disabled={isExporting}
+            className="press glass-quiet"
+            style={{
+              width: '100%', marginTop: 12, padding: '12px 16px', borderRadius: 14,
+              border: 'none', cursor: isExporting ? 'wait' : 'pointer',
+              color: 'var(--u-text-2)', fontWeight: 600, fontSize: 13,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: isExporting ? 0.7 : 1,
+            }}
+          >
+            {isExporting ? 'Exportando…' : '⬇ Exportar CSV (30 días)'}
+          </button>
         </aside>
       </div>
     </>
@@ -161,16 +207,15 @@ function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: 
 
 import type { DaySale, TopProduct } from '@/lib/db/orders';
 
-function SalesChart({ series, totalLast14 }: { series: DaySale[]; totalLast14: number }) {
+function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; totalLast14: number; currency: PanelCurrency }) {
   const max = Math.max(...series.map((d) => d.total), 1);
-  const q14 = (n: number) => 'Q ' + n.toLocaleString('es-GT', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
     <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 12 }}>
       <div>
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Ventas · 14 días</div>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
-          {q14(totalLast14)}
+          {fmtMoney(totalLast14, currency, 0)}
         </div>
       </div>
 
@@ -189,7 +234,7 @@ function SalesChart({ series, totalLast14 }: { series: DaySale[]; totalLast14: n
                   background: day.isToday ? 'var(--u-text)' : 'rgba(255,255,255,0.14)',
                   transition: 'height 400ms var(--ease-entry)',
                 }}
-                title={`${day.label}: Q ${day.total.toFixed(2)}`}
+                title={`${day.label}: ${fmtMoney(day.total, currency)}`}
               />
               <span
                 className="t-mono"

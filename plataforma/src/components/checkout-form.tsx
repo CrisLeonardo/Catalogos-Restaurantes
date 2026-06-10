@@ -30,11 +30,12 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
 
   const [step, setStep] = useState<Step>('form');
   const [orderNumber, setOrderNumber] = useState('');
+  const [trackToken, setTrackToken] = useState('');
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
 
-  const [snapshot, setSnapshot] = useState<{ name: string; qty: number; sub: number }[]>([]);
+  const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
   const [snapshotTotal, setSnapshotTotal] = useState(0);
   const [snapshotFee, setSnapshotFee] = useState(0);
 
@@ -59,14 +60,25 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
     setError('');
     if (!valid) { setTried(true); return; }
 
-    const itemsSnapshot = items.map((i) => ({ name: i.name, qty: i.quantity, sub: i.price * i.quantity }));
+    const itemsSnapshot = items.map((i) => ({
+      name: i.name,
+      opts: i.options?.map((o) => o.choiceName).join(', ') ?? '',
+      qty: i.quantity,
+      sub: i.price * i.quantity,
+    }));
     const feeSnapshot = deliveryFee;
     const totalSnapshot = finalTotal;
 
     start(async () => {
       const result = await createOrder({
         restaurantId,
-        items: items.map((i) => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity })),
+        items: items.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
+        })),
         customer: { name, phone, type, address, notes },
         deliveryFee: feeSnapshot,
       });
@@ -75,6 +87,7 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
       setSnapshotFee(feeSnapshot);
       setSnapshotTotal(totalSnapshot);
       setOrderNumber(result.orderNumber ?? '');
+      setTrackToken(result.publicToken ?? '');
       clearCart();
       setStep('success');
     });
@@ -88,7 +101,7 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
       `👤 ${name}`, `📱 ${phone}`,
       `📦 ${type === 'PICKUP' ? content.checkout.pickup : `${content.checkout.delivery}: ${address}`}`, '',
       '🛒 Pedido:',
-      ...snapshot.map((i) => `• ${i.qty}x ${i.name} — ${formatPrice(i.sub, config)}`), '',
+      ...snapshot.map((i) => `• ${i.qty}x ${i.name}${i.opts ? ` (${i.opts})` : ''} — ${formatPrice(i.sub, config)}`), '',
     ];
     if (snapshotFee > 0) {
       lines.push(`📦 ${content.cart.shipping}: ${formatPrice(snapshotFee, config)}`);
@@ -137,7 +150,14 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
               <Icon name="whatsapp" size={18} /> Notificar al restaurante
             </a>
           )}
-          <PrimaryButton href="/" full>{content.confirmation.again}</PrimaryButton>
+          {trackToken && (
+            <PrimaryButton href={`/pedido/${trackToken}`} full iconRight="arrowRight">
+              {content.confirmation.track}
+            </PrimaryButton>
+          )}
+          <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+            {content.confirmation.again}
+          </Link>
         </div>
       </main>
     );
@@ -157,8 +177,15 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
       <Glass style={{ padding: '16px 18px', marginBottom: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((item) => (
-            <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>{item.quantity}× {item.name}</span>
+            <div key={item.lineId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
+                {item.quantity}× {item.name}
+                {item.options && item.options.length > 0 && (
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                    {item.options.map((o) => o.choiceName).join(' · ')}
+                  </span>
+                )}
+              </span>
               <Price amount={item.price * item.quantity} size={13.5} muted />
             </div>
           ))}

@@ -219,10 +219,19 @@ export function buildFontsHref(config: ThemeConfig): string | null {
 /* ── Formato de precio ────────────────────────────────────── */
 
 export function formatAmount(amount: number, config: ThemeConfig): string {
-  return amount.toLocaleString(config.locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  // Un locale inválido escrito en el editor (campo libre) lanzaría RangeError
+  // y rompería TODO el sitio del tenant; ante eso caemos al default.
+  try {
+    return amount.toLocaleString(config.locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } catch {
+    return amount.toLocaleString('es-GT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
 }
 
 export function formatPrice(amount: number, config: ThemeConfig): string {

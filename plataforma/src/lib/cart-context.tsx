@@ -7,19 +7,47 @@ import {
   useEffect,
   useState,
 } from 'react';
-import type { CartItem } from '@/types';
+import type { CartItem, CartItemOption } from '@/types';
+
+/** Línea única por producto+opciones: "Pizza (grande, extra queso)" ≠ "Pizza (mediana)". */
+export function buildLineId(productId: string, options?: CartItemOption[]): string {
+  if (!options?.length) return productId;
+  const sig = options
+    .map((o) => `${o.groupId}:${o.choiceId}`)
+    .sort()
+    .join('|');
+  return `${productId}__${sig}`;
+}
 
 interface CartContextValue {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (item: Omit<CartItem, 'quantity' | 'lineId'>, quantity?: number) => void;
+  removeItem: (lineId: string) => void;
+  updateQuantity: (lineId: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
   count: number;
+  /** Unidades totales de un producto sumando todas sus variantes. */
+  qtyOfProduct: (productId: string) => number;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+/** Carritos guardados antes de las variantes no traen lineId. */
+function migrate(stored: unknown): CartItem[] {
+  if (!Array.isArray(stored)) return [];
+  return (stored as Partial<CartItem>[])
+    .filter((i) => i && typeof i.productId === 'string' && typeof i.price === 'number')
+    .map((i) => ({
+      lineId: i.lineId ?? buildLineId(i.productId!, i.options),
+      productId: i.productId!,
+      name: i.name ?? '',
+      price: i.price!,
+      quantity: Math.max(1, Number(i.quantity) || 1),
+      image_url: i.image_url ?? null,
+      options: i.options,
+    }));
+}
 
 export function CartProvider({
   children,
@@ -38,7 +66,7 @@ export function CartProvider({
     try {
       const stored = localStorage.getItem(key);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (stored) setItems(JSON.parse(stored));
+      if (stored) setItems(migrate(JSON.parse(stored)));
     } catch {}
   }, [key]);
 
@@ -47,34 +75,35 @@ export function CartProvider({
     return next;
   };
 
-  const addItem = useCallback((item: Omit<CartItem, 'quantity'>) => {
+  const addItem = useCallback((item: Omit<CartItem, 'quantity' | 'lineId'>, quantity = 1) => {
+    const lineId = buildLineId(item.productId, item.options);
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId);
+      const existing = prev.find((i) => i.lineId === lineId);
       return save(
         existing
           ? prev.map((i) =>
-              i.productId === item.productId
-                ? { ...i, quantity: i.quantity + 1 }
+              i.lineId === lineId
+                ? { ...i, quantity: i.quantity + quantity }
                 : i,
             )
-          : [...prev, { ...item, quantity: 1 }],
+          : [...prev, { ...item, lineId, quantity }],
       );
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => save(prev.filter((i) => i.productId !== productId)));
+  const removeItem = useCallback((lineId: string) => {
+    setItems((prev) => save(prev.filter((i) => i.lineId !== lineId)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((lineId: string, quantity: number) => {
     setItems((prev) =>
       save(
         quantity <= 0
-          ? prev.filter((i) => i.productId !== productId)
+          ? prev.filter((i) => i.lineId !== lineId)
           : prev.map((i) =>
-              i.productId === productId ? { ...i, quantity } : i,
+              i.lineId === lineId ? { ...i, quantity } : i,
             ),
       ),
     );
@@ -89,9 +118,15 @@ export function CartProvider({
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
 
+  const qtyOfProduct = useCallback(
+    (productId: string) =>
+      items.reduce((sum, i) => (i.productId === productId ? sum + i.quantity : sum), 0),
+    [items],
+  );
+
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, total, count }}
+      value={{ items, addItem, removeItem, updateQuantity, clearCart, total, count, qtyOfProduct }}
     >
       {children}
     </CartContext.Provider>

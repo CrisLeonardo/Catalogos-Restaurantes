@@ -4,11 +4,17 @@
    Edita ThemeConfig + ThemeContent + custom_css y guarda con saveRestaurantTheme.
    Aquí Leonardo "diseña" el sitio de cada restaurante. */
 
-import { useState, useTransition, type ReactNode } from 'react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import ImageUpload from '@/components/admin/image-upload';
-import { saveRestaurantTheme } from '@/lib/actions/super-admin';
+import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
+import {
+  saveRestaurantTheme,
+  saveThemeTemplate,
+  deleteThemeTemplate,
+  type ThemeTemplate,
+} from '@/lib/actions/super-admin';
 import { fontsForRole, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 
 interface Props {
@@ -16,9 +22,10 @@ interface Props {
   config: ThemeConfig;
   content: ThemeContent;
   customCss: string;
+  templates?: ThemeTemplate[];
 }
 
-export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss }: Props) {
+export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [] }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
@@ -26,9 +33,65 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
+  // Plantillas de tema (lista local para reflejar guardar/borrar al instante).
+  const [templates, setTemplates] = useState<ThemeTemplate[]>(initialTemplates);
+  const [selectedTpl, setSelectedTpl] = useState('');
+  const [tplName, setTplName] = useState('');
+  const [tplMsg, setTplMsg] = useState<string | null>(null);
+  const [tplPending, startTpl] = useTransition();
+
+  function applyTemplate() {
+    const tpl = templates.find((t) => t.id === selectedTpl);
+    if (!tpl) return;
+    // La identidad del restaurante NO se pisa: solo el diseño.
+    setConfig({
+      ...tpl.config,
+      brandName: config.brandName,
+      tagline: config.tagline,
+      zone: config.zone,
+      logoUrl: config.logoUrl,
+      markUrl: config.markUrl,
+    });
+    setContent(structuredClone(tpl.content));
+    setCss(tpl.custom_css ?? '');
+    setTplMsg(`Plantilla "${tpl.name}" aplicada (recuerda guardar).`);
+  }
+
+  function saveAsTemplate() {
+    setTplMsg(null);
+    startTpl(async () => {
+      const res = await saveThemeTemplate({ name: tplName, config, content, customCss: css });
+      if (res.error) { setTplMsg(`Error: ${res.error}`); return; }
+      if (res.template) {
+        setTemplates((prev) => [res.template!, ...prev]);
+        setSelectedTpl(res.template.id);
+        setTplName('');
+        setTplMsg('Plantilla guardada ✓');
+      }
+    });
+  }
+
+  function removeTemplate() {
+    const tpl = templates.find((t) => t.id === selectedTpl);
+    if (!tpl) return;
+    if (!window.confirm(`¿Borrar la plantilla "${tpl.name}"?`)) return;
+    startTpl(async () => {
+      const res = await deleteThemeTemplate(tpl.id);
+      if (res.error) { setTplMsg(`Error: ${res.error}`); return; }
+      setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+      setSelectedTpl('');
+      setTplMsg('Plantilla borrada.');
+    });
+  }
+
   const setC = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setConfig((p) => ({ ...p, [k]: v }));
   const setT = (section: keyof ThemeContent, key: string, v: string) =>
     setContent((p) => ({ ...p, [section]: { ...p[section], [key]: v } }));
+
+  // Vista previa en vivo: cada cambio se transmite a /preview/[id]
+  // (iframe lateral y/o ventana aparte) sin necesidad de guardar.
+  const previewState = useMemo(() => ({ config, content, customCss: css }), [config, content, css]);
+  useThemePreviewChannel(restaurantId, previewState);
 
   function save() {
     setMsg(null);
@@ -40,7 +103,47 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="theme-editor-layout">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+      {/* ── Plantillas ── */}
+      <Section title="Plantillas de tema">
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+          Aplica un diseño guardado (la marca y el logo del restaurante se conservan)
+          o guarda el tema actual para reutilizarlo con otro cliente.
+        </p>
+        {templates.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select
+              value={selectedTpl}
+              onChange={(e) => setSelectedTpl(e.target.value)}
+              style={{ ...selectStyle, flex: 1, minWidth: 160, cursor: 'pointer' }}
+            >
+              <option value="" style={optionStyle}>Elegir plantilla…</option>
+              {templates.map((t) => <option key={t.id} value={t.id} style={optionStyle}>{t.name}</option>)}
+            </select>
+            <button type="button" onClick={applyTemplate} disabled={!selectedTpl || tplPending} className="press btn-white" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5, border: 'none', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
+              Aplicar
+            </button>
+            <button type="button" onClick={removeTemplate} disabled={!selectedTpl || tplPending} className="press" style={{ padding: '9px 13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid rgba(239,68,68,0.3)', background: 'transparent', color: '#f87171', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
+              Borrar
+            </button>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            value={tplName}
+            onChange={(e) => setTplName(e.target.value)}
+            placeholder="Nombre para el tema actual…"
+            style={{ ...inputStyle, flex: 1, minWidth: 160 }}
+          />
+          <button type="button" onClick={saveAsTemplate} disabled={!tplName.trim() || tplPending} className="press" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text)', cursor: 'pointer', opacity: !tplName.trim() || tplPending ? 0.55 : 1 }}>
+            {tplPending ? 'Guardando…' : 'Guardar como plantilla'}
+          </button>
+        </div>
+        {tplMsg && <span style={{ fontSize: 12.5, color: tplMsg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{tplMsg}</span>}
+      </Section>
+
       {/* ── Marca ── */}
       <Section title="Marca">
         <TextCtl label="Nombre de marca" value={config.brandName} onChange={(v) => setC('brandName', v)} />
@@ -163,12 +266,26 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       </Section>
 
       {/* ── Guardar ── */}
-      <div style={{ position: 'sticky', bottom: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+      <div style={{ position: 'sticky', bottom: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', flexWrap: 'wrap' }}>
         <button onClick={save} disabled={isPending} className="press btn-white" style={{ padding: '12px 22px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
           {isPending ? 'Guardando…' : 'Guardar apariencia'}
         </button>
+        {/* En pantallas angostas el panel lateral se oculta: este enlace abre la vista previa en una pestaña. */}
+        <a
+          href={`/preview/${restaurantId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="press"
+          style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '11px 16px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
+        >
+          Vista previa ↗
+        </a>
         {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
       </div>
+    </div>
+
+    {/* ── Columna derecha: vista previa en vivo ── */}
+    <PreviewPane previewId={restaurantId} />
     </div>
   );
 }
@@ -183,15 +300,16 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
 /* ── Definiciones de textos ── */
 const SECTION_LABELS: Record<keyof ThemeContent, string> = {
   portada: 'Portada', catalog: 'Catálogo', product: 'Producto', cart: 'Carrito',
-  checkout: 'Checkout', confirmation: 'Confirmación', tags: 'Etiquetas',
+  checkout: 'Checkout', confirmation: 'Confirmación', tracking: 'Seguimiento', tags: 'Etiquetas',
 };
 const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
-  portada: [['title', 'Título (vacío = nombre)'], ['subtitle', 'Subtítulo (vacío = tagline)'], ['cta', 'Botón'], ['badgeOpen', 'Badge abierto'], ['posterKicker', 'Kicker (poster)']],
+  portada: [['title', 'Título (vacío = nombre)'], ['subtitle', 'Subtítulo (vacío = tagline)'], ['cta', 'Botón'], ['badgeOpen', 'Badge abierto'], ['badgeClosed', 'Badge cerrado'], ['posterKicker', 'Kicker (poster)']],
   catalog: [['kicker', 'Kicker'], ['heading', 'Título del menú'], ['searchPlaceholder', 'Placeholder búsqueda'], ['allLabel', 'Etiqueta "Todo"'], ['empty', 'Mensaje vacío']],
-  product: [['add', 'Botón agregar'], ['soldOut', 'Agotado'], ['prepTime', 'Tiempo de prep.'], ['fresh', 'Etiqueta "fresco"']],
+  product: [['add', 'Botón agregar'], ['soldOut', 'Agotado'], ['prepTime', 'Tiempo de prep.'], ['fresh', 'Etiqueta "fresco"'], ['chooseOne', 'Opción obligatoria'], ['optional', 'Opción opcional']],
   cart: [['title', 'Título'], ['empty', 'Vacío'], ['emptyCta', 'Botón vacío'], ['subtotal', 'Subtotal'], ['shipping', 'Envío'], ['free', 'Gratis'], ['total', 'Total'], ['checkout', 'Botón pagar'], ['barCta', 'Barra: ver carrito'], ['itemsOne', '"producto"'], ['itemsMany', '"productos"']],
-  checkout: [['title', 'Título'], ['typeLabel', 'Tipo de pedido'], ['delivery', 'Domicilio'], ['pickup', 'Para llevar'], ['name', 'Nombre'], ['namePh', 'Placeholder nombre'], ['phone', 'Teléfono'], ['phonePh', 'Placeholder teléfono'], ['address', 'Dirección'], ['addressPh', 'Placeholder dirección'], ['notes', 'Notas'], ['notesPh', 'Placeholder notas'], ['payLabel', 'Pago'], ['payCash', 'Efectivo'], ['payCashSub', 'Sub-texto pago'], ['confirm', 'Confirmar'], ['errName', 'Error nombre'], ['errPhone', 'Error teléfono'], ['errAddress', 'Error dirección']],
-  confirmation: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['eta', 'Tiempo estimado'], ['etaValue', 'Valor tiempo'], ['payment', 'Pago'], ['notified', 'Notificado'], ['again', 'Otro pedido']],
+  checkout: [['title', 'Título'], ['typeLabel', 'Tipo de pedido'], ['delivery', 'Domicilio'], ['pickup', 'Para llevar'], ['name', 'Nombre'], ['namePh', 'Placeholder nombre'], ['phone', 'Teléfono'], ['phonePh', 'Placeholder teléfono'], ['address', 'Dirección'], ['addressPh', 'Placeholder dirección'], ['notes', 'Notas'], ['notesPh', 'Placeholder notas'], ['payLabel', 'Pago'], ['payCash', 'Efectivo'], ['payCashSub', 'Sub-texto pago'], ['confirm', 'Confirmar'], ['errName', 'Error nombre'], ['errPhone', 'Error teléfono'], ['errAddress', 'Error dirección'], ['closedTitle', 'Cerrado: título'], ['closedMsg', 'Cerrado: mensaje'], ['pausedTitle', 'Pausa: título'], ['pausedMsg', 'Pausa: mensaje (vacío = del restaurante)']],
+  confirmation: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['eta', 'Tiempo estimado'], ['etaValue', 'Valor tiempo'], ['payment', 'Pago'], ['notified', 'Notificado'], ['track', 'Botón seguimiento'], ['again', 'Otro pedido']],
+  tracking: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['statusNew', 'Recibido'], ['statusPrep', 'En preparación'], ['statusReady', 'Listo'], ['statusReadyPickup', 'Listo (pickup)'], ['statusTransit', 'En camino'], ['statusDelivered', 'Entregado'], ['statusCancel', 'Cancelado'], ['back', 'Volver al menú']],
   tags: [['hot', 'Picante'], ['new', 'Nuevo'], ['fav', 'Favorito'], ['veg', 'Veggie']],
 };
 
@@ -217,6 +335,18 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
+};
+
+// Selects need a solid dark background so native OS dropdown options are readable
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  background: '#1a1a1a',
+  colorScheme: 'dark',
+};
+
+const optionStyle: React.CSSProperties = {
+  background: '#1a1a1a',
+  color: '#e5e5e5',
 };
 
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
@@ -278,9 +408,9 @@ function FontCtl({ label, role, value, onChange }: { label: string; role: 'displ
   const has = opts.some((o) => o.family === value);
   return (
     <Field label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-        {!has && <option value={value}>{value}</option>}
-        {opts.map((o) => <option key={o.family} value={o.family}>{o.label}</option>)}
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...selectStyle, cursor: 'pointer' }}>
+        {!has && <option value={value} style={optionStyle}>{value}</option>}
+        {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
       </select>
     </Field>
   );

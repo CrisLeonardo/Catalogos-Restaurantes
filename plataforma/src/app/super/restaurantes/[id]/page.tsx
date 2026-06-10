@@ -7,7 +7,11 @@ import PlanEditor from '@/components/super/plan-editor';
 import ThemeEditor from '@/components/super/theme-editor';
 import RestaurantUsers from '@/components/super/restaurant-users';
 import DeleteButton from '@/components/admin/delete-button';
-import { deleteRestaurant } from '@/lib/actions/super-admin';
+import {
+  deleteRestaurant,
+  duplicateRestaurant,
+  listThemeTemplates,
+} from '@/lib/actions/super-admin';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 
 // El editor del Super Admin debe leer SIEMPRE el estado fresco de la BD
@@ -38,7 +42,10 @@ export default async function EditRestaurantePage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
-  const users = await getRestaurantUsers(id);
+  const [users, templates] = await Promise.all([
+    getRestaurantUsers(id),
+    listThemeTemplates(),
+  ]);
   const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
     brandName: row.name,
     tagline: row.tagline,
@@ -137,14 +144,19 @@ export default async function EditRestaurantePage({
       </section>
 
       {/* ── 3. Apariencia ──────────────────────────────────── */}
-      <section>
-        <SectionTitle>Apariencia</SectionTitle>
-        <ThemeEditor
-          restaurantId={row.id}
-          config={resolved.config}
-          content={resolved.content}
-          customCss={resolved.customCss}
-        />
+      {/* full-bleed: rompe el max-width de 800px del layout para que el
+          editor y la vista previa en vivo quepan lado a lado. */}
+      <section className="bleed">
+        <div className="bleed-inner">
+          <SectionTitle>Apariencia</SectionTitle>
+          <ThemeEditor
+            restaurantId={row.id}
+            config={resolved.config}
+            content={resolved.content}
+            customCss={resolved.customCss}
+            templates={templates}
+          />
+        </div>
       </section>
 
       {/* ── 4. Acceso (usuarios) ───────────────────────────── */}
@@ -164,7 +176,53 @@ export default async function EditRestaurantePage({
         <RestaurantUsers restaurantId={row.id} slug={row.slug} users={users} />
       </section>
 
-      {/* ── 5. Zona peligrosa ──────────────────────────────── */}
+      {/* ── 5. Duplicar ────────────────────────────────────── */}
+      <section>
+        <SectionTitle>Duplicar</SectionTitle>
+        <Glass
+          variant="quiet"
+          style={{
+            padding: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)' }}>
+              Duplicar restaurante
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 2 }}>
+              Copia el tema, las categorías y los productos a un restaurante
+              nuevo (queda suspendido hasta que lo actives). Ideal para
+              arrancar un cliente con un diseño que ya te gustó.
+            </div>
+          </div>
+          <form action={duplicateRestaurant}>
+            <input type="hidden" name="id" value={row.id} />
+            <button
+              type="submit"
+              className="press"
+              style={{
+                padding: '10px 18px',
+                borderRadius: 'var(--radius-full)',
+                fontWeight: 600,
+                fontSize: 13,
+                border: '1px solid var(--u-hair-2)',
+                background: 'rgba(255,255,255,0.06)',
+                color: 'var(--u-text)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Duplicar
+            </button>
+          </form>
+        </Glass>
+      </section>
+
+      {/* ── 6. Zona peligrosa ──────────────────────────────── */}
       <section>
         <SectionTitle>Zona peligrosa</SectionTitle>
         <Glass

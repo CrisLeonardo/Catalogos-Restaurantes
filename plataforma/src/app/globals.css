@@ -296,6 +296,48 @@ html, body {
   -webkit-box-orient: vertical;
 }
 
+/* ============================================================
+   VISTA PREVIA EN VIVO (Super Admin) — editor + teléfono
+   ============================================================ */
+/* `clip` evita el scroll horizontal que provocaría el full-bleed de 100vw
+   (no crea contenedor de scroll, solo recorta). */
+html { overflow-x: clip; }
+
+/* Sección que rompe el max-width del layout (centrado de 800px) */
+.bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
+.bleed-inner { max-width: 1240px; margin: 0 auto; }
+
+/* Grid del editor: controles + columna de vista previa */
+.theme-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.preview-pane { display: none; }
+
+@media (min-width: 1180px) {
+  .theme-editor-layout { grid-template-columns: minmax(0, 1fr) 430px; align-items: start; }
+  .preview-pane {
+    display: flex; flex-direction: column; gap: 10px;
+    position: sticky; top: 20px;
+  }
+}
+
+/* Marco de teléfono */
+.preview-frame {
+  width: 100%; max-width: 400px; margin: 0 auto;
+  aspect-ratio: 9 / 18.5; max-height: calc(100vh - 150px);
+  border-radius: 38px; padding: 10px;
+  background: #060607; border: 1px solid var(--u-hair-2);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+  transition: max-width 240ms var(--ease-out);
+}
+.preview-frame iframe {
+  width: 100%; height: 100%; border: none; display: block;
+  border-radius: 28px; background: #0b0b0c;
+}
+.preview-frame.is-wide {
+  max-width: none; aspect-ratio: auto; height: calc(100vh - 150px);
+  border-radius: 18px; padding: 8px;
+}
+.preview-frame.is-wide iframe { border-radius: 12px; }
+
 .press { transition: transform 90ms var(--ease-out); }
 .press:active { transform: scale(0.97); }
 

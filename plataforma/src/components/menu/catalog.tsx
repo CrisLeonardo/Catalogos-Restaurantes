@@ -13,7 +13,12 @@ import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
+
+/** Normaliza para buscar sin acentos ni mayúsculas ("cafe" encuentra "Café"). */
+function fold(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 
 interface CatalogProps {
   categories: CatItem[];
@@ -46,11 +51,14 @@ export default function Catalog({
     return m;
   }, [categories]);
 
-  const list = products.filter(
-    (p) =>
-      (activeCat === null || p.category_id === activeCat) &&
-      (!query || p.name.toLowerCase().includes(query.toLowerCase())),
-  );
+  // Busca en nombre, descripción y tags, ignorando acentos.
+  const q = fold(query.trim());
+  const list = products.filter((p) => {
+    if (activeCat !== null && p.category_id !== activeCat) return false;
+    if (!q) return true;
+    const haystack = fold([p.name, p.description ?? '', ...(p.tags ?? [])].join(' '));
+    return haystack.includes(q);
+  });
 
   const kicker = content.catalog.kicker || [config.brandName, config.zone].filter(Boolean).join(' · ');
   const cols = config.catalogColumns;

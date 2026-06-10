@@ -1,8 +1,10 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import { Glass } from '@/components/glass';
+import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
 import { createRestaurant, type SuperState } from '@/lib/actions/super-admin';
+import { DEFAULT_CONFIG, DEFAULT_CONTENT } from '@/lib/theme/defaults';
 
 const empty: SuperState = null;
 
@@ -42,6 +44,7 @@ export default function RestaurantForm() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
+  const [tagline, setTagline] = useState('');
 
   // El slug se deriva del nombre mientras el usuario no lo edite a mano.
   function onNameChange(value: string) {
@@ -49,8 +52,25 @@ export default function RestaurantForm() {
     if (!slugEdited) setSlug(slugify(value));
   }
 
+  // Vista previa en vivo: mientras escribes nombre/tagline, /preview/new
+  // muestra cómo se vería el sitio (tema default + menú de ejemplo).
+  const previewState = useMemo(
+    () => ({
+      config: {
+        ...DEFAULT_CONFIG,
+        brandName: name.trim() || DEFAULT_CONFIG.brandName,
+        tagline: tagline.trim() || DEFAULT_CONFIG.tagline,
+      },
+      content: DEFAULT_CONTENT,
+      customCss: '',
+    }),
+    [name, tagline],
+  );
+  useThemePreviewChannel('new', previewState);
+
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="theme-editor-layout">
+    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0, maxWidth: 680, width: '100%' }}>
       <Glass variant="quiet" style={{ padding: 16 }}>
         <label htmlFor="name" style={labelStyle}>Nombre del restaurante *</label>
         <input
@@ -95,6 +115,8 @@ export default function RestaurantForm() {
           id="tagline"
           name="tagline"
           type="text"
+          value={tagline}
+          onChange={(e) => setTagline(e.target.value)}
           placeholder="Una frase que describe tu lugar"
           style={inputStyle}
         />
@@ -142,6 +164,10 @@ export default function RestaurantForm() {
         {isPending ? 'Creando…' : 'Crear restaurante'}
       </button>
     </form>
+
+    {/* Vista previa en vivo (tema default + menú de ejemplo) */}
+    <PreviewPane previewId="new" />
+    </div>
   );
 }
 

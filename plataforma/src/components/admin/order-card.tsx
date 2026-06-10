@@ -5,6 +5,23 @@ import { updateOrderStatus } from '@/lib/actions/orders';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
 
+/** Moneda del restaurante (viene del tema resuelto en el servidor). */
+export interface PanelCurrency {
+  symbol: string;
+  position: 'prefix' | 'suffix';
+  locale: string;
+}
+
+function money(n: number, c: PanelCurrency): string {
+  let num: string;
+  try {
+    num = n.toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } catch {
+    num = n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
+}
+
 const STATUS_LABEL: Record<OrderStatus, string> = {
   NEW:       'Nuevo',
   PREP:      'En preparación',
@@ -41,7 +58,7 @@ function nextLabel(order: OrderWithItems): string {
   return '';
 }
 
-export default function OrderCard({ order }: { order: OrderWithItems }) {
+export default function OrderCard({ order, currency }: { order: OrderWithItems; currency: PanelCurrency }) {
   const [isPending, start] = useTransition();
   const next = nextStatus(order);
 
@@ -111,19 +128,32 @@ export default function OrderCard({ order }: { order: OrderWithItems }) {
       {/* Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {order.items.map((item) => (
-          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>
+          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
               {item.quantity}× {item.name_snapshot}
+              {item.options_snapshot && item.options_snapshot.length > 0 && (
+                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                  {item.options_snapshot.map((o) => o.choice).join(' · ')}
+                </span>
+              )}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
-              ${item.subtotal.toFixed(0)}
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)', flexShrink: 0 }}>
+              {money(Number(item.subtotal), currency)}
             </span>
           </div>
         ))}
+        {Number(order.delivery_fee) > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Envío</span>
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
+              {money(Number(order.delivery_fee), currency)}
+            </span>
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Total</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
-            ${order.total.toFixed(0)}
+            {money(Number(order.total), currency)}
           </span>
         </div>
         {order.notes && (

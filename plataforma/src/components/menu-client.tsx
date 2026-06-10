@@ -8,7 +8,7 @@ import { useCart } from '@/lib/cart-context';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
 
 interface Props {
   categories: CatItem[];
@@ -16,8 +16,13 @@ interface Props {
   ordersEnabled?: boolean;
 }
 
+/** ¿El producto tiene variantes/extras que el comensal debe ver? */
+function hasOptions(p: ProdItem): boolean {
+  return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
+}
+
 export default function MenuClient({ categories, products, ordersEnabled = false }: Props) {
-  const { items, addItem } = useCart();
+  const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const cartIconRef = useRef<HTMLButtonElement | null>(null);
@@ -28,8 +33,6 @@ export default function MenuClient({ categories, products, ordersEnabled = false
     for (const c of categories) m.set(c.id, c.icon?.trim() ? c.icon : 'utensils');
     return m;
   }, [categories]);
-
-  const qtyOf = (productId: string) => items.find((i) => i.productId === productId)?.quantity ?? 0;
 
   /* Punto que "vuela" del botón al ícono del carrito. */
   function fly(fromEl: HTMLElement) {
@@ -56,6 +59,12 @@ export default function MenuClient({ categories, products, ordersEnabled = false
   }
 
   function onAdd(product: ProdItem, sourceEl: HTMLElement) {
+    // Con variantes el "+" abre la hoja para elegir; sin variantes agrega directo.
+    if (hasOptions(product)) {
+      setCartOpen(false);
+      setSelected(product);
+      return;
+    }
     addItem({ productId: product.id, name: product.name, price: product.price, image_url: product.image_url });
     fly(sourceEl);
   }
@@ -66,7 +75,7 @@ export default function MenuClient({ categories, products, ordersEnabled = false
         categories={categories}
         products={products}
         ordersEnabled={ordersEnabled}
-        qtyOf={qtyOf}
+        qtyOf={qtyOfProduct}
         onAdd={onAdd}
         onOpen={(p) => { setCartOpen(false); setSelected(p); }}
         cartCount={count}

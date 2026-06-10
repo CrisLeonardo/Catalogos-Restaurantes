@@ -21,7 +21,14 @@ const empty: RestaurantState = null;
 export default function ProfileForm({ restaurantId, restaurant, theme }: ProfileFormProps) {
   const [infoState, infoAction, infoIsPending] = useActionState(updateRestaurantInfo, empty);
   const [themeState, themeAction, themeIsPending] = useActionState(updateRestaurantTheme, empty);
-  const [logoUrl, setLogoUrl] = useState<string>(theme.logo_url ?? '');
+
+  // El resolver da prioridad a config (JSONB) sobre las columnas legacy:
+  // mostramos lo que realmente está en efecto.
+  const cfg = (theme.config ?? {}) as { logoUrl?: string | null; colorAccent?: string };
+  const currentLogo = cfg.logoUrl !== undefined ? cfg.logoUrl : theme.logo_url;
+  const currentAccent = cfg.colorAccent ?? theme.color_primary;
+
+  const [logoUrl, setLogoUrl] = useState<string>(currentLogo ?? '');
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -121,7 +128,9 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
         </form>
       </section>
 
-      {/* ── Apariencia ──────────────────────────────────────── */}
+      {/* ── Apariencia (básica) ─────────────────────────────── */}
+      {/* El diseño completo lo hace Leogin desde el Super Admin; el dueño
+          ajusta su logo y color de acento sin poder romper el resto. */}
       <section>
         <h2 style={sectionTitle}>Apariencia</h2>
         <form action={themeAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -133,74 +142,22 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
             <label style={labelStyle}>Logo</label>
             <ImageUpload
               restaurantId={restaurantId}
-              currentUrl={theme.logo_url}
+              currentUrl={currentLogo}
               folder="logo"
               onUpload={setLogoUrl}
             />
           </Glass>
 
-          {/* Nombre de marca */}
+          {/* Color de acento */}
           <Glass variant="quiet" style={{ padding: 16 }}>
-            <label htmlFor="brand_name" style={labelStyle}>Nombre de marca (portada)</label>
-            <input
-              id="brand_name"
-              name="brand_name"
-              type="text"
-              defaultValue={theme.brand_name ?? ''}
-              placeholder={restaurant.name}
-              style={inputStyle}
-            />
-          </Glass>
-
-          {/* Colores */}
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label style={labelStyle}>Colores</label>
+            <label style={labelStyle}>Color de tu marca</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <ColorRow label="Acento / primario" name="color_primary" defaultValue={theme.color_primary} />
-              <ColorRow label="Fondo" name="color_bg" defaultValue={theme.color_bg} />
-              <ColorRow label="Texto" name="color_text" defaultValue={theme.color_text} />
+              <ColorRow label="Acento / primario" name="color_primary" defaultValue={currentAccent} />
             </div>
-          </Glass>
-
-          {/* Intensidad glass */}
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label style={labelStyle}>Efecto glass</label>
-            <SegmentedControl
-              name="glass_intensity"
-              options={[
-                { value: 'translucido', label: 'Translúcido' },
-                { value: 'esmerilado', label: 'Esmerilado' },
-                { value: 'solido', label: 'Sólido' },
-              ]}
-              defaultValue={theme.glass_intensity}
-            />
-          </Glass>
-
-          {/* Estilo portada */}
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label style={labelStyle}>Estilo de portada</label>
-            <SegmentedControl
-              name="portada_style"
-              options={[
-                { value: 'spotlight', label: 'Spotlight' },
-                { value: 'poster', label: 'Poster' },
-                { value: 'stack', label: 'Stack' },
-              ]}
-              defaultValue={theme.portada_style}
-            />
-          </Glass>
-
-          {/* Vista catálogo */}
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label style={labelStyle}>Vista del catálogo</label>
-            <SegmentedControl
-              name="catalog_view"
-              options={[
-                { value: 'grid', label: 'Cuadrícula' },
-                { value: 'list', label: 'Lista' },
-              ]}
-              defaultValue={theme.catalog_view}
-            />
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 10 }}>
+              El resto del diseño (fondo, tipografías, portada) lo personaliza
+              el equipo de Leogin por ti. Escríbenos si quieres cambios.
+            </p>
           </Glass>
 
           {themeState?.error && <ErrorMsg msg={themeState.error} />}
@@ -244,44 +201,6 @@ function ColorRow({
       <span style={{ fontSize: 12, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
         {value}
       </span>
-    </div>
-  );
-}
-
-function SegmentedControl({
-  name,
-  options,
-  defaultValue,
-}: {
-  name: string;
-  options: { value: string; label: string }[];
-  defaultValue: string;
-}) {
-  const [selected, setSelected] = useState(defaultValue);
-  return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-      <input type="hidden" name={name} value={selected} />
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => setSelected(opt.value)}
-          className="press"
-          style={{
-            padding: '7px 14px',
-            borderRadius: 'var(--radius-full)',
-            fontSize: 13,
-            border: '1px solid',
-            cursor: 'pointer',
-            background: selected === opt.value ? 'rgba(255,255,255,0.12)' : 'transparent',
-            borderColor: selected === opt.value ? 'var(--u-hair-2)' : 'var(--u-hair)',
-            color: selected === opt.value ? 'var(--u-text)' : 'var(--u-text-3)',
-            transition: 'all 150ms',
-          }}
-        >
-          {opt.label}
-        </button>
-      ))}
     </div>
   );
 }

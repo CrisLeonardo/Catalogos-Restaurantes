@@ -37,12 +37,25 @@ export function Glass({
     ref.current.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
   };
 
+  // a11y: un panel clicable se comporta como botón también con teclado.
+  const clickable = Boolean(onClick);
+  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!clickable) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
     <div
       ref={ref}
       className={`${cls} ${interactive ? "press" : ""} ${className}`}
       onMouseMove={handleMove}
       onClick={onClick}
+      onKeyDown={clickable ? handleKey : undefined}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
       style={style}
     >
       {children}

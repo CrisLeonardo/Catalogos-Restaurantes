@@ -143,7 +143,7 @@ export function Field({
   type?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const border = error ? 'rgba(255,255,255,0.85)' : focused ? 'rgba(255,255,255,0.45)' : 'var(--u-hair)';
+  const border = error ? 'rgba(248,113,113,0.75)' : focused ? 'rgba(255,255,255,0.45)' : 'var(--u-hair)';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label className="t-kicker" style={{ fontSize: 10.5 }}>{label}</label>
@@ -170,7 +170,7 @@ export function Field({
         />
       </div>
       {error && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--u-text-2)' }}>
+        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#f87171' }}>
           <Icon name="alertCircle" size={12} />{error}
         </div>
       )}

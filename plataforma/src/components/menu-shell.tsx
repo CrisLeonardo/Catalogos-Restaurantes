@@ -8,7 +8,7 @@ import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
 
 interface Props {
   config: ThemeConfig;
@@ -17,14 +17,16 @@ interface Props {
   products: ProdItem[];
   restaurantId: string;
   ordersEnabled: boolean;
+  /** Estado real según horarios del restaurante (default: abierto). */
+  isOpen?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true }: Props) {
   return (
     <ThemeProvider config={config} content={content}>
       <CartProvider restaurantId={restaurantId}>
         <main style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
-          <Portada />
+          <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} />
           </div>

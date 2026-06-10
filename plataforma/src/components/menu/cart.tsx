@@ -78,15 +78,20 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
           <>
             <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {items.map((item) => (
-                <Glass key={item.productId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
+                <Glass key={item.lineId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{item.name}</div>
+                    {item.options && item.options.length > 0 && (
+                      <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>
+                        {item.options.map((o) => o.choiceName).join(' · ')}
+                      </div>
+                    )}
                     <Price amount={item.price * item.quantity} size={14} style={{ marginTop: 3 }} />
                   </div>
                   <QtyStepper
                     value={item.quantity}
-                    onMinus={() => updateQuantity(item.productId, item.quantity - 1)}
-                    onPlus={() => updateQuantity(item.productId, item.quantity + 1)}
+                    onMinus={() => updateQuantity(item.lineId, item.quantity - 1)}
+                    onPlus={() => updateQuantity(item.lineId, item.quantity + 1)}
                   />
                 </Glass>
               ))}

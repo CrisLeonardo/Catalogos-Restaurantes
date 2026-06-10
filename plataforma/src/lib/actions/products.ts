@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { ProductOptionGroup } from '@/types';
 
 export type ProductState = { error: string } | null;
 
@@ -36,6 +37,51 @@ function parseTags(raw: string | null): string[] | null {
   return raw.split(',').map((t) => t.trim()).filter(Boolean);
 }
 
+/**
+ * Valida los grupos de variantes/extras que manda el editor del admin.
+ * Estructura final: [{ id, name, type, required?, max?, choices: [{ id, name, priceDelta }] }]
+ * Devuelve null si no hay grupos válidos (producto simple).
+ */
+function parseOptions(raw: string | null): ProductOptionGroup[] | null | { error: string } {
+  if (!raw?.trim() || raw.trim() === '[]') return null;
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return { error: 'Variantes inválidas.' };
+  }
+  if (!Array.isArray(data)) return { error: 'Variantes inválidas.' };
+  if (data.length > 10) return { error: 'Máximo 10 grupos de opciones.' };
+
+  const out: ProductOptionGroup[] = [];
+  for (const g of data as Record<string, unknown>[]) {
+    const name = typeof g.name === 'string' ? g.name.trim().slice(0, 60) : '';
+    const type = g.type === 'multi' ? 'multi' : 'single';
+    const id = typeof g.id === 'string' && g.id ? g.id.slice(0, 60) : Math.random().toString(36).slice(2, 9);
+    if (!name || !Array.isArray(g.choices)) continue;
+    if (g.choices.length > 20) return { error: 'Máximo 20 opciones por grupo.' };
+
+    const choices = (g.choices as Record<string, unknown>[])
+      .map((c) => ({
+        id: typeof c.id === 'string' && c.id ? c.id.slice(0, 60) : Math.random().toString(36).slice(2, 9),
+        name: typeof c.name === 'string' ? c.name.trim().slice(0, 60) : '',
+        priceDelta: Math.max(-100_000, Math.min(100_000, Number(c.priceDelta) || 0)),
+      }))
+      .filter((c) => c.name.length > 0);
+    if (choices.length === 0) continue;
+
+    out.push({
+      id,
+      name,
+      type,
+      ...(type === 'single' ? { required: g.required === true } : {}),
+      ...(type === 'multi' ? { max: Math.max(0, Math.min(20, Number(g.max) || 0)) } : {}),
+      choices,
+    });
+  }
+  return out.length > 0 ? out : null;
+}
+
 export async function createProduct(prevState: ProductState, formData: FormData): Promise<ProductState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
@@ -44,6 +90,9 @@ export async function createProduct(prevState: ProductState, formData: FormData)
   const priceRaw = formData.get('price') as string;
   if (!name) return { error: 'El nombre es requerido.' };
   if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
+
+  const options = parseOptions(formData.get('options') as string | null);
+  if (options && 'error' in options) return options;
 
   const { data: existing } = await ctx.db
     .from('products')
@@ -63,6 +112,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
+    options,
     is_available: formData.get('is_available') === 'true',
     sort_order,
   });
@@ -83,6 +133,9 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   if (!name) return { error: 'El nombre es requerido.' };
   if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
 
+  const options = parseOptions(formData.get('options') as string | null);
+  if (options && 'error' in options) return options;
+
   const { error } = await ctx.db
     .from('products')
     .update({
@@ -93,6 +146,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
+      options,
       is_available: formData.get('is_available') === 'true',
     })
     .eq('id', id)
@@ -211,6 +265,9 @@ export async function createProductModal(
   if (!name) return { error: 'El nombre es requerido.' };
   if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
 
+  const options = parseOptions(formData.get('options') as string | null);
+  if (options && 'error' in options) return options;
+
   const { data: existing } = await ctx.db
     .from('products')
     .select('sort_order')
@@ -229,6 +286,7 @@ export async function createProductModal(
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
+    options,
     is_available: formData.get('is_available') === 'true',
     sort_order,
   });
@@ -252,6 +310,9 @@ export async function updateProductModal(
   if (!name) return { error: 'El nombre es requerido.' };
   if (!priceRaw || isNaN(parseFloat(priceRaw))) return { error: 'El precio es requerido.' };
 
+  const options = parseOptions(formData.get('options') as string | null);
+  if (options && 'error' in options) return options;
+
   const { error } = await ctx.db
     .from('products')
     .update({
@@ -262,6 +323,7 @@ export async function updateProductModal(
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
+      options,
       is_available: formData.get('is_available') === 'true',
     })
     .eq('id', id)

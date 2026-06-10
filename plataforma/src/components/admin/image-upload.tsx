@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 interface ImageUploadProps {
@@ -8,6 +8,38 @@ interface ImageUploadProps {
   currentUrl?: string | null;
   folder?: string;
   onUpload: (url: string) => void;
+}
+
+/**
+ * Redimensiona y recomprime en el navegador antes de subir: una foto de
+ * celular de 5 MB termina pesando ~200 KB sin pérdida visible en el menú.
+ * GIF y SVG se suben tal cual (canvas los rompería).
+ */
+async function compressImage(file: File, maxDim = 1600, quality = 0.82): Promise<File> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    // Pequeña y ya comprimida: no vale la pena reprocesar.
+    if (scale === 1 && file.size < 400 * 1024) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/webp', quality),
+    );
+    if (!blob || blob.size >= file.size) return file;
+    const base = file.name.replace(/\.[^.]+$/, '');
+    return new File([blob], `${base}.webp`, { type: 'image/webp' });
+  } catch {
+    return file; // ante cualquier fallo, subir el original
+  }
 }
 
 export default function ImageUpload({
@@ -20,14 +52,31 @@ export default function ImageUpload({
   const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  // Liberar el object URL del preview al desmontar (fuga de memoria).
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
+
+  function setLocalPreview(url: string | null) {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    if (url?.startsWith('blob:')) objectUrlRef.current = url;
+    setPreview(url);
+  }
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validación local
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La imagen no puede superar 5 MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('La imagen no puede superar 10 MB.');
       return;
     }
 
@@ -35,20 +84,22 @@ export default function ImageUpload({
     setUploading(true);
 
     // Preview inmediato
-    const localUrl = URL.createObjectURL(file);
-    setPreview(localUrl);
+    setLocalPreview(URL.createObjectURL(file));
+
+    // Comprimir antes de subir (móvil con datos lo agradece).
+    const upload = await compressImage(file);
 
     const supabase = createClient();
-    const ext = file.name.split('.').pop();
+    const ext = upload.name.split('.').pop();
     const path = `${restaurantId}/${folder}/${Date.now()}.${ext}`;
 
     const { data, error: uploadError } = await supabase.storage
       .from('restaurant-assets')
-      .upload(path, file, { upsert: true });
+      .upload(path, upload, { upsert: true });
 
     if (uploadError) {
       setError(uploadError.message);
-      setPreview(currentUrl ?? null);
+      setLocalPreview(currentUrl ?? null);
       setUploading(false);
       return;
     }

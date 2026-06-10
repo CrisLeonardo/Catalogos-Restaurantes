@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
+import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
 import {
   createProductModal,
   updateProductModal,
@@ -16,7 +17,7 @@ import {
   deleteProduct,
   type ProductModalState,
 } from '@/lib/actions/products';
-import type { Category, Product } from '@/types';
+import type { Category, Product, ProductOptionGroup } from '@/types';
 
 /* ── constantes ───────────────────────────────────────────── */
 
@@ -298,6 +299,9 @@ function ProductModal({
   const [productIcon,  setProductIcon]  = useState<string>(product?.icon ?? '');
   const [isAvailable,  setIsAvailable]  = useState<boolean>(product?.is_available ?? true);
   const [tags,         setTags]         = useState<string[]>(product?.tags ?? []);
+  const [options,      setOptions]      = useState<ProductOptionGroup[]>(
+    Array.isArray(product?.options) ? product!.options! : [],
+  );
   const [uploading,    setUploading]    = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -390,6 +394,7 @@ function ProductModal({
           <input type="hidden" name="icon"         value={productIcon} />
           <input type="hidden" name="is_available" value={String(isAvailable)} />
           <input type="hidden" name="tags"         value={tags.join(',')} />
+          <input type="hidden" name="options"      value={JSON.stringify(cleanOptions(options))} />
 
           {/* Cuerpo scrollable */}
           <div
@@ -587,6 +592,17 @@ function ProductModal({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Variantes / extras */}
+            <div>
+              <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 8 }}>
+                Variantes y extras
+                <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--u-text-4)' }}>
+                  · tamaños, extras con precio… el cliente elige al pedir
+                </span>
+              </label>
+              <OptionsEditor value={options} onChange={setOptions} />
             </div>
 
             {/* Disponibilidad */}

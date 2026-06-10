@@ -1,10 +1,17 @@
 import { z } from 'zod';
 
+/** Opción elegida por el comensal: solo IDs — nombres y precios se resuelven en el servidor. */
+export const orderItemOptionSchema = z.object({
+  groupId: z.string().min(1).max(60),
+  choiceId: z.string().min(1).max(60),
+});
+
 export const orderItemSchema = z.object({
   productId: z.string().uuid('ID de producto inválido'),
   name: z.string().min(1).max(200),
   price: z.number().positive().max(100_000),
   quantity: z.number().int().positive().max(99),
+  options: z.array(orderItemOptionSchema).max(30).optional(),
 });
 
 export const customerSchema = z.object({

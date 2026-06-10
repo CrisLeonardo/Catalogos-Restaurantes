@@ -154,6 +154,7 @@ export interface ThemeContent {
     subtitle: string;         // vacío = usa tagline
     cta: string;
     badgeOpen: string;
+    badgeClosed: string;      // cuando el horario dice "cerrado"
     posterKicker: string;     // "EST · GUATEMALA" en variante poster
   };
   catalog: {
@@ -168,6 +169,8 @@ export interface ThemeContent {
     soldOut: string;
     prepTime: string;
     fresh: string;
+    chooseOne: string;        // grupos de opciones obligatorios ("Elige uno")
+    optional: string;         // grupos opcionales
   };
   cart: {
     title: string;
@@ -202,6 +205,10 @@ export interface ThemeContent {
     errName: string;
     errPhone: string;
     errAddress: string;
+    closedTitle: string;      // checkout bloqueado: fuera de horario
+    closedMsg: string;
+    pausedTitle: string;      // checkout bloqueado: pausa manual
+    pausedMsg: string;        // vacío = usa el mensaje del restaurante
   };
   confirmation: {
     title: string;
@@ -212,7 +219,20 @@ export interface ThemeContent {
     etaValue: string;
     payment: string;
     notified: string;
+    track: string;            // botón "Seguir mi pedido"
     again: string;
+  };
+  tracking: {
+    title: string;
+    subtitle: string;         // vacío = "Actualizamos el estado en vivo"
+    statusNew: string;
+    statusPrep: string;
+    statusReady: string;
+    statusReadyPickup: string;  // "Listo" cuando es para llevar
+    statusTransit: string;
+    statusDelivered: string;
+    statusCancel: string;
+    back: string;             // "Volver al menú"
   };
   tags: {
     hot: string;
@@ -228,6 +248,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     subtitle: '',
     cta: 'Ver el menú',
     badgeOpen: 'Abierto ahora',
+    badgeClosed: 'Cerrado ahora',
     posterKicker: 'EST · 2024',
   },
   catalog: {
@@ -242,6 +263,8 @@ export const DEFAULT_CONTENT: ThemeContent = {
     soldOut: 'Agotado',
     prepTime: '8–12 min',
     fresh: 'Recién hecho',
+    chooseOne: 'Elige uno',
+    optional: 'Opcional',
   },
   cart: {
     title: 'Carrito',
@@ -276,6 +299,10 @@ export const DEFAULT_CONTENT: ThemeContent = {
     errName: 'Decinos tu nombre',
     errPhone: 'Necesitamos un teléfono',
     errAddress: '¿A dónde lo llevamos?',
+    closedTitle: 'Estamos cerrados',
+    closedMsg: 'Volvé en nuestro horario de atención. ¡Te esperamos!',
+    pausedTitle: 'Pedidos en pausa',
+    pausedMsg: '',
   },
   confirmation: {
     title: '¡Pedido enviado!',
@@ -286,7 +313,20 @@ export const DEFAULT_CONTENT: ThemeContent = {
     etaValue: '20–30 min',
     payment: 'Pago',
     notified: 'El restaurante fue notificado al instante',
+    track: 'Seguir mi pedido en vivo',
     again: 'Hacer otro pedido',
+  },
+  tracking: {
+    title: 'Tu pedido',
+    subtitle: '',
+    statusNew: 'Recibido',
+    statusPrep: 'En preparación',
+    statusReady: 'Listo',
+    statusReadyPickup: 'Listo para recoger',
+    statusTransit: 'En camino',
+    statusDelivered: 'Entregado',
+    statusCancel: 'Cancelado',
+    back: 'Volver al menú',
   },
   tags: {
     hot: 'Picante',
