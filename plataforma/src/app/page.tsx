@@ -33,13 +33,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = data.restaurant.tagline ?? `Menú en línea de ${name}`;
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
   const menuUrl = rootDomain ? `https://${slug}.${rootDomain}` : undefined;
+  // pwaIconUrl tiene prioridad para favicon; si no hay, usa el logo de portada.
+  const favicon = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl;
   const logo = data.resolved.config.logoUrl;
 
   return {
     title: `${name} — Menú`,
     description,
-    // El logo del restaurante como favicon y miniatura al compartir el link.
-    icons: logo ? { icon: logo, apple: logo } : undefined,
+    icons: favicon ? { icon: favicon, apple: favicon } : undefined,
     openGraph: {
       title: `${name} — Menú`,
       description,
