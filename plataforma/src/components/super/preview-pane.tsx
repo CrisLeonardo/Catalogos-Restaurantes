@@ -6,11 +6,18 @@
    • useThemePreviewChannel(previewId, state): emite cada cambio
      del editor por BroadcastChannel y responde al "hello" de
      cualquier vista previa que se conecte (iframe o ventana).
-   • <PreviewPane>: marco de teléfono con el iframe de
-     /preview/[id] + botones (móvil/escritorio, abrir ventana).
+   • <PreviewPane>: panel con dos modos —
+       1) Vista previa en vivo APAGADA (por defecto): no monta el
+          iframe → no consume CPU/GPU. Botones para activarla,
+          abrirla en pestaña nueva o en una ventana aparte.
+       2) Vista previa ENCENDIDA: marco de teléfono con el iframe
+          de /preview/[id] (sitio del cliente) o /preview/admin/[id]
+          (panel del restaurante).
+     El iframe del sitio es lo que más pesa (fondos animados,
+     watermark girando, sheen…), por eso se monta solo bajo demanda.
    ============================================================ */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Icon } from '@/components/icons';
 import { previewChannelName, type ThemePreviewState } from '@/components/super/preview-client';
 
@@ -44,14 +51,54 @@ export function useThemePreviewChannel(previewId: string, state: ThemePreviewSta
   }, [state]);
 }
 
-export default function PreviewPane({ previewId }: { previewId: string }) {
-  const src = `/preview/${previewId}`;
-  const [wide, setWide] = useState(false);
+type Target = 'site' | 'admin';
+const STORAGE_KEY = 'leogin-preview-enabled';
+const PREF_EVENT = 'leogin-preview-pref';
 
+/**
+ * Preferencia "vista previa en vivo" persistida en localStorage, leída con
+ * useSyncExternalStore: SSR-safe (snapshot del servidor = apagado) y sin
+ * setState dentro de un effect.
+ */
+function useEnabledPref(): [boolean, (v: boolean) => void] {
+  const enabled = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('storage', cb);
+      window.addEventListener(PREF_EVENT, cb);
+      return () => {
+        window.removeEventListener('storage', cb);
+        window.removeEventListener(PREF_EVENT, cb);
+      };
+    },
+    () => {
+      try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
+    },
+    () => false,
+  );
+  const setEnabled = (v: boolean) => {
+    try { localStorage.setItem(STORAGE_KEY, v ? '1' : '0'); } catch { /* no-op */ }
+    window.dispatchEvent(new Event(PREF_EVENT));
+  };
+  return [enabled, setEnabled];
+}
+
+export default function PreviewPane({ previewId }: { previewId: string }) {
+  const isNew = previewId === 'new';
+  const [enabled, setEnabledPersist] = useEnabledPref();
+  const [wide, setWide] = useState(false);
+  const [target, setTarget] = useState<Target>('site');
+
+  // En creación aún no existe el panel admin del restaurante.
+  const effectiveTarget: Target = isNew ? 'site' : target;
+  const src = effectiveTarget === 'admin' ? `/preview/admin/${previewId}` : `/preview/${previewId}`;
+
+  function openTab() {
+    window.open(src, '_blank', 'noopener,noreferrer');
+  }
   function openWindow() {
     window.open(
       src,
-      `leogin-preview-${previewId}`,
+      `leogin-preview-${previewId}-${effectiveTarget}`,
       'width=430,height=900,menubar=no,toolbar=no,location=no,status=no',
     );
   }
@@ -63,29 +110,83 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
         <span
           aria-hidden
           style={{
-            width: 8, height: 8, borderRadius: 99, background: '#4ade80',
-            boxShadow: '0 0 8px rgba(74,222,128,0.8)', flexShrink: 0,
+            width: 8, height: 8, borderRadius: 99,
+            background: enabled ? '#4ade80' : 'var(--u-text-4)',
+            boxShadow: enabled ? '0 0 8px rgba(74,222,128,0.8)' : 'none', flexShrink: 0,
           }}
         />
-        <span className="t-kicker" style={{ fontSize: 10.5, flex: 1 }}>Vista previa en vivo</span>
+        <span className="t-kicker" style={{ fontSize: 10.5, flex: 1 }}>
+          {enabled ? 'Vista previa en vivo' : 'Vista previa'}
+        </span>
 
-        <div style={{ display: 'flex', gap: 4 }}>
-          <PaneBtn label="Vista móvil" active={!wide} onClick={() => setWide(false)} icon="phone" />
-          <PaneBtn label="Vista ancha" active={wide} onClick={() => setWide(true)} icon="grid" />
-          <PaneBtn label="Abrir en ventana aparte (para mostrarla al cliente)" onClick={openWindow} icon="arrowUpRight" />
+        {enabled && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <PaneBtn label="Vista móvil" active={!wide} onClick={() => setWide(false)} icon="phone" />
+            <PaneBtn label="Vista ancha" active={wide} onClick={() => setWide(true)} icon="grid" />
+            <PaneBtn label="Abrir en pestaña nueva" onClick={openTab} icon="arrowUpRight" />
+            <PaneBtn label="Apagar vista previa en vivo (ahorra recursos)" onClick={() => setEnabledPersist(false)} icon="x" />
+          </div>
+        )}
+      </div>
+
+      {/* Selector de objetivo: sitio del cliente / panel admin del restaurante */}
+      {!isNew && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <TargetBtn label="Sitio del cliente" active={effectiveTarget === 'site'} onClick={() => setTarget('site')} icon="phone" />
+          <TargetBtn label="Panel del restaurante" active={effectiveTarget === 'admin'} onClick={() => setTarget('admin')} icon="dashboard" />
         </div>
-      </div>
+      )}
 
-      {/* Marco de teléfono */}
-      <div className={`preview-frame${wide ? ' is-wide' : ''}`}>
-        <iframe src={src} title="Vista previa del restaurante" loading="lazy" />
-      </div>
-
-      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
-        Los cambios se reflejan al instante, sin guardar.
-        <br />
-        «Abrir en ventana» sirve para mostrarla al cliente en otra pantalla.
-      </p>
+      {enabled ? (
+        <>
+          {/* Marco de teléfono con el iframe (montado solo al activar) */}
+          <div className={`preview-frame${wide ? ' is-wide' : ''}`}>
+            <iframe key={src} src={src} title="Vista previa del restaurante" loading="lazy" />
+          </div>
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
+            {effectiveTarget === 'admin'
+              ? 'Así ve el dueño su panel (datos guardados, solo lectura).'
+              : 'Los cambios del editor se reflejan al instante, sin guardar.'}
+            <br />
+            «Abrir en ventana» sirve para mostrarla al cliente en otra pantalla.
+          </p>
+        </>
+      ) : (
+        /* Estado apagado: tarjeta ligera, sin iframe → no consume recursos */
+        <div
+          style={{
+            border: '1px dashed var(--u-hair-2)', borderRadius: 14, padding: '26px 18px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center',
+          }}
+        >
+          <div style={{ width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,0.05)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
+            <Icon name="eye" size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
+              Vista previa en vivo apagada
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 5, lineHeight: 1.5, maxWidth: 280 }}>
+              La vista en vivo dentro del editor consume CPU. Actívala solo cuando la necesites,
+              o ábrela en una pestaña aparte para que el editor vaya fluido.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
+            <button type="button" onClick={() => setEnabledPersist(true)} className="press btn-white"
+              style={{ padding: '11px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Icon name="eye" size={15} /> Activar vista previa en vivo
+            </button>
+            <button type="button" onClick={openTab} className="press"
+              style={{ padding: '11px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Icon name="arrowUpRight" size={15} /> Abrir en pestaña nueva
+            </button>
+            <button type="button" onClick={openWindow} className="press"
+              style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: 'none', background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+              Abrir en ventana aparte
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
@@ -113,6 +214,34 @@ function PaneBtn({
       }}
     >
       <Icon name={icon} size={14} />
+    </button>
+  );
+}
+
+function TargetBtn({
+  label, icon, active, onClick,
+}: {
+  label: string;
+  icon: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      className="press"
+      style={{
+        flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        padding: '8px 10px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
+        background: active ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+        color: active ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms',
+      }}
+    >
+      <Icon name={icon} size={14} />
+      <span>{label}</span>
     </button>
   );
 }

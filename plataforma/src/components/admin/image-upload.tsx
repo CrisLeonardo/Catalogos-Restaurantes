@@ -7,7 +7,55 @@ interface ImageUploadProps {
   restaurantId: string;
   currentUrl?: string | null;
   folder?: string;
+  /**
+   * 'icon' normaliza la imagen a un PNG cuadrado 512×512 antes de subir
+   * (fondo de marca + logo centrado en la "safe zone"). Necesario para que
+   * el ícono de la PWA instalada se vea bien en Android/iOS y NUNCA salga
+   * como imagen rota: el manifest exige un raster cuadrado de tamaño
+   * concreto (PNG), no un SVG ni un WebP de tamaño desconocido.
+   */
+  mode?: 'photo' | 'icon';
+  /** Color de fondo para el ícono (mode='icon'). Por defecto el oscuro de plataforma. */
+  bgColor?: string;
   onUpload: (url: string) => void;
+}
+
+/**
+ * Convierte cualquier imagen (PNG/JPG/WebP/GIF) en un PNG cuadrado 512×512
+ * con el logo contenido en el 76% central sobre un fondo sólido. El canvas
+ * decodifica WebP de forma nativa (a diferencia de next/og en el servidor),
+ * así que el resultado es un ícono universalmente válido para el manifest PWA.
+ */
+async function normalizeIcon(file: File, bg: string, size = 512): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+
+    // Fondo de marca a sangre completa (clave para el ícono "maskable").
+    ctx.fillStyle = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bg) ? bg : '#0b0b0c';
+    ctx.fillRect(0, 0, size, size);
+
+    // Logo contenido en el 76% central → dentro de la safe zone del maskable.
+    const pad = size * 0.12;
+    const box = size - pad * 2;
+    const scale = Math.min(box / bitmap.width, box / bitmap.height);
+    const w = bitmap.width * scale;
+    const h = bitmap.height * scale;
+    ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/png'),
+    );
+    if (!blob) return file;
+    return new File([blob], 'icon.png', { type: 'image/png' });
+  } catch {
+    return file; // ante cualquier fallo (p.ej. SVG no decodificable) subir el original
+  }
 }
 
 /**
@@ -46,6 +94,8 @@ export default function ImageUpload({
   restaurantId,
   currentUrl,
   folder = 'products',
+  mode = 'photo',
+  bgColor = '#0b0b0c',
   onUpload,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -86,8 +136,10 @@ export default function ImageUpload({
     // Preview inmediato
     setLocalPreview(URL.createObjectURL(file));
 
-    // Comprimir antes de subir (móvil con datos lo agradece).
-    const upload = await compressImage(file);
+    // Ícono PWA → PNG cuadrado 512×512; resto → comprimir webp.
+    const upload = mode === 'icon'
+      ? await normalizeIcon(file, bgColor)
+      : await compressImage(file);
 
     const supabase = createClient();
     const ext = upload.name.split('.').pop();

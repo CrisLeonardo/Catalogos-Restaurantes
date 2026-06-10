@@ -14,11 +14,16 @@ interface Props {
   ordersEnabled?: boolean;
   logoUrl?: string | null;
   zone?: string;
+  /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
+  preview?: boolean;
   children: React.ReactNode;
 }
 
-export default function AdminShell({ restaurantName, ordersEnabled = false, logoUrl, zone, children }: Props) {
-  const pathname = usePathname();
+export default function AdminShell({ restaurantName, ordersEnabled = false, logoUrl, zone, preview = false, children }: Props) {
+  const realPathname = usePathname();
+  // En vista previa la URL es /preview/admin/[id]; fijamos el Catálogo como
+  // sección activa para que el panel se vea como lo ve el dueño al entrar.
+  const pathname = preview ? '/admin/menu' : realPathname;
 
   const nav = [
     ...(ordersEnabled ? [{ href: '/admin/pedidos',    label: 'Pedidos',     icon: 'list'  }] : []),
@@ -62,6 +67,16 @@ export default function AdminShell({ restaurantName, ordersEnabled = false, logo
 
         {nav.map((n) => {
           const active = pathname.startsWith(n.href);
+          // En vista previa los enlaces no navegan (la ruta /admin/* no existe
+          // en el origen de la vista previa): se renderizan como estáticos.
+          if (preview) {
+            return (
+              <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} style={{ cursor: 'default' }}>
+                <Icon name={n.icon} size={18} />
+                <span style={{ flex: 1 }}>{n.label}</span>
+              </div>
+            );
+          }
           return (
             <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'}>
               <Icon name={n.icon} size={18} />
@@ -78,9 +93,9 @@ export default function AdminShell({ restaurantName, ordersEnabled = false, logo
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Administrador</div>
-            <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>Sesión activa</div>
+            <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>
-          <LogoutButton />
+          {!preview && <LogoutButton />}
         </div>
       </aside>
 

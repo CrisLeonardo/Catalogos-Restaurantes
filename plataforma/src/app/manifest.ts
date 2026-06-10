@@ -28,14 +28,24 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     }
   }
 
-  // pwaIconUrl: imagen dedicada para la pantalla de inicio (subida en el editor).
-  // logoUrl: logo de portada, usado como fallback si no hay pwaIconUrl.
-  // Ícono maskable: /api/icon/[slug] → imagen centrada sobre fondo de marca.
+  // pwaIconUrl: ícono dedicado, normalizado a PNG cuadrado 512×512 en el editor.
+  // logoUrl: logo de portada (fallback si no hay pwaIconUrl; puede no ser cuadrado).
+  //
+  // CRÍTICO para que NO salga como imagen rota en Android: el ícono debe ser
+  // un raster de tamaño CONCRETO (no `sizes:'any'`) y NO un SVG —el WebAPK de
+  // Android no rasteriza SVG ni íconos sin tamaño. El pwaIconUrl ya viene como
+  // PNG 512×512 (purpose 'any' + 'maskable' usan la misma imagen).
   const appIcon = pwaIconUrl ?? logoUrl;
+  // No mezclamos el ícono del tenant con los estáticos de plataforma: si lo
+  // hiciéramos, Android podría elegir el estático para tamaños pequeños y
+  // mostrar el ícono equivocado. Chrome reescala el 512 a 192 sin problema.
+  // Servimos el ícono a través de /api/icon/[slug] (mismo origen): evita
+  // problemas de íconos maskable cross-origin y mantiene válida la URL para
+  // PWAs ya instaladas. La ruta hace de proxy de los bytes reales del asset.
   const icons: MetadataRoute.Manifest['icons'] = appIcon && slug && slug !== DEMO_SLUG
     ? [
-        { src: appIcon, sizes: 'any', purpose: 'any' },
-        { src: `/api/icon/${slug}`, sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
+        { src: `/api/icon/${slug}`, sizes: '512x512', type: mimeFor(appIcon), purpose: 'any' },
+        { src: `/api/icon/${slug}`, sizes: '512x512', type: mimeFor(appIcon), purpose: 'maskable' },
       ]
     : [
         { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -53,4 +63,15 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     theme_color: '#0b0b0c',
     icons,
   };
+}
+
+/** Mime por extensión del asset, para declararlo en el manifest. */
+function mimeFor(url: string): string | undefined {
+  const clean = url.split('?')[0].toLowerCase();
+  if (clean.endsWith('.png')) return 'image/png';
+  if (clean.endsWith('.webp')) return 'image/webp';
+  if (clean.endsWith('.jpg') || clean.endsWith('.jpeg')) return 'image/jpeg';
+  if (clean.endsWith('.gif')) return 'image/gif';
+  if (clean.endsWith('.svg')) return 'image/svg+xml';
+  return undefined; // desconocido → el navegador lo deduce
 }

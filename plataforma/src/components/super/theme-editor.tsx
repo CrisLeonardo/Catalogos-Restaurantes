@@ -154,9 +154,9 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           <ImageUpload restaurantId={restaurantId} currentUrl={config.logoUrl} folder="logo" onUpload={(u) => setC('logoUrl', u)} />
         </Field>
         <Field label="Ícono de app instalada (PWA)">
-          <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" onUpload={(u) => setC('pwaIconUrl', u)} />
+          <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" mode="icon" bgColor={config.colorBg} onUpload={(u) => setC('pwaIconUrl', u)} />
           <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 4 }}>
-            Imagen cuadrada que aparece en la pantalla de inicio cuando el cliente instala la app. Si no se sube, se usa el logo.
+            Aparece en la pantalla de inicio cuando el cliente instala la app. Se convierte automáticamente a un ícono cuadrado (PNG 512×512) sobre el color de fondo del tema. Si no se sube, se usa el logo.
           </p>
         </Field>
       </Section>
