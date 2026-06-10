@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import type { CSSProperties } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import {
   getRestaurantFullById,
@@ -8,12 +7,10 @@ import {
 } from '@/lib/db/super-admin';
 import {
   resolveTheme,
-  buildThemeVars,
-  buildFontsHref,
   formatPrice,
   type ThemeRow,
 } from '@/lib/theme/resolve';
-import AdminShell from '@/components/admin/shell';
+import AdminPreviewClient from '@/components/super/admin-preview-client';
 import { Icon } from '@/components/icons';
 
 /* ============================================================
@@ -66,8 +63,6 @@ export default async function AdminPreviewPage({
     brandName: row.name,
     tagline: row.tagline,
   });
-  const vars = buildThemeVars(resolved.config);
-  const fontsHref = buildFontsHref(resolved.config);
   const ordersEnabled = row.modules?.orders === true;
 
   const { categories, products } = await getRestaurantMenuOverview(id);
@@ -78,32 +73,12 @@ export default async function AdminPreviewPage({
   for (const p of products) countByCat.set(p.category_id, (countByCat.get(p.category_id) ?? 0) + 1);
 
   return (
-    <div
-      data-glass={resolved.config.glassIntensity}
-      data-scheme={resolved.config.scheme}
-      style={{
-        ...(vars as CSSProperties),
-        minHeight: '100svh',
-        background: 'var(--brand-bg)',
-        color: 'var(--u-text)',
-        fontFamily: 'var(--ui-font-sans)',
-      }}
+    <AdminPreviewClient
+      previewId={id}
+      initialConfig={resolved.config}
+      ordersEnabled={ordersEnabled}
+      fallbackName={row.name}
     >
-      {fontsHref && (
-        <>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link rel="stylesheet" href={fontsHref} />
-        </>
-      )}
-
-      <AdminShell
-        restaurantName={row.name}
-        ordersEnabled={ordersEnabled}
-        logoUrl={resolved.config.logoUrl}
-        zone={resolved.config.zone}
-        preview
-      >
         <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {/* Aviso de vista previa */}
           <div
@@ -114,7 +89,7 @@ export default async function AdminPreviewPage({
             }}
           >
             <Icon name="eye" size={16} />
-            <span>Vista previa del panel del dueño · datos guardados, solo lectura.</span>
+            <span>Vista previa del panel del dueño · el tema se actualiza en vivo; los datos son los guardados (solo lectura).</span>
           </div>
 
           {/* KPIs */}
@@ -177,8 +152,7 @@ export default async function AdminPreviewPage({
             )}
           </div>
         </div>
-      </AdminShell>
-    </div>
+    </AdminPreviewClient>
   );
 }
 

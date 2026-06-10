@@ -16,15 +16,33 @@ import { DEMO_SLUG } from '@/lib/tenant';
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'Menú en línea',
-  description: 'Menús interactivos para restaurantes',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Leogin',
-  },
-};
+/**
+ * Metadata dinámica: el ícono de "añadir a inicio" de iOS (apple-touch-icon)
+ * se personaliza por restaurante. Apunta al proxy /api/icon/[slug], que sirve
+ * el PNG cuadrado del restaurante. (Por eso se eliminó apple-icon.tsx: un
+ * archivo de convención fijaría el ícono genérico para todos los tenants.)
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const slug = (await headers()).get('x-tenant-slug');
+
+  let appleIcon = '/icon-512.png'; // plataforma / demo → ícono genérico
+  if (slug && slug !== DEMO_SLUG) {
+    const data = await getRestaurantBySlug(slug);
+    const icon = data?.resolved.config.pwaIconUrl ?? data?.resolved.config.logoUrl;
+    if (icon) appleIcon = `/api/icon/${slug}`;
+  }
+
+  return {
+    title: 'Menú en línea',
+    description: 'Menús interactivos para restaurantes',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'black-translucent',
+      title: 'Leogin',
+    },
+    icons: { apple: appleIcon },
+  };
+}
 
 // La barra del navegador toma el color de fondo del tenant (en plataforma
 // queda el oscuro por defecto).

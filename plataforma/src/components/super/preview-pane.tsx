@@ -145,7 +145,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
           </div>
           <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
             {effectiveTarget === 'admin'
-              ? 'Así ve el dueño su panel (datos guardados, solo lectura).'
+              ? 'Así ve el dueño su panel: el tema se actualiza en vivo (datos guardados, solo lectura).'
               : 'Los cambios del editor se reflejan al instante, sin guardar.'}
             <br />
             «Abrir en ventana» sirve para mostrarla al cliente en otra pantalla.
