@@ -13,16 +13,28 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const slug = (await headers()).get('x-tenant-slug');
 
   let name = 'Leogin';
+  let logoUrl: string | null = null;
   if (slug === DEMO_SLUG) {
     name = 'Azúcar Negra';
   } else if (slug) {
     try {
       const data = await getRestaurantBySlug(slug);
       if (data?.restaurant.name) name = data.restaurant.name;
+      if (data?.resolved.config.logoUrl) logoUrl = data.resolved.config.logoUrl;
     } catch {
       /* sin BD o slug inválido → cae al nombre de la plataforma */
     }
   }
+
+  const icons: MetadataRoute.Manifest['icons'] = logoUrl
+    ? [
+        { src: logoUrl, sizes: 'any', purpose: 'any' },
+        { src: logoUrl, sizes: 'any', purpose: 'maskable' },
+      ]
+    : [
+        { src: '/logo-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        { src: '/logo-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      ];
 
   return {
     name,
@@ -33,19 +45,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     orientation: 'portrait',
     background_color: '#0b0b0c',
     theme_color: '#0b0b0c',
-    icons: [
-      {
-        src: '/logo-mark.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'any',
-      },
-      {
-        src: '/logo-mark.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'maskable',
-      },
-    ],
+    icons,
   };
 }

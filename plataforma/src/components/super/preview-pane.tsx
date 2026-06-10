@@ -37,7 +37,10 @@ export function useThemePreviewChannel(previewId: string, state: ThemePreviewSta
 
   useEffect(() => {
     stateRef.current = state;
-    chRef.current?.postMessage({ type: 'state', ...state });
+    const timer = setTimeout(() => {
+      chRef.current?.postMessage({ type: 'state', ...stateRef.current });
+    }, 150);
+    return () => clearTimeout(timer);
   }, [state]);
 }
 

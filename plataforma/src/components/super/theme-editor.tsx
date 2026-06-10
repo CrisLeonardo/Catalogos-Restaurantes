@@ -16,6 +16,7 @@ import {
   type ThemeTemplate,
 } from '@/lib/actions/super-admin';
 import { fontsForRole, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import { buildThemeVars } from '@/lib/theme/resolve';
 
 interface Props {
   restaurantId: string;
@@ -255,10 +256,35 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 6 }}>
           CSS crudo que se inyecta al final del sitio del restaurante (gana sobre todo). Para ajustes sin límite.
         </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+          <button
+            type="button"
+            className="press"
+            onClick={() => {
+              const vars = buildThemeVars(config);
+              const lines = Object.entries(vars).map(([k, v]) => `  ${k}: ${v};`).join('\n');
+              const block = `:root {\n${lines}\n}`;
+              setCss((prev) => prev.trim() ? `${block}\n\n${prev}` : block);
+            }}
+            style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text-2)' }}
+          >
+            Insertar variables del tema actual
+          </button>
+          {css.trim() && (
+            <button
+              type="button"
+              className="press"
+              onClick={() => { if (window.confirm('¿Limpiar el CSS personalizado?')) setCss(''); }}
+              style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'transparent', color: '#f87171' }}
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
         <textarea
           value={css}
           onChange={(e) => setCss(e.target.value)}
-          rows={6}
+          rows={10}
           spellCheck={false}
           placeholder={'.glass { border-radius: 4px; }\n.t-display { letter-spacing: 0; }'}
           style={{ width: '100%', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)', color: 'var(--u-text)', fontSize: 13, fontFamily: 'var(--ui-font-mono)', outline: 'none', resize: 'vertical' }}
