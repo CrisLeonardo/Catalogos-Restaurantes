@@ -26,10 +26,14 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     }
   }
 
-  // No declarar 'maskable' con logos normales: el OS recorta el ícono en
-  // círculo/cuadrado asumiendo zona segura, y el logo queda cortado.
-  const icons: MetadataRoute.Manifest['icons'] = logoUrl
-    ? [{ src: logoUrl, sizes: 'any', purpose: 'any' }]
+  // Ícono regular: el logo tal cual (para el diálogo de instalación y favicon).
+  // Ícono maskable: generado por /api/icon/[slug] → logo centrado sobre el
+  // color de fondo de la marca, así Android no lo envuelve en un squircle blanco.
+  const icons: MetadataRoute.Manifest['icons'] = logoUrl && slug && slug !== DEMO_SLUG
+    ? [
+        { src: logoUrl, sizes: 'any', purpose: 'any' },
+        { src: `/api/icon/${slug}`, sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
+      ]
     : [
         { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
