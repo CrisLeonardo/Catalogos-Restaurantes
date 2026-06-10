@@ -85,8 +85,18 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
 
-html, body {
+/* Solo html recibe el background: el body queda transparente para que los
+   elementos con z-index:-1 (asphalt, bg-layer) no queden tapados por el body.
+   El canvas de la página (viewport completo) viene del background de html. */
+html {
   background: var(--brand-bg);
+  color: var(--u-text);
+  font-family: var(--ui-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+body {
   color: var(--u-text);
   font-family: var(--ui-font-sans);
   -webkit-font-smoothing: antialiased;

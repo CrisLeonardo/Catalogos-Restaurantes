@@ -26,14 +26,13 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     }
   }
 
+  // No declarar 'maskable' con logos normales: el OS recorta el ícono en
+  // círculo/cuadrado asumiendo zona segura, y el logo queda cortado.
   const icons: MetadataRoute.Manifest['icons'] = logoUrl
-    ? [
-        { src: logoUrl, sizes: 'any', purpose: 'any' },
-        { src: logoUrl, sizes: 'any', purpose: 'maskable' },
-      ]
+    ? [{ src: logoUrl, sizes: 'any', purpose: 'any' }]
     : [
-        { src: '/logo-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-        { src: '/logo-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+        { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       ];
 
   return {
