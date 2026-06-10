@@ -104,7 +104,7 @@ export default function RestaurantForm() {
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
           URL:{' '}
           <strong style={{ color: 'var(--u-text-3)' }}>
-            {slug || 'slug'}.tudominio.com
+            {slug || 'slug'}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.com'}
           </strong>
         </p>
       </Glass>

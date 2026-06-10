@@ -71,7 +71,7 @@ export default function RestaurantEditForm({
           style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }}
         />
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-          URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.tudominio.com</strong>
+          URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong>
         </p>
       </Glass>
 
