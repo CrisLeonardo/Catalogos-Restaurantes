@@ -14,6 +14,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
 
   let name = 'Leogin';
   let logoUrl: string | null = null;
+  let pwaIconUrl: string | null = null;
   if (slug === DEMO_SLUG) {
     name = 'Azúcar Negra';
   } else if (slug) {
@@ -21,17 +22,19 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       const data = await getRestaurantBySlug(slug);
       if (data?.restaurant.name) name = data.restaurant.name;
       if (data?.resolved.config.logoUrl) logoUrl = data.resolved.config.logoUrl;
+      if (data?.resolved.config.pwaIconUrl) pwaIconUrl = data.resolved.config.pwaIconUrl;
     } catch {
       /* sin BD o slug inválido → cae al nombre de la plataforma */
     }
   }
 
-  // Ícono regular: el logo tal cual (para el diálogo de instalación y favicon).
-  // Ícono maskable: generado por /api/icon/[slug] → logo centrado sobre el
-  // color de fondo de la marca, así Android no lo envuelve en un squircle blanco.
-  const icons: MetadataRoute.Manifest['icons'] = logoUrl && slug && slug !== DEMO_SLUG
+  // pwaIconUrl: imagen dedicada para la pantalla de inicio (subida en el editor).
+  // logoUrl: logo de portada, usado como fallback si no hay pwaIconUrl.
+  // Ícono maskable: /api/icon/[slug] → imagen centrada sobre fondo de marca.
+  const appIcon = pwaIconUrl ?? logoUrl;
+  const icons: MetadataRoute.Manifest['icons'] = appIcon && slug && slug !== DEMO_SLUG
     ? [
-        { src: logoUrl, sizes: 'any', purpose: 'any' },
+        { src: appIcon, sizes: 'any', purpose: 'any' },
         { src: `/api/icon/${slug}`, sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
       ]
     : [

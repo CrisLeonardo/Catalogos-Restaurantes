@@ -30,6 +30,7 @@ export interface ThemeConfig {
   zone: string;                 // "Zona 1", "Centro", etc. (badge/portada)
   logoUrl: string | null;       // logo grande (portada, sidebar)
   markUrl: string | null;       // marca/ícono chico (watermark de fondo)
+  pwaIconUrl: string | null;    // ícono de la app instalada (PWA home screen)
 
   // ── Color ──
   colorBg: string;
@@ -96,6 +97,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   zone: '',
   logoUrl: null,
   markUrl: null,
+  pwaIconUrl: null,
 
   colorBg: '#0b0b0c',
   colorBg2: '#141416',

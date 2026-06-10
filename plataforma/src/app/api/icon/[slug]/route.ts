@@ -16,19 +16,20 @@ export async function GET(
   const { slug } = await params;
 
   let brandBg = '#0b0b0c';
-  let logoUrl: string | null = null;
+  let iconUrl: string | null = null;
 
   try {
     const data = await getRestaurantBySlug(slug);
     if (data) {
       brandBg = data.resolved.config.colorBg ?? '#0b0b0c';
-      logoUrl = data.resolved.config.logoUrl ?? null;
+      // pwaIconUrl tiene prioridad; si no hay, cae al logoUrl.
+      iconUrl = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl ?? null;
     }
   } catch {
     /* BD no disponible → usa defaults */
   }
 
-  if (!logoUrl) {
+  if (!iconUrl) {
     return Response.redirect(new URL('/icon-512.png', _request.url));
   }
 
@@ -37,7 +38,7 @@ export async function GET(
   // del ícono maskable (el sistema recorta hasta el 80% del área).
   const svg = `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <rect width="512" height="512" fill="${escapeAttr(brandBg)}"/>
-  <image href="${escapeAttr(logoUrl)}" x="76" y="76" width="360" height="360" preserveAspectRatio="xMidYMid meet"/>
+  <image href="${escapeAttr(iconUrl)}" x="76" y="76" width="360" height="360" preserveAspectRatio="xMidYMid meet"/>
 </svg>`;
 
   return new Response(svg, {
