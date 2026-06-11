@@ -44,7 +44,8 @@ export default async function CheckoutPage() {
         <CheckoutForm
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
-          whatsappNumber={restaurant.whatsapp_number}
+          whatsappNumber={restaurant.orders_whatsapp || restaurant.whatsapp_number}
+          deliveryZones={restaurant.delivery_zones ?? []}
         />
       </CartProvider>
     </ThemeProvider>

@@ -15,6 +15,25 @@ export interface Restaurant {
   hours: WeeklyHours | null;
   orders_paused: boolean;
   pause_message: string | null;
+  // Pedidos por WhatsApp + cobertura de delivery (migración 010)
+  orders_whatsapp: string | null;
+  delivery_zones: string[] | null;
+  created_at: string;
+}
+
+/** Cliente final, creado/actualizado automáticamente al pedir (migración 010). */
+export interface Customer {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  default_address: string | null;
+  default_zone: string | null;
+  total_orders: number;
+  total_spent: number;
+  first_order_at: string | null;
+  last_order_at: string | null;
   created_at: string;
 }
 
@@ -97,6 +116,8 @@ export interface Order {
   customer_phone: string;
   order_type: 'PICKUP' | 'DELIVERY';
   address: string | null;
+  delivery_zone: string | null;
+  customer_id: string | null;
   payment_method: string;
   status: OrderStatus;
   subtotal: number;

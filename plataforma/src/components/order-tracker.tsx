@@ -54,16 +54,49 @@ export default function OrderTracker({
     orderRef.current = order;
   }, [order]);
 
-  /* Polling mientras el pedido siga activo y la pestaña esté visible. */
+  /* Permiso de notificaciones del sistema (avisos de cambio de estado). */
+  const [notifPerm, setNotifPerm] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('unsupported');
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNotifPerm(Notification.permission);
+    }
+  }, []);
+
+  /* Aviso al comensal cuando el estado avanza: vibración + notificación. */
+  const notifyStatusChange = (label: string) => {
+    try { navigator.vibrate?.([90, 60, 90]); } catch {}
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification('Tu pedido avanzó', { body: label, tag: token });
+      }
+    } catch {}
+  };
+
+  /* Polling mientras el pedido siga activo. Sin document.hidden como freno:
+     si la pestaña queda en segundo plano, igual queremos avisar del cambio. */
   useEffect(() => {
     if (TERMINAL.includes(initialOrder.status)) return;
     let stopped = false;
 
     const tick = async () => {
-      if (stopped || document.hidden || TERMINAL.includes(orderRef.current.status)) return;
+      if (stopped || TERMINAL.includes(orderRef.current.status)) return;
       try {
         const fresh = await getPublicOrder(token, restaurantId);
-        if (fresh && !stopped) setOrder(fresh);
+        if (fresh && !stopped) {
+          if (fresh.status !== orderRef.current.status) {
+            const labels: Record<OrderStatus, string> = {
+              NEW: content.tracking.statusNew,
+              PREP: content.tracking.statusPrep,
+              READY: fresh.orderType === 'PICKUP' ? content.tracking.statusReadyPickup : content.tracking.statusReady,
+              TRANSIT: content.tracking.statusTransit,
+              DELIVERED: content.tracking.statusDelivered,
+              CANCEL: content.tracking.statusCancel,
+            };
+            notifyStatusChange(`${fresh.orderNumber} · ${labels[fresh.status]}`);
+          }
+          setOrder(fresh);
+        }
       } catch {}
     };
 
@@ -75,7 +108,18 @@ export default function OrderTracker({
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, restaurantId, initialOrder.status]);
+
+  async function enableNotifications() {
+    try {
+      const res = await Notification.requestPermission();
+      setNotifPerm(res);
+      if (res === 'granted') {
+        new Notification('Avisos activados', { body: 'Te avisamos cuando tu pedido avance.' });
+      }
+    } catch {}
+  }
 
   const pickup = order.orderType === 'PICKUP';
   const steps = STEPS.filter((s) => !(pickup && s.status === 'TRANSIT'));
@@ -96,6 +140,20 @@ export default function OrderTracker({
         </div>
         {!cancelled && !TERMINAL.includes(order.status) && (
           <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 15.5, color: 'var(--u-text-2)', marginTop: 6 }}>{subtitle}</p>
+        )}
+        {!cancelled && !TERMINAL.includes(order.status) && notifPerm === 'default' && (
+          <button
+            type="button"
+            onClick={enableNotifications}
+            className="press glass-quiet"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 12,
+              padding: '9px 15px', borderRadius: 99, border: 'none', cursor: 'pointer',
+              fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)',
+            }}
+          >
+            <Icon name="bell" size={14} /> Avisarme cuando avance
+          </button>
         )}
       </div>
 

@@ -104,6 +104,22 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
           </Glass>
 
           <Glass variant="quiet" style={{ padding: 16 }}>
+            <label htmlFor="orders_whatsapp" style={labelStyle}>WhatsApp para recibir pedidos</label>
+            <input
+              id="orders_whatsapp"
+              name="orders_whatsapp"
+              type="tel"
+              defaultValue={restaurant.orders_whatsapp ?? ''}
+              placeholder="+502 5555 0000"
+              style={inputStyle}
+            />
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
+              Cada pedido confirmado se envía por WhatsApp a este número.
+              Si lo dejas vacío, se usa el WhatsApp de arriba.
+            </p>
+          </Glass>
+
+          <Glass variant="quiet" style={{ padding: 16 }}>
             <label htmlFor="contact_email" style={labelStyle}>Email de contacto</label>
             <input
               id="contact_email"

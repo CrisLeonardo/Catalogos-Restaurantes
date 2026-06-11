@@ -54,7 +54,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 99, cursor: 'pointer',
-            background: 'var(--u-text)', color: 'var(--u-bg)',
+            background: 'var(--u-text)', color: 'var(--brand-bg)',
             border: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13,
           }}
         >
@@ -167,7 +167,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                   <span
                     style={{
                       width: 19, height: 19, borderRadius: 99,
-                      background: c.is_active ? 'var(--u-bg)' : 'rgba(255,255,255,0.9)',
+                      background: c.is_active ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)',
                     }}
                   />
                 </button>
@@ -418,7 +418,7 @@ const submitBtn: React.CSSProperties = {
   borderRadius: 99,
   fontWeight: 600, fontSize: 13,
   border: 'none', cursor: 'pointer',
-  background: 'var(--u-text)', color: 'var(--u-bg)',
+  background: 'var(--u-text)', color: 'var(--brand-bg)',
 };
 
 const cancelBtn: React.CSSProperties = {

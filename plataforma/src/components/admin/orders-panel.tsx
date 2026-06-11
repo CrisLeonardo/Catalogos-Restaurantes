@@ -65,26 +65,44 @@ export default function OrdersPanel({ initialOrders, restaurantId, stats, curren
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
 
     const supabase = createClient();
-    const channel = supabase
-      .channel(`orders-${restaurantId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-        (payload) => {
-          const newOrder = payload.new as Order;
-          chime();
-          showToast(`Nuevo pedido ${newOrder.order_number} — ${newOrder.customer_name}`);
-          router.refresh();
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-        () => { router.refresh(); },
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
-    return () => { channel.unsubscribe(); };
+    (async () => {
+      // RLS filtra los eventos por usuario: sin el JWT de la sesión en el
+      // canal realtime no llega NADA. setAuth ANTES de suscribirse.
+      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.realtime.setAuth(session?.access_token ?? null);
+      if (cancelled) return;
+
+      // Topic único por montaje (ver admin/notifications.tsx).
+      channel = supabase
+        .channel(`orders-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
+        .on(
+          'postgres_changes',
+          // Sin filter server-side (ver admin/notifications.tsx): RLS limita
+          // por usuario y el restaurante se verifica en el handler.
+          { event: 'INSERT', schema: 'public', table: 'orders' },
+          (payload) => {
+            const newOrder = payload.new as Order;
+            if (newOrder.restaurant_id !== restaurantId) return;
+            chime();
+            showToast(`Nuevo pedido ${newOrder.order_number} — ${newOrder.customer_name}`);
+            router.refresh();
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'orders' },
+          (payload) => {
+            if ((payload.new as Order).restaurant_id !== restaurantId) return;
+            router.refresh();
+          },
+        )
+        .subscribe();
+    })();
+
+    return () => { cancelled = true; channel?.unsubscribe(); };
   }, [restaurantId, router]);
 
   function downloadCsv() {

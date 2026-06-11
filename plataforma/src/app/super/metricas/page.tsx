@@ -1,13 +1,17 @@
 import { Glass } from '@/components/glass';
-import { getGlobalMetrics, getAllRestaurants } from '@/lib/db/super-admin';
+import { getGlobalMetrics, getAllRestaurants, getAllRestaurantsTraffic } from '@/lib/db/super-admin';
 
 export const metadata = { title: 'Métricas — Super Admin' };
 
 export default async function MetricasPage() {
-  const [metrics, restaurants] = await Promise.all([
+  const [metrics, restaurants, traffic] = await Promise.all([
     getGlobalMetrics(),
     getAllRestaurants(),
+    getAllRestaurantsTraffic(),
   ]);
+
+  const totalVisits30 = [...traffic.values()].reduce((s, t) => s + t.visits30, 0);
+  const totalOrders30 = [...traffic.values()].reduce((s, t) => s + t.orders30, 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -60,6 +64,31 @@ export default async function MetricasPage() {
         </div>
       </section>
 
+      {/* Tráfico global (30 días) */}
+      <section>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 14,
+            color: 'var(--u-text-2)',
+          }}
+        >
+          Tráfico · últimos 30 días
+        </h2>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: 10,
+          }}
+        >
+          <MetricCard label="Visitas" value={totalVisits30} />
+          <MetricCard label="Pedidos" value={totalOrders30} color="#4ade80" />
+        </div>
+      </section>
+
       {/* Tabla de restaurantes recientes */}
       {restaurants.length > 0 && (
         <section>
@@ -88,7 +117,7 @@ export default async function MetricasPage() {
                     borderBottom: '1px solid var(--u-hair)',
                   }}
                 >
-                  {['Nombre', 'Slug', 'Plan', 'Estado', 'Alta'].map((h) => (
+                  {['Nombre', 'Slug', 'Plan', 'Estado', 'Visitas 30d', 'Únicos', 'Pedidos 30d', 'Alta'].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -175,6 +204,36 @@ export default async function MetricasPage() {
                       >
                         {r.status === 'active' ? 'ACTIVO' : 'SUSP.'}
                       </span>
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        color: 'var(--u-text-2)',
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      }}
+                    >
+                      {traffic.get(r.id)?.visits30 ?? 0}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        color: 'var(--u-text-3)',
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      }}
+                    >
+                      {traffic.get(r.id)?.unique30 ?? 0}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        color: 'var(--u-text-2)',
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      }}
+                    >
+                      {traffic.get(r.id)?.orders30 ?? 0}
                     </td>
                     <td
                       style={{

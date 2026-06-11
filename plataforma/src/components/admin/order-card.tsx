@@ -104,7 +104,7 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
           </p>
           {order.order_type === 'DELIVERY' && order.address && (
             <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2 }}>
-              📍 {order.address}
+              📍 {order.address}{order.delivery_zone ? ` · ${order.delivery_zone}` : ''}
             </p>
           )}
         </div>

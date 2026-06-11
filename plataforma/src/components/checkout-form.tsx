@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -9,16 +9,22 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
+import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 
 interface Props {
   restaurantId: string;
   restaurantName: string;
   whatsappNumber: string | null;
+  /** Zonas que cubre el delivery. Vacío = sin restricción. */
+  deliveryZones?: string[];
 }
 
 type Step = 'form' | 'success';
 
-export default function CheckoutForm({ restaurantId, restaurantName, whatsappNumber }: Props) {
+/** Valor sentinela: "mi zona no aparece en la lista". */
+const NO_ZONE = '__fuera__';
+
+export default function CheckoutForm({ restaurantId, restaurantName, whatsappNumber, deliveryZones = [] }: Props) {
   const config = useThemeConfig();
   const content = useThemeContent();
   const { items, total, clearCart } = useCart();
@@ -43,14 +49,34 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
   const [phone, setPhone] = useState('');
   const [type, setType] = useState<'PICKUP' | 'DELIVERY'>(typeOptions[0]?.id ?? 'PICKUP');
   const [address, setAddress] = useState('');
+  const [zone, setZone] = useState('');
   const [notes, setNotes] = useState('');
+  const [welcomeBack, setWelcomeBack] = useState(false);
+
+  // Cliente recurrente: autocompletar con el perfil guardado del dispositivo.
+  // Va en efecto (no en el estado inicial) para no romper la hidratación.
+  useEffect(() => {
+    const p = getLocalProfile(restaurantId);
+    if (!p) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(p.name);
+    setPhone(p.phone);
+    if (p.address) setAddress(p.address);
+    if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
+    setWelcomeBack(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
+  const zonesActive = deliveryZones.length > 0;
+  const outOfZone = type === 'DELIVERY' && zonesActive && zone === NO_ZONE;
 
   const errs = {
     name: !name.trim() ? content.checkout.errName : '',
     phone: !phone.trim() ? content.checkout.errPhone : '',
     address: type === 'DELIVERY' && !address.trim() ? content.checkout.errAddress : '',
+    zone: type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
   };
-  const valid = !errs.name && !errs.phone && !errs.address;
+  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !outOfZone;
 
   const deliveryFee = type === 'DELIVERY' ? config.deliveryFee : 0;
   const finalTotal = total + deliveryFee;
@@ -79,10 +105,31 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
           quantity: i.quantity,
           options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
         })),
-        customer: { name, phone, type, address, notes },
+        customer: {
+          name, phone, type, address, notes,
+          ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
+        },
         deliveryFee: feeSnapshot,
       });
       if (result.error) { setError(result.error); return; }
+
+      // Recordar al cliente y su pedido en este dispositivo:
+      // el checkout se autocompleta la próxima vez y "Mis pedidos"
+      // conserva el seguimiento aunque cierre la app.
+      saveLocalProfile(restaurantId, {
+        name, phone,
+        ...(address.trim() ? { address } : {}),
+        ...(zone && zone !== NO_ZONE ? { zone } : {}),
+      });
+      if (result.publicToken) {
+        addLocalOrder(restaurantId, {
+          token: result.publicToken,
+          orderNumber: result.orderNumber ?? '',
+          createdAt: new Date().toISOString(),
+          total: totalSnapshot,
+        });
+      }
+
       setSnapshot(itemsSnapshot);
       setSnapshotFee(feeSnapshot);
       setSnapshotTotal(totalSnapshot);
@@ -90,23 +137,47 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
       setTrackToken(result.publicToken ?? '');
       clearCart();
       setStep('success');
+
+      // Enviar el pedido por WhatsApp al restaurante (si tiene número).
+      // Si el navegador bloquea el popup, queda el botón de la confirmación.
+      const waUrl = buildWhatsAppUrl({
+        orderNumber: result.orderNumber ?? '',
+        snapshot: itemsSnapshot,
+        fee: feeSnapshot,
+        total: totalSnapshot,
+      });
+      if (waUrl) {
+        try { window.open(waUrl, '_blank', 'noopener'); } catch {}
+      }
     });
   }
 
-  function buildWhatsAppUrl() {
+  function buildWhatsAppUrl(data?: {
+    orderNumber: string;
+    snapshot: { name: string; opts: string; qty: number; sub: number }[];
+    fee: number;
+    total: number;
+  }) {
     if (!whatsappNumber) return null;
+    const num = data?.orderNumber ?? orderNumber;
+    const lineItems = data?.snapshot ?? snapshot;
+    const fee = data?.fee ?? snapshotFee;
+    const tot = data?.total ?? snapshotTotal;
     const clean = whatsappNumber.replace(/\D/g, '');
+    const where = type === 'PICKUP'
+      ? content.checkout.pickup
+      : `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}`;
     const lines: string[] = [
-      `🍽 Nuevo pedido *${orderNumber}*`, '',
+      `🍽 Nuevo pedido *${num}*`, '',
       `👤 ${name}`, `📱 ${phone}`,
-      `📦 ${type === 'PICKUP' ? content.checkout.pickup : `${content.checkout.delivery}: ${address}`}`, '',
+      `📦 ${where}`, '',
       '🛒 Pedido:',
-      ...snapshot.map((i) => `• ${i.qty}x ${i.name}${i.opts ? ` (${i.opts})` : ''} — ${formatPrice(i.sub, config)}`), '',
+      ...lineItems.map((i) => `• ${i.qty}x ${i.name}${i.opts ? ` (${i.opts})` : ''} — ${formatPrice(i.sub, config)}`), '',
     ];
-    if (snapshotFee > 0) {
-      lines.push(`📦 ${content.cart.shipping}: ${formatPrice(snapshotFee, config)}`);
+    if (fee > 0) {
+      lines.push(`📦 ${content.cart.shipping}: ${formatPrice(fee, config)}`);
     }
-    lines.push(`💰 ${content.cart.total}: *${formatPrice(snapshotTotal, config)}*`);
+    lines.push(`💰 ${content.cart.total}: *${formatPrice(tot, config)}*`);
     if (notes) lines.push('', `📝 ${notes}`);
     return `https://wa.me/${clean}?text=${encodeURIComponent(lines.join('\n'))}`;
   }
@@ -145,19 +216,29 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
             <Row k={content.confirmation.payment} v={content.checkout.payCash} />
           </Glass>
           {waUrl && (
-            <a href={waUrl} target="_blank" rel="noopener noreferrer" className="press"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px 24px', borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: 14, textDecoration: 'none', color: '#fff', background: '#25D366', boxShadow: '0 4px 16px rgba(37,211,102,0.35)' }}>
-              <Icon name="whatsapp" size={18} /> Notificar al restaurante
-            </a>
+            <div style={{ width: '100%' }}>
+              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="press"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px 24px', borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: 14, textDecoration: 'none', color: '#fff', background: '#25D366', boxShadow: '0 4px 16px rgba(37,211,102,0.35)' }}>
+                <Icon name="whatsapp" size={18} /> Enviar pedido por WhatsApp
+              </a>
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 7, textAlign: 'center' }}>
+                Si WhatsApp no se abrió solo, toca el botón para confirmar con el restaurante.
+              </p>
+            </div>
           )}
           {trackToken && (
             <PrimaryButton href={`/pedido/${trackToken}`} full iconRight="arrowRight">
               {content.confirmation.track}
             </PrimaryButton>
           )}
-          <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
-            {content.confirmation.again}
-          </Link>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+              Mis pedidos
+            </Link>
+            <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+              {content.confirmation.again}
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -229,9 +310,69 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
           </div>
         )}
 
+        {welcomeBack && (
+          <div className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 12.5, color: 'var(--u-text-2)' }}>
+            <Icon name="checkCircle" size={15} style={{ flexShrink: 0, color: 'var(--u-text-3)' }} />
+            ¡Hola de nuevo, {name.split(' ')[0]}! Completamos tus datos por ti.
+          </div>
+        )}
+
         <Field label={content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
         <Field label={content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={tried && errs.phone} />
-        {type === 'DELIVERY' && (
+
+        {/* Zona de cobertura: solo si el restaurante configuró zonas */}
+        {type === 'DELIVERY' && zonesActive && (
+          <div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>Zona de entrega</label>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 6 }}>
+              {[...deliveryZones, NO_ZONE].map((z) => {
+                const isOther = z === NO_ZONE;
+                const on = zone === z;
+                return (
+                  <button
+                    key={z}
+                    type="button"
+                    onClick={() => setZone(z)}
+                    className="press"
+                    style={{
+                      padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
+                      fontWeight: 600, fontSize: 13,
+                      border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
+                      background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+                      color: on ? 'var(--brand-bg)' : isOther ? 'var(--u-text-4)' : 'var(--u-text-2)',
+                      transition: 'all 150ms',
+                    }}
+                  >
+                    {isOther ? 'Mi zona no aparece' : z}
+                  </button>
+                );
+              })}
+            </div>
+            {tried && errs.zone && !outOfZone && (
+              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{errs.zone}</p>
+            )}
+            {outOfZone && (
+              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+                😔 Por ahora el delivery no llega a tu zona.
+                {typeOptions.some((o) => o.id === 'PICKUP') && (
+                  <>
+                    {' '}Pero puedes pasar por tu pedido:
+                    <button
+                      type="button"
+                      onClick={() => setType('PICKUP')}
+                      className="press"
+                      style={{ display: 'block', marginTop: 8, padding: '8px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 600, fontSize: 12.5 }}
+                    >
+                      Cambiar a {content.checkout.pickup}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {type === 'DELIVERY' && !outOfZone && (
           <Field label={content.checkout.address} icon="mapPin" value={address} onChange={setAddress} placeholder={content.checkout.addressPh} error={tried && errs.address} />
         )}
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />

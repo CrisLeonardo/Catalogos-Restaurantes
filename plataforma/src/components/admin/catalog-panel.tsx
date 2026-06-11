@@ -86,7 +86,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
                 style={{
                   flexShrink: 0, padding: '8px 14px', borderRadius: 99, cursor: 'pointer',
                   background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
-                  color: on ? 'var(--u-bg)' : 'var(--u-text-2)',
+                  color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
                   border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                   fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
                 }}
@@ -102,7 +102,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
           style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 99, cursor: 'pointer',
-            background: 'var(--u-text)', color: 'var(--u-bg)',
+            background: 'var(--u-text)', color: 'var(--brand-bg)',
             border: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13,
           }}
         >
@@ -124,10 +124,8 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
         <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
           {/* Header */}
           <div
-            style={{
-              display: 'grid', gridTemplateColumns: '1fr 110px 150px 90px',
-              padding: '10px 18px', borderBottom: '1px solid var(--u-hair)',
-            }}
+            className="catalog-head"
+            style={{ padding: '10px 18px', borderBottom: '1px solid var(--u-hair)' }}
           >
             {(['Platillo', 'Precio', 'Disponible', ''] as const).map((h, i) => (
               <div
@@ -146,16 +144,16 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
             return (
               <div
                 key={p.id}
+                className="catalog-row"
                 style={{
-                  display: 'grid', gridTemplateColumns: '1fr 110px 150px 90px',
-                  alignItems: 'center', padding: '12px 18px',
+                  padding: '12px 18px',
                   borderBottom: i < list.length - 1 ? '1px solid var(--u-hair)' : 'none',
                   opacity: p.is_available ? 1 : 0.58,
                   transition: 'opacity 160ms',
                 }}
               >
                 {/* Platillo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <div className="catalog-cell-dish" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                   <div
                     style={{
                       width: 44, height: 44, borderRadius: 11, overflow: 'hidden',
@@ -197,6 +195,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
 
                 {/* Precio */}
                 <div
+                  className="catalog-cell-price"
                   style={{
                     textAlign: 'right', fontFamily: 'var(--ui-font-mono)',
                     fontWeight: 600, fontSize: 14, color: 'var(--u-text)',
@@ -206,7 +205,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
                 </div>
 
                 {/* Toggle disponibilidad */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <form action={toggleProductAvailability}>
                     <input type="hidden" name="restaurantId" value={restaurantId} />
                     <input type="hidden" name="id" value={p.id} />
@@ -226,7 +225,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
                       <span
                         style={{
                           width: 19, height: 19, borderRadius: 99,
-                          background: p.is_available ? 'var(--u-bg)' : 'rgba(255,255,255,0.9)',
+                          background: p.is_available ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)',
                           transition: 'all 180ms',
                         }}
                       />
@@ -238,7 +237,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
                 </div>
 
                 {/* Acciones */}
-                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                <div className="catalog-cell-actions" style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                   <button
                     className="press glass-quiet"
                     onClick={() => setEditor({ open: true, product: p })}
@@ -523,7 +522,7 @@ function ProductModal({
                         padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 56,
                         border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--u-hair)'}`,
                         background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.03)',
-                        color: on ? 'var(--u-bg)' : 'var(--u-text-3)',
+                        color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
                         transition: 'all 140ms',
                       }}
                     >
@@ -583,7 +582,7 @@ function ProductModal({
                         padding: '7px 12px', borderRadius: 99, cursor: 'pointer',
                         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                         background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
-                        color: on ? 'var(--u-bg)' : 'var(--u-text-3)',
+                        color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
                         fontWeight: 600, fontSize: 12,
                       }}
                     >
@@ -636,7 +635,7 @@ function ProductModal({
                 <span
                   style={{
                     width: 19, height: 19, borderRadius: 99,
-                    background: isAvailable ? 'var(--u-bg)' : 'rgba(255,255,255,0.9)',
+                    background: isAvailable ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)',
                     transition: 'all 180ms',
                   }}
                 />
@@ -683,7 +682,7 @@ function ProductModal({
               style={{
                 flex: 2, padding: '12px', borderRadius: 12, border: 'none',
                 cursor: isPending ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600,
-                background: 'var(--u-text)', color: 'var(--u-bg)',
+                background: 'var(--u-text)', color: 'var(--brand-bg)',
                 opacity: isPending ? 0.7 : 1, transition: 'opacity 160ms',
               }}
             >
@@ -736,7 +735,7 @@ function CatChip({ on, label, onClick }: { on: boolean; label: string; onClick: 
         padding: '8px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
         background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
-        color: on ? 'var(--u-bg)' : 'var(--u-text-2)',
+        color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
       }}
     >
       {label}

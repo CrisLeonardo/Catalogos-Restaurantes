@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createClient } from '@/lib/supabase/server';
 import ProfileForm from '@/components/admin/profile-form';
 import HoursEditor from '@/components/admin/hours-editor';
+import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
 export const metadata = { title: 'Perfil — Panel admin' };
@@ -109,6 +110,21 @@ export default async function AdminPerfilPage({
           Horario y pedidos
         </h2>
         <HoursEditor restaurant={restaurant as Restaurant} />
+      </section>
+
+      {/* ── Cobertura del delivery ──────────────────────────── */}
+      <section style={{ marginTop: 32 }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 18,
+            marginBottom: 16,
+          }}
+        >
+          Cobertura del delivery
+        </h2>
+        <DeliveryZonesEditor restaurant={restaurant as Restaurant} />
       </section>
     </div>
   );

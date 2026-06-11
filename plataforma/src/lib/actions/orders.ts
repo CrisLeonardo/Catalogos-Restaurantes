@@ -87,7 +87,7 @@ export async function createOrder(
 
   const { data: restaurant } = await db
     .from('restaurants')
-    .select('id, modules, status, whatsapp_number, timezone, hours, orders_paused, pause_message')
+    .select('id, modules, status, whatsapp_number, timezone, hours, orders_paused, pause_message, delivery_zones')
     .eq('id', restaurantId)
     .single();
 
@@ -115,6 +115,19 @@ export async function createOrder(
     )
   ) {
     return { error: 'El restaurante está cerrado en este momento.' };
+  }
+
+  // Cobertura de delivery: si el restaurante configuró zonas, el pedido a
+  // domicilio DEBE traer una zona válida (la UI ya lo exige; esto es el
+  // candado del servidor para carritos viejos o requests manuales).
+  const zones = (restaurant.delivery_zones as string[] | null) ?? [];
+  if (customer.type === 'DELIVERY' && zones.length > 0) {
+    if (!customer.zone || !zones.includes(customer.zone)) {
+      return {
+        error:
+          'El restaurante no llega a tu zona. Elige una zona de cobertura o pide para recoger en el local.',
+      };
+    }
   }
 
   // SEGURIDAD: los precios NUNCA se toman del cliente (serían falsificables).
@@ -179,6 +192,23 @@ export async function createOrder(
   const fee = customer.type === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
   const total = subtotal + fee;
 
+  // Registro automático del cliente (clave: teléfono normalizado por
+  // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
+  // romperse: customer_id queda en null.
+  const phoneKey = customer.phone.replace(/\D/g, '');
+  let customerId: string | null = null;
+  if (phoneKey.length >= 7) {
+    const { data: cid } = await db.rpc('upsert_customer', {
+      p_restaurant_id: restaurantId,
+      p_name:          customer.name,
+      p_phone:         phoneKey,
+      p_address:       customer.type === 'DELIVERY' ? (customer.address ?? '') : '',
+      p_zone:          customer.zone ?? '',
+      p_total:         total,
+    });
+    customerId = (cid as string | null) ?? null;
+  }
+
   const { data: order, error: orderError } = await db
     .from('orders')
     .insert({
@@ -188,6 +218,8 @@ export async function createOrder(
       customer_phone: customer.phone,
       order_type:     customer.type,
       address:        customer.address ?? null,
+      ...(customer.type === 'DELIVERY' && customer.zone ? { delivery_zone: customer.zone } : {}),
+      ...(customerId ? { customer_id: customerId } : {}),
       payment_method: 'CASH',
       status:         'NEW',
       subtotal,

@@ -65,6 +65,7 @@ export default async function AdminLayout({
   return (
     <AdminShell
       restaurantName={restaurantName}
+      restaurantId={currentRestaurant?.id ?? null}
       ordersEnabled={ordersEnabled}
       logoUrl={logoUrl}
       zone={zone}

@@ -48,6 +48,7 @@ export async function updateRestaurantInfo(
       name,
       tagline: (formData.get('tagline') as string)?.trim() || null,
       whatsapp_number: (formData.get('whatsapp_number') as string)?.trim() || null,
+      orders_whatsapp: (formData.get('orders_whatsapp') as string)?.trim() || null,
       contact_email: (formData.get('contact_email') as string)?.trim() || null,
     })
     .eq('id', ctx.restaurantId);
@@ -151,6 +152,41 @@ function parseHours(raw: string | null): { hours: WeeklyHours | null } | { error
   }
   // Sin ningún día con horario = "sin horario configurado" (siempre abierto).
   return { hours: Object.keys(out).length > 0 ? out : null };
+}
+
+/* ── Cobertura de delivery: zonas a las que llega el restaurante ── */
+
+export async function updateDeliveryZones(
+  prevState: RestaurantState,
+  formData: FormData,
+): Promise<RestaurantState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  let zones: string[] = [];
+  try {
+    const raw = JSON.parse((formData.get('zones') as string) || '[]');
+    if (!Array.isArray(raw)) return { error: 'Zonas inválidas.' };
+    zones = [...new Set(
+      raw
+        .filter((z): z is string => typeof z === 'string')
+        .map((z) => z.trim().slice(0, 80))
+        .filter(Boolean),
+    )].slice(0, 60);
+  } catch {
+    return { error: 'Zonas inválidas.' };
+  }
+
+  const { error } = await ctx.db
+    .from('restaurants')
+    .update({ delivery_zones: zones.length > 0 ? zones : null })
+    .eq('id', ctx.restaurantId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/perfil');
+  revalidatePath('/');
+  redirect('/admin/perfil?saved=1');
 }
 
 export async function updateRestaurantOps(

@@ -27,6 +27,8 @@ export const customerSchema = z.object({
     .transform((v) => v.trim()),
   type: z.enum(['PICKUP', 'DELIVERY']),
   address: z.string().max(300).transform((v) => v.trim()).optional(),
+  /** Zona de cobertura elegida (solo si el restaurante configuró zonas). */
+  zone: z.string().max(80).transform((v) => v.trim()).optional(),
   notes: z.string().max(500).transform((v) => v.trim()).optional(),
 });
 
