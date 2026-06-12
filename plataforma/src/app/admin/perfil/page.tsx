@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import ProfileForm from '@/components/admin/profile-form';
 import HoursEditor from '@/components/admin/hours-editor';
 import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
+import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
 export const metadata = { title: 'Perfil — Panel admin' };
@@ -112,19 +113,41 @@ export default async function AdminPerfilPage({
         <HoursEditor restaurant={restaurant as Restaurant} />
       </section>
 
-      {/* ── Cobertura del delivery ──────────────────────────── */}
+      {/* ── Cobertura del delivery: zonas de texto ─────────── */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 700,
             fontSize: 18,
-            marginBottom: 16,
+            marginBottom: 4,
           }}
         >
           Cobertura del delivery
         </h2>
+        <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
+          Puedes usar zonas de texto, el mapa de radio, o ambos.
+        </p>
         <DeliveryZonesEditor restaurant={restaurant as Restaurant} />
+      </section>
+
+      {/* ── Ubicación del restaurante + radio de entrega ────── */}
+      <section style={{ marginTop: 32 }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 18,
+            marginBottom: 4,
+          }}
+        >
+          Mapa de entrega (por radio)
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
+          Activa esto para que el cliente vea un mapa interactivo en el checkout
+          y coloque su pin. El pedido se rechaza si el pin cae fuera del radio.
+        </p>
+        <RestaurantLocationEditor restaurant={restaurant as Restaurant} />
       </section>
     </div>
   );

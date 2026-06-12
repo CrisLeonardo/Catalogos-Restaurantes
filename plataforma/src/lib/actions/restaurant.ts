@@ -8,6 +8,21 @@ import type { HourInterval, WeeklyHours } from '@/lib/hours';
 
 export type RestaurantState = { error: string } | null;
 
+/**
+ * Normalizes a Guatemala WhatsApp number to +502XXXXXXXX.
+ * Accepts: "5555 0000", "55550000", "5555-0000", "+502 5555 0000", "50255550000".
+ * Returns null for empty input, or an error string if the format is invalid.
+ */
+function normalizeWhatsApp(raw: string | null): { value: string | null } | { error: string } {
+  if (!raw?.trim()) return { value: null };
+  const digits = raw.replace(/[\s\-\(\)\+\.]/g, '');
+  if (/^\d{8}$/.test(digits)) return { value: `+502${digits}` };
+  if (/^502\d{8}$/.test(digits)) return { value: `+${digits}` };
+  return {
+    error: `Número inválido: "${raw}". Ingresa 8 dígitos (ej. 5555 0000) o +502 5555 0000`,
+  };
+}
+
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,13 +57,19 @@ export async function updateRestaurantInfo(
   const name = (formData.get('name') as string)?.trim();
   if (!name) return { error: 'El nombre del restaurante es requerido.' };
 
+  const waResult = normalizeWhatsApp(formData.get('whatsapp_number') as string | null);
+  if ('error' in waResult) return { error: waResult.error };
+
+  const ordersWaResult = normalizeWhatsApp(formData.get('orders_whatsapp') as string | null);
+  if ('error' in ordersWaResult) return { error: ordersWaResult.error };
+
   const { error } = await ctx.db
     .from('restaurants')
     .update({
       name,
       tagline: (formData.get('tagline') as string)?.trim() || null,
-      whatsapp_number: (formData.get('whatsapp_number') as string)?.trim() || null,
-      orders_whatsapp: (formData.get('orders_whatsapp') as string)?.trim() || null,
+      whatsapp_number: waResult.value,
+      orders_whatsapp: ordersWaResult.value,
       contact_email: (formData.get('contact_email') as string)?.trim() || null,
     })
     .eq('id', ctx.restaurantId);
@@ -180,6 +201,50 @@ export async function updateDeliveryZones(
   const { error } = await ctx.db
     .from('restaurants')
     .update({ delivery_zones: zones.length > 0 ? zones : null })
+    .eq('id', ctx.restaurantId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/perfil');
+  revalidatePath('/');
+  redirect('/admin/perfil?saved=1');
+}
+
+/* ── Geolocalización del restaurante + radio de entrega ─────── */
+
+export async function updateRestaurantLocation(
+  prevState: RestaurantState,
+  formData: FormData,
+): Promise<RestaurantState> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const latRaw   = (formData.get('location_lat')       as string)?.trim();
+  const lngRaw   = (formData.get('location_lng')       as string)?.trim();
+  const radRaw   = (formData.get('delivery_radius_km') as string)?.trim();
+
+  const lat    = latRaw   ? parseFloat(latRaw)   : null;
+  const lng    = lngRaw   ? parseFloat(lngRaw)   : null;
+  const radius = radRaw   ? parseFloat(radRaw)   : null;
+
+  if (lat !== null && (isNaN(lat) || lat < -90  || lat > 90))
+    return { error: 'Latitud inválida (debe estar entre -90 y 90).' };
+  if (lng !== null && (isNaN(lng) || lng < -180 || lng > 180))
+    return { error: 'Longitud inválida (debe estar entre -180 y 180).' };
+  if (radius !== null && (isNaN(radius) || radius <= 0 || radius > 500))
+    return { error: 'Radio inválido (debe ser mayor a 0 y máximo 500 km).' };
+
+  // Si se indica lat/lng, ambos son obligatorios
+  if ((lat === null) !== (lng === null))
+    return { error: 'Debes indicar tanto la latitud como la longitud.' };
+
+  const { error } = await ctx.db
+    .from('restaurants')
+    .update({
+      location_lat:       lat,
+      location_lng:       lng,
+      delivery_radius_km: radius,
+    })
     .eq('id', ctx.restaurantId);
 
   if (error) return { error: error.message };

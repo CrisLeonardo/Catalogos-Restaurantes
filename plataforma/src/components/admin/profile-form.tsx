@@ -29,6 +29,18 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
   const currentAccent = cfg.colorAccent ?? theme.color_primary;
 
   const [logoUrl, setLogoUrl] = useState<string>(currentLogo ?? '');
+  const [whatsappVal, setWhatsappVal] = useState(restaurant.whatsapp_number ?? '');
+  const [ordersWaVal, setOrdersWaVal] = useState(restaurant.orders_whatsapp ?? '');
+
+  function validateWhatsApp(v: string): string {
+    if (!v.trim()) return '';
+    const digits = v.replace(/[\s\-\(\)\+\.]/g, '');
+    if (/^\d{8}$/.test(digits) || /^502\d{8}$/.test(digits)) return '';
+    return 'Ingresa 8 dígitos (ej. 5555 0000) o +502 5555 0000';
+  }
+
+  const whatsappErr = validateWhatsApp(whatsappVal);
+  const ordersWaErr = validateWhatsApp(ordersWaVal);
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -97,10 +109,23 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
               id="whatsapp_number"
               name="whatsapp_number"
               type="tel"
-              defaultValue={restaurant.whatsapp_number ?? ''}
-              placeholder="+502 5555 0000"
-              style={inputStyle}
+              value={whatsappVal}
+              onChange={(e) => setWhatsappVal(e.target.value)}
+              placeholder="5555 0000  ó  +502 5555 0000"
+              style={{
+                ...inputStyle,
+                borderColor: whatsappErr ? 'rgba(248,113,113,0.6)' : undefined,
+              }}
             />
+            {whatsappErr ? (
+              <p style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{whatsappErr}</p>
+            ) : whatsappVal.trim() ? (
+              <p style={{ fontSize: 12, color: '#4ade80', marginTop: 6 }}>Número válido ✓</p>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
+                Acepta: 5555 0000 · 55550000 · 5555-0000 · +502 5555 0000
+              </p>
+            )}
           </Glass>
 
           <Glass variant="quiet" style={{ padding: 16 }}>
@@ -109,14 +134,24 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
               id="orders_whatsapp"
               name="orders_whatsapp"
               type="tel"
-              defaultValue={restaurant.orders_whatsapp ?? ''}
-              placeholder="+502 5555 0000"
-              style={inputStyle}
+              value={ordersWaVal}
+              onChange={(e) => setOrdersWaVal(e.target.value)}
+              placeholder="5555 0000  ó  +502 5555 0000"
+              style={{
+                ...inputStyle,
+                borderColor: ordersWaErr ? 'rgba(248,113,113,0.6)' : undefined,
+              }}
             />
-            <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
-              Cada pedido confirmado se envía por WhatsApp a este número.
-              Si lo dejas vacío, se usa el WhatsApp de arriba.
-            </p>
+            {ordersWaErr ? (
+              <p style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{ordersWaErr}</p>
+            ) : ordersWaVal.trim() ? (
+              <p style={{ fontSize: 12, color: '#4ade80', marginTop: 6 }}>Número válido ✓</p>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
+                Cada pedido confirmado se envía por WhatsApp a este número.
+                Si lo dejas vacío, se usa el WhatsApp de arriba.
+              </p>
+            )}
           </Glass>
 
           <Glass variant="quiet" style={{ padding: 16 }}>
@@ -135,9 +170,9 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
 
           <button
             type="submit"
-            disabled={infoIsPending}
+            disabled={infoIsPending || !!whatsappErr || !!ordersWaErr}
             className="press btn-accent"
-            style={saveBtnStyle(infoIsPending)}
+            style={saveBtnStyle(infoIsPending || !!whatsappErr || !!ordersWaErr)}
           >
             {infoIsPending ? 'Guardando…' : 'Guardar información'}
           </button>

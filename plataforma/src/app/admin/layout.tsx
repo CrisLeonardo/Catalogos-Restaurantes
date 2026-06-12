@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -5,6 +6,10 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
 import type { Restaurant } from '@/types';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { manifest: '/api/admin-manifest' };
+}
 
 export default async function AdminLayout({
   children,

@@ -18,6 +18,10 @@ export interface Restaurant {
   // Pedidos por WhatsApp + cobertura de delivery (migración 010)
   orders_whatsapp: string | null;
   delivery_zones: string[] | null;
+  // Geolocalización de delivery (migración 011)
+  location_lat: number | null;
+  location_lng: number | null;
+  delivery_radius_km: number | null;
   created_at: string;
 }
 
@@ -117,6 +121,8 @@ export interface Order {
   order_type: 'PICKUP' | 'DELIVERY';
   address: string | null;
   delivery_zone: string | null;
+  delivery_lat: number | null;
+  delivery_lng: number | null;
   customer_id: string | null;
   payment_method: string;
   status: OrderStatus;

@@ -87,7 +87,7 @@ export async function createOrder(
 
   const { data: restaurant } = await db
     .from('restaurants')
-    .select('id, modules, status, whatsapp_number, timezone, hours, orders_paused, pause_message, delivery_zones')
+    .select('id, modules, status, whatsapp_number, timezone, hours, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
     .eq('id', restaurantId)
     .single();
 
@@ -117,15 +117,42 @@ export async function createOrder(
     return { error: 'El restaurante está cerrado en este momento.' };
   }
 
-  // Cobertura de delivery: si el restaurante configuró zonas, el pedido a
-  // domicilio DEBE traer una zona válida (la UI ya lo exige; esto es el
-  // candado del servidor para carritos viejos o requests manuales).
+  // Cobertura de delivery: si el restaurante configuró zonas de texto, el pedido
+  // a domicilio DEBE traer una zona válida.
   const zones = (restaurant.delivery_zones as string[] | null) ?? [];
   if (customer.type === 'DELIVERY' && zones.length > 0) {
     if (!customer.zone || !zones.includes(customer.zone)) {
       return {
         error:
           'El restaurante no llega a tu zona. Elige una zona de cobertura o pide para recoger en el local.',
+      };
+    }
+  }
+
+  // Cobertura geográfica: si el restaurante tiene ubicación + radio configurados,
+  // las coordenadas del cliente son OBLIGATORIAS y se validan con Haversine.
+  const geoLat = restaurant.location_lat as number | null;
+  const geoLng = restaurant.location_lng as number | null;
+  const geoRadius = restaurant.delivery_radius_km as number | null;
+
+  if (customer.type === 'DELIVERY' && geoLat !== null && geoLng !== null && geoRadius !== null) {
+    if (customer.deliveryLat === undefined || customer.deliveryLng === undefined) {
+      return { error: 'Este restaurante requiere que indiques tu ubicación en el mapa.' };
+    }
+
+    // RPC Haversine en el servidor (la UI ya hizo la validación; esto es el candado).
+    const { data: coverage } = await db.rpc('check_delivery_coverage', {
+      p_restaurant_id: restaurantId,
+      p_lat: customer.deliveryLat,
+      p_lng: customer.deliveryLng,
+    });
+
+    const cov = coverage as { covered: boolean; distance_km: number | null; radius_km: number | null } | null;
+    if (!cov?.covered) {
+      const dist = cov?.distance_km ? ` (estás a ${cov.distance_km} km)` : '';
+      const radius = cov?.radius_km ?? geoRadius;
+      return {
+        error: `Tu ubicación está fuera de la zona de entrega${dist}. El restaurante llega hasta ${radius} km.`,
       };
     }
   }
@@ -219,6 +246,9 @@ export async function createOrder(
       order_type:     customer.type,
       address:        customer.address ?? null,
       ...(customer.type === 'DELIVERY' && customer.zone ? { delivery_zone: customer.zone } : {}),
+      ...(customer.type === 'DELIVERY' && customer.deliveryLat !== undefined && customer.deliveryLng !== undefined
+        ? { delivery_lat: customer.deliveryLat, delivery_lng: customer.deliveryLng }
+        : {}),
       ...(customerId ? { customer_id: customerId } : {}),
       payment_method: 'CASH',
       status:         'NEW',

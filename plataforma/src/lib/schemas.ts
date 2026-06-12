@@ -14,6 +14,16 @@ export const orderItemSchema = z.object({
   options: z.array(orderItemOptionSchema).max(30).optional(),
 });
 
+/** Strips spaces, dashes, dots, parens from a phone string. */
+export function stripPhoneFormatting(v: string): string {
+  return v.replace(/[\s\-\(\)\.]/g, '').trim();
+}
+
+/** Returns true if v is a valid 8-digit Guatemala local number (after stripping). */
+export function isValidGuatemalaPhone(raw: string): boolean {
+  return /^\d{8}$/.test(stripPhoneFormatting(raw));
+}
+
 export const customerSchema = z.object({
   name: z
     .string({ required_error: 'El nombre es requerido' })
@@ -22,14 +32,19 @@ export const customerSchema = z.object({
     .transform((v) => v.trim()),
   phone: z
     .string({ required_error: 'El teléfono es requerido' })
-    .min(7, 'Teléfono inválido')
-    .max(20, 'Teléfono inválido')
-    .transform((v) => v.trim()),
+    .min(1, 'El teléfono es requerido')
+    .transform((v) => stripPhoneFormatting(v))
+    .refine((v) => /^\d{8}$/.test(v), {
+      message: 'Número inválido. Ingresa 8 dígitos guatemaltecos (ej. 5555 0000)',
+    }),
   type: z.enum(['PICKUP', 'DELIVERY']),
   address: z.string().max(300).transform((v) => v.trim()).optional(),
   /** Zona de cobertura elegida (solo si el restaurante configuró zonas). */
   zone: z.string().max(80).transform((v) => v.trim()).optional(),
   notes: z.string().max(500).transform((v) => v.trim()).optional(),
+  /** Coordenadas del pin de entrega (solo si el restaurante tiene geo configurado). */
+  deliveryLat: z.number().min(-90).max(90).optional(),
+  deliveryLng: z.number().min(-180).max(180).optional(),
 });
 
 export const createOrderSchema = z

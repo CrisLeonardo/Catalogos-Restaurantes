@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -10,13 +11,46 @@ import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
+import { isValidGuatemalaPhone } from '@/lib/schemas';
+
+const DeliveryMap = dynamic(() => import('./delivery-map'), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      height: 280, borderRadius: 'var(--radius-lg)',
+      background: 'rgba(255,255,255,0.04)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: 'var(--u-text-4)', fontSize: 13,
+    }}>
+      Cargando mapa…
+    </div>
+  ),
+});
+
+// Haversine en el cliente para mostrar feedback en tiempo real
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 interface Props {
   restaurantId: string;
   restaurantName: string;
   whatsappNumber: string | null;
-  /** Zonas que cubre el delivery. Vacío = sin restricción. */
+  /** Zonas de texto que cubre el delivery. Vacío = sin restricción. */
   deliveryZones?: string[];
+  /** Geo: ubicación del restaurante para mostrar el radio en el mapa. */
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+  /** Radio en km. Si está definido, el cliente debe colocar su pin dentro. */
+  deliveryRadiusKm?: number | null;
 }
 
 type Step = 'form' | 'success';
@@ -24,7 +58,15 @@ type Step = 'form' | 'success';
 /** Valor sentinela: "mi zona no aparece en la lista". */
 const NO_ZONE = '__fuera__';
 
-export default function CheckoutForm({ restaurantId, restaurantName, whatsappNumber, deliveryZones = [] }: Props) {
+export default function CheckoutForm({
+  restaurantId,
+  restaurantName,
+  whatsappNumber,
+  deliveryZones = [],
+  restaurantLat,
+  restaurantLng,
+  deliveryRadiusKm,
+}: Props) {
   const config = useThemeConfig();
   const content = useThemeContent();
   const { items, total, clearCart } = useCart();
@@ -53,6 +95,10 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
   const [notes, setNotes] = useState('');
   const [welcomeBack, setWelcomeBack] = useState(false);
 
+  // Geo: coordenadas del pin del cliente en el mapa
+  const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
+  const [deliveryLng, setDeliveryLng] = useState<number | undefined>(undefined);
+
   // Cliente recurrente: autocompletar con el perfil guardado del dispositivo.
   // Va en efecto (no en el estado inicial) para no romper la hidratación.
   useEffect(() => {
@@ -68,15 +114,37 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
   }, [restaurantId]);
 
   const zonesActive = deliveryZones.length > 0;
-  const outOfZone = type === 'DELIVERY' && zonesActive && zone === NO_ZONE;
+  const outOfZone   = type === 'DELIVERY' && zonesActive && zone === NO_ZONE;
+
+  // Geo: el restaurante tiene configuración de radio
+  const geoActive = type === 'DELIVERY'
+    && restaurantLat !== undefined && restaurantLat !== null
+    && restaurantLng !== undefined && restaurantLng !== null
+    && deliveryRadiusKm !== undefined && deliveryRadiusKm !== null;
+
+  // Distancia actual (actualizada cuando el usuario mueve el pin)
+  const geoDistanceKm = geoActive && deliveryLat !== undefined && deliveryLng !== undefined
+    ? haversineKm(restaurantLat!, restaurantLng!, deliveryLat, deliveryLng)
+    : null;
+  const geoOutOfRange = geoActive && (
+    deliveryLat === undefined || deliveryLng === undefined || (geoDistanceKm !== null && geoDistanceKm > deliveryRadiusKm!)
+  );
 
   const errs = {
-    name: !name.trim() ? content.checkout.errName : '',
-    phone: !phone.trim() ? content.checkout.errPhone : '',
-    address: type === 'DELIVERY' && !address.trim() ? content.checkout.errAddress : '',
-    zone: type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
+    name:  !name.trim() ? content.checkout.errName : '',
+    phone: !phone.trim()
+      ? content.checkout.errPhone
+      : !isValidGuatemalaPhone(phone)
+        ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)'
+        : '',
+    // La dirección en texto es opcional cuando el cliente colocó un pin en el mapa
+    address: type === 'DELIVERY' && !geoActive && !address.trim() ? content.checkout.errAddress : '',
+    zone:    type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
+    geo:     geoActive && (deliveryLat === undefined || deliveryLng === undefined)
+              ? 'Coloca tu ubicación en el mapa' : '',
   };
-  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !outOfZone;
+  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !errs.geo
+    && !outOfZone && !geoOutOfRange;
 
   const deliveryFee = type === 'DELIVERY' ? config.deliveryFee : 0;
   const finalTotal = total + deliveryFee;
@@ -108,6 +176,9 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
         customer: {
           name, phone, type, address, notes,
           ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
+          ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
+            ? { deliveryLat, deliveryLng }
+            : {}),
         },
         deliveryFee: feeSnapshot,
       });
@@ -164,9 +235,12 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
     const fee = data?.fee ?? snapshotFee;
     const tot = data?.total ?? snapshotTotal;
     const clean = whatsappNumber.replace(/\D/g, '');
+    const mapsLink = type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
+      ? `\nhttps://maps.google.com/?q=${deliveryLat.toFixed(6)},${deliveryLng.toFixed(6)}`
+      : '';
     const where = type === 'PICKUP'
       ? content.checkout.pickup
-      : `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}`;
+      : `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}${mapsLink}`;
     const lines: string[] = [
       `🍽 Nuevo pedido *${num}*`, '',
       `👤 ${name}`, `📱 ${phone}`,
@@ -318,7 +392,12 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
         )}
 
         <Field label={content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
-        <Field label={content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={tried && errs.phone} />
+        <Field label={content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={(tried || phone.trim().length > 0) && errs.phone} />
+        {phone.trim().length > 0 && !errs.phone && (
+          <p style={{ fontSize: 11.5, color: '#4ade80', marginTop: -12 }}>
+            Número válido ✓
+          </p>
+        )}
 
         {/* Zona de cobertura: solo si el restaurante configuró zonas */}
         {type === 'DELIVERY' && zonesActive && (
@@ -372,8 +451,59 @@ export default function CheckoutForm({ restaurantId, restaurantName, whatsappNum
           </div>
         )}
 
+        {/* Mapa interactivo: solo si el restaurante tiene geo configurado */}
+        {type === 'DELIVERY' && !outOfZone && geoActive && (
+          <div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>
+              Tu ubicación de entrega
+            </label>
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '4px 0 8px', lineHeight: 1.5 }}>
+              Arrastra el pin azul hasta tu puerta exacta. Si cae fuera del área
+              naranja, el restaurante no puede llegar ahí.
+            </p>
+            <DeliveryMap
+              restaurantLat={restaurantLat}
+              restaurantLng={restaurantLng}
+              radiusKm={deliveryRadiusKm}
+              onLocationChange={(lat, lng) => {
+                setDeliveryLat(lat);
+                setDeliveryLng(lng);
+              }}
+            />
+            {/* Feedback de distancia */}
+            {geoDistanceKm !== null && (
+              <div style={{
+                marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,
+                fontSize: 12.5,
+                color: geoOutOfRange ? '#f87171' : '#4ade80',
+              }}>
+                <Icon
+                  name={geoOutOfRange ? 'x' : 'check'}
+                  size={14}
+                  strokeWidth={2.5}
+                />
+                {geoOutOfRange
+                  ? `Fuera del rango — estás a ${geoDistanceKm.toFixed(1)} km (máx. ${deliveryRadiusKm} km)`
+                  : `Dentro del rango — a ${geoDistanceKm.toFixed(1)} km del restaurante`
+                }
+              </div>
+            )}
+            {tried && errs.geo && (
+              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{errs.geo}</p>
+            )}
+          </div>
+        )}
+
+        {/* Campo de dirección en texto */}
         {type === 'DELIVERY' && !outOfZone && (
-          <Field label={content.checkout.address} icon="mapPin" value={address} onChange={setAddress} placeholder={content.checkout.addressPh} error={tried && errs.address} />
+          <Field
+            label={geoActive ? 'Referencias o indicaciones (opcional)' : content.checkout.address}
+            icon="mapPin"
+            value={address}
+            onChange={setAddress}
+            placeholder={geoActive ? 'Ej. Portón azul, frente al parque…' : content.checkout.addressPh}
+            error={tried && errs.address}
+          />
         )}
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />
 

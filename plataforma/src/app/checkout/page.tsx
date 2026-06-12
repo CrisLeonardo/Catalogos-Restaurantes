@@ -46,6 +46,9 @@ export default async function CheckoutPage() {
           restaurantName={restaurant.name}
           whatsappNumber={restaurant.orders_whatsapp || restaurant.whatsapp_number}
           deliveryZones={restaurant.delivery_zones ?? []}
+          restaurantLat={restaurant.location_lat}
+          restaurantLng={restaurant.location_lng}
+          deliveryRadiusKm={restaurant.delivery_radius_km}
         />
       </CartProvider>
     </ThemeProvider>
