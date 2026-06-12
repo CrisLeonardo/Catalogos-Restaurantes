@@ -1,15 +1,24 @@
 -- ============================================================
---  Migración 013 – Agregar dine_in a configs existentes
---  · Restaurantes que tenían orderTypes guardado sin dine_in
---    (antes de que se implementara el tipo DINE_IN) no ven la
---    opción "Comer aquí" porque la BD sobreescribe el default.
---  · Este script inserta 'dine_in' al INICIO del array para
---    que aparezca como primera opción (seleccionada por defecto).
---  · Restaurantes con config NULL no se tocan: ya heredan el
---    nuevo DEFAULT_CONFIG con dine_in incluido.
+--  Migración 013 – Soporte completo para DINE_IN
+--  1. Corrige el CHECK constraint de orders.order_type para
+--     permitir 'DINE_IN' (antes solo aceptaba PICKUP / DELIVERY).
+--  2. Agrega 'dine_in' al array orderTypes de los restaurantes
+--     que ya tenían config guardada sin él, para que la opción
+--     "Comer aquí" aparezca automáticamente en el checkout.
 --  Ejecutar en el SQL Editor de Supabase.
 -- ============================================================
 
+-- ── 1. Constraint de order_type ───────────────────────────────
+ALTER TABLE orders
+  DROP CONSTRAINT IF EXISTS orders_order_type_check;
+
+ALTER TABLE orders
+  ADD CONSTRAINT orders_order_type_check
+  CHECK (order_type IN ('PICKUP', 'DELIVERY', 'DINE_IN'));
+
+-- ── 2. Configs existentes sin dine_in ─────────────────────────
+-- Solo toca filas cuyo config->'orderTypes' existe y no incluye
+-- 'dine_in'. Lo inserta al inicio para que sea la opción por defecto.
 UPDATE restaurant_themes
 SET config = jsonb_set(
   config,

@@ -230,6 +230,12 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       {/* ── Pedidos / Moneda ── */}
       <Section title="Pedidos y moneda">
         <Toggle label="Comer en local" value={config.orderTypes.includes('dine_in')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'dine_in', v))} />
+        {config.orderTypes.includes('dine_in') && (
+          <>
+            <NumberCtl label="Cantidad de mesas" value={config.dineInTableCount} min={1} max={50} onChange={(v) => setC('dineInTableCount', v)} />
+            <StringListCtl label="Preferencias de servicio" items={config.dineInCourseOptions} onChange={(v) => setC('dineInCourseOptions', v)} />
+          </>
+        )}
         <Toggle label="Domicilio" value={config.orderTypes.includes('delivery')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'delivery', v))} />
         <Toggle label="Para llevar" value={config.orderTypes.includes('pickup')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'pickup', v))} />
         <TextCtl label="Símbolo de moneda" value={config.currencySymbol} onChange={(v) => setC('currencySymbol', v)} />
@@ -436,6 +442,74 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
   return (
     <Field label={`${label} · ${value.toFixed(2)}`}>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--brand-accent)' }} />
+    </Field>
+  );
+}
+
+function NumberCtl({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          const n = Math.max(min, Math.min(max, parseInt(e.target.value, 10) || min));
+          onChange(n);
+        }}
+        style={{ ...inputStyle, width: 70, textAlign: 'center', padding: '6px 8px', fontSize: 14 }}
+      />
+    </div>
+  );
+}
+
+function StringListCtl({ label, items, onChange }: { label: string; items: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  function add() {
+    const v = draft.trim();
+    if (!v || items.includes(v)) return;
+    onChange([...items, v]);
+    setDraft('');
+  }
+  return (
+    <Field label={label}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map((item, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)', padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)' }}>
+              {item}
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange(items.filter((_, j) => j !== i))}
+              className="press"
+              style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'transparent', color: '#f87171', flexShrink: 0 }}
+            >
+              Quitar
+            </button>
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+            placeholder="Nueva preferencia…"
+            style={{ ...inputStyle, flex: 1, padding: '7px 10px', fontSize: 13 }}
+          />
+          <button
+            type="button"
+            onClick={add}
+            className="press"
+            style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text-2)', flexShrink: 0 }}
+          >
+            Agregar
+          </button>
+        </div>
+      </div>
     </Field>
   );
 }

@@ -81,6 +81,8 @@ export interface ThemeConfig {
   // ── Pedidos / checkout ──
   orderTypes: OrderType[];
   deliveryFee: number;
+  dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
+  dineInCourseOptions: string[];  // preferencias de servicio configurables
 
   // ── Moneda ──
   currencySymbol: string;       // 'Q', '$', '€'
@@ -140,6 +142,8 @@ export const DEFAULT_CONFIG: ThemeConfig = {
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,
+  dineInTableCount: 20,
+  dineInCourseOptions: ['Entrada primero', 'Plato principal primero', 'Postre al final'],
 
   currencySymbol: 'Q',
   currencyPosition: 'prefix',

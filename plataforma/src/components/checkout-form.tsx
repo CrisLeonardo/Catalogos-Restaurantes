@@ -54,14 +54,6 @@ type OrderType = 'PICKUP' | 'DELIVERY' | 'DINE_IN';
 
 const NO_ZONE = '__fuera__';
 
-const TABLE_COUNT = 20;
-
-const COURSE_OPTIONS = [
-  { value: '',                         label: 'Sin preferencia' },
-  { value: 'Entrada primero',          label: '🥗 Entrada primero' },
-  { value: 'Plato principal primero',  label: '🍽 Plato principal primero' },
-  { value: 'Postre al final',          label: '🍰 Postre al final' },
-];
 
 export default function CheckoutForm({
   restaurantId,
@@ -424,7 +416,7 @@ export default function CheckoutForm({
           <div>
             <label className="t-kicker" style={{ fontSize: 10.5 }}>Número de mesa</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7, marginTop: 8 }}>
-              {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((n) => {
+              {Array.from({ length: config.dineInTableCount }, (_, i) => i + 1).map((n) => {
                 const on = tableNumber === n;
                 return (
                   <button
@@ -454,17 +446,17 @@ export default function CheckoutForm({
         )}
 
         {/* ── DINE_IN: preferencia de servicio ── */}
-        {type === 'DINE_IN' && (
+        {type === 'DINE_IN' && config.dineInCourseOptions.length > 0 && (
           <div>
             <label className="t-kicker" style={{ fontSize: 10.5 }}>Preferencia de servicio <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
-              {COURSE_OPTIONS.map((opt) => {
-                const on = coursePreference === opt.value;
+              {['', ...config.dineInCourseOptions].map((opt) => {
+                const on = coursePreference === opt;
                 return (
                   <button
-                    key={opt.value}
+                    key={opt}
                     type="button"
-                    onClick={() => setCoursePreference(opt.value)}
+                    onClick={() => setCoursePreference(opt)}
                     className="press"
                     style={{
                       padding: '8px 13px', borderRadius: 99, cursor: 'pointer',
@@ -475,7 +467,7 @@ export default function CheckoutForm({
                       transition: 'all 150ms',
                     }}
                   >
-                    {opt.label}
+                    {opt === '' ? 'Sin preferencia' : opt}
                   </button>
                 );
               })}
