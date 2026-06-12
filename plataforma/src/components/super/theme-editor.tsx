@@ -229,6 +229,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
       {/* ── Pedidos / Moneda ── */}
       <Section title="Pedidos y moneda">
+        <Toggle label="Comer en local" value={config.orderTypes.includes('dine_in')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'dine_in', v))} />
         <Toggle label="Domicilio" value={config.orderTypes.includes('delivery')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'delivery', v))} />
         <Toggle label="Para llevar" value={config.orderTypes.includes('pickup')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'pickup', v))} />
         <TextCtl label="Símbolo de moneda" value={config.currencySymbol} onChange={(v) => setC('currencySymbol', v)} />
