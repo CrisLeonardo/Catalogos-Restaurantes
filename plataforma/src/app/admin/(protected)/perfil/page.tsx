@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import ProfileForm from '@/components/admin/profile-form';
 import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
-import type { Restaurant, RestaurantTheme } from '@/types';
+import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Perfil – Panel admin' };
 
@@ -36,31 +36,15 @@ export default async function AdminPerfilPage({
 
   if (!restaurantId) redirect('/admin/login');
 
-  // Cargar restaurant + theme con privilegios admin
+  // Cargar datos del restaurante
   const supabase = await createClient();
-  const [{ data: restaurant }, { data: theme }] = await Promise.all([
-    supabase.from('restaurants').select('*').eq('id', restaurantId).single(),
-    supabase.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
-  ]);
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('*')
+    .eq('id', restaurantId)
+    .single();
 
   if (!restaurant) redirect('/admin/login');
-
-  const defaultTheme: RestaurantTheme = {
-    restaurant_id: restaurantId,
-    brand_name: null,
-    logo_url: null,
-    color_primary: '#D97757',
-    color_bg: '#0b0b0c',
-    color_text: '#F5F3EF',
-    font_display: 'Unbounded',
-    portada_style: 'spotlight',
-    catalog_view: 'grid',
-    glass_intensity: 'translucido',
-    background_image: null,
-    config: null,
-    content: null,
-    custom_css: null,
-  };
 
   return (
     <div className="anim-fade-up">
@@ -94,7 +78,6 @@ export default async function AdminPerfilPage({
       <ProfileForm
         restaurantId={restaurantId}
         restaurant={restaurant as Restaurant}
-        theme={(theme as RestaurantTheme) ?? defaultTheme}
       />
 
       {/* ── Operación: horarios, pausa, zona horaria ───────── */}

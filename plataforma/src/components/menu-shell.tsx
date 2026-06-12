@@ -6,6 +6,7 @@ import Portada from '@/components/menu/portada';
 import MenuClient from '@/components/menu-client';
 import ActiveOrderChip from '@/components/active-order-chip';
 import VisitTracker from '@/components/visit-tracker';
+import InstallBanner from '@/components/install-banner';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
@@ -35,6 +36,7 @@ export default function MenuShell({ config, content, categories, products, resta
           </div>
         </main>
         {ordersEnabled && <ActiveOrderChip restaurantId={restaurantId} />}
+        <InstallBanner brandName={config.brandName} />
       </CartProvider>
     </ThemeProvider>
   );

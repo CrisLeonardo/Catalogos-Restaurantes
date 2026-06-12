@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
-import { exportOrdersCsv } from '@/lib/actions/orders';
+import { exportOrdersStructured } from '@/lib/actions/orders';
 import { localDateKey } from '@/lib/hours';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
@@ -52,7 +52,8 @@ export default function OrdersPanel({ initialOrders, restaurantId, stats, curren
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isExporting, startExport] = useTransition();
+  const [isExportingXls, startExportXls] = useTransition();
+  const [isExportingPdf, startExportPdf] = useTransition();
   const orders = initialOrders;
 
   function showToast(msg: string) {
@@ -105,20 +106,70 @@ export default function OrdersPanel({ initialOrders, restaurantId, stats, curren
     return () => { cancelled = true; channel?.unsubscribe(); };
   }, [restaurantId, router]);
 
-  function downloadCsv() {
-    startExport(async () => {
-      const res = await exportOrdersCsv(restaurantId, 30);
-      if (res.error || !res.csv) {
-        showToast(res.error ?? 'No se pudo exportar.');
-        return;
-      }
-      const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8' });
+  function buildExportHtml(
+    headers: string[],
+    rows: string[][],
+    restaurantName: string,
+    forPrint: boolean,
+  ): string {
+    const today = new Date().toLocaleDateString('es-GT');
+    const thCells = headers.map((h) => `<th>${h}</th>`).join('');
+    const bodyRows = rows
+      .map((r) => `<tr>${r.map((c) => `<td>${c.replace(/</g, '&lt;')}</td>`).join('')}</tr>`)
+      .join('');
+    const printScript = forPrint ? '<script>window.onload=()=>{window.print();}<\/script>' : '';
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pedidos — ${restaurantName}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; }
+  h2 { font-size: 15px; margin: 0 0 4px; }
+  p { margin: 0 0 12px; color: #555; font-size: 11px; }
+  table { border-collapse: collapse; width: 100%; }
+  th { background: #f0f0f0; font-weight: bold; padding: 6px 8px; border: 1px solid #ccc; text-align: left; font-size: 11px; }
+  td { padding: 5px 8px; border: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  @media print { body { margin: 0; } }
+</style>
+${printScript}
+</head>
+<body>
+<h2>${restaurantName} — Pedidos (últimos 30 días)</h2>
+<p>Generado el ${today} · ${rows.length} pedidos</p>
+<table>
+<thead><tr>${thCells}</tr></thead>
+<tbody>${bodyRows}</tbody>
+</table>
+</body>
+</html>`;
+  }
+
+  function downloadExcel() {
+    startExportXls(async () => {
+      const res = await exportOrdersStructured(restaurantId, 30);
+      if ('error' in res) { showToast(res.error); return; }
+      const html = buildExportHtml(res.headers, res.rows, res.restaurantName, false);
+      const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = res.filename ?? 'pedidos.csv';
+      a.download = `${res.filename}.xls`;
       a.click();
       URL.revokeObjectURL(url);
+    });
+  }
+
+  function downloadPdf() {
+    startExportPdf(async () => {
+      const res = await exportOrdersStructured(restaurantId, 30);
+      if ('error' in res) { showToast(res.error); return; }
+      const html = buildExportHtml(res.headers, res.rows, res.restaurantName, true);
+      const win = window.open('', '_blank');
+      if (!win) { showToast('Permite ventanas emergentes para descargar el PDF.'); return; }
+      win.document.write(html);
+      win.document.close();
     });
   }
 
@@ -189,20 +240,36 @@ export default function OrdersPanel({ initialOrders, restaurantId, stats, curren
         <aside style={{ width: '100%', minWidth: 0 }}>
           <SalesChart series={stats.series} totalLast14={stats.totalLast14} currency={currency} />
           {stats.topToday.length > 0 && <TopToday items={stats.topToday} />}
-          <button
-            onClick={downloadCsv}
-            disabled={isExporting}
-            className="press glass-quiet"
-            style={{
-              width: '100%', marginTop: 12, padding: '12px 16px', borderRadius: 14,
-              border: 'none', cursor: isExporting ? 'wait' : 'pointer',
-              color: 'var(--u-text-2)', fontWeight: 600, fontSize: 13,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              opacity: isExporting ? 0.7 : 1,
-            }}
-          >
-            {isExporting ? 'Exportando…' : '⬇ Exportar CSV (30 días)'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button
+              onClick={downloadExcel}
+              disabled={isExportingXls || isExportingPdf}
+              className="press glass-quiet"
+              style={{
+                flex: 1, padding: '12px 10px', borderRadius: 14,
+                border: 'none', cursor: isExportingXls ? 'wait' : 'pointer',
+                color: 'var(--u-text-2)', fontWeight: 600, fontSize: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                opacity: isExportingXls ? 0.7 : 1,
+              }}
+            >
+              {isExportingXls ? '…' : '⬇ Excel'}
+            </button>
+            <button
+              onClick={downloadPdf}
+              disabled={isExportingXls || isExportingPdf}
+              className="press glass-quiet"
+              style={{
+                flex: 1, padding: '12px 10px', borderRadius: 14,
+                border: 'none', cursor: isExportingPdf ? 'wait' : 'pointer',
+                color: 'var(--u-text-2)', fontWeight: 600, fontSize: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                opacity: isExportingPdf ? 0.7 : 1,
+              }}
+            >
+              {isExportingPdf ? '…' : '⬇ PDF'}
+            </button>
+          </div>
         </aside>
       </div>
     </>

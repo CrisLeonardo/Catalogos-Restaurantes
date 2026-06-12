@@ -351,14 +351,16 @@ function csvCell(v: string | number): string {
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/**
- * Exporta los pedidos de los últimos `days` días como CSV (para Excel).
- * Solo el staff del restaurante (o el Super Admin) puede exportar.
- */
-export async function exportOrdersCsv(
+/** Autentica y devuelve los datos crudos de pedidos para exportar. */
+async function fetchOrdersForExport(
   restaurantId: string,
-  days: number = 30,
-): Promise<{ csv?: string; filename?: string; error?: string }> {
+  days: number,
+): Promise<{
+  rows: string[][];
+  headers: string[];
+  restaurantName: string;
+  filename: string;
+} | { error: string }> {
   if (!restaurantId) return { error: 'Restaurante inválido.' };
   const safeDays = Math.min(Math.max(Math.trunc(days) || 30, 1), 366);
 
@@ -383,7 +385,7 @@ export async function exportOrdersCsv(
   since.setDate(since.getDate() - safeDays);
 
   const [{ data: restaurant }, { data: orders }] = await Promise.all([
-    db.from('restaurants').select('slug, timezone').eq('id', restaurantId).single(),
+    db.from('restaurants').select('name, slug, timezone').eq('id', restaurantId).single(),
     db
       .from('orders')
       .select('order_number, created_at, customer_name, customer_phone, order_type, status, subtotal, delivery_fee, total, notes, items:order_items(name_snapshot, quantity, options_snapshot)')
@@ -394,7 +396,7 @@ export async function exportOrdersCsv(
   ]);
 
   const tz = (restaurant?.timezone as string) || 'America/Guatemala';
-  const header = [
+  const headers = [
     'Numero', 'Fecha', 'Hora', 'Cliente', 'Telefono', 'Tipo', 'Estado',
     'Productos', 'Subtotal', 'Envio', 'Total', 'Notas',
   ];
@@ -418,19 +420,48 @@ export async function exportOrdersCsv(
       })
       .join(' | ');
     return [
-      o.order_number, fecha, hora, o.customer_name, o.customer_phone,
+      String(o.order_number), fecha, hora, String(o.customer_name), String(o.customer_phone),
       o.order_type === 'PICKUP' ? 'Para llevar' : o.order_type === 'DINE_IN' ? 'En local' : 'Domicilio',
-      o.status, productos,
+      String(o.status), productos,
       Number(o.subtotal).toFixed(2), Number(o.delivery_fee).toFixed(2), Number(o.total).toFixed(2),
       (o.notes as string | null) ?? '',
-    ].map(csvCell).join(',');
+    ];
   });
 
-  // BOM para que Excel abra el UTF-8 con acentos correctos.
-  const csv = '\uFEFF' + [header.join(','), ...rows].join('\r\n');
   const today = new Date().toISOString().slice(0, 10);
-  return { csv, filename: `pedidos-${restaurant?.slug ?? 'restaurante'}-${today}.csv` };
+  return {
+    rows,
+    headers,
+    restaurantName: (restaurant?.name as string) ?? 'Restaurante',
+    filename: `pedidos-${restaurant?.slug ?? 'restaurante'}-${today}`,
+  };
 }
+
+/**
+ * Exporta pedidos de los últimos `days` días como datos estructurados
+ * (para generar Excel HTML o PDF en el cliente sin dependencias extra).
+ */
+export async function exportOrdersStructured(
+  restaurantId: string,
+  days: number = 30,
+): Promise<{ rows: string[][]; headers: string[]; restaurantName: string; filename: string } | { error: string }> {
+  return fetchOrdersForExport(restaurantId, days);
+}
+
+/**
+ * Exporta los pedidos de los últimos `days` días como CSV (para Excel).
+ * Solo el staff del restaurante (o el Super Admin) puede exportar.
+ */
+export async function exportOrdersCsv(
+  restaurantId: string,
+  days: number = 30,
+): Promise<{ csv?: string; filename?: string; error?: string }> {
+  const result = await fetchOrdersForExport(restaurantId, days);
+  if ('error' in result) return result;
+  const csv = '﻿' + [result.headers.join(','), ...result.rows.map((r) => r.map(csvCell).join(','))].join('\r\n');
+  return { csv, filename: `${result.filename}.csv` };
+}
+
 
 /* ── Seguimiento público (/pedido/[token]) ─────────────────── */
 

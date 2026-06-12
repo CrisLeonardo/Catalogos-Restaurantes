@@ -3,18 +3,15 @@
 /* ============================================================
    OPERACIÓN — horarios de apertura + pausa de pedidos
    ------------------------------------------------------------
-   · Horario semanal (un intervalo por día; cierre <= apertura
-     cruza la medianoche, p. ej. 18:00–01:00).
+   · Horario semanal con múltiples turnos por día.
    · Toggle "pausar pedidos" con mensaje personalizable.
-   · Zona horaria del restaurante (KPIs y horario usan esta).
-   El badge "Abierto/Cerrado" de la portada y el bloqueo del
-   checkout salen de estos datos.
+   · Zona horaria del restaurante.
    ============================================================ */
 
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { updateRestaurantOps, type RestaurantState } from '@/lib/actions/restaurant';
-import { DAY_LABELS, DAY_ORDER, type DayKey, type WeeklyHours } from '@/lib/hours';
+import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours } from '@/lib/hours';
 import type { Restaurant } from '@/types';
 
 const TIMEZONES = [
@@ -33,15 +30,21 @@ const TIMEZONES = [
   'Europe/Madrid',
 ];
 
-type DayState = { on: boolean; open: string; close: string };
+type Interval = { open: string; close: string };
+type DayState = { on: boolean; intervals: Interval[] };
 
 function initDays(hours: WeeklyHours | null): Record<DayKey, DayState> {
   const out = {} as Record<DayKey, DayState>;
   for (const day of DAY_ORDER) {
-    const interval = hours?.[day]?.[0];
-    out[day] = interval
-      ? { on: true, open: interval[0], close: interval[1] }
-      : { on: false, open: '08:00', close: '21:00' };
+    const dayIntervals = hours?.[day] ?? [];
+    if (dayIntervals.length > 0) {
+      out[day] = {
+        on: true,
+        intervals: dayIntervals.map(([open, close]) => ({ open, close })),
+      };
+    } else {
+      out[day] = { on: false, intervals: [{ open: '08:00', close: '21:00' }] };
+    }
   }
   return out;
 }
@@ -50,7 +53,12 @@ function buildHoursJson(days: Record<DayKey, DayState>): string {
   const out: WeeklyHours = {};
   for (const day of DAY_ORDER) {
     const d = days[day];
-    if (d.on && d.open && d.close) out[day] = [[d.open, d.close]];
+    if (d.on && d.intervals.length > 0) {
+      const valid = d.intervals
+        .filter((iv) => iv.open && iv.close)
+        .map((iv) => [iv.open, iv.close] as HourInterval);
+      if (valid.length > 0) out[day] = valid;
+    }
   }
   return Object.keys(out).length > 0 ? JSON.stringify(out) : '';
 }
@@ -62,8 +70,35 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
   const [paused, setPaused] = useState(restaurant.orders_paused === true);
 
-  const setDay = (day: DayKey, patch: Partial<DayState>) =>
-    setDays((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+  const toggleDay = (day: DayKey) =>
+    setDays((prev) => ({ ...prev, [day]: { ...prev[day], on: !prev[day].on } }));
+
+  const setInterval = (day: DayKey, idx: number, patch: Partial<Interval>) =>
+    setDays((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        intervals: prev[day].intervals.map((iv, i) => (i === idx ? { ...iv, ...patch } : iv)),
+      },
+    }));
+
+  const addInterval = (day: DayKey) =>
+    setDays((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        intervals: [...prev[day].intervals, { open: '12:00', close: '21:00' }],
+      },
+    }));
+
+  const removeInterval = (day: DayKey, idx: number) =>
+    setDays((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        intervals: prev[day].intervals.filter((_, i) => i !== idx),
+      },
+    }));
 
   const inputStyle: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)',
@@ -149,18 +184,20 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       <Glass variant="quiet" style={{ padding: 16 }}>
         <label style={labelStyle}>Horario de apertura</label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12 }}>
-          El badge “Abierto/Cerrado” y el checkout se rigen por este horario.
-          Sin días activos = siempre abierto. Un cierre de madrugada (p. ej.
-          18:00 a 01:00) cruza la medianoche sin problema.
+          El badge "Abierto/Cerrado" y el checkout se rigen por este horario.
+          Sin días activos = siempre abierto. Puedes agregar varios turnos por día
+          (p. ej. 7:00–10:00 y 13:00–21:00). Un cierre de madrugada (p. ej.
+          20:00 a 02:00) cruza la medianoche sin problema.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {DAY_ORDER.map((day) => {
             const d = days[day];
             return (
-              <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div key={day} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                {/* Botón día */}
                 <button
                   type="button"
-                  onClick={() => setDay(day, { on: !d.on })}
+                  onClick={() => toggleDay(day)}
                   className="press"
                   style={{
                     width: 110, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
@@ -168,7 +205,8 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                     background: d.on ? 'rgba(255,255,255,0.08)' : 'transparent',
                     border: `1px solid ${d.on ? 'var(--u-hair-2)' : 'var(--u-hair)'}`,
                     color: d.on ? 'var(--u-text)' : 'var(--u-text-4)',
-                    fontSize: 13, fontWeight: 600, transition: 'all 150ms',
+                    fontSize: 13, fontWeight: 600, transition: 'all 150ms', flexShrink: 0,
+                    marginTop: 0,
                   }}
                 >
                   <span
@@ -179,26 +217,63 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                   />
                   {DAY_LABELS[day]}
                 </button>
+
+                {/* Turnos */}
                 {d.on ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                      type="time"
-                      value={d.open}
-                      onChange={(e) => setDay(day, { open: e.target.value })}
-                      style={inputStyle}
-                      aria-label={`Apertura ${DAY_LABELS[day]}`}
-                    />
-                    <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
-                    <input
-                      type="time"
-                      value={d.close}
-                      onChange={(e) => setDay(day, { close: e.target.value })}
-                      style={inputStyle}
-                      aria-label={`Cierre ${DAY_LABELS[day]}`}
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+                    {d.intervals.map((iv, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <input
+                          type="time"
+                          value={iv.open}
+                          onChange={(e) => setInterval(day, idx, { open: e.target.value })}
+                          style={inputStyle}
+                          aria-label={`Apertura turno ${idx + 1} ${DAY_LABELS[day]}`}
+                        />
+                        <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
+                        <input
+                          type="time"
+                          value={iv.close}
+                          onChange={(e) => setInterval(day, idx, { close: e.target.value })}
+                          style={inputStyle}
+                          aria-label={`Cierre turno ${idx + 1} ${DAY_LABELS[day]}`}
+                        />
+                        {d.intervals.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeInterval(day, idx)}
+                            className="press"
+                            aria-label="Eliminar turno"
+                            style={{
+                              width: 26, height: 26, borderRadius: 99, border: 'none',
+                              background: 'rgba(239,68,68,0.14)', color: '#f87171',
+                              cursor: 'pointer', fontSize: 15, lineHeight: 1,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {d.intervals.length < 4 && (
+                      <button
+                        type="button"
+                        onClick={() => addInterval(day)}
+                        className="press"
+                        style={{
+                          alignSelf: 'flex-start', padding: '4px 10px', borderRadius: 'var(--radius-md)',
+                          border: '1px dashed var(--u-hair-2)', background: 'transparent',
+                          color: 'var(--u-text-4)', fontSize: 12, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 5,
+                        }}
+                      >
+                        + Turno
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <span style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Cerrado</span>
+                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 8 }}>Cerrado</span>
                 )}
               </div>
             );

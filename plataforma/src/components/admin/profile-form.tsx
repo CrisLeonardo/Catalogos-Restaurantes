@@ -2,45 +2,28 @@
 
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
-import ImageUpload from './image-upload';
-import {
-  updateRestaurantInfo,
-  updateRestaurantTheme,
-  type RestaurantState,
-} from '@/lib/actions/restaurant';
-import type { Restaurant, RestaurantTheme } from '@/types';
+import { updateRestaurantInfo, type RestaurantState } from '@/lib/actions/restaurant';
+import type { Restaurant } from '@/types';
 
 interface ProfileFormProps {
   restaurantId: string;
   restaurant: Restaurant;
-  theme: RestaurantTheme;
 }
 
 const empty: RestaurantState = null;
 
-export default function ProfileForm({ restaurantId, restaurant, theme }: ProfileFormProps) {
+export default function ProfileForm({ restaurantId, restaurant }: ProfileFormProps) {
   const [infoState, infoAction, infoIsPending] = useActionState(updateRestaurantInfo, empty);
-  const [themeState, themeAction, themeIsPending] = useActionState(updateRestaurantTheme, empty);
-
-  // El resolver da prioridad a config (JSONB) sobre las columnas legacy:
-  // mostramos lo que realmente está en efecto.
-  const cfg = (theme.config ?? {}) as { logoUrl?: string | null; colorAccent?: string };
-  const currentLogo = cfg.logoUrl !== undefined ? cfg.logoUrl : theme.logo_url;
-  const currentAccent = cfg.colorAccent ?? theme.color_primary;
-
-  const [logoUrl, setLogoUrl] = useState<string>(currentLogo ?? '');
   const [whatsappVal, setWhatsappVal] = useState(restaurant.whatsapp_number ?? '');
-  const [ordersWaVal, setOrdersWaVal] = useState(restaurant.orders_whatsapp ?? '');
 
   function validateWhatsApp(v: string): string {
     if (!v.trim()) return '';
     const digits = v.replace(/[\s\-\(\)\+\.]/g, '');
     if (/^\d{8}$/.test(digits) || /^502\d{8}$/.test(digits)) return '';
-    return 'Ingresa 8 dígitos (ej. 5555 0000) o +502 5555 0000';
+    return 'Ingresa 8 dígitos (ej. 49340483 ó 4934-0483)';
   }
 
   const whatsappErr = validateWhatsApp(whatsappVal);
-  const ordersWaErr = validateWhatsApp(ordersWaVal);
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -78,6 +61,7 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
         <h2 style={sectionTitle}>Información</h2>
         <form action={infoAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <input type="hidden" name="restaurantId" value={restaurantId} />
+          <input type="hidden" name="orders_whatsapp" value="" />
 
           <Glass variant="quiet" style={{ padding: 16 }}>
             <label htmlFor="name" style={labelStyle}>Nombre del restaurante *</label>
@@ -111,7 +95,7 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
               type="tel"
               value={whatsappVal}
               onChange={(e) => setWhatsappVal(e.target.value)}
-              placeholder="5555 0000  ó  +502 5555 0000"
+              placeholder="49340483 · 4934-0483 · 4934 0483"
               style={{
                 ...inputStyle,
                 borderColor: whatsappErr ? 'rgba(248,113,113,0.6)' : undefined,
@@ -123,33 +107,7 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
               <p style={{ fontSize: 12, color: '#4ade80', marginTop: 6 }}>Número válido ✓</p>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-                Acepta: 5555 0000 · 55550000 · 5555-0000 · +502 5555 0000
-              </p>
-            )}
-          </Glass>
-
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label htmlFor="orders_whatsapp" style={labelStyle}>WhatsApp para recibir pedidos</label>
-            <input
-              id="orders_whatsapp"
-              name="orders_whatsapp"
-              type="tel"
-              value={ordersWaVal}
-              onChange={(e) => setOrdersWaVal(e.target.value)}
-              placeholder="5555 0000  ó  +502 5555 0000"
-              style={{
-                ...inputStyle,
-                borderColor: ordersWaErr ? 'rgba(248,113,113,0.6)' : undefined,
-              }}
-            />
-            {ordersWaErr ? (
-              <p style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{ordersWaErr}</p>
-            ) : ordersWaVal.trim() ? (
-              <p style={{ fontSize: 12, color: '#4ade80', marginTop: 6 }}>Número válido ✓</p>
-            ) : (
-              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
-                Cada pedido confirmado se envía por WhatsApp a este número.
-                Si lo dejas vacío, se usa el WhatsApp de arriba.
+                Acepta: 49340483 · 4934-0483 · 4934 0483 · +502 4934 0483
               </p>
             )}
           </Glass>
@@ -170,56 +128,11 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
 
           <button
             type="submit"
-            disabled={infoIsPending || !!whatsappErr || !!ordersWaErr}
+            disabled={infoIsPending || !!whatsappErr}
             className="press btn-accent"
-            style={saveBtnStyle(infoIsPending || !!whatsappErr || !!ordersWaErr)}
+            style={saveBtnStyle(infoIsPending || !!whatsappErr)}
           >
             {infoIsPending ? 'Guardando…' : 'Guardar información'}
-          </button>
-        </form>
-      </section>
-
-      {/* ── Apariencia (básica) ─────────────────────────────── */}
-      {/* El diseño completo lo hace Leogin desde el Super Admin; el dueño
-          ajusta su logo y color de acento sin poder romper el resto. */}
-      <section>
-        <h2 style={sectionTitle}>Apariencia</h2>
-        <form action={themeAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <input type="hidden" name="restaurantId" value={restaurantId} />
-          <input type="hidden" name="logo_url" value={logoUrl} />
-
-          {/* Logo */}
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label style={labelStyle}>Logo</label>
-            <ImageUpload
-              restaurantId={restaurantId}
-              currentUrl={currentLogo}
-              folder="logo"
-              onUpload={setLogoUrl}
-            />
-          </Glass>
-
-          {/* Color de acento */}
-          <Glass variant="quiet" style={{ padding: 16 }}>
-            <label style={labelStyle}>Color de tu marca</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <ColorRow label="Acento / primario" name="color_primary" defaultValue={currentAccent} />
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 10 }}>
-              El resto del diseño (fondo, tipografías, portada) lo personaliza
-              el equipo de Leogin por ti. Escríbenos si quieres cambios.
-            </p>
-          </Glass>
-
-          {themeState?.error && <ErrorMsg msg={themeState.error} />}
-
-          <button
-            type="submit"
-            disabled={themeIsPending}
-            className="press btn-accent"
-            style={saveBtnStyle(themeIsPending)}
-          >
-            {themeIsPending ? 'Guardando…' : 'Guardar apariencia'}
           </button>
         </form>
       </section>
@@ -228,33 +141,6 @@ export default function ProfileForm({ restaurantId, restaurant, theme }: Profile
 }
 
 /* ── Helpers UI ──────────────────────────────────────────── */
-
-function ColorRow({
-  label,
-  name,
-  defaultValue,
-}: {
-  label: string;
-  name: string;
-  defaultValue: string;
-}) {
-  const [value, setValue] = useState(defaultValue);
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <input
-        type="color"
-        name={name}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2 }}
-      />
-      <span style={{ fontSize: 14, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
-      <span style={{ fontSize: 12, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
-        {value}
-      </span>
-    </div>
-  );
-}
 
 function ErrorMsg({ msg }: { msg: string }) {
   return (

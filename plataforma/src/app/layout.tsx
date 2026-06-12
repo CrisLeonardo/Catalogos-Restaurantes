@@ -35,6 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Menú en línea',
     description: 'Menús interactivos para restaurantes',
+    manifest: '/api/manifest',
     appleWebApp: {
       capable: true,
       statusBarStyle: 'black-translucent',
