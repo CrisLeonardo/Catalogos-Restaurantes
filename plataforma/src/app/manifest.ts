@@ -42,10 +42,15 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   // Servimos el ícono a través de /api/icon/[slug] (mismo origen): evita
   // problemas de íconos maskable cross-origin y mantiene válida la URL para
   // PWAs ya instaladas. La ruta hace de proxy de los bytes reales del asset.
+  // El parámetro ?v= hace cache-busting: cuando el ícono cambia, la URL cambia
+  // y el navegador/Android descarga el nuevo en lugar de usar el cacheado.
+  const iconVersion = appIcon ? hashStr(appIcon) : '';
+  const iconSrc = `/api/icon/${slug}${iconVersion ? `?v=${iconVersion}` : ''}`;
+
   const icons: MetadataRoute.Manifest['icons'] = appIcon && slug && slug !== DEMO_SLUG
     ? [
-        { src: `/api/icon/${slug}`, sizes: '512x512', type: mimeFor(appIcon), purpose: 'any' },
-        { src: `/api/icon/${slug}`, sizes: '512x512', type: mimeFor(appIcon), purpose: 'maskable' },
+        { src: iconSrc, sizes: '512x512', type: mimeFor(appIcon), purpose: 'any' },
+        { src: iconSrc, sizes: '512x512', type: mimeFor(appIcon), purpose: 'maskable' },
       ]
     : [
         { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -56,13 +61,27 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     name,
     short_name: name,
     description: 'Menús interactivos para restaurantes',
+    // id explícito: Chrome 97+ lo usa para distinguir PWAs del mismo origen.
+    // El catálogo tiene id='/' y el admin tiene id='/admin/', así pueden
+    // instalarse como apps separadas aunque compartan el mismo dominio.
+    id: '/',
     start_url: '/',
+    scope: '/',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0b0b0c',
     theme_color: '#0b0b0c',
     icons,
   };
+}
+
+/** Hash corto no-criptográfico de una URL — solo para cache-busting. */
+function hashStr(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
 }
 
 /** Mime por extensión del asset, para declararlo en el manifest. */

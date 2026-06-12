@@ -44,9 +44,11 @@ export async function GET(_request: NextRequest) {
     name,
     short_name: name,
     description: 'Panel de administración del restaurante',
+    // id distingue esta PWA del catálogo (id='/') en Chrome 97+.
+    // scope='/' permite que /login funcione dentro del standalone sin abrir el navegador.
     id: '/admin/',
     start_url: '/admin/',
-    scope: '/admin/',
+    scope: '/',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0b0b0c',

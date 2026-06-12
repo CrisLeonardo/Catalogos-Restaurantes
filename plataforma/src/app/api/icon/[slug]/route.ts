@@ -45,10 +45,16 @@ export async function GET(
       return Response.redirect(new URL('/icon-512.png', request.url));
     }
     const contentType = (res.headers.get('content-type') ?? 'image/png').split(';')[0].trim();
+    // Si viene con ?v= (hash del asset) la URL es inmutable → cache largo.
+    // Sin ?v= (acceso directo) → cache corto para no servir versión vieja.
+    const hasVersion = request.nextUrl.searchParams.has('v');
+    const cacheControl = hasVersion
+      ? 'public, max-age=31536000, immutable'
+      : 'public, max-age=60, stale-while-revalidate=300';
     return new Response(res.body, {
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+        'Cache-Control': cacheControl,
       },
     });
   } catch {
