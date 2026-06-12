@@ -62,9 +62,12 @@ export const createOrderSchema = z
     deliveryFee: z.number().min(0).max(10_000).default(0),
   })
   .refine(
-    (data) =>
-      data.customer.type !== 'DELIVERY' ||
-      (data.customer.address?.length ?? 0) > 3,
+    (data) => {
+      if (data.customer.type !== 'DELIVERY') return true;
+      // Si hay coordenadas geo, la dirección de texto es opcional
+      if (data.customer.deliveryLat != null && data.customer.deliveryLng != null) return true;
+      return (data.customer.address?.length ?? 0) > 3;
+    },
     {
       message: 'La dirección es requerida para envío a domicilio',
       path: ['customer', 'address'],
