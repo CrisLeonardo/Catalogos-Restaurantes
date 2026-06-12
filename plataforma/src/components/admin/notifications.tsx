@@ -8,6 +8,9 @@
      —si el dueño lo activó— notificación del sistema.
    · La campana pide/enseña el permiso de notificaciones del
      navegador; el puntito indica el estado.
+   · Usa el Service Worker (sw.js) para mostrar la notificación
+     en la barra del sistema del dispositivo, incluso cuando la
+     pestaña está en segundo plano (funciona en móvil y desktop).
    · En /admin/pedidos el chime lo pone OrdersPanel (muteChime
      evita el doble sonido).
    ============================================================ */
@@ -52,6 +55,7 @@ export default function AdminNotifications({
   const [toast, setToast] = useState<string | null>(null);
   const [hint, setHint] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swRegRef = useRef<ServiceWorkerRegistration | null>(null);
   // El callback de realtime debe leer el valor actual sin re-suscribirse.
   const muteRef = useRef(muteChime);
   useEffect(() => { muteRef.current = muteChime; }, [muteChime]);
@@ -59,6 +63,15 @@ export default function AdminNotifications({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPerm(typeof Notification === 'undefined' ? 'unsupported' : (Notification.permission as Perm));
+  }, []);
+
+  // Registrar el service worker para mostrar notificaciones en la barra del sistema.
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        swRegRef.current = reg;
+      }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -98,14 +111,29 @@ export default function AdminNotifications({
               toastTimer.current = setTimeout(() => setToast(null), 5000);
             }
 
-            // Notificación del sistema: llega aunque la pestaña esté en segundo plano.
+            // Notificación del sistema: usa el SW para que llegue a la barra
+            // de notificaciones del dispositivo (móvil y desktop, incluso
+            // con la pestaña en segundo plano).
             try {
-              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                const n = new Notification('🛎 Nuevo pedido', {
-                  body: `${order.order_number} · ${order.customer_name} · ${order.order_type === 'DELIVERY' ? 'A domicilio' : 'Para llevar'}`,
-                  tag: order.id,
-                });
-                n.onclick = () => { window.focus(); router.push('/admin/pedidos'); };
+              if (Notification.permission === 'granted') {
+                const typeLabel = order.order_type === 'DELIVERY' ? 'A domicilio'
+                  : order.order_type === 'DINE_IN' ? 'Comer aquí'
+                  : 'Para llevar';
+                const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
+                const swReg = swRegRef.current;
+                if (swReg) {
+                  swReg.showNotification('🛎 Nuevo pedido', {
+                    body,
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: order.id,
+                    data: { url: '/admin/pedidos' },
+                  });
+                } else {
+                  // Fallback si el SW aún no está listo
+                  const n = new Notification('🛎 Nuevo pedido', { body, tag: order.id });
+                  n.onclick = () => { window.focus(); router.push('/admin/pedidos'); };
+                }
               }
             } catch {}
 
@@ -125,7 +153,12 @@ export default function AdminNotifications({
         const res = await Notification.requestPermission();
         setPerm(res as Perm);
         if (res === 'granted') {
-          new Notification('Avisos activados', { body: 'Te avisaremos aquí cuando entre un pedido.' });
+          const swReg = swRegRef.current;
+          if (swReg) {
+            swReg.showNotification('Avisos activados', { body: 'Te avisaremos aquí cuando entre un pedido.', icon: '/icon-192.png' });
+          } else {
+            new Notification('Avisos activados', { body: 'Te avisaremos aquí cuando entre un pedido.' });
+          }
           return;
         }
       } catch {}

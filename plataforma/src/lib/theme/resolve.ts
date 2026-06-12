@@ -141,7 +141,9 @@ const GLASS_PRESETS: Record<GlassIntensity, { blur: number; sat: number; fill: n
 
 export function buildThemeVars(config: ThemeConfig): Record<string, string> {
   const text = config.colorText;
-  const light = config.scheme === 'light';
+  // El esquema se auto-detecta del color de fondo (no hay control manual).
+  // Así el glass y los bordes siempre se adaptan sin que el admin lo configure.
+  const light = isLight(config.colorBg);
   const g = GLASS_PRESETS[config.glassIntensity];
   const cr = config.cornerRadius;
 

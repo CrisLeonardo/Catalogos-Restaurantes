@@ -172,7 +172,6 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <ColorCtl label="Texto" value={config.colorText} onChange={(v) => setC('colorText', v)} />
         <ColorCtl label="Acento / primario" value={config.colorAccent} onChange={(v) => setC('colorAccent', v)} />
         <ColorCtl label="Texto sobre acento" value={config.onAccent} onChange={(v) => setC('onAccent', v)} />
-        <Segmented label="Esquema" value={config.scheme} options={[['dark', 'Oscuro'], ['light', 'Claro']]} onChange={(v) => setC('scheme', v as ThemeConfig['scheme'])} />
       </Section>
 
       {/* ── Tipografía ── */}

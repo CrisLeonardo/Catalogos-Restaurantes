@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
+import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 
 export type SuperState = { error: string } | null;
 export type SaveThemeResult = { error?: string; ok?: boolean };
@@ -538,4 +538,35 @@ export async function deleteRestaurantUser(formData: FormData) {
   await db.auth.admin.deleteUser(userId);
 
   revalidatePath(`/super/restaurantes/${restaurantId}`);
+}
+
+/**
+ * Actualiza solo los tipos de pedido activos (comer aquí / domicilio / retiro)
+ * sin tocar el resto de la configuración del tema.
+ */
+export async function updateOrderTypes(
+  restaurantId: string,
+  orderTypes: OrderType[],
+): Promise<{ error?: string; ok?: boolean }> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+  if (!restaurantId) return { error: 'Restaurante inválido.' };
+
+  // Leemos la config existente para hacer un merge parcial (no pisar otros campos).
+  const { data: existing } = await db
+    .from('restaurant_themes')
+    .select('config')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+
+  const mergedConfig = { ...(existing?.config ?? {}), orderTypes };
+
+  const { error } = await db
+    .from('restaurant_themes')
+    .upsert({ restaurant_id: restaurantId, config: mergedConfig }, { onConflict: 'restaurant_id' });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/super/restaurantes/${restaurantId}`);
+  return { ok: true };
 }

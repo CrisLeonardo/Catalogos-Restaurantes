@@ -4,6 +4,7 @@ import { Glass } from '@/components/glass';
 import { getRestaurantFullById, getRestaurantUsers } from '@/lib/db/super-admin';
 import RestaurantEditForm from '@/components/super/restaurant-edit-form';
 import PlanEditor from '@/components/super/plan-editor';
+import OrderTypesEditor from '@/components/super/order-types-editor';
 import ThemeEditor from '@/components/super/theme-editor';
 import RestaurantUsers from '@/components/super/restaurant-users';
 import DeleteButton from '@/components/admin/delete-button';
@@ -140,7 +141,15 @@ export default async function EditRestaurantePage({
       {/* ── 2. Plan y módulos ──────────────────────────────── */}
       <section>
         <SectionTitle>Plan y módulos</SectionTitle>
-        <PlanEditor restaurant={row} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <PlanEditor restaurant={row} />
+          {resolved.config.orderTypes && (
+            <OrderTypesEditor
+              restaurantId={row.id}
+              initialOrderTypes={resolved.config.orderTypes}
+            />
+          )}
+        </div>
       </section>
 
       {/* ── 3. Apariencia ──────────────────────────────────── */}
