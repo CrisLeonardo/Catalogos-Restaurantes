@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+﻿import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
@@ -9,7 +9,7 @@ import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
-export const metadata = { title: 'Perfil — Panel admin' };
+export const metadata = { title: 'Perfil â€” Panel admin' };
 
 export default async function AdminPerfilPage({
   searchParams,
@@ -17,7 +17,7 @@ export default async function AdminPerfilPage({
   searchParams: Promise<{ saved?: string }>;
 }) {
   const ctx = await getAdminContext();
-  if (!ctx) redirect('/login');
+  if (!ctx) redirect('/admin/login');
 
   const sp = await searchParams;
   const saved = sp.saved === '1';
@@ -35,7 +35,7 @@ export default async function AdminPerfilPage({
     restaurantId = ctx.profile.restaurant_id;
   }
 
-  if (!restaurantId) redirect('/login');
+  if (!restaurantId) redirect('/admin/login');
 
   // Cargar restaurant + theme con privilegios admin
   const supabase = await createClient();
@@ -44,7 +44,7 @@ export default async function AdminPerfilPage({
     supabase.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
   ]);
 
-  if (!restaurant) redirect('/login');
+  if (!restaurant) redirect('/admin/login');
 
   const defaultTheme: RestaurantTheme = {
     restaurant_id: restaurantId,
@@ -88,7 +88,7 @@ export default async function AdminPerfilPage({
             fontSize: 14,
           }}
         >
-          ✓ Cambios guardados correctamente
+          âœ“ Cambios guardados correctamente
         </div>
       )}
 
@@ -98,7 +98,7 @@ export default async function AdminPerfilPage({
         theme={(theme as RestaurantTheme) ?? defaultTheme}
       />
 
-      {/* ── Operación: horarios, pausa, zona horaria ───────── */}
+      {/* â”€â”€ OperaciÃ³n: horarios, pausa, zona horaria â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{
@@ -113,7 +113,7 @@ export default async function AdminPerfilPage({
         <HoursEditor restaurant={restaurant as Restaurant} />
       </section>
 
-      {/* ── Cobertura del delivery: zonas de texto ─────────── */}
+      {/* â”€â”€ Cobertura del delivery: zonas de texto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{
@@ -131,7 +131,7 @@ export default async function AdminPerfilPage({
         <DeliveryZonesEditor restaurant={restaurant as Restaurant} />
       </section>
 
-      {/* ── Ubicación del restaurante + radio de entrega ────── */}
+      {/* â”€â”€ UbicaciÃ³n del restaurante + radio de entrega â”€â”€â”€â”€â”€â”€ */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{

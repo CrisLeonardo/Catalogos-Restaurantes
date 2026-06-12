@@ -17,7 +17,7 @@ export default async function EditProductPage({
   const { id } = await params;
 
   const ctx = await getAdminContext();
-  if (!ctx) redirect('/login');
+  if (!ctx) redirect('/admin/login');
 
   let restaurantId: string | null = null;
 
@@ -32,7 +32,7 @@ export default async function EditProductPage({
     restaurantId = ctx.profile.restaurant_id;
   }
 
-  if (!restaurantId) redirect('/login');
+  if (!restaurantId) redirect('/admin/login');
 
   const [product, { categories }] = await Promise.all([
     getProductById(id, restaurantId),

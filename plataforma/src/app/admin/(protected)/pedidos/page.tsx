@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+﻿import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -11,10 +11,10 @@ import OrdersPanel from '@/components/admin/orders-panel';
 export default async function PedidosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect('/admin/login');
 
   const ctx = await getAdminContext();
-  if (!ctx) redirect('/login');
+  if (!ctx) redirect('/admin/login');
 
   const { profile } = ctx;
   const headersList = await headers();

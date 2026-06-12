@@ -1,14 +1,14 @@
-import { redirect } from 'next/navigation';
+﻿import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import CategoriesPanel from '@/components/admin/categories-panel';
 
-export const metadata = { title: 'Categorías — Panel admin' };
+export const metadata = { title: 'CategorÃ­as â€” Panel admin' };
 
 export default async function AdminCategoriasPage() {
   const ctx = await getAdminContext();
-  if (!ctx) redirect('/login');
+  if (!ctx) redirect('/admin/login');
 
   let restaurantId: string | null = null;
 
@@ -23,7 +23,7 @@ export default async function AdminCategoriasPage() {
     restaurantId = ctx.profile.restaurant_id;
   }
 
-  if (!restaurantId) redirect('/login');
+  if (!restaurantId) redirect('/admin/login');
 
   const { categories, products } = await getAdminMenu(restaurantId);
 

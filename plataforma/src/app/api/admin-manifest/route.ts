@@ -31,7 +31,9 @@ export async function GET(_request: NextRequest) {
         name = `${data.restaurant.name} · Admin`;
         const icon = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl;
         if (icon) {
-          iconSrc = `/api/icon/${slug}`;
+          // ?v= hace cache-busting: cuando el ícono cambia el hash cambia → el
+          // navegador descarga el nuevo en lugar de usar el que tenía en caché.
+          iconSrc = `/api/icon/${slug}?v=${hashStr(icon)}`;
           iconType = mimeFor(icon) ?? 'image/png';
         }
       }
@@ -44,11 +46,13 @@ export async function GET(_request: NextRequest) {
     name,
     short_name: name,
     description: 'Panel de administración del restaurante',
-    // id distingue esta PWA del catálogo (id='/') en Chrome 97+.
-    // scope='/' permite que /login funcione dentro del standalone sin abrir el navegador.
+    // id y scope distintos al catálogo (id='/', scope='/') permiten instalar
+    // admin y catálogo como dos apps independientes en el mismo origen.
+    // scope='/admin/' evita que el catálogo (scope='/') "capture" las URLs de admin.
+    // /admin/login está dentro del scope, por lo que funciona en modo standalone.
     id: '/admin/',
     start_url: '/admin/',
-    scope: '/',
+    scope: '/admin/',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0b0b0c',
@@ -65,6 +69,14 @@ export async function GET(_request: NextRequest) {
       'Cache-Control': 'public, max-age=60, stale-while-revalidate=600',
     },
   });
+}
+
+function hashStr(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
 }
 
 function mimeFor(url: string): string | undefined {

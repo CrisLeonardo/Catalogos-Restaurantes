@@ -1,11 +1,11 @@
-import { redirect } from 'next/navigation';
+﻿import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import ProductForm from '@/components/admin/product-form';
 
-export const metadata = { title: 'Nuevo producto — Panel admin' };
+export const metadata = { title: 'Nuevo producto â€” Panel admin' };
 
 export default async function NewProductPage({
   searchParams,
@@ -13,7 +13,7 @@ export default async function NewProductPage({
   searchParams: Promise<{ cat?: string }>;
 }) {
   const ctx = await getAdminContext();
-  if (!ctx) redirect('/login');
+  if (!ctx) redirect('/admin/login');
 
   let restaurantId: string | null = null;
 
@@ -28,7 +28,7 @@ export default async function NewProductPage({
     restaurantId = ctx.profile.restaurant_id;
   }
 
-  if (!restaurantId) redirect('/login');
+  if (!restaurantId) redirect('/admin/login');
 
   const { categories } = await getAdminMenu(restaurantId);
 
@@ -49,7 +49,7 @@ export default async function NewProductPage({
             textDecoration: 'none',
           }}
         >
-          ← Volver
+          â† Volver
         </Link>
         <h1
           style={{
