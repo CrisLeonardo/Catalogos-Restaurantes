@@ -171,7 +171,7 @@ export default function AdminNotifications({
               const reg = swRegRef.current;
               if (reg) {
                 reg.showNotification('🛎 Nuevo pedido', {
-                  body, icon: '/icon-192.png', badge: '/icon-192.png',
+                  body, icon: '/icon-192.png', badge: '/badge.svg',
                   tag: order.id, data: { url: '/admin/pedidos' },
                 });
               } else {
@@ -259,6 +259,7 @@ export default function AdminNotifications({
           reg.showNotification('Notificaciones push activadas', {
             body: 'Te avisaremos aquí cuando entre un pedido nuevo.',
             icon: '/icon-192.png',
+            badge: '/badge.svg',
           });
         } else {
           // Push suscrito pero no se pudo guardar en el servidor.

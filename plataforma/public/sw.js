@@ -21,7 +21,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body:             data.body || 'Revisa los pedidos.',
     icon:             '/icon-192.png',
-    badge:            '/icon-192.png',
+    badge:            '/badge.svg',
     tag:              data.tag  || 'new-order',
     requireInteraction: false,
     data:             { url: data.url || '/admin/pedidos' },
