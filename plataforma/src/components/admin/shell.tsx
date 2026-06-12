@@ -32,9 +32,10 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
     { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag'   },
     { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag'   },
     ...(ordersEnabled ? [{ href: '/admin/clientes',   label: 'Clientes',    icon: 'users' }] : []),
-    { href: '/admin/metricas',    label: 'Métricas',    icon: 'chart' },
-    { href: '/admin/perfil',      label: 'Perfil',      icon: 'user'  },
-    { href: '/admin/qr',          label: 'QR',          icon: 'image' },
+    { href: '/admin/metricas',        label: 'Métricas',     icon: 'chart'    },
+    { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle'  },
+    { href: '/admin/perfil',          label: 'Perfil',       icon: 'user'     },
+    { href: '/admin/qr',              label: 'QR',           icon: 'image'    },
   ];
 
   const title =
@@ -43,9 +44,10 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
     : pathname.startsWith('/admin/clientes') ? 'Clientes'
     : pathname.startsWith('/admin/metricas') ? 'Métricas'
     : pathname.startsWith('/admin/menu/productos') ? 'Producto'
-    : pathname.startsWith('/admin/menu')     ? 'Catálogo'
-    : pathname.startsWith('/admin/perfil')   ? 'Perfil'
-    : pathname.startsWith('/admin/qr')       ? 'Código QR'
+    : pathname.startsWith('/admin/menu')           ? 'Catálogo'
+    : pathname.startsWith('/admin/personalizacion') ? 'Personalizar sitio'
+    : pathname.startsWith('/admin/perfil')          ? 'Perfil'
+    : pathname.startsWith('/admin/qr')              ? 'Código QR'
     : 'Panel';
 
   const isLive = pathname.startsWith('/admin/pedidos');

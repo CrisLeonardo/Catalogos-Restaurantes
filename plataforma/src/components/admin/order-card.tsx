@@ -183,7 +183,7 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
                 borderRadius: 'var(--radius-lg)',
                 fontWeight: 700, fontSize: 13,
                 cursor: isPending ? 'not-allowed' : 'pointer',
-                border: 'none', color: '#fff',
+                border: 'none',
                 opacity: isPending ? 0.7 : 1,
               }}
             >

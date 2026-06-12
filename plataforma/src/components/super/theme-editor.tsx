@@ -24,9 +24,11 @@ interface Props {
   content: ThemeContent;
   customCss: string;
   templates?: ThemeTemplate[];
+  saveAction?: (input: { restaurantId: string; config: ThemeConfig; content: ThemeContent; customCss: string }) => Promise<{ error?: string; ok?: boolean }>;
+  showTemplates?: boolean;
 }
 
-export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [] }: Props) {
+export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
@@ -97,7 +99,8 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
   function save() {
     setMsg(null);
     start(async () => {
-      const res = await saveRestaurantTheme({ restaurantId, config, content, customCss: css });
+      const action = saveAction ?? saveRestaurantTheme;
+      const res = await action({ restaurantId, config, content, customCss: css });
       if (res.error) setMsg(`Error: ${res.error}`);
       else { setMsg('Guardado ✓'); router.refresh(); }
     });
@@ -107,7 +110,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
     <div className="theme-editor-layout">
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
       {/* ── Plantillas ── */}
-      <Section title="Plantillas de tema">
+      {showTemplates && <Section title="Plantillas de tema">
         <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
           Aplica un diseño guardado (la marca y el logo del restaurante se conservan)
           o guarda el tema actual para reutilizarlo con otro cliente.
@@ -143,7 +146,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           </button>
         </div>
         {tplMsg && <span style={{ fontSize: 12.5, color: tplMsg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{tplMsg}</span>}
-      </Section>
+      </Section>}
 
       {/* ── Marca ── */}
       <Section title="Marca">

@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours } from '@/lib/hours';
+import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 
 export type RestaurantState = { error: string } | null;
 
@@ -286,4 +287,66 @@ export async function updateRestaurantOps(
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   redirect('/admin/perfil?saved=1');
+}
+
+export type SaveThemeResult = { error?: string; ok?: boolean };
+
+export async function saveAdminRestaurantTheme(input: {
+  restaurantId: string;
+  config: ThemeConfig;
+  content: ThemeContent;
+  customCss: string;
+}): Promise<SaveThemeResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('restaurant_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) return { error: 'No autorizado.' };
+
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && profile.restaurant_id !== input.restaurantId) {
+    return { error: 'No autorizado.' };
+  }
+
+  const db = createServiceClient();
+  const { restaurantId, config, content, customCss } = input;
+
+  const legacyPortada = ['spotlight', 'poster', 'stack'].includes(config.portadaVariant)
+    ? config.portadaVariant
+    : 'spotlight';
+
+  const { error } = await db
+    .from('restaurant_themes')
+    .upsert(
+      {
+        restaurant_id: restaurantId,
+        config,
+        content,
+        custom_css: customCss?.trim() ? customCss : null,
+        brand_name: config.brandName || null,
+        logo_url: config.logoUrl || null,
+        color_primary: config.colorAccent,
+        color_bg: config.colorBg,
+        color_text: config.colorText,
+        font_display: config.fontDisplay,
+        portada_style: legacyPortada,
+        catalog_view: config.catalogView,
+        glass_intensity: config.glassIntensity,
+        background_image: config.backgroundImage,
+      },
+      { onConflict: 'restaurant_id' },
+    );
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/personalizacion');
+  revalidatePath('/admin/perfil');
+  revalidatePath('/');
+  return { ok: true };
 }
