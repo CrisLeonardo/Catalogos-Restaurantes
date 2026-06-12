@@ -32,6 +32,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/admin") ||  // ya tiene el prefijo
       pathname === "/favicon.ico" ||
+      pathname === "/sw.js" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {
       rewriteUrl = request.nextUrl.clone();
