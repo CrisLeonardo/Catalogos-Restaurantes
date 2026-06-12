@@ -3,16 +3,15 @@
 /* ============================================================
    NOTIFICACIONES DEL ADMIN — campana del topbar
    ------------------------------------------------------------
-   · Escucha pedidos nuevos por Supabase Realtime en TODO el
-     panel (no solo en /admin/pedidos): suena, muestra toast y
-     —si el dueño lo activó— notificación del sistema.
-   · La campana pide/enseña el permiso de notificaciones del
-     navegador; el puntito indica el estado.
-   · Usa el Service Worker (sw.js) para mostrar la notificación
-     en la barra del sistema del dispositivo, incluso cuando la
-     pestaña está en segundo plano (funciona en móvil y desktop).
-   · En /admin/pedidos el chime lo pone OrdersPanel (muteChime
-     evita el doble sonido).
+   Dos capas de notificación:
+   1. In-app (Realtime): toast + sonido cuando la pestaña está abierta.
+   2. Push (Web Push / VAPID): notificación en la barra del sistema
+      del dispositivo aunque la app esté cerrada o en segundo plano.
+
+   La campana agrupa ambas. Al hacer clic:
+   · Si no está activado → pide permiso + suscribe push.
+   · Si ya está activado → desuscribe (deja de llegar).
+   · Estado claro con dot de color y tooltip descriptivo.
    ============================================================ */
 
 import { useEffect, useRef, useState } from 'react';
@@ -20,6 +19,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
 import type { Order } from '@/types';
+
+/* ── Audio chime ────────────────────────────────────────────── */
 
 function chime() {
   try {
@@ -41,7 +42,78 @@ function chime() {
   } catch {}
 }
 
-type Perm = 'default' | 'granted' | 'denied' | 'unsupported';
+/* ── Helpers de Web Push ────────────────────────────────────── */
+
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr.buffer as ArrayBuffer;
+}
+
+async function getPushSubscription(
+  reg: ServiceWorkerRegistration,
+): Promise<PushSubscription | null> {
+  return reg.pushManager.getSubscription();
+}
+
+async function subscribePush(
+  reg: ServiceWorkerRegistration,
+): Promise<PushSubscription | null> {
+  const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!vapidKey) return null;
+  try {
+    return await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function saveSub(sub: PushSubscription): Promise<boolean> {
+  try {
+    const json = sub.toJSON();
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: sub.endpoint,
+        keys: { p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '' },
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function removeSub(sub: PushSubscription): Promise<void> {
+  try {
+    await sub.unsubscribe();
+    await fetch('/api/push/subscribe', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    });
+  } catch {}
+}
+
+/* ── Tipos de estado ────────────────────────────────────────── */
+
+// Estado combinado de la campana.
+// 'active'    → permisos OK + suscrito a push → dot verde
+// 'partial'   → permisos OK pero sin push (SW no disponible o sin VAPID) → dot amarillo
+// 'inactive'  → sin activar → dot gris
+// 'denied'    → permisos bloqueados → dot rojo
+// 'pending'   → procesando
+
+type BellState = 'active' | 'partial' | 'inactive' | 'denied' | 'pending';
+
+/* ── Componente principal ───────────────────────────────────── */
 
 export default function AdminNotifications({
   restaurantId,
@@ -51,29 +123,39 @@ export default function AdminNotifications({
   muteChime?: boolean;
 }) {
   const router = useRouter();
-  const [perm, setPerm] = useState<Perm>('default');
+  const [bellState, setBellState] = useState<BellState>('inactive');
   const [toast, setToast] = useState<string | null>(null);
-  const [hint, setHint] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const swRegRef = useRef<ServiceWorkerRegistration | null>(null);
-  // El callback de realtime debe leer el valor actual sin re-suscribirse.
+  const hintTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const muteRef = useRef(muteChime);
+  const swRegRef = useRef<ServiceWorkerRegistration | null>(null);
   useEffect(() => { muteRef.current = muteChime; }, [muteChime]);
 
+  // ── Inicialización ──────────────────────────────────────────
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPerm(typeof Notification === 'undefined' ? 'unsupported' : (Notification.permission as Perm));
-  }, []);
+    (async () => {
+      if (typeof Notification === 'undefined') return;
 
-  // Registrar el service worker para mostrar notificaciones en la barra del sistema.
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
+      const perm = Notification.permission;
+      if (perm === 'denied') { setBellState('denied'); return; }
+      if (perm !== 'granted') { setBellState('inactive'); return; }
+
+      // Permiso concedido: comprobar si hay push activo.
+      if (!('serviceWorker' in navigator)) { setBellState('partial'); return; }
+
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
         swRegRef.current = reg;
-      }).catch(() => {});
-    }
+        const sub = await getPushSubscription(reg);
+        setBellState(sub ? 'active' : 'partial');
+      } catch {
+        setBellState('partial');
+      }
+    })();
   }, []);
 
+  // ── Realtime: escucha pedidos nuevos ────────────────────────
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
 
@@ -82,28 +164,21 @@ export default function AdminNotifications({
     let cancelled = false;
 
     (async () => {
-      // RLS filtra los eventos por usuario: sin el JWT de la sesión en el
-      // canal realtime no llega NADA. setAuth ANTES de suscribirse.
       const { data: { session } } = await supabase.auth.getSession();
       await supabase.realtime.setAuth(session?.access_token ?? null);
       if (cancelled) return;
 
-      // Topic único por montaje: con el doble-mount de React en dev, el
-      // phx_leave del primer montaje mataría la suscripción del segundo
-      // si compartieran el mismo nombre de canal.
       channel = supabase
         .channel(`orders-notify-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
         .on(
           'postgres_changes',
-          // Sin filter del lado servidor: RLS ya limita lo que cada usuario
-          // recibe, y el filter server-side resultó poco fiable en realtime.
-          // El restaurante se verifica aquí (importa para el Super Admin).
           { event: 'INSERT', schema: 'public', table: 'orders' },
           (payload) => {
             const order = payload.new as Order;
             if (order.restaurant_id !== restaurantId) return;
             const msg = `Nuevo pedido ${order.order_number} — ${order.customer_name}`;
 
+            // Toast + sonido (siempre, aunque las notificaciones push estén activas).
             if (!muteRef.current) {
               chime();
               if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -111,26 +186,22 @@ export default function AdminNotifications({
               toastTimer.current = setTimeout(() => setToast(null), 5000);
             }
 
-            // Notificación del sistema: usa el SW para que llegue a la barra
-            // de notificaciones del dispositivo (móvil y desktop, incluso
-            // con la pestaña en segundo plano).
+            // Notificación in-app como refuerzo (si la pestaña está activa).
+            // La notificación push ya la disparó el servidor cuando creó el pedido.
             try {
               if (Notification.permission === 'granted') {
-                const typeLabel = order.order_type === 'DELIVERY' ? 'A domicilio'
-                  : order.order_type === 'DINE_IN' ? 'Comer aquí'
-                  : 'Para llevar';
+                const typeLabel =
+                  order.order_type === 'DELIVERY' ? 'A domicilio' :
+                  order.order_type === 'DINE_IN'  ? 'Comer aquí'  :
+                  'Para llevar';
                 const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
-                const swReg = swRegRef.current;
-                if (swReg) {
-                  swReg.showNotification('🛎 Nuevo pedido', {
-                    body,
-                    icon: '/icon-192.png',
-                    badge: '/icon-192.png',
-                    tag: order.id,
+                const reg = swRegRef.current;
+                if (reg) {
+                  reg.showNotification('🛎 Nuevo pedido', {
+                    body, icon: '/icon-192.png', badge: '/icon-192.png', tag: order.id,
                     data: { url: '/admin/pedidos' },
                   });
                 } else {
-                  // Fallback si el SW aún no está listo
                   const n = new Notification('🛎 Nuevo pedido', { body, tag: order.id });
                   n.onclick = () => { window.focus(); router.push('/admin/pedidos'); };
                 }
@@ -146,68 +217,136 @@ export default function AdminNotifications({
     return () => { cancelled = true; channel?.unsubscribe(); };
   }, [restaurantId, router]);
 
+  // ── Clic en la campana ──────────────────────────────────────
   async function handleBell() {
-    if (perm === 'unsupported') return;
-    if (perm === 'default') {
-      try {
-        const res = await Notification.requestPermission();
-        setPerm(res as Perm);
-        if (res === 'granted') {
-          const swReg = swRegRef.current;
-          if (swReg) {
-            swReg.showNotification('Avisos activados', { body: 'Te avisaremos aquí cuando entre un pedido.', icon: '/icon-192.png' });
-          } else {
-            new Notification('Avisos activados', { body: 'Te avisaremos aquí cuando entre un pedido.' });
-          }
-          return;
-        }
-      } catch {}
+    if (bellState === 'pending' || bellState === 'denied') {
+      showHint(
+        bellState === 'denied'
+          ? 'Notificaciones bloqueadas. Actívalas en el candado de la barra del navegador.'
+          : '',
+      );
+      return;
     }
-    setHint(true);
-    setTimeout(() => setHint(false), 3500);
+
+    if (bellState === 'active') {
+      // Desuscribir.
+      setBellState('pending');
+      const reg = swRegRef.current;
+      if (reg) {
+        const sub = await getPushSubscription(reg);
+        if (sub) await removeSub(sub);
+      }
+      setBellState('inactive');
+      showHint('Notificaciones desactivadas. Ya no recibirás avisos en este dispositivo.');
+      return;
+    }
+
+    // Activar: pedir permiso si hace falta, luego suscribir.
+    setBellState('pending');
+
+    const perm = await Notification.requestPermission().catch(() => 'denied' as NotificationPermission);
+    if (perm !== 'granted') {
+      setBellState('denied');
+      showHint('Notificaciones bloqueadas. Actívalas en el candado de la barra del navegador.');
+      return;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      // Permisos OK pero sin SW (navegador antiguo): modo parcial.
+      setBellState('partial');
+      showHint('Recibirás avisos cuando la pestaña esté abierta, pero no en segundo plano.');
+      return;
+    }
+
+    try {
+      let reg = swRegRef.current;
+      if (!reg) {
+        reg = await navigator.serviceWorker.register('/sw.js');
+        swRegRef.current = reg;
+      }
+      // Esperar a que el SW esté activo.
+      await navigator.serviceWorker.ready;
+
+      const sub = await subscribePush(reg);
+      if (sub) {
+        await saveSub(sub);
+        setBellState('active');
+        showHint('¡Listo! Recibirás notificaciones en este dispositivo aunque cierres el navegador.');
+        // Notificación de confirmación.
+        reg.showNotification('Notificaciones activadas', {
+          body: 'Te avisaremos aquí cuando entre un pedido nuevo.',
+          icon: '/icon-192.png',
+        });
+      } else {
+        // Push no disponible (HTTP, modo privado, etc.).
+        setBellState('partial');
+        showHint('Recibirás avisos cuando la pestaña esté abierta. Para avisos en segundo plano, abre desde HTTPS.');
+      }
+    } catch {
+      setBellState('partial');
+      showHint('Recibirás avisos cuando la pestaña esté abierta.');
+    }
   }
 
+  function showHint(msg: string) {
+    if (!msg) return;
+    setHint(msg);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 4000);
+  }
+
+  // ── Colores y etiquetas ─────────────────────────────────────
   const dotColor =
-    perm === 'granted' ? '#4ade80'
-    : perm === 'denied' ? '#f87171'
-    : 'var(--u-text-4)';
+    bellState === 'active'   ? '#4ade80' :
+    bellState === 'partial'  ? '#facc15' :
+    bellState === 'denied'   ? '#f87171' :
+    bellState === 'pending'  ? '#60a5fa' :
+    'var(--u-text-4)';
+
+  const tooltip =
+    bellState === 'active'  ? 'Notificaciones activas — toca para desactivar' :
+    bellState === 'partial' ? 'Avisos básicos activos (push no disponible)' :
+    bellState === 'denied'  ? 'Notificaciones bloqueadas en el navegador' :
+    bellState === 'pending' ? 'Procesando…' :
+    'Activar notificaciones de pedidos nuevos';
 
   return (
     <>
       <button
         type="button"
         onClick={handleBell}
+        disabled={bellState === 'pending'}
         className="glass-quiet press"
-        title={
-          perm === 'granted' ? 'Avisos del sistema activados'
-          : perm === 'denied' ? 'Avisos bloqueados — actívalos en el candado del navegador'
-          : 'Activar avisos de pedidos nuevos'
-        }
+        title={tooltip}
         style={{
           position: 'relative', width: 42, height: 42, borderRadius: 12, border: 'none',
-          display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer',
+          display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: bellState === 'pending' ? 'default' : 'pointer',
+          opacity: bellState === 'pending' ? 0.6 : 1,
         }}
       >
-        <Icon name="bell" size={19} />
-        {perm !== 'unsupported' && (
-          <span style={{ position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: 99, background: dotColor, border: '2px solid var(--brand-bg)' }} />
-        )}
+        <Icon name={bellState === 'active' ? 'bell' : 'bell'} size={19} />
+        <span style={{
+          position: 'absolute', top: 9, right: 9, width: 8, height: 8,
+          borderRadius: 99, background: dotColor, border: '2px solid var(--brand-bg)',
+          transition: 'background 300ms',
+        }} />
       </button>
 
+      {/* Tooltip de estado ── */}
       {hint && (
         <div
           className="glass-solid anim-pop"
           style={{
-            position: 'fixed', top: 70, right: 16, zIndex: 90, maxWidth: 280,
-            padding: '12px 15px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.45, color: 'var(--u-text-2)',
+            position: 'fixed', top: 70, right: 16, zIndex: 90, maxWidth: 300,
+            padding: '12px 15px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.5,
+            color: 'var(--u-text-2)',
           }}
         >
-          {perm === 'granted'
-            ? 'Los avisos del sistema están activados. Te notificamos cuando entre un pedido, incluso con la pestaña en segundo plano.'
-            : 'Los avisos están bloqueados. Tócalo en el candado de la barra del navegador para permitir notificaciones.'}
+          {hint}
         </div>
       )}
 
+      {/* Toast de pedido nuevo ── */}
       {toast && (
         <div
           className="glass anim-slide-up"

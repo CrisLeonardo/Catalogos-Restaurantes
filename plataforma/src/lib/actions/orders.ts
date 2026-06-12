@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { createOrderSchema } from '@/lib/schemas';
+import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { isOpenNow, type WeeklyHours } from '@/lib/hours';
 import type {
@@ -281,6 +282,20 @@ export async function createOrder(
   );
 
   if (itemsError) return { error: itemsError.message };
+
+  // Notificación push server-side: llega a la barra del sistema aunque la
+  // app esté cerrada o en segundo plano (requiere VAPID configurado).
+  const typeLabel =
+    customer.type === 'DELIVERY' ? 'A domicilio' :
+    customer.type === 'DINE_IN'  ? 'Comer aquí'  :
+    'Para llevar';
+
+  sendPushToRestaurant(restaurantId, {
+    title: '🛎 Nuevo pedido',
+    body:  `${order.order_number} · ${customer.name} · ${typeLabel}`,
+    tag:   order.id,
+    url:   '/admin/pedidos',
+  }).catch(() => {});
 
   return {
     success: true,
