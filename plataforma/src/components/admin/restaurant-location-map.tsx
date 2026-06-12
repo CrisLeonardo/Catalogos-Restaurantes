@@ -3,7 +3,7 @@
 /* Mapa interno del editor de ubicación del restaurante.
    Importado con dynamic({ ssr: false }) — NO renderizar en el servidor. */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Props {
   lat: number;
@@ -13,10 +13,14 @@ interface Props {
 }
 
 export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationChange }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef    = useRef<unknown>(null);
-  const markerRef = useRef<unknown>(null);
-  const circleRef = useRef<unknown>(null);
+  const containerRef     = useRef<HTMLDivElement>(null);
+  const mapRef           = useRef<unknown>(null);
+  const markerRef        = useRef<unknown>(null);
+  const circleRef        = useRef<unknown>(null);
+  const onChangeRef      = useRef(onLocationChange);
+  const [calibrating, setCalibrating] = useState(false);
+
+  useEffect(() => { onChangeRef.current = onLocationChange; });
 
   // Montaje inicial del mapa
   useEffect(() => {
@@ -102,10 +106,49 @@ export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationCh
     });
   }, [radiusKm]);
 
+  function handleRecalibrate() {
+    if (!navigator.geolocation || !mapRef.current || !markerRef.current) return;
+    setCalibrating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        (mapRef.current as { setView: (latlng: [number, number], zoom: number) => void })
+          .setView([latitude, longitude], 16);
+        (markerRef.current as { setLatLng: (latlng: [number, number]) => void })
+          .setLatLng([latitude, longitude]);
+        if (circleRef.current) {
+          (circleRef.current as { setLatLng: (latlng: [number, number]) => void })
+            .setLatLng([latitude, longitude]);
+        }
+        onChangeRef.current(latitude, longitude);
+        setCalibrating(false);
+      },
+      () => setCalibrating(false),
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  }
+
   return (
-    <div
-      ref={containerRef}
-      style={{ height: 300, borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
-    />
+    <div style={{ position: 'relative' }}>
+      <div
+        ref={containerRef}
+        style={{ height: 300, borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
+      />
+      <button
+        type="button"
+        onClick={handleRecalibrate}
+        disabled={calibrating}
+        style={{
+          position: 'absolute', bottom: 10, right: 10, zIndex: 1000,
+          background: '#fff', border: 'none', borderRadius: 8,
+          padding: '7px 12px', cursor: calibrating ? 'wait' : 'pointer',
+          fontSize: 12, fontWeight: 600, color: '#333',
+          display: 'flex', alignItems: 'center', gap: 5,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.28)',
+          opacity: calibrating ? 0.7 : 1,
+        }}
+      >
+        📍 {calibrating ? 'Buscando…' : 'Recalibrar'}
+      </button>
+    </div>
   );
 }

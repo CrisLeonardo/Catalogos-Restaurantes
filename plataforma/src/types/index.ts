@@ -122,7 +122,7 @@ export interface Order {
   order_number: string;
   customer_name: string;
   customer_phone: string;
-  order_type: 'PICKUP' | 'DELIVERY';
+  order_type: 'PICKUP' | 'DELIVERY' | 'DINE_IN';
   address: string | null;
   delivery_zone: string | null;
   delivery_lat: number | null;

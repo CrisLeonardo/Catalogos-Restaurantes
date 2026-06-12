@@ -27,7 +27,6 @@ const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ),
 });
 
-// Haversine en el cliente para mostrar feedback en tiempo real
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -44,19 +43,25 @@ interface Props {
   restaurantId: string;
   restaurantName: string;
   whatsappNumber: string | null;
-  /** Zonas de texto que cubre el delivery. Vacío = sin restricción. */
   deliveryZones?: string[];
-  /** Geo: ubicación del restaurante para mostrar el radio en el mapa. */
   restaurantLat?: number | null;
   restaurantLng?: number | null;
-  /** Radio en km. Si está definido, el cliente debe colocar su pin dentro. */
   deliveryRadiusKm?: number | null;
 }
 
 type Step = 'form' | 'success';
+type OrderType = 'PICKUP' | 'DELIVERY' | 'DINE_IN';
 
-/** Valor sentinela: "mi zona no aparece en la lista". */
 const NO_ZONE = '__fuera__';
+
+const TABLE_COUNT = 20;
+
+const COURSE_OPTIONS = [
+  { value: '',                         label: 'Sin preferencia' },
+  { value: 'Entrada primero',          label: '🥗 Entrada primero' },
+  { value: 'Plato principal primero',  label: '🍽 Plato principal primero' },
+  { value: 'Postre al final',          label: '🍰 Postre al final' },
+];
 
 export default function CheckoutForm({
   restaurantId,
@@ -67,14 +72,15 @@ export default function CheckoutForm({
   restaurantLng,
   deliveryRadiusKm,
 }: Props) {
-  const config = useThemeConfig();
+  const config  = useThemeConfig();
   const content = useThemeContent();
   const { items, total, clearCart } = useCart();
 
   const typeOptions = [
-    config.orderTypes.includes('delivery') && { id: 'DELIVERY' as const, label: content.checkout.delivery, icon: 'truck' },
-    config.orderTypes.includes('pickup') && { id: 'PICKUP' as const, label: content.checkout.pickup, icon: 'bag' },
-  ].filter(Boolean) as { id: 'DELIVERY' | 'PICKUP'; label: string; icon: string }[];
+    config.orderTypes.includes('dine_in')  && { id: 'DINE_IN'   as const, label: 'Comer aquí', icon: 'utensils' },
+    config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
+    config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
+  ].filter(Boolean) as { id: OrderType; label: string; icon: string }[];
 
   const [step, setStep] = useState<Step>('form');
   const [orderNumber, setOrderNumber] = useState('');
@@ -87,20 +93,22 @@ export default function CheckoutForm({
   const [snapshotTotal, setSnapshotTotal] = useState(0);
   const [snapshotFee, setSnapshotFee] = useState(0);
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [type, setType] = useState<'PICKUP' | 'DELIVERY'>(typeOptions[0]?.id ?? 'PICKUP');
+  const [name, setName]       = useState('');
+  const [phone, setPhone]     = useState('');
+  const [type, setType]       = useState<OrderType>(typeOptions[0]?.id ?? 'DINE_IN');
   const [address, setAddress] = useState('');
-  const [zone, setZone] = useState('');
-  const [notes, setNotes] = useState('');
+  const [zone, setZone]       = useState('');
+  const [notes, setNotes]     = useState('');
   const [welcomeBack, setWelcomeBack] = useState(false);
+
+  // DINE_IN: mesa y preferencia de servicio
+  const [tableNumber, setTableNumber]         = useState<number | null>(null);
+  const [coursePreference, setCoursePreference] = useState('');
 
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
   const [deliveryLng, setDeliveryLng] = useState<number | undefined>(undefined);
 
-  // Cliente recurrente: autocompletar con el perfil guardado del dispositivo.
-  // Va en efecto (no en el estado inicial) para no romper la hidratación.
   useEffect(() => {
     const p = getLocalProfile(restaurantId);
     if (!p) return;
@@ -116,13 +124,11 @@ export default function CheckoutForm({
   const zonesActive = deliveryZones.length > 0;
   const outOfZone   = type === 'DELIVERY' && zonesActive && zone === NO_ZONE;
 
-  // Geo: el restaurante tiene configuración de radio
   const geoActive = type === 'DELIVERY'
     && restaurantLat !== undefined && restaurantLat !== null
     && restaurantLng !== undefined && restaurantLng !== null
     && deliveryRadiusKm !== undefined && deliveryRadiusKm !== null;
 
-  // Distancia actual (actualizada cuando el usuario mueve el pin)
   const geoDistanceKm = geoActive && deliveryLat !== undefined && deliveryLng !== undefined
     ? haversineKm(restaurantLat!, restaurantLng!, deliveryLat, deliveryLng)
     : null;
@@ -137,17 +143,17 @@ export default function CheckoutForm({
       : !isValidGuatemalaPhone(phone)
         ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)'
         : '',
-    // La dirección en texto es opcional cuando el cliente colocó un pin en el mapa
     address: type === 'DELIVERY' && !geoActive && !address.trim() ? content.checkout.errAddress : '',
     zone:    type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
     geo:     geoActive && (deliveryLat === undefined || deliveryLng === undefined)
               ? 'Coloca tu ubicación en el mapa' : '',
+    table:   type === 'DINE_IN' && !tableNumber ? 'Selecciona el número de mesa' : '',
   };
-  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !errs.geo
+  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !errs.geo && !errs.table
     && !outOfZone && !geoOutOfRange;
 
   const deliveryFee = type === 'DELIVERY' ? config.deliveryFee : 0;
-  const finalTotal = total + deliveryFee;
+  const finalTotal  = total + deliveryFee;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -160,7 +166,7 @@ export default function CheckoutForm({
       qty: i.quantity,
       sub: i.price * i.quantity,
     }));
-    const feeSnapshot = deliveryFee;
+    const feeSnapshot   = deliveryFee;
     const totalSnapshot = finalTotal;
 
     start(async () => {
@@ -174,7 +180,10 @@ export default function CheckoutForm({
           options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
         })),
         customer: {
-          name, phone, type, address, notes,
+          name, phone, type,
+          ...(type === 'DELIVERY' ? { address, notes } : { notes }),
+          ...(type === 'DINE_IN' && tableNumber  ? { tableNumber }      : {}),
+          ...(type === 'DINE_IN' && coursePreference ? { coursePreference } : {}),
           ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
           ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
             ? { deliveryLat, deliveryLng }
@@ -184,9 +193,6 @@ export default function CheckoutForm({
       });
       if (result.error) { setError(result.error); return; }
 
-      // Recordar al cliente y su pedido en este dispositivo:
-      // el checkout se autocompleta la próxima vez y "Mis pedidos"
-      // conserva el seguimiento aunque cierre la app.
       saveLocalProfile(restaurantId, {
         name, phone,
         ...(address.trim() ? { address } : {}),
@@ -209,8 +215,6 @@ export default function CheckoutForm({
       clearCart();
       setStep('success');
 
-      // Enviar el pedido por WhatsApp al restaurante (si tiene número).
-      // Si el navegador bloquea el popup, queda el botón de la confirmación.
       const waUrl = buildWhatsAppUrl({
         orderNumber: result.orderNumber ?? '',
         snapshot: itemsSnapshot,
@@ -230,17 +234,25 @@ export default function CheckoutForm({
     total: number;
   }) {
     if (!whatsappNumber) return null;
-    const num = data?.orderNumber ?? orderNumber;
+    const num       = data?.orderNumber ?? orderNumber;
     const lineItems = data?.snapshot ?? snapshot;
-    const fee = data?.fee ?? snapshotFee;
-    const tot = data?.total ?? snapshotTotal;
-    const clean = whatsappNumber.replace(/\D/g, '');
+    const fee       = data?.fee ?? snapshotFee;
+    const tot       = data?.total ?? snapshotTotal;
+    const clean     = whatsappNumber.replace(/\D/g, '');
+
     const mapsLink = type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
       ? `\nhttps://maps.google.com/?q=${deliveryLat.toFixed(6)},${deliveryLng.toFixed(6)}`
       : '';
-    const where = type === 'PICKUP'
-      ? content.checkout.pickup
-      : `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}${mapsLink}`;
+
+    let where: string;
+    if (type === 'DINE_IN') {
+      where = `🍽 Mesa ${tableNumber ?? '?'}${coursePreference ? ` · Servicio: ${coursePreference}` : ''}`;
+    } else if (type === 'PICKUP') {
+      where = content.checkout.pickup;
+    } else {
+      where = `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}${mapsLink}`;
+    }
+
     const lines: string[] = [
       `🍽 Nuevo pedido *${num}*`, '',
       `👤 ${name}`, `📱 ${phone}`,
@@ -273,6 +285,11 @@ export default function CheckoutForm({
   if (step === 'success') {
     const waUrl = buildWhatsAppUrl();
     const subtitle = content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
+    const typeLabel = type === 'DINE_IN'
+      ? `Mesa ${tableNumber ?? '?'}`
+      : type === 'PICKUP'
+        ? content.checkout.pickup
+        : content.checkout.delivery;
     return (
       <main className="anim-fade-up" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
         <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
@@ -285,7 +302,10 @@ export default function CheckoutForm({
           </div>
           <Glass style={{ borderRadius: 18, padding: 18, width: '100%', display: 'flex', flexDirection: 'column', gap: 11 }}>
             <Row k={content.confirmation.orderNo} v={orderNumber || '—'} />
-            <Row k={content.confirmation.type} v={type === 'PICKUP' ? content.checkout.pickup : content.checkout.delivery} />
+            <Row k={content.confirmation.type} v={typeLabel} />
+            {type === 'DINE_IN' && coursePreference && (
+              <Row k="Servicio" v={coursePreference} />
+            )}
             <Row k={content.confirmation.eta} v={content.confirmation.etaValue} />
             <Row k={content.confirmation.payment} v={content.checkout.payCash} />
           </Glass>
@@ -375,8 +395,8 @@ export default function CheckoutForm({
                 const on = type === o.id;
                 return (
                   <button key={o.id} type="button" onClick={() => setType(o.id)} className="press"
-                    style={{ flex: 1, padding: 11, borderRadius: 11, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: on ? 'var(--u-text)' : 'transparent', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)', fontWeight: 600, fontSize: 13.5, transition: 'all 160ms' }}>
-                    <Icon name={o.icon} size={16} />{o.label}
+                    style={{ flex: 1, padding: '10px 6px', borderRadius: 11, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: on ? 'var(--u-text)' : 'transparent', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)', fontWeight: 600, fontSize: 12.5, transition: 'all 160ms', whiteSpace: 'nowrap' }}>
+                    <Icon name={o.icon} size={15} />{o.label}
                   </button>
                 );
               })}
@@ -399,7 +419,71 @@ export default function CheckoutForm({
           </p>
         )}
 
-        {/* Zona de cobertura: solo si el restaurante configuró zonas */}
+        {/* ── DINE_IN: selector de mesa ── */}
+        {type === 'DINE_IN' && (
+          <div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>Número de mesa</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7, marginTop: 8 }}>
+              {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((n) => {
+                const on = tableNumber === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setTableNumber(n)}
+                    className="press"
+                    style={{
+                      padding: '10px 0',
+                      borderRadius: 11,
+                      border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
+                      background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+                      color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                      fontWeight: 700, fontSize: 15,
+                      cursor: 'pointer', transition: 'all 150ms',
+                    }}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+            {tried && errs.table && (
+              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 7 }}>{errs.table}</p>
+            )}
+          </div>
+        )}
+
+        {/* ── DINE_IN: preferencia de servicio ── */}
+        {type === 'DINE_IN' && (
+          <div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>Preferencia de servicio <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
+              {COURSE_OPTIONS.map((opt) => {
+                const on = coursePreference === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setCoursePreference(opt.value)}
+                    className="press"
+                    style={{
+                      padding: '8px 13px', borderRadius: 99, cursor: 'pointer',
+                      fontWeight: 600, fontSize: 12.5,
+                      border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
+                      background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+                      color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                      transition: 'all 150ms',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── DELIVERY: zona de cobertura ── */}
         {type === 'DELIVERY' && zonesActive && (
           <div>
             <label className="t-kicker" style={{ fontSize: 10.5 }}>Zona de entrega</label>
@@ -451,7 +535,7 @@ export default function CheckoutForm({
           </div>
         )}
 
-        {/* Mapa interactivo: solo si el restaurante tiene geo configurado */}
+        {/* ── DELIVERY: mapa interactivo ── */}
         {type === 'DELIVERY' && !outOfZone && geoActive && (
           <div>
             <label className="t-kicker" style={{ fontSize: 10.5 }}>
@@ -470,7 +554,6 @@ export default function CheckoutForm({
                 setDeliveryLng(lng);
               }}
             />
-            {/* Feedback de distancia */}
             {geoDistanceKm !== null && (
               <div style={{
                 marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,
@@ -494,7 +577,7 @@ export default function CheckoutForm({
           </div>
         )}
 
-        {/* Campo de dirección en texto */}
+        {/* ── DELIVERY: campo de dirección en texto ── */}
         {type === 'DELIVERY' && !outOfZone && (
           <Field
             label={geoActive ? 'Referencias o indicaciones (opcional)' : content.checkout.address}
@@ -505,6 +588,7 @@ export default function CheckoutForm({
             error={tried && errs.address}
           />
         )}
+
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />
 
         {/* Pago */}

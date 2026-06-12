@@ -244,7 +244,9 @@ export async function createOrder(
       customer_name:  customer.name,
       customer_phone: customer.phone,
       order_type:     customer.type,
-      address:        customer.address ?? null,
+      address:        customer.type === 'DINE_IN'
+        ? (customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null)
+        : (customer.address ?? null),
       ...(customer.type === 'DELIVERY' && customer.zone ? { delivery_zone: customer.zone } : {}),
       ...(customer.type === 'DELIVERY' && customer.deliveryLat !== undefined && customer.deliveryLng !== undefined
         ? { delivery_lat: customer.deliveryLat, delivery_lng: customer.deliveryLng }
@@ -255,7 +257,9 @@ export async function createOrder(
       subtotal,
       delivery_fee:   fee,
       total,
-      notes:          customer.notes ?? null,
+      notes:          customer.type === 'DINE_IN' && customer.coursePreference
+        ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
+        : (customer.notes ?? null),
     })
     .select('id, order_number, public_token')
     .single();
@@ -400,7 +404,7 @@ export async function exportOrdersCsv(
       .join(' | ');
     return [
       o.order_number, fecha, hora, o.customer_name, o.customer_phone,
-      o.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio',
+      o.order_type === 'PICKUP' ? 'Para llevar' : o.order_type === 'DINE_IN' ? 'En local' : 'Domicilio',
       o.status, productos,
       Number(o.subtotal).toFixed(2), Number(o.delivery_fee).toFixed(2), Number(o.total).toFixed(2),
       (o.notes as string | null) ?? '',

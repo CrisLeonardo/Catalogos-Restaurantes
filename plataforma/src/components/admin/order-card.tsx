@@ -1,9 +1,12 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { updateOrderStatus } from '@/lib/actions/orders';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
+
+const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
 /** Moneda del restaurante (viene del tema resuelto en el servidor). */
 export interface PanelCurrency {
@@ -53,13 +56,18 @@ function nextLabel(order: OrderWithItems): string {
   const { status, order_type } = order;
   if (status === 'NEW')   return 'Confirmar';
   if (status === 'PREP')  return 'Marcar listo';
-  if (status === 'READY') return order_type === 'DELIVERY' ? 'En camino' : 'Entregado';
+  if (status === 'READY') {
+    if (order_type === 'DELIVERY') return 'En camino';
+    if (order_type === 'DINE_IN')  return 'Servir en mesa';
+    return 'Entregado';
+  }
   if (status === 'TRANSIT') return 'Entregado';
   return '';
 }
 
 export default function OrderCard({ order, currency }: { order: OrderWithItems; currency: PanelCurrency }) {
   const [isPending, start] = useTransition();
+  const [mapOpen, setMapOpen] = useState(false);
   const next = nextStatus(order);
 
   async function handleAdvance() {
@@ -100,11 +108,16 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
           <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
             📱 {order.customer_phone}
             {' · '}
-            {order.order_type === 'PICKUP' ? '🥡 Para llevar' : '🛵 Domicilio'}
+            {order.order_type === 'PICKUP' ? '🥡 Para llevar' : order.order_type === 'DINE_IN' ? '🍽 En local' : '🛵 Domicilio'}
           </p>
           {order.order_type === 'DELIVERY' && order.address && (
             <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2 }}>
               📍 {order.address}{order.delivery_zone ? ` · ${order.delivery_zone}` : ''}
+            </p>
+          )}
+          {order.order_type === 'DINE_IN' && order.address && (
+            <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2 }}>
+              🪑 {order.address}
             </p>
           )}
         </div>
@@ -162,6 +175,29 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
           </p>
         )}
       </div>
+
+      {/* Mapa de entrega (solo DELIVERY con coordenadas) */}
+      {order.order_type === 'DELIVERY' && order.delivery_lat && order.delivery_lng && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setMapOpen((v) => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)',
+              color: '#60a5fa', borderRadius: 8, padding: '6px 12px',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            🗺 {mapOpen ? 'Ocultar mapa' : 'Ver ubicación del cliente'}
+          </button>
+          {mapOpen && (
+            <div style={{ marginTop: 8 }}>
+              <OrderLocationMap lat={order.delivery_lat} lng={order.delivery_lng} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Hora */}
       <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>

@@ -7,7 +7,7 @@
    tiene radio configurado, se muestra el área de cobertura y se informa
    si el pin está dentro o fuera. */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 interface Props {
   /** Posición inicial del pin del cliente (si ya se eligió antes). */
@@ -42,9 +42,11 @@ export default function DeliveryMap({
   radiusKm,
   onLocationChange,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef       = useRef<unknown>(null);
-  const markerRef    = useRef<unknown>(null);
+  const containerRef      = useRef<HTMLDivElement>(null);
+  const mapRef            = useRef<unknown>(null);
+  const markerRef         = useRef<unknown>(null);
+  const notifyChangeRef   = useRef<((lat: number, lng: number) => void) | null>(null);
+  const [calibrating, setCalibrating] = useState(false);
 
   const hasRestaurant = restaurantLat !== undefined && restaurantLat !== null
     && restaurantLng !== undefined && restaurantLng !== null;
@@ -167,8 +169,9 @@ export default function DeliveryMap({
         notifyChange(lat, lng);
       });
 
-      mapRef.current    = map;
-      markerRef.current = clientMarker;
+      mapRef.current      = map;
+      markerRef.current   = clientMarker;
+      notifyChangeRef.current = notifyChange;
 
       // Notificar posición inicial
       notifyChange(startLat, startLng);
@@ -194,10 +197,45 @@ export default function DeliveryMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function handleRecalibrate() {
+    if (!navigator.geolocation || !mapRef.current || !markerRef.current) return;
+    setCalibrating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        (mapRef.current as { setView: (latlng: [number, number], zoom: number) => void })
+          .setView([latitude, longitude], 16);
+        (markerRef.current as { setLatLng: (latlng: [number, number]) => void })
+          .setLatLng([latitude, longitude]);
+        notifyChangeRef.current?.(latitude, longitude);
+        setCalibrating(false);
+      },
+      () => setCalibrating(false),
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  }
+
   return (
-    <div
-      ref={containerRef}
-      style={{ height: 280, borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
-    />
+    <div style={{ position: 'relative' }}>
+      <div
+        ref={containerRef}
+        style={{ height: 280, borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
+      />
+      <button
+        type="button"
+        onClick={handleRecalibrate}
+        disabled={calibrating}
+        style={{
+          position: 'absolute', bottom: 10, right: 10, zIndex: 1000,
+          background: '#fff', border: 'none', borderRadius: 8,
+          padding: '7px 12px', cursor: calibrating ? 'wait' : 'pointer',
+          fontSize: 12, fontWeight: 600, color: '#333',
+          display: 'flex', alignItems: 'center', gap: 5,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.28)',
+          opacity: calibrating ? 0.7 : 1,
+        }}
+      >
+        📍 {calibrating ? 'Buscando…' : 'Mi ubicación'}
+      </button>
+    </div>
   );
 }

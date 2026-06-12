@@ -37,7 +37,7 @@ export const customerSchema = z.object({
     .refine((v) => /^\d{8}$/.test(v), {
       message: 'Número inválido. Ingresa 8 dígitos guatemaltecos (ej. 5555 0000)',
     }),
-  type: z.enum(['PICKUP', 'DELIVERY']),
+  type: z.enum(['PICKUP', 'DELIVERY', 'DINE_IN']),
   address: z.string().max(300).transform((v) => v.trim()).optional(),
   /** Zona de cobertura elegida (solo si el restaurante configuró zonas). */
   zone: z.string().max(80).transform((v) => v.trim()).optional(),
@@ -45,6 +45,10 @@ export const customerSchema = z.object({
   /** Coordenadas del pin de entrega (solo si el restaurante tiene geo configurado). */
   deliveryLat: z.number().min(-90).max(90).optional(),
   deliveryLng: z.number().min(-180).max(180).optional(),
+  /** Solo para DINE_IN: número de mesa. */
+  tableNumber: z.number().int().min(1).max(200).optional(),
+  /** Solo para DINE_IN: preferencia de orden de servicio. */
+  coursePreference: z.string().max(200).transform((v) => v.trim()).optional(),
 });
 
 export const createOrderSchema = z

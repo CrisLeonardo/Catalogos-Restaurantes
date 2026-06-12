@@ -4,6 +4,7 @@
    BrandPattern o foto, tags y agregar al carrito. Portado de ClientScreens.jsx. */
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useMemo, useState, type RefObject } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -13,18 +14,21 @@ import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options' | 'is_available' | 'unavailable_at'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'> & {
+  is_available?: boolean | null;
+  unavailable_at?: string | null;
+};
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
 function isAutoRestored(p: ProdItem): boolean {
-  if (p.is_available) return false;
+  if (p.is_available !== false) return false;
   if (!p.unavailable_at) return false;
   return Date.now() - new Date(p.unavailable_at).getTime() >= TWELVE_HOURS_MS;
 }
 
 function isUnavailable(p: ProdItem): boolean {
-  if (p.is_available) return false;
+  if (p.is_available !== false) return false;
   return !isAutoRestored(p);
 }
 
@@ -87,20 +91,31 @@ export default function Catalog({
           </h2>
         </div>
         {ordersEnabled && (
-          <button
-            ref={cartIconRef}
-            onClick={onOpenCart}
-            className="press glass"
-            style={{ position: 'relative', width: 48, height: 48, borderRadius: 15, display: 'grid', placeItems: 'center', color: 'var(--u-text)', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-            aria-label="Ver carrito"
-          >
-            <Icon name="bag" size={21} />
-            {cartCount > 0 && (
-              <span className="t-mono" style={{ position: 'absolute', top: -5, right: -5, minWidth: 21, height: 21, padding: '0 5px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center', border: '2px solid var(--brand-bg)' }}>
-                {cartCount}
-              </span>
-            )}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Link
+              href="/mis-pedidos"
+              className="press glass"
+              title="Mis pedidos"
+              style={{ width: 44, height: 44, borderRadius: 13, display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', textDecoration: 'none', flexShrink: 0 }}
+              aria-label="Mis pedidos"
+            >
+              <Icon name="receipt" size={19} />
+            </Link>
+            <button
+              ref={cartIconRef}
+              onClick={onOpenCart}
+              className="press glass"
+              style={{ position: 'relative', width: 48, height: 48, borderRadius: 15, display: 'grid', placeItems: 'center', color: 'var(--u-text)', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              aria-label="Ver carrito"
+            >
+              <Icon name="bag" size={21} />
+              {cartCount > 0 && (
+                <span className="t-mono" style={{ position: 'absolute', top: -5, right: -5, minWidth: 21, height: 21, padding: '0 5px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center', border: '2px solid var(--brand-bg)' }}>
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          </div>
         )}
       </div>
 

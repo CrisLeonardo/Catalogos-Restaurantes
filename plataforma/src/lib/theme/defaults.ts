@@ -21,7 +21,7 @@ export type CtaStyle = 'white' | 'accent' | 'outline';
 export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
 export type CatalogView = 'grid' | 'list';
 export type ProductArt = 'auto' | 'pattern' | 'photo';
-export type OrderType = 'delivery' | 'pickup';
+export type OrderType = 'delivery' | 'pickup' | 'dine_in';
 
 export interface ThemeConfig {
   // ── Marca ──
@@ -138,7 +138,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   productArt: 'auto',
   showTags: true,
 
-  orderTypes: ['delivery', 'pickup'],
+  orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,
 
   currencySymbol: 'Q',
