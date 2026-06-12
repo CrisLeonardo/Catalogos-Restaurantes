@@ -255,6 +255,12 @@ body {
    PANEL ADMIN — layout con sidebar (como el prototipo)
    ============================================================ */
 .admin-shell { display: flex; min-height: 100svh; }
+
+/* Cuando el admin oculta el fondo del restaurante */
+html[data-admin-bg="off"] .asphalt,
+html[data-admin-bg="off"] .bg-layer,
+html[data-admin-bg="off"] .asphalt-grain,
+html[data-admin-bg="off"] .asphalt-mark { display: none; }
 .admin-sidebar {
   width: 240px; flex-shrink: 0; border-right: 1px solid var(--u-hair);
   display: flex; flex-direction: column; gap: 4px; padding: 18px 12px;

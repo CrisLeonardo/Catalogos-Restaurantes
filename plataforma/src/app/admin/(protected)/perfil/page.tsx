@@ -5,7 +5,6 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createClient } from '@/lib/supabase/server';
 import ProfileForm from '@/components/admin/profile-form';
 import HoursEditor from '@/components/admin/hours-editor';
-import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
@@ -111,24 +110,6 @@ export default async function AdminPerfilPage({
           Horario y pedidos
         </h2>
         <HoursEditor restaurant={restaurant as Restaurant} />
-      </section>
-
-      {/* â”€â”€ Cobertura del delivery: zonas de texto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <section style={{ marginTop: 32 }}>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 18,
-            marginBottom: 4,
-          }}
-        >
-          Cobertura del delivery
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
-          Puedes usar zonas de texto, el mapa de radio, o ambos.
-        </p>
-        <DeliveryZonesEditor restaurant={restaurant as Restaurant} />
       </section>
 
       {/* â”€â”€ UbicaciÃ³n del restaurante + radio de entrega â”€â”€â”€â”€â”€â”€ */}

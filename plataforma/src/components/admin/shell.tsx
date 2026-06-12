@@ -3,12 +3,15 @@
 /* Shell del panel admin — sidebar + topbar en escritorio; en móvil el nav
    se convierte en una barra inferior fija tipo app. Envuelve /admin/*. */
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
+
+const BG_KEY = 'admin-bg-visible';
 
 interface Props {
   restaurantName: string;
@@ -23,6 +26,22 @@ interface Props {
 
 export default function AdminShell({ restaurantName, restaurantId, ordersEnabled = false, logoUrl, zone, preview = false, children }: Props) {
   const realPathname = usePathname();
+
+  const [bgVisible, setBgVisible] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(BG_KEY);
+    const visible = stored !== 'false';
+    setBgVisible(visible);
+    document.documentElement.setAttribute('data-admin-bg', visible ? 'on' : 'off');
+  }, []);
+
+  function toggleBg() {
+    const next = !bgVisible;
+    setBgVisible(next);
+    localStorage.setItem(BG_KEY, String(next));
+    document.documentElement.setAttribute('data-admin-bg', next ? 'on' : 'off');
+  }
   // En vista previa la URL es /preview/admin/[id]; fijamos el Catálogo como
   // sección activa para que el panel se vea como lo ve el dueño al entrar.
   const pathname = preview ? '/admin/menu' : realPathname;
@@ -118,6 +137,16 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
             <span className="glass-quiet admin-live" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 99, fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>
               <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--u-text)', boxShadow: '0 0 8px var(--u-text)', animation: 'pulse-ring 2s infinite' }} /> En vivo
             </span>
+          )}
+          {!preview && (
+            <button
+              onClick={toggleBg}
+              title={bgVisible ? 'Ocultar fondo' : 'Mostrar fondo'}
+              className="press glass-quiet"
+              style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', color: bgVisible ? 'var(--u-text)' : 'var(--u-text-3)', border: 'none', cursor: 'pointer', background: 'none', flexShrink: 0 }}
+            >
+              <Icon name={bgVisible ? 'eye' : 'eyeOff'} size={18} />
+            </button>
           )}
           {!preview && restaurantId && ordersEnabled ? (
             <AdminNotifications restaurantId={restaurantId} muteChime={isLive} />
