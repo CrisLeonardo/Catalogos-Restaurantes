@@ -14,6 +14,7 @@ import {
   createProductModal,
   updateProductModal,
   toggleProductAvailability,
+  toggleProductActive,
   deleteProduct,
   type ProductModalState,
 } from '@/lib/actions/products';
@@ -21,7 +22,7 @@ import type { Category, Product, ProductOptionGroup } from '@/types';
 
 /* ── constantes ───────────────────────────────────────────── */
 
-const TAGS = [
+const PRESET_TAGS = [
   { id: 'hot',  label: 'Picante',   icon: 'flame'   },
   { id: 'new',  label: 'Nuevo',     icon: 'sparkle' },
   { id: 'fav',  label: 'Favorito',  icon: 'star'    },
@@ -29,19 +30,31 @@ const TAGS = [
 ] as const;
 
 const PRODUCT_ICONS = [
-  { id: 'utensils',  label: 'General'   },
-  { id: 'coffee',    label: 'Café'      },
-  { id: 'bagel',     label: 'Bagel'     },
-  { id: 'croissant', label: 'Croissant' },
-  { id: 'ice',       label: 'Frío'      },
-  { id: 'cookie',    label: 'Galleta'   },
-  { id: 'flame',     label: 'Picante'   },
-  { id: 'leaf',      label: 'Veggie'    },
-  { id: 'milk',      label: 'Leche'     },
-  { id: 'wheat',     label: 'Pan'       },
-  { id: 'star',      label: 'Favorito'  },
-  { id: 'sparkle',   label: 'Especial'  },
-] as const;
+  { id: 'utensils',  label: 'General',   keywords: ['comida', 'food', 'menu', 'plato', 'general'] },
+  { id: 'coffee',    label: 'Café',      keywords: ['cafe', 'coffee', 'expreso', 'latte', 'capuchino', 'americano', 'bebida', 'drink', 'moca', 'mocha'] },
+  { id: 'bagel',     label: 'Bagel',     keywords: ['bagel', 'rosquilla'] },
+  { id: 'croissant', label: 'Croissant', keywords: ['croissant', 'medialuna'] },
+  { id: 'ice',       label: 'Frío',      keywords: ['frio', 'helado', 'smoothie', 'shake', 'frape', 'batido', 'granizado', 'frozen', 'nieve'] },
+  { id: 'cookie',    label: 'Galleta',   keywords: ['galleta', 'cookie', 'postre', 'dulce', 'pastel', 'cake', 'torta', 'muffin', 'brownie', 'dessert'] },
+  { id: 'flame',     label: 'Picante',   keywords: ['picante', 'hot', 'spicy', 'salsa', 'chile', 'habanero', 'jalap'] },
+  { id: 'leaf',      label: 'Veggie',    keywords: ['vegano', 'veggie', 'vegetariano', 'ensalada', 'salad', 'fresco', 'saludable', 'green', 'organico'] },
+  { id: 'milk',      label: 'Leche',     keywords: ['leche', 'lacteo', 'dairy', 'milk', 'yogur', 'yogurt', 'queso', 'cheese'] },
+  { id: 'wheat',     label: 'Pan',       keywords: ['pan', 'panaderia', 'pizza', 'pasta', 'harina', 'trigo', 'bread', 'empanada', 'wrap', 'taco', 'baguette'] },
+  { id: 'star',      label: 'Favorito',  keywords: ['favorito', 'especial', 'premium', 'top', 'mejor', 'star', 'signature'] },
+  { id: 'sparkle',   label: 'Especial',  keywords: ['nuevo', 'new', 'novedad', 'fresh', 'especial', 'destacado', 'temporada', 'seasonal'] },
+];
+
+function fold(s: string) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function suggestIconFromName(name: string): string {
+  const n = fold(name);
+  for (const icon of PRODUCT_ICONS) {
+    if (icon.keywords.some((kw) => n.includes(kw))) return icon.id;
+  }
+  return 'utensils';
+}
 
 function pickIcon(icon: string | null | undefined): string {
   return icon?.trim() || 'utensils';
@@ -148,7 +161,7 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
                 style={{
                   padding: '12px 18px',
                   borderBottom: i < list.length - 1 ? '1px solid var(--u-hair)' : 'none',
-                  opacity: p.is_available ? 1 : 0.58,
+                  opacity: p.is_active ? (p.is_available ? 1 : 0.58) : 0.42,
                   transition: 'opacity 160ms',
                 }}
               >
@@ -206,34 +219,36 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
 
                 {/* Toggle disponibilidad */}
                 <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <form action={toggleProductAvailability}>
-                    <input type="hidden" name="restaurantId" value={restaurantId} />
-                    <input type="hidden" name="id" value={p.id} />
-                    <input type="hidden" name="is_available" value={String(!p.is_available)} />
-                    <button
-                      type="submit"
-                      className="press"
-                      title={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
-                      style={{
-                        width: 42, height: 25, borderRadius: 99, border: 'none',
-                        cursor: 'pointer', padding: 3,
-                        background: p.is_available ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
-                        display: 'flex', justifyContent: p.is_available ? 'flex-end' : 'flex-start',
-                        transition: 'background 180ms',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 19, height: 19, borderRadius: 99,
-                          background: p.is_available ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)',
-                          transition: 'all 180ms',
-                        }}
-                      />
-                    </button>
-                  </form>
-                  <span style={{ fontSize: 12, color: p.is_available ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
-                    {p.is_available ? 'Activo' : 'Agotado'}
-                  </span>
+                  {!p.is_active ? (
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#f87171', padding: '3px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
+                      Desactivado
+                    </span>
+                  ) : (
+                    <>
+                      <form action={toggleProductAvailability}>
+                        <input type="hidden" name="restaurantId" value={restaurantId} />
+                        <input type="hidden" name="id" value={p.id} />
+                        <input type="hidden" name="is_available" value={String(!p.is_available)} />
+                        <button
+                          type="submit"
+                          className="press"
+                          title={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
+                          style={{
+                            width: 42, height: 25, borderRadius: 99, border: 'none',
+                            cursor: 'pointer', padding: 3,
+                            background: p.is_available ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+                            display: 'flex', justifyContent: p.is_available ? 'flex-end' : 'flex-start',
+                            transition: 'background 180ms',
+                          }}
+                        >
+                          <span style={{ width: 19, height: 19, borderRadius: 99, background: p.is_available ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)', transition: 'all 180ms' }} />
+                        </button>
+                      </form>
+                      <span style={{ fontSize: 12, color: p.is_available ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
+                        {p.is_available ? 'Activo' : 'Agotado'}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 {/* Acciones */}
@@ -297,7 +312,10 @@ function ProductModal({
   const [catId,        setCatId]        = useState<string>(product?.category_id ?? '');
   const [productIcon,  setProductIcon]  = useState<string>(product?.icon ?? '');
   const [isAvailable,  setIsAvailable]  = useState<boolean>(product?.is_available ?? true);
+  const [isActive,     setIsActive]     = useState<boolean>(product?.is_active ?? true);
   const [tags,         setTags]         = useState<string[]>(product?.tags ?? []);
+  const [customTagInput, setCustomTagInput] = useState('');
+  const [iconSearch,   setIconSearch]   = useState('');
   const [options,      setOptions]      = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
@@ -333,6 +351,13 @@ function ProductModal({
 
   function toggleTag(id: string) {
     setTags((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
+  function addCustomTag() {
+    const t = customTagInput.trim();
+    if (!t || tags.includes(t)) { setCustomTagInput(''); return; }
+    setTags((prev) => [...prev, t]);
+    setCustomTagInput('');
   }
 
   const previewIcon = productIcon || catIconMap.get(catId) || 'utensils';
@@ -392,6 +417,7 @@ function ProductModal({
           <input type="hidden" name="category_id"  value={catId} />
           <input type="hidden" name="icon"         value={productIcon} />
           <input type="hidden" name="is_available" value={String(isAvailable)} />
+          <input type="hidden" name="is_active"    value={String(isActive)} />
           <input type="hidden" name="tags"         value={tags.join(',')} />
           <input type="hidden" name="options"      value={JSON.stringify(cleanOptions(options))} />
 
@@ -507,14 +533,38 @@ function ProductModal({
                   · se usa si el producto no tiene foto
                 </span>
               </label>
+              {/* Búsqueda de ícono por nombre */}
+              <div style={{ position: 'relative', marginBottom: 8 }}>
+                <input
+                  type="text"
+                  value={iconSearch}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setIconSearch(v);
+                    const suggested = v.trim() ? suggestIconFromName(v) : '';
+                    if (suggested && v.trim()) setProductIcon(suggested);
+                  }}
+                  placeholder="Escribe para buscar ícono (ej: pizza, café, helado…)"
+                  style={{
+                    width: '100%', padding: '9px 12px', borderRadius: 10, outline: 'none',
+                    fontSize: 13, color: 'var(--u-text)',
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                />
+              </div>
               <div className="u-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-                {PRODUCT_ICONS.map((opt) => {
+                {PRODUCT_ICONS.filter((opt) => {
+                  if (!iconSearch.trim()) return true;
+                  const q = fold(iconSearch);
+                  return fold(opt.label).includes(q) || opt.keywords.some((kw) => kw.includes(q));
+                }).map((opt) => {
                   const on = productIcon === opt.id || (!productIcon && opt.id === 'utensils');
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setProductIcon(productIcon === opt.id ? '' : opt.id)}
+                      onClick={() => { setProductIcon(productIcon === opt.id ? '' : opt.id); setIconSearch(''); }}
                       title={opt.label}
                       className="press"
                       style={{
@@ -568,8 +618,8 @@ function ProductModal({
               <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 8 }}>
                 Etiquetas
               </label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {TAGS.map((t) => {
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                {PRESET_TAGS.map((t) => {
                   const on = tags.includes(t.id);
                   return (
                     <button
@@ -590,6 +640,54 @@ function ProductModal({
                     </button>
                   );
                 })}
+                {/* Etiquetas personalizadas activas */}
+                {tags.filter((t) => !PRESET_TAGS.some((p) => p.id === t)).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="press"
+                    onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '7px 12px', borderRadius: 99, cursor: 'pointer',
+                      border: '1px solid transparent',
+                      background: 'var(--u-text)',
+                      color: 'var(--brand-bg)',
+                      fontWeight: 600, fontSize: 12,
+                    }}
+                  >
+                    {t} <Icon name="x" size={10} />
+                  </button>
+                ))}
+              </div>
+              {/* Agregar etiqueta personalizada */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  value={customTagInput}
+                  onChange={(e) => setCustomTagInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
+                  placeholder="Etiqueta personalizada…"
+                  maxLength={30}
+                  style={{
+                    flex: 1, padding: '8px 11px', borderRadius: 10, outline: 'none',
+                    fontSize: 12.5, color: 'var(--u-text)',
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomTag}
+                  className="press"
+                  style={{
+                    padding: '8px 12px', borderRadius: 10, border: 'none',
+                    background: 'rgba(255,255,255,0.08)', color: 'var(--u-text-2)',
+                    cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                  }}
+                >
+                  +
+                </button>
               </div>
             </div>
 
@@ -604,20 +702,17 @@ function ProductModal({
               <OptionsEditor value={options} onChange={setOptions} />
             </div>
 
-            {/* Disponibilidad */}
+            {/* Disponibilidad temporal */}
             <div
               className="glass-quiet"
-              style={{
-                borderRadius: 13, padding: '13px 15px',
-                display: 'flex', alignItems: 'center', gap: 12,
-              }}
+              style={{ borderRadius: 13, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}
             >
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)' }}>
                   Disponible ahora
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
-                  Apagado → sale como &ldquo;Agotado&rdquo;
+                  Apagado → se muestra tachado; se restaura solo en 12 h
                 </div>
               </div>
               <button
@@ -632,13 +727,36 @@ function ProductModal({
                   transition: 'background 180ms',
                 }}
               >
-                <span
-                  style={{
-                    width: 19, height: 19, borderRadius: 99,
-                    background: isAvailable ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)',
-                    transition: 'all 180ms',
-                  }}
-                />
+                <span style={{ width: 19, height: 19, borderRadius: 99, background: isAvailable ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)', transition: 'all 180ms' }} />
+              </button>
+            </div>
+
+            {/* Activar / desactivar platillo (oculto permanente) */}
+            <div
+              className="glass-quiet"
+              style={{ borderRadius: 13, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, border: !isActive ? '1px solid rgba(248,113,113,0.2)' : '1px solid transparent' }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: isActive ? 'var(--u-text)' : '#f87171' }}>
+                  {isActive ? 'Platillo activo' : 'Platillo desactivado'}
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+                  Desactivado → no aparece en el menú hasta que lo reactives
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsActive((v) => !v)}
+                className="press"
+                style={{
+                  width: 42, height: 25, borderRadius: 99, border: 'none',
+                  cursor: 'pointer', padding: 3,
+                  background: isActive ? 'var(--u-text)' : 'rgba(248,113,113,0.3)',
+                  display: 'flex', justifyContent: isActive ? 'flex-end' : 'flex-start',
+                  transition: 'background 180ms',
+                }}
+              >
+                <span style={{ width: 19, height: 19, borderRadius: 99, background: isActive ? 'var(--brand-bg)' : '#f87171', transition: 'all 180ms' }} />
               </button>
             </div>
 

@@ -10,9 +10,10 @@ interface Props {
 
 export default function QRDisplay({ restaurantName, menuUrl }: Props) {
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const qrSrc = `/api/qr?url=${encodeURIComponent(menuUrl)}`;
-  const fileName = `qr-${restaurantName.toLowerCase().replace(/\s+/g, '-')}.svg`;
+  const fileName = `qr-${restaurantName.toLowerCase().replace(/\s+/g, '-')}.png`;
 
   async function copyUrl() {
     try {
@@ -21,6 +22,50 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
       setTimeout(() => setCopied(false), 2200);
     } catch {
       // clipboard not available
+    }
+  }
+
+  async function downloadPng() {
+    setDownloading(true);
+    try {
+      const res = await fetch(qrSrc);
+      const svgBlob = await res.blob();
+      const svgUrl = URL.createObjectURL(svgBlob);
+      await new Promise<void>((resolve) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const size = 480;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, size, size);
+          ctx.drawImage(img, 0, 0, size, size);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              a.click();
+              URL.revokeObjectURL(url);
+            }
+            URL.revokeObjectURL(svgUrl);
+            resolve();
+          }, 'image/png');
+        };
+        img.onerror = () => { URL.revokeObjectURL(svgUrl); resolve(); };
+        img.src = svgUrl;
+      });
+    } catch {
+      // fallback: direct link
+      const a = document.createElement('a');
+      a.href = qrSrc;
+      a.download = fileName;
+      a.click();
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -111,25 +156,28 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
       </Glass>
 
       {/* Download */}
-      <a
-        href={qrSrc}
-        download={fileName}
+      <button
+        onClick={downloadPng}
+        disabled={downloading}
         className="press"
         style={{
           display: 'block',
+          width: '100%',
           textAlign: 'center',
           padding: '13px 20px',
           borderRadius: 'var(--radius-full)',
           border: '1px solid var(--u-hair-2)',
           fontSize: 14,
           fontWeight: 600,
-          textDecoration: 'none',
+          cursor: downloading ? 'wait' : 'pointer',
           color: 'var(--u-text)',
           background: 'rgba(255,255,255,0.04)',
+          fontFamily: 'var(--font-sans)',
+          opacity: downloading ? 0.7 : 1,
         }}
       >
-        ↓ Descargar QR (.svg)
-      </a>
+        {downloading ? 'Generando…' : '↓ Descargar QR (.png)'}
+      </button>
 
       {/* Instructions */}
       <p

@@ -114,6 +114,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     tags: parseTags(formData.get('tags') as string),
     options,
     is_available: formData.get('is_available') === 'true',
+    is_active: formData.get('is_active') !== 'false',
     sort_order,
   });
 
@@ -136,6 +137,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   const options = parseOptions(formData.get('options') as string | null);
   if (options && 'error' in options) return options;
 
+  const newAvailable = formData.get('is_available') === 'true';
   const { error } = await ctx.db
     .from('products')
     .update({
@@ -147,7 +149,9 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
       options,
-      is_available: formData.get('is_available') === 'true',
+      is_available: newAvailable,
+      unavailable_at: newAvailable ? null : new Date().toISOString(),
+      is_active: formData.get('is_active') !== 'false',
     })
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
@@ -182,7 +186,26 @@ export async function toggleProductAvailability(formData: FormData) {
 
   await ctx.db
     .from('products')
-    .update({ is_available })
+    .update({
+      is_available,
+      unavailable_at: is_available ? null : new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('restaurant_id', ctx.restaurantId);
+
+  revalidatePath('/admin/menu');
+}
+
+export async function toggleProductActive(formData: FormData) {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return;
+
+  const id = formData.get('id') as string;
+  const is_active = formData.get('is_active') === 'true';
+
+  await ctx.db
+    .from('products')
+    .update({ is_active })
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
@@ -288,6 +311,7 @@ export async function createProductModal(
     tags: parseTags(formData.get('tags') as string),
     options,
     is_available: formData.get('is_available') === 'true',
+    is_active: formData.get('is_active') !== 'false',
     sort_order,
   });
 
@@ -313,6 +337,7 @@ export async function updateProductModal(
   const options = parseOptions(formData.get('options') as string | null);
   if (options && 'error' in options) return options;
 
+  const newAvailableModal = formData.get('is_available') === 'true';
   const { error } = await ctx.db
     .from('products')
     .update({
@@ -324,7 +349,9 @@ export async function updateProductModal(
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
       options,
-      is_available: formData.get('is_available') === 'true',
+      is_available: newAvailableModal,
+      unavailable_at: newAvailableModal ? null : new Date().toISOString(),
+      is_active: formData.get('is_active') !== 'false',
     })
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);

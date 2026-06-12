@@ -13,7 +13,20 @@ import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options' | 'is_available' | 'unavailable_at'>;
+
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+function isAutoRestored(p: ProdItem): boolean {
+  if (p.is_available) return false;
+  if (!p.unavailable_at) return false;
+  return Date.now() - new Date(p.unavailable_at).getTime() >= TWELVE_HOURS_MS;
+}
+
+function isUnavailable(p: ProdItem): boolean {
+  if (p.is_available) return false;
+  return !isAutoRestored(p);
+}
 
 /** Normaliza para buscar sin acentos ni mayúsculas ("cafe" encuentra "Café"). */
 function fold(s: string): string {
@@ -201,21 +214,33 @@ function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: Pr
 
 function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
+  const unavail = isUnavailable(p);
   return (
-    <Glass interactive onClick={() => onOpen(p)} style={{ borderRadius: 18, overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Glass
+      interactive={!unavail}
+      onClick={() => !unavail && onOpen(p)}
+      style={{ borderRadius: 18, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', height: '100%', opacity: unavail ? 0.72 : 1 }}
+    >
       <div style={{ position: 'relative', aspectRatio: '1.25', background: 'rgba(255,255,255,0.03)', overflow: 'hidden' }}>
         <ProductArt p={p} icon={icon} />
-        {config.showTags && p.tags && p.tags.length > 0 && (
+        {config.showTags && p.tags && p.tags.length > 0 && !unavail && (
           <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {p.tags.slice(0, 2).map((t) => <Tag key={t} label={t} small />)}
           </div>
         )}
+        {unavail && (
+          <div style={{ position: 'absolute', top: 8, left: 8 }}>
+            <span style={{ display: 'inline-block', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(0,0,0,0.65)', color: '#ccc', letterSpacing: '0.04em', backdropFilter: 'blur(4px)' }}>
+              No disponible
+            </span>
+          </div>
+        )}
       </div>
       <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5, lineHeight: 1.12, color: 'var(--u-text)', flex: 1 }}>{p.name}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5, lineHeight: 1.12, color: 'var(--u-text)', flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'rgba(255,255,255,0.4)' }}>{p.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Price amount={p.price} size={15} />
-          {ordersEnabled && <AddControl p={p} qty={qty} onAdd={onAdd} />}
+          <Price amount={p.price} size={15} muted={unavail} />
+          {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
     </Glass>
@@ -224,22 +249,24 @@ function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIt
 
 function ProductRow({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
+  const unavail = isUnavailable(p);
   return (
-    <Glass interactive onClick={() => onOpen(p)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: 'pointer' }}>
+    <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
       <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
         <ProductArt p={p} icon={icon} scale={0.9} />
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15.5, color: 'var(--u-text)' }}>{p.name}</div>
-          {config.showTags && p.tags?.[0] && <Tag label={p.tags[0]} small />}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15.5, color: 'var(--u-text)', textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'rgba(255,255,255,0.4)' }}>{p.name}</div>
+          {unavail && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>No disponible</span>}
+          {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
         </div>
         {p.description && (
           <div className="line-clamp-2" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.35 }}>{p.description}</div>
         )}
-        <Price amount={p.price} size={15} />
+        <Price amount={p.price} size={15} muted={unavail} />
       </div>
-      {ordersEnabled && <AddControl p={p} qty={qty} onAdd={onAdd} />}
+      {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
     </Glass>
   );
 }

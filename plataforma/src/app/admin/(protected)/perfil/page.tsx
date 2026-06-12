@@ -1,4 +1,4 @@
-﻿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
@@ -8,7 +8,7 @@ import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
-export const metadata = { title: 'Perfil â€” Panel admin' };
+export const metadata = { title: 'Perfil – Panel admin' };
 
 export default async function AdminPerfilPage({
   searchParams,
@@ -87,7 +87,7 @@ export default async function AdminPerfilPage({
             fontSize: 14,
           }}
         >
-          âœ“ Cambios guardados correctamente
+          ✓ Cambios guardados correctamente
         </div>
       )}
 
@@ -97,7 +97,7 @@ export default async function AdminPerfilPage({
         theme={(theme as RestaurantTheme) ?? defaultTheme}
       />
 
-      {/* â”€â”€ OperaciÃ³n: horarios, pausa, zona horaria â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Operación: horarios, pausa, zona horaria ───────── */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{
@@ -112,7 +112,7 @@ export default async function AdminPerfilPage({
         <HoursEditor restaurant={restaurant as Restaurant} />
       </section>
 
-      {/* â”€â”€ UbicaciÃ³n del restaurante + radio de entrega â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Ubicación del restaurante + radio de entrega ───── */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{

@@ -26,9 +26,10 @@ interface Props {
   templates?: ThemeTemplate[];
   saveAction?: (input: { restaurantId: string; config: ThemeConfig; content: ThemeContent; customCss: string }) => Promise<{ error?: string; ok?: boolean }>;
   showTemplates?: boolean;
+  showAdvanced?: boolean;
 }
 
-export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true }: Props) {
+export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true, showAdvanced = true }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
@@ -261,7 +262,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       </Section>
 
       {/* ── Avanzado ── */}
-      <Section title="Avanzado · CSS propio">
+      {showAdvanced && <Section title="Avanzado · CSS propio">
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 6 }}>
           CSS crudo que se inyecta al final del sitio del restaurante (gana sobre todo). Para ajustes sin límite.
         </p>
@@ -298,7 +299,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           placeholder={'.glass { border-radius: 4px; }\n.t-display { letter-spacing: 0; }'}
           style={{ width: '100%', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)', color: 'var(--u-text)', fontSize: 13, fontFamily: 'var(--ui-font-mono)', outline: 'none', resize: 'vertical' }}
         />
-      </Section>
+      </Section>}
 
       {/* ── Guardar ── */}
       <div style={{ position: 'sticky', bottom: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', flexWrap: 'wrap' }}>

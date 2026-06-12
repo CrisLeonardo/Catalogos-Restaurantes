@@ -5,7 +5,42 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons';
+
+function fold(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+const CAT_ICON_MAP: [string, string[]][] = [
+  ['coffee',    ['cafe', 'coffee', 'te', 'latte', 'capuchino', 'espreso', 'expreso', 'boba', 'jugo', 'refresco', 'cocoa', 'matcha']],
+  ['sparkle',   ['cocktail', 'coctel', 'bar', 'alcohol', 'cerveza', 'beer', 'vino', 'wine', 'copa', 'bebida alcoholica', 'cantina']],
+  ['ice',       ['frappe', 'smoothie', 'batido', 'licuado', 'malteada', 'shake', 'frio', 'agua fresca']],
+  ['flame',     ['parrilla', 'grill', 'brasa', 'bbq', 'barbecue', 'carne', 'asado', 'parrillada', 'alitas', 'wings']],
+  ['leaf',      ['vegano', 'vegetal', 'ensalada', 'salad', 'saludable', 'verde', 'organico', 'natural', 'verduras', 'fruta', 'fruit', 'vegetariano']],
+  ['cookie',    ['postre', 'dessert', 'pastel', 'torta', 'dulce', 'sweet', 'galleta', 'helado', 'gelatina', 'flan', 'brownie', 'crepa', 'waffle', 'pan dulce']],
+  ['croissant', ['sandwich', 'sanwich', 'hamburguesa', 'burger', 'torta', 'wrap', 'hot dog', 'hotdog', 'baguette', 'pan', 'bread', 'tostada', 'quesadilla', 'burritos']],
+  ['milk',      ['lacteo', 'queso', 'leche', 'dairy', 'yogurt', 'yogur', 'cremoso']],
+  ['wheat',     ['pasta', 'arroz', 'rice', 'cereal', 'harina', 'espagueti', 'fideos', 'noodles']],
+  ['star',      ['especial', 'special', 'premium', 'signature', 'chef', 'popular', 'favorito', 'destacado', 'promocion', 'oferta', 'combo']],
+  ['bagel',     ['pizza', 'donut', 'dona', 'bagel', 'empanada', 'gordita', 'arepa']],
+  ['utensils',  []],
+];
+
+function suggestIcon(name: string): string {
+  const n = fold(name);
+  for (const [icon, kws] of CAT_ICON_MAP) {
+    for (const kw of kws) {
+      if (n.includes(fold(kw))) return icon;
+    }
+  }
+  return 'utensils';
+}
+
+function CatIconDisplay({ icon }: { icon: string | null }) {
+  if (!icon) return <Icon name="utensils" size={22} />;
+  if (ICON_PATHS[icon]) return <Icon name={icon} size={22} />;
+  return <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>;
+}
 import {
   moveCategoryUp,
   moveCategoryDown,
@@ -111,15 +146,15 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
               )}
             </div>
 
-            {/* Ícono emoji */}
+            {/* Ícono */}
             <div
               style={{
                 width: 44, height: 44, borderRadius: 12,
                 background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)',
-                display: 'grid', placeItems: 'center', fontSize: 20, flexShrink: 0,
+                display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0,
               }}
             >
-              {c.icon || '🍽'}
+              <CatIconDisplay icon={c.icon} />
             </div>
 
             {/* Nombre + contador / formulario inline */}
@@ -225,6 +260,8 @@ function NewCategoryForm({
     createCategoryModal,
     null,
   );
+  const [catName, setCatName] = useState('');
+  const iconSuggested = suggestIcon(catName);
 
   useEffect(() => {
     if (state && 'success' in state) onSaved();
@@ -232,32 +269,27 @@ function NewCategoryForm({
   }, [state]);
 
   return (
-    <div
-      className="glass"
-      style={{ borderRadius: 15, padding: '16px 18px' }}
-    >
-      <div
-        className="t-kicker"
-        style={{ fontSize: 10, marginBottom: 12 }}
-      >
-        Nueva categoría
-      </div>
+    <div className="glass" style={{ borderRadius: 15, padding: '16px 18px' }}>
+      <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Nueva categoría</div>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            name="icon"
-            type="text"
-            placeholder="🍕"
-            maxLength={4}
-            style={{ ...inlineInput, width: 54 }}
-          />
+        <input type="hidden" name="icon" value={iconSuggested} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)',
+            display: 'grid', placeItems: 'center', color: 'var(--u-text-2)',
+          }}>
+            <Icon name={iconSuggested} size={22} />
+          </div>
           <input
             name="name"
             type="text"
             required
             placeholder="Nombre de la categoría"
             autoFocus
+            value={catName}
+            onChange={(e) => setCatName(e.target.value)}
             style={{ ...inlineInput, flex: 1 }}
           />
         </div>
@@ -265,20 +297,10 @@ function NewCategoryForm({
           <span style={{ fontSize: 12, color: '#f87171' }}>{state.error}</span>
         )}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="press"
-            style={submitBtn}
-          >
+          <button type="submit" disabled={isPending} className="press" style={submitBtn}>
             {isPending ? '…' : 'Crear'}
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="press"
-            style={cancelBtn}
-          >
+          <button type="button" onClick={onClose} className="press" style={cancelBtn}>
             Cancelar
           </button>
         </div>
@@ -304,6 +326,8 @@ function InlineEditForm({
     updateCategoryModal,
     null,
   );
+  const [catName, setCatName] = useState(category.name);
+  const iconSuggested = suggestIcon(catName);
 
   useEffect(() => {
     if (state && 'success' in state) onSaved();
@@ -314,39 +338,23 @@ function InlineEditForm({
     <form action={formAction} style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id"           value={category.id} />
-      <input
-        name="icon"
-        type="text"
-        defaultValue={category.icon ?? ''}
-        placeholder="🍕"
-        maxLength={4}
-        style={{ ...inlineInput, width: 54 }}
-      />
+      <input type="hidden" name="icon"         value={iconSuggested} />
       <input
         name="name"
         type="text"
         required
-        defaultValue={category.name}
+        value={catName}
+        onChange={(e) => setCatName(e.target.value)}
         autoFocus
         style={{ ...inlineInput, flex: 1 }}
       />
       {state && 'error' in state && (
         <span style={{ fontSize: 11, color: '#f87171', flexShrink: 0 }}>{state.error}</span>
       )}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="press"
-        style={{ ...submitBtn, flexShrink: 0 }}
-      >
+      <button type="submit" disabled={isPending} className="press" style={{ ...submitBtn, flexShrink: 0 }}>
         {isPending ? '…' : '✓'}
       </button>
-      <button
-        type="button"
-        onClick={onClose}
-        className="press"
-        style={{ ...cancelBtn, flexShrink: 0 }}
-      >
+      <button type="button" onClick={onClose} className="press" style={{ ...cancelBtn, flexShrink: 0 }}>
         ×
       </button>
     </form>

@@ -59,6 +59,7 @@ export default async function AdminPersonalizacionPage() {
         customCss={resolved.customCss}
         saveAction={saveAdminRestaurantTheme}
         showTemplates={false}
+        showAdvanced={false}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import CategoriesPanel from '@/components/admin/categories-panel';
 
-export const metadata = { title: 'CategorÃ­as â€” Panel admin' };
+export const metadata = { title: 'Categorías – Panel admin' };
 
 export default async function AdminCategoriasPage() {
   const ctx = await getAdminContext();

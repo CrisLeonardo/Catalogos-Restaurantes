@@ -4,7 +4,7 @@ import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import CatalogPanel from '@/components/admin/catalog-panel';
 
-export const metadata = { title: 'CatÃ¡logo â€” Panel admin' };
+export const metadata = { title: 'Catálogo – Panel admin' };
 
 export default async function AdminMenuPage() {
   const ctx = await getAdminContext();

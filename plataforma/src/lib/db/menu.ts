@@ -26,7 +26,6 @@ export const getMenuData = cache(
         .from('products')
         .select('*')
         .eq('restaurant_id', restaurantId)
-        .eq('is_available', true)
         .order('sort_order'),
     ]);
 

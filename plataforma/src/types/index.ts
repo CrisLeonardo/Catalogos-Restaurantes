@@ -100,6 +100,10 @@ export interface Product {
   tags: string[] | null;
   options: ProductOptionGroup[] | null;
   is_available: boolean;
+  /** Timestamp de cuando se marcó no-disponible; NULL si está disponible. */
+  unavailable_at: string | null;
+  /** false = oculto permanentemente del menú hasta que el restaurante lo reactive. */
+  is_active: boolean;
   sort_order: number;
 }
 

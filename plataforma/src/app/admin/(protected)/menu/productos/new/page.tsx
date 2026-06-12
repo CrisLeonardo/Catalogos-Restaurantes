@@ -1,11 +1,11 @@
-﻿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import ProductForm from '@/components/admin/product-form';
 
-export const metadata = { title: 'Nuevo producto â€” Panel admin' };
+export const metadata = { title: 'Nuevo producto – Panel admin' };
 
 export default async function NewProductPage({
   searchParams,
@@ -49,7 +49,7 @@ export default async function NewProductPage({
             textDecoration: 'none',
           }}
         >
-          â† Volver
+          ← Volver
         </Link>
         <h1
           style={{
