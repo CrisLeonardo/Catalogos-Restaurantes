@@ -50,8 +50,30 @@ export function getTenantSlug(host: string | null | undefined): string | null {
     if (hostname.endsWith(`.${root}`)) {
       const sub = hostname.slice(0, hostname.length - root.length - 1);
       if (!sub || sub === "www") return null;
-      return sub.split(".")[0]; // primer label como slug
+      // azucar-negra-admin.root → slug es "azucar-negra"
+      if (sub.endsWith("-admin")) {
+        return sub.slice(0, -6); // quita el sufijo "-admin"
+      }
+      return sub.split(".")[0];
     }
   }
   return null;
+}
+
+/**
+ * Devuelve true cuando el host es el subdominio admin del tenant.
+ * Patrón: SLUG-admin.leogin.online  (un solo nivel, cubierto por *.leogin.online)
+ * Ejemplos: azucar-negra-admin.leogin.online → true
+ *           azucar-negra.leogin.online       → false
+ */
+export function isAdminSubdomain(host: string | null | undefined): boolean {
+  if (!host) return false;
+  const hostname = host.toLowerCase().split(":")[0];
+  for (const root of ROOT_DOMAINS) {
+    if (hostname.endsWith(`.${root}`)) {
+      const sub = hostname.slice(0, hostname.length - root.length - 1);
+      return sub.endsWith("-admin");
+    }
+  }
+  return false;
 }

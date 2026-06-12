@@ -42,17 +42,22 @@ export async function GET(_request: NextRequest) {
     }
   }
 
+  // Cuando se sirve desde el subdominio admin.* (origen separado), las rutas
+  // son relativas a ese origen: start_url='/' y scope='/'.
+  // Desde el subdominio del catálogo (acceso directo a /admin/) usamos
+  // id/start_url/scope='/admin/' para distinguirlo del catálogo (id='/').
+  const isAdminSub = headersList.get('x-is-admin-subdomain') === '1';
+  const appId       = isAdminSub ? '/' : '/admin/';
+  const startUrl    = isAdminSub ? '/' : '/admin/';
+  const scope       = isAdminSub ? '/' : '/admin/';
+
   const manifest = {
     name,
     short_name: name,
     description: 'Panel de administración del restaurante',
-    // id y scope distintos al catálogo (id='/', scope='/') permiten instalar
-    // admin y catálogo como dos apps independientes en el mismo origen.
-    // scope='/admin/' evita que el catálogo (scope='/') "capture" las URLs de admin.
-    // /admin/login está dentro del scope, por lo que funciona en modo standalone.
-    id: '/admin/',
-    start_url: '/admin/',
-    scope: '/admin/',
+    id: appId,
+    start_url: startUrl,
+    scope,
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0b0b0c',
