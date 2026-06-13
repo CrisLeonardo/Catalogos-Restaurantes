@@ -53,7 +53,9 @@ body{} </style><script>/* roba lo que el cliente escribe en el checkout */</scri
 
 **Corrección aplicada:** sanitizador centralizado en el resolver, `sanitizeCustomCss()` en [`src/lib/theme/resolve.ts`](plataforma/src/lib/theme/resolve.ts), que elimina `</style`, `</script` y `<!--`. Verificado en vivo: el ataque queda como texto CSS inerte y el CSS legítimo (incl. combinador `>`) se preserva.
 
-> ⚠️ **Residual:** aun sin “breakout” a JS, el CSS arbitrario puede exfiltrar datos (p. ej. selectores de atributo + `background:url(...)`). El control definitivo es **restringir quién escribe `custom_css`** (¿de verdad lo necesita el dueño, o debería ser solo Super Admin?) y/o un **CSP** (ver S5).
+**Endurecimiento adicional aplicado:** `custom_css` ahora **solo lo define el Super Admin** — `saveAdminRestaurantTheme` ya no confía en el CSS que manda el cliente; para un dueño se conserva el valor existente (la UI ya ocultaba el campo con `showAdvanced={false}`, esto es el candado server-side). Alinea con el modelo "Leonardo diseña".
+
+> ⚠️ **Residual:** aun sin “breakout” a JS, el CSS arbitrario puede exfiltrar datos (p. ej. selectores de atributo + `background:url(...)`). Como ya solo el Super Admin (de confianza) lo escribe, el riesgo es mínimo; un **CSP** (ver S5) lo cerraría del todo.
 
 ### 🔴 S2 — RLS de `push_subscriptions` abierta a todo el mundo *(A01: Broken Access Control)*
 
@@ -226,7 +228,7 @@ Medido sobre el fondo oscuro `#0b0b0c` (valores reales del DOM):
 
 ## 7. Pendientes priorizados (requieren tu decisión / infraestructura)
 
-1. **(Alta)** Correr migraciones **015, 016 y 017** en prod. Definir si `custom_css` debe quedar **solo para Super Admin** (reduce mucho la superficie de S1).
-2. **(Alta)** Añadir **CSP** (empezar en `Report-Only`).
+1. **(Alta)** Correr migraciones **015, 016 y 017** en prod.
+2. **(Alta)** Añadir **CSP** (empezar en `Report-Only`) — único control de alto valor que queda pendiente para S1/S5.
 3. **(Media)** Si se escala a varias instancias, migrar el rate-limit (S4) a Redis/Upstash; considerar captcha/honeypot en el checkout.
 4. **(Baja)** Validar host de `logo_url` al guardar; `crypto.randomUUID()` para IDs de opciones; endurecer `with check` de la policy de UPDATE de `orders`; índice único opcional en `orders(restaurant_id, order_number)` tras deduplicar.
