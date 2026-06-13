@@ -17,11 +17,17 @@ import type { CartItemOption, Product, ProductOptionGroup } from '@/types';
 
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
 
-/** Selección inicial: los grupos single requeridos arrancan con su primera opción. */
+/** Selección inicial: single requeridos arrancan con su primera opción; combo arranca con todas. */
 function initialSelection(groups: ProductOptionGroup[]): Record<string, string[]> {
   const sel: Record<string, string[]> = {};
   for (const g of groups) {
-    sel[g.id] = g.type === 'single' && g.required && g.choices.length > 0 ? [g.choices[0].id] : [];
+    if (g.type === 'combo') {
+      sel[g.id] = g.choices.map((c) => c.id);
+    } else if (g.type === 'single' && g.required && g.choices.length > 0) {
+      sel[g.id] = [g.choices[0].id];
+    } else {
+      sel[g.id] = [];
+    }
   }
   return sel;
 }
@@ -59,10 +65,12 @@ export default function ProductSheet({
         const next = current.includes(choiceId) && !group.required ? [] : [choiceId];
         return { ...prev, [group.id]: next };
       }
+      // combo y multi: toggle libre
       if (current.includes(choiceId)) {
         return { ...prev, [group.id]: current.filter((c) => c !== choiceId) };
       }
-      if (group.max && group.max > 0 && current.length >= group.max) return prev;
+      // solo multi tiene límite máximo
+      if (group.type === 'multi' && group.max && group.max > 0 && current.length >= group.max) return prev;
       return { ...prev, [group.id]: [...current, choiceId] };
     });
   }
@@ -153,11 +161,13 @@ export default function ProductSheet({
             ))}
           </div>
 
-          {/* ── Variantes / extras ── */}
+          {/* ── Variantes / extras / combo ── */}
           {groups.map((group) => {
             const picked = selected[group.id] ?? [];
-            const hint =
-              group.type === 'single'
+            const isCombo = group.type === 'combo';
+            const hint = isCombo
+              ? 'Personaliza tu combo'
+              : group.type === 'single'
                 ? group.required ? content.product.chooseOne : content.product.optional
                 : group.max && group.max > 0
                   ? `${content.product.optional} · máx ${group.max}`
@@ -168,36 +178,91 @@ export default function ProductSheet({
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{group.name}</span>
                   <span className="t-kicker" style={{ fontSize: 9.5 }}>{hint}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {group.choices.map((choice) => {
-                    const on = picked.includes(choice.id);
-                    const delta = Number(choice.priceDelta) || 0;
-                    return (
-                      <button
-                        key={choice.id}
-                        type="button"
-                        onClick={() => toggleChoice(group, choice.id)}
-                        className="press"
-                        aria-pressed={on}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
-                          background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
-                          color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                          border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                          fontWeight: 600, fontSize: 13, transition: 'all 140ms',
-                        }}
-                      >
-                        {on && <Icon name="check" size={13} strokeWidth={3} />}
-                        {choice.name}
-                        {delta !== 0 && (
-                          <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.75 }}>
-                            {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
+
+                {isCombo ? (
+                  /* ── Combo: filas con checkmark, precio visible como ahorro al quitar ── */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {group.choices.map((choice) => {
+                      const included = picked.includes(choice.id);
+                      const delta = Number(choice.priceDelta) || 0;
+                      return (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          onClick={() => toggleChoice(group, choice.id)}
+                          className="press"
+                          aria-pressed={included}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                            borderRadius: 13, cursor: 'pointer', textAlign: 'left',
+                            background: included ? 'rgba(34,197,94,0.10)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair-2)'}`,
+                            transition: 'all 140ms',
+                          }}
+                        >
+                          {/* checkbox visual */}
+                          <span style={{
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            display: 'grid', placeItems: 'center',
+                            background: included ? '#22c55e' : 'rgba(255,255,255,0.08)',
+                            border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair-2)'}`,
+                            transition: 'all 140ms',
+                          }}>
+                            {included && <Icon name="check" size={12} strokeWidth={3} style={{ color: '#fff' }} />}
                           </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span style={{
+                            flex: 1, fontSize: 13.5, fontWeight: 600,
+                            color: included ? 'var(--u-text)' : 'var(--u-text-3)',
+                            textDecoration: included ? 'none' : 'line-through',
+                          }}>
+                            {choice.name}
+                          </span>
+                          {delta > 0 && (
+                            <span className="t-mono" style={{
+                              fontSize: 12, flexShrink: 0,
+                              color: included ? 'var(--u-text-2)' : '#f87171',
+                              opacity: included ? 0.7 : 1,
+                            }}>
+                              {included ? `+${formatPrice(delta, config)}` : `−${formatPrice(delta, config)}`}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* ── Single / Multi: píldoras ── */
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {group.choices.map((choice) => {
+                      const on = picked.includes(choice.id);
+                      const delta = Number(choice.priceDelta) || 0;
+                      return (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          onClick={() => toggleChoice(group, choice.id)}
+                          className="press"
+                          aria-pressed={on}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
+                            background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
+                            color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                            border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
+                            fontWeight: 600, fontSize: 13, transition: 'all 140ms',
+                          }}
+                        >
+                          {on && <Icon name="check" size={13} strokeWidth={3} />}
+                          {choice.name}
+                          {delta !== 0 && (
+                            <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.75 }}>
+                              {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

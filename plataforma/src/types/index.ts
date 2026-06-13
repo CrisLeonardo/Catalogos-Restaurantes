@@ -79,8 +79,8 @@ export interface ProductOptionChoice {
 
 export interface ProductOptionGroup {
   id: string;
-  name: string;            // "Tamaño", "Extras"…
-  type: 'single' | 'multi';
+  name: string;            // "Tamaño", "Extras", "Incluye"…
+  type: 'single' | 'multi' | 'combo';
   /** Solo single: el comensal DEBE elegir una opción. */
   required?: boolean;
   /** Solo multi: máximo de opciones (0/ausente = sin límite). */

@@ -160,6 +160,7 @@ export default function AdminNotifications({
             if (toastTimer.current) clearTimeout(toastTimer.current);
             setToast(`Nuevo pedido ${order.order_number} — ${order.customer_name}`);
             toastTimer.current = setTimeout(() => setToast(null), 5000);
+            router.refresh();
           }
 
           // Notificación in-app de refuerzo (el servidor ya disparó el push).
@@ -180,7 +181,6 @@ export default function AdminNotifications({
               }
             }
           } catch {}
-          router.refresh();
         })
         .subscribe();
     })();

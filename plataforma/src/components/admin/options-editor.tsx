@@ -16,10 +16,10 @@ function newId(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
-export function emptyGroup(type: 'single' | 'multi'): ProductOptionGroup {
+export function emptyGroup(type: 'single' | 'multi' | 'combo'): ProductOptionGroup {
   return {
     id: newId(),
-    name: type === 'single' ? 'Tamaño' : 'Extras',
+    name: type === 'single' ? 'Tamaño' : type === 'combo' ? 'Incluye' : 'Extras',
     type,
     required: type === 'single',
     max: type === 'multi' ? 0 : undefined,
@@ -89,7 +89,7 @@ export default function OptionsEditor({
               style={{ ...fieldStyle, flex: 1, minWidth: 140, fontWeight: 600 }}
             />
             <div style={{ display: 'flex', gap: 4 }}>
-              {([['single', 'Elegir 1'], ['multi', 'Varios']] as const).map(([t, lbl]) => {
+              {([['single', 'Elegir 1'], ['multi', 'Varios'], ['combo', 'Combo']] as const).map(([t, lbl]) => {
                 const on = group.type === t;
                 return (
                   <button
@@ -106,8 +106,8 @@ export default function OptionsEditor({
                     style={{
                       padding: '7px 11px', borderRadius: 99, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                      background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
-                      color: on ? 'var(--brand-bg, #0b0b0c)' : 'var(--u-text-3)',
+                      background: on ? (t === 'combo' ? 'var(--brand-accent, #22c55e)' : 'var(--u-text)') : 'rgba(255,255,255,0.04)',
+                      color: on ? (t === 'combo' ? '#fff' : 'var(--brand-bg, #0b0b0c)') : 'var(--u-text-3)',
                     }}
                   >
                     {lbl}
@@ -141,6 +141,10 @@ export default function OptionsEditor({
               />
               Obligatorio (el cliente debe elegir uno)
             </label>
+          ) : group.type === 'combo' ? (
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+              Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio del producto debe ser el valor del combo completo; cada componente lleva el precio que aporta al combo (el cliente ve el descuento al quitarlo).
+            </p>
           ) : (
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--u-text-3)' }}>
               Máximo de opciones
@@ -164,17 +168,18 @@ export default function OptionsEditor({
                   type="text"
                   value={choice.name}
                   onChange={(e) => setChoice(group.id, choice.id, { name: e.target.value })}
-                  placeholder="Opción (Grande, Extra queso…)"
+                  placeholder={group.type === 'combo' ? 'Componente (Papas fritas, Gaseosa…)' : 'Opción (Grande, Extra queso…)'}
                   style={{ ...fieldStyle, flex: 1, minWidth: 0 }}
                 />
-                <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>+</span>
+                <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{group.type === 'combo' ? 'Q' : '+'}</span>
                 <input
                   type="number"
                   step="0.01"
+                  min={group.type === 'combo' ? 0 : undefined}
                   value={choice.priceDelta}
                   onChange={(e) => setChoice(group.id, choice.id, { priceDelta: Number(e.target.value) || 0 })}
                   style={{ ...fieldStyle, width: 78, fontFamily: 'var(--ui-font-mono)' }}
-                  aria-label="Precio extra"
+                  aria-label={group.type === 'combo' ? 'Precio del componente' : 'Precio extra'}
                 />
                 <button
                   type="button"
@@ -237,6 +242,19 @@ export default function OptionsEditor({
           }}
         >
           <Icon name="plus" size={13} /> Grupo &ldquo;varios&rdquo; (extras)
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange([...groups, emptyGroup('combo')])}
+          className="press"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
+            borderRadius: 10, border: '1px dashed var(--brand-accent, #22c55e)',
+            background: 'rgba(34,197,94,0.06)', color: 'var(--brand-accent, #22c55e)',
+            cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+          }}
+        >
+          <Icon name="plus" size={13} /> Combo (componentes incluidos)
         </button>
       </div>
     </div>
