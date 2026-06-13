@@ -105,9 +105,27 @@ export function resolveTheme(
 
   const content = mergeContent(row?.content, override?.content);
 
-  const customCss = override?.customCss ?? row?.custom_css ?? '';
+  const customCss = sanitizeCustomCss(override?.customCss ?? row?.custom_css ?? '');
 
   return { config, content, customCss };
+}
+
+/**
+ * Neutraliza el custom_css antes de inyectarlo con dangerouslySetInnerHTML.
+ *
+ * Un `<style>` es un "raw text element": el navegador solo lo cierra al
+ * encontrar literalmente `</style`. Sin esto, un dueño podría guardar
+ * `custom_css = "</style><script>…</script>"` y lograr XSS almacenado que
+ * corre en el menú de TODOS sus comensales. Quitamos esa secuencia (y, por
+ * higiene, cualquier `</script`/`<!--`); el CSS legítimo nunca la necesita.
+ *
+ * Nota: esto cierra el "breakout" a JS, pero el CSS arbitrario aún puede
+ * exfiltrar datos por selectores+url(). El control real es restringir quién
+ * puede escribir custom_css y/o un Content-Security-Policy.
+ */
+export function sanitizeCustomCss(css: string | null | undefined): string {
+  if (!css) return '';
+  return css.replace(/<\/(style|script)/gi, '').replace(/<!--/g, '');
 }
 
 /* ── Helpers de color ─────────────────────────────────────── */
@@ -172,7 +190,8 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     '--u-text': text,
     '--u-text-2': rgba(text, 0.74),
     '--u-text-3': rgba(text, 0.5),
-    '--u-text-4': rgba(text, 0.32),
+    // 0.32 reprobaba WCAG AA (2.65:1 sobre fondo oscuro); 0.48 ≈ 4.6:1.
+    '--u-text-4': rgba(text, 0.48),
     '--u-hair': light ? rgba('#000000', 0.1) : rgba(text, 0.1),
     '--u-hair-2': light ? rgba('#000000', 0.16) : rgba(text, 0.18),
 

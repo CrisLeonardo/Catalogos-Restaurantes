@@ -3,7 +3,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { createOrderSchema } from '@/lib/schemas';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { isOpenNow, type WeeklyHours } from '@/lib/hours';
@@ -84,6 +86,14 @@ export async function createOrder(
   }
 
   const { restaurantId, items, customer } = parsed.data;
+
+  // Rate-limit: endpoint público sin login. Frena inundación de pedidos
+  // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
+  const ip = clientIp(await headers());
+  if (!rateLimit(`order:${ip}:${restaurantId}`, 6, 60_000)) {
+    return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
+  }
+
   const db = createServiceClient();
 
   const { data: restaurant } = await db
@@ -212,10 +222,6 @@ export async function createOrder(
     .single();
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
-  const { data: orderNumber } = await db.rpc('generate_order_number', {
-    p_restaurant_id: restaurantId,
-  });
-
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const fee = customer.type === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
   const total = subtotal + fee;
@@ -237,41 +243,33 @@ export async function createOrder(
     customerId = (cid as string | null) ?? null;
   }
 
-  const { data: order, error: orderError } = await db
-    .from('orders')
-    .insert({
-      restaurant_id:  restaurantId,
-      order_number:   orderNumber ?? 'ORD-???',
-      customer_name:  customer.name,
-      customer_phone: customer.phone,
-      order_type:     customer.type,
-      address:        customer.type === 'DINE_IN'
-        ? (customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null)
-        : (customer.address ?? null),
-      ...(customer.type === 'DELIVERY' && customer.zone ? { delivery_zone: customer.zone } : {}),
-      ...(customer.type === 'DELIVERY' && customer.deliveryLat !== undefined && customer.deliveryLng !== undefined
-        ? { delivery_lat: customer.deliveryLat, delivery_lng: customer.deliveryLng }
-        : {}),
-      ...(customerId ? { customer_id: customerId } : {}),
-      payment_method: 'CASH',
-      status:         'NEW',
-      subtotal,
-      delivery_fee:   fee,
-      total,
-      notes:          customer.type === 'DINE_IN' && customer.coursePreference
-        ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
-        : (customer.notes ?? null),
-    })
-    .select('id, order_number, public_token')
-    .single();
+  const address =
+    customer.type === 'DINE_IN'
+      ? (customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null)
+      : (customer.address ?? null);
+  const notes =
+    customer.type === 'DINE_IN' && customer.coursePreference
+      ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
+      : (customer.notes ?? null);
 
-  if (orderError || !order) {
-    return { error: orderError?.message ?? 'Error al crear el pedido.' };
-  }
-
-  const { error: itemsError } = await db.from('order_items').insert(
-    verifiedItems.map((i) => ({
-      order_id:         order.id,
+  // Numeración atómica + pedido + ítems en UNA transacción (RPC place_order):
+  // evita el número duplicado por carrera (count(*)+1) y los pedidos huérfanos
+  // si la inserción de ítems fallara a mitad. Ver migración 016.
+  const { data: placed, error: orderError } = await db.rpc('place_order', {
+    p_restaurant_id:  restaurantId,
+    p_customer_name:  customer.name,
+    p_customer_phone: customer.phone,
+    p_order_type:     customer.type,
+    p_address:        address,
+    p_delivery_zone:  customer.type === 'DELIVERY' && customer.zone ? customer.zone : null,
+    p_delivery_lat:   customer.type === 'DELIVERY' && customer.deliveryLat !== undefined ? customer.deliveryLat : null,
+    p_delivery_lng:   customer.type === 'DELIVERY' && customer.deliveryLng !== undefined ? customer.deliveryLng : null,
+    p_customer_id:    customerId,
+    p_subtotal:       subtotal,
+    p_delivery_fee:   fee,
+    p_total:          total,
+    p_notes:          notes,
+    p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,
       price_snapshot:   i.price,
@@ -279,9 +277,12 @@ export async function createOrder(
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
     })),
-  );
+  });
 
-  if (itemsError) return { error: itemsError.message };
+  const order = placed as { id: string; order_number: string; public_token: string } | null;
+  if (orderError || !order) {
+    return { error: orderError?.message ?? 'Error al crear el pedido.' };
+  }
 
   // Notificación push server-side: llega a la barra del sistema aunque la
   // app esté cerrada o en segundo plano (requiere VAPID configurado).

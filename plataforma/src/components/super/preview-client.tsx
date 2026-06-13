@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import MenuShell from '@/components/menu-shell';
 import ThemeBackground from '@/components/theme-background';
-import { buildThemeVars, buildFontsHref } from '@/lib/theme/resolve';
+import { buildThemeVars, buildFontsHref, sanitizeCustomCss } from '@/lib/theme/resolve';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
@@ -170,7 +170,7 @@ export default function PreviewClient({
       />
 
       {/* CSS propio del restaurante: al final del documento → gana sobre todo. */}
-      {customCss ? <style dangerouslySetInnerHTML={{ __html: customCss }} /> : null}
+      {customCss ? <style dangerouslySetInnerHTML={{ __html: sanitizeCustomCss(customCss) }} /> : null}
     </div>
   );
 }
