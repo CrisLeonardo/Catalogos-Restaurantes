@@ -20,11 +20,11 @@ Se encontraron **2 vulnerabilidades altas**, **2 medias**, varios riesgos de con
 | S1 | 🔴 Alta | XSS almacenado vía `custom_css` (`dangerouslySetInnerHTML`) | ✅ Corregido |
 | S2 | 🔴 Alta | RLS de `push_subscriptions` abierta a `public` (anon key) | ✅ Corregido (mig. 015) |
 | S3 | 🟠 Media | SSRF en `/api/icon/[slug]` (fetch de `logo_url` sin validar host) | ✅ Corregido |
-| S4 | 🟠 Media | Sin rate-limit en endpoints públicos (`createOrder`, `trackVisit`) | 📋 Documentado |
+| S4 | 🟠 Media | Sin rate-limit en endpoints públicos (`createOrder`, `trackVisit`) | ✅ Corregido (in-memory) |
 | B1 | 🟠 Media | Bug: combos se guardan como `single` (`parseOptions`) | ✅ Corregido |
 | C1 | 🟠 Media | `order_number` con `count(*)+1` → colisión por concurrencia | ✅ Corregido (mig. 016) |
 | C2 | 🟡 Baja | `orders` + `order_items` insertados sin transacción | ✅ Corregido (mig. 016) |
-| P1 | 🟠 Media | `getVisitStats` agrega hasta 50 000 filas en JS por carga | 📋 Documentado |
+| P1 | 🟠 Media | `getVisitStats` agrega hasta 50 000 filas en JS por carga | ✅ Corregido (mig. 017) |
 | S5 | 🟡 Baja | `X-XSS-Protection: 1; mode=block` deprecado; falta CSP | ✅ Parcial / 📋 CSP |
 | U1 | 🟠 Media | `--u-text-4` (op. 0.32) = 2.65:1 → reprueba WCAG AA | ✅ Corregido (0.48 → 4.61:1) |
 
@@ -82,13 +82,13 @@ El handler hace `fetch(iconUrl)` **server-side** y devuelve el body. `iconUrl` s
 
 > Recomendación adicional (no aplicada): validar también el host **al guardar** `logo_url`/`pwaIconUrl` en las actions, para rechazar el dato malicioso en origen.
 
-### 🟠 S4 — Sin rate-limiting en endpoints públicos *(A04: Insecure Design)*
+### ✅ S4 — Rate-limiting en endpoints públicos *(corregido)*
 
-`createOrder` ([`actions/orders.ts:77`](plataforma/src/lib/actions/orders.ts:77)) y `trackVisit` ([`actions/metrics.ts:20`](plataforma/src/lib/actions/metrics.ts:20)) son invocables anónimamente y escriben con service role. Sin límite:
-- **`createOrder`**: inundación de pedidos → spam de push/sonido al restaurante + crecimiento de tabla. (Mitigado en parte: valida horario, pausa y módulo activo.)
-- **`trackVisit`**: con `visitorId` controlado por el atacante, se pueden inflar “visitantes únicos” y llenar `page_visits`.
+`createOrder` y `trackVisit` son invocables anónimamente y escriben con service role. Sin límite, `createOrder` permitía inundar de pedidos (spam de push/sonido + crecimiento de tabla) y `trackVisit` inflar métricas / llenar `page_visits`.
 
-**No aplicado** (requiere infraestructura): rate-limit por IP (Upstash/Redis, o el rate-limiter del WAF de Render/Vercel), y un `captcha`/honeypot en el checkout. Como mínimo, un límite por IP+restaurante por minuto.
+**Corrección aplicada:** limitador en memoria [`lib/rate-limit.ts`](plataforma/src/lib/rate-limit.ts) (ventana fija por IP), aplicado en [`createOrder`](plataforma/src/lib/actions/orders.ts) (**6/min** por IP+restaurante) y [`trackVisit`](plataforma/src/lib/actions/metrics.ts) (**40/min**). La IP sale de `x-forwarded-for`.
+
+> ⚠️ **Limitación:** el contador vive en el proceso → con escalado horizontal (varias instancias) cada una cuenta por separado. Para tu deploy actual de 1 instancia en Render es suficiente; si escalas, migrar a **Redis/Upstash** con la misma interfaz `rateLimit()`. Un `captcha`/honeypot en el checkout sigue siendo recomendable contra bots dedicados.
 
 ### 🟡 S5 — Headers de seguridad
 
@@ -106,11 +106,14 @@ El handler hace `fetch(iconUrl)` **server-side** y devuelve el body. `iconUrl` s
 
 ## 2. Rendimiento
 
-### 🟠 P1 — `getVisitStats` agrega en JS hasta 50 000 filas por carga
-**Dónde:** [`src/lib/actions/metrics.ts:93`](plataforma/src/lib/actions/metrics.ts:93)
+### ✅ P1 — `getVisitStats` agregaba en JS hasta 50 000 filas por carga *(corregido, mig. 017)*
+**Antes:** traía hasta `limit(50000)` filas de `page_visits` y calculaba today/7d/30d + únicos + serie de 14 días **en memoria** en cada carga del panel.
 
-Trae hasta `limit(50000)` filas de `page_visits` y calcula today/7d/30d + únicos + serie de 14 días **en memoria** en cada carga del panel de métricas. A medida que crezca el tráfico, esto será lento y pesado en RAM.
-**Recomendación:** mover la agregación a SQL (un RPC `security definer` con `GROUP BY date_trunc('day', created_at AT TIME ZONE tz)` y `count(distinct visitor_id)`). Devuelve decenas de filas en vez de decenas de miles.
+**Corrección aplicada:** [`migrations/017_visit_stats_rpc.sql`](plataforma/supabase/migrations/017_visit_stats_rpc.sql) añade el RPC `visit_stats` (`security definer`, `stable`) que agrega en SQL con `count(distinct visitor_id)` y `generate_series` para la franja de 14 días, usando la zona horaria del restaurante. [`getVisitStats`](plataforma/src/lib/actions/metrics.ts) ahora solo recibe el resumen (≈decenas de filas).
+
+**Verificado en la BD local:** con +3 visitas de hoy (2 de un visitante, 1 de otro) → `today=3`, `uniqueToday=2`, y la última celda de la serie `{day, visits:3, is_today:true}`. La serie siempre trae 14 entradas.
+
+> **Acción requerida:** correr la **migración 017** en producción.
 
 ### 🟡 P2 — `getRestaurantBySlug`: 2 queries secuenciales
 **Dónde:** [`src/lib/db/restaurants.ts:29`](plataforma/src/lib/db/restaurants.ts) — restaurante y luego tema. Es secuencial por necesidad (el tema depende del `id`). Menor; opcional unir con un `select` embebido `restaurants(*, restaurant_themes(*))`.
@@ -212,17 +215,18 @@ Medido sobre el fondo oscuro `#0b0b0c` (valores reales del DOM):
 | [`supabase/migrations/016_atomic_order_placement.sql`](plataforma/supabase/migrations/016_atomic_order_placement.sql) | **Nueva** — `order_counters` + RPC `place_order` (fix C1+C2) |
 | [`lib/actions/orders.ts`](plataforma/src/lib/actions/orders.ts) | `createOrder` usa el RPC transaccional `place_order` (fix C1+C2) |
 | [`app/globals.css`](plataforma/src/app/globals.css) · [`lib/theme/resolve.ts`](plataforma/src/lib/theme/resolve.ts) | `--u-text-4` 0.32 → 0.48 (fix U1) |
+| [`lib/rate-limit.ts`](plataforma/src/lib/rate-limit.ts) (nuevo) · [`actions/orders.ts`](plataforma/src/lib/actions/orders.ts) · [`actions/metrics.ts`](plataforma/src/lib/actions/metrics.ts) | Rate-limit in-memory en `createOrder`/`trackVisit` (fix S4) |
+| [`supabase/migrations/017_visit_stats_rpc.sql`](plataforma/supabase/migrations/017_visit_stats_rpc.sql) (nuevo) · [`actions/metrics.ts`](plataforma/src/lib/actions/metrics.ts) | RPC `visit_stats`; `getVisitStats` agrega en SQL (fix P1) |
 
-**Verificación:** `tsc --noEmit` en verde; demo del cliente renderiza sin errores de consola; sanitizador probado con casos de ataque (mayúsculas, breakout, CSS legítimo con `>`); RPC `place_order` probado contra la BD local (atomicidad + numeración secuencial, sin contaminar datos); contraste de `--u-text-4` medido en vivo en 4.61:1.
+**Verificación:** `tsc --noEmit` y `eslint` (de los archivos tocados) en verde; demo del cliente y panel de métricas renderizan sin errores de consola; sanitizador probado con casos de ataque; RPC `place_order` probado contra la BD local (atomicidad + numeración secuencial); RPC `visit_stats` probado (conteos + serie + `is_today`); contraste de `--u-text-4` medido en vivo en 4.61:1. Commit en rama `auditoria-fixes-2026-06-12`.
 
-> **Acción manual requerida:** correr las **migraciones 015 y 016** en Supabase de producción.
+> **Acción manual requerida:** correr las **migraciones 015, 016 y 017** en Supabase de producción.
 
 ---
 
 ## 7. Pendientes priorizados (requieren tu decisión / infraestructura)
 
-1. **(Alta)** Correr migraciones **015 y 016** en prod. Definir si `custom_css` debe quedar **solo para Super Admin** (reduce mucho la superficie de S1).
+1. **(Alta)** Correr migraciones **015, 016 y 017** en prod. Definir si `custom_css` debe quedar **solo para Super Admin** (reduce mucho la superficie de S1).
 2. **(Alta)** Añadir **CSP** (empezar en `Report-Only`).
-3. **(Media)** Rate-limit en `createOrder`/`trackVisit` (S4).
-4. **(Media)** Agregación SQL en `getVisitStats` (P1).
-5. **(Baja)** Validar host de `logo_url` al guardar; `crypto.randomUUID()` para IDs de opciones; endurecer `with check` de la policy de UPDATE de `orders`; índice único opcional en `orders(restaurant_id, order_number)` tras deduplicar.
+3. **(Media)** Si se escala a varias instancias, migrar el rate-limit (S4) a Redis/Upstash; considerar captcha/honeypot en el checkout.
+4. **(Baja)** Validar host de `logo_url` al guardar; `crypto.randomUUID()` para IDs de opciones; endurecer `with check` de la policy de UPDATE de `orders`; índice único opcional en `orders(restaurant_id, order_number)` tras deduplicar.
