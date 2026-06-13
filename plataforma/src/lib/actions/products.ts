@@ -56,7 +56,7 @@ function parseOptions(raw: string | null): ProductOptionGroup[] | null | { error
   const out: ProductOptionGroup[] = [];
   for (const g of data as Record<string, unknown>[]) {
     const name = typeof g.name === 'string' ? g.name.trim().slice(0, 60) : '';
-    const type = g.type === 'multi' ? 'multi' : 'single';
+    const type = g.type === 'multi' ? 'multi' : g.type === 'combo' ? 'combo' : 'single';
     const id = typeof g.id === 'string' && g.id ? g.id.slice(0, 60) : Math.random().toString(36).slice(2, 9);
     if (!name || !Array.isArray(g.choices)) continue;
     if (g.choices.length > 20) return { error: 'Máximo 20 opciones por grupo.' };

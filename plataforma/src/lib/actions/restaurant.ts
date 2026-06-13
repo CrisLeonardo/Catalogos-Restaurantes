@@ -317,6 +317,22 @@ export async function saveAdminRestaurantTheme(input: {
   const db = createServiceClient();
   const { restaurantId, config, content, customCss } = input;
 
+  // custom_css es CSS crudo (superficie de inyección): solo el Super Admin
+  // puede definirlo (modelo "Leonardo diseña"). Para un dueño NO se toca —
+  // se conserva el valor existente, ignorando lo que mande el cliente (la UI
+  // ya le oculta el campo, pero el server action es el candado real).
+  let effectiveCss: string | null;
+  if (isSuperAdmin) {
+    effectiveCss = customCss?.trim() ? customCss : null;
+  } else {
+    const { data: existing } = await db
+      .from('restaurant_themes')
+      .select('custom_css')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    effectiveCss = (existing?.custom_css as string | null) ?? null;
+  }
+
   const legacyPortada = ['spotlight', 'poster', 'stack'].includes(config.portadaVariant)
     ? config.portadaVariant
     : 'spotlight';
@@ -328,7 +344,7 @@ export async function saveAdminRestaurantTheme(input: {
         restaurant_id: restaurantId,
         config,
         content,
-        custom_css: customCss?.trim() ? customCss : null,
+        custom_css: effectiveCss,
         brand_name: config.brandName || null,
         logo_url: config.logoUrl || null,
         color_primary: config.colorAccent,

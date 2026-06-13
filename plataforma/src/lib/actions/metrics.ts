@@ -12,7 +12,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { localDateKey } from '@/lib/hours';
+import { headers } from 'next/headers';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const PATH_RE = /^\/[\w\-/[\]%.]*$/;
@@ -24,6 +25,10 @@ export async function trackVisit(
 ): Promise<void> {
   if (!UUID_RE.test(restaurantId) || !UUID_RE.test(visitorId)) return;
   const safePath = PATH_RE.test(path) ? path.slice(0, 120) : '/';
+
+  // Rate-limit: evita inflar métricas / llenar la tabla desde una misma IP.
+  const ip = clientIp(await headers());
+  if (!rateLimit(`visit:${ip}:${restaurantId}`, 40, 60_000)) return;
 
   try {
     const db = createServiceClient();
@@ -86,68 +91,43 @@ export async function getVisitStats(
       profile?.restaurant_id === restaurantId);
   if (!allowed) return EMPTY_VISIT_STATS;
 
+  // La agregación se hace en SQL (RPC visit_stats, migración 017): la BD
+  // devuelve solo el resumen, no decenas de miles de filas. Los cortes de día
+  // usan la zona horaria del restaurante.
   const db = createServiceClient();
-  const since = new Date();
-  since.setDate(since.getDate() - 31);
+  const { data } = await db.rpc('visit_stats', {
+    p_restaurant_id: restaurantId,
+    p_tz: timezone,
+  });
+  if (!data) return EMPTY_VISIT_STATS;
 
-  const { data } = await db
-    .from('page_visits')
-    .select('visitor_id, created_at')
-    .eq('restaurant_id', restaurantId)
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(50000);
+  const r = data as {
+    today: number; uniqueToday: number;
+    last7: number; unique7: number;
+    last30: number; unique30: number;
+    series14: { day: string; visits: number; is_today: boolean }[];
+  };
 
-  const rows = data ?? [];
-  const now = new Date();
-  const todayKey = localDateKey(now, timezone);
-
-  const key7 = new Set<string>();
-  const key14ByDay = new Map<string, number>();
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    key7.add(localDateKey(d, timezone));
-  }
-  const order14: string[] = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    const k = localDateKey(d, timezone);
-    order14.push(k);
-    key14ByDay.set(k, 0);
-  }
-
-  let today = 0, last7 = 0, last30 = 0;
-  const uniqToday = new Set<string>(), uniq7 = new Set<string>(), uniq30 = new Set<string>();
-
-  for (const r of rows) {
-    const k = localDateKey(new Date(r.created_at as string), timezone);
-    last30 += 1;
-    uniq30.add(r.visitor_id as string);
-    if (key7.has(k)) { last7 += 1; uniq7.add(r.visitor_id as string); }
-    if (k === todayKey) { today += 1; uniqToday.add(r.visitor_id as string); }
-    if (key14ByDay.has(k)) key14ByDay.set(k, (key14ByDay.get(k) ?? 0) + 1);
-  }
-
-  const series14: DayVisits[] = order14.map((k, idx) => {
+  const series14: DayVisits[] = (r.series14 ?? []).map(({ day, visits, is_today }) => {
+    // `day` ya es la fecha local (YYYY-MM-DD); su inicial de día de semana se
+    // obtiene formateando el mediodía UTC de esa fecha (independiente del runtime).
     let label = '·';
     try {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (13 - idx));
-      const short = d.toLocaleDateString('es', { weekday: 'short', timeZone: timezone });
+      const short = new Date(`${day}T12:00:00Z`).toLocaleDateString('es', {
+        weekday: 'short', timeZone: 'UTC',
+      });
       label = short.charAt(0).toUpperCase() + short.slice(1, 2);
     } catch {}
-    return { label, visits: key14ByDay.get(k) ?? 0, isToday: k === todayKey };
+    return { label, visits: Number(visits), isToday: is_today };
   });
 
   return {
-    today,
-    uniqueToday: uniqToday.size,
-    last7,
-    unique7: uniq7.size,
-    last30,
-    unique30: uniq30.size,
+    today: Number(r.today),
+    uniqueToday: Number(r.uniqueToday),
+    last7: Number(r.last7),
+    unique7: Number(r.unique7),
+    last30: Number(r.last30),
+    unique30: Number(r.unique30),
     series14,
   };
 }

@@ -38,7 +38,8 @@
   --u-text:    var(--brand-text);
   --u-text-2:  rgba(245, 243, 239, 0.74);
   --u-text-3:  rgba(245, 243, 239, 0.50);
-  --u-text-4:  rgba(245, 243, 239, 0.32);
+  /* 0.32 daba 2.65:1 sobre el fondo oscuro → reprobaba WCAG AA. 0.48 ≈ 4.6:1. */
+  --u-text-4:  rgba(245, 243, 239, 0.48);
   --u-hair:    rgba(245, 243, 239, 0.10);
   --u-hair-2:  rgba(245, 243, 239, 0.18);
 
