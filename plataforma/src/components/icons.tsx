@@ -60,6 +60,8 @@ export const ICON_PATHS: Record<string, ReactNode> = {
   milk: <><path d="M8 2h8" /><path d="M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.788a4 4 0 0 0-.672-2.22l-.656-.984A4 4 0 0 1 15 4.788V2" /><path d="M7 15a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0" /></>,
   wheat: <><path d="M12 22v-9" /><path d="M16 8c0-2.2-1.8-4-4-4s-4 1.8-4 4c2.2 0 4 1.8 4 4 0-2.2 1.8-4 4-4Z" /><path d="M16 14c0-2.2-1.8-4-4-4s-4 1.8-4 4c2.2 0 4 1.8 4 4 0-2.2 1.8-4 4-4Z" /></>,
   utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2" /><path d="M5 2v20" /><path d="M21 15V2a5 5 0 0 0-3 4.5V13c0 1 .5 2 2 2Z" /></>,
+  helpCircle: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" x2="12.01" y1="17" y2="17" /></>,
+  mail: <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></>,
 };
 
 export type IconName = keyof typeof ICON_PATHS;

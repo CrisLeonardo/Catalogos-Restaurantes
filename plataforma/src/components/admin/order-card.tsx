@@ -68,6 +68,7 @@ function nextLabel(order: OrderWithItems): string {
 export default function OrderCard({ order, currency }: { order: OrderWithItems; currency: PanelCurrency }) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const next = nextStatus(order);
 
   async function handleAdvance() {
@@ -76,6 +77,7 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
   }
 
   async function handleCancel() {
+    setConfirmCancel(false);
     start(async () => { await updateOrderStatus(order.id, 'CANCEL'); });
   }
 
@@ -209,40 +211,80 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
       {/* Acciones */}
       {!isTerminal && (
         <div style={{ display: 'flex', gap: 8 }}>
-          {next && (
-            <button
-              onClick={handleAdvance}
-              disabled={isPending}
-              className="press btn-accent"
-              style={{
-                flex: 1, padding: '10px 12px',
-                borderRadius: 'var(--radius-lg)',
-                fontWeight: 700, fontSize: 13,
-                cursor: isPending ? 'not-allowed' : 'pointer',
-                border: 'none',
-                opacity: isPending ? 0.7 : 1,
-              }}
-            >
-              {nextLabel(order)}
-            </button>
+          {confirmCancel ? (
+            <>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+                ¿Cancelar este pedido?
+              </span>
+              <button
+                onClick={() => setConfirmCancel(false)}
+                disabled={isPending}
+                className="press"
+                style={{
+                  padding: '10px 14px', borderRadius: 'var(--radius-lg)',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid var(--u-hair)',
+                  color: 'var(--u-text-2)',
+                }}
+              >
+                No
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isPending}
+                className="press"
+                style={{
+                  padding: '10px 14px', borderRadius: 'var(--radius-lg)',
+                  fontWeight: 700, fontSize: 13,
+                  cursor: isPending ? 'not-allowed' : 'pointer',
+                  background: 'rgba(239,68,68,0.18)',
+                  border: '1px solid rgba(239,68,68,0.40)',
+                  color: '#ef4444',
+                  opacity: isPending ? 0.7 : 1,
+                }}
+              >
+                Sí, cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              {next && (
+                <button
+                  onClick={handleAdvance}
+                  disabled={isPending}
+                  className="press btn-accent"
+                  style={{
+                    flex: 1, padding: '10px 12px',
+                    borderRadius: 'var(--radius-lg)',
+                    fontWeight: 700, fontSize: 13,
+                    cursor: isPending ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    opacity: isPending ? 0.7 : 1,
+                  }}
+                >
+                  {nextLabel(order)}
+                </button>
+              )}
+              <button
+                onClick={() => setConfirmCancel(true)}
+                disabled={isPending}
+                className="press"
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontWeight: 600, fontSize: 13,
+                  cursor: isPending ? 'not-allowed' : 'pointer',
+                  background: 'rgba(239,68,68,0.10)',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  color: '#ef4444',
+                  opacity: isPending ? 0.7 : 1,
+                }}
+              >
+                Cancelar
+              </button>
+            </>
           )}
-          <button
-            onClick={handleCancel}
-            disabled={isPending}
-            className="press"
-            style={{
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-lg)',
-              fontWeight: 600, fontSize: 13,
-              cursor: isPending ? 'not-allowed' : 'pointer',
-              background: 'rgba(239,68,68,0.10)',
-              border: '1px solid rgba(239,68,68,0.25)',
-              color: '#ef4444',
-              opacity: isPending ? 0.7 : 1,
-            }}
-          >
-            Cancelar
-          </button>
         </div>
       )}
     </div>

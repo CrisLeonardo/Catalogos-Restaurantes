@@ -55,6 +55,7 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
     { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle'  },
     { href: '/admin/perfil',          label: 'Perfil',       icon: 'user'     },
     { href: '/admin/qr',              label: 'QR',           icon: 'image'    },
+    { href: '/admin/soporte',         label: 'Soporte',      icon: 'helpCircle' },
   ];
 
   const title =
@@ -67,6 +68,7 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
     : pathname.startsWith('/admin/personalizacion') ? 'Personalizar sitio'
     : pathname.startsWith('/admin/perfil')          ? 'Perfil'
     : pathname.startsWith('/admin/qr')              ? 'Código QR'
+    : pathname.startsWith('/admin/soporte')         ? 'Soporte'
     : 'Panel';
 
   const isLive = pathname.startsWith('/admin/pedidos');

@@ -486,6 +486,41 @@ export interface PublicOrder {
 }
 
 /**
+ * Cancela un pedido desde el cliente final usando el token público.
+ * Solo se permite cuando el estado es NEW (aún no confirmado por el restaurante).
+ */
+export async function cancelPublicOrder(
+  token: string,
+  restaurantId: string,
+): Promise<{ error?: string; success?: boolean }> {
+  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return { error: 'Token inválido.' };
+  if (!restaurantId) return { error: 'Restaurante inválido.' };
+
+  const db = createServiceClient();
+
+  const { data: order } = await db
+    .from('orders')
+    .select('id, status, restaurant_id')
+    .eq('public_token', token)
+    .single();
+
+  if (!order || order.restaurant_id !== restaurantId)
+    return { error: 'Pedido no encontrado.' };
+
+  if (order.status !== 'NEW')
+    return { error: 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.' };
+
+  const { error } = await db
+    .from('orders')
+    .update({ status: 'CANCEL' })
+    .eq('id', order.id);
+
+  if (error) return { error: error.message };
+
+  return { success: true };
+}
+
+/**
  * Estado de un pedido por su token público. El token es un UUID opaco que
  * solo conoce quien hizo el pedido; no expone teléfono ni dirección.
  * Se usa para el render inicial Y para el polling de estado en vivo.

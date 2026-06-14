@@ -9,13 +9,13 @@
    "En preparación → Listo → En camino → Entregado" sin recargar.
    ============================================================ */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
-import { getPublicOrder, type PublicOrder } from '@/lib/actions/orders';
+import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actions/orders';
 import type { OrderStatus } from '@/types';
 
 const POLL_MS = 8000;
@@ -47,12 +47,14 @@ export default function OrderTracker({
   const config = useThemeConfig();
   const content = useThemeContent();
   const [order, setOrder] = useState<PublicOrder>(initialOrder);
-  // El intervalo de polling necesita leer el estado MÁS RECIENTE sin
-  // re-suscribirse en cada cambio: ref espejo actualizada por efecto.
   const orderRef = useRef(initialOrder);
   useEffect(() => {
     orderRef.current = order;
   }, [order]);
+
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCancelling, startCancel] = useTransition();
 
   /* Permiso de notificaciones del sistema (avisos de cambio de estado). */
   const [notifPerm, setNotifPerm] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('unsupported');
@@ -111,6 +113,24 @@ export default function OrderTracker({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, restaurantId, initialOrder.status]);
 
+  function handleCancelRequest() {
+    setCancelError(null);
+    setShowCancelConfirm(true);
+  }
+
+  function handleCancelConfirm() {
+    startCancel(async () => {
+      const result = await cancelPublicOrder(token, restaurantId);
+      if (result.error) {
+        setCancelError(result.error);
+        setShowCancelConfirm(false);
+      } else {
+        setOrder((prev) => ({ ...prev, status: 'CANCEL' as OrderStatus }));
+        setShowCancelConfirm(false);
+      }
+    });
+  }
+
   async function enableNotifications() {
     try {
       const res = await Notification.requestPermission();
@@ -154,6 +174,75 @@ export default function OrderTracker({
           >
             <Icon name="bell" size={14} /> Avisarme cuando avance
           </button>
+        )}
+
+        {/* Botón cancelar — solo disponible cuando el pedido está en NEW */}
+        {order.status === 'NEW' && (
+          <div style={{ marginTop: 14 }}>
+            {cancelError && (
+              <p style={{ fontSize: 12.5, color: '#f87171', marginBottom: 8 }}>{cancelError}</p>
+            )}
+            {showCancelConfirm ? (
+              <Glass variant="quiet" style={{ borderRadius: 14, padding: '14px 16px' }}>
+                <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)', marginBottom: 12 }}>
+                  ¿Seguro que quieres cancelar tu pedido?
+                </p>
+                <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginBottom: 14 }}>
+                  Esta acción no se puede deshacer. Si ya fue confirmado por el restaurante, no será posible cancelarlo.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelConfirm(false)}
+                    disabled={isCancelling}
+                    className="press"
+                    style={{
+                      flex: 1, padding: '10px 12px', borderRadius: 12,
+                      fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid var(--u-hair)',
+                      color: 'var(--u-text-2)',
+                    }}
+                  >
+                    No, mantener pedido
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelConfirm}
+                    disabled={isCancelling}
+                    className="press"
+                    style={{
+                      flex: 1, padding: '10px 12px', borderRadius: 12,
+                      fontWeight: 700, fontSize: 13,
+                      cursor: isCancelling ? 'not-allowed' : 'pointer',
+                      background: 'rgba(239,68,68,0.18)',
+                      border: '1px solid rgba(239,68,68,0.40)',
+                      color: '#f87171',
+                      opacity: isCancelling ? 0.6 : 1,
+                    }}
+                  >
+                    {isCancelling ? 'Cancelando...' : 'Sí, cancelar'}
+                  </button>
+                </div>
+              </Glass>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCancelRequest}
+                className="press"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '8px 14px', borderRadius: 99,
+                  fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                  background: 'rgba(239,68,68,0.10)',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  color: '#f87171',
+                }}
+              >
+                <Icon name="x" size={13} strokeWidth={2.5} /> Cancelar pedido
+              </button>
+            )}
+          </div>
         )}
       </div>
 

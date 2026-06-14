@@ -570,3 +570,57 @@ export async function updateOrderTypes(
   revalidatePath(`/super/restaurantes/${restaurantId}`);
   return { ok: true };
 }
+
+/* ── Configuración de la plataforma (datos de soporte) ─────────────── */
+
+export interface PlatformContactSettings {
+  support_whatsapp: string;
+  support_email: string;
+}
+
+/** Lee los datos de contacto del soporte desde platform_settings. */
+export async function getPlatformContactSettings(): Promise<PlatformContactSettings> {
+  const db = createServiceClient();
+  const { data } = await db.from('platform_settings').select('key, value');
+  const map = Object.fromEntries(
+    (data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]),
+  );
+  return {
+    support_whatsapp: (map.support_whatsapp as string) ?? '',
+    support_email: (map.support_email as string) ?? '',
+  };
+}
+
+export type PlatformSettingsState = { saved: true } | { error: string } | null;
+
+/** Guarda los datos de contacto del soporte (solo Super Admin). */
+export async function savePlatformSettings(
+  prevState: PlatformSettingsState,
+  formData: FormData,
+): Promise<PlatformSettingsState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+
+  const whatsapp = String(formData.get('support_whatsapp') ?? '').trim();
+  const email = String(formData.get('support_email') ?? '').trim();
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { error: 'El correo electrónico no es válido.' };
+
+  if (whatsapp && !/^\+?[\d\s\-()+]{7,20}$/.test(whatsapp))
+    return { error: 'El número de WhatsApp no es válido (solo dígitos, +, espacios y guiones).' };
+
+  const { error } = await db.from('platform_settings').upsert(
+    [
+      { key: 'support_whatsapp', value: whatsapp },
+      { key: 'support_email', value: email },
+    ],
+    { onConflict: 'key' },
+  );
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/super/configuracion');
+  revalidatePath('/admin/soporte');
+  return { saved: true };
+}
