@@ -23,6 +23,8 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [state, formAction, isPending] = useActionState(action, emptyState);
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
+  const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
+  const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
   const [options, setOptions] = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
@@ -82,20 +84,69 @@ export default function ProductForm({ restaurantId, categories, product, default
         />
       </Glass>
 
-      {/* Precio */}
+      {/* Precio y costo → margen en vivo */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="price" style={labelStyle}>Precio *</label>
-        <input
-          id="price"
-          name="price"
-          type="number"
-          required
-          min="0"
-          step="0.01"
-          defaultValue={product?.price ?? ''}
-          placeholder="0.00"
-          style={inputStyle}
-        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label htmlFor="price" style={labelStyle}>Precio *</label>
+            <input
+              id="price"
+              name="price"
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              value={priceVal}
+              onChange={(e) => setPriceVal(e.target.value)}
+              placeholder="0.00"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label htmlFor="cost" style={labelStyle}>Costo</label>
+            <input
+              id="cost"
+              name="cost"
+              type="number"
+              min="0"
+              step="0.01"
+              value={costVal}
+              onChange={(e) => setCostVal(e.target.value)}
+              placeholder="0.00"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+        {(() => {
+          const p = parseFloat(priceVal);
+          const c = parseFloat(costVal);
+          if (isNaN(p) || isNaN(c) || costVal.trim() === '') {
+            return (
+              <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8, display: 'block' }}>
+                Captura el costo para ver tu utilidad y margen por venta.
+              </span>
+            );
+          }
+          const profit = p - c;
+          const margin = p > 0 ? (profit / p) * 100 : 0;
+          const good = profit >= 0;
+          return (
+            <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 12.5 }}>
+              <span style={{ color: 'var(--u-text-3)' }}>
+                Utilidad:{' '}
+                <strong style={{ color: good ? 'var(--u-text)' : '#f87171' }}>
+                  {profit.toFixed(2)}
+                </strong>
+              </span>
+              <span style={{ color: 'var(--u-text-3)' }}>
+                Margen:{' '}
+                <strong style={{ color: good ? 'var(--brand-accent)' : '#f87171' }}>
+                  {margin.toFixed(0)}%
+                </strong>
+              </span>
+            </div>
+          );
+        })()}
       </Glass>
 
       {/* Categoría */}

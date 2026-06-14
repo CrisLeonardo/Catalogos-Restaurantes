@@ -50,6 +50,8 @@ export function getTenantSlug(host: string | null | undefined): string | null {
     if (hostname.endsWith(`.${root}`)) {
       const sub = hostname.slice(0, hostname.length - root.length - 1);
       if (!sub || sub === "www") return null;
+      // slug-central.root → panel del GRUPO, no es un menú de restaurante.
+      if (sub.endsWith("-central")) return null;
       // azucar-negra-admin.root → slug es "azucar-negra"
       if (sub.endsWith("-admin")) {
         return sub.slice(0, -6); // quita el sufijo "-admin"
@@ -76,4 +78,34 @@ export function isAdminSubdomain(host: string | null | undefined): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Devuelve true cuando el host es el subdominio del PANEL DE GRUPO.
+ * Patrón: SLUG-central.leogin.online (un nivel, cubierto por el wildcard).
+ * Ejemplos: tacos-del-norte-central.leogin.online → true
+ */
+export function isGroupSubdomain(host: string | null | undefined): boolean {
+  if (!host) return false;
+  const hostname = host.toLowerCase().split(":")[0];
+  for (const root of ROOT_DOMAINS) {
+    if (hostname.endsWith(`.${root}`)) {
+      const sub = hostname.slice(0, hostname.length - root.length - 1);
+      return sub.endsWith("-central");
+    }
+  }
+  return false;
+}
+
+/** Slug del grupo a partir del host (quita el sufijo "-central"), o null. */
+export function getGroupSlug(host: string | null | undefined): string | null {
+  if (!host) return null;
+  const hostname = host.toLowerCase().split(":")[0];
+  for (const root of ROOT_DOMAINS) {
+    if (hostname.endsWith(`.${root}`)) {
+      const sub = hostname.slice(0, hostname.length - root.length - 1);
+      if (sub.endsWith("-central")) return sub.slice(0, -8); // quita "-central"
+    }
+  }
+  return null;
 }

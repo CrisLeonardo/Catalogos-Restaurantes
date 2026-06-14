@@ -9,6 +9,8 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { isOpenNow, type WeeklyHours } from '@/lib/hours';
+import { resolvePromo } from '@/lib/db/promos';
+import { logActivity } from '@/lib/activity';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -174,7 +176,7 @@ export async function createOrder(
   const productIds = [...new Set(items.map((i) => i.productId))];
   const { data: dbProducts, error: productsError } = await db
     .from('products')
-    .select('id, name, price, is_available, options')
+    .select('id, name, price, cost, is_available, options')
     .eq('restaurant_id', restaurantId)
     .in('id', productIds);
 
@@ -188,6 +190,7 @@ export async function createOrder(
     productId: string;
     name: string;
     price: number;
+    cost: number | null;
     quantity: number;
     options: OrderItemOption[];
   }[] = [];
@@ -209,6 +212,9 @@ export async function createOrder(
       productId: product.id as string,
       name: product.name as string,
       price: Number(product.price) + resolvedOpts.delta,
+      // Costo congelado al vender (margen histórico). El costo es del producto
+      // base; las variantes/extras no llevan costo propio por ahora.
+      cost: product.cost != null ? Number(product.cost) : null,
       quantity: item.quantity,
       options: resolvedOpts.snapshot,
     });
@@ -224,7 +230,12 @@ export async function createOrder(
 
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const fee = customer.type === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
-  const total = subtotal + fee;
+
+  // Promoción (cupón escrito o automática). Autoritativo en el servidor:
+  // el descuento NUNCA se toma del cliente, se recalcula contra la BD.
+  const applied = await resolvePromo(restaurantId, parsed.data.promoCode, subtotal, fee);
+  const discount = applied ? applied.discount : 0;
+  const total = Math.max(0, subtotal + fee - discount);
 
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
@@ -273,6 +284,7 @@ export async function createOrder(
       product_id:       i.productId,
       name_snapshot:    i.name,
       price_snapshot:   i.price,
+      cost_snapshot:    i.cost,
       quantity:         i.quantity,
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
@@ -282,6 +294,16 @@ export async function createOrder(
   const order = placed as { id: string; order_number: string; public_token: string } | null;
   if (orderError || !order) {
     return { error: orderError?.message ?? 'Error al crear el pedido.' };
+  }
+
+  // Persistir la promo aplicada (metadata para recibos/reportes) y contar su uso.
+  if (applied && discount > 0) {
+    await db.from('orders').update({
+      discount,
+      promo_id: applied.promo.id,
+      promo_code: applied.promo.code ?? null,
+    }).eq('id', order.id);
+    await db.rpc('increment_promo_usage', { p_id: applied.promo.id });
   }
 
   // Notificación push server-side: llega a la barra del sistema aunque la
@@ -334,12 +356,37 @@ export async function updateOrderStatus(
 
   const db = profile.role === 'SUPER_ADMIN' ? createServiceClient() : supabase;
 
+  // Al cancelar, devolver stock de productos con inventario (idempotente en BD:
+  // restock_order no hace nada si el pedido ya estaba CANCEL). Va ANTES del update.
+  if (status === 'CANCEL') {
+    await db.rpc('restock_order', { p_order_id: orderId });
+  }
+
+  // Sella la marca de tiempo de la transición (analítica: tiempos y cancelación).
+  const now = new Date().toISOString();
+  const stamp: Record<string, string> =
+    status === 'PREP'      ? { accepted_at: now }
+    : status === 'READY'     ? { ready_at: now }
+    : status === 'DELIVERED' ? { delivered_at: now }
+    : status === 'CANCEL'    ? { cancelled_at: now }
+    : {};
+
   const { error } = await db
     .from('orders')
-    .update({ status })
+    .update({ status, ...stamp })
     .eq('id', orderId);
 
   if (error) return { error: error.message };
+
+  if (profile.restaurant_id) {
+    logActivity({
+      restaurantId: profile.restaurant_id,
+      actorId: user.id,
+      action: 'order_status',
+      entity: status,
+      meta: { orderId },
+    });
+  }
 
   revalidatePath('/admin/pedidos');
   return {};
@@ -510,9 +557,12 @@ export async function cancelPublicOrder(
   if (order.status !== 'NEW')
     return { error: 'Solo puedes cancelar un pedido que aún no ha sido confirmado por el restaurante.' };
 
+  // Devolver stock antes de marcar CANCEL (idempotente en BD).
+  await db.rpc('restock_order', { p_order_id: order.id });
+
   const { error } = await db
     .from('orders')
-    .update({ status: 'CANCEL' })
+    .update({ status: 'CANCEL', cancelled_at: new Date().toISOString() })
     .eq('id', order.id);
 
   if (error) return { error: error.message };

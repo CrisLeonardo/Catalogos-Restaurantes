@@ -1,5 +1,16 @@
 import type { WeeklyHours } from '@/lib/hours';
 
+/** Grupo/cadena dueño de varias sucursales (migración 024). */
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  color_primary: string;
+  contact_email: string | null;
+  created_at: string;
+}
+
 export interface Restaurant {
   id: string;
   slug: string;
@@ -22,6 +33,8 @@ export interface Restaurant {
   location_lat: number | null;
   location_lng: number | null;
   delivery_radius_km: number | null;
+  /** Grupo dueño (migración 024); null = independiente. */
+  organization_id: string | null;
   created_at: string;
 }
 
@@ -95,6 +108,8 @@ export interface Product {
   name: string;
   description: string | null;
   price: number;
+  /** Costo del producto (migración 019). Margen = price - cost. NULL = sin costo. */
+  cost: number | null;
   image_url: string | null;
   icon: string | null;
   tags: string[] | null;
@@ -104,14 +119,39 @@ export interface Product {
   unavailable_at: string | null;
   /** false = oculto permanentemente del menú hasta que el restaurante lo reactive. */
   is_active: boolean;
+  // Inventario (migración 021)
+  track_stock: boolean;
+  stock: number | null;
+  low_stock_threshold: number;
   sort_order: number;
 }
 
 export interface Profile {
   id: string;
   restaurant_id: string | null;
-  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF';
+  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF' | 'GROUP_OWNER';
   full_name: string | null;
+  /** Secciones permitidas para RESTAURANT_STAFF (migración 023); null = todas. */
+  permissions: string[] | null;
+  /** Para GROUP_OWNER (migración 024): el grupo que administra. */
+  organization_id: string | null;
+}
+
+/** Promoción / cupón a nivel de pedido (migración 022). */
+export interface Promotion {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  kind: 'PERCENT' | 'AMOUNT' | 'FREE_DELIVERY';
+  value: number;
+  code: string | null;
+  min_order: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  active: boolean;
+  usage_limit: number | null;
+  used_count: number;
+  created_at: string;
 }
 
 export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'DELIVERED' | 'CANCEL';
@@ -132,10 +172,19 @@ export interface Order {
   status: OrderStatus;
   subtotal: number;
   delivery_fee: number;
+  /** Descuento aplicado (migración 022); total = subtotal + envío - descuento. */
+  discount: number;
+  promo_id: string | null;
+  promo_code: string | null;
   total: number;
   notes: string | null;
   public_token: string;
   created_at: string;
+  // Marcas de tiempo de estado (migración 020) — analítica de tiempos.
+  accepted_at: string | null;
+  ready_at: string | null;
+  delivered_at: string | null;
+  cancelled_at: string | null;
 }
 
 /** Opción elegida congelada en el pedido. */
@@ -151,6 +200,8 @@ export interface OrderItem {
   product_id: string | null;
   name_snapshot: string;
   price_snapshot: number;
+  /** Costo congelado al vender (migración 019); NULL si no había costo. */
+  cost_snapshot: number | null;
   quantity: number;
   subtotal: number;
   options_snapshot: OrderItemOption[] | null;

@@ -319,6 +319,8 @@ function ProductModal({
   const [options,      setOptions]      = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
+  const [priceVal,     setPriceVal]     = useState<string>(product?.price?.toString() ?? '');
+  const [costVal,      setCostVal]      = useState<string>(product?.cost != null ? String(product.cost) : '');
   const [uploading,    setUploading]    = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -584,15 +586,76 @@ function ProductModal({
               </div>
             </div>
 
-            {/* Precio */}
-            <ModalField
-              label="Precio (Q)"
-              name="price"
-              defaultValue={product?.price?.toString() ?? ''}
-              placeholder="0.00"
-              mono
-              required
-            />
+            {/* Precio y costo → margen en vivo */}
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
+                    Precio (Q)
+                  </label>
+                  <input
+                    name="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    value={priceVal}
+                    onChange={(e) => setPriceVal(e.target.value)}
+                    placeholder="0.00"
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
+                      fontSize: 14, color: 'var(--u-text)',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                      fontFamily: 'var(--ui-font-mono)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
+                    Costo (Q)
+                  </label>
+                  <input
+                    name="cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={costVal}
+                    onChange={(e) => setCostVal(e.target.value)}
+                    placeholder="0.00"
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
+                      fontSize: 14, color: 'var(--u-text)',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                      fontFamily: 'var(--ui-font-mono)',
+                    }}
+                  />
+                </div>
+              </div>
+              {(() => {
+                const p = parseFloat(priceVal);
+                const c = parseFloat(costVal);
+                if (isNaN(p) || isNaN(c) || costVal.trim() === '') {
+                  return (
+                    <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 7, display: 'block' }}>
+                      Captura el costo para ver utilidad y margen por venta.
+                    </span>
+                  );
+                }
+                const profit = p - c;
+                const margin = p > 0 ? (profit / p) * 100 : 0;
+                const good = profit >= 0;
+                return (
+                  <div style={{ display: 'flex', gap: 16, marginTop: 9, fontSize: 12.5 }}>
+                    <span style={{ color: 'var(--u-text-3)' }}>
+                      Utilidad: <strong style={{ color: good ? 'var(--u-text)' : '#f87171' }}>Q{profit.toFixed(2)}</strong>
+                    </span>
+                    <span style={{ color: 'var(--u-text-3)' }}>
+                      Margen: <strong style={{ color: good ? 'var(--brand-accent)' : '#f87171' }}>{margin.toFixed(0)}%</strong>
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
 
             {/* Descripción */}
             <div>

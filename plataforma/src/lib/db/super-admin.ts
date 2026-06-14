@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
-import type { Category, Product, Profile, Restaurant, RestaurantTheme } from '@/types';
+import type { Category, Organization, Product, Profile, Restaurant, RestaurantTheme } from '@/types';
 
 export type RestaurantRow = Restaurant & {
   restaurant_themes: RestaurantTheme[];
@@ -102,6 +102,59 @@ export const getRestaurantUsers = cache(
       if (a.role !== b.role) return a.role === 'RESTAURANT_OWNER' ? -1 : 1;
       return (a.email ?? '').localeCompare(b.email ?? '');
     });
+  },
+);
+
+/* ── Grupos / organizaciones (Fase E) ──────────────────────── */
+
+export type OrganizationRow = Organization & { branchCount: number };
+
+export const getAllOrganizations = cache(async (): Promise<OrganizationRow[]> => {
+  const db = createServiceClient();
+  const [{ data: orgs }, { data: rests }] = await Promise.all([
+    db.from('organizations').select('*').order('created_at', { ascending: false }),
+    db.from('restaurants').select('organization_id'),
+  ]);
+  const counts = new Map<string, number>();
+  for (const r of rests ?? []) {
+    const oid = r.organization_id as string | null;
+    if (oid) counts.set(oid, (counts.get(oid) ?? 0) + 1);
+  }
+  return (orgs ?? []).map((o) => ({ ...(o as Organization), branchCount: counts.get(o.id as string) ?? 0 }));
+});
+
+export type OrgGroupOwner = { id: string; email: string | null; full_name: string | null };
+
+export const getOrganizationDetail = cache(
+  async (orgId: string): Promise<{
+    org: Organization | null;
+    branches: Restaurant[];
+    available: Restaurant[];   // restaurantes sin grupo (asignables)
+    owners: OrgGroupOwner[];
+  }> => {
+    const db = createServiceClient();
+    const { data: org } = await db.from('organizations').select('*').eq('id', orgId).single();
+    if (!org) return { org: null, branches: [], available: [], owners: [] };
+
+    const [{ data: branches }, { data: available }, { data: ownerProfiles }] = await Promise.all([
+      db.from('restaurants').select('*').eq('organization_id', orgId).order('name'),
+      db.from('restaurants').select('*').is('organization_id', null).order('name'),
+      db.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'GROUP_OWNER'),
+    ]);
+
+    const owners = await Promise.all(
+      (ownerProfiles ?? []).map(async (p) => {
+        const { data } = await db.auth.admin.getUserById(p.id as string);
+        return { id: p.id as string, email: data.user?.email ?? null, full_name: (p.full_name as string | null) ?? null };
+      }),
+    );
+
+    return {
+      org: org as Organization,
+      branches: (branches ?? []) as Restaurant[],
+      available: (available ?? []) as Restaurant[],
+      owners,
+    };
   },
 );
 

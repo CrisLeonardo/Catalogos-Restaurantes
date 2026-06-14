@@ -60,6 +60,8 @@ export const createOrderSchema = z
       .max(50, 'Demasiados ítems'),
     customer: customerSchema,
     deliveryFee: z.number().min(0).max(10_000).default(0),
+    /** Código de cupón opcional escrito en el checkout. */
+    promoCode: z.string().max(40).transform((v) => v.trim()).optional(),
   })
   .refine(
     (data) => {

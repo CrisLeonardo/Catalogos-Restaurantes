@@ -37,6 +37,13 @@ function parseTags(raw: string | null): string[] | null {
   return raw.split(',').map((t) => t.trim()).filter(Boolean);
 }
 
+/** Costo del producto: numérico ≥ 0, o null si viene vacío/ inválido. */
+function parseCost(raw: string | null): number | null {
+  if (raw == null || raw.trim() === '') return null;
+  const n = parseFloat(raw);
+  return isNaN(n) || n < 0 ? null : n;
+}
+
 /**
  * Valida los grupos de variantes/extras que manda el editor del admin.
  * Estructura final: [{ id, name, type, required?, max?, choices: [{ id, name, priceDelta }] }]
@@ -109,6 +116,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     name,
     description: (formData.get('description') as string)?.trim() || null,
     price: parseFloat(priceRaw),
+    cost: parseCost(formData.get('cost') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
@@ -145,6 +153,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       name,
       description: (formData.get('description') as string)?.trim() || null,
       price: parseFloat(priceRaw),
+      cost: parseCost(formData.get('cost') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
@@ -306,6 +315,7 @@ export async function createProductModal(
     name,
     description: (formData.get('description') as string)?.trim() || null,
     price: parseFloat(priceRaw),
+    cost: parseCost(formData.get('cost') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
@@ -345,6 +355,7 @@ export async function updateProductModal(
       name,
       description: (formData.get('description') as string)?.trim() || null,
       price: parseFloat(priceRaw),
+      cost: parseCost(formData.get('cost') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),

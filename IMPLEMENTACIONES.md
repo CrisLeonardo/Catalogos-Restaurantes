@@ -547,6 +547,122 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-06-14 — Fase A: Admin Pro · Finanzas y rentabilidad
+
+**Objetivo:** Arrancar el "Admin Pro" (que el panel del restaurante resuelva la operación completa). Primera fase de 4: finanzas y rentabilidad. (Roadmap completo en `PLAN_ADMIN_PRO.md`; el panel multi-sucursal va en `PLAN_GRUPOS.md`, Fase E.)
+
+**Realizado:**
+- **Migración `019_finanzas.sql`:** `products.cost`, `order_items.cost_snapshot`, tabla `cash_counts` (cortes de caja, RLS sin políticas) y `place_order` (RPC) ahora congela el costo por ítem.
+- **Costo por producto:** input "Costo" con utilidad/margen en vivo en el formulario y el modal de producto; se captura en las 4 acciones de producto.
+- **Margen histórico real:** `createOrder` lee `products.cost` y lo congela en cada `order_item`.
+- **Reportes financieros** (`src/lib/db/reports.ts` · `getSalesReport`): ingreso, utilidad, margen, ticket, serie diaria, mix por canal/método de pago/zona, top por ingreso y por utilidad.
+- **Corte de caja** (`src/lib/actions/finanzas.ts`): efectivo esperado del día (snapshot del servidor), guardar corte con diferencia, historial; export del reporte a CSV.
+- **Pantalla `/admin/finanzas`** con selector de rango (7/30/90 días o fechas), KPIs, gráfica, mix, top productos y corte de caja. Ítem "Finanzas" en el nav (con módulo Pedidos) + ícono `wallet`.
+- ✅ `npm run build` + `typecheck` limpios. Errores de lint que aparecen son **preexistentes** (shell/notifications/hours-editor, reglas eslint más estrictas).
+
+**Decisiones clave:**
+- El costo se congela en `order_items.cost_snapshot` → editar el costo no altera reportes pasados.
+- Utilidad/margen solo sobre ítems con costo capturado (se avisa en la UI si faltan).
+- `setup_produccion.sql` quedó congelado en mig. 008; la fuente de verdad es `supabase/migrations/`.
+
+**Pendiente:**
+- **Verificación real en navegador** (requiere Docker Desktop + `npx supabase start` + aplicar `019`).
+- Fases B (analítica), C (inventario) y D (promos/personal) del Admin Pro; luego Fase E (panel de grupo).
+
+**Próximo paso:** Verificar Fase A end-to-end y continuar con la Fase B (analítica avanzada).
+
+---
+
+## Sesión — 2026-06-14 (cont.) — Fase B: Admin Pro · Analítica avanzada
+
+**Objetivo:** Segunda fase del Admin Pro: analítica de operación (complementa a Finanzas, que ve el dinero).
+
+**Realizado:**
+- **Migración `020_order_timestamps.sql`:** `orders.accepted_at/ready_at/delivered_at/cancelled_at`.
+- **Sellado de tiempos:** `updateOrderStatus` marca el timestamp según la transición; `cancelPublicOrder` sella `cancelled_at`.
+- **`src/lib/db/analytics.ts` (`getAnalytics`):** heatmap 7×24 de horas pico, franja/día pico, top vendidos + "no se mueven" (incluye 0 ventas), mix por canal/pago/zona (por nº de pedidos), tasa de cancelación, tiempos promedio prep/entrega.
+- **Pantalla `/admin/analitica`** con KPIs, mapa de calor, velocidad de productos y mix; ítem "Analítica" en el nav.
+- ✅ Verificado end-to-end: 30 pedidos sembrados + sellado real de `accepted_at`/`ready_at` desde el panel; build/typecheck limpios.
+
+**Decisiones clave:**
+- Tiempos se miden desde los cambios de estado (acumulan hacia adelante; los pedidos viejos no tienen marca).
+- Finanzas = dinero (por ingreso); Analítica = operación (por nº de pedidos) → sin duplicar.
+
+**Pendiente:** Fase C (inventario), Fase D (promos/personal), Fase E (panel de grupo). El nav ya tiene 11 ítems → la reorg por secciones + overflow móvil va en la Fase D.
+
+**Próximo paso:** Fase C — inventario / control de stock.
+
+---
+
+## Sesión — 2026-06-14 (cont.) — Fase C: Admin Pro · Inventario / stock
+
+**Objetivo:** Tercera fase del Admin Pro: control de existencias real, con anti-sobreventa.
+
+**Realizado:**
+- **Migración `021_inventario.sql`:** `products.track_stock/stock/low_stock_threshold`, tabla `stock_movements`, `place_order` (descuento atómico + guardia anti-sobreventa + auto-agotar a 0), `restock_order` (idempotente).
+- **`src/lib/actions/inventory.ts`:** `saveInventory`, `adjustStock` (+/−), `getLowStock`.
+- **Restock al cancelar:** `updateOrderStatus` y `cancelPublicOrder` llaman `restock_order` antes de marcar CANCEL.
+- **Pantalla `/admin/inventario`** (`inventory-panel.tsx`): resumen, filtro, stepper, activar/editar stock+umbral, badges. Ítem "Inventario" en el nav (ícono `box`).
+- ✅ Verificado: set/adjust/sale/cancel con bitácora, y **anti-sobreventa** (RAISE + rollback sin pedido fantasma). Build/typecheck limpios.
+
+**Decisiones clave:**
+- La guardia anti-sobreventa vive DENTRO de `place_order` (transaccional) → imposible vender de más por carrera.
+- Activar control abre un form para capturar el stock inicial (no agota de golpe).
+
+**Pendiente:** Fase D (promos/personal) y Fase E (panel de grupo). Reorg del nav (ya 12 ítems) en la Fase D.
+
+**Próximo paso:** Fase D — promociones/cupones + gestión de personal con permisos.
+
+---
+
+## Sesión — 2026-06-14 (cont.) — Fase D: Admin Pro · Promos y personal
+
+**Objetivo:** Cuarta y última fase del Admin Pro: cupones/descuentos + gestión de personal con permisos + bitácora.
+
+**Realizado:**
+- **Migraciones `022_promociones.sql`** (tabla `promotions`, `orders.discount/promo_id/promo_code`, `increment_promo_usage`) y **`023_personal.sql`** (`profiles.permissions`, tabla `activity_log`).
+- **Promociones:** `db/promos.ts` (cálculo + resolución), `actions/promos.ts` (preview público + CRUD). Descuento aplicado **server-side** en `createOrder` (autoritativo) + conteo de uso.
+- **Cupón en checkout:** campo con preview, desglose de descuento y línea en WhatsApp.
+- **Permisos:** `lib/permissions.ts` (`can`), nav filtrado por sección, guards en páginas sensibles.
+- **Personal:** `actions/staff.ts` (el dueño gestiona staff acotado a su restaurante con permisos), `/admin/personal` con equipo + bitácora.
+- **Bitácora:** `lib/activity.ts` (`logActivity`) cableado en cambios de estado, stock, promos y staff.
+- **Nav reorganizado:** secciones en escritorio, scrollable horizontal en móvil (ya caben 14 ítems).
+- ✅ Verificado: cupón 20% (Q90→Q72) persistido + uso contado; staff con permisos limitados ve solo sus secciones y es redirigido de las demás. Build/typecheck limpios (35 rutas).
+
+**Decisiones clave:**
+- El descuento NUNCA se toma del cliente: se recalcula contra la BD en `createOrder`.
+- `place_order` no cambió de firma; el descuento se persiste post-creación (total ya correcto).
+- Staff con `permissions=null` = acceso total (compatibilidad); el dueño restringe asignando secciones.
+
+**Pendiente:** Fase E — panel de grupo multi-sucursal (`slug-central`). Hardening menor de guards en páginas legacy.
+
+**Próximo paso:** Fase E — organizaciones, rol GROUP_OWNER, ruteo `-central`, panel `/central/*`, alta de grupos desde el Super Admin.
+
+---
+
+## Sesión — 2026-06-14 (cont.) — Fase E: Panel de Grupo multi-sucursal
+
+**Objetivo:** Panel propio para el dueño de varias sucursales (el "jefe del grupo") en `slug-central.dominio`. (Doc completo en `PLAN_GRUPOS.md`.)
+
+**Realizado:**
+- **Migración `024_grupos.sql`:** tabla `organizations`, `restaurants.organization_id`, `profiles.organization_id` + rol `GROUP_OWNER`.
+- **Ruteo:** `tenant.ts` (`isGroupSubdomain`/`getGroupSlug` sufijo `-central`, `getTenantSlug` ignora `-central`), `proxy.ts` (rewrite a `/central` + header `x-org-slug`), `validateSlug` reserva `central`.
+- **`src/lib/db/group.ts`:** `getGroupContext` (seguro: jefe ve solo su grupo), `getGroupDashboard`, `getGroupReport`.
+- **Panel `/central/*`** (`group-shell.tsx`): resumen consolidado, sucursales (con drill-in a `-admin`), comparativa, finanzas. Login propio `/central/login`; `auth.ts` redirige GROUP_OWNER → `/central`.
+- **Super Admin `/super/grupos`:** crear grupo, asignar/quitar sucursales, alta del login del jefe, eliminar. Acciones + lecturas en `super-admin.ts`/`db/super-admin.ts`.
+- ✅ Verificado end-to-end: grupo con 2 sucursales, consolidado Q269 hoy, comparativa Q2166 (83%/17%) — agregación correcta. Build/typecheck limpios (42 rutas).
+
+**Decisiones clave:**
+- Subdominio `slug-central` (cubierto por el wildcard existente; sin DNS nuevo).
+- `getGroupContext` es la frontera de seguridad: el jefe solo accede a su `organization_id`.
+- El consolidado reusa `getOrderStats`/`getSalesReport` por sucursal (cada una en su zona horaria).
+
+**Pendiente:** que el GROUP_OWNER administre cada sucursal con su mismo login (hoy abre el `-admin`; acceso de escritura cruzado = follow-up). Hardening de guards en páginas admin legacy.
+
+**Próximo paso:** (Roadmap Admin Pro + Grupos COMPLETO.) Desplegar a la nube aplicando migraciones 019–024; opcional: acceso de escritura del jefe por sucursal.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

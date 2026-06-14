@@ -10,6 +10,7 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
+import { validatePromo } from '@/lib/actions/promos';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 
@@ -84,6 +85,7 @@ export default function CheckoutForm({
   const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
   const [snapshotTotal, setSnapshotTotal] = useState(0);
   const [snapshotFee, setSnapshotFee] = useState(0);
+  const [snapshotDiscount, setSnapshotDiscount] = useState(0);
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -100,6 +102,12 @@ export default function CheckoutForm({
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
   const [deliveryLng, setDeliveryLng] = useState<number | undefined>(undefined);
+
+  // Cupón / promoción
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<{ discount: number; name: string; code: string } | null>(null);
+  const [promoMsg, setPromoMsg] = useState('');
+  const [promoChecking, setPromoChecking] = useState(false);
 
   useEffect(() => {
     const p = getLocalProfile(restaurantId);
@@ -145,7 +153,29 @@ export default function CheckoutForm({
     && !outOfZone && !geoOutOfRange;
 
   const deliveryFee = type === 'DELIVERY' ? config.deliveryFee : 0;
-  const finalTotal  = total + deliveryFee;
+  const discount    = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
+  const finalTotal  = Math.max(0, total + deliveryFee - discount);
+
+  // Si cambia el carrito o el tipo de pedido, el cupón se revalida (se limpia).
+  useEffect(() => {
+    if (appliedPromo) { setAppliedPromo(null); setPromoMsg(''); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total, deliveryFee]);
+
+  async function applyPromo() {
+    if (!promoCode.trim()) return;
+    setPromoChecking(true);
+    setPromoMsg('');
+    const res = await validatePromo(restaurantId, promoCode.trim(), total, deliveryFee);
+    setPromoChecking(false);
+    if (res.ok) {
+      setAppliedPromo({ discount: res.discount, name: res.name, code: res.code });
+      setPromoMsg('');
+    } else {
+      setAppliedPromo(null);
+      setPromoMsg(res.error);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -182,6 +212,7 @@ export default function CheckoutForm({
             : {}),
         },
         deliveryFee: feeSnapshot,
+        ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
       });
       if (result.error) { setError(result.error); return; }
 
@@ -201,6 +232,7 @@ export default function CheckoutForm({
 
       setSnapshot(itemsSnapshot);
       setSnapshotFee(feeSnapshot);
+      setSnapshotDiscount(discount);
       setSnapshotTotal(totalSnapshot);
       setOrderNumber(result.orderNumber ?? '');
       setTrackToken(result.publicToken ?? '');
@@ -212,6 +244,7 @@ export default function CheckoutForm({
         snapshot: itemsSnapshot,
         fee: feeSnapshot,
         total: totalSnapshot,
+        discount,
       });
       if (waUrl) {
         try { window.open(waUrl, '_blank', 'noopener'); } catch {}
@@ -224,11 +257,13 @@ export default function CheckoutForm({
     snapshot: { name: string; opts: string; qty: number; sub: number }[];
     fee: number;
     total: number;
+    discount?: number;
   }) {
     if (!whatsappNumber) return null;
     const num       = data?.orderNumber ?? orderNumber;
     const lineItems = data?.snapshot ?? snapshot;
     const fee       = data?.fee ?? snapshotFee;
+    const disc      = data?.discount ?? snapshotDiscount;
     const tot       = data?.total ?? snapshotTotal;
     const clean     = whatsappNumber.replace(/\D/g, '');
 
@@ -254,6 +289,9 @@ export default function CheckoutForm({
     ];
     if (fee > 0) {
       lines.push(`📦 ${content.cart.shipping}: ${formatPrice(fee, config)}`);
+    }
+    if (disc > 0) {
+      lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
     }
     lines.push(`💰 ${content.cart.total}: *${formatPrice(tot, config)}*`);
     if (notes) lines.push('', `📝 ${notes}`);
@@ -357,22 +395,55 @@ export default function CheckoutForm({
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {(deliveryFee > 0 || discount > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
+                <Price amount={total} size={13.5} muted />
+              </div>
+            )}
             {deliveryFee > 0 && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
-                  <Price amount={total} size={13.5} muted />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
-                  <Price amount={deliveryFee} size={13.5} muted />
-                </div>
-              </>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
+                <Price amount={deliveryFee} size={13.5} muted />
+              </div>
+            )}
+            {discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#4ade80' }}>Descuento{appliedPromo ? ` · ${appliedPromo.name}` : ''}</span>
+                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
+              </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>
               <Price amount={finalTotal} size={20} />
             </div>
+          </div>
+
+          {/* Cupón */}
+          <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
+            {appliedPromo ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: 12.5, color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="checkCircle" size={15} /> Cupón {appliedPromo.code} aplicado
+                </span>
+                <button type="button" onClick={() => { setAppliedPromo(null); setPromoCode(''); setPromoMsg(''); }} className="press t-mute" style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
+                  Quitar
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder="¿Tienes un cupón?"
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 13.5, outline: 'none', textTransform: 'uppercase' }}
+                />
+                <button type="button" onClick={applyPromo} disabled={promoChecking || !promoCode.trim()} className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', opacity: promoChecking || !promoCode.trim() ? 0.6 : 1 }}>
+                  {promoChecking ? '…' : 'Aplicar'}
+                </button>
+              </div>
+            )}
+            {promoMsg && <p style={{ fontSize: 12, color: '#f87171', marginTop: 7 }}>{promoMsg}</p>}
           </div>
         </div>
       </Glass>

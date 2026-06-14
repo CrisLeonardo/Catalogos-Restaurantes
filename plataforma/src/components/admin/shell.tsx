@@ -1,7 +1,8 @@
 'use client';
 
 /* Shell del panel admin — sidebar + topbar en escritorio; en móvil el nav
-   se convierte en una barra inferior fija tipo app. Envuelve /admin/*. */
+   se convierte en una barra inferior fija tipo app. Envuelve /admin/*.
+   El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -10,8 +11,11 @@ import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
+import { can } from '@/lib/permissions';
 
 const BG_KEY = 'admin-bg-visible';
+
+interface NavItem { href: string; label: string; icon: string; key: string }
 
 interface Props {
   restaurantName: string;
@@ -19,14 +23,21 @@ interface Props {
   ordersEnabled?: boolean;
   logoUrl?: string | null;
   zone?: string;
+  /** Rol y permisos del usuario (para filtrar el nav). */
+  role?: string | null;
+  permissions?: string[] | null;
+  /** El dueño/super admin puede ver la sección Personal. */
+  canManageStaff?: boolean;
   /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
   preview?: boolean;
   children: React.ReactNode;
 }
 
-export default function AdminShell({ restaurantName, restaurantId, ordersEnabled = false, logoUrl, zone, preview = false, children }: Props) {
+export default function AdminShell({
+  restaurantName, restaurantId, ordersEnabled = false, logoUrl, zone,
+  role, permissions, canManageStaff, preview = false, children,
+}: Props) {
   const realPathname = usePathname();
-
   const [bgVisible, setBgVisible] = useState(true);
 
   useEffect(() => {
@@ -42,41 +53,90 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
     localStorage.setItem(BG_KEY, String(next));
     document.documentElement.setAttribute('data-admin-bg', next ? 'on' : 'off');
   }
-  // En vista previa la URL es /preview/admin/[id]; fijamos el Catálogo como
-  // sección activa para que el panel se vea como lo ve el dueño al entrar.
+
   const pathname = preview ? '/admin/menu' : realPathname;
 
-  const nav = [
-    ...(ordersEnabled ? [{ href: '/admin/pedidos',    label: 'Pedidos',     icon: 'list'  }] : []),
-    { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag'   },
-    { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag'   },
-    ...(ordersEnabled ? [{ href: '/admin/clientes',   label: 'Clientes',    icon: 'users' }] : []),
-    { href: '/admin/metricas',        label: 'Métricas',     icon: 'chart'    },
-    { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle'  },
-    { href: '/admin/perfil',          label: 'Perfil',       icon: 'user'     },
-    { href: '/admin/qr',              label: 'QR',           icon: 'image'    },
-    { href: '/admin/soporte',         label: 'Soporte',      icon: 'helpCircle' },
-  ];
+  // En preview (sin rol) se muestra todo como lo ve el dueño.
+  const effRole = role ?? 'RESTAURANT_OWNER';
+  const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
+  const allow = (key: string) => can(effRole, permissions ?? null, key);
 
-  const title =
-    pathname.startsWith('/admin/pedidos')    ? 'Pedidos en vivo'
-    : pathname.startsWith('/admin/categorias') ? 'Categorías'
-    : pathname.startsWith('/admin/clientes') ? 'Clientes'
-    : pathname.startsWith('/admin/metricas') ? 'Métricas'
-    : pathname.startsWith('/admin/menu/productos') ? 'Producto'
-    : pathname.startsWith('/admin/menu')           ? 'Catálogo'
-    : pathname.startsWith('/admin/personalizacion') ? 'Personalizar sitio'
-    : pathname.startsWith('/admin/perfil')          ? 'Perfil'
-    : pathname.startsWith('/admin/qr')              ? 'Código QR'
-    : pathname.startsWith('/admin/soporte')         ? 'Soporte'
-    : 'Panel';
+  const sections: { title: string; items: NavItem[] }[] = [
+    {
+      title: 'Operación',
+      items: [
+        ...(ordersEnabled ? [{ href: '/admin/pedidos', label: 'Pedidos', icon: 'list', key: 'pedidos' }] : []),
+        { href: '/admin/menu', label: 'Catálogo', icon: 'bag', key: 'catalogo' },
+        { href: '/admin/categorias', label: 'Categorías', icon: 'tag', key: 'categorias' },
+        { href: '/admin/inventario', label: 'Inventario', icon: 'box', key: 'inventario' },
+      ],
+    },
+    {
+      title: 'Negocio',
+      items: [
+        { href: '/admin/metricas', label: 'Métricas', icon: 'chart', key: 'metricas' },
+        ...(ordersEnabled ? [{ href: '/admin/analitica', label: 'Analítica', icon: 'dashboard', key: 'analitica' }] : []),
+        ...(ordersEnabled ? [{ href: '/admin/finanzas', label: 'Finanzas', icon: 'wallet', key: 'finanzas' }] : []),
+        ...(ordersEnabled ? [{ href: '/admin/clientes', label: 'Clientes', icon: 'users', key: 'clientes' }] : []),
+        ...(ordersEnabled ? [{ href: '/admin/promociones', label: 'Promos', icon: 'percent', key: 'promociones' }] : []),
+      ],
+    },
+    {
+      title: 'Cuenta',
+      items: [
+        { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle', key: 'personalizar' },
+        { href: '/admin/perfil', label: 'Perfil', icon: 'user', key: 'perfil' },
+        ...(showStaff ? [{ href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }] : []),
+        { href: '/admin/qr', label: 'QR', icon: 'image', key: 'qr' },
+        { href: '/admin/soporte', label: 'Soporte', icon: 'helpCircle', key: 'soporte' },
+      ],
+    },
+  ]
+    .map((s) => ({ ...s, items: s.items.filter((it) => allow(it.key)) }))
+    .filter((s) => s.items.length > 0);
+
+  const TITLES: Record<string, string> = {
+    '/admin/pedidos': 'Pedidos en vivo',
+    '/admin/categorias': 'Categorías',
+    '/admin/inventario': 'Inventario',
+    '/admin/clientes': 'Clientes',
+    '/admin/metricas': 'Métricas',
+    '/admin/analitica': 'Analítica',
+    '/admin/finanzas': 'Finanzas',
+    '/admin/promociones': 'Promociones',
+    '/admin/personal': 'Personal',
+    '/admin/menu/productos': 'Producto',
+    '/admin/menu': 'Catálogo',
+    '/admin/personalizacion': 'Personalizar sitio',
+    '/admin/perfil': 'Perfil',
+    '/admin/qr': 'Código QR',
+    '/admin/soporte': 'Soporte',
+  };
+  const title = Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
 
   const isLive = pathname.startsWith('/admin/pedidos');
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';
 
+  function renderLink(n: NavItem) {
+    const active = pathname.startsWith(n.href);
+    if (preview) {
+      return (
+        <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} style={{ cursor: 'default' }}>
+          <Icon name={n.icon} size={18} />
+          <span className="nav-label">{n.label}</span>
+        </div>
+      );
+    }
+    return (
+      <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'}>
+        <Icon name={n.icon} size={18} />
+        <span className="nav-label">{n.label}</span>
+      </Link>
+    );
+  }
+
   return (
     <div className="admin-shell">
-      {/* Sidebar (escritorio) / cabecera compacta (móvil) */}
       <aside className="admin-sidebar">
         <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
@@ -92,29 +152,14 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
           </div>
         </div>
 
-        <div className="t-kicker admin-section" style={{ fontSize: 9.5, padding: '4px 10px' }}>Operación</div>
-
-        {/* Nav: columna en escritorio, barra inferior fija en móvil */}
+        {/* Nav: secciones en escritorio; barra inferior scrollable en móvil */}
         <nav className="admin-nav">
-          {nav.map((n) => {
-            const active = pathname.startsWith(n.href);
-            // En vista previa los enlaces no navegan (la ruta /admin/* no existe
-            // en el origen de la vista previa): se renderizan como estáticos.
-            if (preview) {
-              return (
-                <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} style={{ cursor: 'default' }}>
-                  <Icon name={n.icon} size={18} />
-                  <span className="nav-label">{n.label}</span>
-                </div>
-              );
-            }
-            return (
-              <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'}>
-                <Icon name={n.icon} size={18} />
-                <span className="nav-label">{n.label}</span>
-              </Link>
-            );
-          })}
+          {sections.map((s) => (
+            <div key={s.title} className="admin-navgroup">
+              <div className="t-kicker admin-navgroup-title" style={{ fontSize: 9.5, padding: '4px 10px' }}>{s.title}</div>
+              {s.items.map(renderLink)}
+            </div>
+          ))}
         </nav>
 
         <div className="admin-spacer" style={{ flex: 1 }} />
@@ -124,14 +169,15 @@ export default function AdminShell({ restaurantName, restaurantId, ordersEnabled
             <Icon name="user" size={17} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Administrador</div>
+            <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {effRole === 'RESTAURANT_STAFF' ? 'Personal' : 'Administrador'}
+            </div>
             <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>
           {!preview && <LogoutButton />}
         </div>
       </aside>
 
-      {/* Main */}
       <div className="admin-main">
         <div className="admin-topbar">
           <h1 className="t-display" style={{ fontSize: 22, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>

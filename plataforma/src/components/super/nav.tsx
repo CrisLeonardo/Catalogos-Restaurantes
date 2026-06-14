@@ -10,6 +10,7 @@ export default function SuperNav() {
 
   const links = [
     { href: '/super/restaurantes', label: 'Restaurantes' },
+    { href: '/super/grupos', label: 'Grupos' },
     { href: '/super/metricas', label: 'Métricas' },
     { href: '/super/configuracion', label: 'Configuración' },
   ];

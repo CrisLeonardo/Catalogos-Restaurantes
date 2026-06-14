@@ -69,6 +69,9 @@ export default async function AdminProtectedLayout({
       ordersEnabled={ordersEnabled}
       logoUrl={logoUrl}
       zone={zone}
+      role={profile.role}
+      permissions={profile.permissions}
+      canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
     >
       {children}
     </AdminShell>

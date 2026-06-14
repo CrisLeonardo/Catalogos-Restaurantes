@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getTenantSlug, isAdminSubdomain } from "@/lib/tenant";
+import { getTenantSlug, isAdminSubdomain, isGroupSubdomain, getGroupSlug } from "@/lib/tenant";
 
 /**
  * Proxy (Next.js 16 — antes llamado "middleware"):
@@ -15,10 +15,13 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host");
   const slug = getTenantSlug(host);
   const adminSub = isAdminSubdomain(host);
+  const groupSub = isGroupSubdomain(host);
+  const groupSlug = getGroupSlug(host);
 
   const requestHeaders = new Headers(request.headers);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
   if (adminSub) requestHeaders.set("x-is-admin-subdomain", "1");
+  if (groupSlug) requestHeaders.set("x-org-slug", groupSlug);
 
   // 2) Rewrite para subdominio admin.*
   //    admin.azucar-negra.leogin.online/       → /admin/
@@ -37,6 +40,20 @@ export async function proxy(request: NextRequest) {
     if (!skip) {
       rewriteUrl = request.nextUrl.clone();
       rewriteUrl.pathname = pathname === "/" ? "/admin/" : `/admin${pathname}`;
+    }
+  } else if (groupSub) {
+    // slug-central.dominio/  → /central   ·  /sucursales → /central/sucursales
+    const pathname = request.nextUrl.pathname;
+    const skip =
+      pathname.startsWith("/api/") ||
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/central") ||
+      pathname === "/favicon.ico" ||
+      pathname === "/sw.js" ||
+      /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
+    if (!skip) {
+      rewriteUrl = request.nextUrl.clone();
+      rewriteUrl.pathname = pathname === "/" ? "/central" : `/central${pathname}`;
     }
   }
 

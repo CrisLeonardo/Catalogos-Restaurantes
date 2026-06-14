@@ -32,6 +32,11 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     redirect('/super/restaurantes');
   }
 
+  // El jefe de grupo entra a su panel consolidado (host slug-central.dominio).
+  if (profile?.role === 'GROUP_OWNER') {
+    redirect('/central');
+  }
+
   redirect('/admin/menu');
 }
 
@@ -39,4 +44,11 @@ export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect('/admin/login');
+}
+
+/** Logout desde el panel de grupo (vuelve al login del grupo). */
+export async function logoutGroup() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect('/central/login');
 }

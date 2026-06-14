@@ -38,7 +38,7 @@ function slugify(text: string): string {
 
 // Subdominios que no pueden ser de un restaurante: `demo` es la demo pública
 // de Leogin y `www` se trata como dominio raíz en lib/tenant.ts.
-const RESERVED_SLUGS = ['demo', 'www', 'admin', 'api', 'app', 'super', 'preview', 'login'];
+const RESERVED_SLUGS = ['demo', 'www', 'admin', 'api', 'app', 'super', 'preview', 'login', 'central'];
 
 /** Valida un slug de subdominio; devuelve mensaje de error o null si es válido. */
 function validateSlug(slug: string): string | null {
@@ -47,6 +47,10 @@ function validateSlug(slug: string): string | null {
   }
   if (RESERVED_SLUGS.includes(slug)) {
     return `El slug "${slug}" está reservado por la plataforma. Elige otro.`;
+  }
+  // Estos sufijos son subdominios especiales (panel admin / panel de grupo).
+  if (slug.endsWith('-admin') || slug.endsWith('-central')) {
+    return `El slug no puede terminar en "-admin" ni "-central" (son subdominios reservados).`;
   }
   return null;
 }
@@ -569,6 +573,117 @@ export async function updateOrderTypes(
 
   revalidatePath(`/super/restaurantes/${restaurantId}`);
   return { ok: true };
+}
+
+/* ── Grupos / organizaciones (Fase E) ──────────────────────────────── */
+
+export async function createOrganization(
+  prevState: SuperState,
+  formData: FormData,
+): Promise<SuperState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+
+  const name = (formData.get('name') as string)?.trim();
+  if (!name) return { error: 'El nombre del grupo es requerido.' };
+
+  const slug = (formData.get('slug') as string)?.trim().toLowerCase() || slugify(name);
+  const slugError = validateSlug(slug);
+  if (slugError) return { error: slugError };
+
+  const { data: org, error } = await db
+    .from('organizations')
+    .insert({
+      name,
+      slug,
+      contact_email: (formData.get('contact_email') as string)?.trim() || null,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    if (error.message.includes('unique') || error.message.includes('duplicate')) {
+      return { error: `El slug "${slug}" ya existe. Elige otro.` };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath('/super/grupos');
+  redirect(`/super/grupos/${org.id}`);
+}
+
+export async function assignRestaurantToOrg(formData: FormData) {
+  const db = await verifySuperAdmin();
+  if (!db) return;
+  const orgId = (formData.get('orgId') as string)?.trim();
+  const restaurantId = (formData.get('restaurantId') as string)?.trim();
+  if (!orgId || !restaurantId) return;
+  await db.from('restaurants').update({ organization_id: orgId }).eq('id', restaurantId);
+  revalidatePath(`/super/grupos/${orgId}`);
+}
+
+export async function unassignRestaurant(formData: FormData) {
+  const db = await verifySuperAdmin();
+  if (!db) return;
+  const orgId = (formData.get('orgId') as string)?.trim();
+  const restaurantId = (formData.get('restaurantId') as string)?.trim();
+  if (!restaurantId) return;
+  await db.from('restaurants').update({ organization_id: null }).eq('id', restaurantId);
+  if (orgId) revalidatePath(`/super/grupos/${orgId}`);
+}
+
+export async function createGroupOwner(
+  prevState: SuperState,
+  formData: FormData,
+): Promise<SuperState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+
+  const orgId = (formData.get('orgId') as string)?.trim();
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const password = (formData.get('password') as string) ?? '';
+  const fullName = (formData.get('full_name') as string)?.trim() || null;
+
+  if (!orgId) return { error: 'Grupo inválido.' };
+  if (!email || !email.includes('@')) return { error: 'Email inválido.' };
+  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+
+  const { data: created, error: createErr } = await db.auth.admin.createUser({
+    email, password, email_confirm: true, user_metadata: { full_name: fullName },
+  });
+  if (createErr || !created?.user) {
+    const m = createErr?.message?.toLowerCase() ?? '';
+    if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
+      return { error: `Ya existe un usuario con el email ${email}.` };
+    }
+    return { error: createErr?.message ?? 'No se pudo crear el usuario.' };
+  }
+
+  const { error: profErr } = await db.from('profiles').upsert({
+    id: created.user.id,
+    role: 'GROUP_OWNER',
+    organization_id: orgId,
+    restaurant_id: null,
+    full_name: fullName,
+  });
+  if (profErr) {
+    await db.auth.admin.deleteUser(created.user.id);
+    return { error: profErr.message };
+  }
+
+  revalidatePath(`/super/grupos/${orgId}`);
+  redirect(`/super/grupos/${orgId}?saved=owner`);
+}
+
+export async function deleteOrganization(formData: FormData) {
+  const db = await verifySuperAdmin();
+  if (!db) return;
+  const id = (formData.get('id') as string)?.trim();
+  if (!id) return;
+  // Las sucursales quedan independientes (organization_id → null por FK).
+  await db.from('organizations').delete().eq('id', id);
+  revalidatePath('/super/grupos');
+  redirect('/super/grupos');
 }
 
 /* ── Configuración de la plataforma (datos de soporte) ─────────────── */
