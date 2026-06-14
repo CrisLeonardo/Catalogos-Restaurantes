@@ -2,14 +2,7 @@
 
 import { useId } from 'react';
 
-/* ============================================================
-   Logo PROVISIONAL de Leogin.
-   Monograma "L" + punto de acento sobre tile coral (la marca
-   de la plataforma). Reemplázalo por el logo original cuando
-   lo tengas: basta con cambiar <LeoginMark> y/o public/logo-mark.svg.
-   ============================================================ */
-
-/** Solo la marca (tile coral con la "L"). Escalable y nítida. */
+/** Solo la marca: cuadrado oscuro con la "L" en gradiente coral→naranja. */
 export function LeoginMark({ size = 28 }: { size?: number }) {
   const raw = useId();
   const gid = `leogin-grad-${raw.replace(/:/g, '')}`;
@@ -25,23 +18,18 @@ export function LeoginMark({ size = 28 }: { size?: number }) {
       style={{ display: 'block', flex: '0 0 auto' }}
     >
       <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E8917A" />
-          <stop offset="1" stopColor="#C75D3E" />
+        <linearGradient id={gid} x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#E8534A" />
+          <stop offset="1" stopColor="#F5A030" />
         </linearGradient>
       </defs>
-      <rect width="100" height="100" rx="24" fill={`url(#${gid})`} />
-      {/* sutil brillo superior */}
-      <rect width="100" height="100" rx="24" fill="#ffffff" fillOpacity="0.06" />
-      {/* Monograma L */}
-      <path d="M36 26 h13 v37 h21 v13 H36 Z" fill="#ffffff" />
-      {/* Punto de acento */}
-      <circle cx="64" cy="33" r="7" fill="#ffffff" fillOpacity="0.55" />
+      <rect width="100" height="100" rx="22" fill="#1C1C1E" />
+      <path d="M27 19 h18 v44 h27 v18 H27 Z" fill={`url(#${gid})`} />
     </svg>
   );
 }
 
-/** Marca + wordmark "Leogin". Úsalo en landing, login y panel. */
+/** Marca + wordmark "Leogin" con gradiente coral→naranja en el texto. */
 export default function LeoginLogo({
   size = 28,
   wordmark = true,
@@ -55,7 +43,15 @@ export default function LeoginLogo({
       {wordmark && (
         <span
           className="t-display"
-          style={{ fontSize: size * 0.66, lineHeight: 1, letterSpacing: '-0.02em' }}
+          style={{
+            fontSize: size * 0.66,
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            background: 'linear-gradient(90deg, #E8534A 0%, #F5A030 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
         >
           Leogin
         </span>
