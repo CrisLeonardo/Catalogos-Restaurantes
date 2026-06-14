@@ -78,7 +78,7 @@ export default function AdminShell({
         ...(ordersEnabled ? [{ href: '/admin/analitica', label: 'Analítica', icon: 'dashboard', key: 'analitica' }] : []),
         ...(ordersEnabled ? [{ href: '/admin/finanzas', label: 'Finanzas', icon: 'wallet', key: 'finanzas' }] : []),
         ...(ordersEnabled ? [{ href: '/admin/clientes', label: 'Clientes', icon: 'users', key: 'clientes' }] : []),
-        ...(ordersEnabled ? [{ href: '/admin/promociones', label: 'Promos', icon: 'percent', key: 'promociones' }] : []),
+        // ...(ordersEnabled ? [{ href: '/admin/promociones', label: 'Promos', icon: 'percent', key: 'promociones' }] : []),
       ],
     },
     {

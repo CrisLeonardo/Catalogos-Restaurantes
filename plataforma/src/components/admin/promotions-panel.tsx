@@ -122,10 +122,10 @@ function PromoModal({ restaurantId, promo, onClose, onSaved }: { restaurantId: s
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={label}>Tipo</label>
-              <select name="kind" value={kind} onChange={(e) => setKind(e.target.value as Promotion['kind'])} style={input}>
-                <option value="PERCENT">% de descuento</option>
-                <option value="AMOUNT">Monto fijo (Q)</option>
-                <option value="FREE_DELIVERY">Envío gratis</option>
+              <select name="kind" value={kind} onChange={(e) => setKind(e.target.value as Promotion['kind'])} style={{ ...input, background: '#1a1a1a' }}>
+                <option value="PERCENT" style={{ background: '#1a1a1a', color: '#f0f0f0' }}>% de descuento</option>
+                <option value="AMOUNT" style={{ background: '#1a1a1a', color: '#f0f0f0' }}>Monto fijo (Q)</option>
+                <option value="FREE_DELIVERY" style={{ background: '#1a1a1a', color: '#f0f0f0' }}>Envío gratis</option>
               </select>
             </div>
             <div>

@@ -6,7 +6,8 @@
    · getCashSummary:   efectivo esperado HOY (por método de pago).
    · saveCashCount:    guarda un corte de caja (esperado vs contado).
    · getCashHistory:   últimos cortes del restaurante.
-   · exportSalesReportCsv: reporte de ventas del rango a CSV (Excel).
+   · exportSalesReportXlsx: reporte de ventas del rango a .xlsx.
+   · getSalesReportData:   datos del reporte para PDF en el cliente.
    Todo pasa por service role tras validar el rol del usuario.
    ============================================================ */
 
@@ -15,6 +16,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { localDateKey } from '@/lib/hours';
 import { getSalesReport } from '@/lib/db/reports';
+import type { SalesReport } from '@/lib/db/reports';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -179,47 +181,64 @@ export async function saveCashCount(
   return { ok: true };
 }
 
-/* ── Export del reporte de ventas a CSV (Excel) ────────────── */
+/* ── Export del reporte de ventas ───────────────────────────── */
 
-function csvCell(v: string | number): string {
-  const s = String(v);
-  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/** Exporta el reporte de ventas del rango como CSV (BOM para Excel). */
-export async function exportSalesReportCsv(
+/** Devuelve los datos del reporte para que el cliente genere el PDF. */
+export async function getSalesReportData(
   restaurantId: string,
   from: string,
   to: string,
-): Promise<{ csv?: string; filename?: string; error?: string }> {
+): Promise<{ report?: SalesReport; error?: string }> {
+  const ctx = await authRestaurant(restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+  const report = await getSalesReport(restaurantId, from, to, ctx.tz);
+  return { report };
+}
+
+/** Exporta el reporte como .xlsx (base64) para descarga directa. */
+export async function exportSalesReportXlsx(
+  restaurantId: string,
+  from: string,
+  to: string,
+): Promise<{ xlsx?: string; filename?: string; error?: string }> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
   const report = await getSalesReport(restaurantId, from, to, ctx.tz);
+  const XLSX = await import('xlsx');
 
-  const lines: string[][] = [];
-  lines.push(['Reporte de ventas', `${from} a ${to}`]);
-  lines.push([]);
-  lines.push(['Resumen', '']);
-  lines.push(['Pedidos', String(report.orders)]);
-  lines.push(['Ingreso bruto', report.revenue.toFixed(2)]);
-  lines.push(['Ingreso productos', report.productRevenue.toFixed(2)]);
-  lines.push(['Envíos', report.deliveryRevenue.toFixed(2)]);
-  lines.push(['Costo', report.cost.toFixed(2)]);
-  lines.push(['Utilidad', report.profit.toFixed(2)]);
-  lines.push(['Margen %', report.marginPct != null ? report.marginPct.toFixed(1) : 'n/d']);
-  lines.push(['Ticket promedio', report.avgTicket.toFixed(2)]);
-  lines.push([]);
-  lines.push(['Ventas por día', '']);
-  lines.push(['Fecha', 'Pedidos', 'Ingreso']);
-  for (const d of report.series) lines.push([d.date, String(d.orders), d.revenue.toFixed(2)]);
-  lines.push([]);
-  lines.push(['Productos (por ingreso)', '']);
-  lines.push(['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad']);
-  for (const p of report.topByRevenue) {
-    lines.push([p.name, String(p.qty), p.revenue.toFixed(2), p.cost.toFixed(2), p.profit.toFixed(2)]);
-  }
+  const wb = XLSX.utils.book_new();
 
-  const csv = '﻿' + lines.map((r) => r.map(csvCell).join(',')).join('\r\n');
-  return { csv, filename: `reporte-ventas-${from}_a_${to}.csv` };
+  // Hoja 1 – Resumen
+  const ws1 = XLSX.utils.aoa_to_sheet([
+    ['Reporte de Ventas', `${from} a ${to}`],
+    [],
+    ['Métrica', 'Valor'],
+    ['Pedidos', report.orders],
+    ['Ingreso bruto', report.revenue],
+    ['Ingreso productos', report.productRevenue],
+    ['Envíos', report.deliveryRevenue],
+    ['Costo', report.cost],
+    ['Utilidad', report.profit],
+    ['Margen %', report.marginPct != null ? `${report.marginPct.toFixed(1)}%` : 'n/d'],
+    ['Ticket promedio', report.avgTicket],
+  ]);
+  XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+
+  // Hoja 2 – Ventas por día
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['Fecha', 'Pedidos', 'Ingreso'],
+    ...report.series.map((d) => [d.date, d.orders, d.revenue]),
+  ]);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Ventas por día');
+
+  // Hoja 3 – Productos
+  const ws3 = XLSX.utils.aoa_to_sheet([
+    ['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
+    ...report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]),
+  ]);
+  XLSX.utils.book_append_sheet(wb, ws3, 'Productos');
+
+  const xlsx = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }) as string;
+  return { xlsx, filename: `reporte-ventas-${from}_a_${to}.xlsx` };
 }

@@ -87,7 +87,7 @@ export async function createOrder(
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer } = parsed.data;
+  const { restaurantId, items, customer, paymentMethod, cashAmount } = parsed.data;
 
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
   // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
@@ -280,6 +280,8 @@ export async function createOrder(
     p_delivery_fee:   fee,
     p_total:          total,
     p_notes:          notes,
+    p_payment_method: customer.type === 'DINE_IN' ? 'CASH' : (paymentMethod ?? 'CASH'),
+    p_cash_amount:    customer.type === 'DELIVERY' && (paymentMethod ?? 'CASH') === 'CASH' && cashAmount != null ? cashAmount : null,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,

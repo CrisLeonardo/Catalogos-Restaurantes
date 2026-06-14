@@ -86,6 +86,9 @@ export default function CheckoutForm({
   const [snapshotTotal, setSnapshotTotal] = useState(0);
   const [snapshotFee, setSnapshotFee] = useState(0);
   const [snapshotDiscount, setSnapshotDiscount] = useState(0);
+  const [snapshotPayment, setSnapshotPayment] = useState<'CASH' | 'CARD'>('CASH');
+  const [snapshotCashAmount, setSnapshotCashAmount] = useState(0);
+  const [snapshotOrderType, setSnapshotOrderType] = useState<OrderType>('DINE_IN');
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -94,6 +97,10 @@ export default function CheckoutForm({
   const [zone, setZone]       = useState('');
   const [notes, setNotes]     = useState('');
   const [welcomeBack, setWelcomeBack] = useState(false);
+
+  // Método de pago
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
+  const [cashAmount, setCashAmount] = useState('');
 
   // DINE_IN: mesa y preferencia de servicio
   const [tableNumber, setTableNumber]         = useState<number | null>(null);
@@ -136,6 +143,11 @@ export default function CheckoutForm({
     deliveryLat === undefined || deliveryLng === undefined || (geoDistanceKm !== null && geoDistanceKm > deliveryRadiusKm!)
   );
 
+  // Limpiar cashAmount si cambia el tipo o método de pago
+  useEffect(() => {
+    setCashAmount('');
+  }, [type, paymentMethod]);
+
   const errs = {
     name:  !name.trim() ? content.checkout.errName : '',
     phone: !phone.trim()
@@ -149,12 +161,21 @@ export default function CheckoutForm({
               ? 'Coloca tu ubicación en el mapa' : '',
     table:   type === 'DINE_IN' && !tableNumber ? 'Selecciona el número de mesa' : '',
   };
-  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !errs.geo && !errs.table
-    && !outOfZone && !geoOutOfRange;
 
   const deliveryFee = type === 'DELIVERY' ? config.deliveryFee : 0;
   const discount    = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
   const finalTotal  = Math.max(0, total + deliveryFee - discount);
+
+  // cashAmount: validación después de finalTotal porque depende del total final
+  const cashAmountNum = parseFloat(cashAmount.replace(',', '.')) || 0;
+  const needsCashAmount = type === 'DELIVERY' && paymentMethod === 'CASH';
+  const cashAmountErr = needsCashAmount && cashAmount.trim()
+    ? cashAmountNum < finalTotal ? `El monto mínimo es ${formatPrice(finalTotal, config)}` : ''
+    : '';
+  const cashAmountValid = !needsCashAmount || (cashAmount.trim() !== '' && cashAmountNum >= finalTotal);
+
+  const valid = !errs.name && !errs.phone && !errs.address && !errs.zone && !errs.geo && !errs.table
+    && !outOfZone && !geoOutOfRange && cashAmountValid;
 
   // Si cambia el carrito o el tipo de pedido, el cupón se revalida (se limpia).
   useEffect(() => {
@@ -213,6 +234,8 @@ export default function CheckoutForm({
         },
         deliveryFee: feeSnapshot,
         ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
+        paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
+        ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
       });
       if (result.error) { setError(result.error); return; }
 
@@ -234,6 +257,9 @@ export default function CheckoutForm({
       setSnapshotFee(feeSnapshot);
       setSnapshotDiscount(discount);
       setSnapshotTotal(totalSnapshot);
+      setSnapshotPayment(type === 'DINE_IN' ? 'CASH' : paymentMethod);
+      setSnapshotCashAmount(needsCashAmount ? cashAmountNum : 0);
+      setSnapshotOrderType(type);
       setOrderNumber(result.orderNumber ?? '');
       setTrackToken(result.publicToken ?? '');
       clearCart();
@@ -245,6 +271,9 @@ export default function CheckoutForm({
         fee: feeSnapshot,
         total: totalSnapshot,
         discount,
+        payment: type === 'DINE_IN' ? 'CASH' : paymentMethod,
+        cashAmt: needsCashAmount ? cashAmountNum : 0,
+        orderType: type,
       });
       if (waUrl) {
         try { window.open(waUrl, '_blank', 'noopener'); } catch {}
@@ -258,6 +287,9 @@ export default function CheckoutForm({
     fee: number;
     total: number;
     discount?: number;
+    payment?: 'CASH' | 'CARD';
+    cashAmt?: number;
+    orderType?: OrderType;
   }) {
     if (!whatsappNumber) return null;
     const num       = data?.orderNumber ?? orderNumber;
@@ -265,6 +297,9 @@ export default function CheckoutForm({
     const fee       = data?.fee ?? snapshotFee;
     const disc      = data?.discount ?? snapshotDiscount;
     const tot       = data?.total ?? snapshotTotal;
+    const pmeth     = data?.payment ?? snapshotPayment;
+    const cAmt      = data?.cashAmt ?? snapshotCashAmount;
+    const oType     = data?.orderType ?? snapshotOrderType;
     const clean     = whatsappNumber.replace(/\D/g, '');
 
     const mapsLink = type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
@@ -294,6 +329,14 @@ export default function CheckoutForm({
       lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
     }
     lines.push(`💰 ${content.cart.total}: *${formatPrice(tot, config)}*`);
+    if (oType !== 'DINE_IN') {
+      if (pmeth === 'CARD') {
+        lines.push(`💳 Pago: Tarjeta al recibir`);
+      } else {
+        const changeInfo = cAmt > 0 ? ` — paga con ${formatPrice(cAmt, config)} (cambio: ${formatPrice(cAmt - tot, config)})` : '';
+        lines.push(`💵 Pago: Efectivo${changeInfo}`);
+      }
+    }
     if (notes) lines.push('', `📝 ${notes}`);
     return `https://wa.me/${clean}?text=${encodeURIComponent(lines.join('\n'))}`;
   }
@@ -337,7 +380,12 @@ export default function CheckoutForm({
               <Row k="Servicio" v={coursePreference} />
             )}
             <Row k={content.confirmation.eta} v={content.confirmation.etaValue} />
-            <Row k={content.confirmation.payment} v={content.checkout.payCash} />
+            {snapshotOrderType !== 'DINE_IN' && (
+              <Row
+                k={content.confirmation.payment}
+                v={snapshotPayment === 'CARD' ? content.checkout.payCard : content.checkout.payCash}
+              />
+            )}
           </Glass>
           {waUrl && (
             <div style={{ width: '100%' }}>
@@ -654,22 +702,76 @@ export default function CheckoutForm({
 
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />
 
-        {/* Pago */}
-        <div>
-          <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.payLabel}</label>
-          <Glass style={{ borderRadius: 14, padding: 15, display: 'flex', alignItems: 'center', gap: 13, marginTop: 6 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.08)', color: 'var(--u-text)' }}>
-              <Icon name="receipt" size={20} />
+        {/* Pago — solo DELIVERY y PICKUP; en DINE_IN el mesero lo maneja */}
+        {type !== 'DINE_IN' && (
+          <div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.payLabel}</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+              {/* Efectivo */}
+              <PayOption
+                icon="banknote"
+                label={type === 'DELIVERY' ? content.checkout.payCash : 'Efectivo'}
+                sublabel={type === 'DELIVERY' ? content.checkout.payCashSub : 'Pagas en el local al recoger'}
+                selected={paymentMethod === 'CASH'}
+                onClick={() => setPaymentMethod('CASH')}
+              />
+              {/* Tarjeta — solo si el restaurante lo habilita */}
+              {config.acceptsCard && (
+                <PayOption
+                  icon="creditCard"
+                  label={content.checkout.payCard}
+                  sublabel={type === 'DELIVERY' ? content.checkout.payCardSub : 'Pagas con tarjeta en el local'}
+                  selected={paymentMethod === 'CARD'}
+                  onClick={() => setPaymentMethod('CARD')}
+                />
+              )}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>{content.checkout.payCash}</div>
-              <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{content.checkout.payCashSub}</div>
-            </div>
-            <span style={{ width: 22, height: 22, borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', display: 'grid', placeItems: 'center' }}>
-              <Icon name="check" size={14} strokeWidth={3} />
-            </span>
-          </Glass>
-        </div>
+
+            {/* Efectivo con cambio — solo DELIVERY + CASH */}
+            {type === 'DELIVERY' && paymentMethod === 'CASH' && (
+              <div style={{ marginTop: 12 }}>
+                <label className="t-kicker" style={{ fontSize: 10.5 }}>¿Con cuánto vas a pagar?</label>
+                <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '3px 0 8px', lineHeight: 1.5 }}>
+                  Para que el repartidor lleve el cambio exacto.
+                </p>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(e.target.value)}
+                  min={finalTotal}
+                  step="any"
+                  placeholder={`Mínimo ${formatPrice(finalTotal, config)}`}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${tried && !cashAmountValid ? '#ff6b6b' : 'var(--u-hair)'}`,
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '12px 14px',
+                    color: 'var(--u-text)',
+                    fontSize: 15,
+                    fontWeight: 600,
+                    outline: 'none',
+                  }}
+                />
+                {tried && !cashAmountValid && (
+                  <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>
+                    {cashAmount.trim() ? `El monto mínimo es ${formatPrice(finalTotal, config)}` : 'Ingresa el monto con el que pagarás'}
+                  </p>
+                )}
+                {cashAmountErr && !tried && (
+                  <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{cashAmountErr}</p>
+                )}
+                {cashAmount.trim() !== '' && cashAmountNum >= finalTotal && (
+                  <p style={{ fontSize: 12.5, color: '#4ade80', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon name="check" size={13} strokeWidth={3} />
+                    Cambio que recibirás: <strong>{formatPrice(cashAmountNum - finalTotal, config)}</strong>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <p style={{ fontSize: 13, color: '#ff6b6b', background: 'rgba(255,107,107,0.10)', border: '1px solid rgba(255,107,107,0.20)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
@@ -680,6 +782,36 @@ export default function CheckoutForm({
         </PrimaryButton>
       </form>
     </main>
+  );
+}
+
+function PayOption({ icon, label, sublabel, selected, onClick }: {
+  icon: string; label: string; sublabel: string; selected: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="press"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 13,
+        padding: 15, borderRadius: 14, width: '100%', textAlign: 'left', cursor: 'pointer',
+        border: `1.5px solid ${selected ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
+        background: selected ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+        transition: 'all 160ms',
+      }}
+    >
+      <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: selected ? 'var(--u-text)' : 'rgba(255,255,255,0.08)', color: selected ? 'var(--brand-bg)' : 'var(--u-text)', transition: 'all 160ms' }}>
+        <Icon name={icon} size={20} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>{sublabel}</div>
+      </div>
+      <span style={{ width: 22, height: 22, borderRadius: 99, flexShrink: 0, border: `2px solid ${selected ? 'var(--u-text)' : 'var(--u-hair-2)'}`, background: selected ? 'var(--u-text)' : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
+        {selected && <Icon name="check" size={12} strokeWidth={3} style={{ color: 'var(--brand-bg)' }} />}
+      </span>
+    </button>
   );
 }
 

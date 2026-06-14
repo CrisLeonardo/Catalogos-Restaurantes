@@ -51,9 +51,9 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
         {available.length > 0 && (
           <form action={assignRestaurantToOrg} style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
             <input type="hidden" name="orgId" value={org.id} />
-            <select name="restaurantId" required defaultValue="" style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}>
-              <option value="" disabled>Agregar una sucursal…</option>
-              {available.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.slug})</option>)}
+            <select name="restaurantId" required defaultValue="" style={{ flex: 1, background: '#1a1a1a', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}>
+              <option value="" disabled style={{ background: '#1a1a1a', color: '#aaa' }}>Agregar una sucursal…</option>
+              {available.map((r) => <option key={r.id} value={r.id} style={{ background: '#1a1a1a', color: '#f0f0f0' }}>{r.name} ({r.slug})</option>)}
             </select>
             <button type="submit" className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>Asignar</button>
           </form>

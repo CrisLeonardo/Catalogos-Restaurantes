@@ -83,6 +83,7 @@ export interface ThemeConfig {
   deliveryFee: number;
   dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
   dineInCourseOptions: string[];  // preferencias de servicio configurables
+  acceptsCard: boolean;           // habilita la opción "pagar con tarjeta" en delivery y pickup
 
   // ── Moneda ──
   currencySymbol: string;       // 'Q', '$', '€'
@@ -144,6 +145,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   deliveryFee: 0,
   dineInTableCount: 20,
   dineInCourseOptions: ['Entrada primero', 'Plato principal primero', 'Postre al final'],
+  acceptsCard: false,
 
   currencySymbol: 'Q',
   currencyPosition: 'prefix',
@@ -207,6 +209,8 @@ export interface ThemeContent {
     payLabel: string;
     payCash: string;
     payCashSub: string;
+    payCard: string;
+    payCardSub: string;
     confirm: string;
     errName: string;
     errPhone: string;
@@ -301,6 +305,8 @@ export const DEFAULT_CONTENT: ThemeContent = {
     payLabel: 'Pago',
     payCash: 'Efectivo contra entrega',
     payCashSub: 'Pagás cuando llega tu pedido',
+    payCard: 'Tarjeta (paga al recibir)',
+    payCardSub: 'El repartidor lleva terminal',
     confirm: 'Confirmar pedido',
     errName: 'Decinos tu nombre',
     errPhone: 'Necesitamos un teléfono',
