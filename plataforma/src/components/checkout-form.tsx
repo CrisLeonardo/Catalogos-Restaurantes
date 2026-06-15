@@ -129,6 +129,25 @@ export default function CheckoutForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 
+  useEffect(() => {
+    if (!config.orderTypes.includes('dine_in')) return;
+    try {
+      const key = `qr-mesa-${restaurantId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const n = parseInt(stored, 10);
+        if (n > 0 && n <= config.dineInTableCount) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setType('DINE_IN');
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setTableNumber(n);
+          localStorage.removeItem(key);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
   const zonesActive = deliveryZones.length > 0;
   const outOfZone   = type === 'DELIVERY' && zonesActive && zone === NO_ZONE;
 

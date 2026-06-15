@@ -21,6 +21,7 @@ export const ADMIN_SECTIONS = [
   { key: 'suscripcion',  label: 'Mi suscripción' },
   { key: 'personalizar', label: 'Personalizar' },
   { key: 'perfil',       label: 'Perfil' },
+  { key: 'mesas',        label: 'Mesas' },
   { key: 'qr',           label: 'QR' },
   { key: 'soporte',      label: 'Soporte' },
 ] as const;

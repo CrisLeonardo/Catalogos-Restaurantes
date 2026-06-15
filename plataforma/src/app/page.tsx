@@ -69,8 +69,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /* ── Página principal ──────────────────────────────────────── */
-export default async function Home() {
-  const slug = (await headers()).get('x-tenant-slug');
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [slug, params] = await Promise.all([
+    headers().then((h) => h.get('x-tenant-slug')),
+    searchParams,
+  ]);
+  const rawMesa = typeof params.mesa === 'string' ? params.mesa : undefined;
+  const initialMesa = rawMesa ? (parseInt(rawMesa, 10) || undefined) : undefined;
 
   // Dominio raíz → landing comercial de Leogin
   if (!slug) return <LeoginLanding />;
@@ -124,6 +133,7 @@ export default async function Home() {
       restaurantId={data.restaurant.id}
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
+      initialMesa={initialMesa}
     />
   );
 }

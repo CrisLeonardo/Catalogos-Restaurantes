@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import Portada from '@/components/menu/portada';
@@ -21,9 +22,19 @@ interface Props {
   ordersEnabled: boolean;
   /** Estado real según horarios del restaurante (default: abierto). */
   isOpen?: boolean;
+  /** Mesa pre-seleccionada desde el QR de la mesa. */
+  initialMesa?: number;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, initialMesa }: Props) {
+  useEffect(() => {
+    if (initialMesa && initialMesa > 0) {
+      try {
+        localStorage.setItem(`qr-mesa-${restaurantId}`, String(initialMesa));
+      } catch {}
+    }
+  }, [initialMesa, restaurantId]);
+
   return (
     <ThemeProvider config={config} content={content}>
       <CartProvider restaurantId={restaurantId}>

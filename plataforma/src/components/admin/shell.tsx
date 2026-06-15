@@ -75,6 +75,7 @@ export default function AdminShell({
       title: 'Operación',
       items: [
         ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
+        ...(on(ordersEnabled)    ? [{ href: '/admin/mesas',     label: 'Mesas',       icon: 'grid',  key: 'mesas'     }] : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
         ...(on(inventarioEnabled) ? [{ href: '/admin/inventario', label: 'Inventario',  icon: 'box',   key: 'inventario' }] : []),
@@ -106,6 +107,7 @@ export default function AdminShell({
     .filter((s) => s.items.length > 0);
 
   const TITLES: Record<string, string> = {
+    '/admin/mesas': 'Mesas · Comer en local',
     '/admin/pedidos': 'Pedidos en vivo',
     '/admin/categorias': 'Categorías',
     '/admin/inventario': 'Inventario',
