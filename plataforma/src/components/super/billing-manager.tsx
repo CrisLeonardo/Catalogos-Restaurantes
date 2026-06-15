@@ -36,6 +36,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
   borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
+const optionStyle: React.CSSProperties = { color: '#000', background: '#fff' };
 const labelStyle: React.CSSProperties = {
   fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600,
   letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
@@ -142,9 +143,9 @@ function ConfigCard({
           <div>
             <label style={labelStyle}>Moneda</label>
             <select name="currency" defaultValue={config?.currency ?? 'GTQ'} style={inputStyle}>
-              <option value="GTQ">GTQ (Q)</option>
-              <option value="MXN">MXN ($)</option>
-              <option value="USD">USD ($)</option>
+              <option value="GTQ" style={optionStyle}>GTQ (Q)</option>
+              <option value="MXN" style={optionStyle}>MXN ($)</option>
+              <option value="USD" style={optionStyle}>USD ($)</option>
             </select>
           </div>
           <div>
@@ -320,11 +321,11 @@ function PayForm({
       <div style={{ flex: '1 1 120px' }}>
         <label style={labelStyle}>Método</label>
         <select name="payment_method" defaultValue="Transferencia" style={inputStyle}>
-          <option>Transferencia</option>
-          <option>Efectivo</option>
-          <option>Depósito</option>
-          <option>Tarjeta</option>
-          <option>Otro</option>
+          <option style={optionStyle}>Transferencia</option>
+          <option style={optionStyle}>Efectivo</option>
+          <option style={optionStyle}>Depósito</option>
+          <option style={optionStyle}>Tarjeta</option>
+          <option style={optionStyle}>Otro</option>
         </select>
       </div>
       <button type="submit" disabled={pending} className="press btn-accent" style={{

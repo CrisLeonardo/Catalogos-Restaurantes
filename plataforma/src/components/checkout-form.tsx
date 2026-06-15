@@ -165,8 +165,8 @@ export default function CheckoutForm({
 
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
   const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
-  const showTip      = type === 'DINE_IN' && config.tipEnabled;
-  const tipAmount    = showTip ? Math.round(total * config.tipPercent) / 100 : 0;
+  const showTip      = false;
+  const tipAmount    = 0;
   const finalTotal   = Math.max(0, total + deliveryFee - discount + tipAmount);
 
   // cashAmount: validación después de finalTotal porque depende del total final
