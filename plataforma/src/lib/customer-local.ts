@@ -84,6 +84,33 @@ export function addLocalOrder(restaurantId: string, order: LocalOrderRef): void 
   } catch {}
 }
 
+/* ── Sucursal preferida del grupo (selector geo) ──────────── */
+// Recuerda a qué sucursal entró el cliente desde el link del grupo, para no
+// volver a preguntarle en visitas siguientes (con escape "cambiar sucursal").
+
+const branchKey = (orgSlug: string) => `group-branch-${orgSlug}`;
+
+export function getPreferredBranch(orgSlug: string): string | null {
+  try {
+    const slug = localStorage.getItem(branchKey(orgSlug));
+    return slug && /^[a-z0-9-]+$/i.test(slug) ? slug : null;
+  } catch {
+    return null;
+  }
+}
+
+export function savePreferredBranch(orgSlug: string, branchSlug: string): void {
+  try {
+    localStorage.setItem(branchKey(orgSlug), branchSlug);
+  } catch {}
+}
+
+export function clearPreferredBranch(orgSlug: string): void {
+  try {
+    localStorage.removeItem(branchKey(orgSlug));
+  } catch {}
+}
+
 /* ── Visitante anónimo (métricas) ─────────────────────────── */
 
 export function getVisitorId(): string | null {

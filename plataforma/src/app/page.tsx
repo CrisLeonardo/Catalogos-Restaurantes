@@ -3,7 +3,9 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import MenuShell from '@/components/menu-shell';
 import LeoginLanding from '@/components/landing';
+import BranchSelector from '@/components/branch-selector';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { getGroupBranches } from '@/lib/db/org-public';
 import { getMenuData } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow } from '@/lib/hours';
@@ -27,7 +29,18 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   const data = await getRestaurantBySlug(slug);
-  if (!data) return { title: 'Restaurante no encontrado' };
+  if (!data) {
+    // ¿Es el link público de un grupo? (grupo-slug.dominio → selector)
+    const group = await getGroupBranches(slug);
+    if (group) {
+      return {
+        title: `${group.name} — Pide en línea`,
+        description: `Elige tu sucursal de ${group.name} y pide en línea.`,
+        robots: { index: false, follow: false },
+      };
+    }
+    return { title: 'Restaurante no encontrado' };
+  }
 
   const name = data.restaurant.name;
   const description = data.restaurant.tagline ?? `Menú en línea de ${name}`;
@@ -88,7 +101,12 @@ export default async function Home() {
 
   // Tenant real
   const data = await getRestaurantBySlug(slug);
-  if (!data) notFound();
+  if (!data) {
+    // Fallback: ¿es el link público de un grupo? → selector de sucursal.
+    const group = await getGroupBranches(slug);
+    if (group && group.branches.length > 0) return <BranchSelector group={group} />;
+    notFound();
+  }
 
   const menu = await getMenuData(data.restaurant.id);
   const ordersEnabled = data.restaurant.modules?.orders === true;

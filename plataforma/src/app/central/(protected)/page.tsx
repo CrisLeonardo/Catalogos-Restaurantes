@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getGroupContext, getGroupDashboard } from '@/lib/db/group';
 import { subdomainUrl } from '@/lib/tenant';
 import { Icon } from '@/components/icons';
+import GroupLinkCard from '@/components/central/group-link-card';
 
 export const metadata = { title: 'Resumen del grupo' };
 
@@ -38,6 +39,9 @@ export default async function CentralDashboardPage() {
         <Kpi label="Ventas 14 días" value={money(dash.sales14)} />
         {dash.best && <Kpi label="Mejor sucursal hoy" value={dash.best.name} sub={money(dash.best.todaySales)} small />}
       </div>
+
+      {/* Link único de pedidos en línea del grupo */}
+      <GroupLinkCard url={subdomainUrl(ctx.org.slug)} groupName={ctx.org.name} />
 
       {/* Alertas */}
       {alerts.length > 0 && (

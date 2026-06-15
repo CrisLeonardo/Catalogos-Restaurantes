@@ -55,6 +55,25 @@ function validateSlug(slug: string): string | null {
   return null;
 }
 
+/**
+ * El subdominio (slug) es un namespace COMPARTIDO entre restaurantes y grupos:
+ * `grupo-slug.dominio` solo enruta al selector de sucursal si NINGÚN restaurante
+ * usa ese slug (el restaurante gana). Esta verificación cruzada evita esa colisión.
+ * `table` es la tabla donde se va a guardar; se revisa la OTRA. null = sin colisión.
+ */
+async function crossSlugCollision(
+  db: ReturnType<typeof createServiceClient>,
+  slug: string,
+  table: 'restaurants' | 'organizations',
+): Promise<string | null> {
+  const other = table === 'restaurants' ? 'organizations' : 'restaurants';
+  const { data } = await db.from(other).select('id').eq('slug', slug).maybeSingle();
+  if (!data) return null;
+  return other === 'organizations'
+    ? `El slug "${slug}" ya lo usa un grupo. Elige otro.`
+    : `El slug "${slug}" ya lo usa una sucursal. Elige otro.`;
+}
+
 export async function createRestaurant(
   prevState: SuperState,
   formData: FormData,
@@ -70,6 +89,8 @@ export async function createRestaurant(
   if (!slug) return { error: 'No se pudo generar un slug válido.' };
   const slugError = validateSlug(slug);
   if (slugError) return { error: slugError };
+  const collision = await crossSlugCollision(db, slug, 'restaurants');
+  if (collision) return { error: collision };
 
   const { data: restaurant, error: rErr } = await db
     .from('restaurants')
@@ -119,6 +140,8 @@ export async function updateRestaurantBasic(
   if (!slug) return { error: 'El slug es requerido.' };
   const slugError = validateSlug(slug);
   if (slugError) return { error: slugError };
+  const collision = await crossSlugCollision(db, slug, 'restaurants');
+  if (collision) return { error: collision };
 
   const { error } = await db
     .from('restaurants')
@@ -590,6 +613,8 @@ export async function createOrganization(
   const slug = (formData.get('slug') as string)?.trim().toLowerCase() || slugify(name);
   const slugError = validateSlug(slug);
   if (slugError) return { error: slugError };
+  const collision = await crossSlugCollision(db, slug, 'organizations');
+  if (collision) return { error: collision };
 
   const { data: org, error } = await db
     .from('organizations')
