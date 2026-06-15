@@ -48,6 +48,17 @@ function fold(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+function calcProductPrice(p: Product): { total: number; hasCombo: boolean; hasSizes: boolean; hasExtras: boolean } {
+  const opts = Array.isArray(p.options) ? p.options : [];
+  const hasCombo   = opts.some((g) => g.type === 'combo');
+  const hasSizes   = opts.some((g) => g.type === 'single' && g.choices.some((c) => (c.priceDelta || 0) !== 0));
+  const hasExtras  = opts.some((g) => g.type === 'multi');
+  const comboDelta = opts
+    .filter((g) => g.type === 'combo')
+    .reduce((sum, g) => sum + g.choices.reduce((s, c) => s + (Number(c.priceDelta) || 0), 0), 0);
+  return { total: p.price + comboDelta, hasCombo, hasSizes, hasExtras };
+}
+
 function suggestIconFromName(name: string): string {
   const n = fold(name);
   for (const icon of PRODUCT_ICONS) {
@@ -154,6 +165,9 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
           {/* Filas */}
           {list.map((p, i) => {
             const icon = catIconMap.get(p.category_id ?? '') ?? 'utensils';
+            const { total, hasCombo, hasSizes, hasExtras } = calcProductPrice(p);
+            const tags = p.tags ?? [];
+            const hasBadges = hasCombo || hasSizes || hasExtras || tags.length > 0;
             return (
               <div
                 key={p.id}
@@ -203,18 +217,35 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
                     >
                       {p.description ?? '—'}
                     </div>
+                    {hasBadges && (
+                      <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
+                        {hasCombo  && <RowBadge label="Combo"   color="#16a34a" bg="rgba(22,163,74,0.12)" />}
+                        {hasSizes  && <RowBadge label="Tamaños" color="var(--u-text-3)" bg="rgba(255,255,255,0.06)" />}
+                        {hasExtras && <RowBadge label="Extras"  color="var(--u-text-3)" bg="rgba(255,255,255,0.06)" />}
+                        {tags.map((t) => <RowBadge key={t} label={t} color="var(--u-text-3)" bg="rgba(255,255,255,0.06)" />)}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Precio */}
                 <div
                   className="catalog-cell-price"
-                  style={{
-                    textAlign: 'right', fontFamily: 'var(--ui-font-mono)',
-                    fontWeight: 600, fontSize: 14, color: 'var(--u-text)',
-                  }}
+                  style={{ textAlign: 'right' }}
                 >
-                  Q{p.price.toFixed(2)}
+                  {hasSizes && (
+                    <div style={{ fontSize: 9.5, color: 'var(--u-text-4)', fontWeight: 600, letterSpacing: '0.04em', marginBottom: 1 }}>
+                      DESDE
+                    </div>
+                  )}
+                  <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, fontSize: 14, color: 'var(--u-text)' }}>
+                    Q{total.toFixed(2)}
+                  </div>
+                  {hasCombo && total !== p.price && (
+                    <div style={{ fontSize: 9.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                      base Q{p.price.toFixed(2)}
+                    </div>
+                  )}
                 </div>
 
                 {/* Toggle disponibilidad */}
@@ -634,24 +665,37 @@ function ProductModal({
               {(() => {
                 const p = parseFloat(priceVal);
                 const c = parseFloat(costVal);
-                if (isNaN(p) || isNaN(c) || costVal.trim() === '') {
-                  return (
-                    <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 7, display: 'block' }}>
-                      Captura el costo para ver utilidad y margen por venta.
-                    </span>
-                  );
-                }
-                const profit = p - c;
-                const margin = p > 0 ? (profit / p) * 100 : 0;
-                const good = profit >= 0;
+                const comboDelta = options
+                  .filter((g) => g.type === 'combo')
+                  .reduce((sum, g) => sum + g.choices.reduce((s, ch) => s + (Number(ch.priceDelta) || 0), 0), 0);
+                const totalPrice = (isNaN(p) ? 0 : p) + comboDelta;
+
                 return (
-                  <div style={{ display: 'flex', gap: 16, marginTop: 9, fontSize: 12.5 }}>
-                    <span style={{ color: 'var(--u-text-3)' }}>
-                      Utilidad: <strong style={{ color: good ? 'var(--u-text)' : '#f87171' }}>Q{profit.toFixed(2)}</strong>
-                    </span>
-                    <span style={{ color: 'var(--u-text-3)' }}>
-                      Margen: <strong style={{ color: good ? 'var(--brand-accent)' : '#f87171' }}>{margin.toFixed(0)}%</strong>
-                    </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 9 }}>
+                    {comboDelta > 0 && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', borderRadius: 10, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.2)' }}>
+                        <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>Precio base</span>
+                        <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{isNaN(p) ? '—' : p.toFixed(2)}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>+ combo</span>
+                        <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{comboDelta.toFixed(2)}</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: '#4ade80' }}>= Q{totalPrice.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {!isNaN(p) && !isNaN(c) && costVal.trim() !== '' && (
+                      <div style={{ display: 'flex', gap: 16, fontSize: 12.5 }}>
+                        <span style={{ color: 'var(--u-text-3)' }}>
+                          Utilidad: <strong style={{ color: p - c >= 0 ? 'var(--u-text)' : '#f87171' }}>Q{(p - c).toFixed(2)}</strong>
+                        </span>
+                        <span style={{ color: 'var(--u-text-3)' }}>
+                          Margen: <strong style={{ color: p - c >= 0 ? '#4ade80' : '#f87171' }}>{p > 0 ? (((p - c) / p) * 100).toFixed(0) : 0}%</strong>
+                        </span>
+                      </div>
+                    )}
+                    {(isNaN(c) || costVal.trim() === '') && comboDelta === 0 && (
+                      <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
+                        Captura el costo para ver utilidad y margen por venta.
+                      </span>
+                    )}
                   </div>
                 );
               })()}
@@ -903,6 +947,18 @@ function ModalField({
         }}
       />
     </div>
+  );
+}
+
+function RowBadge({ label, color, bg }: { label: string; color: string; bg: string }) {
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 7px', borderRadius: 99,
+      fontSize: 10, fontWeight: 600, background: bg, color,
+      letterSpacing: '0.02em', whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
   );
 }
 

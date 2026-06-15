@@ -173,11 +173,41 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
             </span>
           </div>
         )}
+        {Number(order.discount) > 0 && (
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '5px 8px', borderRadius: 8,
+            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+          }}>
+            <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+              🏷 Cupón
+              {order.promo_code && (
+                <span style={{
+                  fontFamily: 'var(--ui-font-mono)', fontSize: 10.5, fontWeight: 700,
+                  padding: '2px 6px', borderRadius: 5,
+                  background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                }}>
+                  {order.promo_code}
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4ade80' }}>
+              −{money(Number(order.discount), currency)}
+            </span>
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Total</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
-            {money(Number(order.total), currency)}
-          </span>
+          <div style={{ textAlign: 'right' }}>
+            {Number(order.discount) > 0 && (
+              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
+                {money(Number(order.total) + Number(order.discount), currency)}
+              </div>
+            )}
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
+              {money(Number(order.total), currency)}
+            </span>
+          </div>
         </div>
         {/* Método de pago — no aplica para DINE_IN (mesero lo maneja) */}
         {order.order_type !== 'DINE_IN' && (
