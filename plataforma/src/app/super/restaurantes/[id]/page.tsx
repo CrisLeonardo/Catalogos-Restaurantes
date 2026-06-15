@@ -8,6 +8,7 @@ import OrderTypesEditor from '@/components/super/order-types-editor';
 import ThemeEditor from '@/components/super/theme-editor';
 import RestaurantUsers from '@/components/super/restaurant-users';
 import BillingManager from '@/components/super/billing-manager';
+import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import DeleteButton from '@/components/admin/delete-button';
 import { getBillingConfig, getInvoices } from '@/lib/db/billing';
 import {
@@ -16,6 +17,7 @@ import {
   listThemeTemplates,
 } from '@/lib/actions/super-admin';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import type { Restaurant } from '@/types';
 
 // El editor del Super Admin debe leer SIEMPRE el estado fresco de la BD
 // (no caché de route): tras guardar el tema, debe reflejar lo guardado.
@@ -132,6 +134,8 @@ export default async function EditRestaurantePage({
             ? 'Acceso creado. Entrega las credenciales al restaurante.'
             : saved === 'pass'
             ? 'Contraseña actualizada.'
+            : saved === 'location'
+            ? 'Ubicación y radio guardados.'
             : 'Cambios guardados.'}
         </div>
       )}
@@ -156,7 +160,24 @@ export default async function EditRestaurantePage({
         </div>
       </section>
 
-      {/* ── 3. Apariencia ──────────────────────────────────── */}
+      {/* ── 3. Ubicación y radio de entrega ───────────────── */}
+      <section>
+        <SectionTitle>Ubicación y radio de entrega</SectionTitle>
+        <p
+          style={{
+            fontSize: 13,
+            color: 'var(--u-text-4)',
+            marginTop: -8,
+            marginBottom: 14,
+          }}
+        >
+          Coloca el pin en el mapa y define hasta cuántos km llega el reparto.
+          Las coordenadas alimentan el selector automático de sucursal del grupo.
+        </p>
+        <RestaurantLocationEditor restaurant={row as unknown as Restaurant} />
+      </section>
+
+      {/* ── 4. Apariencia ──────────────────────────────────── */}
       {/* full-bleed: rompe el max-width de 800px del layout para que el
           editor y la vista previa en vivo quepan lado a lado. */}
       <section className="bleed">
@@ -172,7 +193,7 @@ export default async function EditRestaurantePage({
         </div>
       </section>
 
-      {/* ── 4. Acceso (usuarios) ───────────────────────────── */}
+      {/* ── 5. Acceso (usuarios) ───────────────────────────── */}
       <section>
         <SectionTitle>Acceso del restaurante</SectionTitle>
         <p

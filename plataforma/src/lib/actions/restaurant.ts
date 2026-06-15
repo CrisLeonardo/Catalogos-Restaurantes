@@ -45,7 +45,7 @@ async function resolveContext(formData: FormData) {
   if (!restaurantId) return null;
 
   const db = isSuperAdmin ? createServiceClient() : supabase;
-  return { db, restaurantId };
+  return { db, restaurantId, isSuperAdmin };
 }
 
 export async function updateRestaurantInfo(
@@ -69,6 +69,7 @@ export async function updateRestaurantInfo(
     .update({
       name,
       tagline: (formData.get('tagline') as string)?.trim() || null,
+      address: (formData.get('address') as string)?.trim() || null,
       whatsapp_number: waResult.value,
       orders_whatsapp: ordersWaResult.value,
       contact_email: (formData.get('contact_email') as string)?.trim() || null,
@@ -250,6 +251,10 @@ export async function updateRestaurantLocation(
 
   if (error) return { error: error.message };
 
+  if (ctx.isSuperAdmin) {
+    revalidatePath(`/super/restaurantes/${ctx.restaurantId}`);
+    redirect(`/super/restaurantes/${ctx.restaurantId}?saved=location`);
+  }
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   redirect('/admin/perfil?saved=1');

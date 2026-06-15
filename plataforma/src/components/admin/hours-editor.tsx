@@ -291,7 +291,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
           style={{ ...inputStyle, width: '100%', fontFamily: 'var(--ui-font-sans)', cursor: 'pointer' }}
         >
           {TIMEZONES.map((tz) => (
-            <option key={tz} value={tz}>{tz.replace('America/', '').replace(/_/g, ' ')}</option>
+            <option key={tz} value={tz} style={{ color: '#000', background: '#fff' }}>{tz.replace('America/', '').replace(/_/g, ' ')}</option>
           ))}
         </select>
       </Glass>

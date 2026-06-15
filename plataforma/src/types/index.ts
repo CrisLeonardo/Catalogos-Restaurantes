@@ -35,6 +35,8 @@ export interface Restaurant {
   delivery_radius_km: number | null;
   /** Grupo dueño (migración 024); null = independiente. */
   organization_id: string | null;
+  /** Dirección legible del local (migración 026). Se muestra en el selector de sucursal. */
+  address: string | null;
   created_at: string;
 }
 

@@ -88,6 +88,21 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
           </Glass>
 
           <Glass variant="quiet" style={{ padding: 16 }}>
+            <label htmlFor="address" style={labelStyle}>Dirección</label>
+            <input
+              id="address"
+              name="address"
+              type="text"
+              defaultValue={restaurant.address ?? ''}
+              placeholder="Ej. 5a Av. 10-23, Zona 1"
+              style={inputStyle}
+            />
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
+              Se muestra cuando los clientes eligen sucursal en el link del grupo.
+            </p>
+          </Glass>
+
+          <Glass variant="quiet" style={{ padding: 16 }}>
             <label htmlFor="whatsapp_number" style={labelStyle}>WhatsApp</label>
             <input
               id="whatsapp_number"

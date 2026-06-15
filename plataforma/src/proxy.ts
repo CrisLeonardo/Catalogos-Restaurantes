@@ -70,6 +70,13 @@ export async function proxy(request: NextRequest) {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (supabaseUrl && anonKey) {
+    // En producción compartimos la sesión en todos los subdominios usando
+    // domain=.leogin.online. En local no se toca (los subdominios *.localhost
+    // no admiten cookie-domain en todos los navegadores).
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(",")[0].trim() ?? "";
+    const isLocal = !rootDomain || rootDomain.includes("localhost");
+    const cookieDomain = isLocal ? undefined : `.${rootDomain.split(":")[0]}`;
+
     const supabase = createServerClient(supabaseUrl, anonKey, {
       cookies: {
         getAll() {
@@ -81,7 +88,10 @@ export async function proxy(request: NextRequest) {
           );
           response = makeResponse();
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, {
+              ...options,
+              ...(cookieDomain ? { domain: cookieDomain } : {}),
+            }),
           );
         },
       },

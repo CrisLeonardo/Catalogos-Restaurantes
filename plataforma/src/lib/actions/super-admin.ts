@@ -149,6 +149,7 @@ export async function updateRestaurantBasic(
       name,
       slug,
       tagline: (formData.get('tagline') as string)?.trim() || null,
+      address: (formData.get('address') as string)?.trim() || null,
       whatsapp_number:
         (formData.get('whatsapp_number') as string)?.trim() || null,
       contact_email:

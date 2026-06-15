@@ -88,6 +88,21 @@ export default function RestaurantEditForm({
       </Glass>
 
       <Glass variant="quiet" style={{ padding: 16 }}>
+        <label htmlFor="address" style={labelStyle}>Dirección</label>
+        <input
+          id="address"
+          name="address"
+          type="text"
+          defaultValue={restaurant.address ?? ''}
+          placeholder="Ej. 5a Av. 10-23, Zona 1, Ciudad de Guatemala"
+          style={inputStyle}
+        />
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
+          Se muestra en el selector de sucursal del grupo.
+        </p>
+      </Glass>
+
+      <Glass variant="quiet" style={{ padding: 16 }}>
         <label htmlFor="contact_email" style={labelStyle}>Email</label>
         <input
           id="contact_email"
