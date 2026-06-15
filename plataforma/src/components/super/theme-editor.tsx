@@ -27,9 +27,10 @@ interface Props {
   saveAction?: (input: { restaurantId: string; config: ThemeConfig; content: ThemeContent; customCss: string }) => Promise<{ error?: string; ok?: boolean }>;
   showTemplates?: boolean;
   showAdvanced?: boolean;
+  showOrdersAndCurrency?: boolean;
 }
 
-export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true, showAdvanced = true }: Props) {
+export default function ThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, templates: initialTemplates = [], saveAction, showTemplates = true, showAdvanced = true, showOrdersAndCurrency = true }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
@@ -227,7 +228,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       </Section>
 
       {/* ── Pedidos / Moneda ── */}
-      <Section title="Pedidos y moneda">
+      {showOrdersAndCurrency && <Section title="Pedidos y moneda">
         <Toggle label="Comer en local" value={config.orderTypes.includes('dine_in')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'dine_in', v))} />
         {config.orderTypes.includes('dine_in') && (
           <>
@@ -246,7 +247,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Segmented label="Posición del símbolo" value={config.currencyPosition} options={[['prefix', 'Antes (Q10)'], ['suffix', 'Después (10Q)']]} onChange={(v) => setC('currencyPosition', v as ThemeConfig['currencyPosition'])} />
         <TextCtl label="Locale (formato)" value={config.locale} onChange={(v) => setC('locale', v)} placeholder="es-GT" />
         <Toggle label="Animaciones" value={config.animations} onChange={(v) => setC('animations', v)} />
-      </Section>
+      </Section>}
 
       {/* ── Textos (todos) ── */}
       <Section title="Textos del cliente">

@@ -21,6 +21,11 @@ interface Props {
   restaurantName: string;
   restaurantId?: string | null;
   ordersEnabled?: boolean;
+  analiticaEnabled?: boolean;
+  inventarioEnabled?: boolean;
+  promocionesEnabled?: boolean;
+  personalEnabled?: boolean;
+  finanzasEnabled?: boolean;
   logoUrl?: string | null;
   zone?: string;
   /** Rol y permisos del usuario (para filtrar el nav). */
@@ -34,8 +39,10 @@ interface Props {
 }
 
 export default function AdminShell({
-  restaurantName, restaurantId, ordersEnabled = false, logoUrl, zone,
-  role, permissions, canManageStaff, preview = false, children,
+  restaurantName, restaurantId, ordersEnabled = false,
+  analiticaEnabled = false, inventarioEnabled = false,
+  promocionesEnabled = false, personalEnabled = false, finanzasEnabled = false,
+  logoUrl, zone, role, permissions, canManageStaff, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
   const [bgVisible, setBgVisible] = useState(true);
@@ -61,35 +68,37 @@ export default function AdminShell({
   const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
   const allow = (key: string) => can(effRole, permissions ?? null, key);
 
+  const on = (flag: boolean) => preview || flag;
+
   const sections: { title: string; items: NavItem[] }[] = [
     {
       title: 'Operación',
       items: [
-        ...(ordersEnabled ? [{ href: '/admin/pedidos', label: 'Pedidos', icon: 'list', key: 'pedidos' }] : []),
-        { href: '/admin/menu', label: 'Catálogo', icon: 'bag', key: 'catalogo' },
-        { href: '/admin/categorias', label: 'Categorías', icon: 'tag', key: 'categorias' },
-        { href: '/admin/inventario', label: 'Inventario', icon: 'box', key: 'inventario' },
+        ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
+        { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
+        { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
+        ...(on(inventarioEnabled) ? [{ href: '/admin/inventario', label: 'Inventario',  icon: 'box',   key: 'inventario' }] : []),
       ],
     },
     {
       title: 'Negocio',
       items: [
         { href: '/admin/metricas', label: 'Métricas', icon: 'chart', key: 'metricas' },
-        ...(ordersEnabled ? [{ href: '/admin/analitica', label: 'Analítica', icon: 'dashboard', key: 'analitica' }] : []),
-        ...(ordersEnabled ? [{ href: '/admin/finanzas', label: 'Finanzas', icon: 'wallet', key: 'finanzas' }] : []),
-        ...(ordersEnabled ? [{ href: '/admin/clientes', label: 'Clientes', icon: 'users', key: 'clientes' }] : []),
-        ...(ordersEnabled ? [{ href: '/admin/promociones', label: 'Promos', icon: 'percent', key: 'promociones' }] : []),
+        ...(on(analiticaEnabled)   ? [{ href: '/admin/analitica',   label: 'Analítica', icon: 'dashboard', key: 'analitica'   }] : []),
+        ...(on(finanzasEnabled)    ? [{ href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }] : []),
+        ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
+        ...(on(promocionesEnabled) ? [{ href: '/admin/promociones', label: 'Promos',    icon: 'percent',   key: 'promociones' }] : []),
       ],
     },
     {
       title: 'Cuenta',
       items: [
-        { href: '/admin/suscripcion', label: 'Mi suscripción', icon: 'wallet', key: 'suscripcion' },
-        { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle', key: 'personalizar' },
-        { href: '/admin/perfil', label: 'Perfil', icon: 'user', key: 'perfil' },
-        ...(showStaff ? [{ href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }] : []),
-        { href: '/admin/qr', label: 'QR', icon: 'image', key: 'qr' },
-        { href: '/admin/soporte', label: 'Soporte', icon: 'helpCircle', key: 'soporte' },
+        { href: '/admin/suscripcion',   label: 'Mi suscripción', icon: 'wallet',    key: 'suscripcion' },
+        { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle',   key: 'personalizar' },
+        { href: '/admin/perfil',        label: 'Perfil',         icon: 'user',      key: 'perfil'      },
+        ...(showStaff && on(personalEnabled) ? [{ href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }] : []),
+        { href: '/admin/qr',            label: 'QR',             icon: 'image',     key: 'qr'          },
+        { href: '/admin/soporte',       label: 'Soporte',        icon: 'helpCircle', key: 'soporte'     },
       ],
     },
   ]
@@ -163,8 +172,6 @@ export default function AdminShell({
             </div>
           ))}
         </nav>
-
-        <div className="admin-spacer" style={{ flex: 1 }} />
 
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'rgba(255,255,255,0.1)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>

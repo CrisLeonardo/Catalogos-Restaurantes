@@ -296,6 +296,53 @@ export async function updateRestaurantOps(
 
 export type SaveThemeResult = { error?: string; ok?: boolean };
 
+export async function saveOrdersAndCurrency(input: {
+  restaurantId: string;
+  patch: Pick<ThemeConfig,
+    'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
+    'tipEnabled' | 'tipPercent' | 'acceptsCard' |
+    'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
+  >;
+}): Promise<SaveThemeResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('restaurant_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) return { error: 'No autorizado.' };
+
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && profile.restaurant_id !== input.restaurantId) {
+    return { error: 'No autorizado.' };
+  }
+
+  const db = createServiceClient();
+  const { data: row } = await db
+    .from('restaurant_themes')
+    .select('config')
+    .eq('restaurant_id', input.restaurantId)
+    .maybeSingle();
+
+  const existingConfig = (row?.config as Record<string, unknown>) ?? {};
+  const newConfig = { ...existingConfig, ...input.patch };
+
+  const { error } = await db
+    .from('restaurant_themes')
+    .upsert({ restaurant_id: input.restaurantId, config: newConfig }, { onConflict: 'restaurant_id' });
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/perfil');
+  revalidatePath('/admin/personalizacion');
+  revalidatePath('/');
+  return { ok: true };
+}
+
 export async function saveAdminRestaurantTheme(input: {
   restaurantId: string;
   config: ThemeConfig;

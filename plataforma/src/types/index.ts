@@ -16,8 +16,18 @@ export interface Restaurant {
   slug: string;
   name: string;
   tagline: string | null;
-  plan_actual: 'CATALOGO' | 'PREMIUM';
-  modules: { catalog: boolean; orders: boolean; whatsapp_notify: boolean };
+  plan_actual: 'BASICO' | 'POPULAR' | 'PREMIUM';
+  modules: {
+    catalog: boolean;
+    orders: boolean;
+    whatsapp_notify: boolean;
+    analitica: boolean;
+    inventario: boolean;
+    promociones: boolean;
+    personal: boolean;
+    finanzas: boolean;
+    multi_branch: boolean;
+  };
   status: 'active' | 'suspended';
   whatsapp_number: string | null;
   contact_email: string | null;

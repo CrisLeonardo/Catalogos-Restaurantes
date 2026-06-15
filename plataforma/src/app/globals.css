@@ -275,7 +275,15 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
 .admin-content { padding: 24px; flex: 1; min-width: 0; }
-.admin-nav { display: flex; flex-direction: column; gap: 4px; }
+.admin-nav {
+  display: flex; flex-direction: column; gap: 4px;
+  flex: 1; min-height: 0; overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.admin-nav::-webkit-scrollbar { width: 3px; }
+.admin-nav::-webkit-scrollbar-track { background: transparent; }
+.admin-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
 .admin-navgroup { display: flex; flex-direction: column; gap: 4px; }
 .admin-navgroup-title { margin-top: 12px; color: var(--u-text-4); }
 .admin-navgroup:first-child .admin-navgroup-title { margin-top: 0; }
@@ -320,7 +328,6 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   }
   .admin-brand { flex: 1; min-width: 0; }
   .admin-section { display: none; }
-  .admin-spacer { display: none !important; }
 
   /* Nav → tab bar inferior fija y scrollable en horizontal (caben todas las secciones) */
   .admin-nav {

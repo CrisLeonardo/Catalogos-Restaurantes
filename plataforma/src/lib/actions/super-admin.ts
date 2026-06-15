@@ -183,10 +183,17 @@ export async function updateRestaurantPlan(
   const id = formData.get('id') as string;
   const plan_actual = formData.get('plan_actual') as string;
 
+  const bool = (key: string) => formData.get(key) === 'true';
   const modules = {
     catalog: true,
-    orders: formData.get('module_orders') === 'true',
-    whatsapp_notify: formData.get('module_whatsapp') === 'true',
+    orders:         bool('module_orders'),
+    whatsapp_notify:bool('module_whatsapp'),
+    analitica:      bool('module_analitica'),
+    inventario:     bool('module_inventario'),
+    promociones:    bool('module_promociones'),
+    personal:       bool('module_personal'),
+    finanzas:       bool('module_finanzas'),
+    multi_branch:   bool('module_multi_branch'),
   };
 
   const { error } = await db

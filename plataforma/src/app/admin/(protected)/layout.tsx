@@ -59,14 +59,19 @@ export default async function AdminProtectedLayout({
     }
   }
 
-  const modules = currentRestaurant?.modules as { orders?: boolean } | null;
-  const ordersEnabled = modules?.orders === true;
+  const mod = currentRestaurant?.modules as Record<string, boolean> | null;
+  const m = (k: string) => mod?.[k] === true;
 
   return (
     <AdminShell
       restaurantName={restaurantName}
       restaurantId={currentRestaurant?.id ?? null}
-      ordersEnabled={ordersEnabled}
+      ordersEnabled={m('orders')}
+      analiticaEnabled={m('analitica')}
+      inventarioEnabled={m('inventario')}
+      promocionesEnabled={m('promociones')}
+      personalEnabled={m('personal')}
+      finanzasEnabled={m('finanzas')}
       logoUrl={logoUrl}
       zone={zone}
       role={profile.role}

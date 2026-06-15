@@ -60,6 +60,7 @@ export default async function AdminPersonalizacionPage() {
         saveAction={saveAdminRestaurantTheme}
         showTemplates={false}
         showAdvanced={false}
+        showOrdersAndCurrency={false}
       />
     </div>
   );
