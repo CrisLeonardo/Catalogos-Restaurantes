@@ -32,6 +32,15 @@ function isUnavailable(p: ProdItem): boolean {
   return !isAutoRestored(p);
 }
 
+/** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto). */
+function displayPrice(p: ProdItem): number {
+  if (!p.options || p.options.length === 0) return p.price;
+  const comboDelta = p.options
+    .filter((g) => g.type === 'combo')
+    .reduce((sum, g) => sum + g.choices.reduce((s, c) => s + (c.priceDelta || 0), 0), 0);
+  return p.price + comboDelta;
+}
+
 /** Normaliza para buscar sin acentos ni mayúsculas ("cafe" encuentra "Café"). */
 function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -254,7 +263,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIt
       <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5, lineHeight: 1.12, color: 'var(--u-text)', flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'rgba(255,255,255,0.4)' }}>{p.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Price amount={p.price} size={15} muted={unavail} />
+          <Price amount={displayPrice(p)} size={15} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
@@ -279,7 +288,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIte
         {p.description && (
           <div className="line-clamp-2" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.35 }}>{p.description}</div>
         )}
-        <Price amount={p.price} size={15} muted={unavail} />
+        <Price amount={displayPrice(p)} size={15} muted={unavail} />
       </div>
       {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
     </Glass>

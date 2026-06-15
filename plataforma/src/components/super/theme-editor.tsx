@@ -233,6 +233,10 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           <>
             <NumberCtl label="Cantidad de mesas" value={config.dineInTableCount} min={1} max={50} onChange={(v) => setC('dineInTableCount', v)} />
             <StringListCtl label="Preferencias de servicio" items={config.dineInCourseOptions} onChange={(v) => setC('dineInCourseOptions', v)} />
+            <Toggle label="Habilitar propina en comer en local" value={config.tipEnabled} onChange={(v) => setC('tipEnabled', v)} />
+            {config.tipEnabled && (
+              <NumberCtl label="Porcentaje de propina (%)" value={config.tipPercent} min={1} max={50} onChange={(v) => setC('tipPercent', v)} />
+            )}
           </>
         )}
         <Toggle label="Domicilio" value={config.orderTypes.includes('delivery')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'delivery', v))} />

@@ -81,6 +81,7 @@ export default function CheckoutForm({
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
+  const [tipAccepted, setTipAccepted] = useState(true);
 
   const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
   const [snapshotTotal, setSnapshotTotal] = useState(0);
@@ -89,6 +90,7 @@ export default function CheckoutForm({
   const [snapshotPayment, setSnapshotPayment] = useState<'CASH' | 'CARD'>('CASH');
   const [snapshotCashAmount, setSnapshotCashAmount] = useState(0);
   const [snapshotOrderType, setSnapshotOrderType] = useState<OrderType>('DINE_IN');
+  const [snapshotTip, setSnapshotTip] = useState(0);
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -162,9 +164,11 @@ export default function CheckoutForm({
     table:   type === 'DINE_IN' && !tableNumber ? 'Selecciona el número de mesa' : '',
   };
 
-  const deliveryFee = type === 'DELIVERY' ? config.deliveryFee : 0;
-  const discount    = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
-  const finalTotal  = Math.max(0, total + deliveryFee - discount);
+  const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
+  const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
+  const showTip      = type === 'DINE_IN' && config.tipEnabled;
+  const tipAmount    = showTip && tipAccepted ? Math.round(total * config.tipPercent) / 100 : 0;
+  const finalTotal   = Math.max(0, total + deliveryFee - discount + tipAmount);
 
   // cashAmount: validación después de finalTotal porque depende del total final
   const cashAmountNum = parseFloat(cashAmount.replace(',', '.')) || 0;
@@ -210,6 +214,7 @@ export default function CheckoutForm({
       sub: i.price * i.quantity,
     }));
     const feeSnapshot   = deliveryFee;
+    const tipSnapshot   = tipAmount;
     const totalSnapshot = finalTotal;
 
     start(async () => {
@@ -236,6 +241,7 @@ export default function CheckoutForm({
         ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
         paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
         ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
+        tipAccepted: type === 'DINE_IN' ? tipAccepted : false,
       });
       if (result.error) { setError(result.error); return; }
 
@@ -256,6 +262,7 @@ export default function CheckoutForm({
       setSnapshot(itemsSnapshot);
       setSnapshotFee(feeSnapshot);
       setSnapshotDiscount(discount);
+      setSnapshotTip(tipSnapshot);
       setSnapshotTotal(totalSnapshot);
       setSnapshotPayment(type === 'DINE_IN' ? 'CASH' : paymentMethod);
       setSnapshotCashAmount(needsCashAmount ? cashAmountNum : 0);
@@ -269,6 +276,7 @@ export default function CheckoutForm({
         orderNumber: result.orderNumber ?? '',
         snapshot: itemsSnapshot,
         fee: feeSnapshot,
+        tip: tipSnapshot,
         total: totalSnapshot,
         discount,
         payment: type === 'DINE_IN' ? 'CASH' : paymentMethod,
@@ -285,6 +293,7 @@ export default function CheckoutForm({
     orderNumber: string;
     snapshot: { name: string; opts: string; qty: number; sub: number }[];
     fee: number;
+    tip: number;
     total: number;
     discount?: number;
     payment?: 'CASH' | 'CARD';
@@ -296,6 +305,7 @@ export default function CheckoutForm({
     const lineItems = data?.snapshot ?? snapshot;
     const fee       = data?.fee ?? snapshotFee;
     const disc      = data?.discount ?? snapshotDiscount;
+    const tipAmt    = data?.tip ?? snapshotTip;
     const tot       = data?.total ?? snapshotTotal;
     const pmeth     = data?.payment ?? snapshotPayment;
     const cAmt      = data?.cashAmt ?? snapshotCashAmount;
@@ -327,6 +337,9 @@ export default function CheckoutForm({
     }
     if (disc > 0) {
       lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
+    }
+    if (tipAmt > 0) {
+      lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);
     }
     lines.push(`💰 ${content.cart.total}: *${formatPrice(tot, config)}*`);
     if (oType !== 'DINE_IN') {
@@ -459,6 +472,12 @@ export default function CheckoutForm({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 13, color: '#4ade80' }}>Descuento{appliedPromo ? ` · ${appliedPromo.name}` : ''}</span>
                 <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
+              </div>
+            )}
+            {tipAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
+                <Price amount={tipAmount} size={13.5} muted />
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -698,6 +717,42 @@ export default function CheckoutForm({
             placeholder={geoActive ? 'Ej. Portón azul, frente al parque…' : content.checkout.addressPh}
             error={tried && errs.address}
           />
+        )}
+
+        {/* ── DINE_IN: propina ── */}
+        {showTip && (
+          <div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>Propina</label>
+            <button
+              type="button"
+              onClick={() => setTipAccepted((v) => !v)}
+              className="press"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 13,
+                padding: 15, borderRadius: 14, width: '100%', textAlign: 'left', cursor: 'pointer',
+                border: `1.5px solid ${tipAccepted ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
+                background: tipAccepted ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                transition: 'all 160ms', marginTop: 8,
+              }}
+            >
+              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: tipAccepted ? 'var(--u-text)' : 'rgba(255,255,255,0.08)', color: tipAccepted ? 'var(--brand-bg)' : 'var(--u-text)', transition: 'all 160ms', fontSize: 22 }}>
+                🙏
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>
+                  Agregar propina del {config.tipPercent}%
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+                  {tipAccepted
+                    ? `${formatPrice(tipAmount, config)} · Gracias por tu apoyo`
+                    : 'Toca para incluir propina al equipo'}
+                </div>
+              </div>
+              <span style={{ width: 22, height: 22, borderRadius: 99, flexShrink: 0, border: `2px solid ${tipAccepted ? 'var(--u-text)' : 'var(--u-hair-2)'}`, background: tipAccepted ? 'var(--u-text)' : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
+                {tipAccepted && <Icon name="check" size={12} strokeWidth={3} style={{ color: 'var(--brand-bg)' }} />}
+              </span>
+            </button>
+          </div>
         )}
 
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />

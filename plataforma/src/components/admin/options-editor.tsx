@@ -106,8 +106,8 @@ export default function OptionsEditor({
                     style={{
                       padding: '7px 11px', borderRadius: 99, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                      background: on ? (t === 'combo' ? 'var(--brand-accent, #22c55e)' : 'var(--u-text)') : 'rgba(255,255,255,0.04)',
-                      color: on ? (t === 'combo' ? '#fff' : 'var(--brand-bg, #0b0b0c)') : 'var(--u-text-3)',
+                      background: on ? (t === 'combo' ? '#16a34a' : 'var(--u-text)') : 'rgba(255,255,255,0.04)',
+                      color: on ? '#fff' : 'var(--u-text-3)',
                     }}
                   >
                     {lbl}
@@ -143,7 +143,7 @@ export default function OptionsEditor({
             </label>
           ) : group.type === 'combo' ? (
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-              Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio del producto debe ser el valor del combo completo; cada componente lleva el precio que aporta al combo (el cliente ve el descuento al quitarlo).
+              Todos los componentes aparecen <strong>incluidos por defecto</strong>. El precio base del producto es el plato principal; el precio de cada componente se suma automáticamente al total que ve el cliente en el menú.
             </p>
           ) : (
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--u-text-3)' }}>

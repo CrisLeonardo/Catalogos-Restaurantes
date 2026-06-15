@@ -87,7 +87,7 @@ export async function createOrder(
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer, paymentMethod, cashAmount } = parsed.data;
+  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted } = parsed.data;
 
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
   // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
@@ -235,7 +235,15 @@ export async function createOrder(
   // el descuento NUNCA se toma del cliente, se recalcula contra la BD.
   const applied = await resolvePromo(restaurantId, parsed.data.promoCode, subtotal, fee);
   const discount = applied ? applied.discount : 0;
-  const total = Math.max(0, subtotal + fee - discount);
+
+  // Propina: solo para DINE_IN cuando el restaurante la habilita. Se calcula
+  // server-side sobre el subtotal (antes de descuento); el cliente solo indica
+  // si la acepta (boolean), nunca el monto.
+  const tipEnabled = customer.type === 'DINE_IN' && themeConfig.tipEnabled === true;
+  const tipPercent = tipEnabled ? Math.max(0, Number(themeConfig.tipPercent) || 0) : 0;
+  const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
+
+  const total = Math.max(0, subtotal + fee - discount + tip);
 
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
@@ -282,6 +290,7 @@ export async function createOrder(
     p_notes:          notes,
     p_payment_method: customer.type === 'DINE_IN' ? 'CASH' : (paymentMethod ?? 'CASH'),
     p_cash_amount:    customer.type === 'DELIVERY' && (paymentMethod ?? 'CASH') === 'CASH' && cashAmount != null ? cashAmount : null,
+    p_tip:            tip,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,

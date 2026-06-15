@@ -66,6 +66,8 @@ export const createOrderSchema = z
     paymentMethod: z.enum(['CASH', 'CARD']).default('CASH'),
     /** Monto en efectivo que el cliente dará (para que el repartidor lleve cambio). Solo DELIVERY+CASH. */
     cashAmount: z.number().min(0).max(1_000_000).optional(),
+    /** Indica si el cliente aceptó incluir propina. Solo DINE_IN cuando el restaurante la habilita. */
+    tipAccepted: z.boolean().default(false),
   })
   .refine(
     (data) => {

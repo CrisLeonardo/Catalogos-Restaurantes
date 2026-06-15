@@ -165,12 +165,37 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
             </span>
           </div>
         )}
+        {Number(order.tip) > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>🙏 Propina</span>
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
+              {money(Number(order.tip), currency)}
+            </span>
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Total</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
             {money(Number(order.total), currency)}
           </span>
         </div>
+        {/* Método de pago — no aplica para DINE_IN (mesero lo maneja) */}
+        {order.order_type !== 'DINE_IN' && (
+          <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700,
+                color: order.payment_method === 'CARD' ? '#a78bfa' : '#4ade80' }}>
+                {order.payment_method === 'CARD' ? '💳 Tarjeta al recibir' : '💵 Efectivo'}
+              </span>
+            </div>
+            {order.payment_method !== 'CARD' && order.cash_amount != null && order.cash_amount > 0 && (
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', margin: 0 }}>
+                Paga con <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount), currency)}</strong>
+                {' · '}cambio: <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount) - Number(order.total), currency)}</strong>
+              </p>
+            )}
+          </div>
+        )}
         {order.notes && (
           <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontStyle: 'italic', marginTop: 2 }}>
             📝 {order.notes}

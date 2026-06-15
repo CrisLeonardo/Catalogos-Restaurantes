@@ -169,6 +169,7 @@ export interface Order {
   delivery_lng: number | null;
   customer_id: string | null;
   payment_method: string;
+  cash_amount: number | null;
   status: OrderStatus;
   subtotal: number;
   delivery_fee: number;
@@ -176,6 +177,8 @@ export interface Order {
   discount: number;
   promo_id: string | null;
   promo_code: string | null;
+  /** Propina aplicada (migración 027); solo DINE_IN cuando el restaurante la habilita. */
+  tip: number;
   total: number;
   notes: string | null;
   public_token: string;

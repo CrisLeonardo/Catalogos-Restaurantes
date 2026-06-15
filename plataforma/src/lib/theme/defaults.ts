@@ -84,6 +84,8 @@ export interface ThemeConfig {
   dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
   dineInCourseOptions: string[];  // preferencias de servicio configurables
   acceptsCard: boolean;           // habilita la opción "pagar con tarjeta" en delivery y pickup
+  tipEnabled: boolean;            // propina sugerida en pedidos DINE_IN
+  tipPercent: number;             // porcentaje a cobrar (ej. 10 = 10 %)
 
   // ── Moneda ──
   currencySymbol: string;       // 'Q', '$', '€'
@@ -146,6 +148,8 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   dineInTableCount: 20,
   dineInCourseOptions: ['Entrada primero', 'Plato principal primero', 'Postre al final'],
   acceptsCard: false,
+  tipEnabled: false,
+  tipPercent: 10,
 
   currencySymbol: 'Q',
   currencyPosition: 'prefix',
