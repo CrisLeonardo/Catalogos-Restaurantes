@@ -18,6 +18,7 @@ export const ADMIN_SECTIONS = [
   { key: 'analitica',    label: 'Analítica' },
   { key: 'finanzas',     label: 'Finanzas' },
   { key: 'promociones',  label: 'Promociones' },
+  { key: 'suscripcion',  label: 'Mi suscripción' },
   { key: 'personalizar', label: 'Personalizar' },
   { key: 'perfil',       label: 'Perfil' },
   { key: 'qr',           label: 'QR' },

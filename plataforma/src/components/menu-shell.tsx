@@ -4,7 +4,6 @@ import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import Portada from '@/components/menu/portada';
 import MenuClient from '@/components/menu-client';
-import ActiveOrderChip from '@/components/active-order-chip';
 import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
@@ -32,10 +31,9 @@ export default function MenuShell({ config, content, categories, products, resta
         <main style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} />
           </div>
         </main>
-        {ordersEnabled && <ActiveOrderChip restaurantId={restaurantId} />}
         <InstallBanner brandName={config.brandName} />
       </CartProvider>
     </ThemeProvider>

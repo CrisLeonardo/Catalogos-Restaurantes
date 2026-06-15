@@ -7,7 +7,9 @@ import PlanEditor from '@/components/super/plan-editor';
 import OrderTypesEditor from '@/components/super/order-types-editor';
 import ThemeEditor from '@/components/super/theme-editor';
 import RestaurantUsers from '@/components/super/restaurant-users';
+import BillingManager from '@/components/super/billing-manager';
 import DeleteButton from '@/components/admin/delete-button';
+import { getBillingConfig, getInvoices } from '@/lib/db/billing';
 import {
   deleteRestaurant,
   duplicateRestaurant,
@@ -43,9 +45,11 @@ export default async function EditRestaurantePage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
-  const [users, templates] = await Promise.all([
+  const [users, templates, billingConfig, invoices] = await Promise.all([
     getRestaurantUsers(id),
     listThemeTemplates(),
+    getBillingConfig(id),
+    getInvoices(id),
   ]);
   const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
     brandName: row.name,
@@ -185,7 +189,28 @@ export default async function EditRestaurantePage({
         <RestaurantUsers restaurantId={row.id} slug={row.slug} users={users} />
       </section>
 
-      {/* ── 5. Duplicar ────────────────────────────────────── */}
+      {/* ── 5. Facturación / Cobros ────────────────────────── */}
+      <section>
+        <SectionTitle>Facturación y cobros</SectionTitle>
+        <p
+          style={{
+            fontSize: 13,
+            color: 'var(--u-text-4)',
+            marginTop: -8,
+            marginBottom: 14,
+          }}
+        >
+          Define cuánto paga este restaurante por la implementación y la
+          mensualidad, genera sus cobros y registra cuándo te pagan. Lo verá en
+          su panel en «Mi suscripción».{' '}
+          <Link href={`/super/metricas/${row.id}`} style={{ color: 'var(--brand-accent)' }}>
+            Ver métricas a fondo →
+          </Link>
+        </p>
+        <BillingManager restaurantId={row.id} config={billingConfig} invoices={invoices} />
+      </section>
+
+      {/* ── 6. Duplicar ────────────────────────────────────── */}
       <section>
         <SectionTitle>Duplicar</SectionTitle>
         <Glass
@@ -231,7 +256,7 @@ export default async function EditRestaurantePage({
         </Glass>
       </section>
 
-      {/* ── 6. Zona peligrosa ──────────────────────────────── */}
+      {/* ── 7. Zona peligrosa ──────────────────────────────── */}
       <section>
         <SectionTitle>Zona peligrosa</SectionTitle>
         <Glass

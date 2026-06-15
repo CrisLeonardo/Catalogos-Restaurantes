@@ -12,6 +12,7 @@ export default function SuperNav() {
     { href: '/super/restaurantes', label: 'Restaurantes' },
     { href: '/super/grupos', label: 'Grupos' },
     { href: '/super/metricas', label: 'Métricas' },
+    { href: '/super/cobros', label: 'Cobros' },
     { href: '/super/configuracion', label: 'Configuración' },
   ];
 

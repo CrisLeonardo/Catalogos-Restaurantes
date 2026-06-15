@@ -232,3 +232,123 @@ export const getAllRestaurantsTraffic = cache(
     return map;
   },
 );
+
+/* ── Métricas a fondo de UN restaurante (Super Admin) ──────── */
+
+export type DeepSeriesPoint = { date: string; visits: number; orders: number; revenue: number };
+
+export interface RestaurantDeepMetrics {
+  /** Ventana actual (últimos 30 días). */
+  visits30: number;
+  unique30: number;
+  orders30: number;
+  /** Venta del restaurante (su negocio) en 30 días, sin cancelados. */
+  revenue30: number;
+  /** Ventana previa (30 días anteriores) para comparar crecimiento. */
+  visitsPrev: number;
+  ordersPrev: number;
+  revenuePrev: number;
+  /** Crecimiento % vs. ventana previa (null si la previa fue 0). */
+  visitsGrowth: number | null;
+  ordersGrowth: number | null;
+  revenueGrowth: number | null;
+  /** Conversión: pedidos / visitas (%). */
+  conversion: number;
+  /** Ticket promedio de sus pedidos. */
+  avgTicket: number;
+  /** Serie diaria de los últimos 30 días (para gráficas). */
+  series: DeepSeriesPoint[];
+}
+
+const EMPTY_DEEP: RestaurantDeepMetrics = {
+  visits30: 0, unique30: 0, orders30: 0, revenue30: 0,
+  visitsPrev: 0, ordersPrev: 0, revenuePrev: 0,
+  visitsGrowth: null, ordersGrowth: null, revenueGrowth: null,
+  conversion: 0, avgTicket: 0, series: [],
+};
+
+function growth(curr: number, prev: number): number | null {
+  if (prev <= 0) return null;
+  return ((curr - prev) / prev) * 100;
+}
+
+/**
+ * Métricas detalladas de un restaurante en 60 días (dos ventanas de 30
+ * para comparar crecimiento) + serie diaria. Para la vista a fondo del
+ * Super Admin (/super/metricas/[id]) y decidir cuánto cobrarle.
+ */
+export const getRestaurantDeepMetrics = cache(
+  async (restaurantId: string): Promise<RestaurantDeepMetrics> => {
+    const db = createServiceClient();
+    const now = new Date();
+    const start60 = new Date(now); start60.setDate(start60.getDate() - 60);
+    const split = new Date(now); split.setDate(split.getDate() - 30);
+    const start60Iso = start60.toISOString();
+    const splitMs = split.getTime();
+
+    const [{ data: visits }, { data: orders }] = await Promise.all([
+      db.from('page_visits')
+        .select('visitor_id, created_at')
+        .eq('restaurant_id', restaurantId)
+        .gte('created_at', start60Iso)
+        .limit(100000),
+      db.from('orders')
+        .select('total, created_at')
+        .eq('restaurant_id', restaurantId)
+        .neq('status', 'CANCEL')
+        .gte('created_at', start60Iso)
+        .limit(100000),
+    ]);
+
+    if (!visits?.length && !orders?.length) return EMPTY_DEEP;
+
+    // Serie diaria de los últimos 30 días.
+    const dayKeys: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      dayKeys.push(d.toISOString().slice(0, 10));
+    }
+    const seriesMap = new Map<string, DeepSeriesPoint>(
+      dayKeys.map((k) => [k, { date: k, visits: 0, orders: 0, revenue: 0 }]),
+    );
+
+    const uniques = new Set<string>();
+    let visits30 = 0, visitsPrev = 0;
+    for (const v of visits ?? []) {
+      const t = new Date(v.created_at as string).getTime();
+      if (t >= splitMs) {
+        visits30 += 1;
+        uniques.add(v.visitor_id as string);
+        const k = (v.created_at as string).slice(0, 10);
+        const pt = seriesMap.get(k); if (pt) pt.visits += 1;
+      } else visitsPrev += 1;
+    }
+
+    let orders30 = 0, ordersPrev = 0, revenue30 = 0, revenuePrev = 0;
+    for (const o of orders ?? []) {
+      const t = new Date(o.created_at as string).getTime();
+      const amt = Number(o.total ?? 0);
+      if (t >= splitMs) {
+        orders30 += 1; revenue30 += amt;
+        const k = (o.created_at as string).slice(0, 10);
+        const pt = seriesMap.get(k); if (pt) { pt.orders += 1; pt.revenue += amt; }
+      } else { ordersPrev += 1; revenuePrev += amt; }
+    }
+
+    return {
+      visits30,
+      unique30: uniques.size,
+      orders30,
+      revenue30,
+      visitsPrev,
+      ordersPrev,
+      revenuePrev,
+      visitsGrowth: growth(visits30, visitsPrev),
+      ordersGrowth: growth(orders30, ordersPrev),
+      revenueGrowth: growth(revenue30, revenuePrev),
+      conversion: visits30 > 0 ? (orders30 / visits30) * 100 : 0,
+      avgTicket: orders30 > 0 ? revenue30 / orders30 : 0,
+      series: dayKeys.map((k) => seriesMap.get(k)!),
+    };
+  },
+);

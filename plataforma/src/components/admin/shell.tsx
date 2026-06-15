@@ -84,6 +84,7 @@ export default function AdminShell({
     {
       title: 'Cuenta',
       items: [
+        { href: '/admin/suscripcion', label: 'Mi suscripción', icon: 'wallet', key: 'suscripcion' },
         { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle', key: 'personalizar' },
         { href: '/admin/perfil', label: 'Perfil', icon: 'user', key: 'perfil' },
         ...(showStaff ? [{ href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }] : []),
@@ -105,6 +106,7 @@ export default function AdminShell({
     '/admin/finanzas': 'Finanzas',
     '/admin/promociones': 'Promociones',
     '/admin/personal': 'Personal',
+    '/admin/suscripcion': 'Mi suscripción',
     '/admin/menu/productos': 'Producto',
     '/admin/menu': 'Catálogo',
     '/admin/personalizacion': 'Personalizar sitio',

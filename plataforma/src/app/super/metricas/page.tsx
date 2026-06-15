@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { getGlobalMetrics, getAllRestaurants, getAllRestaurantsTraffic } from '@/lib/db/super-admin';
 
@@ -20,7 +21,7 @@ export default async function MetricasPage() {
           Métricas
         </h1>
         <p className="t-mute" style={{ fontSize: 14 }}>
-          Vista global de la plataforma
+          Vista global de la plataforma · haz clic en un restaurante para ver sus métricas a fondo
         </p>
       </div>
 
@@ -150,10 +151,14 @@ export default async function MetricasPage() {
                       style={{
                         padding: '12px 16px',
                         fontWeight: 500,
-                        color: 'var(--u-text)',
                       }}
                     >
-                      {r.name}
+                      <Link
+                        href={`/super/metricas/${r.id}`}
+                        style={{ color: 'var(--u-text)', textDecoration: 'none' }}
+                      >
+                        {r.name}
+                      </Link>
                     </td>
                     <td
                       style={{

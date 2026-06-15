@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
+import ActiveOrderChip from '@/components/active-order-chip';
 import { useCart } from '@/lib/cart-context';
 import type { Category, Product } from '@/types';
 
@@ -17,6 +18,7 @@ interface Props {
   categories: CatItem[];
   products: ProdItem[];
   ordersEnabled?: boolean;
+  restaurantId?: string;
 }
 
 /** ¿El producto tiene variantes/extras que el comensal debe ver? */
@@ -24,7 +26,7 @@ function hasOptions(p: ProdItem): boolean {
   return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
 }
 
-export default function MenuClient({ categories, products, ordersEnabled = false }: Props) {
+export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -99,6 +101,9 @@ export default function MenuClient({ categories, products, ordersEnabled = false
 
       {ordersEnabled && <CartBar onOpen={() => setCartOpen(true)} />}
       {ordersEnabled && cartOpen && <CartPanel onClose={() => setCartOpen(false)} />}
+      {ordersEnabled && restaurantId && !selected && !cartOpen && (
+        <ActiveOrderChip restaurantId={restaurantId} />
+      )}
     </>
   );
 }

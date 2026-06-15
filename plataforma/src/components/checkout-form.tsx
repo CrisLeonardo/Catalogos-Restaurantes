@@ -81,7 +81,6 @@ export default function CheckoutForm({
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
-  const [tipAccepted, setTipAccepted] = useState(true);
 
   const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
   const [snapshotTotal, setSnapshotTotal] = useState(0);
@@ -167,7 +166,7 @@ export default function CheckoutForm({
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
   const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
   const showTip      = type === 'DINE_IN' && config.tipEnabled;
-  const tipAmount    = showTip && tipAccepted ? Math.round(total * config.tipPercent) / 100 : 0;
+  const tipAmount    = showTip ? Math.round(total * config.tipPercent) / 100 : 0;
   const finalTotal   = Math.max(0, total + deliveryFee - discount + tipAmount);
 
   // cashAmount: validación después de finalTotal porque depende del total final
@@ -241,7 +240,7 @@ export default function CheckoutForm({
         ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
         paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
         ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
-        tipAccepted: type === 'DINE_IN' ? tipAccepted : false,
+        tipAccepted: showTip,
       });
       if (result.error) { setError(result.error); return; }
 
@@ -719,39 +718,30 @@ export default function CheckoutForm({
           />
         )}
 
-        {/* ── DINE_IN: propina ── */}
+        {/* ── DINE_IN: propina (automática, no opcional) ── */}
         {showTip && (
           <div>
             <label className="t-kicker" style={{ fontSize: 10.5 }}>Propina</label>
-            <button
-              type="button"
-              onClick={() => setTipAccepted((v) => !v)}
-              className="press"
+            <div
               style={{
                 display: 'flex', alignItems: 'center', gap: 13,
-                padding: 15, borderRadius: 14, width: '100%', textAlign: 'left', cursor: 'pointer',
-                border: `1.5px solid ${tipAccepted ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
-                background: tipAccepted ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
-                transition: 'all 160ms', marginTop: 8,
+                padding: 15, borderRadius: 14, marginTop: 8,
+                border: '1.5px solid var(--u-hair-2)',
+                background: 'rgba(255,255,255,0.03)',
               }}
             >
-              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: tipAccepted ? 'var(--u-text)' : 'rgba(255,255,255,0.08)', color: tipAccepted ? 'var(--brand-bg)' : 'var(--u-text)', transition: 'all 160ms', fontSize: 22 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.08)', fontSize: 22 }}>
                 🙏
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>
-                  Agregar propina del {config.tipPercent}%
+                  Propina del {config.tipPercent}%
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  {tipAccepted
-                    ? `${formatPrice(tipAmount, config)} · Gracias por tu apoyo`
-                    : 'Toca para incluir propina al equipo'}
+                  {formatPrice(tipAmount, config)} · Incluida automáticamente
                 </div>
               </div>
-              <span style={{ width: 22, height: 22, borderRadius: 99, flexShrink: 0, border: `2px solid ${tipAccepted ? 'var(--u-text)' : 'var(--u-hair-2)'}`, background: tipAccepted ? 'var(--u-text)' : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
-                {tipAccepted && <Icon name="check" size={12} strokeWidth={3} style={{ color: 'var(--brand-bg)' }} />}
-              </span>
-            </button>
+            </div>
           </div>
         )}
 
