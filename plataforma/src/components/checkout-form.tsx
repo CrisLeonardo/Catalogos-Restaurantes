@@ -48,6 +48,7 @@ interface Props {
   restaurantLat?: number | null;
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
+  hasPromos?: boolean;
 }
 
 type Step = 'form' | 'success';
@@ -64,6 +65,7 @@ export default function CheckoutForm({
   restaurantLat,
   restaurantLng,
   deliveryRadiusKm,
+  hasPromos = false,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -170,16 +172,18 @@ export default function CheckoutForm({
 
   const errs = {
     name:  !name.trim() ? content.checkout.errName : '',
-    phone: !phone.trim()
-      ? content.checkout.errPhone
-      : !isValidGuatemalaPhone(phone)
-        ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)'
-        : '',
+    phone: type === 'DINE_IN'
+      ? (phone.trim() && !isValidGuatemalaPhone(phone) ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)' : '')
+      : (!phone.trim()
+          ? content.checkout.errPhone
+          : !isValidGuatemalaPhone(phone)
+            ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)'
+            : ''),
     address: type === 'DELIVERY' && !geoActive && !address.trim() ? content.checkout.errAddress : '',
     zone:    type === 'DELIVERY' && zonesActive && !zone ? 'Elige tu zona' : '',
     geo:     geoActive && (deliveryLat === undefined || deliveryLng === undefined)
               ? 'Coloca tu ubicación en el mapa' : '',
-    table:   type === 'DINE_IN' && !tableNumber ? 'Selecciona el número de mesa' : '',
+    table:   type === 'DINE_IN' && !tableNumber ? 'Escanea el QR de tu mesa para continuar' : '',
   };
 
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
@@ -504,8 +508,8 @@ export default function CheckoutForm({
             </div>
           </div>
 
-          {/* Cupón */}
-          <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
+          {/* Cupón — solo si el restaurante tiene cupones activos */}
+          {hasPromos && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
             {appliedPromo ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ fontSize: 12.5, color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -529,7 +533,7 @@ export default function CheckoutForm({
               </div>
             )}
             {promoMsg && <p style={{ fontSize: 12, color: '#f87171', marginTop: 7 }}>{promoMsg}</p>}
-          </div>
+          </div>}
         </div>
       </Glass>
 
@@ -560,41 +564,46 @@ export default function CheckoutForm({
         )}
 
         <Field label={content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
-        <Field label={content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={(tried || phone.trim().length > 0) && errs.phone} />
+        <Field label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={(tried || phone.trim().length > 0) && errs.phone} />
         {phone.trim().length > 0 && !errs.phone && (
           <p style={{ fontSize: 11.5, color: '#4ade80', marginTop: -12 }}>
             Número válido ✓
           </p>
         )}
 
-        {/* ── DINE_IN: selector de mesa ── */}
+        {/* ── DINE_IN: mesa asignada por QR (solo lectura) ── */}
         {type === 'DINE_IN' && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>Número de mesa</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7, marginTop: 8 }}>
-              {Array.from({ length: config.dineInTableCount }, (_, i) => i + 1).map((n) => {
-                const on = tableNumber === n;
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setTableNumber(n)}
-                    className="press"
-                    style={{
-                      padding: '10px 0',
-                      borderRadius: 11,
-                      border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                      background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
-                      color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                      fontWeight: 700, fontSize: 15,
-                      cursor: 'pointer', transition: 'all 150ms',
-                    }}
-                  >
-                    {n}
-                  </button>
-                );
-              })}
-            </div>
+            <label className="t-kicker" style={{ fontSize: 10.5 }}>Tu mesa</label>
+            {tableNumber ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 13, marginTop: 8,
+                padding: '13px 16px', borderRadius: 14,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--u-hair-2)',
+              }}>
+                <div style={{
+                  width: 46, height: 46, borderRadius: 11, flexShrink: 0,
+                  display: 'grid', placeItems: 'center',
+                  background: 'var(--u-text)', color: 'var(--brand-bg)',
+                  fontWeight: 700, fontSize: 22,
+                }}>
+                  {tableNumber}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>Mesa {tableNumber}</div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>Detectada al escanear el QR</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                marginTop: 8, padding: '12px 14px', borderRadius: 14,
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.20)',
+                fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5,
+              }}>
+                No se detectó mesa. Escanea el QR de tu mesa para continuar.
+              </div>
+            )}
             {tried && errs.table && (
               <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 7 }}>{errs.table}</p>
             )}

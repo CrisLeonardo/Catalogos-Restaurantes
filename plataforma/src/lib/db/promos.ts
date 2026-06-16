@@ -71,6 +71,27 @@ export async function resolvePromo(
   return best;
 }
 
+/** Devuelve true si el restaurante tiene al menos un cupón (con código) activo y vigente. */
+export async function hasActiveCodePromos(restaurantId: string): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return false;
+  const db = createServiceClient();
+  const { data } = await db
+    .from('promotions')
+    .select('id, starts_at, ends_at, usage_limit, used_count')
+    .eq('restaurant_id', restaurantId)
+    .eq('active', true)
+    .not('code', 'is', null)
+    .limit(20);
+
+  const now = Date.now();
+  return (data ?? []).some((p) => {
+    if (p.starts_at && now < new Date(p.starts_at).getTime()) return false;
+    if (p.ends_at   && now > new Date(p.ends_at).getTime())   return false;
+    if (p.usage_limit != null && p.used_count >= p.usage_limit) return false;
+    return true;
+  });
+}
+
 /** Lista de promociones del restaurante (panel admin, service role). */
 export async function listPromotions(restaurantId: string): Promise<Promotion[]> {
   if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return [];
