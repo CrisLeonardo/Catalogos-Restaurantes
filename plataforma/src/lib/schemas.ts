@@ -31,12 +31,12 @@ export const customerSchema = z.object({
     .max(100, 'Nombre demasiado largo')
     .transform((v) => v.trim()),
   phone: z
-    .string({ required_error: 'El teléfono es requerido' })
-    .min(1, 'El teléfono es requerido')
+    .string()
     .transform((v) => stripPhoneFormatting(v))
-    .refine((v) => /^\d{8}$/.test(v), {
+    .refine((v) => !v || /^\d{8}$/.test(v), {
       message: 'Número inválido. Ingresa 8 dígitos guatemaltecos (ej. 5555 0000)',
-    }),
+    })
+    .default(''),
   type: z.enum(['PICKUP', 'DELIVERY', 'DINE_IN']),
   address: z.string().max(300).transform((v) => v.trim()).optional(),
   /** Zona de cobertura elegida (solo si el restaurante configuró zonas). */
@@ -80,6 +80,13 @@ export const createOrderSchema = z
       message: 'La dirección es requerida para envío a domicilio',
       path: ['customer', 'address'],
     },
+  )
+  .refine(
+    (data) => {
+      if (data.customer.type === 'DINE_IN') return true;
+      return !!data.customer.phone && /^\d{8}$/.test(data.customer.phone);
+    },
+    { message: 'El teléfono es requerido', path: ['customer', 'phone'] },
   );
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
