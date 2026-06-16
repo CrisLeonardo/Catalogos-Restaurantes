@@ -9,6 +9,7 @@ import ProfileForm from '@/components/admin/profile-form';
 import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import OrdersCurrencyEditor from '@/components/admin/orders-currency-editor';
+import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
 import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Perfil – Panel admin' };
@@ -154,6 +155,25 @@ export default async function AdminPerfilPage({
             animations: resolved.config.animations,
           }}
         />
+      </section>
+
+      {/* ── Impresión de cocina ────────────────────────────── */}
+      <section style={{ marginTop: 32 }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 18,
+            marginBottom: 6,
+          }}
+        >
+          Impresión de cocina
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
+          Configura la comanda automática que se envía a la impresora de cocina
+          al confirmar cada pedido. Esta configuración es por dispositivo.
+        </p>
+        <KitchenPrintSettings />
       </section>
     </div>
   );

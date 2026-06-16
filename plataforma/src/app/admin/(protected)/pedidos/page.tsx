@@ -36,10 +36,11 @@ export default async function PedidosPage() {
   // Zona horaria + moneda reales del restaurante (KPIs y montos honestos).
   const db = createServiceClient();
   const [{ data: restaurant }, { data: themeRow }] = await Promise.all([
-    db.from('restaurants').select('timezone').eq('id', restaurantId).single(),
+    db.from('restaurants').select('timezone, name').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
   ]);
   const timezone = (restaurant?.timezone as string) || 'America/Guatemala';
+  const restaurantName = (restaurant as { name?: string } | null)?.name ?? '';
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
   const [orders, stats] = await Promise.all([
@@ -51,6 +52,7 @@ export default async function PedidosPage() {
     <OrdersPanel
       initialOrders={orders}
       restaurantId={restaurantId}
+      restaurantName={restaurantName}
       stats={stats}
       timezone={timezone}
       currency={{

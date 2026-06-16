@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { updateOrderStatus } from '@/lib/actions/orders';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
+import { KITCHEN_PRINT_KEY } from './kitchen-print-settings';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -65,14 +66,239 @@ function nextLabel(order: OrderWithItems): string {
   return '';
 }
 
-export default function OrderCard({ order, currency }: { order: OrderWithItems; currency: PanelCurrency }) {
+function buildKitchenHtml(order: OrderWithItems, restaurantName: string): string {
+  const orderTypeLabel =
+    order.order_type === 'PICKUP'  ? 'Para llevar' :
+    order.order_type === 'DINE_IN' ? 'En local'    : 'A domicilio';
+
+  const timeStr = new Date(order.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+  const itemsHtml = order.items.map((item) => {
+    const opts = item.options_snapshot?.length
+      ? `<div class="opts">– ${item.options_snapshot.map((o) => o.choice).join(' · ')}</div>`
+      : '';
+    return `
+      <div class="row">
+        <span class="qty">${item.quantity}×</span>
+        <span class="item">${item.name_snapshot}</span>
+      </div>${opts}`;
+  }).join('');
+
+  const addressHtml = (() => {
+    if (order.order_type === 'DELIVERY' && order.address)
+      return `<div class="meta">📍 ${order.address}${order.delivery_zone ? ` · ${order.delivery_zone}` : ''}</div>`;
+    if (order.order_type === 'DINE_IN' && order.address)
+      return `<div class="meta">🪑 ${order.address}</div>`;
+    return '';
+  })();
+
+  const notesHtml = order.notes
+    ? `<div class="notes"><div class="notes-label">⚠ Nota especial</div>${order.notes}</div>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Comanda ${order.order_number}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', monospace; font-size: 14px; color: #000; background: #fff; width: 80mm; margin: 0 auto; padding: 6mm 4mm; }
+  .header { text-align: center; border: 3px solid #000; padding: 8px; margin-bottom: 10px; }
+  .kitchen-label { font-size: 28px; font-weight: 900; letter-spacing: 4px; }
+  .order-num { font-size: 40px; font-weight: 900; letter-spacing: 2px; margin: 4px 0; }
+  .sep { border: none; border-top: 2px dashed #000; margin: 8px 0; }
+  .sep-solid { border: none; border-top: 2px solid #000; margin: 8px 0; }
+  .meta { font-size: 13px; margin: 3px 0; }
+  .tag { display: inline-block; background: #000; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; }
+  .row { display: flex; align-items: flex-start; gap: 6px; margin: 10px 0 3px; }
+  .qty { font-size: 24px; font-weight: 900; min-width: 40px; }
+  .item { font-size: 20px; font-weight: 700; line-height: 1.25; }
+  .opts { font-size: 13px; font-weight: 600; color: #333; padding-left: 46px; margin-bottom: 4px; line-height: 1.4; }
+  .notes { border: 2px solid #000; padding: 7px 9px; margin-top: 10px; font-size: 15px; font-weight: 700; line-height: 1.4; }
+  .notes-label { font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+  .footer { text-align: center; font-size: 11px; color: #888; margin-top: 12px; }
+  @media print { body { width: 100%; padding: 0; } @page { margin: 4mm; size: 80mm auto; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="kitchen-label">COCINA</div>
+  <div class="order-num">#${order.order_number}</div>
+  <div class="meta">${timeStr} · <span class="tag">${orderTypeLabel}</span></div>
+</div>
+<div class="meta"><strong>Cliente:</strong> ${order.customer_name}</div>
+${addressHtml}
+<hr class="sep-solid">
+${itemsHtml}
+${notesHtml}
+<hr class="sep">
+<div class="footer">${restaurantName || 'Restaurante'}</div>
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+}
+
+function printKitchenTicket(order: OrderWithItems, restaurantName: string) {
+  if (typeof window === 'undefined') return;
+  if (localStorage.getItem(KITCHEN_PRINT_KEY) !== '1') return;
+  const win = window.open('', '_blank', 'width=420,height=700');
+  if (!win) return;
+  win.document.write(buildKitchenHtml(order, restaurantName));
+  win.document.close();
+}
+
+function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restaurantName: string): string {
+  function fmt(n: number) { return money(n, currency); }
+
+  const orderTypeLabel =
+    order.order_type === 'PICKUP'   ? 'Para llevar' :
+    order.order_type === 'DINE_IN'  ? 'En local'    : 'Domicilio';
+
+  const dateStr = new Date(order.created_at).toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  const itemsHtml = order.items.map((item) => {
+    const opts = item.options_snapshot?.length
+      ? `<div class="opts">${item.options_snapshot.map((o) => o.choice).join(', ')}</div>`
+      : '';
+    return `
+      <tr>
+        <td class="qty">${item.quantity}×</td>
+        <td class="desc">${item.name_snapshot}${opts}</td>
+        <td class="amount">${fmt(Number(item.subtotal))}</td>
+      </tr>`;
+  }).join('');
+
+  const extraRows: string[] = [];
+  if (Number(order.delivery_fee) > 0)
+    extraRows.push(`<tr class="sub"><td colspan="2">Envío</td><td class="amount">${fmt(Number(order.delivery_fee))}</td></tr>`);
+  if (Number(order.tip) > 0)
+    extraRows.push(`<tr class="sub"><td colspan="2">Propina</td><td class="amount">${fmt(Number(order.tip))}</td></tr>`);
+  if (Number(order.discount) > 0) {
+    const promoLabel = order.promo_code ? ` (${order.promo_code})` : '';
+    extraRows.push(`<tr class="sub discount"><td colspan="2">Descuento${promoLabel}</td><td class="amount">−${fmt(Number(order.discount))}</td></tr>`);
+  }
+
+  const paymentHtml = order.order_type !== 'DINE_IN' ? (() => {
+    const method = order.payment_method === 'CARD' ? 'Tarjeta al recibir' : 'Efectivo';
+    let changeHtml = '';
+    if (order.payment_method !== 'CARD' && order.cash_amount && order.cash_amount > 0) {
+      const change = Number(order.cash_amount) - Number(order.total);
+      changeHtml = `<p class="small">Paga con ${fmt(Number(order.cash_amount))} · Cambio: ${fmt(change)}</p>`;
+    }
+    return `<p class="payment">${method}</p>${changeHtml}`;
+  })() : '';
+
+  const notesHtml = order.notes
+    ? `<div class="notes">Nota: ${order.notes}</div>`
+    : '';
+
+  const addressHtml = (() => {
+    if (order.order_type === 'DELIVERY' && order.address)
+      return `<p class="small">${order.address}${order.delivery_zone ? ` · ${order.delivery_zone}` : ''}</p>`;
+    if (order.order_type === 'DINE_IN' && order.address)
+      return `<p class="small">${order.address}</p>`;
+    return '';
+  })();
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Recibo ${order.order_number}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+    width: 80mm;
+    margin: 0 auto;
+    padding: 8mm 4mm;
+  }
+  .center { text-align: center; }
+  .restaurant { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+  .order-num { font-size: 22px; font-weight: bold; letter-spacing: 2px; margin: 6px 0 2px; }
+  .date { font-size: 10px; color: #555; margin-bottom: 6px; }
+  .sep { border: none; border-top: 1px dashed #999; margin: 7px 0; }
+  .label { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: .5px; }
+  .value { font-size: 12px; font-weight: 600; }
+  .small { font-size: 10px; color: #555; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+  .qty { width: 22px; vertical-align: top; padding-top: 2px; font-size: 11px; }
+  .desc { padding: 0 4px; line-height: 1.35; }
+  .opts { font-size: 10px; color: #666; }
+  .amount { text-align: right; white-space: nowrap; font-weight: 600; vertical-align: top; padding-top: 2px; }
+  tr.sub td { font-size: 11px; padding-top: 2px; }
+  tr.discount td { color: #008800; }
+  .total-row { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 4px; display: flex; justify-content: space-between; }
+  .payment { font-size: 12px; font-weight: 600; margin-top: 5px; }
+  .notes { font-size: 11px; color: #333; font-style: italic; margin-top: 4px; padding: 4px 0; border-top: 1px dashed #ccc; }
+  .footer { text-align: center; font-size: 10px; color: #888; margin-top: 10px; }
+  @media print {
+    body { width: 100%; padding: 0; }
+    @page { margin: 4mm; size: 80mm auto; }
+  }
+</style>
+</head>
+<body>
+<div class="center">
+  <div class="restaurant">${restaurantName || 'Restaurante'}</div>
+  <div class="order-num">#${order.order_number}</div>
+  <div class="date">${dateStr}</div>
+</div>
+<hr class="sep">
+<div class="label">Cliente</div>
+<div class="value">${order.customer_name}</div>
+<div class="small">${order.customer_phone}</div>
+<div class="label" style="margin-top:5px">Tipo</div>
+<div class="value">${orderTypeLabel}</div>
+${addressHtml}
+<hr class="sep">
+<table>
+  <tbody>
+    ${itemsHtml}
+  </tbody>
+</table>
+<table>
+  <tbody>
+    ${extraRows.join('')}
+  </tbody>
+</table>
+<hr class="sep">
+<div class="total-row">
+  <span>TOTAL</span>
+  <span>${fmt(Number(order.total))}</span>
+</div>
+${paymentHtml}
+${notesHtml}
+<div class="footer">¡Gracias por su preferencia!</div>
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+}
+
+export default function OrderCard({ order, currency, restaurantName }: { order: OrderWithItems; currency: PanelCurrency; restaurantName: string }) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const next = nextStatus(order);
 
+  function handlePrint() {
+    const html = buildReceiptHtml(order, currency, restaurantName);
+    const win = window.open('', '_blank', 'width=400,height=700');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+  }
+
   async function handleAdvance() {
     if (!next) return;
+    if (next === 'PREP') printKitchenTicket(order, restaurantName);
     start(async () => { await updateOrderStatus(order.id, next); });
   }
 
@@ -342,6 +568,25 @@ export default function OrderCard({ order, currency }: { order: OrderWithItems; 
           )}
         </div>
       )}
+
+      {/* Imprimir recibo */}
+      <button
+        type="button"
+        onClick={handlePrint}
+        className="press"
+        style={{
+          width: '100%', padding: '8px 12px',
+          borderRadius: 'var(--radius-lg)',
+          fontWeight: 600, fontSize: 12,
+          cursor: 'pointer',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid var(--u-hair)',
+          color: 'var(--u-text-3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}
+      >
+        🖨 Imprimir recibo
+      </button>
     </div>
   );
 }
