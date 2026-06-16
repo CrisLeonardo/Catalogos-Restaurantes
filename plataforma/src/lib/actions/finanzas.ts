@@ -13,6 +13,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { localDateKey } from '@/lib/hours';
 import { getSalesReport } from '@/lib/db/reports';
@@ -35,15 +36,18 @@ async function authRestaurant(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, restaurant_id')
+    .select('role, restaurant_id, permissions')
     .eq('id', user.id)
     .single();
 
-  const allowed =
+  // Pertenencia al restaurante + permiso de sección "finanzas" (los datos
+  // financieros y sus exports son sensibles: un staff sin el permiso no entra).
+  const belongs =
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId);
-  if (!allowed) return null;
+  if (!belongs) return null;
+  if (!can(profile?.role, profile?.permissions as string[] | null, 'finanzas')) return null;
 
   const db = createServiceClient();
   const { data: r } = await db

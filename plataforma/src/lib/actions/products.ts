@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { ProductOptionGroup } from '@/types';
@@ -15,11 +16,15 @@ async function resolveContext(formData: FormData) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('restaurant_id, role')
+    .select('restaurant_id, role, permissions')
     .eq('id', user.id)
     .single();
 
   if (!profile) return null;
+
+  // Permisos por sección: un staff sin "catalogo" no puede tocar el menú,
+  // aunque la UI esté oculta (la verificación de UI no basta como candado).
+  if (!can(profile.role, profile.permissions as string[] | null, 'catalogo')) return null;
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   const restaurantId = isSuperAdmin

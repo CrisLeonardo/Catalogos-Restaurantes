@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -14,11 +15,14 @@ async function resolveContext(formData: FormData) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('restaurant_id, role')
+    .select('restaurant_id, role, permissions')
     .eq('id', user.id)
     .single();
 
   if (!profile) return null;
+
+  // Un staff sin permiso "categorias" no puede modificarlas (candado server-side).
+  if (!can(profile.role, profile.permissions as string[] | null, 'categorias')) return null;
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   const restaurantId = isSuperAdmin
