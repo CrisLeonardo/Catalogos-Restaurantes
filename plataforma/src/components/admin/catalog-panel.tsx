@@ -7,6 +7,7 @@ import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/components/admin/image-upload';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
@@ -366,12 +367,13 @@ function ProductModal({
     if (file.size > 5 * 1024 * 1024) return;
     setImagePreview(URL.createObjectURL(file));
     setUploading(true);
+    const upload = await compressImage(file);
     const supabase = createClient();
-    const ext = file.name.split('.').pop();
+    const ext = upload.name.split('.').pop();
     const path = `${restaurantId}/products/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage
       .from('restaurant-assets')
-      .upload(path, file, { upsert: true });
+      .upload(path, upload, { upsert: true });
     if (!error && data) {
       const { data: { publicUrl } } = supabase.storage
         .from('restaurant-assets')

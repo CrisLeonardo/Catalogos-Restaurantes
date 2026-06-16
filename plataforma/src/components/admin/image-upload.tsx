@@ -61,15 +61,15 @@ async function normalizeIcon(file: File, bg: string, size = 512): Promise<File> 
 /**
  * Redimensiona y recomprime en el navegador antes de subir: una foto de
  * celular de 5 MB termina pesando ~200 KB sin pérdida visible en el menú.
- * GIF y SVG se suben tal cual (canvas los rompería).
+ * Siempre intenta convertir a WebP (sin importar si el cliente subió JPG,
+ * PNG o WebP) y se queda con el resultado más liviano. GIF y SVG se suben
+ * tal cual (canvas los rompería / perdería la animación).
  */
-async function compressImage(file: File, maxDim = 1600, quality = 0.82): Promise<File> {
+export async function compressImage(file: File, maxDim = 1600, quality = 0.82): Promise<File> {
   if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
-    // Pequeña y ya comprimida: no vale la pena reprocesar.
-    if (scale === 1 && file.size < 400 * 1024) return file;
 
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
