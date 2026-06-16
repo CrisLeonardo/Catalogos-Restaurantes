@@ -7,6 +7,14 @@ export type MenuData = {
   products: Product[];
 };
 
+// Columnas que el menú PÚBLICO necesita. Excluye datos de negocio sensibles
+// (cost/margen) e inventario (stock, track_stock, low_stock_threshold): RLS
+// filtra filas pero NO columnas, así que un select('*') los serializaba al
+// navegador del comensal (visibles en el payload de red). is_active lo filtra
+// la política RLS `products_select_available`, no hace falta pedirlo.
+const PUBLIC_PRODUCT_COLUMNS =
+  'id, category_id, name, description, price, image_url, icon, tags, options, is_available, unavailable_at, sort_order';
+
 /**
  * Carga categorías y productos activos de un restaurante en una sola request.
  * Cached por request para evitar queries duplicadas.
@@ -18,13 +26,13 @@ export const getMenuData = cache(
     const [{ data: categories }, { data: products }] = await Promise.all([
       supabase
         .from('categories')
-        .select('*')
+        .select('id, name, icon, sort_order')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('sort_order'),
       supabase
         .from('products')
-        .select('*')
+        .select(PUBLIC_PRODUCT_COLUMNS)
         .eq('restaurant_id', restaurantId)
         .order('sort_order'),
     ]);

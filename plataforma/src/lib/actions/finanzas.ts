@@ -205,12 +205,15 @@ export async function exportSalesReportXlsx(
   if (!ctx) return { error: 'No autorizado.' };
 
   const report = await getSalesReport(restaurantId, from, to, ctx.tz);
-  const XLSX = await import('xlsx');
 
-  const wb = XLSX.utils.book_new();
+  // exceljs (solo escritura, mantenido) en vez de SheetJS, que arrastraba
+  // vulnerabilidades sin parche. Import dinámico → fuera del bundle principal.
+  const { Workbook } = await import('exceljs');
+  const wb = new Workbook();
 
   // Hoja 1 – Resumen
-  const ws1 = XLSX.utils.aoa_to_sheet([
+  const ws1 = wb.addWorksheet('Resumen');
+  ws1.addRows([
     ['Reporte de Ventas', `${from} a ${to}`],
     [],
     ['Métrica', 'Valor'],
@@ -223,22 +226,18 @@ export async function exportSalesReportXlsx(
     ['Margen %', report.marginPct != null ? `${report.marginPct.toFixed(1)}%` : 'n/d'],
     ['Ticket promedio', report.avgTicket],
   ]);
-  XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
 
   // Hoja 2 – Ventas por día
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    ['Fecha', 'Pedidos', 'Ingreso'],
-    ...report.series.map((d) => [d.date, d.orders, d.revenue]),
-  ]);
-  XLSX.utils.book_append_sheet(wb, ws2, 'Ventas por día');
+  const ws2 = wb.addWorksheet('Ventas por día');
+  ws2.addRow(['Fecha', 'Pedidos', 'Ingreso']);
+  ws2.addRows(report.series.map((d) => [d.date, d.orders, d.revenue]));
 
   // Hoja 3 – Productos
-  const ws3 = XLSX.utils.aoa_to_sheet([
-    ['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
-    ...report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]),
-  ]);
-  XLSX.utils.book_append_sheet(wb, ws3, 'Productos');
+  const ws3 = wb.addWorksheet('Productos');
+  ws3.addRow(['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad']);
+  ws3.addRows(report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]));
 
-  const xlsx = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }) as string;
+  const buf = await wb.xlsx.writeBuffer();
+  const xlsx = Buffer.from(buf).toString('base64');
   return { xlsx, filename: `reporte-ventas-${from}_a_${to}.xlsx` };
 }
