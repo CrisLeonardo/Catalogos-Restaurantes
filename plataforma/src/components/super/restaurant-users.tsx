@@ -394,7 +394,8 @@ function AddUserForm({
 
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', textAlign: 'center' }}>
           El dueño entrará en{' '}
-          <strong style={{ color: 'var(--u-text-3)' }}>{slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}/login</strong>
+          <strong style={{ color: 'var(--u-text-3)' }}>{slug}-admin.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong>
+          {' '}— el panel del restaurante en su propio subdominio.
         </p>
       </form>
     </Glass>

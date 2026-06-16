@@ -143,16 +143,20 @@ export default async function EditRestaurantePage({
       {/* ── 1. Información ─────────────────────────────────── */}
       <section>
         <SectionTitle>Información</SectionTitle>
-        <RestaurantEditForm restaurant={row} />
+        {/* key={row.id}: fuerza re-montaje al cambiar de sucursal por navegación
+            cliente; sin él, el estado/inputs conservaban los datos de la
+            sucursal anterior y se guardaban en la equivocada. */}
+        <RestaurantEditForm key={row.id} restaurant={row} />
       </section>
 
       {/* ── 2. Plan y módulos ──────────────────────────────── */}
       <section>
         <SectionTitle>Plan y módulos</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <PlanEditor restaurant={row} />
+          <PlanEditor key={row.id} restaurant={row} />
           {resolved.config.orderTypes && (
             <OrderTypesEditor
+              key={row.id}
               restaurantId={row.id}
               initialOrderTypes={resolved.config.orderTypes}
             />
@@ -174,7 +178,7 @@ export default async function EditRestaurantePage({
           Coloca el pin en el mapa y define hasta cuántos km llega el reparto.
           Las coordenadas alimentan el selector automático de sucursal del grupo.
         </p>
-        <RestaurantLocationEditor restaurant={row as unknown as Restaurant} />
+        <RestaurantLocationEditor key={row.id} restaurant={row as unknown as Restaurant} />
       </section>
 
       {/* ── 4. Apariencia ──────────────────────────────────── */}
@@ -184,6 +188,7 @@ export default async function EditRestaurantePage({
         <div className="bleed-inner">
           <SectionTitle>Apariencia</SectionTitle>
           <ThemeEditor
+            key={row.id}
             restaurantId={row.id}
             config={resolved.config}
             content={resolved.content}
@@ -207,7 +212,7 @@ export default async function EditRestaurantePage({
           Crea el usuario y contraseña con los que el dueño entrará a gestionar
           su menú. Tú controlas estos accesos.
         </p>
-        <RestaurantUsers restaurantId={row.id} slug={row.slug} users={users} />
+        <RestaurantUsers key={row.id} restaurantId={row.id} slug={row.slug} users={users} />
       </section>
 
       {/* ── 5. Facturación / Cobros ────────────────────────── */}
@@ -228,7 +233,7 @@ export default async function EditRestaurantePage({
             Ver métricas a fondo →
           </Link>
         </p>
-        <BillingManager restaurantId={row.id} config={billingConfig} invoices={invoices} />
+        <BillingManager key={row.id} restaurantId={row.id} config={billingConfig} invoices={invoices} />
       </section>
 
       {/* ── 6. Duplicar ────────────────────────────────────── */}
