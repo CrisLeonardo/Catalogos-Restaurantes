@@ -70,18 +70,42 @@ async function loadQz(): Promise<QZ> {
   return qzPromise;
 }
 
+/** ¿El servidor puede firmar ahora mismo? (sesión activa + clave configurada) */
+async function canSign(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/print/sign', {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: '__probe__',
+    });
+    return res.ok; // 200 = firma disponible; 401/501/otros = no firmamos
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Configura la firma para que QZ no muestre avisos por acción.
- * Si no hay certificado, se omite y QZ opera en modo sin firma (pide permiso
- * la primera vez por sesión). La clave privada nunca llega al cliente: se firma
- * en /api/print/sign.
+ * Configura la firma SOLO si está realmente disponible, de modo que un problema
+ * de firma (sin sesión, sin clave, endpoint caído) nunca rompa la conexión a QZ:
+ * en ese caso se conecta en modo sin firma (QZ pide permiso la 1ª vez por sesión).
+ * La clave privada nunca llega al cliente: se firma en /api/print/sign.
  */
 async function configureSecurity(qz: QZ): Promise<void> {
   if (securityConfigured) return;
-  securityConfigured = true;
 
   const { QZ_CERTIFICATE } = await import('./qz-cert');
-  if (!QZ_CERTIFICATE || !QZ_CERTIFICATE.includes('BEGIN CERTIFICATE')) return;
+  const hasCert = !!QZ_CERTIFICATE && QZ_CERTIFICATE.includes('BEGIN CERTIFICATE');
+
+  if (!hasCert) {
+    securityConfigured = true; // sin cert → siempre sin firma
+    return;
+  }
+
+  if (!(await canSign())) {
+    // Aún no podemos firmar (sin sesión/clave). Conectamos sin firma y dejamos
+    // que un próximo intento reconfigure si la firma ya está disponible.
+    return;
+  }
 
   qz.security.setCertificatePromise((resolve: (v: string) => void) => resolve(QZ_CERTIFICATE));
   qz.security.setSignatureAlgorithm('SHA512');
@@ -93,13 +117,14 @@ async function configureSecurity(qz: QZ): Promise<void> {
           headers: { 'content-type': 'text/plain' },
           body: toSign,
         });
-        if (!res.ok) throw new Error(`sign ${res.status}`);
+        if (!res.ok) throw new Error(`firma falló (HTTP ${res.status})`);
         resolve(await res.text());
       } catch (e) {
         reject(e);
       }
     },
   );
+  securityConfigured = true;
 }
 
 /** Conecta al agente QZ si no hay sesión activa. Lanza si no está disponible. */

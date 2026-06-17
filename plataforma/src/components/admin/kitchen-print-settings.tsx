@@ -141,6 +141,7 @@ export default function KitchenPrintSettings() {
   const [printers, setPrinters] = useState<string[]>([]);
   const [defaultPrinter, setDefaultPrinter] = useState<string | null>(null);
   const [testMsg, setTestMsg] = useState('');
+  const [qzError, setQzError] = useState('');
 
   function toggle() {
     setKitchenAutoPrintEnabled(!enabled);
@@ -150,12 +151,16 @@ export default function KitchenPrintSettings() {
   async function detectPrinters() {
     setQzState('checking');
     setTestMsg('');
+    setQzError('');
     try {
       const [list, def] = await Promise.all([listPrinters(), getDefaultPrinter()]);
       setPrinters(list);
       setDefaultPrinter(def);
       setQzState('available');
-    } catch {
+    } catch (e) {
+      const msg = (e as Error)?.message || String(e);
+      console.error('[QZ] Falló la conexión:', e);
+      setQzError(msg);
       setQzState('unavailable');
     }
   }
@@ -311,9 +316,18 @@ export default function KitchenPrintSettings() {
                 fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55,
               }}
             >
-              No detectamos QZ Tray en este equipo. Instálalo desde{' '}
-              <a href={QZ_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>qz.io/download</a>,
-              ábrelo y vuelve a intentar. Mientras tanto, la impresión usa el diálogo del navegador.
+              No pudimos conectar con QZ Tray en este equipo. Revisa que:
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                <li>QZ Tray esté <strong style={{ color: 'var(--u-text-2)' }}>abierto</strong> (ícono junto al reloj). Si no lo tienes, instálalo desde{' '}
+                  <a href={QZ_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>qz.io/download</a>.</li>
+                <li>Si aparece una ventana de QZ pidiendo permiso para un sitio <strong style={{ color: 'var(--u-text-2)' }}>no confiable</strong>, marca «Recordar» y pulsa <strong style={{ color: 'var(--u-text-2)' }}>Permitir</strong>.</li>
+              </ul>
+              <div style={{ marginTop: 6 }}>Mientras tanto, la impresión usa el diálogo del navegador.</div>
+              {qzError && (
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--font-mono, monospace)', wordBreak: 'break-word' }}>
+                  Detalle técnico: {qzError}
+                </div>
+              )}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
