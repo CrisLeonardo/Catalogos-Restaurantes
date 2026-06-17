@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
+import AdminShell from '@/components/admin/shell';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -26,22 +27,49 @@ export default async function WaiterLayout({ children }: { children: React.React
     .eq('id', user.id)
     .single();
 
-  // Acceso permitido a quien tenga la sección "mesero" (staff con permiso,
-  // dueño, super admin o el rol deprecado RESTAURANT_WAITER).
-  if (!profile || !profile.restaurant_id ||
-      !can(profile.role as string, profile.permissions as string[] | null, 'mesero')) {
+  if (
+    !profile || !profile.restaurant_id ||
+    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+  ) {
     redirect('/admin/login');
   }
 
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug');
 
+  const restaurantId = profile.restaurant_id as string;
+  let restaurantName = 'Restaurante';
+  let ordersEnabled = false;
+  let logoUrl: string | null = null;
+  let zone = '';
+
   if (tenantSlug) {
     const tenantData = await getRestaurantBySlug(tenantSlug);
-    if (!tenantData || tenantData.restaurant.id !== profile.restaurant_id) {
-      redirect('/');
-    }
+    if (!tenantData || tenantData.restaurant.id !== restaurantId) redirect('/');
+    restaurantName = tenantData.restaurant.name;
+    const mod = tenantData.restaurant.modules as Record<string, boolean> | null;
+    ordersEnabled = mod?.['orders'] === true;
+    logoUrl = tenantData.resolved.config.logoUrl ?? null;
+    zone = tenantData.resolved.config.zone ?? '';
+  } else {
+    const { data: r } = await db.from('restaurants').select('name, modules').eq('id', restaurantId).single();
+    restaurantName = (r?.name as string | null) ?? 'Restaurante';
+    const mod = r?.modules as Record<string, boolean> | null;
+    ordersEnabled = mod?.['orders'] === true;
   }
 
-  return <>{children}</>;
+  return (
+    <AdminShell
+      restaurantName={restaurantName}
+      restaurantId={restaurantId}
+      ordersEnabled={ordersEnabled}
+      logoUrl={logoUrl}
+      zone={zone}
+      role={profile.role}
+      permissions={profile.permissions}
+      canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
+    >
+      {children}
+    </AdminShell>
+  );
 }

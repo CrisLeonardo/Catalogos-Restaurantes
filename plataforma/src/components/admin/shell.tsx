@@ -108,6 +108,7 @@ export default function AdminShell({
     .filter((s) => s.items.length > 0);
 
   const TITLES: Record<string, string> = {
+    '/admin/mesero': 'Tomar pedidos',
     '/admin/mesas': 'Mesas · Comer en local',
     '/admin/pedidos': 'Pedidos en vivo',
     '/admin/categorias': 'Categorías',

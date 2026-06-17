@@ -505,6 +505,51 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   return { success: true, orderId: order.id, orderNumber: order.order_number };
 }
 
+/**
+ * Libera una mesa marcando como DELIVERED todos sus pedidos DINE_IN activos.
+ * Solo el personal con permiso 'mesero' puede hacerlo.
+ */
+export async function freeTable(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<{ error?: string }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+  const { data: profile } = await db
+    .from('profiles')
+    .select('role, restaurant_id, permissions')
+    .eq('id', user.id)
+    .single();
+
+  if (
+    !profile ||
+    profile.restaurant_id !== restaurantId ||
+    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+  ) {
+    return { error: 'No autorizado.' };
+  }
+
+  const tableAddress = `Mesa ${tableNumber}`;
+  const { error } = await db
+    .from('orders')
+    .update({ status: 'DELIVERED', delivered_at: new Date().toISOString() })
+    .eq('restaurant_id', restaurantId)
+    .eq('address', tableAddress)
+    .eq('order_type', 'DINE_IN')
+    .not('status', 'in', '("DELIVERED","CANCEL")');
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/pedidos');
+  return {};
+}
+
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,

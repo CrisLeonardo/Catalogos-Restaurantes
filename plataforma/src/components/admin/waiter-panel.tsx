@@ -10,9 +10,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
-import { createWaiterOrder } from '@/lib/actions/orders';
-import { updateOrderStatus } from '@/lib/actions/orders';
-import type { Category, Product, ProductOptionGroup, ProductOptionChoice } from '@/types';
+import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
+import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
 
@@ -76,7 +75,21 @@ function nextLabel(status: string): string {
   return '';
 }
 
-/* ── Modal de opciones del producto ─────────────────────────── */
+/* ── Modal de opciones del producto (diseño igual al cliente) ── */
+function initModalSelection(groups: ProductOptionGroup[]): Record<string, string[]> {
+  const sel: Record<string, string[]> = {};
+  for (const g of groups) {
+    if (g.type === 'combo') {
+      sel[g.id] = g.choices.map((c) => c.id);
+    } else if (g.type === 'single' && g.required && g.choices.length > 0) {
+      sel[g.id] = [g.choices[0].id];
+    } else {
+      sel[g.id] = [];
+    }
+  }
+  return sel;
+}
+
 function ProductOptionsModal({
   product,
   currency,
@@ -89,36 +102,30 @@ function ProductOptionsModal({
   onClose: () => void;
 }) {
   const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
-  const [selected, setSelected] = useState<Map<string, Set<string>>>(new Map());
+  const [selected, setSelected] = useState<Record<string, string[]>>(() => initModalSelection(groups));
   const [qty, setQty] = useState(1);
 
-  function toggleChoice(group: ProductOptionGroup, choice: ProductOptionChoice) {
+  function toggleChoice(group: ProductOptionGroup, choiceId: string) {
     setSelected((prev) => {
-      const map = new Map(prev);
-      const set = new Set(map.get(group.id) ?? []);
+      const current = prev[group.id] ?? [];
       if (group.type === 'single') {
-        map.set(group.id, new Set([choice.id]));
-      } else {
-        if (set.has(choice.id)) { set.delete(choice.id); } else { set.add(choice.id); }
-        map.set(group.id, set);
+        const next = current.includes(choiceId) && !group.required ? [] : [choiceId];
+        return { ...prev, [group.id]: next };
       }
-      return map;
+      if (current.includes(choiceId)) {
+        return { ...prev, [group.id]: current.filter((c) => c !== choiceId) };
+      }
+      if (group.type === 'multi' && group.max && group.max > 0 && current.length >= group.max) return prev;
+      return { ...prev, [group.id]: [...current, choiceId] };
     });
-  }
-
-  function isSelected(groupId: string, choiceId: string): boolean {
-    return selected.get(groupId)?.has(choiceId) ?? false;
   }
 
   function buildOptions() {
     const opts: CartLine['options'] = [];
     for (const group of groups) {
-      const ids = selected.get(group.id) ?? new Set();
-      for (const choiceId of ids) {
+      for (const choiceId of selected[group.id] ?? []) {
         const choice = group.choices.find((c) => c.id === choiceId);
-        if (choice) {
-          opts.push({ groupId: group.id, groupName: group.name, choiceId: choice.id, choiceName: choice.name, priceDelta: choice.priceDelta });
-        }
+        if (choice) opts.push({ groupId: group.id, groupName: group.name, choiceId: choice.id, choiceName: choice.name, priceDelta: choice.priceDelta });
       }
     }
     return opts;
@@ -126,8 +133,8 @@ function ProductOptionsModal({
 
   function validate(): string | null {
     for (const group of groups) {
-      if (group.type === 'single' && group.required) {
-        if (!selected.get(group.id)?.size) return `Elige "${group.name}"`;
+      if (group.type === 'single' && group.required && !(selected[group.id]?.length)) {
+        return `Elige "${group.name}"`;
       }
     }
     return null;
@@ -137,75 +144,99 @@ function ProductOptionsModal({
     const err = validate();
     if (err) { alert(err); return; }
     const opts = buildOptions();
-    const deltaTotal = opts.reduce((s, o) => s + o.priceDelta, 0);
+    const delta = opts.reduce((s, o) => s + o.priceDelta, 0);
     for (let i = 0; i < qty; i++) {
-      onAdd({
-        lineId: newLineId(product.id),
-        productId: product.id,
-        name: product.name,
-        price: product.price + deltaTotal,
-        quantity: 1,
-        options: opts,
-      });
+      onAdd({ lineId: newLineId(product.id), productId: product.id, name: product.name, price: product.price + delta, quantity: 1, options: opts });
     }
     onClose();
   }
 
-  const deltaTotal = buildOptions().reduce((s, o) => s + o.priceDelta, 0);
-  const finalPrice = product.price + deltaTotal;
+  const delta = buildOptions().reduce((s, o) => s + o.priceDelta, 0);
+  const finalPrice = product.price + delta;
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(7,7,8,0.7)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center' }}>
-      <div className="glass-solid anim-pop" onClick={(e) => e.stopPropagation()} style={{ width: 420, maxWidth: '96vw', maxHeight: '88vh', borderRadius: 20, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--u-hair)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div className="glass anim-slide-up" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, maxHeight: '88dvh', borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '18px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div className="t-display" style={{ fontSize: 18 }}>{product.name}</div>
+            <div className="t-display" style={{ fontSize: 20 }}>{product.name}</div>
             <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>{money(finalPrice, currency)} por unidad</div>
           </div>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
+          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0, marginLeft: 10 }}>
             <Icon name="x" size={18} />
           </button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {groups.map((group) => (
-            <div key={group.id}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                {group.name} {group.required && <span style={{ color: '#f87171' }}>*</span>}
+        {/* Body */}
+        <div style={{ overflowY: 'auto', padding: '4px 20px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {groups.map((group) => {
+            const picked = selected[group.id] ?? [];
+            const isCombo = group.type === 'combo';
+            const hint = isCombo ? 'Personaliza tu combo'
+              : group.type === 'single' ? (group.required ? 'Elige uno' : 'Opcional')
+              : group.max && group.max > 0 ? `Opcional · máx ${group.max}` : 'Opcional';
+
+            return (
+              <div key={group.id}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{group.name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{hint}</span>
+                </div>
+
+                {isCombo ? (
+                  /* Combo: filas con checkmark, precio visible como ahorro al quitar */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {group.choices.map((choice) => {
+                      const included = picked.includes(choice.id);
+                      const d = Number(choice.priceDelta) || 0;
+                      return (
+                        <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
+                            background: included ? 'rgba(34,197,94,0.10)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}` }}>
+                          <span style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'grid', placeItems: 'center',
+                            background: included ? '#22c55e' : 'rgba(255,255,255,0.08)', border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair)'}` }}>
+                            {included && <Icon name="check" size={12} style={{ color: '#fff' }} />}
+                          </span>
+                          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: included ? 'var(--u-text)' : 'var(--u-text-3)', textDecoration: included ? 'none' : 'line-through' }}>
+                            {choice.name}
+                          </span>
+                          {d > 0 && (
+                            <span style={{ fontSize: 12, flexShrink: 0, color: included ? 'var(--u-text-2)' : '#f87171' }}>
+                              {included ? `+${money(d, currency)}` : `−${money(d, currency)}`}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* Single / Multi: píldoras */
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {group.choices.map((choice) => {
+                      const on = picked.includes(choice.id);
+                      const d = Number(choice.priceDelta) || 0;
+                      return (
+                        <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
+                            background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                            border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 13 }}>
+                          {on && <Icon name="check" size={13} />}
+                          {choice.name}
+                          {d !== 0 && <span style={{ fontSize: 11.5, opacity: 0.75 }}>{d > 0 ? '+' : '−'}{money(Math.abs(d), currency)}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {group.choices.map((choice) => {
-                  const on = isSelected(group.id, choice.id);
-                  return (
-                    <button
-                      key={choice.id}
-                      type="button"
-                      onClick={() => toggleChoice(group, choice)}
-                      className="press"
-                      style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '11px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                        border: `1px solid ${on ? 'var(--color-accent)' : 'var(--u-hair)'}`,
-                        background: on ? 'rgba(var(--color-accent-rgb),0.12)' : 'rgba(255,255,255,0.03)',
-                        color: 'var(--u-text)',
-                      }}
-                    >
-                      <span style={{ fontSize: 14 }}>{choice.name}</span>
-                      {choice.priceDelta !== 0 && (
-                        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>
-                          {choice.priceDelta > 0 ? '+' : ''}{money(choice.priceDelta, currency)}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Cantidad */}
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Cantidad</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', marginBottom: 10 }}>Cantidad</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="press glass-quiet" style={{ width: 42, height: 42, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>−</button>
               <span style={{ fontSize: 20, fontWeight: 700, minWidth: 32, textAlign: 'center' }}>{qty}</span>
@@ -273,13 +304,14 @@ export default function WaiterPanel({
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
-  const [activeCat, setActiveCat] = useState<string | null>(categories[0]?.id ?? null);
+  const [activeCat, setActiveCat] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartLine[]>([]);
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [guestName, setGuestName] = useState('');
   const [notes, setNotes] = useState('');
-  const [tipAccepted, setTipAccepted] = useState(false);
+  const [tableToFree, setTableToFree] = useState<number | null>(null);
+  const [freeing, startFree] = useTransition();
   const [productModal, setProductModal] = useState<Product | null>(null);
   const [submitting, startSubmit] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -378,14 +410,13 @@ export default function WaiterPanel({
 
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
   const subtotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
-  const tipAmount = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
+  const tipAmount = tipEnabled && subtotal > 0 ? Math.round(subtotal * tipPercent) / 100 : 0;
   const total = subtotal + tipAmount;
 
   function resetOrder() {
     setCart([]);
     setGuestName('');
     setNotes('');
-    setTipAccepted(false);
     setTableNumber(null);
     setSubmitError(null);
   }
@@ -413,7 +444,7 @@ export default function WaiterPanel({
         tableNumber,
         notes: notes.trim() || undefined,
       },
-      tipAccepted,
+      tipAccepted: tipEnabled && subtotal > 0,
     };
 
     startSubmit(async () => {
@@ -434,7 +465,8 @@ export default function WaiterPanel({
   const visibleProducts = products.filter((p) => {
     if (!p.is_available || !p.is_active) return false;
     if (query) return p.name.toLowerCase().includes(query);
-    return p.category_id === activeCat;
+    if (activeCat !== null) return p.category_id === activeCat;
+    return true;
   });
 
   /* ── UI compartida ───────────────────────────────────── */
@@ -562,7 +594,10 @@ export default function WaiterPanel({
                 <button
                   key={n}
                   type="button"
-                  onClick={() => { setTableNumber(n); setSearch(''); setView('menu'); }}
+                  onClick={() => {
+                    if (occupied) { setTableToFree(n); }
+                    else { setTableNumber(n); setSearch(''); setView('menu'); }
+                  }}
                   className="press"
                   style={{
                     aspectRatio: '1 / 1', borderRadius: 16, cursor: 'pointer',
@@ -581,6 +616,50 @@ export default function WaiterPanel({
             })}
           </div>
         </div>
+
+        {/* Diálogo: opciones para mesa ocupada */}
+        {tableToFree !== null && (
+          <div onClick={() => setTableToFree(null)} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <div className="glass anim-slide-up" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, borderRadius: '20px 20px 0 0', padding: '20px 20px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <div>
+                  <div className="t-display" style={{ fontSize: 20 }}>Mesa {tableToFree}</div>
+                  <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>Tiene un pedido activo</div>
+                </div>
+                <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => { setTableToFree(null); setTableNumber(tableToFree); setSearch(''); setView('menu'); }}
+                  className="press btn-accent"
+                  style={{ padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}
+                >
+                  ＋ Agregar platos
+                </button>
+                <button
+                  type="button"
+                  disabled={freeing}
+                  onClick={() => {
+                    const n = tableToFree!;
+                    startFree(async () => {
+                      const res = await freeTable(restaurantId, n);
+                      if (res.error) { alert(res.error); }
+                      setTableToFree(null);
+                      router.refresh();
+                    });
+                  }}
+                  className="press"
+                  style={{ padding: '14px', borderRadius: 14, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
+                >
+                  {freeing ? 'Liberando…' : '✓ Marcar como libre'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -629,26 +708,22 @@ export default function WaiterPanel({
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Alergias, sin sal, extra salsa…" style={inputStyle} />
           </div>
 
-          {tipEnabled && subtotal > 0 && (
-            <button
-              type="button"
-              onClick={() => setTipAccepted((v) => !v)}
-              className="press"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 12, border: `1px solid ${tipAccepted ? 'var(--color-accent)' : 'var(--u-hair)'}`,
-                background: tipAccepted ? 'rgba(var(--color-accent-rgb),0.1)' : 'rgba(255,255,255,0.03)',
-                color: 'var(--u-text)', cursor: 'pointer', textAlign: 'left',
-              }}
-            >
-              <span style={{ fontSize: 18 }}>🙏</span>
-              <span style={{ flex: 1, fontSize: 14 }}>Propina sugerida ({tipPercent}%) — {money(Math.round(subtotal * tipPercent) / 100, currency)}</span>
-              <span style={{ fontSize: 14, color: tipAccepted ? 'var(--color-accent)' : 'var(--u-text-4)', fontWeight: 700 }}>{tipAccepted ? '✓' : '+'}</span>
-            </button>
-          )}
         </div>
 
         {/* Barra fija inferior: total + enviar */}
         <div style={{ borderTop: '1px solid var(--u-hair)', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(16px)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {tipEnabled && tipAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Subtotal</span>
+              <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{money(subtotal, currency)}</span>
+            </div>
+          )}
+          {tipEnabled && tipAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>🙏 Propina ({tipPercent}%)</span>
+              <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{money(tipAmount, currency)}</span>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 15, color: 'var(--u-text-2)', fontWeight: 600 }}>Total</span>
             <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)' }}>{money(total, currency)}</span>
@@ -701,6 +776,19 @@ export default function WaiterPanel({
       {/* Categorías (ocultas al buscar) */}
       {!query && (
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 14px 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
+          <button
+            type="button"
+            onClick={() => setActiveCat(null)}
+            className="press"
+            style={{
+              whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
+              background: activeCat === null ? 'var(--color-accent)' : 'rgba(255,255,255,0.07)',
+              color: activeCat === null ? 'var(--on-accent)' : 'var(--u-text-2)',
+              flexShrink: 0,
+            }}
+          >
+            Todos
+          </button>
           {categories.filter((c) => c.is_active).map((cat) => (
             <button
               key={cat.id}
