@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { isMeseroOnly } from '@/lib/permissions';
 
 export type AuthState = { error: string } | null;
 
@@ -24,7 +25,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // Redirigir según rol
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, permissions')
     .eq('id', signInData.user.id)
     .single();
 
@@ -35,6 +36,11 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // El jefe de grupo entra a su panel consolidado (host slug-central.dominio).
   if (profile?.role === 'GROUP_OWNER') {
     redirect('/central');
+  }
+
+  // El mesero puro entra directo a su panel de toma de pedidos.
+  if (isMeseroOnly(profile?.role, profile?.permissions as string[] | null)) {
+    redirect('/admin/mesero');
   }
 
   redirect('/admin/menu');

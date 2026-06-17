@@ -74,6 +74,7 @@ export default function AdminShell({
     {
       title: 'Operación',
       items: [
+        ...(on(ordersEnabled)    ? [{ href: '/admin/mesero',    label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }] : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/mesas',     label: 'Mesas',       icon: 'grid',  key: 'mesas'     }] : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },

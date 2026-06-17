@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { can } from '@/lib/permissions';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,11 +22,14 @@ export default async function WaiterLayout({ children }: { children: React.React
   const db = createServiceClient();
   const { data: profile } = await db
     .from('profiles')
-    .select('id, role, restaurant_id, full_name')
+    .select('id, role, restaurant_id, full_name, permissions')
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'RESTAURANT_WAITER' || !profile.restaurant_id) {
+  // Acceso permitido a quien tenga la sección "mesero" (staff con permiso,
+  // dueño, super admin o el rol deprecado RESTAURANT_WAITER).
+  if (!profile || !profile.restaurant_id ||
+      !can(profile.role as string, profile.permissions as string[] | null, 'mesero')) {
     redirect('/admin/login');
   }
 

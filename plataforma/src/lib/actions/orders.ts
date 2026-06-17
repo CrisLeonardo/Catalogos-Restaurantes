@@ -11,6 +11,7 @@ import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
+import { can } from '@/lib/permissions';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -370,14 +371,14 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
 
   const { data: waiterProfile } = await db
     .from('profiles')
-    .select('role, restaurant_id')
+    .select('role, restaurant_id, permissions')
     .eq('id', user.id)
     .single();
 
   if (
     !waiterProfile ||
-    waiterProfile.role !== 'RESTAURANT_WAITER' ||
-    waiterProfile.restaurant_id !== restaurantId
+    waiterProfile.restaurant_id !== restaurantId ||
+    !can(waiterProfile.role as string, waiterProfile.permissions as string[] | null, 'mesero')
   ) {
     return { error: 'No autorizado.' };
   }

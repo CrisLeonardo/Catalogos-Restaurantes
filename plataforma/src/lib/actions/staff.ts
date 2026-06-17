@@ -44,7 +44,6 @@ export type StaffMember = {
   email: string | null;
   full_name: string | null;
   permissions: string[] | null;
-  staff_type: 'staff' | 'waiter';
 };
 
 async function buildMemberList(
@@ -54,12 +53,14 @@ async function buildMemberList(
   return Promise.all(
     profiles.map(async (p) => {
       const { data } = await db.auth.admin.getUserById(p.id as string);
+      // Compatibilidad: un mesero del rol deprecado se ve como STAFF con ["mesero"].
+      const perms = (p.permissions as string[] | null)
+        ?? (p.role === 'RESTAURANT_WAITER' ? ['mesero'] : null);
       return {
         id: p.id as string,
         email: data.user?.email ?? null,
         full_name: (p.full_name as string | null) ?? null,
-        permissions: (p.permissions as string[] | null) ?? null,
-        staff_type: (p.role === 'RESTAURANT_WAITER' ? 'waiter' : 'staff') as 'staff' | 'waiter',
+        permissions: perms,
       };
     }),
   );
@@ -94,13 +95,11 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = (formData.get('password') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
-  const staffType = (formData.get('staff_type') as string) === 'waiter' ? 'waiter' : 'staff';
-  const isWaiter = staffType === 'waiter';
-  const permissions = isWaiter ? [] : readPermissions(formData);
+  const permissions = readPermissions(formData);
 
   if (!email || !email.includes('@')) return { error: 'Email inválido.' };
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
-  if (!isWaiter && permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
+  if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
 
   const { data: created, error: createErr } = await ctx.db.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { full_name: fullName },
@@ -113,20 +112,19 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     return { error: createErr?.message ?? 'No se pudo crear el usuario.' };
   }
 
-  const role = isWaiter ? 'RESTAURANT_WAITER' : 'RESTAURANT_STAFF';
   const { error: profErr } = await ctx.db.from('profiles').upsert({
     id: created.user.id,
     restaurant_id: ctx.restaurantId,
-    role,
+    role: 'RESTAURANT_STAFF',
     full_name: fullName,
-    permissions: isWaiter ? null : permissions,
+    permissions,
   });
   if (profErr) {
     await ctx.db.auth.admin.deleteUser(created.user.id);
     return { error: profErr.message };
   }
 
-  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: email, meta: { added: true, role } });
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: email, meta: { added: true, role: 'RESTAURANT_STAFF', permissions } });
   revalidatePath('/admin/personal');
   return { ok: true };
 }
@@ -147,14 +145,12 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
   if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
 
   const fullName = (formData.get('full_name') as string)?.trim() || null;
+  const permissions = readPermissions(formData);
+  if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
 
-  // Verificar si es mesero para no asignarle permisos de secciones
-  const { data: prof } = await ctx.db.from('profiles').select('role').eq('id', userId).single();
-  const isWaiter = (prof?.role as string | null) === 'RESTAURANT_WAITER';
-  const permissions = isWaiter ? null : readPermissions(formData);
-
+  // Si era un mesero del rol deprecado, lo normalizamos a STAFF al editarlo.
   const { error } = await ctx.db.from('profiles')
-    .update({ permissions, full_name: fullName })
+    .update({ permissions, full_name: fullName, role: 'RESTAURANT_STAFF' })
     .eq('id', userId);
   if (error) return { error: error.message };
 
@@ -188,7 +184,7 @@ export async function removeStaff(formData: FormData) {
   revalidatePath('/admin/personal');
 }
 
-/** Lista solo los meseros del restaurante (para la interfaz del mesero y el selector de pedidos). */
+/** Lista el personal con permiso "mesero" (toma pedidos en mesa). */
 export async function listWaiters(restaurantId: string): Promise<StaffMember[]> {
   if (!UUID_RE.test(restaurantId)) return [];
   const db = createServiceClient();
@@ -196,10 +192,13 @@ export async function listWaiters(restaurantId: string): Promise<StaffMember[]> 
     .from('profiles')
     .select('id, full_name, permissions, role')
     .eq('restaurant_id', restaurantId)
-    .eq('role', 'RESTAURANT_WAITER');
+    .in('role', ['RESTAURANT_STAFF', 'RESTAURANT_WAITER']);
 
-  if (!profiles?.length) return [];
-  return buildMemberList(db, profiles as { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[]);
+  const members = await buildMemberList(
+    db,
+    (profiles ?? []) as { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[],
+  );
+  return members.filter((m) => m.permissions?.includes('mesero'));
 }
 
 /* ── Bitácora de actividad ──────────────────────────────────── */

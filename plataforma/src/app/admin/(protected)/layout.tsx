@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
+import { isMeseroOnly } from '@/lib/permissions';
 import type { Restaurant } from '@/types';
 
 export default async function AdminProtectedLayout({
@@ -27,8 +28,8 @@ export default async function AdminProtectedLayout({
 
   const { profile } = ctx;
 
-  // Los meseros no tienen acceso al panel admin — redirigir a su interfaz propia.
-  if (profile.role === 'RESTAURANT_WAITER') {
+  // El "mesero puro" (solo sección mesero) no entra al panel admin.
+  if (isMeseroOnly(profile.role, profile.permissions)) {
     redirect('/admin/mesero');
   }
 

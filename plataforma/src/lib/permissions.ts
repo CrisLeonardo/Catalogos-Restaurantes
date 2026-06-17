@@ -9,6 +9,7 @@
    ============================================================ */
 
 export const ADMIN_SECTIONS = [
+  { key: 'mesero',       label: 'Mesero' },
   { key: 'pedidos',      label: 'Pedidos' },
   { key: 'catalogo',     label: 'Catálogo' },
   { key: 'categorias',   label: 'Categorías' },
@@ -42,6 +43,24 @@ export function can(
     if (permissions == null) return true; // aún sin restringir
     return permissions.includes(section);
   }
-  // RESTAURANT_WAITER no tiene acceso al panel admin (solo a /admin/mesero)
+  // RESTAURANT_WAITER (deprecado): solo conserva acceso a la sección "mesero".
+  if (role === 'RESTAURANT_WAITER') return section === 'mesero';
   return false;
+}
+
+/** Secciones del panel admin (todas menos "mesero", que es pantalla aparte). */
+const PANEL_SECTIONS: string[] = ADMIN_SECTIONS.map((s) => s.key).filter((k) => k !== 'mesero');
+
+/**
+ * ¿Es un "mesero puro"? — solo toma pedidos en mesa y NO debe ver el panel admin.
+ * Cierto cuando su único acceso es "mesero" (o es el rol deprecado RESTAURANT_WAITER).
+ */
+export function isMeseroOnly(
+  role: string | null | undefined,
+  permissions: string[] | null | undefined,
+): boolean {
+  if (role === 'RESTAURANT_WAITER') return true;
+  if (role !== 'RESTAURANT_STAFF') return false;
+  if (!Array.isArray(permissions)) return false;
+  return permissions.includes('mesero') && !permissions.some((p) => PANEL_SECTIONS.includes(p));
 }

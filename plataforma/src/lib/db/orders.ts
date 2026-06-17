@@ -49,6 +49,26 @@ export async function getWaiterActiveOrders(
   } as OrderWithItems));
 }
 
+/** Números de mesa con un pedido DINE_IN activo (no entregado/cancelado).
+   Se usa para marcar mesas ocupadas en el panel del mesero. */
+export async function getActiveTableNumbers(restaurantId: string): Promise<number[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('orders')
+    .select('address')
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .not('status', 'in', '("DELIVERED","CANCEL")')
+    .limit(200);
+
+  const nums = new Set<number>();
+  for (const row of (data ?? []) as { address: string | null }[]) {
+    const m = row.address?.match(/Mesa\s+(\d+)/i);
+    if (m) nums.add(Number(m[1]));
+  }
+  return [...nums];
+}
+
 export type DaySale    = { label: string; total: number; isToday: boolean };
 export type TopProduct = { name: string; qty: number };
 
