@@ -30,6 +30,8 @@ Es un **SaaS multi-tenant**: una sola plataforma sirve a muchos restaurantes, ca
 | **SUPER_ADMIN** | Tú (dueño de la plataforma) | Panel maestro global: crea restaurantes, activa/desactiva módulos y planes, personaliza temas, ve métricas de todos. |
 | **RESTAURANT_OWNER** | Dueño del restaurante | Panel admin de SU restaurante: catálogo, precios, fotos, disponibilidad, pedidos. |
 | **RESTAURANT_STAFF** | Empleado (opcional) | Subconjunto del panel admin (ej. solo gestionar pedidos), sin tocar precios. |
+| **RESTAURANT_WAITER** | Mesero (opcional) | Interfaz separada `/admin/mesero` (tablet): toma pedidos en mesa por el cliente. Sin acceso al panel admin. Cada pedido registra qué mesero lo tomó. |
+| **GROUP_OWNER** | Jefe de un grupo de sucursales | Panel consolidado `slug-central.dominio` de todas sus sucursales. |
 | **CLIENTE FINAL** | Comensal | Vista pública del menú vía QR/subdominio. Sin login. Hace pedidos como invitado (Plan 2). |
 
 > Hereda el patrón RBAC de tu proyecto DistLEOGIN, adaptado a multi-tenant con RLS de Supabase.
@@ -171,7 +173,7 @@ restaurant_themes ( ... ver sección 6 ... )
 
 profiles (              -- extiende auth.users
   id uuid PK FK→auth.users, restaurant_id uuid FK,
-  role text,            -- SUPER_ADMIN | RESTAURANT_OWNER | RESTAURANT_STAFF
+  role text,            -- SUPER_ADMIN | GROUP_OWNER | RESTAURANT_OWNER | RESTAURANT_STAFF | RESTAURANT_WAITER
   full_name text
 )
 

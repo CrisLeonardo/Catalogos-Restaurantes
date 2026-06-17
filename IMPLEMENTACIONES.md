@@ -663,6 +663,33 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-06-16 — Rol Mesero: toma de pedidos en mesa
+
+**Objetivo:** que el restaurante pueda dar de alta **meseros** que tomen pedidos en lugar del cliente (sistema tradicional de servicio en mesa), con interfaz separada optimizada para tablet/móvil.
+
+**Realizado:**
+- **Migración `030_meseros.sql`:** nuevo rol `RESTAURANT_WAITER` en el CHECK de `profiles.role`; columna `orders.waiter_id` (FK a `profiles`, `ON DELETE SET NULL`); políticas RLS (`staff read/update own orders`, `staff read own order_items`) recreadas para incluir al mesero; RPC `place_order` recreada con parámetro `p_waiter_id` (graba quién tomó la orden).
+- **Alta desde Personal** (`staff-panel.tsx`, `actions/staff.ts`): la sección "Personal" ahora tiene **dos bloques** — *Staff admin* y *Meseros* — cada uno con su botón "+ Nuevo". El modal incluye selector "Tipo de personal"; al elegir Mesero se crea con `role=RESTAURANT_WAITER` y `permissions=null` (sin checkboxes de secciones). `listWaiters()` añadido.
+- **Interfaz de mesero** (`/admin/mesero`, route group `(waiter)` aparte de `(protected)`): el layout y `auth.ts` redirigen al mesero a su panel y le bloquean el admin completo. `waiter-panel.tsx` (~400 líneas, touch-friendly): pestañas *Nuevo pedido* / *Mis pedidos*, scroll de categorías, grid de productos con modal de opciones, selector de mesa (1..`dineInTableCount`), nombre/referencia, notas, propina, carrito y total. Lecturas de menú vía `createServiceClient()` (el mesero no pasa las RLS de `categories`).
+- **Acción `createWaiterOrder`** (`actions/orders.ts`): valida sesión y rol, usa service client, fuerza `DINE_IN` con `address='Mesa N'`, graba `waiter_id`; salta rate-limit/pausa/horario (el mesero está presente). `updateOrderStatus` ahora acepta al mesero → **control total** de estados (confirmar/listo/servir/cancelar) sobre sus pedidos.
+- **Visibilidad del mesero en Pedidos** (`order-card.tsx`, `db/orders.ts`): cada tarjeta muestra `🙋 Mesero: <nombre>` (también en el recibo de cocina). El mesero solo ve sus pedidos **activos** (`getWaiterActiveOrders`, excluye DELIVERED/CANCEL). Realtime para refrescar.
+- ✅ **Verificado end-to-end** en local: alta de "Carlos Mesero" → login redirige a `/admin/mesero` → pedido ORD-2026-00004 (Mesa 5, "Familia Pérez", Q45) con `waiter_id` correcto → avance de estado Nuevo→Preparando desde el panel del mesero → el dueño ve "🙋 Mesero: Carlos Mesero" en `/admin/pedidos`.
+
+**Decisiones clave (confirmadas con el usuario):**
+- Mesero como **rol nuevo** (no flag sobre staff): ruteo e RLS limpios.
+- **Interfaz separada** en `(waiter)` (sin AdminShell), pensada para tablet.
+- Reusa el selector de mesa existente (`dineInTableCount`); el mesero elige la mesa.
+- El mesero ve **solo sus pedidos activos** y tiene **control total** de estados (igual que cajero).
+
+**Pendiente:**
+- Aplicar `030_meseros.sql` a Supabase en la nube al desplegar.
+
+**Nota de entorno:** los puertos por defecto de Supabase local (54321–54324) quedaron en el rango de exclusión de Windows; se reasignaron a 54600–54607 en `supabase/config.toml` y `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`).
+
+**Próximo paso:** desplegar (incluye migración 030) y validar el flujo de mesero en producción.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

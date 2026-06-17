@@ -26,6 +26,12 @@ export default async function AdminProtectedLayout({
   if (!ctx) redirect('/admin/login');
 
   const { profile } = ctx;
+
+  // Los meseros no tienen acceso al panel admin — redirigir a su interfaz propia.
+  if (profile.role === 'RESTAURANT_WAITER') {
+    redirect('/admin/mesero');
+  }
+
   const headersList = await headers();
   const tenantSlug  = headersList.get('x-tenant-slug');
 

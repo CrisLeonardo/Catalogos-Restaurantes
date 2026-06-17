@@ -88,7 +88,7 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string): string
     if (order.order_type === 'DELIVERY' && order.address)
       return `<div class="meta">📍 ${order.address}${order.delivery_zone ? ` · ${order.delivery_zone}` : ''}</div>`;
     if (order.order_type === 'DINE_IN' && order.address)
-      return `<div class="meta">🪑 ${order.address}</div>`;
+      return `<div class="meta">🪑 ${order.address}${order.waiter_name ? ` · Mesero: ${order.waiter_name}` : ''}</div>`;
     return '';
   })();
 
@@ -346,6 +346,11 @@ export default function OrderCard({ order, currency, restaurantName }: { order: 
           {order.order_type === 'DINE_IN' && order.address && (
             <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2 }}>
               🪑 {order.address}
+            </p>
+          )}
+          {order.waiter_name && (
+            <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2 }}>
+              🙋 Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong>
             </p>
           )}
         </div>

@@ -44,19 +44,13 @@ export type StaffMember = {
   email: string | null;
   full_name: string | null;
   permissions: string[] | null;
+  staff_type: 'staff' | 'waiter';
 };
 
-export async function listStaff(restaurantId: string): Promise<StaffMember[]> {
-  if (!UUID_RE.test(restaurantId)) return [];
-  const db = createServiceClient();
-  const { data: profiles } = await db
-    .from('profiles')
-    .select('id, full_name, permissions')
-    .eq('restaurant_id', restaurantId)
-    .eq('role', 'RESTAURANT_STAFF');
-
-  if (!profiles?.length) return [];
-
+async function buildMemberList(
+  db: ReturnType<typeof createServiceClient>,
+  profiles: { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[],
+): Promise<StaffMember[]> {
   return Promise.all(
     profiles.map(async (p) => {
       const { data } = await db.auth.admin.getUserById(p.id as string);
@@ -65,9 +59,23 @@ export async function listStaff(restaurantId: string): Promise<StaffMember[]> {
         email: data.user?.email ?? null,
         full_name: (p.full_name as string | null) ?? null,
         permissions: (p.permissions as string[] | null) ?? null,
+        staff_type: (p.role === 'RESTAURANT_WAITER' ? 'waiter' : 'staff') as 'staff' | 'waiter',
       };
     }),
   );
+}
+
+export async function listStaff(restaurantId: string): Promise<StaffMember[]> {
+  if (!UUID_RE.test(restaurantId)) return [];
+  const db = createServiceClient();
+  const { data: profiles } = await db
+    .from('profiles')
+    .select('id, full_name, permissions, role')
+    .eq('restaurant_id', restaurantId)
+    .in('role', ['RESTAURANT_STAFF', 'RESTAURANT_WAITER']);
+
+  if (!profiles?.length) return [];
+  return buildMemberList(db, profiles as { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[]);
 }
 
 /** Lee y valida las secciones marcadas en el form. */
@@ -86,11 +94,13 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = (formData.get('password') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
-  const permissions = readPermissions(formData);
+  const staffType = (formData.get('staff_type') as string) === 'waiter' ? 'waiter' : 'staff';
+  const isWaiter = staffType === 'waiter';
+  const permissions = isWaiter ? [] : readPermissions(formData);
 
   if (!email || !email.includes('@')) return { error: 'Email inválido.' };
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
-  if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
+  if (!isWaiter && permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
 
   const { data: created, error: createErr } = await ctx.db.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { full_name: fullName },
@@ -103,27 +113,30 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     return { error: createErr?.message ?? 'No se pudo crear el usuario.' };
   }
 
+  const role = isWaiter ? 'RESTAURANT_WAITER' : 'RESTAURANT_STAFF';
   const { error: profErr } = await ctx.db.from('profiles').upsert({
     id: created.user.id,
     restaurant_id: ctx.restaurantId,
-    role: 'RESTAURANT_STAFF',
+    role,
     full_name: fullName,
-    permissions,
+    permissions: isWaiter ? null : permissions,
   });
   if (profErr) {
     await ctx.db.auth.admin.deleteUser(created.user.id);
     return { error: profErr.message };
   }
 
-  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: email, meta: { added: true } });
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: email, meta: { added: true, role } });
   revalidatePath('/admin/personal');
   return { ok: true };
 }
 
-/** Solo permite operar sobre STAFF de ESTE restaurante. */
+/** Solo permite operar sobre STAFF/WAITER de ESTE restaurante. */
 async function assertStaffOfRestaurant(ctx: Ctx, userId: string): Promise<boolean> {
   const { data } = await ctx.db.from('profiles').select('role, restaurant_id').eq('id', userId).single();
-  return !!data && data.role === 'RESTAURANT_STAFF' && data.restaurant_id === ctx.restaurantId;
+  return !!data
+    && (data.role === 'RESTAURANT_STAFF' || data.role === 'RESTAURANT_WAITER')
+    && data.restaurant_id === ctx.restaurantId;
 }
 
 export async function updateStaffPermissions(prevState: StaffState, formData: FormData): Promise<StaffState> {
@@ -133,8 +146,12 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
   const userId = (formData.get('userId') as string)?.trim();
   if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
 
-  const permissions = readPermissions(formData);
   const fullName = (formData.get('full_name') as string)?.trim() || null;
+
+  // Verificar si es mesero para no asignarle permisos de secciones
+  const { data: prof } = await ctx.db.from('profiles').select('role').eq('id', userId).single();
+  const isWaiter = (prof?.role as string | null) === 'RESTAURANT_WAITER';
+  const permissions = isWaiter ? null : readPermissions(formData);
 
   const { error } = await ctx.db.from('profiles')
     .update({ permissions, full_name: fullName })
@@ -169,6 +186,20 @@ export async function removeStaff(formData: FormData) {
   await ctx.db.auth.admin.deleteUser(userId); // el profile cae por FK cascade
   await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: userId, meta: { removed: true } });
   revalidatePath('/admin/personal');
+}
+
+/** Lista solo los meseros del restaurante (para la interfaz del mesero y el selector de pedidos). */
+export async function listWaiters(restaurantId: string): Promise<StaffMember[]> {
+  if (!UUID_RE.test(restaurantId)) return [];
+  const db = createServiceClient();
+  const { data: profiles } = await db
+    .from('profiles')
+    .select('id, full_name, permissions, role')
+    .eq('restaurant_id', restaurantId)
+    .eq('role', 'RESTAURANT_WAITER');
+
+  if (!profiles?.length) return [];
+  return buildMemberList(db, profiles as { id: unknown; full_name: unknown; permissions: unknown; role: unknown }[]);
 }
 
 /* ── Bitácora de actividad ──────────────────────────────────── */

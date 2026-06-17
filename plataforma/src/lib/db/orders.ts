@@ -2,7 +2,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { localDateKey } from '@/lib/hours';
 import type { Order, OrderItem } from '@/types';
 
-export type OrderWithItems = Order & { items: OrderItem[] };
+export type OrderWithItems = Order & {
+  items: OrderItem[];
+  /** Nombre del mesero que tomó el pedido (migración 030). Solo DINE_IN por mesero. */
+  waiter_name?: string | null;
+};
 
 export async function getRestaurantOrders(
   restaurantId: string,
@@ -10,12 +14,39 @@ export async function getRestaurantOrders(
   const db = createServiceClient();
   const { data } = await db
     .from('orders')
-    .select('*, items:order_items(*)')
+    .select('*, items:order_items(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
     .limit(100);
 
-  return (data ?? []) as OrderWithItems[];
+  return ((data ?? []) as (Record<string, unknown>)[]).map((row) => {
+    const { waiter, ...order } = row as Record<string, unknown> & { waiter?: { full_name: string | null } | null };
+    return {
+      ...order,
+      waiter_name: waiter?.full_name ?? null,
+    } as OrderWithItems;
+  });
+}
+
+/** Pedidos activos del mesero (para la interfaz /admin/mesero). */
+export async function getWaiterActiveOrders(
+  restaurantId: string,
+  waiterId: string,
+): Promise<OrderWithItems[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('orders')
+    .select('*, items:order_items(*)')
+    .eq('restaurant_id', restaurantId)
+    .eq('waiter_id', waiterId)
+    .not('status', 'in', '("DELIVERED","CANCEL")')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  return ((data ?? []) as (Record<string, unknown>)[]).map((row) => ({
+    ...row,
+    waiter_name: null,
+  } as OrderWithItems));
 }
 
 export type DaySale    = { label: string; total: number; isToday: boolean };

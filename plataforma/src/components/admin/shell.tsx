@@ -181,7 +181,7 @@ export default function AdminShell({
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {effRole === 'RESTAURANT_STAFF' ? 'Personal' : 'Administrador'}
+              {effRole === 'RESTAURANT_STAFF' ? 'Personal' : effRole === 'RESTAURANT_WAITER' ? 'Mesero' : 'Administrador'}
             </div>
             <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>

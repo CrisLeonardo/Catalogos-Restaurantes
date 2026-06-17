@@ -31,7 +31,7 @@ export type SectionKey = (typeof ADMIN_SECTIONS)[number]['key'];
 /** Secciones que un staff puede tener asignadas (las que el dueño puede delegar). */
 export const STAFF_ASSIGNABLE: SectionKey[] = ADMIN_SECTIONS.map((s) => s.key);
 
-/** ¿Puede el perfil ver/usar esta sección? */
+/** ¿Puede el perfil ver/usar esta sección del panel admin? */
 export function can(
   role: string | null | undefined,
   permissions: string[] | null | undefined,
@@ -42,5 +42,6 @@ export function can(
     if (permissions == null) return true; // aún sin restringir
     return permissions.includes(section);
   }
+  // RESTAURANT_WAITER no tiene acceso al panel admin (solo a /admin/mesero)
   return false;
 }

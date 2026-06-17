@@ -141,7 +141,7 @@ export interface Product {
 export interface Profile {
   id: string;
   restaurant_id: string | null;
-  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF' | 'GROUP_OWNER';
+  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF' | 'GROUP_OWNER' | 'RESTAURANT_WAITER';
   full_name: string | null;
   /** Secciones permitidas para RESTAURANT_STAFF (migración 023); null = todas. */
   permissions: string[] | null;
@@ -200,6 +200,8 @@ export interface Order {
   ready_at: string | null;
   delivered_at: string | null;
   cancelled_at: string | null;
+  /** Mesero que tomó el pedido (migración 030); null = pedido online del cliente. */
+  waiter_id: string | null;
 }
 
 /** Opción elegida congelada en el pedido. */

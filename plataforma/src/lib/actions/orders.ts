@@ -339,6 +339,171 @@ export async function createOrder(
   };
 }
 
+/** Resultado de crear un pedido desde el panel de mesero. */
+export interface WaiterOrderResult {
+  success?: boolean;
+  orderId?: string;
+  orderNumber?: string;
+  error?: string;
+}
+
+/**
+ * Crea un pedido desde la interfaz del mesero.
+ * Autenticado: el mesero debe tener rol RESTAURANT_WAITER del restaurante.
+ * Salta rate limit y pausa (el mesero está físicamente en el local).
+ */
+export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderResult> {
+  const parsed = createOrderSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    return { error: first?.message ?? 'Datos del pedido inválidos.' };
+  }
+
+  const { restaurantId, items, customer, tipAccepted } = parsed.data;
+
+  // Autenticación obligatoria (es mesero, no cliente anónimo).
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+
+  const { data: waiterProfile } = await db
+    .from('profiles')
+    .select('role, restaurant_id')
+    .eq('id', user.id)
+    .single();
+
+  if (
+    !waiterProfile ||
+    waiterProfile.role !== 'RESTAURANT_WAITER' ||
+    waiterProfile.restaurant_id !== restaurantId
+  ) {
+    return { error: 'No autorizado.' };
+  }
+
+  const { data: restaurant } = await db
+    .from('restaurants')
+    .select('id, modules, status, timezone')
+    .eq('id', restaurantId)
+    .single();
+
+  if (!restaurant) return { error: 'Restaurante no encontrado.' };
+  if (restaurant.status !== 'active') return { error: 'El restaurante no está disponible.' };
+
+  const modules = restaurant.modules as { orders?: boolean } | null;
+  if (!modules?.orders) return { error: 'Este restaurante no acepta pedidos.' };
+
+  // Validar productos desde BD (precio autoritativo).
+  const productIds = [...new Set(items.map((i) => i.productId))];
+  const { data: dbProducts, error: productsError } = await db
+    .from('products')
+    .select('id, name, price, cost, is_available, options')
+    .eq('restaurant_id', restaurantId)
+    .in('id', productIds);
+
+  if (productsError) return { error: productsError.message };
+
+  const productById = new Map(
+    (dbProducts ?? []).map((p) => [p.id as string, p]),
+  );
+
+  const verifiedItems: {
+    productId: string;
+    name: string;
+    price: number;
+    cost: number | null;
+    quantity: number;
+    options: OrderItemOption[];
+  }[] = [];
+
+  for (const item of items) {
+    const product = productById.get(item.productId);
+    if (!product || !product.is_available) {
+      return { error: `"${item.name}" ya no está disponible.` };
+    }
+
+    const resolvedOpts = resolveItemOptions(
+      product.options as ProductOptionGroup[] | null,
+      item.options,
+      product.name as string,
+    );
+    if ('error' in resolvedOpts) return { error: resolvedOpts.error };
+
+    verifiedItems.push({
+      productId: product.id as string,
+      name: product.name as string,
+      price: Number(product.price) + resolvedOpts.delta,
+      cost: product.cost != null ? Number(product.cost) : null,
+      quantity: item.quantity,
+      options: resolvedOpts.snapshot,
+    });
+  }
+
+  // Propina (si aplica para DINE_IN).
+  const { data: themeRow } = await db
+    .from('restaurant_themes')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .single();
+  const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
+
+  const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const tipEnabled = customer.type === 'DINE_IN' && themeConfig.tipEnabled === true;
+  const tipPercent = tipEnabled ? Math.max(0, Number(themeConfig.tipPercent) || 0) : 0;
+  const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
+  const total = Math.max(0, subtotal + tip);
+
+  const address = customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null;
+  const notes = customer.coursePreference
+    ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
+    : (customer.notes ?? null);
+
+  const { data: placed, error: orderError } = await db.rpc('place_order', {
+    p_restaurant_id:  restaurantId,
+    p_customer_name:  customer.name,
+    p_customer_phone: customer.phone || '00000000',
+    p_order_type:     'DINE_IN',
+    p_address:        address,
+    p_delivery_zone:  null,
+    p_delivery_lat:   null,
+    p_delivery_lng:   null,
+    p_customer_id:    null,
+    p_subtotal:       subtotal,
+    p_delivery_fee:   0,
+    p_total:          total,
+    p_notes:          notes,
+    p_payment_method: 'CASH',
+    p_cash_amount:    null,
+    p_tip:            tip,
+    p_waiter_id:      user.id,
+    p_items: verifiedItems.map((i) => ({
+      product_id:       i.productId,
+      name_snapshot:    i.name,
+      price_snapshot:   i.price,
+      cost_snapshot:    i.cost,
+      quantity:         i.quantity,
+      subtotal:         i.price * i.quantity,
+      options_snapshot: i.options.length > 0 ? i.options : null,
+    })),
+  });
+
+  const order = placed as { id: string; order_number: string; public_token: string } | null;
+  if (orderError || !order) {
+    return { error: orderError?.message ?? 'Error al crear el pedido.' };
+  }
+
+  sendPushToRestaurant(restaurantId, {
+    title: '🛎 Nuevo pedido (mesero)',
+    body: `${order.order_number} · ${customer.name} · Mesa ${customer.tableNumber ?? '?'}`,
+    tag: order.id,
+    url: '/admin/pedidos',
+  }).catch(() => {});
+
+  revalidatePath('/admin/mesero');
+  return { success: true, orderId: order.id, orderNumber: order.order_number };
+}
+
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
@@ -362,7 +527,7 @@ export async function updateOrderStatus(
 
   if (!profile) return { error: 'No autorizado.' };
 
-  const validRoles = ['SUPER_ADMIN', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF'];
+  const validRoles = ['SUPER_ADMIN', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'];
   if (!validRoles.includes(profile.role)) return { error: 'No autorizado.' };
 
   const db = profile.role === 'SUPER_ADMIN' ? createServiceClient() : supabase;
@@ -400,6 +565,7 @@ export async function updateOrderStatus(
   }
 
   revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/mesero');
   return {};
 }
 
