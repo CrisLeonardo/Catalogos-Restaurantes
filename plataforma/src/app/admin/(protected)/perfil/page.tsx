@@ -157,7 +157,7 @@ export default async function AdminPerfilPage({
         />
       </section>
 
-      {/* ── Impresión de cocina ────────────────────────────── */}
+      {/* ── Impresión: cocina y recibos ────────────────────── */}
       <section style={{ marginTop: 32 }}>
         <h2
           style={{
@@ -167,11 +167,12 @@ export default async function AdminPerfilPage({
             marginBottom: 6,
           }}
         >
-          Impresión de cocina
+          Impresión (cocina y recibos)
         </h2>
         <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
-          Configura la comanda automática que se envía a la impresora de cocina
-          al confirmar cada pedido. Esta configuración es por dispositivo.
+          Configura la comanda automática de cocina al confirmar cada pedido y, con
+          QZ Tray, la impresión directa a una impresora para cocina y otra para
+          recibos. Esta configuración es por dispositivo.
         </p>
         <KitchenPrintSettings />
       </section>

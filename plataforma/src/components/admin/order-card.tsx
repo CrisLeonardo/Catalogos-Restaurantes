@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { updateOrderStatus } from '@/lib/actions/orders';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
-import { KITCHEN_PRINT_KEY } from './kitchen-print-settings';
+import { printTicket, isKitchenAutoPrintEnabled } from '@/lib/printing';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -134,18 +134,15 @@ ${itemsHtml}
 ${notesHtml}
 <hr class="sep">
 <div class="footer">${restaurantName || 'Restaurante'}</div>
-<script>window.onload = () => { window.print(); }<\/script>
 </body>
 </html>`;
 }
 
 function printKitchenTicket(order: OrderWithItems, restaurantName: string) {
   if (typeof window === 'undefined') return;
-  if (localStorage.getItem(KITCHEN_PRINT_KEY) !== '1') return;
-  const win = window.open('', '_blank', 'width=420,height=700');
-  if (!win) return;
-  win.document.write(buildKitchenHtml(order, restaurantName));
-  win.document.close();
+  if (!isKitchenAutoPrintEnabled()) return;
+  // QZ silencioso a la térmica de cocina si está configurada; si no, diálogo.
+  void printTicket('kitchen', buildKitchenHtml(order, restaurantName));
 }
 
 function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restaurantName: string): string {
@@ -277,7 +274,6 @@ ${addressHtml}
 ${paymentHtml}
 ${notesHtml}
 <div class="footer">¡Gracias por su preferencia!</div>
-<script>window.onload = () => { window.print(); }<\/script>
 </body>
 </html>`;
 }
@@ -289,11 +285,8 @@ export default function OrderCard({ order, currency, restaurantName }: { order: 
   const next = nextStatus(order);
 
   function handlePrint() {
-    const html = buildReceiptHtml(order, currency, restaurantName);
-    const win = window.open('', '_blank', 'width=400,height=700');
-    if (!win) return;
-    win.document.write(html);
-    win.document.close();
+    // QZ silencioso a la impresora de recibos si está configurada; si no, diálogo.
+    void printTicket('receipt', buildReceiptHtml(order, currency, restaurantName));
   }
 
   async function handleAdvance() {
