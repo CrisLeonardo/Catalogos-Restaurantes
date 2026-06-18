@@ -86,10 +86,11 @@ export default async function RootLayout({
   const glassIntensity = resolved?.config.glassIntensity ?? 'translucido';
   const scheme = resolved?.config.scheme ?? 'dark';
 
-  // Serializar las variables como :root{} en vez de inline style en <html>.
-  // Los inline styles tienen especificidad máxima y el customCss (stylesheet)
-  // no puede sobrescribirlos. Poniéndolos en un <style> temprano, el customCss
-  // inyectado al final del body los puede sobrescribir normalmente.
+  // Serializar vars como :root{} para <style> en el body.
+  // Un <style> en body aplica al documento completo igual que en <head>,
+  // pero evita conflictos con el manejo de <head> de Next.js App Router.
+  // Al ir antes de {children}, el customCss al final del body lo sobreescribe
+  // normalmente por orden de cascade (sin necesitar !important).
   const themeVarsCss = themeVars
     ? `:root{${Object.entries(themeVars).map(([k, v]) => `${k}:${v}`).join(';')}}`
     : '';
@@ -101,15 +102,16 @@ export default async function RootLayout({
       data-scheme={scheme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
+      <body className="min-h-full flex flex-col">
+        {/* Variables del tema: stylesheet en vez de inline style → el customCss
+            al final puede sobrescribirlas con selectores normales. */}
         {themeVarsCss && (
           <style
             id="tenant-theme-vars"
             dangerouslySetInnerHTML={{ __html: themeVarsCss }}
           />
         )}
-      </head>
-      <body className="min-h-full flex flex-col">
+
         {/* Fuentes del tenant (React 19 iza <link> al <head>) */}
         {fontsHref && (
           <>
