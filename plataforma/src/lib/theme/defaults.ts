@@ -65,6 +65,7 @@ export interface ThemeConfig {
   // ── CTA / botones ──
   ctaStyle: CtaStyle;
   checkoutActiveColor: CheckoutActiveColor; // color del estado activo en tabs/pills/opciones del checkout
+  checkoutFormGlass: boolean;               // envuelve los campos de info del cliente en una tarjeta glass
 
   // ── Portada ──
   portadaVariant: PortadaVariant;
@@ -143,6 +144,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
 
   ctaStyle: 'white',
   checkoutActiveColor: 'text',
+  checkoutFormGlass: false,
 
   portadaVariant: 'spotlight',
   portadaShowLogo: true,

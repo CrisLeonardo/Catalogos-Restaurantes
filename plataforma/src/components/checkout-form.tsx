@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
@@ -559,6 +559,8 @@ export default function CheckoutForm({
           </div>
         )}
 
+        <FormSection glass={config.checkoutFormGlass}>
+
         {welcomeBack && (
           <div className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 12.5, color: 'var(--u-text-2)' }}>
             <Icon name="checkCircle" size={15} style={{ flexShrink: 0, color: 'var(--u-text-3)' }} />
@@ -778,6 +780,8 @@ export default function CheckoutForm({
 
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />
 
+        </FormSection>
+
         {/* Pago — solo DELIVERY y PICKUP; en DINE_IN el mesero lo maneja */}
         {type !== 'DINE_IN' && (
           <div>
@@ -894,6 +898,17 @@ function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeT
       </span>
     </button>
   );
+}
+
+function FormSection({ glass, children }: { glass: boolean; children: React.ReactNode }) {
+  if (glass) {
+    return (
+      <Glass style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {children}
+      </Glass>
+    );
+  }
+  return <>{children}</>;
 }
 
 function Row({ k, v }: { k: string; v: string }) {

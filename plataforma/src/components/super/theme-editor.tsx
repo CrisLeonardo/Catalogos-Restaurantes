@@ -276,6 +276,10 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Para llevar" value={config.orderTypes.includes('pickup')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'pickup', v))} />
         <Toggle label="Aceptar pago con tarjeta" value={config.acceptsCard} onChange={(v) => setC('acceptsCard', v)} />
         <Segmented label="Color activo en checkout (tabs/opciones)" value={config.checkoutActiveColor} options={[['text', 'Blanco/texto'], ['accent', 'Acento del restaurante']]} onChange={(v) => setC('checkoutActiveColor', v as ThemeConfig['checkoutActiveColor'])} />
+        <Toggle label="Glass en campos del formulario" value={config.checkoutFormGlass} onChange={(v) => setC('checkoutFormGlass', v)} />
+        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+          Agrupa los campos (nombre, mesa, notas…) en una tarjeta con efecto glass + blur. Útil cuando el fondo es una imagen o watermark intenso.
+        </p>
         <TextCtl label="Símbolo de moneda" value={config.currencySymbol} onChange={(v) => setC('currencySymbol', v)} />
         <Segmented label="Posición del símbolo" value={config.currencyPosition} options={[['prefix', 'Antes (Q10)'], ['suffix', 'Después (10Q)']]} onChange={(v) => setC('currencyPosition', v as ThemeConfig['currencyPosition'])} />
         <TextCtl label="Locale (formato)" value={config.locale} onChange={(v) => setC('locale', v)} placeholder="es-GT" />
