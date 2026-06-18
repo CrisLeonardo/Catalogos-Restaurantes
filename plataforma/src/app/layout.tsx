@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import type { CSSProperties } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { headers } from 'next/headers';
 import './globals.css';
@@ -87,15 +86,29 @@ export default async function RootLayout({
   const glassIntensity = resolved?.config.glassIntensity ?? 'translucido';
   const scheme = resolved?.config.scheme ?? 'dark';
 
+  // Serializar las variables como :root{} en vez de inline style en <html>.
+  // Los inline styles tienen especificidad máxima y el customCss (stylesheet)
+  // no puede sobrescribirlos. Poniéndolos en un <style> temprano, el customCss
+  // inyectado al final del body los puede sobrescribir normalmente.
+  const themeVarsCss = themeVars
+    ? `:root{${Object.entries(themeVars).map(([k, v]) => `${k}:${v}`).join(';')}}`
+    : '';
+
   return (
     <html
       lang="es"
       data-glass={glassIntensity}
       data-scheme={scheme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      // Variables del tema: inline en <html> gana sobre :root de globals.css.
-      style={themeVars as unknown as CSSProperties}
     >
+      <head>
+        {themeVarsCss && (
+          <style
+            id="tenant-theme-vars"
+            dangerouslySetInnerHTML={{ __html: themeVarsCss }}
+          />
+        )}
+      </head>
       <body className="min-h-full flex flex-col">
         {/* Fuentes del tenant (React 19 iza <link> al <head>) */}
         {fontsHref && (

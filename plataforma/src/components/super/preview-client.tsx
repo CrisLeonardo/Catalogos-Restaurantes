@@ -89,14 +89,22 @@ export default function PreviewClient({
   }, [previewId]);
 
   /* Sincronizar data-glass, data-scheme y CSS vars en <html> con cada
-     cambio de config, para que los selectores CSS de globals.css reflejen
-     el estado del editor (glass intensity, color scheme, etc.). */
+     cambio de config. Las vars se inyectan en un <style id="preview-theme-vars">
+     en lugar de inline-style, para que el customCss del restaurante (también
+     un <style>, inyectado después) pueda sobrescribirlas sin necesitar !important. */
   useEffect(() => {
     const html = document.documentElement;
     html.setAttribute('data-glass', state.config.glassIntensity);
     html.setAttribute('data-scheme', state.config.scheme);
     const vars = buildThemeVars(state.config);
-    Object.entries(vars).forEach(([k, v]) => html.style.setProperty(k, v));
+    const css = `:root{${Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')}}`;
+    let styleEl = document.getElementById('preview-theme-vars') as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'preview-theme-vars';
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = css;
   }, [state.config]);
 
   /* La vista previa es solo para mirar: bloquear navegación interna

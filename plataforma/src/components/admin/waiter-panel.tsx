@@ -257,11 +257,12 @@ function ProductOptionsModal({
 
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, showOrders, ordersCount, onShowOrders,
+  title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders,
 }: {
   title: string;
   waiterName: string;
   onBack?: () => void;
+  onAdminBack?: () => void;
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
@@ -272,11 +273,16 @@ function WaiterHeader({
       background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid var(--u-hair)',
       position: 'sticky', top: 0, zIndex: 200,
     }}>
-      {onBack && (
+      {onBack ? (
         <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
           <Icon name="chevronLeft" size={20} />
         </button>
-      )}
+      ) : onAdminBack ? (
+        <button type="button" onClick={onAdminBack} className="press glass-quiet" style={{ height: 36, padding: '0 12px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: 'var(--u-text-3)', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+          <Icon name="chevronLeft" size={15} />
+          Panel
+        </button>
+      ) : null}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {title}
@@ -477,6 +483,7 @@ export default function WaiterPanel({
 
   const headerProps = {
     waiterName,
+    onAdminBack: () => router.push('/admin'),
     showOrders: view !== 'orders',
     ordersCount: orders.length,
     onShowOrders: () => setView('orders'),

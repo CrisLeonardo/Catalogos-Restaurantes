@@ -130,7 +130,16 @@ export default function AdminShell({
   const title = Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
 
   const isLive = pathname.startsWith('/admin/pedidos');
+  const isWaiter = pathname.startsWith('/admin/mesero');
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';
+
+  if (isWaiter) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--u-bg)', zIndex: 0 }}>
+        {children}
+      </div>
+    );
+  }
 
   function renderLink(n: NavItem) {
     const active = pathname.startsWith(n.href);
