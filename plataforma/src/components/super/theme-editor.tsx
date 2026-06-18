@@ -275,6 +275,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Domicilio" value={config.orderTypes.includes('delivery')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'delivery', v))} />
         <Toggle label="Para llevar" value={config.orderTypes.includes('pickup')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'pickup', v))} />
         <Toggle label="Aceptar pago con tarjeta" value={config.acceptsCard} onChange={(v) => setC('acceptsCard', v)} />
+        <Segmented label="Color activo en checkout (tabs/opciones)" value={config.checkoutActiveColor} options={[['text', 'Blanco/texto'], ['accent', 'Acento del restaurante']]} onChange={(v) => setC('checkoutActiveColor', v as ThemeConfig['checkoutActiveColor'])} />
         <TextCtl label="Símbolo de moneda" value={config.currencySymbol} onChange={(v) => setC('currencySymbol', v)} />
         <Segmented label="Posición del símbolo" value={config.currencyPosition} options={[['prefix', 'Antes (Q10)'], ['suffix', 'Después (10Q)']]} onChange={(v) => setC('currencyPosition', v as ThemeConfig['currencyPosition'])} />
         <TextCtl label="Locale (formato)" value={config.locale} onChange={(v) => setC('locale', v)} placeholder="es-GT" />
@@ -387,7 +388,26 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
   catalog: [['kicker', 'Kicker'], ['heading', 'Título del menú'], ['searchPlaceholder', 'Placeholder búsqueda'], ['allLabel', 'Etiqueta "Todo"'], ['empty', 'Mensaje vacío']],
   product: [['add', 'Botón agregar'], ['soldOut', 'Agotado'], ['prepTime', 'Tiempo de prep.'], ['fresh', 'Etiqueta "fresco"'], ['chooseOne', 'Opción obligatoria'], ['optional', 'Opción opcional']],
   cart: [['title', 'Título'], ['empty', 'Vacío'], ['emptyCta', 'Botón vacío'], ['subtotal', 'Subtotal'], ['shipping', 'Envío'], ['free', 'Gratis'], ['total', 'Total'], ['checkout', 'Botón pagar'], ['barCta', 'Barra: ver carrito'], ['itemsOne', '"producto"'], ['itemsMany', '"productos"']],
-  checkout: [['title', 'Título'], ['typeLabel', 'Tipo de pedido'], ['delivery', 'Domicilio'], ['pickup', 'Para llevar'], ['name', 'Nombre'], ['namePh', 'Placeholder nombre'], ['phone', 'Teléfono'], ['phonePh', 'Placeholder teléfono'], ['address', 'Dirección'], ['addressPh', 'Placeholder dirección'], ['notes', 'Notas'], ['notesPh', 'Placeholder notas'], ['payLabel', 'Pago'], ['payCash', 'Efectivo'], ['payCashSub', 'Sub-texto pago'], ['confirm', 'Confirmar'], ['errName', 'Error nombre'], ['errPhone', 'Error teléfono'], ['errAddress', 'Error dirección'], ['closedTitle', 'Cerrado: título'], ['closedMsg', 'Cerrado: mensaje'], ['pausedTitle', 'Pausa: título'], ['pausedMsg', 'Pausa: mensaje (vacío = del restaurante)']],
+  checkout: [
+    ['title', 'Título'], ['typeLabel', 'Tipo de pedido'],
+    ['dineIn', 'Tab: Comer aquí'], ['delivery', 'Tab: Domicilio'], ['pickup', 'Tab: Para llevar'],
+    ['name', 'Nombre'], ['namePh', 'Placeholder nombre'],
+    ['phone', 'Teléfono'], ['phonePh', 'Placeholder teléfono'],
+    ['address', 'Dirección'], ['addressPh', 'Placeholder dirección'],
+    ['notes', 'Notas'], ['notesPh', 'Placeholder notas'],
+    ['mesa', 'Mesa: etiqueta'], ['mesaDetected', 'Mesa: detectada'], ['mesaNotFound', 'Mesa: no encontrada'],
+    ['courseLabel', 'Servicio: etiqueta'], ['courseNone', 'Servicio: sin preferencia'],
+    ['payLabel', 'Pago: etiqueta'],
+    ['payCash', 'Pago: efectivo (delivery)'], ['payCashSub', 'Pago: sub-texto efectivo delivery'],
+    ['payCashPickup', 'Pago: efectivo (pickup)'], ['payCashPickupSub', 'Pago: sub-texto efectivo pickup'],
+    ['payCard', 'Pago: tarjeta (delivery)'], ['payCardSub', 'Pago: sub-texto tarjeta delivery'],
+    ['payCardPickupSub', 'Pago: sub-texto tarjeta pickup'],
+    ['cashAmountLabel', 'Cambio: etiqueta'], ['cashAmountSub', 'Cambio: sub-texto'],
+    ['confirm', 'Confirmar'],
+    ['errName', 'Error nombre'], ['errPhone', 'Error teléfono'], ['errAddress', 'Error dirección'],
+    ['closedTitle', 'Cerrado: título'], ['closedMsg', 'Cerrado: mensaje'],
+    ['pausedTitle', 'Pausa: título'], ['pausedMsg', 'Pausa: mensaje (vacío = del restaurante)'],
+  ],
   confirmation: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['orderNo', 'N° de pedido'], ['type', 'Tipo'], ['eta', 'Tiempo estimado'], ['etaValue', 'Valor tiempo'], ['payment', 'Pago'], ['notified', 'Notificado'], ['track', 'Botón seguimiento'], ['again', 'Otro pedido']],
   tracking: [['title', 'Título'], ['subtitle', 'Subtítulo'], ['statusNew', 'Recibido'], ['statusPrep', 'En preparación'], ['statusReady', 'Listo'], ['statusReadyPickup', 'Listo (pickup)'], ['statusTransit', 'En camino'], ['statusDelivered', 'Entregado'], ['statusCancel', 'Cancelado'], ['back', 'Volver al menú']],
   tags: [['hot', 'Picante'], ['new', 'Nuevo'], ['fav', 'Favorito'], ['veg', 'Veggie']],

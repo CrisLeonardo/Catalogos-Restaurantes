@@ -18,6 +18,7 @@ export type GlassIntensity = 'translucido' | 'esmerilado' | 'solido';
 export type ColorScheme = 'dark' | 'light';
 export type BackgroundType = 'asphalt' | 'solid' | 'gradient' | 'image';
 export type CtaStyle = 'white' | 'accent' | 'outline';
+export type CheckoutActiveColor = 'text' | 'accent';
 export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
 export type CatalogView = 'grid' | 'list';
 export type ProductArt = 'auto' | 'pattern' | 'photo';
@@ -63,6 +64,7 @@ export interface ThemeConfig {
 
   // ── CTA / botones ──
   ctaStyle: CtaStyle;
+  checkoutActiveColor: CheckoutActiveColor; // color del estado activo en tabs/pills/opciones del checkout
 
   // ── Portada ──
   portadaVariant: PortadaVariant;
@@ -140,6 +142,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   watermark: false,
 
   ctaStyle: 'white',
+  checkoutActiveColor: 'text',
 
   portadaVariant: 'spotlight',
   portadaShowLogo: true,
@@ -218,6 +221,7 @@ export interface ThemeContent {
   checkout: {
     title: string;
     typeLabel: string;
+    dineIn: string;           // "Comer aquí"
     delivery: string;
     pickup: string;
     name: string;
@@ -228,11 +232,25 @@ export interface ThemeContent {
     addressPh: string;
     notes: string;
     notesPh: string;
+    // Mesa (dine_in)
+    mesa: string;             // "Tu mesa"
+    mesaDetected: string;     // "Detectada al escanear el QR"
+    mesaNotFound: string;     // "No se detectó mesa. Escanea el QR de tu mesa para continuar."
+    // Preferencia de servicio
+    courseLabel: string;      // "Preferencia de servicio"
+    courseNone: string;       // "Sin preferencia"
+    // Pago
     payLabel: string;
     payCash: string;
     payCashSub: string;
+    payCashPickup: string;    // "Efectivo" (pickup)
+    payCashPickupSub: string; // "Pagas en el local al recoger"
     payCard: string;
     payCardSub: string;
+    payCardPickupSub: string; // "Pagas con tarjeta en el local"
+    // Efectivo con cambio
+    cashAmountLabel: string;  // "¿Con cuánto vas a pagar?"
+    cashAmountSub: string;    // "Para que el repartidor lleve el cambio exacto."
     confirm: string;
     errName: string;
     errPhone: string;
@@ -314,6 +332,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
   checkout: {
     title: 'Tu pedido',
     typeLabel: 'Tipo de pedido',
+    dineIn: 'Comer aquí',
     delivery: 'A domicilio',
     pickup: 'Para llevar',
     name: 'Tu nombre',
@@ -324,11 +343,21 @@ export const DEFAULT_CONTENT: ThemeContent = {
     addressPh: 'Calle, zona, referencia',
     notes: 'Notas (opcional)',
     notesPh: 'Sin cebolla, extra picante…',
+    mesa: 'Tu mesa',
+    mesaDetected: 'Detectada al escanear el QR',
+    mesaNotFound: 'No se detectó mesa. Escanea el QR de tu mesa para continuar.',
+    courseLabel: 'Preferencia de servicio',
+    courseNone: 'Sin preferencia',
     payLabel: 'Pago',
     payCash: 'Efectivo contra entrega',
     payCashSub: 'Pagás cuando llega tu pedido',
+    payCashPickup: 'Efectivo',
+    payCashPickupSub: 'Pagas en el local al recoger',
     payCard: 'Tarjeta (paga al recibir)',
     payCardSub: 'El repartidor lleva terminal',
+    payCardPickupSub: 'Pagas con tarjeta en el local',
+    cashAmountLabel: '¿Con cuánto vas a pagar?',
+    cashAmountSub: 'Para que el repartidor lleve el cambio exacto.',
     confirm: 'Confirmar pedido',
     errName: 'Decinos tu nombre',
     errPhone: 'Necesitamos un teléfono',
