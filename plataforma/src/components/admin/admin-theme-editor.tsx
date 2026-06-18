@@ -1,0 +1,599 @@
+'use client';
+
+/* Editor de personalización para el dueño del restaurante.
+   Tabs bien organizadas, paletas de color, controles orientados al negocio.
+   No incluye: plantillas, CSS propio, pedidos/moneda (esos van en /admin/perfil). */
+
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
+import ImageUpload from '@/components/admin/image-upload';
+import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
+import { saveAdminRestaurantTheme } from '@/lib/actions/restaurant';
+import { fontsForRole, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+
+/* ── Paletas de color prediseñadas ───────────────────────── */
+const PALETTES: { name: string; colorBg: string; colorBg2: string; colorText: string; colorAccent: string; onAccent: string; scheme: ThemeConfig['scheme'] }[] = [
+  { name: 'Carbón',    colorBg: '#0b0b0c', colorBg2: '#141416', colorText: '#F5F3EF', colorAccent: '#D97757', onAccent: '#0b0b0c', scheme: 'dark' },
+  { name: 'Medianoche',colorBg: '#0d0e1a', colorBg2: '#12142a', colorText: '#e8e6ff', colorAccent: '#7c6af5', onAccent: '#fff',    scheme: 'dark' },
+  { name: 'Bosque',    colorBg: '#0a120e', colorBg2: '#121f16', colorText: '#d8ede1', colorAccent: '#3dba72', onAccent: '#0a120e', scheme: 'dark' },
+  { name: 'Vino',      colorBg: '#120812', colorBg2: '#1e0e1e', colorText: '#f0dff0', colorAccent: '#c44fb8', onAccent: '#fff',    scheme: 'dark' },
+  { name: 'Miel',      colorBg: '#fdf8f0', colorBg2: '#f4ece0', colorText: '#1a1208', colorAccent: '#c47b28', onAccent: '#fff',    scheme: 'light' },
+  { name: 'Nieve',     colorBg: '#f8fafc', colorBg2: '#eef2f8', colorText: '#0f172a', colorAccent: '#2563eb', onAccent: '#fff',    scheme: 'light' },
+  { name: 'Oliva',     colorBg: '#f5f4ed', colorBg2: '#e8e7da', colorText: '#1a1a0d', colorAccent: '#5c6b00', onAccent: '#fff',    scheme: 'light' },
+  { name: 'Rojo fuego',colorBg: '#120405', colorBg2: '#1e080a', colorText: '#fde8e8', colorAccent: '#e53e3e', onAccent: '#fff',    scheme: 'dark' },
+];
+
+/* ── Tipos ────────────────────────────────────────────────── */
+interface Props {
+  restaurantId: string;
+  config: ThemeConfig;
+  content: ThemeContent;
+  customCss: string;
+}
+
+type Tab = 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos' | 'mipanel';
+const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'identidad', label: 'Identidad',  icon: 'sparkle' },
+  { key: 'visual',    label: 'Visual',     icon: 'image'   },
+  { key: 'portada',   label: 'Portada',    icon: 'phone'   },
+  { key: 'catalogo',  label: 'Catálogo',   icon: 'grid'    },
+  { key: 'fuentes',   label: 'Tipografía', icon: 'tag'     },
+  { key: 'textos',    label: 'Textos',     icon: 'list'    },
+  { key: 'mipanel',   label: 'Mi panel',   icon: 'dashboard'},
+];
+
+/* ── Componente principal ─────────────────────────────────── */
+export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss }: Props) {
+  const router = useRouter();
+  const [config, setConfig] = useState<ThemeConfig>(initialConfig);
+  const [content, setContent] = useState<ThemeContent>(initialContent);
+  const [tab, setTab] = useState<Tab>('identidad');
+  const [isPending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const setC = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setConfig((p) => ({ ...p, [k]: v }));
+  const setT = (section: keyof ThemeContent, key: string, v: string) =>
+    setContent((p) => ({ ...p, [section]: { ...p[section], [key]: v } }));
+
+  const previewState = useMemo(() => ({ config, content, customCss }), [config, content, customCss]);
+  useThemePreviewChannel(restaurantId, previewState);
+
+  function save() {
+    setMsg(null);
+    start(async () => {
+      const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss });
+      if (res.error) setMsg(`Error: ${res.error}`);
+      else { setMsg('Guardado ✓'); router.refresh(); }
+    });
+  }
+
+  function applyPalette(p: typeof PALETTES[0]) {
+    setConfig((prev) => ({
+      ...prev,
+      colorBg: p.colorBg,
+      colorBg2: p.colorBg2,
+      colorText: p.colorText,
+      colorAccent: p.colorAccent,
+      onAccent: p.onAccent,
+      scheme: p.scheme,
+    }));
+  }
+
+  return (
+    <div className="theme-editor-layout">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
+
+        {/* ── Tabs ── */}
+        <div style={{
+          display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 16,
+          padding: '6px', background: 'rgba(255,255,255,0.04)', borderRadius: 14,
+          border: '1px solid var(--u-hair)',
+        }}>
+          {TABS.map(({ key, label, icon }) => {
+            const on = tab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className="press"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                  border: 'none',
+                  background: on ? 'var(--u-text)' : 'transparent',
+                  color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
+                  transition: 'all 150ms',
+                }}
+              >
+                <Icon name={icon} size={14} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Tab: Identidad ── */}
+        {tab === 'identidad' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Section title="Logos e imágenes">
+              <Field label="Logo principal (portada y encabezado)">
+                <ImageUpload restaurantId={restaurantId} currentUrl={config.logoUrl} folder="logo" onUpload={(u) => setC('logoUrl', u)} />
+              </Field>
+              <Field label="Ícono de app instalada (PWA)">
+                <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" mode="icon" bgColor={config.colorBg} onUpload={(u) => setC('pwaIconUrl', u)} />
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.5 }}>
+                  Aparece en la pantalla de inicio cuando el cliente instala la app. Se adapta automáticamente al color de fondo del tema.
+                </p>
+              </Field>
+              <Field label="Marca de agua (watermark de fondo)">
+                <ImageUpload restaurantId={restaurantId} currentUrl={config.markUrl} folder="mark" onUpload={(u) => setC('markUrl', u)} />
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.5 }}>
+                  Ícono pequeño que rota en el fondo cuando activas el watermark. Si no se sube, usa el logo.
+                </p>
+              </Field>
+            </Section>
+
+            <Section title="Información de marca">
+              <TextCtl label="Nombre de marca" value={config.brandName} onChange={(v) => setC('brandName', v)} />
+              <TextCtl label="Tagline / lema" value={config.tagline} onChange={(v) => setC('tagline', v)} placeholder="Sabor que enamora…" />
+              <TextCtl label="Zona / ubicación" value={config.zone} onChange={(v) => setC('zone', v)} placeholder="Zona 1, Centro…" />
+            </Section>
+
+            <Section title="Colores de marca">
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 4 }}>
+                Paletas listas para aplicar de un toque — siempre puedes ajustar los colores individualmente después.
+              </p>
+              {/* Paletas */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                {PALETTES.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => applyPalette(p)}
+                    title={`Aplicar paleta "${p.name}"`}
+                    className="press"
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                      border: '1.5px solid var(--u-hair-2)', borderRadius: 10, padding: '8px 10px',
+                      background: 'rgba(255,255,255,0.03)', cursor: 'pointer', minWidth: 68,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorBg, border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorAccent }} />
+                      <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorText, border: '1px solid rgba(0,0,0,0.1)' }} />
+                    </div>
+                    <span style={{ fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600 }}>{p.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
+
+              <ColorCtl label="Color de fondo" value={config.colorBg} onChange={(v) => setC('colorBg', v)} />
+              <ColorCtl label="Fondo 2 (gradientes)" value={config.colorBg2} onChange={(v) => setC('colorBg2', v)} />
+              <ColorCtl label="Color de texto" value={config.colorText} onChange={(v) => setC('colorText', v)} />
+              <ColorCtl label="Color de acento / marca" value={config.colorAccent} onChange={(v) => setC('colorAccent', v)} />
+              <ColorCtl label="Texto sobre acento" value={config.onAccent} onChange={(v) => setC('onAccent', v)} />
+              <Segmented
+                label="Modo de color"
+                value={config.scheme}
+                options={[['dark', 'Oscuro'], ['light', 'Claro']]}
+                onChange={(v) => setC('scheme', v as ThemeConfig['scheme'])}
+              />
+            </Section>
+          </div>
+        )}
+
+        {/* ── Tab: Visual ── */}
+        {tab === 'visual' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Section title="Fondo del sitio">
+              <Segmented
+                label="Tipo de fondo"
+                value={config.backgroundType}
+                options={[['asphalt', 'Asphalt (textura)'], ['solid', 'Sólido'], ['gradient', 'Gradiente'], ['image', 'Imagen']]}
+                onChange={(v) => setC('backgroundType', v as ThemeConfig['backgroundType'])}
+              />
+              {config.backgroundType === 'image' && (
+                <Field label="Imagen de fondo">
+                  <ImageUpload restaurantId={restaurantId} currentUrl={config.backgroundImage} folder="bg" onUpload={(u) => setC('backgroundImage', u)} />
+                </Field>
+              )}
+              {config.backgroundType === 'image' && (
+                <Slider label="Oscuridad del velo sobre la imagen" value={config.bgOverlayOpacity} min={0} max={1} step={0.05} onChange={(v) => setC('bgOverlayOpacity', v)} />
+              )}
+              {config.backgroundType === 'gradient' && (
+                <TextCtl
+                  label="CSS del gradiente"
+                  value={config.backgroundGradient ?? ''}
+                  onChange={(v) => setC('backgroundGradient', v || null)}
+                  placeholder="linear-gradient(160deg, #111, #333)"
+                />
+              )}
+              <Toggle label="Luz ambiental (efecto glow)" value={config.ambientGlow} onChange={(v) => setC('ambientGlow', v)} />
+              <Toggle label="Grano de concreto" value={config.grain} onChange={(v) => setC('grain', v)} />
+              <Toggle label="Marca de agua girando" value={config.watermark} onChange={(v) => setC('watermark', v)} />
+              {config.watermark && (
+                <>
+                  <Slider label="Opacidad de la marca de agua" value={config.watermarkOpacity} min={0.01} max={0.15} step={0.01} onChange={(v) => setC('watermarkOpacity', v)} />
+                  <Slider label="Tamaño de la marca de agua" value={config.watermarkSize} min={40} max={120} step={5} onChange={(v) => setC('watermarkSize', v)} />
+                </>
+              )}
+            </Section>
+
+            <Section title="Estilo de tarjetas (glass)">
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
+                Las tarjetas de producto, el carrito y los modales usan este estilo de cristal.
+              </p>
+              <Segmented
+                label="Transparencia"
+                value={config.glassIntensity}
+                options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Sólido']]}
+                onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])}
+              />
+              <Slider label="Redondeo de esquinas" value={config.cornerRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('cornerRadius', v)} />
+              <Toggle label="Brillo que sigue al cursor" value={config.sheen} onChange={(v) => setC('sheen', v)} />
+            </Section>
+          </div>
+        )}
+
+        {/* ── Tab: Portada ── */}
+        {tab === 'portada' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Section title="Portada del menú">
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 4 }}>
+                La portada es lo primero que ve el cliente al abrir el menú QR.
+              </p>
+              <Segmented
+                label="Estilo de portada"
+                value={config.portadaVariant}
+                options={[['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'], ['none', 'Sin portada']]}
+                onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])}
+              />
+              {config.portadaVariant !== 'none' && (
+                <>
+                  <Toggle label="Mostrar logo" value={config.portadaShowLogo} onChange={(v) => setC('portadaShowLogo', v)} />
+                  <Toggle label="Mostrar badge 'Abierto / Cerrado'" value={config.portadaShowBadge} onChange={(v) => setC('portadaShowBadge', v)} />
+                  <Toggle label="Punto de estado (indicador en vivo)" value={config.portadaShowStatus} onChange={(v) => setC('portadaShowStatus', v)} />
+                </>
+              )}
+              <Segmented
+                label="Estilo del botón 'Ver el menú'"
+                value={config.ctaStyle}
+                options={[['white', 'Blanco'], ['accent', 'Color de acento'], ['outline', 'Contorno']]}
+                onChange={(v) => setC('ctaStyle', v as ThemeConfig['ctaStyle'])}
+              />
+            </Section>
+
+            <Section title="Textos de portada">
+              <TextCtl label="Título (vacío = nombre del restaurante)" value={content.portada.title} onChange={(v) => setT('portada', 'title', v)} />
+              <TextCtl label="Subtítulo (vacío = tagline)" value={content.portada.subtitle} onChange={(v) => setT('portada', 'subtitle', v)} />
+              <TextCtl label="Texto del botón" value={content.portada.cta} onChange={(v) => setT('portada', 'cta', v)} />
+              <TextCtl label="Badge 'Abierto'" value={content.portada.badgeOpen} onChange={(v) => setT('portada', 'badgeOpen', v)} />
+              <TextCtl label="Badge 'Cerrado'" value={content.portada.badgeClosed} onChange={(v) => setT('portada', 'badgeClosed', v)} />
+            </Section>
+          </div>
+        )}
+
+        {/* ── Tab: Catálogo ── */}
+        {tab === 'catalogo' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Section title="Vista del menú">
+              <Segmented
+                label="Diseño"
+                value={config.catalogView}
+                options={[['grid', 'Cuadrícula'], ['list', 'Lista']]}
+                onChange={(v) => setC('catalogView', v as ThemeConfig['catalogView'])}
+              />
+              <Segmented
+                label="Columnas en cuadrícula"
+                value={String(config.catalogColumns)}
+                options={[['2', '2 columnas'], ['3', '3 columnas']]}
+                onChange={(v) => setC('catalogColumns', Number(v) as 2 | 3)}
+              />
+              <Segmented
+                label="Arte de productos"
+                value={config.productArt}
+                options={[['auto', 'Auto (foto o patrón)'], ['pattern', 'Solo patrón'], ['photo', 'Solo foto']]}
+                onChange={(v) => setC('productArt', v as ThemeConfig['productArt'])}
+              />
+            </Section>
+
+            <Section title="Elementos visibles">
+              <Toggle label="Buscador de productos" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
+              <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
+              <Toggle label="Etiquetas (Picante, Nuevo, Veggie…)" value={config.showTags} onChange={(v) => setC('showTags', v)} />
+            </Section>
+
+            <Section title="Textos del menú">
+              <TextCtl label="Título del menú" value={content.catalog.heading} onChange={(v) => setT('catalog', 'heading', v)} />
+              <TextCtl label="Placeholder del buscador" value={content.catalog.searchPlaceholder} onChange={(v) => setT('catalog', 'searchPlaceholder', v)} />
+              <TextCtl label="Etiqueta 'Todos'" value={content.catalog.allLabel} onChange={(v) => setT('catalog', 'allLabel', v)} />
+              <TextCtl label="Mensaje cuando no hay resultados" value={content.catalog.empty} onChange={(v) => setT('catalog', 'empty', v)} />
+            </Section>
+
+            <Section title="Etiquetas de producto">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <TextCtl label="Picante" value={content.tags.hot} onChange={(v) => setT('tags', 'hot', v)} />
+                <TextCtl label="Nuevo" value={content.tags.new} onChange={(v) => setT('tags', 'new', v)} />
+                <TextCtl label="Favorito" value={content.tags.fav} onChange={(v) => setT('tags', 'fav', v)} />
+                <TextCtl label="Veggie" value={content.tags.veg} onChange={(v) => setT('tags', 'veg', v)} />
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {/* ── Tab: Fuentes ── */}
+        {tab === 'fuentes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Section title="Tipografía">
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 4 }}>
+                Las fuentes se cargan desde Google Fonts. Úsalas para dar personalidad a tu menú.
+              </p>
+              <FontCtl label="Titulares y encabezados" role="display" value={config.fontDisplay} onChange={(v) => setC('fontDisplay', v)} />
+              <FontCtl label="Kickers y etiquetas grandes" role="poster" value={config.fontPoster} onChange={(v) => setC('fontPoster', v)} />
+              <FontCtl label="Texto del cuerpo" role="body" value={config.fontBody} onChange={(v) => setC('fontBody', v)} />
+              <FontCtl label="Cursivas y texto literario" role="serif" value={config.fontSerif} onChange={(v) => setC('fontSerif', v)} />
+              <FontCtl label="Precios y números" role="mono" value={config.fontMono} onChange={(v) => setC('fontMono', v)} />
+              <Slider label="Escala de texto global" value={config.fontScale} min={0.85} max={1.25} step={0.05} onChange={(v) => setC('fontScale', v)} />
+            </Section>
+          </div>
+        )}
+
+        {/* ── Tab: Textos ── */}
+        {tab === 'textos' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Glass variant="quiet" style={{ padding: 16 }}>
+              <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
+                Personaliza cada texto que ve el cliente. Deja en blanco para usar el texto por defecto.
+              </p>
+            </Glass>
+
+            {([
+              ['product', 'Producto', [
+                ['add', 'Botón "Agregar"'],
+                ['soldOut', 'Agotado'],
+                ['prepTime', 'Tiempo de preparación'],
+                ['fresh', 'Etiqueta "recién hecho"'],
+                ['chooseOne', 'Opción obligatoria'],
+                ['optional', 'Opción opcional'],
+              ]],
+              ['cart', 'Carrito', [
+                ['title', 'Título del carrito'],
+                ['empty', 'Carrito vacío'],
+                ['subtotal', 'Subtotal'],
+                ['shipping', 'Envío'],
+                ['free', 'Gratis'],
+                ['total', 'Total'],
+                ['checkout', 'Botón "Ir a pagar"'],
+                ['barCta', 'Barra flotante'],
+              ]],
+              ['checkout', 'Checkout', [
+                ['title', 'Título'],
+                ['typeLabel', 'Tipo de pedido'],
+                ['delivery', 'A domicilio'],
+                ['pickup', 'Para llevar'],
+                ['name', 'Campo nombre'],
+                ['namePh', 'Placeholder nombre'],
+                ['phone', 'Campo teléfono'],
+                ['phonePh', 'Placeholder teléfono'],
+                ['address', 'Campo dirección'],
+                ['addressPh', 'Placeholder dirección'],
+                ['notes', 'Campo notas'],
+                ['notesPh', 'Placeholder notas'],
+                ['payLabel', 'Forma de pago'],
+                ['payCash', 'Pago en efectivo'],
+                ['payCashSub', 'Sub-texto efectivo'],
+                ['confirm', 'Botón confirmar'],
+                ['closedTitle', 'Cerrado: título'],
+                ['closedMsg', 'Cerrado: mensaje'],
+                ['pausedTitle', 'En pausa: título'],
+                ['pausedMsg', 'En pausa: mensaje'],
+              ]],
+              ['confirmation', 'Confirmación', [
+                ['title', 'Título'],
+                ['subtitle', 'Subtítulo'],
+                ['orderNo', 'Número de pedido'],
+                ['eta', 'Tiempo estimado'],
+                ['etaValue', 'Valor del tiempo'],
+                ['payment', 'Forma de pago'],
+                ['notified', 'Notificado'],
+                ['track', 'Botón seguimiento'],
+                ['again', 'Hacer otro pedido'],
+              ]],
+              ['tracking', 'Seguimiento', [
+                ['title', 'Título'],
+                ['subtitle', 'Subtítulo'],
+                ['statusNew', 'Estado: recibido'],
+                ['statusPrep', 'Estado: en preparación'],
+                ['statusReady', 'Estado: listo'],
+                ['statusReadyPickup', 'Estado: listo para recoger'],
+                ['statusTransit', 'Estado: en camino'],
+                ['statusDelivered', 'Estado: entregado'],
+                ['statusCancel', 'Estado: cancelado'],
+                ['back', 'Volver al menú'],
+              ]],
+            ] as [keyof ThemeContent, string, [string, string][]][]).map(([section, label, fields]) => (
+              <Glass key={section} variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="t-kicker" style={{ fontSize: 10.5 }}>{label}</div>
+                {fields.map(([key, fieldLabel]) => (
+                  <TextCtl
+                    key={key}
+                    label={fieldLabel}
+                    value={(content[section] as Record<string, string>)[key] ?? ''}
+                    onChange={(v) => setT(section, key, v)}
+                  />
+                ))}
+              </Glass>
+            ))}
+          </div>
+        )}
+
+        {/* ── Tab: Mi panel ── */}
+        {tab === 'mipanel' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Section title="Colores del panel de administración">
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
+                Personaliza el sidebar y el topbar que tú y tu equipo ven al administrar el restaurante. No afecta el menú del cliente.
+              </p>
+              <Toggle
+                label="Usar los mismos colores que el menú del cliente"
+                value={config.adminUseClientTheme}
+                onChange={(v) => setC('adminUseClientTheme', v)}
+              />
+              {!config.adminUseClientTheme && (
+                <>
+                  <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
+                  <ColorCtl label="Color de fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
+                  <ColorCtl label="Color de acento (ítem activo en el menú)" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
+                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                    El color del texto se calcula automáticamente según el fondo elegido.
+                  </p>
+                </>
+              )}
+            </Section>
+
+            <Section title="Otras opciones">
+              <Toggle label="Animaciones del menú del cliente" value={config.animations} onChange={(v) => setC('animations', v)} />
+            </Section>
+          </div>
+        )}
+
+        {/* ── Guardar ── */}
+        <div style={{
+          position: 'sticky', bottom: 0,
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
+          flexWrap: 'wrap',
+          background: 'linear-gradient(to top, var(--u-bg) 70%, transparent)',
+          marginTop: 14,
+        }}>
+          <button
+            onClick={save}
+            disabled={isPending}
+            className="press btn-accent"
+            style={{ padding: '13px 28px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
+          >
+            {isPending ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+          <a
+            href={`/preview/${restaurantId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="press"
+            style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '12px 16px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
+          >
+            Ver sitio ↗
+          </a>
+          {msg && (
+            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Panel de vista previa ── */}
+      <PreviewPane previewId={restaurantId} />
+    </div>
+  );
+}
+
+/* ── Controles reutilizables ─────────────────────────────── */
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="t-kicker" style={{ fontSize: 10.5 }}>{title}</div>
+      {children}
+    </Glass>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 500 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
+};
+
+const selectStyle: React.CSSProperties = {
+  ...inputStyle, background: '#1a1a1a', colorScheme: 'dark',
+};
+
+const optionStyle: React.CSSProperties = { background: '#1a1a1a', color: '#e5e5e5' };
+
+function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <Field label={label}>
+      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
+    </Field>
+  );
+}
+
+function ColorCtl({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
+      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
+      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
+    </div>
+  );
+}
+
+function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
+      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
+        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+      </button>
+    </div>
+  );
+}
+
+function Segmented({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void }) {
+  return (
+    <Field label={label}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {options.map(([val, lbl]) => {
+          const on = value === val;
+          return (
+            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+              {lbl}
+            </button>
+          );
+        })}
+      </div>
+    </Field>
+  );
+}
+
+function Slider({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+  return (
+    <Field label={`${label} · ${value % 1 === 0 ? value : value.toFixed(2)}`}>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--brand-accent)' }} />
+    </Field>
+  );
+}
+
+function FontCtl({ label, role, value, onChange }: { label: string; role: 'display' | 'poster' | 'body' | 'serif' | 'mono'; value: string; onChange: (v: string) => void }) {
+  const opts = fontsForRole(role);
+  const has = opts.some((o) => o.family === value);
+  return (
+    <Field label={label}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...selectStyle, cursor: 'pointer' }}>
+        {!has && <option value={value} style={optionStyle}>{value}</option>}
+        {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
+      </select>
+    </Field>
+  );
+}
