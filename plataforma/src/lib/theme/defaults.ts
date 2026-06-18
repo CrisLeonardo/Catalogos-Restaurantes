@@ -94,6 +94,15 @@ export interface ThemeConfig {
 
   // ── Animaciones ──
   animations: boolean;
+
+  // ── Fondo avanzado ──
+  bgOverlayOpacity: number;    // opacidad del velo sobre imagen de fondo (0.0–1.0)
+  watermarkOpacity: number;    // opacidad del watermark (0.01–0.15)
+  watermarkSize: number;       // tamaño del watermark en vmin (40–120)
+
+  // ── Panel admin ──
+  adminPanelBg: string;        // color de fondo del sidebar/topbar del panel
+  adminPanelAccent: string;    // color de acento del panel (navlinks activos)
 }
 
 export const DEFAULT_CONFIG: ThemeConfig = {
@@ -156,6 +165,13 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   locale: 'es-GT',
 
   animations: true,
+
+  bgOverlayOpacity: 1,
+  watermarkOpacity: 0.04,
+  watermarkSize: 78,
+
+  adminPanelBg: '#0c0c0e',
+  adminPanelAccent: '#D97757',
 };
 
 /* ── ThemeContent (todos los textos del cliente) ─────────── */

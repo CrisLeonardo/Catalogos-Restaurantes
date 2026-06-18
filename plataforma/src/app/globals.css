@@ -67,6 +67,15 @@
   --radius-md: 10px;  --radius-lg: 14px;  --radius-xl: 20px;  --radius-2xl: 28px;  --radius-full: 9999px;
   --ease-out:   cubic-bezier(0.4, 0, 0.2, 1);
   --ease-entry: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Panel admin (sobreescritos por buildThemeVars) ─────── */
+  --admin-panel-bg:     #0c0c0e;
+  --admin-panel-accent: #D97757;
+
+  /* ── Fondo avanzado (sobreescritos por buildThemeVars) ───── */
+  --bg-overlay-opacity: 1;
+  --watermark-opacity:  0.04;
+  --watermark-size:     78vmin;
 }
 
 /* Presets de glass por intensidad (se aplican con data-glass en <html>) */
@@ -139,13 +148,14 @@ body {
 /* Fondos alternativos (config.backgroundType) — todos capa fija detrás del contenido */
 .bg-layer { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 .bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
-/* velo sutil para legibilidad del texto sobre fotos */
+/* velo degradado para legibilidad sobre fotos — opacidad controlada por --bg-overlay-opacity */
 .bg-image::after {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(180deg,
     color-mix(in srgb, var(--brand-bg) 55%, transparent) 0%,
     color-mix(in srgb, var(--brand-bg) 30%, transparent) 40%,
     color-mix(in srgb, var(--brand-bg) 72%, transparent) 100%);
+  opacity: var(--bg-overlay-opacity, 1);
 }
 
 /* Grano de concreto (config.grain) */
@@ -155,12 +165,14 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Watermark gigante girando (config.watermark) — la URL va por estilo inline */
+/* Watermark gigante girando (config.watermark) — opacidad y tamaño controlados por vars CSS */
 .asphalt-mark {
-  position: fixed; width: 78vmin; height: 78vmin; left: 50%; top: 46%;
+  position: fixed;
+  width: var(--watermark-size, 78vmin); height: var(--watermark-size, 78vmin);
+  left: 50%; top: 46%;
   transform: translate(-50%,-50%); z-index: -1;
   background-position: center; background-size: contain; background-repeat: no-repeat;
-  opacity: 0.04; pointer-events: none;
+  opacity: var(--watermark-opacity, 0.04); pointer-events: none;
   animation: mark-spin 120s linear infinite;
 }
 @keyframes mark-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
@@ -263,16 +275,33 @@ html[data-admin-bg="off"] .bg-layer,
 html[data-admin-bg="off"] .asphalt-grain,
 html[data-admin-bg="off"] .asphalt-mark { display: none; }
 .admin-sidebar {
-  width: 240px; flex-shrink: 0; border-right: 1px solid var(--u-hair);
+  width: 240px; flex-shrink: 0;
   display: flex; flex-direction: column; gap: 4px; padding: 18px 12px;
   position: sticky; top: 0; height: 100svh;
+  /* Fondo propio del admin — independiente del tema del restaurante */
+  background: var(--admin-panel-bg);
+  border-right: 1px solid rgba(245,243,239,0.08);
+  /* Forzar escala de texto clara dentro del sidebar para contraste sobre fondo oscuro */
+  --u-text:   #F5F3EF;
+  --u-text-2: rgba(245,243,239,0.74);
+  --u-text-3: rgba(245,243,239,0.50);
+  --u-text-4: rgba(245,243,239,0.48);
+  --u-hair:   rgba(245,243,239,0.10);
+  --u-hair-2: rgba(245,243,239,0.18);
 }
 .admin-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .admin-topbar {
   min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 24px;
-  border-bottom: 1px solid var(--u-hair); position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--brand-bg) 82%, transparent);
+  border-bottom: 1px solid rgba(245,243,239,0.08); position: sticky; top: 0; z-index: 20;
+  /* Fondo del admin con blur — independiente del tema del restaurante */
+  background: color-mix(in srgb, var(--admin-panel-bg) 85%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  /* Texto siempre claro en topbar */
+  --u-text:   #F5F3EF;
+  --u-text-2: rgba(245,243,239,0.74);
+  --u-text-3: rgba(245,243,239,0.50);
+  --u-hair:   rgba(245,243,239,0.10);
+  --u-hair-2: rgba(245,243,239,0.18);
 }
 .admin-content { padding: 24px; flex: 1; min-width: 0; }
 .admin-nav {
@@ -294,8 +323,12 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   background: transparent;
 }
 .admin-navlink .nav-label { flex: 1; }
-.admin-navlink:hover { background: rgba(255,255,255,0.04); color: var(--u-text-2); }
-.admin-navlink[data-active="1"] { background: rgba(255,255,255,0.09); color: var(--u-text); font-weight: 600; }
+.admin-navlink:hover { background: rgba(255,255,255,0.06); color: var(--u-text-2); }
+.admin-navlink[data-active="1"] {
+  background: color-mix(in srgb, var(--admin-panel-accent) 14%, transparent);
+  color: var(--admin-panel-accent);
+  font-weight: 600;
+}
 
 /* Tabla de catálogo: grid en escritorio, tarjeta de 2 filas en móvil */
 .catalog-head, .catalog-row {
@@ -323,8 +356,8 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   .admin-sidebar {
     width: 100%; height: auto; position: sticky; top: 0; z-index: 40;
     flex-direction: row; align-items: center; gap: 10px;
-    border-right: none; border-bottom: 1px solid var(--u-hair); padding: 10px 14px;
-    background: color-mix(in srgb, var(--brand-bg) 97%, #fff 3%);
+    border-right: none; border-bottom: 1px solid rgba(245,243,239,0.08); padding: 10px 14px;
+    background: var(--admin-panel-bg);
   }
   .admin-brand { flex: 1; min-width: 0; }
   .admin-section { display: none; }
@@ -334,10 +367,15 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
     flex-direction: row; gap: 0; align-items: stretch;
     padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid var(--u-hair);
-    background: color-mix(in srgb, var(--brand-bg) 88%, transparent);
+    border-top: 1px solid rgba(245,243,239,0.08);
+    background: color-mix(in srgb, var(--admin-panel-bg) 88%, transparent);
     -webkit-backdrop-filter: blur(18px) saturate(130%); backdrop-filter: blur(18px) saturate(130%);
     overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: none;
+    /* Texto claro en la tab bar */
+    --u-text:   #F5F3EF;
+    --u-text-2: rgba(245,243,239,0.74);
+    --u-text-3: rgba(245,243,239,0.50);
+    --u-hair:   rgba(245,243,239,0.10);
   }
   .admin-nav::-webkit-scrollbar { display: none; }
   .admin-navgroup { flex-direction: row; gap: 0; }
@@ -350,7 +388,10 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
     flex: none; font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
-  .admin-navlink[data-active="1"] { background: rgba(255,255,255,0.07); }
+  .admin-navlink[data-active="1"] {
+    background: color-mix(in srgb, var(--admin-panel-accent) 14%, transparent);
+    color: var(--admin-panel-accent);
+  }
 
   /* Tarjeta de usuario → chip compacto a la derecha de la cabecera */
   .admin-usercard { padding: 5px 6px 5px 5px !important; border-radius: 99px !important; gap: 7px !important; }

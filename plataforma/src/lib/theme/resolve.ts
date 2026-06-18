@@ -159,9 +159,9 @@ const GLASS_PRESETS: Record<GlassIntensity, { blur: number; sat: number; fill: n
 
 export function buildThemeVars(config: ThemeConfig): Record<string, string> {
   const text = config.colorText;
-  // El esquema se auto-detecta del color de fondo (no hay control manual).
-  // Así el glass y los bordes siempre se adaptan sin que el admin lo configure.
-  const light = isLight(config.colorBg);
+  // scheme='light' fuerza modo claro; cualquier otro valor (incl. 'dark') auto-detecta del fondo.
+  // Así los restaurantes existentes con scheme='dark' conservan el comportamiento original.
+  const light = config.scheme === 'light' ? true : isLight(config.colorBg);
   const g = GLASS_PRESETS[config.glassIntensity];
   const cr = config.cornerRadius;
 
@@ -214,6 +214,12 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     '--radius-lg': `${14 * cr}px`,
     '--radius-xl': `${20 * cr}px`,
     '--radius-2xl': `${28 * cr}px`,
+
+    '--bg-overlay-opacity': String(config.bgOverlayOpacity ?? 1),
+    '--watermark-opacity': String(config.watermarkOpacity ?? 0.04),
+    '--watermark-size': `${config.watermarkSize ?? 78}vmin`,
+    '--admin-panel-bg': config.adminPanelBg ?? '#0c0c0e',
+    '--admin-panel-accent': config.adminPanelAccent ?? config.colorAccent,
   };
 }
 

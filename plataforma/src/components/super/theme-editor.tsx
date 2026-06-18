@@ -173,6 +173,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <ColorCtl label="Texto" value={config.colorText} onChange={(v) => setC('colorText', v)} />
         <ColorCtl label="Acento / primario" value={config.colorAccent} onChange={(v) => setC('colorAccent', v)} />
         <ColorCtl label="Texto sobre acento" value={config.onAccent} onChange={(v) => setC('onAccent', v)} />
+        <Segmented label="Esquema de color" value={config.scheme} options={[['dark', 'Oscuro (auto)'], ['light', 'Claro (forzado)']]} onChange={(v) => setC('scheme', v as ThemeConfig['scheme'])} />
       </Section>
 
       {/* ── Tipografía ── */}
@@ -206,6 +207,15 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Luz ambiental (glow)" value={config.ambientGlow} onChange={(v) => setC('ambientGlow', v)} />
         <Toggle label="Grano de concreto" value={config.grain} onChange={(v) => setC('grain', v)} />
         <Toggle label="Watermark girando (usa logo)" value={config.watermark} onChange={(v) => setC('watermark', v)} />
+        {config.watermark && (
+          <>
+            <Slider label="Opacidad del watermark" value={config.watermarkOpacity} min={0.01} max={0.15} step={0.01} onChange={(v) => setC('watermarkOpacity', v)} />
+            <Slider label="Tamaño del watermark" value={config.watermarkSize} min={40} max={120} step={5} onChange={(v) => setC('watermarkSize', v)} />
+          </>
+        )}
+        {config.backgroundType === 'image' && (
+          <Slider label="Velo sobre la imagen" value={config.bgOverlayOpacity} min={0} max={1} step={0.05} onChange={(v) => setC('bgOverlayOpacity', v)} />
+        )}
       </Section>
 
       {/* ── Portada ── */}
@@ -215,6 +225,15 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Mostrar badge 'Abierto'" value={config.portadaShowBadge} onChange={(v) => setC('portadaShowBadge', v)} />
         <Toggle label="Punto de estado (respira)" value={config.portadaShowStatus} onChange={(v) => setC('portadaShowStatus', v)} />
         <Segmented label="Estilo del botón" value={config.ctaStyle} options={[['white', 'Blanco'], ['accent', 'Acento'], ['outline', 'Contorno']]} onChange={(v) => setC('ctaStyle', v as ThemeConfig['ctaStyle'])} />
+      </Section>
+
+      {/* ── Panel admin ── */}
+      <Section title="Panel de admin">
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
+          Colores del sidebar y topbar del panel. No afectan el sitio del cliente.
+        </p>
+        <ColorCtl label="Fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
+        <ColorCtl label="Acento del panel" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
       </Section>
 
       {/* ── Catálogo ── */}
