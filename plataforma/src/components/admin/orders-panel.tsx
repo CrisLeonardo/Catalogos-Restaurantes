@@ -16,6 +16,9 @@ interface Props {
   stats:          OrderStats;
   currency:       PanelCurrency;
   timezone:       string;
+  /** El restaurante usa el Agente Leogin para cocina / caja (evita doble impresión). */
+  agentKitchen?:  boolean;
+  agentReceipt?:  boolean;
 }
 
 function chime() {
@@ -49,7 +52,7 @@ export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-export default function OrdersPanel({ initialOrders, restaurantId, restaurantName, stats, currency, timezone }: Props) {
+export default function OrdersPanel({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false }: Props) {
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -224,14 +227,14 @@ ${printScript}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 28 }}>
-              {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} />)}
+              {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} />)}
             </div>
           )}
           {completedToday.length > 0 && (
             <>
               <h2 className="t-poster" style={{ fontSize: 20, marginBottom: 12 }}>Cerrados hoy</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, opacity: 0.62 }}>
-                {completedToday.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} />)}
+                {completedToday.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} />)}
               </div>
             </>
           )}

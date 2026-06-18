@@ -2,10 +2,11 @@
 
 import { useTransition, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { updateOrderStatus } from '@/lib/actions/orders';
+import { updateOrderStatus, printReceiptViaAgent } from '@/lib/actions/orders';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
 import { printTicket, isKitchenAutoPrintEnabled } from '@/lib/printing';
+import { buildKitchenEscPos, buildReceiptEscPos } from '@/lib/escpos';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -141,8 +142,11 @@ ${notesHtml}
 function printKitchenTicket(order: OrderWithItems, restaurantName: string) {
   if (typeof window === 'undefined') return;
   if (!isKitchenAutoPrintEnabled()) return;
-  // QZ silencioso a la térmica de cocina si está configurada; si no, diálogo.
-  void printTicket('kitchen', buildKitchenHtml(order, restaurantName));
+  void printTicket(
+    'kitchen',
+    buildKitchenHtml(order, restaurantName),
+    () => buildKitchenEscPos(order, restaurantName),
+  );
 }
 
 function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restaurantName: string): string {
@@ -278,20 +282,44 @@ ${notesHtml}
 </html>`;
 }
 
-export default function OrderCard({ order, currency, restaurantName }: { order: OrderWithItems; currency: PanelCurrency; restaurantName: string }) {
+export default function OrderCard({
+  order,
+  currency,
+  restaurantName,
+  agentKitchen = false,
+  agentReceipt = false,
+}: {
+  order: OrderWithItems;
+  currency: PanelCurrency;
+  restaurantName: string;
+  /** El Agente Leogin imprime la comanda (servidor) → no imprimir también desde el navegador. */
+  agentKitchen?: boolean;
+  /** El Agente Leogin imprime el recibo (servidor) → el botón encola en vez de usar el navegador. */
+  agentReceipt?: boolean;
+}) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const next = nextStatus(order);
 
   function handlePrint() {
-    // QZ silencioso a la impresora de recibos si está configurada; si no, diálogo.
-    void printTicket('receipt', buildReceiptHtml(order, currency, restaurantName));
+    // Con agente: el recibo se genera e imprime en el servidor (funciona en móvil).
+    if (agentReceipt) {
+      void printReceiptViaAgent(order.id);
+      return;
+    }
+    void printTicket(
+      'receipt',
+      buildReceiptHtml(order, currency, restaurantName),
+      () => buildReceiptEscPos(order, currency, restaurantName),
+    );
   }
 
   async function handleAdvance() {
     if (!next) return;
-    if (next === 'PREP') printKitchenTicket(order, restaurantName);
+    // Solo imprimir la comanda desde el navegador si el agente NO la maneja
+    // (evita doble impresión cuando el restaurante usa el Agente Leogin).
+    if (next === 'PREP' && !agentKitchen) printKitchenTicket(order, restaurantName);
     start(async () => { await updateOrderStatus(order.id, next); });
   }
 

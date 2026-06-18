@@ -35,13 +35,16 @@ export default async function PedidosPage() {
 
   // Zona horaria + moneda reales del restaurante (KPIs y montos honestos).
   const db = createServiceClient();
-  const [{ data: restaurant }, { data: themeRow }] = await Promise.all([
+  const [{ data: restaurant }, { data: themeRow }, { data: agent }] = await Promise.all([
     db.from('restaurants').select('timezone, name').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
+    db.from('print_agents').select('kitchen_target, receipt_target').eq('restaurant_id', restaurantId).single(),
   ]);
   const timezone = (restaurant?.timezone as string) || 'America/Guatemala';
   const restaurantName = (restaurant as { name?: string } | null)?.name ?? '';
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
+  const agentKitchen = !!(agent?.kitchen_target);
+  const agentReceipt = !!(agent?.receipt_target);
 
   const [orders, stats] = await Promise.all([
     getRestaurantOrders(restaurantId),
@@ -60,6 +63,8 @@ export default async function PedidosPage() {
         position: themeConfig.currencyPosition,
         locale: themeConfig.locale,
       }}
+      agentKitchen={agentKitchen}
+      agentReceipt={agentReceipt}
     />
   );
 }

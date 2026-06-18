@@ -1,20 +1,13 @@
-// Capa de impresión.
+// Capa de impresión — tres niveles con detección automática:
+//   1. QZ Tray   → silencioso, cualquier impresora (USB/WiFi/BT), todos los browsers
+//   2. Web USB   → silencioso, impresoras USB, Chrome/Edge (sin instalar nada extra)
+//   3. Fallback  → window.print() con diálogo del navegador
 //
-// Estrategia de dos niveles con detección automática de capacidad:
-//   1. QZ Tray (agente de escritorio Windows/Mac/Linux) → impresión SILENCIOSA
-//      a una impresora elegida por nombre. Permite mandar la comanda a la
-//      térmica de cocina y el recibo a otra impresora distinta, configurado
-//      una sola vez por dispositivo.
-//   2. Fallback `window.print()` → cuando no hay QZ (móvil, o PC sin el agente).
-//      Sale el diálogo del sistema y va a la impresora predeterminada.
-//
-// Toda la configuración es POR DISPOSITIVO (localStorage), porque las
-// impresoras pertenecen al equipo físico, no a la cuenta del restaurante.
+// Toda la configuración es POR DISPOSITIVO (localStorage).
 
 export type PrintRole = 'kitchen' | 'receipt';
 
 export const PRINT_KEYS = {
-  /** Compat con la versión anterior: activa la comanda automática al confirmar. */
   kitchenEnabled: 'leogin_kitchen_print_enabled',
   kitchenPrinter: 'leogin_print_kitchen_printer',
   receiptPrinter: 'leogin_print_receipt_printer',
@@ -22,11 +15,7 @@ export const PRINT_KEYS = {
 
 function store(): Storage | null {
   if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
+  try { return window.localStorage; } catch { return null; }
 }
 
 function printerKey(role: PrintRole): string {
@@ -52,9 +41,9 @@ export function setKitchenAutoPrintEnabled(on: boolean): void {
   store()?.setItem(PRINT_KEYS.kitchenEnabled, on ? '1' : '0');
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// QZ Tray
-// ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Nivel 1: QZ Tray
+// ─────────────────────────────────────────────────────────────────────────────
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type QZ = any;
@@ -62,7 +51,6 @@ type QZ = any;
 let qzPromise: Promise<QZ> | null = null;
 let securityConfigured = false;
 
-/** Carga perezosa del módulo (solo en cliente, fuera de SSR). */
 async function loadQz(): Promise<QZ> {
   if (!qzPromise) {
     qzPromise = import('qz-tray').then((m: any) => m.default ?? m);
@@ -70,7 +58,6 @@ async function loadQz(): Promise<QZ> {
   return qzPromise;
 }
 
-/** ¿El servidor puede firmar ahora mismo? (sesión activa + clave configurada) */
 async function canSign(): Promise<boolean> {
   try {
     const res = await fetch('/api/print/sign', {
@@ -78,34 +65,18 @@ async function canSign(): Promise<boolean> {
       headers: { 'content-type': 'text/plain' },
       body: '__probe__',
     });
-    return res.ok; // 200 = firma disponible; 401/501/otros = no firmamos
+    return res.ok;
   } catch {
     return false;
   }
 }
 
-/**
- * Configura la firma SOLO si está realmente disponible, de modo que un problema
- * de firma (sin sesión, sin clave, endpoint caído) nunca rompa la conexión a QZ:
- * en ese caso se conecta en modo sin firma (QZ pide permiso la 1ª vez por sesión).
- * La clave privada nunca llega al cliente: se firma en /api/print/sign.
- */
 async function configureSecurity(qz: QZ): Promise<void> {
   if (securityConfigured) return;
-
   const { QZ_CERTIFICATE } = await import('./qz-cert');
   const hasCert = !!QZ_CERTIFICATE && QZ_CERTIFICATE.includes('BEGIN CERTIFICATE');
-
-  if (!hasCert) {
-    securityConfigured = true; // sin cert → siempre sin firma
-    return;
-  }
-
-  if (!(await canSign())) {
-    // Aún no podemos firmar (sin sesión/clave). Conectamos sin firma y dejamos
-    // que un próximo intento reconfigure si la firma ya está disponible.
-    return;
-  }
+  if (!hasCert) { securityConfigured = true; return; }
+  if (!(await canSign())) return;
 
   qz.security.setCertificatePromise((resolve: (v: string) => void) => resolve(QZ_CERTIFICATE));
   qz.security.setSignatureAlgorithm('SHA512');
@@ -119,25 +90,19 @@ async function configureSecurity(qz: QZ): Promise<void> {
         });
         if (!res.ok) throw new Error(`firma falló (HTTP ${res.status})`);
         resolve(await res.text());
-      } catch (e) {
-        reject(e);
-      }
+      } catch (e) { reject(e); }
     },
   );
   securityConfigured = true;
 }
 
-/** Conecta al agente QZ si no hay sesión activa. Lanza si no está disponible. */
 export async function connectQz(): Promise<QZ> {
   const qz = await loadQz();
   await configureSecurity(qz);
-  if (!qz.websocket.isActive()) {
-    await qz.websocket.connect();
-  }
+  if (!qz.websocket.isActive()) await qz.websocket.connect();
   return qz;
 }
 
-/** ¿Está QZ Tray corriendo y alcanzable en este equipo? No lanza. */
 export async function isQzAvailable(): Promise<boolean> {
   try {
     const qz = await loadQz();
@@ -145,12 +110,9 @@ export async function isQzAvailable(): Promise<boolean> {
     await configureSecurity(qz);
     await qz.websocket.connect();
     return qz.websocket.isActive();
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
-/** Lista los nombres de impresoras instaladas en el equipo. */
 export async function listPrinters(): Promise<string[]> {
   const qz = await connectQz();
   const found = await qz.printers.find();
@@ -158,26 +120,143 @@ export async function listPrinters(): Promise<string[]> {
   return found ? [found] : [];
 }
 
-/** Impresora predeterminada del sistema, o null. */
 export async function getDefaultPrinter(): Promise<string | null> {
   try {
     const qz = await connectQz();
     return (await qz.printers.getDefault()) ?? null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 async function printHtmlViaQz(printerName: string, html: string): Promise<void> {
   const qz = await connectQz();
   const config = qz.configs.create(printerName, {
-    size: { width: 80, height: null, units: 'mm' }, // ticket térmico 80 mm
+    size: { width: 80, height: null, units: 'mm' },
     margins: { top: 0, right: 0, bottom: 0, left: 0 },
     units: 'mm',
   });
-  const data = [{ type: 'pixel', format: 'html', flavor: 'plain', data: html }];
-  await qz.print(config, data);
+  await qz.print(config, [{ type: 'pixel', format: 'html', flavor: 'plain', data: html }]);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nivel 2: Web USB (ESC/POS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UsbPrinterInfo {
+  vendorId: number;
+  productId: number;
+  serialNumber?: string;
+  productName?: string;
+}
+
+const USB_KEYS: Record<PrintRole, string> = {
+  kitchen: 'leogin_usb_kitchen',
+  receipt: 'leogin_usb_receipt',
+};
+
+export function isWebUsbSupported(): boolean {
+  return typeof navigator !== 'undefined' && 'usb' in navigator;
+}
+
+export function getUsbPrinterInfo(role: PrintRole): UsbPrinterInfo | null {
+  const raw = store()?.getItem(USB_KEYS[role]);
+  if (!raw) return null;
+  try { return JSON.parse(raw) as UsbPrinterInfo; } catch { return null; }
+}
+
+function saveUsbPrinterInfo(role: PrintRole, info: UsbPrinterInfo): void {
+  store()?.setItem(USB_KEYS[role], JSON.stringify(info));
+}
+
+export function clearUsbPrinter(role: PrintRole): void {
+  store()?.removeItem(USB_KEYS[role]);
+}
+
+/** Muestra el selector de dispositivos USB (requiere gesto del usuario). */
+export async function requestUsbPrinter(role: PrintRole): Promise<UsbPrinterInfo | null> {
+  if (!isWebUsbSupported()) return null;
+  try {
+    const device = await navigator.usb.requestDevice({ filters: [] });
+    const info: UsbPrinterInfo = {
+      vendorId: device.vendorId,
+      productId: device.productId,
+      serialNumber: device.serialNumber ?? undefined,
+      productName: device.productName ?? undefined,
+    };
+    saveUsbPrinterInfo(role, info);
+    return info;
+  } catch (e) {
+    // El usuario canceló el selector
+    if ((e as DOMException)?.name === 'NotFoundError') return null;
+    throw e;
+  }
+}
+
+function findBulkOutEndpoint(
+  device: USBDevice,
+): { interfaceNum: number; endpointNum: number } | null {
+  for (const config of device.configurations) {
+    for (const iface of config.interfaces) {
+      for (const alt of iface.alternates) {
+        for (const ep of alt.endpoints) {
+          if (ep.direction === 'out' && ep.type === 'bulk') {
+            return { interfaceNum: iface.interfaceNumber, endpointNum: ep.endpointNumber };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+async function findAuthorizedDevice(info: UsbPrinterInfo): Promise<USBDevice | null> {
+  const devices = await navigator.usb.getDevices();
+  return (
+    devices.find(
+      (d) =>
+        d.vendorId === info.vendorId &&
+        d.productId === info.productId &&
+        (!info.serialNumber || d.serialNumber === info.serialNumber),
+    ) ?? null
+  );
+}
+
+/** Envía bytes ESC/POS directamente a la impresora USB configurada para el rol. */
+export async function printEscPosViaUsb(role: PrintRole, data: Uint8Array): Promise<boolean> {
+  if (!isWebUsbSupported()) return false;
+  const info = getUsbPrinterInfo(role);
+  if (!info) return false;
+
+  let device: USBDevice | null = null;
+  try {
+    device = await findAuthorizedDevice(info);
+    if (!device) return false;
+
+    await device.open();
+    if (device.configuration === null) await device.selectConfiguration(1);
+
+    const ep = findBulkOutEndpoint(device);
+    if (!ep) throw new Error('No se encontró endpoint bulk-out');
+
+    await device.claimInterface(ep.interfaceNum);
+    await device.transferOut(ep.endpointNum, data);
+    return true;
+  } catch (e) {
+    const msg = (e as Error)?.message ?? String(e);
+    // El controlador de Windows puede bloquear la interfaz — error esperado
+    if (msg.includes('Unable to claim') || msg.includes('Access denied')) {
+      console.warn('[USB] Interfaz ocupada (driver de Windows). Intenta con QZ Tray.');
+    } else {
+      console.warn('[USB] Error al imprimir:', msg);
+    }
+    return false;
+  } finally {
+    try { await device?.close(); } catch { /* ignore */ }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nivel 3: Fallback — diálogo del navegador
+// ─────────────────────────────────────────────────────────────────────────────
 
 function printHtmlViaBrowser(html: string): void {
   const win = window.open('', '_blank', 'width=420,height=700');
@@ -185,8 +264,6 @@ function printHtmlViaBrowser(html: string): void {
     alert('Permite ventanas emergentes para imprimir.');
     return;
   }
-  // El HTML que generamos viene sin auto-impresión (QZ no la necesita);
-  // aquí inyectamos el disparo de window.print() para el diálogo del sistema.
   const withAutoPrint = html.includes('__leogin_autoprint__')
     ? html
     : html.replace(
@@ -197,30 +274,58 @@ function printHtmlViaBrowser(html: string): void {
   win.document.close();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Función principal de impresión
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface PrintResult {
-  method: 'qz' | 'browser';
+  method: 'qz' | 'usb' | 'browser';
   ok: boolean;
   error?: string;
 }
 
 /**
- * Imprime un ticket en el rol indicado.
- * Usa QZ silencioso si hay impresora configurada para el rol y el agente está
- * disponible; si no, cae al diálogo del navegador.
+ * Imprime un ticket para el rol indicado.
+ *
+ * Orden de intento:
+ *   1. QZ Tray (si hay impresora asignada y el agente está activo)
+ *   2. Web USB (si hay impresora USB autorizada y se provee escposBuilder)
+ *   3. window.print() como último recurso
+ *
+ * @param role        'kitchen' | 'receipt'
+ * @param html        HTML completo del ticket (para QZ y browser)
+ * @param escposBuilder  función que genera bytes ESC/POS (para Web USB, llamada lazy)
  */
-export async function printTicket(role: PrintRole, html: string): Promise<PrintResult> {
-  const printer = getPrinter(role);
-  if (printer) {
+export async function printTicket(
+  role: PrintRole,
+  html: string,
+  escposBuilder?: () => Uint8Array,
+): Promise<PrintResult> {
+  // ── Nivel 1: QZ ──────────────────────────────────────────────────────────
+  const qzPrinter = getPrinter(role);
+  if (qzPrinter) {
     try {
       if (await isQzAvailable()) {
-        await printHtmlViaQz(printer, html);
+        await printHtmlViaQz(qzPrinter, html);
         return { method: 'qz', ok: true };
       }
     } catch (e) {
-      // Si QZ falla a mitad, no perdemos el ticket: caemos al navegador.
-      console.warn('[printing] QZ falló, usando navegador:', (e as Error)?.message);
+      console.warn('[printing] QZ falló, continuando:', (e as Error)?.message);
     }
   }
+
+  // ── Nivel 2: Web USB ─────────────────────────────────────────────────────
+  if (escposBuilder && isWebUsbSupported() && getUsbPrinterInfo(role)) {
+    try {
+      const data = escposBuilder();
+      const ok = await printEscPosViaUsb(role, data);
+      if (ok) return { method: 'usb', ok: true };
+    } catch (e) {
+      console.warn('[printing] USB falló, usando navegador:', (e as Error)?.message);
+    }
+  }
+
+  // ── Nivel 3: Diálogo del navegador ───────────────────────────────────────
   printHtmlViaBrowser(html);
   return { method: 'browser', ok: true };
 }

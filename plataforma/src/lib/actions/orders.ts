@@ -12,6 +12,7 @@ import { isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
+import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -600,6 +601,17 @@ export async function updateOrderStatus(
 
   if (error) return { error: error.message };
 
+  // Al confirmar (NEW→PREP): encola la comanda de cocina al agente de impresión
+  // del restaurante (funciona desde cualquier dispositivo, incl. móvil). No-op
+  // si no hay agente configurado; best-effort, no debe romper el cambio de estado.
+  if (status === 'PREP' && profile.restaurant_id) {
+    try {
+      await enqueueKitchenForOrder(profile.restaurant_id, orderId);
+    } catch {
+      /* impresión es best-effort */
+    }
+  }
+
   if (profile.restaurant_id) {
     logActivity({
       restaurantId: profile.restaurant_id,
@@ -612,6 +624,47 @@ export async function updateOrderStatus(
 
   revalidatePath('/admin/pedidos');
   revalidatePath('/admin/mesero');
+  return {};
+}
+
+/**
+ * Encola el recibo de caja de un pedido al agente de impresión del restaurante.
+ * Lo llama el botón "Imprimir recibo" cuando el restaurante usa el Agente Leogin
+ * (en vez de la impresión por navegador/QZ). Best-effort.
+ */
+export async function printReceiptViaAgent(orderId: string): Promise<{ error?: string }> {
+  if (!orderId) return { error: 'ID de pedido requerido.' };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, restaurant_id')
+    .eq('id', user.id)
+    .single();
+  if (!profile) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+  const { data: order } = await db
+    .from('orders')
+    .select('restaurant_id')
+    .eq('id', orderId)
+    .single();
+  if (!order) return { error: 'Pedido no encontrado.' };
+
+  const allowed =
+    profile.role === 'SUPER_ADMIN' ||
+    (['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'].includes(profile.role) &&
+      profile.restaurant_id === order.restaurant_id);
+  if (!allowed) return { error: 'No autorizado.' };
+
+  try {
+    await enqueueReceiptForOrder(order.restaurant_id as string, orderId);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   return {};
 }
 

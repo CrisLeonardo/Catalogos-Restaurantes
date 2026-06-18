@@ -10,6 +10,7 @@ import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import OrdersCurrencyEditor from '@/components/admin/orders-currency-editor';
 import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
+import PrintAgentSettings from '@/components/admin/print-agent-settings';
 import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Perfil – Panel admin' };
@@ -170,10 +171,12 @@ export default async function AdminPerfilPage({
           Impresión (cocina y recibos)
         </h2>
         <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
-          Configura la comanda automática de cocina al confirmar cada pedido y, con
-          QZ Tray, la impresión directa a una impresora para cocina y otra para
-          recibos. Esta configuración es por dispositivo.
+          Configura la impresión de comandas de cocina y recibos. El <strong>Agente Leogin</strong>
+          {' '}(recomendado) imprime desde cualquier dispositivo y se configura una sola vez; abajo
+          quedan QZ Tray y USB como alternativas por dispositivo.
         </p>
+        <PrintAgentSettings />
+        <div style={{ height: 16 }} />
         <KitchenPrintSettings />
       </section>
     </div>
