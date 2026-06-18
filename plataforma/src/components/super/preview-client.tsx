@@ -13,7 +13,7 @@
    cómo va quedando en otra pantalla.
    ============================================================ */
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import MenuShell from '@/components/menu-shell';
 import ThemeBackground from '@/components/theme-background';
 import { buildThemeVars, buildFontsHref, sanitizeCustomCss } from '@/lib/theme/resolve';
@@ -88,23 +88,14 @@ export default function PreviewClient({
     return () => ch.close();
   }, [previewId]);
 
-  /* Sincronizar data-glass, data-scheme y CSS vars en <html> con cada
-     cambio de config. Las vars se inyectan en un <style id="preview-theme-vars">
-     en lugar de inline-style, para que el customCss del restaurante (también
-     un <style>, inyectado después) pueda sobrescribirlas sin necesitar !important. */
+  /* Sincronizar data-glass y data-scheme en <html> con cada cambio de config.
+     Las CSS vars ya no van inline ni en document.head — se renderizan como
+     <style> React dentro del contenedor, antes del customCss, para que el
+     customCss (último) pueda sobrescribirlas con selectores normales. */
   useEffect(() => {
     const html = document.documentElement;
     html.setAttribute('data-glass', state.config.glassIntensity);
     html.setAttribute('data-scheme', state.config.scheme);
-    const vars = buildThemeVars(state.config);
-    const css = `:root{${Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')}}`;
-    let styleEl = document.getElementById('preview-theme-vars') as HTMLStyleElement | null;
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = 'preview-theme-vars';
-      document.head.appendChild(styleEl);
-    }
-    styleEl.textContent = css;
   }, [state.config]);
 
   /* La vista previa es solo para mirar: bloquear navegación interna
@@ -124,6 +115,10 @@ export default function PreviewClient({
 
   const { config, content, customCss } = state;
   const vars = useMemo(() => buildThemeVars(config), [config]);
+  const varsCss = useMemo(
+    () => `:root{${Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')}}`,
+    [vars],
+  );
   const fontsHref = useMemo(() => buildFontsHref(config), [config]);
 
   return (
@@ -132,9 +127,8 @@ export default function PreviewClient({
       data-glass={config.glassIntensity}
       data-scheme={config.scheme}
       style={{
-        ...(vars as CSSProperties),
-        // `isolation` crea un stacking context propio: las capas de fondo
-        // (z-index -1) quedan SOBRE este fondo sólido pero bajo el contenido.
+        // Sin vars inline: las CSS vars van en el <style> de abajo para que
+        // el customCss (último) pueda sobrescribirlas con selectores normales.
         isolation: 'isolate',
         position: 'relative',
         minHeight: '100svh',
@@ -143,6 +137,9 @@ export default function PreviewClient({
         fontFamily: 'var(--ui-font-sans)',
       }}
     >
+      {/* Variables del tema — PRIMERO para que customCss (último) las sobreescriba. */}
+      <style dangerouslySetInnerHTML={{ __html: varsCss }} />
+
       {/* Fuentes del tema (React iza los <link> al <head>) */}
       {fontsHref && (
         <>
@@ -177,7 +174,7 @@ export default function PreviewClient({
         ordersEnabled={ordersEnabled}
       />
 
-      {/* CSS propio del restaurante: al final del documento → gana sobre todo. */}
+      {/* CSS propio del restaurante: ÚLTIMO → gana sobre las vars del tema. */}
       {customCss ? <style dangerouslySetInnerHTML={{ __html: sanitizeCustomCss(customCss) }} /> : null}
     </div>
   );

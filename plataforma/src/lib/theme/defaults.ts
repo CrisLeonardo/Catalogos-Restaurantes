@@ -101,8 +101,9 @@ export interface ThemeConfig {
   watermarkSize: number;       // tamaño del watermark en vmin (40–120)
 
   // ── Panel admin ──
-  adminPanelBg: string;        // color de fondo del sidebar/topbar del panel
-  adminPanelAccent: string;    // color de acento del panel (navlinks activos)
+  adminUseClientTheme: boolean; // true = hereda colores del tema del cliente
+  adminPanelBg: string;         // color de fondo del sidebar/topbar (cuando no usa tema del cliente)
+  adminPanelAccent: string;     // color de acento (navlinks activos)
 }
 
 export const DEFAULT_CONFIG: ThemeConfig = {
@@ -170,6 +171,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   watermarkOpacity: 0.04,
   watermarkSize: 78,
 
+  adminUseClientTheme: false,
   adminPanelBg: '#0c0c0e',
   adminPanelAccent: '#D97757',
 };

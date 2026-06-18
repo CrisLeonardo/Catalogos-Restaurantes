@@ -159,18 +159,12 @@ const GLASS_PRESETS: Record<GlassIntensity, { blur: number; sat: number; fill: n
 
 export function buildThemeVars(config: ThemeConfig): Record<string, string> {
   const text = config.colorText;
-  // scheme='light' fuerza modo claro; cualquier otro valor (incl. 'dark') auto-detecta del fondo.
-  // Así los restaurantes existentes con scheme='dark' conservan el comportamiento original.
-  const light = config.scheme === 'light' ? true : isLight(config.colorBg);
   const g = GLASS_PRESETS[config.glassIntensity];
   const cr = config.cornerRadius;
 
-  // El glass es blanco-traslúcido en oscuro; en claro sube opacidad y usa borde oscuro.
-  const glassTint = light ? '255,255,255' : '255,255,255';
-  const glassFill = light ? Math.min(0.85, g.fill * 8 + 0.4) : g.fill;
-  const glassFill2 = light ? Math.min(0.92, g.fill2 * 6 + 0.45) : g.fill2;
-  const glassStroke = light ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.14)';
-  const glassHi = light ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.42)';
+  // Las variables de glass para modo claro las manejan reglas CSS puras en globals.css
+  // usando html[data-scheme="light"] y html[data-scheme="light"][data-glass="..."].
+  // Aquí siempre inyectamos los valores de modo oscuro como base; CSS los sobreescribe.
 
   const dispFont = findFont(config.fontDisplay);
   const postFont = findFont(config.fontPoster);
@@ -190,17 +184,18 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     '--u-text': text,
     '--u-text-2': rgba(text, 0.74),
     '--u-text-3': rgba(text, 0.5),
-    // 0.32 reprobaba WCAG AA (2.65:1 sobre fondo oscuro); 0.48 ≈ 4.6:1.
     '--u-text-4': rgba(text, 0.48),
-    '--u-hair': light ? rgba('#000000', 0.1) : rgba(text, 0.1),
-    '--u-hair-2': light ? rgba('#000000', 0.16) : rgba(text, 0.18),
+    // Modo claro: CSS html[data-scheme="light"] sobreescribe a rgba(0,0,0,0.10/0.16)
+    '--u-hair': rgba(text, 0.1),
+    '--u-hair-2': rgba(text, 0.18),
 
     '--glass-blur': `${g.blur}px`,
     '--glass-sat': `${g.sat}%`,
-    '--glass-fill': `rgba(${glassTint},${glassFill})`,
-    '--glass-fill-2': `rgba(${glassTint},${glassFill2})`,
-    '--glass-stroke': glassStroke,
-    '--glass-hi': glassHi,
+    '--glass-fill': `rgba(255,255,255,${g.fill})`,
+    '--glass-fill-2': `rgba(255,255,255,${g.fill2})`,
+    // Modo claro: CSS sobreescribe stroke y hi a valores oscuros-sobre-blanco
+    '--glass-stroke': 'rgba(255,255,255,0.14)',
+    '--glass-hi': 'rgba(255,255,255,0.42)',
 
     '--font-display': fam(config.fontDisplay, dispFont?.stack ?? 'system-ui, sans-serif'),
     '--font-poster': fam(config.fontPoster, postFont?.stack ?? "'Arial Narrow', sans-serif"),
@@ -217,9 +212,35 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
 
     '--bg-overlay-opacity': String(config.bgOverlayOpacity ?? 1),
     '--watermark-opacity': String(config.watermarkOpacity ?? 0.04),
-    '--watermark-size': `${config.watermarkSize ?? 78}vmin`,
-    '--admin-panel-bg': config.adminPanelBg ?? '#0c0c0e',
-    '--admin-panel-accent': config.adminPanelAccent ?? config.colorAccent,
+    '--watermark-size': `${config.watermarkSize ?? 78}svmin`,
+
+    // ── Panel admin — colores del sidebar/topbar ────────────
+    // Cuando adminUseClientTheme=true se heredan los colores del restaurante;
+    // cuando es false se usan los colores del panel configurados independientemente.
+    ...buildAdminPanelVars(config),
+  };
+}
+
+/** Genera las variables CSS del panel admin. */
+function buildAdminPanelVars(config: ThemeConfig): Record<string, string> {
+  const useClient = config.adminUseClientTheme ?? false;
+
+  const bg     = useClient ? config.colorBg      : (config.adminPanelBg     ?? '#0c0c0e');
+  const accent = useClient ? config.colorAccent   : (config.adminPanelAccent ?? config.colorAccent);
+
+  // El texto del panel se auto-calcula según la luminancia del fondo elegido.
+  const adminLight = isLight(bg);
+  const adminText  = useClient ? config.colorText : (adminLight ? '#0a0a0c' : '#F5F3EF');
+
+  return {
+    '--admin-panel-bg':      bg,
+    '--admin-panel-accent':  accent,
+    '--admin-panel-text':    adminText,
+    '--admin-panel-text-2':  rgba(adminText, 0.74),
+    '--admin-panel-text-3':  rgba(adminText, 0.50),
+    '--admin-panel-text-4':  rgba(adminText, 0.48),
+    '--admin-panel-hair':    adminLight ? rgba('#000000', 0.10) : rgba(adminText, 0.10),
+    '--admin-panel-hair-2':  adminLight ? rgba('#000000', 0.16) : rgba(adminText, 0.18),
   };
 }
 

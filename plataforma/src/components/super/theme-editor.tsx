@@ -230,10 +230,23 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
       {/* ── Panel admin ── */}
       <Section title="Panel de admin">
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
-          Colores del sidebar y topbar del panel. No afectan el sitio del cliente.
+          Personaliza el sidebar y topbar del panel. No afecta el sitio del cliente.
         </p>
-        <ColorCtl label="Fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
-        <ColorCtl label="Acento del panel" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
+        <Toggle
+          label="Usar mismo tema que el cliente"
+          value={config.adminUseClientTheme}
+          onChange={(v) => setC('adminUseClientTheme', v)}
+        />
+        {!config.adminUseClientTheme && (
+          <>
+            <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
+            <ColorCtl label="Fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
+            <ColorCtl label="Acento (ítem activo)" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
+            <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+              El color del texto se calcula automáticamente según el fondo elegido.
+            </p>
+          </>
+        )}
       </Section>
 
       {/* ── Catálogo ── */}
