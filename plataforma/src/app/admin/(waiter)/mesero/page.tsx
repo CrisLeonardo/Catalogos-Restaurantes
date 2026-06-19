@@ -15,20 +15,24 @@ export default async function MeseroPage() {
   if (!user) return null;
 
   const db = createServiceClient();
+  const headersList = await headers();
+  const slug = headersList.get('x-tenant-slug') ?? null;
+
   const { data: profile } = await db
     .from('profiles')
     .select('id, role, restaurant_id, full_name')
     .eq('id', user.id)
     .single();
 
-  if (!profile || !profile.restaurant_id) return null;
-
-  const restaurantId = profile.restaurant_id as string;
-
-  const headersList = await headers();
-  const tenantSlug = headersList.get('x-tenant-slug');
-
-  const slug = tenantSlug ?? null;
+  // SUPER_ADMIN no tiene restaurant_id propio: lo resolvemos del slug de tenant.
+  let restaurantId = profile?.restaurant_id as string | null ?? null;
+  if (!restaurantId && profile?.role === 'SUPER_ADMIN') {
+    if (slug) {
+      const tenantData = await getRestaurantBySlug(slug);
+      if (tenantData) restaurantId = tenantData.restaurant.id;
+    }
+  }
+  if (!restaurantId) return null;
   let restaurantName = 'Restaurante';
   let resolvedConfig: ThemeConfig | null = null;
 
@@ -56,7 +60,7 @@ export default async function MeseroPage() {
   return (
     <WaiterPanel
       waiterId={user.id}
-      waiterName={(profile.full_name as string | null) ?? 'Mesero'}
+      waiterName={(profile?.full_name as string | null) ?? 'Mesero'}
       restaurantId={restaurantId}
       restaurantName={restaurantName}
       categories={categories}

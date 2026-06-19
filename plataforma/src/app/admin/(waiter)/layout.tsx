@@ -27,17 +27,23 @@ export default async function WaiterLayout({ children }: { children: React.React
     .eq('id', user.id)
     .single();
 
-  if (
-    !profile || !profile.restaurant_id ||
-    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
-  ) {
+  if (!profile || !can(profile.role as string, profile.permissions as string[] | null, 'mesero')) {
     redirect('/admin/login');
   }
 
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug');
 
-  const restaurantId = profile.restaurant_id as string;
+  // SUPER_ADMIN no tiene restaurant_id propio: lo resolvemos del slug de tenant.
+  let restaurantId = profile.restaurant_id as string | null;
+  if (!restaurantId && profile.role === 'SUPER_ADMIN') {
+    if (!tenantSlug) redirect('/super/restaurantes');
+    const tenantData = await getRestaurantBySlug(tenantSlug);
+    if (!tenantData) redirect('/super/restaurantes');
+    restaurantId = tenantData.restaurant.id;
+  }
+  if (!restaurantId) redirect('/admin/login');
+
   let restaurantName = 'Restaurante';
   let ordersEnabled = false;
   let logoUrl: string | null = null;

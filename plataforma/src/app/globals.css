@@ -685,6 +685,11 @@ html { overflow-x: clip; }
   .waiter-sheet { border-radius: 22px; max-height: 86dvh; }
 }
 
+/* Visor del plano del salón (zoom/paneo). Aspecto FIJO 16/10 = el mismo que
+   el editor, para que las posiciones sean fieles en todo dispositivo; el zoom
+   resuelve las pantallas chicas. */
+.floor-map-vp { aspect-ratio: 16 / 10; }
+
 .press { transition: transform 90ms var(--ease-out); }
 .press:active { transform: scale(0.97); }
 

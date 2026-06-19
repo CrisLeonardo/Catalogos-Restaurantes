@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
+import FloorMap, { TableToken } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
@@ -168,7 +169,7 @@ function ProductOptionsModal({
         {/* Header */}
         <div style={{ padding: '18px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div className="t-display" style={{ fontSize: 20 }}>{product.name}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>{product.name}</div>
             <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>{money(finalPrice, currency)} por unidad</div>
           </div>
           <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0, marginLeft: 10 }}>
@@ -306,37 +307,6 @@ function WaiterHeader({
         )}
       </div>
     </header>
-  );
-}
-
-/* Token de mesa para el plano (solo lectura, táctil). */
-function TableToken({
-  n, occupied, onTap, style,
-}: {
-  n: number;
-  occupied: boolean;
-  onTap: () => void;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onTap}
-      className="press"
-      style={{
-        borderRadius: 16, cursor: 'pointer',
-        border: `1.5px solid ${occupied ? 'rgba(251,191,36,0.55)' : 'var(--u-hair-2)'}`,
-        background: occupied ? 'rgba(251,191,36,0.14)' : 'rgba(255,255,255,0.05)',
-        color: occupied ? '#fbbf24' : 'var(--u-text)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-        boxShadow: occupied ? '0 4px 14px rgba(251,191,36,0.18)' : '0 2px 10px rgba(0,0,0,0.18)',
-        ...style,
-      }}
-    >
-      <span style={{ fontSize: 10, color: occupied ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600 }}>Mesa</span>
-      <span style={{ fontSize: 23, fontWeight: 800, lineHeight: 1 }}>{n}</span>
-      {occupied && <span style={{ fontSize: 9, fontWeight: 700, marginTop: 1 }}>● activa</span>}
-    </button>
   );
 }
 
@@ -647,7 +617,7 @@ export default function WaiterPanel({
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <div className="waiter-wrap" style={{ padding: '18px 16px 40px' }}>
             <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Paso 1 de 3</div>
-            <div className="t-display" style={{ fontSize: 24, marginBottom: 4 }}>Elige la mesa</div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)', marginBottom: 4 }}>Elige la mesa</div>
             <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(255,255,255,0.1)', border: '1px solid var(--u-hair)' }} /> Libre
@@ -679,30 +649,8 @@ export default function WaiterPanel({
                   </div>
                 )}
 
-                {/* Lienzo del salón */}
-                <div style={{
-                  position: 'relative', width: '100%', aspectRatio: '16 / 10',
-                  borderRadius: 18, overflow: 'hidden', border: '1px solid var(--u-hair-2)',
-                  background:
-                    'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px) 0 0 / 100% 9%,' +
-                    'linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px) 0 0 / 6.25% 100%,' +
-                    'rgba(255,255,255,0.02)',
-                }}>
-                  {planTables.length === 0 && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20 }}>
-                      Este nivel no tiene mesas colocadas.
-                    </div>
-                  )}
-                  {planTables.map((t) => (
-                    <TableToken
-                      key={t.n}
-                      n={t.n}
-                      occupied={occupiedSet.has(t.n)}
-                      onTap={() => selectTable(t.n)}
-                      style={{ position: 'absolute', left: `${t.x * 100}%`, top: `${t.y * 100}%`, transform: 'translate(-50%, -50%)', width: 66, height: 66, borderRadius: t.shape === 'square' ? 14 : 99 }}
-                    />
-                  ))}
-                </div>
+                {/* Mapa del salón (zoom + paneo) */}
+                <FloorMap tables={planTables} occupied={occupiedSet} onSelect={selectTable} />
 
                 {/* Otras mesas (sin ubicar en el plano) */}
                 {otherTables.length > 0 && (
@@ -732,7 +680,7 @@ export default function WaiterPanel({
             <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, padding: '20px 20px 28px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                 <div>
-                  <div className="t-display" style={{ fontSize: 20 }}>Mesa {tableToFree}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
                   <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>Tiene un pedido activo</div>
                 </div>
                 <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
