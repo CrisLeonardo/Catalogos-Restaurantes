@@ -258,15 +258,17 @@ export default function FloorPlanEditor({
                     top: t.y * VIRT_H,
                     width: TOKEN, height: TOKEN,
                     transform: 'translate(-50%, -50%)',
-                    borderRadius: t.shape === 'square' ? 12 : 99,
-                    background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)',
-                    display: 'grid', placeItems: 'center', cursor: 'grab',
-                    fontWeight: 800, fontSize: 18, userSelect: 'none', touchAction: 'none',
-                    boxShadow: '0 4px 14px color-mix(in srgb, var(--brand-accent) 40%, transparent)',
-                    border: '2px solid rgba(255,255,255,0.25)',
+                    borderRadius: t.shape === 'square' ? 14 : 99,
+                    border: '1.5px solid var(--u-hair-2)',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'var(--u-text)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                    cursor: 'grab', userSelect: 'none', touchAction: 'none',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
                   }}
                 >
-                  {t.n}
+                  <span style={{ fontSize: 9.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none' }}>Mesa</span>
+                  <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{t.n}</span>
                   <span
                     role="button"
                     tabIndex={0}

@@ -132,15 +132,18 @@ export default function FloorMap({
       zoomBy(factor, e.clientX - rect.left, e.clientY - rect.top);
     };
     // Evita que el browser móvil tome control del touch (scroll nativo) y dispare
-    // pointercancel, lo que interrumpe el paneo.
-    const stopDefault = (e: Event) => e.preventDefault();
+    // pointercancel, interrumpiendo el paneo. Excluye botones para que sus clicks sigan funcionando.
+    const stopDefault = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return;
+      e.preventDefault();
+    };
     vp.addEventListener('wheel', onWheel, { passive: false });
     vp.addEventListener('touchstart', stopDefault, { passive: false });
     vp.addEventListener('touchmove', stopDefault, { passive: false });
     return () => {
       vp.removeEventListener('wheel', onWheel);
-      vp.removeEventListener('touchstart', stopDefault);
-      vp.removeEventListener('touchmove', stopDefault);
+      vp.removeEventListener('touchstart', stopDefault as EventListener);
+      vp.removeEventListener('touchmove', stopDefault as EventListener);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
