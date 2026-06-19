@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
-import { usePrice, useThemeConfig } from '@/lib/theme/context';
+import { usePrice, useThemeConfig, useText } from '@/lib/theme/context';
 
 /* ── Precio (moneda configurable) ─────────────────────────── */
 
@@ -23,15 +23,17 @@ export function Price({
   style?: CSSProperties;
 }) {
   const { symbol, position, format } = usePrice();
+  const config = useThemeConfig();
+  const sz = size * (config.typography?.price?.size ?? 1);
   const sym = (
-    <span style={{ fontSize: size * 0.66, opacity: 0.6, margin: position === 'prefix' ? '0 1px 0 0' : '0 0 0 1px' }}>
+    <span style={{ fontSize: sz * 0.66, opacity: 0.6, margin: position === 'prefix' ? '0 1px 0 0' : '0 0 0 1px' }}>
       {symbol}
     </span>
   );
   return (
     <span
-      className="t-mono"
-      style={{ fontSize: size, fontWeight: 600, color: muted ? 'var(--u-text-3)' : 'var(--u-text)', whiteSpace: 'nowrap', ...style }}
+      className="ct-price"
+      style={{ fontSize: sz, color: muted ? 'var(--u-text-3)' : undefined, whiteSpace: 'nowrap', ...style }}
     >
       {position === 'prefix' && sym}
       {format(amount)}
@@ -51,14 +53,16 @@ const TAG_MAP: Record<string, { icon: string }> = {
 
 export function Tag({ label, small = false }: { label: string; small?: boolean }) {
   const meta = TAG_MAP[label.toLowerCase().trim()];
+  const config = useThemeConfig();
+  const sz = (small ? 9.5 : 10.5) * (config.typography?.tag?.size ?? 1);
   return (
     <span
+      className="ct-tag"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: small ? '2px 7px' : '3px 9px', borderRadius: 999,
-        background: 'rgba(255,255,255,0.10)', border: '1px solid var(--u-hair-2)',
-        color: 'var(--u-text)', fontWeight: 600,
-        fontSize: small ? 9.5 : 10.5, letterSpacing: '0.02em',
+        background: 'var(--surface-strong)', border: '1px solid var(--u-hair-2)',
+        fontSize: sz,
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       }}
     >
@@ -75,7 +79,7 @@ export function ctaClass(style: 'white' | 'accent' | 'outline'): string {
 }
 
 export function PrimaryButton({
-  children, onClick, href, iconRight, full = false, size = 'md', style,
+  children, onClick, href, iconRight, full = false, size = 'md', style, elementKey,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -84,16 +88,20 @@ export function PrimaryButton({
   full?: boolean;
   size?: 'md' | 'lg';
   style?: CSSProperties;
+  /** Override de tipografía por elemento (ej. 'portadaCta'). */
+  elementKey?: string;
 }) {
   const config = useThemeConfig();
+  const t = useText('button', elementKey);
   const pad = size === 'lg' ? '15px 22px' : '12px 18px';
-  const fs = size === 'lg' ? 15 : 14;
+  const fs = (size === 'lg' ? 15 : 14) * t.size;
   const sharedStyle: CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-    padding: pad, borderRadius: 'var(--radius-lg)', fontWeight: 600, fontSize: fs,
-    cursor: 'pointer', border: 'none', textDecoration: 'none', width: full ? '100%' : undefined, ...style,
+    padding: pad, borderRadius: 'var(--radius-lg)', fontSize: fs,
+    cursor: 'pointer', border: 'none', textDecoration: 'none', width: full ? '100%' : undefined,
+    ...t.vars, ...style,
   };
-  const cls = `press ${ctaClass(config.ctaStyle)}`;
+  const cls = `press ct-button ${ctaClass(config.ctaStyle)}`;
   const inner = (<>{children}{iconRight && <Icon name={iconRight} size={size === 'lg' ? 18 : 16} />}</>);
 
   if (href) {
@@ -117,7 +125,7 @@ export function QtyStepper({
   const ic = size === 'lg' ? 18 : 14;
   const btn: CSSProperties = {
     width: d, height: d, borderRadius: r, border: 'none',
-    background: 'rgba(255,255,255,0.06)', color: 'var(--u-text)',
+    background: 'var(--surface-2)', color: 'var(--u-text)',
     cursor: 'pointer', display: 'grid', placeItems: 'center',
   };
   return (
@@ -143,7 +151,7 @@ export function Field({
   type?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const border = error ? 'rgba(248,113,113,0.75)' : focused ? 'rgba(255,255,255,0.45)' : 'var(--u-hair)';
+  const border = error ? 'rgba(248,113,113,0.75)' : focused ? 'var(--u-text-3)' : 'var(--u-hair)';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label className="t-kicker" style={{ fontSize: 10.5 }}>{label}</label>
@@ -160,12 +168,13 @@ export function Field({
           placeholder={placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          className="ct-body"
           style={{
             width: '100%', padding: icon ? '13px 14px 13px 40px' : '13px 14px',
             borderRadius: 'var(--radius-lg)', color: 'var(--u-text)', fontSize: 14.5, outline: 'none',
-            background: 'rgba(255,255,255,0.05)', border: `1px solid ${border}`,
+            background: 'var(--surface-2)', border: `1px solid ${border}`,
             transition: 'border-color 150ms',
-            boxShadow: focused ? '0 0 0 4px rgba(255,255,255,0.06)' : 'none',
+            boxShadow: focused ? '0 0 0 4px var(--surface-2)' : 'none',
           }}
         />
       </div>

@@ -10,7 +10,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Price, Tag } from '@/components/menu/ui';
-import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
@@ -68,6 +68,8 @@ export default function Catalog({
 }: CatalogProps) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  const kickerT = useText('kicker', 'catalogKicker');
+  const headingT = useText('poster', 'catalogHeading');
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
@@ -94,8 +96,8 @@ export default function Catalog({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <div className="t-kicker" style={{ fontSize: 12 }}>{kicker}</div>
-          <h2 className="t-poster" style={{ fontSize: 'clamp(34px, 11vw, 44px)', lineHeight: 0.95, marginTop: 2 }}>
+          <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
+          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, 44px))`, marginTop: 2 }}>
             {content.catalog.heading}
           </h2>
         </div>
@@ -138,8 +140,8 @@ export default function Catalog({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={content.catalog.searchPlaceholder}
-            className="glass-quiet"
-            style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 14, outline: 'none', background: 'rgba(255,255,255,0.05)' }}
+            className="glass-quiet ct-body"
+            style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 14, outline: 'none', background: 'var(--surface-2)' }}
           />
         </div>
       )}
@@ -189,7 +191,7 @@ function CategoryChip({ label, icon, active, onClick }: { label: string; icon?: 
       className="press"
       style={{
         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 15px', borderRadius: 99, cursor: 'pointer',
-        background: active ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
+        background: active ? 'var(--u-text)' : 'var(--surface-2)',
         color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
         border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
         fontWeight: 600, fontSize: 13.5,
@@ -245,7 +247,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIt
       onClick={() => !unavail && onOpen(p)}
       style={{ borderRadius: 18, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', height: '100%', opacity: unavail ? 0.72 : 1 }}
     >
-      <div style={{ position: 'relative', aspectRatio: '1.25', background: 'rgba(255,255,255,0.03)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', aspectRatio: '1.25', background: 'var(--surface-1)', overflow: 'hidden' }}>
         <ProductArt p={p} icon={icon} />
         {config.showTags && p.tags && p.tags.length > 0 && !unavail && (
           <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -254,14 +256,14 @@ function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIt
         )}
         {unavail && (
           <div style={{ position: 'absolute', top: 8, left: 8 }}>
-            <span style={{ display: 'inline-block', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(0,0,0,0.65)', color: '#ccc', letterSpacing: '0.04em', backdropFilter: 'blur(4px)' }}>
+            <span style={{ display: 'inline-block', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'var(--badge-bg)', color: 'var(--badge-text)', letterSpacing: '0.04em', backdropFilter: 'blur(4px)' }}>
               No disponible
             </span>
           </div>
         )}
       </div>
       <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5, lineHeight: 1.12, color: 'var(--u-text)', flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'rgba(255,255,255,0.4)' }}>{p.name}</div>
+        <div className="ct-product-name" style={{ fontSize: 14.5 * config.typography.productName.size, flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Price amount={displayPrice(p)} size={15} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
@@ -276,17 +278,17 @@ function ProductRow({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIte
   const unavail = isUnavailable(p);
   return (
     <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
-      <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
+      <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-1)', position: 'relative' }}>
         <ProductArt p={p} icon={icon} scale={0.9} />
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15.5, color: 'var(--u-text)', textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'rgba(255,255,255,0.4)' }}>{p.name}</div>
-          {unavail && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(255,255,255,0.08)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>No disponible</span>}
+          <div className="ct-product-name" style={{ fontSize: 15.5 * config.typography.productName.size, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
+          {unavail && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>No disponible</span>}
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
         </div>
         {p.description && (
-          <div className="line-clamp-2" style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.35 }}>{p.description}</div>
+          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * config.typography.productDesc.size }}>{p.description}</div>
         )}
         <Price amount={displayPrice(p)} size={15} muted={unavail} />
       </div>

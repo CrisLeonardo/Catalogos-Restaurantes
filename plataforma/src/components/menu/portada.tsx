@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
-import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 
 function scrollToMenu() {
   document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -54,7 +54,7 @@ function OpenBadge({ isOpen }: { isOpen: boolean }) {
     <span
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 13px', borderRadius: 999,
-        background: 'rgba(255,255,255,0.08)', border: '1px solid var(--u-hair-2)',
+        background: 'var(--surface-3)', border: '1px solid var(--u-hair-2)',
         backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
         fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)',
       }}
@@ -75,6 +75,8 @@ const heroWrap: CSSProperties = {
 export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  const titleT = useText('heading', 'portadaTitle');
+  const subT = useText('serif', 'portadaSubtitle');
   if (config.portadaVariant === 'none') return null;
 
   const title = content.portada.title || config.brandName;
@@ -99,14 +101,14 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           </div>
         )}
         <div className={anim ? 'anim-fade-up' : ''}>
-          <h1 className="t-display" style={{ fontSize: 'clamp(40px, 12vw, 60px)', lineHeight: 0.95 }}>{title}</h1>
+          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(40px, 12vw, 60px))` }}>{title}</h1>
           {subtitle && (
-            <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 19, color: 'var(--u-text-2)', marginTop: 12 }}>{subtitle}</p>
+            <p className="t-serif" style={{ ...subT.vars, fontSize: 19 * subT.size, marginTop: 12 }}>{subtitle}</p>
           )}
         </div>
         <div className={anim ? 'anim-fade-up' : ''} style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', width: '100%', maxWidth: 320 }}>
           {config.portadaShowBadge && <OpenBadge isOpen={isOpen} />}
-          <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} style={{ marginTop: 4 }}>
+          <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta" style={{ marginTop: 4 }}>
             {content.portada.cta}
           </PrimaryButton>
         </div>
@@ -129,7 +131,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
             <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 20, color: 'var(--u-text-2)', marginTop: 18 }}>{subtitle}</p>
           )}
         </div>
-        <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu}>{content.portada.cta}</PrimaryButton>
+        <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
       </section>
     );
   }
@@ -144,13 +146,13 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
     <section style={{ ...heroWrap, justifyContent: 'flex-start', gap: 18 }}>
       <div className={anim ? 'anim-fade-up' : ''} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 6 }}>
         {config.portadaShowLogo && <BrandMark size={92} />}
-        <h1 className="t-display" style={{ fontSize: 'clamp(30px, 9vw, 40px)' }}>{title}</h1>
-        {subtitle && <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 17, color: 'var(--u-text-2)' }}>{subtitle}</p>}
+        <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(30px, 9vw, 40px))` }}>{title}</h1>
+        {subtitle && <p className="t-serif" style={{ ...subT.vars, fontSize: 17 * subT.size }}>{subtitle}</p>}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 360, flex: 1, justifyContent: 'center' }}>
         {feats.map((f, i) => (
           <Glass key={i} style={{ padding: '15px 16px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 13 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.08)', color: 'var(--u-text)' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
               <Icon name={f.i} size={20} />
             </div>
             <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--u-text)', textAlign: 'left' }}>{f.t}</span>
@@ -159,7 +161,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
       </div>
       <div style={{ width: '100%', maxWidth: 360 }}>
         {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge isOpen={isOpen} /></div>}
-        <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu}>{content.portada.cta}</PrimaryButton>
+        <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
       </div>
     </section>
   );

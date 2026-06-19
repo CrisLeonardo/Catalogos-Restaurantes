@@ -72,13 +72,13 @@ export default function MyOrders({ restaurantId }: { restaurantId: string }) {
   };
 
   return (
-    <main className="anim-fade-up" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
+    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       <div style={{ marginBottom: 20 }}>
         <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <Icon name="chevronLeft" size={16} /> {content.tracking.back}
         </Link>
         <h1 className="t-display" style={{ fontSize: 28 }}>Mis pedidos</h1>
-        <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 15.5, color: 'var(--u-text-2)', marginTop: 6 }}>
+        <p className="t-serif" style={{ fontSize: 15.5, marginTop: 6 }}>
           Los pedidos hechos desde este dispositivo.
         </p>
       </div>
@@ -115,7 +115,7 @@ export default function MyOrders({ restaurantId }: { restaurantId: string }) {
                 <div
                   style={{
                     width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0,
-                    background: isActive ? 'var(--u-text)' : 'rgba(255,255,255,0.06)',
+                    background: isActive ? 'var(--u-text)' : 'var(--surface-2)',
                     color: isActive ? 'var(--brand-bg)' : 'var(--u-text-3)',
                   }}
                 >
@@ -128,7 +128,7 @@ export default function MyOrders({ restaurantId }: { restaurantId: string }) {
                       <span
                         style={{
                           fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                          background: isActive ? 'rgba(74,222,128,0.14)' : 'rgba(255,255,255,0.06)',
+                          background: isActive ? 'rgba(74,222,128,0.14)' : 'var(--surface-2)',
                           color: isActive ? '#4ade80' : status === 'CANCEL' ? '#f87171' : 'var(--u-text-3)',
                         }}
                       >

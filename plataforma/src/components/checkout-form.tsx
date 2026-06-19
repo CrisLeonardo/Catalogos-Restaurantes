@@ -7,7 +7,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
-import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
 import { validatePromo } from '@/lib/actions/promos';
@@ -19,7 +19,7 @@ const DeliveryMap = dynamic(() => import('./delivery-map'), {
   loading: () => (
     <div style={{
       height: 280, borderRadius: 'var(--radius-lg)',
-      background: 'rgba(255,255,255,0.04)',
+      background: 'var(--surface-1)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       color: 'var(--u-text-4)', fontSize: 13,
     }}>
@@ -69,6 +69,8 @@ export default function CheckoutForm({
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
+  const checkoutTitleT = useText('heading', 'checkoutTitle');
+  const confirmTitleT  = useText('heading', 'confirmationTitle');
   const { items, total, clearCart } = useCart();
 
   const typeOptions = [
@@ -382,7 +384,7 @@ export default function CheckoutForm({
   /* ── Carrito vacío ── */
   if (items.length === 0 && step !== 'success') {
     return (
-      <main style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <main className="themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
         <Glass style={{ padding: '32px 24px', textAlign: 'center', maxWidth: 380, width: '100%' }}>
           <Icon name="bag" size={44} strokeWidth={1.3} style={{ color: 'var(--u-text-4)', margin: '0 auto 16px' }} />
           <h2 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 10 }}>{content.cart.empty}</h2>
@@ -402,14 +404,14 @@ export default function CheckoutForm({
         ? content.checkout.pickup
         : content.checkout.delivery;
     return (
-      <main className="anim-fade-up" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <main className="anim-fade-up themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
         <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
           <div className="anim-pop" style={{ width: 92, height: 92, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--u-text)', color: 'var(--brand-bg)' }}>
             <Icon name="check" size={46} strokeWidth={2.6} />
           </div>
           <div>
-            <h2 className="t-display" style={{ fontSize: 30 }}>{content.confirmation.title}</h2>
-            <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 17, color: 'var(--u-text-2)', marginTop: 8 }}>{subtitle}</p>
+            <h2 className="t-display" style={{ ...confirmTitleT.vars, fontSize: 30 * confirmTitleT.size }}>{content.confirmation.title}</h2>
+            <p className="t-serif" style={{ fontSize: 17, marginTop: 8 }}>{subtitle}</p>
           </div>
           <Glass style={{ borderRadius: 18, padding: 18, width: '100%', display: 'flex', flexDirection: 'column', gap: 11 }}>
             <Row k={content.confirmation.orderNo} v={orderNumber || '—'} />
@@ -456,12 +458,12 @@ export default function CheckoutForm({
 
   /* ── Formulario ── */
   return (
-    <main className="anim-fade-up" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
+    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       <div style={{ marginBottom: 20 }}>
         <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <Icon name="chevronLeft" size={16} /> {restaurantName}
         </Link>
-        <h1 className="t-display" style={{ fontSize: 28 }}>{content.checkout.title}</h1>
+        <h1 className="t-display" style={{ ...checkoutTitleT.vars, fontSize: 28 * checkoutTitleT.size }}>{content.checkout.title}</h1>
       </div>
 
       {/* Resumen */}
@@ -528,7 +530,7 @@ export default function CheckoutForm({
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                   placeholder="¿Tienes un cupón?"
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 13.5, outline: 'none', textTransform: 'uppercase' }}
+                  style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 13.5, outline: 'none', textTransform: 'uppercase' }}
                 />
                 <button type="button" onClick={applyPromo} disabled={promoChecking || !promoCode.trim()} className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', opacity: promoChecking || !promoCode.trim() ? 0.6 : 1 }}>
                   {promoChecking ? '…' : 'Aplicar'}
@@ -584,7 +586,7 @@ export default function CheckoutForm({
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 13, marginTop: 8,
                 padding: '13px 16px', borderRadius: 14,
-                background: 'rgba(255,255,255,0.04)',
+                background: 'var(--surface-1)',
                 border: '1px solid var(--u-hair-2)',
               }}>
                 <div style={{
@@ -632,7 +634,7 @@ export default function CheckoutForm({
                       padding: '8px 13px', borderRadius: 99, cursor: 'pointer',
                       fontWeight: 600, fontSize: 12.5,
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                      background: on ? activeBg : 'rgba(255,255,255,0.04)',
+                      background: on ? activeBg : 'var(--surface-1)',
                       color: on ? activeText : 'var(--u-text-2)',
                       transition: 'all 150ms',
                     }}
@@ -663,7 +665,7 @@ export default function CheckoutForm({
                       padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
                       fontWeight: 600, fontSize: 13,
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                      background: on ? activeBg : 'rgba(255,255,255,0.04)',
+                      background: on ? activeBg : 'var(--surface-1)',
                       color: on ? activeText : isOther ? 'var(--u-text-4)' : 'var(--u-text-2)',
                       transition: 'all 150ms',
                     }}
@@ -760,10 +762,10 @@ export default function CheckoutForm({
                 display: 'flex', alignItems: 'center', gap: 13,
                 padding: 15, borderRadius: 14, marginTop: 8,
                 border: '1.5px solid var(--u-hair-2)',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--surface-1)',
               }}
             >
-              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.08)', fontSize: 22 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', fontSize: 22 }}>
                 🙏
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -828,7 +830,7 @@ export default function CheckoutForm({
                   placeholder={`Mínimo ${formatPrice(finalTotal, config)}`}
                   style={{
                     width: '100%',
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--surface-2)',
                     border: `1px solid ${tried && !cashAmountValid ? '#ff6b6b' : 'var(--u-hair)'}`,
                     borderRadius: 'var(--radius-lg)',
                     padding: '12px 14px',
@@ -882,11 +884,11 @@ function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeT
         display: 'flex', alignItems: 'center', gap: 13,
         padding: 15, borderRadius: 14, width: '100%', textAlign: 'left', cursor: 'pointer',
         border: `1.5px solid ${selected ? activeBg : 'var(--u-hair-2)'}`,
-        background: selected ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+        background: selected ? 'var(--surface-2)' : 'var(--surface-1)',
         transition: 'all 160ms',
       }}
     >
-      <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: selected ? activeBg : 'rgba(255,255,255,0.08)', color: selected ? activeText : 'var(--u-text)', transition: 'all 160ms' }}>
+      <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: selected ? activeBg : 'var(--surface-3)', color: selected ? activeText : 'var(--u-text)', transition: 'all 160ms' }}>
         <Icon name={icon} size={20} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>

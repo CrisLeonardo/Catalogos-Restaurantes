@@ -82,6 +82,29 @@
   --bg-overlay-opacity: 1;
   --watermark-opacity:  0.04;
   --watermark-size:     78vmin;
+
+  /* ── Superficies / tarjetas (se adaptan a la paleta) ───────
+     --surface-base = el tinte (blanco en oscuro, casi-negro en claro);
+     el alpha se multiplica por --surface-tint (config del restaurante).
+     Reemplazan los rgba(255,255,255,x) hardcodeados de los componentes. */
+  --surface-base:   255, 255, 255;
+  --surface-tint:   1;
+  --card-shadow:    1;
+  --surface-1:      rgba(var(--surface-base), calc(0.03 * var(--surface-tint)));
+  --surface-2:      rgba(var(--surface-base), calc(0.05 * var(--surface-tint)));
+  --surface-3:      rgba(var(--surface-base), calc(0.08 * var(--surface-tint)));
+  --surface-strong: rgba(var(--surface-base), calc(0.12 * var(--surface-tint)));
+  --surface-strike: var(--u-text-3);
+  --scrim:          rgba(0, 0, 0, 0.55);
+  --badge-bg:       rgba(0, 0, 0, 0.62);
+  --badge-text:     rgba(255, 255, 255, 0.86);
+}
+
+/* En modo claro el tinte de las superficies se invierte a negro suave. */
+html[data-scheme="light"] {
+  --surface-base:   17, 17, 19;
+  --badge-bg:       rgba(20, 20, 22, 0.72);
+  --badge-text:     rgba(255, 255, 255, 0.92);
 }
 
 /* Presets de glass por intensidad â€” modo oscuro (se aplican con data-glass en <html>) */
@@ -243,7 +266,7 @@ body {
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 -1px 1px rgba(255,255,255,0.05),
-    0 10px 34px rgba(0,0,0,0.45);
+    0 10px 34px rgba(0,0,0,calc(0.45 * var(--card-shadow, 1)));
   border-radius: var(--radius-xl);
 }
 /* sheen especular â€” el "tell" del liquid glass (sigue al puntero via --mx/--my) */
@@ -297,6 +320,109 @@ body {
 .t-mute    { color: var(--u-text-3); }
 
 /* ============================================================
+   TIPOGRAFÍA TEMABLE POR ROL
+   ------------------------------------------------------------
+   Bajo .themed-type (envoltorio del menú del cliente), las clases
+   .t-* y sus equivalentes .ct-* consumen las variables --t-<rol>-*
+   que emite buildThemeVars. Fuera de .themed-type (panel admin,
+   plataforma) las .t-* conservan su look estático de arriba.
+   El tamaño NO se fija aquí: lo aplican los componentes (px × size).
+   ============================================================ */
+.themed-type .t-display,
+.ct-heading {
+  font-family:    var(--t-heading-family, var(--font-display));
+  font-weight:    var(--t-heading-weight, 800);
+  font-style:     var(--t-heading-style, normal);
+  letter-spacing: var(--t-heading-tracking, -0.02em);
+  line-height:    var(--t-heading-lh, 0.95);
+  text-transform: var(--t-heading-transform, none);
+  color:          var(--t-heading-color, var(--u-text));
+}
+.themed-type .t-poster,
+.ct-poster {
+  font-family:    var(--t-poster-family, var(--font-poster));
+  font-weight:    var(--t-poster-weight, 400);
+  font-style:     var(--t-poster-style, normal);
+  letter-spacing: var(--t-poster-tracking, 0.01em);
+  line-height:    var(--t-poster-lh, 0.95);
+  text-transform: var(--t-poster-transform, uppercase);
+  color:          var(--t-poster-color, var(--u-text));
+}
+.themed-type .t-serif,
+.ct-serif {
+  font-family:    var(--t-serif-family, var(--font-serif));
+  font-weight:    var(--t-serif-weight, 400);
+  font-style:     var(--t-serif-style, italic);
+  letter-spacing: var(--t-serif-tracking, -0.01em);
+  line-height:    var(--t-serif-lh, 1.3);
+  text-transform: var(--t-serif-transform, none);
+  color:          var(--t-serif-color, var(--u-text-2));
+}
+.themed-type .t-kicker,
+.ct-kicker {
+  font-family:    var(--t-kicker-family, var(--font-poster));
+  font-weight:    var(--t-kicker-weight, 400);
+  font-style:     var(--t-kicker-style, normal);
+  letter-spacing: var(--t-kicker-tracking, 0.14em);
+  line-height:    var(--t-kicker-lh, 1.3);
+  text-transform: var(--t-kicker-transform, uppercase);
+  color:          var(--t-kicker-color, var(--u-text-3));
+}
+.themed-type .t-mono,
+.ct-price {
+  font-family:    var(--t-price-family, var(--ui-font-mono));
+  font-weight:    var(--t-price-weight, 600);
+  font-style:     var(--t-price-style, normal);
+  letter-spacing: var(--t-price-tracking, -0.01em);
+  text-transform: var(--t-price-transform, none);
+  color:          var(--t-price-color, var(--u-text));
+}
+.ct-body {
+  font-family:    var(--t-body-family, var(--ui-font-sans));
+  font-weight:    var(--t-body-weight, 400);
+  font-style:     var(--t-body-style, normal);
+  letter-spacing: var(--t-body-tracking, 0em);
+  line-height:    var(--t-body-lh, 1.5);
+  text-transform: var(--t-body-transform, none);
+  color:          var(--t-body-color, var(--u-text));
+}
+.ct-product-name {
+  font-family:    var(--t-productName-family, var(--font-display));
+  font-weight:    var(--t-productName-weight, 700);
+  font-style:     var(--t-productName-style, normal);
+  letter-spacing: var(--t-productName-tracking, -0.01em);
+  line-height:    var(--t-productName-lh, 1.14);
+  text-transform: var(--t-productName-transform, none);
+  color:          var(--t-productName-color, var(--u-text));
+}
+.ct-product-desc {
+  font-family:    var(--t-productDesc-family, var(--ui-font-sans));
+  font-weight:    var(--t-productDesc-weight, 400);
+  font-style:     var(--t-productDesc-style, normal);
+  letter-spacing: var(--t-productDesc-tracking, 0em);
+  line-height:    var(--t-productDesc-lh, 1.4);
+  text-transform: var(--t-productDesc-transform, none);
+  color:          var(--t-productDesc-color, var(--u-text-3));
+}
+.ct-button {
+  /* El color del botón lo gobierna btn-white/btn-accent/btn-outline (ctaStyle),
+     por eso aquí NO se fija color: evitaría ese control por orden de cascada. */
+  font-family:    var(--t-button-family, var(--ui-font-sans));
+  font-weight:    var(--t-button-weight, 600);
+  font-style:     var(--t-button-style, normal);
+  letter-spacing: var(--t-button-tracking, 0em);
+  text-transform: var(--t-button-transform, none);
+}
+.ct-tag {
+  font-family:    var(--t-tag-family, var(--ui-font-sans));
+  font-weight:    var(--t-tag-weight, 600);
+  font-style:     var(--t-tag-style, normal);
+  letter-spacing: var(--t-tag-tracking, 0.02em);
+  text-transform: var(--t-tag-transform, none);
+  color:          var(--t-tag-color, var(--u-text));
+}
+
+/* ============================================================
    ANIMACIONES (entrada solo con transform â€” nunca opacity:0 en reposo)
    ============================================================ */
 @keyframes fade-up  { from { transform: translateY(12px); }  to { transform: translateY(0); } }
@@ -334,6 +460,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   position: sticky; top: 0; height: 100svh;
   background: var(--admin-panel-bg);
   border-right: 1px solid var(--admin-panel-hair);
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
   /* Redirigir la escala de texto al tema del panel (dinÃ¡mico: cliente o personalizado) */
   --u-text:   var(--admin-panel-text);
   --u-text-2: var(--admin-panel-text-2);
@@ -348,6 +475,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   border-bottom: 1px solid var(--admin-panel-hair); position: sticky; top: 0; z-index: 20;
   background: color-mix(in srgb, var(--admin-panel-bg) 85%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
   --u-text:   var(--admin-panel-text);
   --u-text-2: var(--admin-panel-text-2);
   --u-text-3: var(--admin-panel-text-3);
@@ -368,11 +496,15 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 .admin-navgroup-title { margin-top: 12px; color: var(--u-text-4); }
 .admin-navgroup:first-child .admin-navgroup-title { margin-top: 0; }
 .admin-navlink {
-  display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 12px;
+  display: flex; align-items: center; gap: 11px; padding: 11px 12px;
+  border-radius: calc(12px * var(--admin-panel-radius, 1));
   border: none; cursor: pointer; text-align: left; text-decoration: none;
-  color: var(--u-text-3); font-weight: 500; font-size: 14px; transition: all 140ms;
+  color: var(--u-text-3); font-weight: 500;
+  font-size: calc(14px * var(--admin-panel-scale, 1)); transition: all 140ms;
   background: transparent;
 }
+/* Tarjeta de usuario del panel: fondo personalizable. */
+.admin-usercard { background: var(--admin-panel-card, rgba(255,255,255,0.04)) !important; }
 .admin-navlink .nav-label { flex: 1; }
 .admin-navlink:hover { background: rgba(255,255,255,0.06); color: var(--u-text-2); }
 .admin-navlink[data-active="1"] {
@@ -435,7 +567,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
     padding: 6px 8px; border-radius: 10px; text-align: center;
   }
   .admin-navlink .nav-label {
-    flex: none; font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em;
+    flex: none; font-size: calc(9.5px * var(--admin-panel-scale, 1)); font-weight: 600; letter-spacing: 0.02em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
   .admin-navlink[data-active="1"] {

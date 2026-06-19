@@ -15,7 +15,16 @@ import {
   deleteThemeTemplate,
   type ThemeTemplate,
 } from '@/lib/actions/super-admin';
-import { fontsForRole, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import {
+  fontsForRole,
+  TYPO_ROLES,
+  ELEMENT_TARGETS,
+  DEFAULT_TYPOGRAPHY,
+  type ThemeConfig,
+  type ThemeContent,
+  type TextStyle,
+  type TypographyRole,
+} from '@/lib/theme/defaults';
 import { buildThemeVars } from '@/lib/theme/resolve';
 
 interface Props {
@@ -49,14 +58,17 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
     const tpl = templates.find((t) => t.id === selectedTpl);
     if (!tpl) return;
     // La identidad del restaurante NO se pisa: solo el diseño.
-    setConfig({
+    // Partimos de `prev` para que las plantillas viejas (sin tipografía/superficies)
+    // conserven los defaults en vez de dejarlos undefined.
+    setConfig((prev) => ({
+      ...prev,
       ...tpl.config,
-      brandName: config.brandName,
-      tagline: config.tagline,
-      zone: config.zone,
-      logoUrl: config.logoUrl,
-      markUrl: config.markUrl,
-    });
+      brandName: prev.brandName,
+      tagline: prev.tagline,
+      zone: prev.zone,
+      logoUrl: prev.logoUrl,
+      markUrl: prev.markUrl,
+    }));
     setContent(structuredClone(tpl.content));
     setCss(tpl.custom_css ?? '');
     setTplMsg(`Plantilla "${tpl.name}" aplicada (recuerda guardar).`);
@@ -92,6 +104,23 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
   const setC = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setConfig((p) => ({ ...p, [k]: v }));
   const setT = (section: keyof ThemeContent, key: string, v: string) =>
     setContent((p) => ({ ...p, [section]: { ...p[section], [key]: v } }));
+
+  // ── Setters de tipografía granular ──
+  const setTypo = (role: TypographyRole, patch: Partial<TextStyle>) =>
+    setConfig((p) => ({ ...p, typography: { ...p.typography, [role]: { ...p.typography[role], ...patch } } }));
+  const setEl = (key: string, patch: Partial<TextStyle>) =>
+    setConfig((p) => ({ ...p, elementStyles: { ...p.elementStyles, [key]: { ...p.elementStyles[key], ...patch } } }));
+  const toggleEl = (key: string, on: boolean) =>
+    setConfig((p) => {
+      const next = { ...p.elementStyles };
+      if (on) {
+        const role = ELEMENT_TARGETS.find((t) => t.key === key)?.role ?? 'heading';
+        next[key] = { ...(p.typography[role] ?? DEFAULT_TYPOGRAPHY[role]) };
+      } else {
+        delete next[key];
+      }
+      return { ...p, elementStyles: next };
+    });
 
   // Vista previa en vivo: cada cambio se transmite a /preview/[id]
   // (iframe lateral y/o ventana aparte) sin necesidad de guardar.
@@ -186,11 +215,43 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Slider label="Escala de texto" value={config.fontScale} min={0.85} max={1.25} step={0.05} onChange={(v) => setC('fontScale', v)} />
       </Section>
 
+      {/* ── Estilos de texto (tipografía por rol) ── */}
+      <Section title="Estilos de texto · por tipo">
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+          Controla tamaño, grosor, negrita, itálica, espaciado, mayúsculas, color y familia de
+          cada <strong>tipo</strong> de texto del menú. Aplica a todos los textos de ese tipo.
+        </p>
+        {TYPO_ROLES.map((r) => (
+          <details key={r.key} style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
+              {r.label}
+            </summary>
+            <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '6px 0 2px' }}>{r.hint}</p>
+            <TextStyleCtl value={config.typography[r.key]} onChange={(patch) => setTypo(r.key, patch)} />
+          </details>
+        ))}
+      </Section>
+
       {/* ── Glass / forma ── */}
       <Section title="Glass y forma">
         <Segmented label="Intensidad glass" value={config.glassIntensity} options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Sólido']]} onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])} />
         <Slider label="Redondeo" value={config.cornerRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('cornerRadius', v)} />
         <Toggle label="Brillo que sigue al cursor" value={config.sheen} onChange={(v) => setC('sheen', v)} />
+      </Section>
+
+      {/* ── Superficies / tarjetas ── */}
+      <Section title="Superficies y tarjetas">
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+          Estos controles afectan los rellenos sutiles de tarjetas, chips, badges y velos. Se
+          adaptan solos a cualquier paleta (clara u oscura).
+        </p>
+        <Slider label="Intensidad del tinte de superficies" value={config.surfaceTint} min={0.4} max={2.5} step={0.1} onChange={(v) => setC('surfaceTint', v)} />
+        <Slider label="Profundidad de sombras (tarjetas)" value={config.cardShadow} min={0} max={1.6} step={0.1} onChange={(v) => setC('cardShadow', v)} />
+        <Slider label="Oscuridad del velo de modales" value={config.scrimOpacity} min={0} max={0.85} step={0.05} onChange={(v) => setC('scrimOpacity', v)} />
+        <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
+        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>Badge “No disponible” (vacío = automático por esquema).</p>
+        <ColorOrAuto label="Fondo del badge" value={config.badgeBg} fallback="#1a1a1a" onChange={(v) => setC('badgeBg', v)} />
+        <ColorOrAuto label="Texto del badge" value={config.badgeText} fallback="#ffffff" onChange={(v) => setC('badgeText', v)} />
       </Section>
 
       {/* ── Fondo ── */}
@@ -242,9 +303,17 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
             <ColorCtl label="Fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
             <ColorCtl label="Acento (ítem activo)" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
-            <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
-              El color del texto se calcula automáticamente según el fondo elegido.
-            </p>
+            <Segmented
+              label="Esquema del panel"
+              value={config.adminPanelScheme}
+              options={[['auto', 'Auto'], ['dark', 'Oscuro'], ['light', 'Claro']]}
+              onChange={(v) => setC('adminPanelScheme', v as ThemeConfig['adminPanelScheme'])}
+            />
+            <ColorOrAuto label="Color de texto" value={config.adminPanelText} fallback="#F5F3EF" onChange={(v) => setC('adminPanelText', v)} />
+            <ColorOrAuto label="Fondo de tarjetas" value={config.adminPanelCardBg} fallback="#1a1a1d" onChange={(v) => setC('adminPanelCardBg', v)} />
+            <FontCtl label="Fuente del panel" role="body" value={config.adminPanelFont || 'Geist'} onChange={(v) => setC('adminPanelFont', v === 'Geist' ? '' : v)} />
+            <Slider label="Escala de texto del panel" value={config.adminPanelTextScale} min={0.85} max={1.2} step={0.05} onChange={(v) => setC('adminPanelTextScale', v)} />
+            <Slider label="Redondeo del panel" value={config.adminPanelRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('adminPanelRadius', v)} />
           </>
         )}
       </Section>
@@ -308,6 +377,32 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             </div>
           </details>
         ))}
+      </Section>
+
+      {/* ── Textos destacados (override por elemento) ── */}
+      <Section title="Textos destacados · por elemento">
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+          Haz que UN texto en particular (ej. el título de la portada) se vea distinto a los
+          demás de su tipo. Actívalo y ajusta su estilo completo.
+        </p>
+        {ELEMENT_TARGETS.map((t) => {
+          const on = !!config.elementStyles[t.key];
+          return (
+            <details key={t.key} style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: on ? 'var(--brand-accent)' : 'var(--u-text-2)' }}>
+                {t.label}{on ? ' ·  ✦' : ''}
+              </summary>
+              <div style={{ paddingTop: 8 }}>
+                <Toggle label="Estilo propio para este texto" value={on} onChange={(v) => toggleEl(t.key, v)} />
+                {on && config.elementStyles[t.key] && (
+                  <div style={{ marginTop: 8 }}>
+                    <TextStyleCtl value={config.elementStyles[t.key]} onChange={(patch) => setEl(t.key, patch)} />
+                  </div>
+                )}
+              </div>
+            </details>
+          );
+        })}
       </Section>
 
       {/* ── Avanzado ── */}
@@ -572,6 +667,43 @@ function StringListCtl({ label, items, onChange }: { label: string; items: strin
         </div>
       </div>
     </Field>
+  );
+}
+
+/* Control completo de un TextStyle (tamaño, grosor, negrita, etc.). */
+function TextStyleCtl({ value, onChange }: { value: TextStyle; onChange: (patch: Partial<TextStyle>) => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 8 }}>
+      <Slider label="Tamaño (×)" value={value.size} min={0.6} max={2.4} step={0.05} onChange={(v) => onChange({ size: v })} />
+      <Slider label="Grosor" value={value.weight} min={100} max={900} step={100} onChange={(v) => onChange({ weight: v })} />
+      <Toggle label="Negrita / itálica (italic)" value={value.italic} onChange={(v) => onChange({ italic: v })} />
+      <Slider label="Espaciado entre letras (em)" value={value.tracking} min={-0.05} max={0.4} step={0.01} onChange={(v) => onChange({ tracking: v })} />
+      <Slider label="Interlineado" value={value.lineHeight} min={0.8} max={2} step={0.05} onChange={(v) => onChange({ lineHeight: v })} />
+      <Segmented
+        label="Mayúsculas"
+        value={value.transform}
+        options={[['none', 'Normal'], ['uppercase', 'MAYÚS'], ['lowercase', 'minús'], ['capitalize', 'Capital']]}
+        onChange={(v) => onChange({ transform: v as TextStyle['transform'] })}
+      />
+      <Segmented
+        label="Familia"
+        value={value.font}
+        options={[['', 'Auto'], ['display', 'Display'], ['poster', 'Poster'], ['body', 'Cuerpo'], ['serif', 'Serif'], ['mono', 'Mono']]}
+        onChange={(v) => onChange({ font: v as TextStyle['font'] })}
+      />
+      <ColorOrAuto label="Color" value={value.color} fallback="#ffffff" onChange={(v) => onChange({ color: v })} />
+    </div>
+  );
+}
+
+/* Color con interruptor "automático" (vacío) ↔ color propio. */
+function ColorOrAuto({ label, value, fallback, onChange }: { label: string; value: string; fallback: string; onChange: (v: string) => void }) {
+  const custom = value !== '';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <Toggle label={`${label}: propio`} value={custom} onChange={(on) => onChange(on ? fallback : '')} />
+      {custom && <ColorCtl label={label} value={value || fallback} onChange={onChange} />}
+    </div>
   );
 }
 

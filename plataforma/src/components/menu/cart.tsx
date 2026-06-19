@@ -8,7 +8,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, QtyStepper, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
-import { useThemeContent } from '@/lib/theme/context';
+import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
 
 /* Barra inferior fija con el resumen del carrito. */
 export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIconHidden?: boolean }) {
@@ -40,6 +40,8 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
 export function CartPanel({ onClose }: { onClose: () => void }) {
   const { items, updateQuantity, total } = useCart();
   const content = useThemeContent();
+  const config = useThemeConfig();
+  const titleT = useText('heading', 'cartTitle');
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -55,14 +57,14 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label={content.cart.title}
     >
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
       <div
         className="glass anim-slide-up"
         onClick={(e) => e.stopPropagation()}
         style={{ position: 'relative', width: '100%', maxWidth: 460, borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0', padding: '20px 20px 28px', maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h2 className="t-display" style={{ fontSize: 26 }}>{content.cart.title}</h2>
+          <h2 className="t-display" style={{ ...titleT.vars, fontSize: 26 * titleT.size }}>{content.cart.title}</h2>
           <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }} aria-label="Cerrar">
             <Icon name="x" size={18} />
           </button>
@@ -80,7 +82,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
               {items.map((item) => (
                 <Glass key={item.lineId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{item.name}</div>
+                    <div className="ct-product-name" style={{ fontSize: 14 * config.typography.productName.size }}>{item.name}</div>
                     {item.options && item.options.length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>
                         {item.options.map((o) => o.choiceName).join(' · ')}

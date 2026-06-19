@@ -39,7 +39,7 @@ export default function MenuShell({ config, content, categories, products, resta
     <ThemeProvider config={config} content={content}>
       <CartProvider restaurantId={restaurantId}>
         <VisitTracker restaurantId={restaurantId} />
-        <main style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
+        <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} />

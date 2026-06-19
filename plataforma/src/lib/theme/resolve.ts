@@ -12,9 +12,18 @@
 import {
   DEFAULT_CONFIG,
   DEFAULT_CONTENT,
+  DEFAULT_TYPOGRAPHY,
+  TYPO_ROLES,
+  ELEMENT_TARGETS,
+  ROLE_NATURAL_COLOR,
+  ROLE_NATURAL_FONT,
+  FONT_ROLE_VAR,
   findFont,
   type ThemeConfig,
   type ThemeContent,
+  type ThemeTypography,
+  type TypographyRole,
+  type TextStyle,
   type GlassIntensity,
 } from './defaults';
 import { getTenantOverride } from '@/tenants/registry';
@@ -78,6 +87,22 @@ function mergeContent(...layers: Array<DeepPartial<ThemeContent> | null | undefi
   return base;
 }
 
+/** Merge profundo de tipografía: cada rol se completa contra su default. */
+function mergeTypography(
+  ...layers: Array<Partial<ThemeTypography> | null | undefined>
+): ThemeTypography {
+  const out = {} as ThemeTypography;
+  for (const role of Object.keys(DEFAULT_TYPOGRAPHY) as TypographyRole[]) {
+    let merged: TextStyle = { ...DEFAULT_TYPOGRAPHY[role] };
+    for (const layer of layers) {
+      const v = layer?.[role];
+      if (v && typeof v === 'object') merged = { ...merged, ...v };
+    }
+    out[role] = merged;
+  }
+  return out;
+}
+
 /** Semilla del nombre/tagline reales del restaurante (tabla restaurants). */
 export interface ThemeFallback {
   brandName?: string;
@@ -101,6 +126,19 @@ export function resolveTheme(
     ...legacyToConfig(row ?? {}),
     ...(row?.config ?? {}),
     ...(override?.config ?? {}),
+  };
+
+  // Los objetos anidados (typography/elementStyles) se mergean en profundidad
+  // contra los defaults: un override parcial nunca borra los roles no tocados.
+  config.typography = mergeTypography(
+    DEFAULT_CONFIG.typography,
+    (row?.config as Partial<ThemeConfig> | undefined)?.typography,
+    override?.config?.typography,
+  );
+  config.elementStyles = {
+    ...(DEFAULT_CONFIG.elementStyles ?? {}),
+    ...((row?.config as Partial<ThemeConfig> | undefined)?.elementStyles ?? {}),
+    ...(override?.config?.elementStyles ?? {}),
   };
 
   const content = mergeContent(row?.content, override?.content);
@@ -214,6 +252,12 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     '--watermark-opacity': String(config.watermarkOpacity ?? 0.04),
     '--watermark-size': `${config.watermarkSize ?? 78}svmin`,
 
+    // ── Tipografía por rol (--t-<rol>-*) ────────────────────
+    ...buildTypographyVars(config.typography ?? DEFAULT_TYPOGRAPHY),
+
+    // ── Superficies / tarjetas (se adaptan a la paleta) ─────
+    ...buildSurfaceVars(config),
+
     // ── Panel admin — colores del sidebar/topbar ────────────
     // Cuando adminUseClientTheme=true se heredan los colores del restaurante;
     // cuando es false se usan los colores del panel configurados independientemente.
@@ -221,26 +265,106 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
   };
 }
 
-/** Genera las variables CSS del panel admin. */
+/* ── Tipografía: TextStyle → variables CSS ────────────────────
+   Devuelve las 8 propiedades CSS de un rol. Las clases de rol
+   (bajo .themed-type) las consumen; para overrides por elemento se
+   re-emiten estas mismas vars inline en el elemento concreto. */
+export function textStyleVars(role: TypographyRole, s: TextStyle): Record<string, string> {
+  const fam = s.font ? FONT_ROLE_VAR[s.font] : ROLE_NATURAL_FONT[role];
+  const col = s.color ? s.color : ROLE_NATURAL_COLOR[role];
+  return {
+    [`--t-${role}-size`]: String(s.size),
+    [`--t-${role}-weight`]: String(s.weight),
+    [`--t-${role}-style`]: s.italic ? 'italic' : 'normal',
+    [`--t-${role}-tracking`]: `${s.tracking}em`,
+    [`--t-${role}-lh`]: String(s.lineHeight),
+    [`--t-${role}-transform`]: s.transform,
+    [`--t-${role}-color`]: col,
+    [`--t-${role}-family`]: fam,
+  };
+}
+
+function buildTypographyVars(typo: ThemeTypography): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const { key } of TYPO_ROLES) {
+    Object.assign(out, textStyleVars(key, typo[key] ?? DEFAULT_TYPOGRAPHY[key]));
+  }
+  return out;
+}
+
+/**
+ * Vars CSS para el override de UN elemento concreto. Se aplican inline en el
+ * elemento (`style`) y, al ser variables, la clase del rol recalcula solo para
+ * ese subárbol. Devuelve {} si el elemento no tiene override.
+ */
+export function elementStyleVars(config: ThemeConfig, elementKey: string): Record<string, string> {
+  const style = config.elementStyles?.[elementKey];
+  if (!style) return {};
+  const target = ELEMENT_TARGETS.find((t) => t.key === elementKey);
+  if (!target) return {};
+  return textStyleVars(target.role, style);
+}
+
+/** Multiplicador de tamaño efectivo de un rol (para componentes que fijan px). */
+export function roleSize(config: ThemeConfig, role: TypographyRole, elementKey?: string): number {
+  const el = elementKey ? config.elementStyles?.[elementKey] : undefined;
+  return el?.size ?? config.typography?.[role]?.size ?? 1;
+}
+
+function buildSurfaceVars(config: ThemeConfig): Record<string, string> {
+  return {
+    '--surface-tint': String(config.surfaceTint ?? 1),
+    '--card-shadow': String(config.cardShadow ?? 1),
+    '--scrim': `rgba(0,0,0,${config.scrimOpacity ?? 0.55})`,
+    '--badge-bg': config.badgeBg || 'rgba(0,0,0,0.62)',
+    '--badge-text': config.badgeText || 'rgba(255,255,255,0.86)',
+  };
+}
+
+/** Genera las variables CSS del panel admin (personalización total). */
 function buildAdminPanelVars(config: ThemeConfig): Record<string, string> {
   const useClient = config.adminUseClientTheme ?? false;
 
   const bg     = useClient ? config.colorBg      : (config.adminPanelBg     ?? '#0c0c0e');
   const accent = useClient ? config.colorAccent   : (config.adminPanelAccent ?? config.colorAccent);
 
-  // El texto del panel se auto-calcula según la luminancia del fondo elegido.
-  const adminLight = isLight(bg);
-  const adminText  = useClient ? config.colorText : (adminLight ? '#0a0a0c' : '#F5F3EF');
+  // Esquema del panel: 'auto' decide por luminancia del fondo; o se fuerza.
+  const schemePref = config.adminPanelScheme ?? 'auto';
+  const adminLight = useClient
+    ? isLight(bg)
+    : schemePref === 'light' ? true : schemePref === 'dark' ? false : isLight(bg);
+
+  // Texto: heredado, explícito, o auto por esquema.
+  const adminText = useClient
+    ? config.colorText
+    : (config.adminPanelText || (adminLight ? '#15130f' : '#F5F3EF'));
+
+  // Fondo de tarjetas del panel (usercard, etc.).
+  const cardBg = useClient
+    ? rgba(config.colorText, 0.06)
+    : (config.adminPanelCardBg || (adminLight ? rgba('#000000', 0.04) : rgba('#ffffff', 0.06)));
+
+  // Familia del panel: una de FONT_OPTIONS, o Geist por defecto.
+  const adminFont = !useClient && config.adminPanelFont
+    ? `'${config.adminPanelFont}', var(--ui-font-sans)`
+    : 'var(--ui-font-sans)';
+
+  const scale  = useClient ? 1 : (config.adminPanelTextScale ?? 1);
+  const radius = useClient ? 1 : (config.adminPanelRadius ?? 1);
 
   return {
-    '--admin-panel-bg':      bg,
-    '--admin-panel-accent':  accent,
-    '--admin-panel-text':    adminText,
-    '--admin-panel-text-2':  rgba(adminText, 0.74),
-    '--admin-panel-text-3':  rgba(adminText, 0.50),
-    '--admin-panel-text-4':  rgba(adminText, 0.48),
-    '--admin-panel-hair':    adminLight ? rgba('#000000', 0.10) : rgba(adminText, 0.10),
-    '--admin-panel-hair-2':  adminLight ? rgba('#000000', 0.16) : rgba(adminText, 0.18),
+    '--admin-panel-bg':       bg,
+    '--admin-panel-accent':   accent,
+    '--admin-panel-text':     adminText,
+    '--admin-panel-text-2':   rgba(adminText, 0.74),
+    '--admin-panel-text-3':   rgba(adminText, 0.50),
+    '--admin-panel-text-4':   rgba(adminText, 0.48),
+    '--admin-panel-hair':     adminLight ? rgba('#000000', 0.10) : rgba(adminText, 0.10),
+    '--admin-panel-hair-2':   adminLight ? rgba('#000000', 0.16) : rgba(adminText, 0.18),
+    '--admin-panel-card':     cardBg,
+    '--admin-panel-font':     adminFont,
+    '--admin-panel-scale':    String(scale),
+    '--admin-panel-radius':   String(radius),
   };
 }
 
@@ -253,6 +377,7 @@ export function buildFontsHref(config: ThemeConfig): string | null {
     config.fontBody,
     config.fontSerif,
     config.fontMono,
+    config.adminPanelFont,
   ];
   const axes = new Set<string>();
   for (const family of families) {

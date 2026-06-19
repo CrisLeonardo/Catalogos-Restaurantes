@@ -24,13 +24,13 @@ export default function CheckoutBlocked({
       : content.checkout.closedMsg;
 
   return (
-    <main style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+    <main className="themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
       <Glass className="anim-pop" style={{ padding: '34px 26px', textAlign: 'center', maxWidth: 400, width: '100%' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 20, margin: '0 auto 16px', display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.07)', color: 'var(--u-text-2)' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 20, margin: '0 auto 16px', display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text-2)' }}>
           <Icon name={reason === 'paused' ? 'flame' : 'clock'} size={30} strokeWidth={1.6} />
         </div>
         <h2 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 10 }}>{title}</h2>
-        <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 16, color: 'var(--u-text-2)', lineHeight: 1.45, marginBottom: 22 }}>
+        <p className="t-serif" style={{ fontSize: 16, lineHeight: 1.45, marginBottom: 22 }}>
           {msg}
         </p>
         <PrimaryButton href="/" full>{content.tracking.back}</PrimaryButton>

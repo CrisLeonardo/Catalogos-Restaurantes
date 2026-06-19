@@ -11,7 +11,7 @@ import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Tag, QtyStepper, PrimaryButton, Price } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
-import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import type { CartItemOption, Product, ProductOptionGroup } from '@/types';
 
@@ -42,6 +42,7 @@ export default function ProductSheet({
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  const titleT = useText('heading', 'productTitle');
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
 
@@ -116,7 +117,7 @@ export default function ProductSheet({
       aria-modal="true"
       aria-label={product.name}
     >
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
       <div
         className="glass anim-slide-up"
         onClick={(e) => e.stopPropagation()}
@@ -132,7 +133,7 @@ export default function ProductSheet({
         </button>
 
         {/* Hero */}
-        <div style={{ borderRadius: 22, overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--u-hair)' }}>
+        <div style={{ borderRadius: 22, overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
           {usePhoto ? (
             <Image src={product.image_url!} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="460px" unoptimized />
           ) : (
@@ -148,9 +149,9 @@ export default function ProductSheet({
         </div>
 
         <div style={{ padding: '18px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h2 className="t-display" style={{ fontSize: 28 }}>{product.name}</h2>
+          <h2 className="t-display" style={{ ...titleT.vars, fontSize: 28 * titleT.size }}>{product.name}</h2>
           {product.description && (
-            <p className="t-serif" style={{ fontSize: 17, fontStyle: 'italic', color: 'var(--u-text-2)', lineHeight: 1.4 }}>{product.description}</p>
+            <p className="t-serif" style={{ fontSize: 17, lineHeight: 1.4 }}>{product.description}</p>
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
             {[{ i: 'clock', t: content.product.prepTime }, { i: 'flame', t: content.product.fresh }].map((x, k) => (
@@ -195,7 +196,7 @@ export default function ProductSheet({
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                             borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'rgba(34,197,94,0.10)' : 'rgba(255,255,255,0.03)',
+                            background: included ? 'rgba(34,197,94,0.10)' : 'var(--surface-1)',
                             border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair-2)'}`,
                             transition: 'all 140ms',
                           }}
@@ -204,7 +205,7 @@ export default function ProductSheet({
                           <span style={{
                             width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                             display: 'grid', placeItems: 'center',
-                            background: included ? '#22c55e' : 'rgba(255,255,255,0.08)',
+                            background: included ? '#22c55e' : 'var(--surface-3)',
                             border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair-2)'}`,
                             transition: 'all 140ms',
                           }}>
@@ -245,7 +246,7 @@ export default function ProductSheet({
                           aria-pressed={on}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
-                            background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
+                            background: on ? 'var(--u-text)' : 'var(--surface-2)',
                             color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
                             border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
                             fontWeight: 600, fontSize: 13, transition: 'all 140ms',

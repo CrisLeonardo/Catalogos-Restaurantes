@@ -23,6 +23,42 @@ export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
 export type CatalogView = 'grid' | 'list';
 export type ProductArt = 'auto' | 'pattern' | 'photo';
 export type OrderType = 'delivery' | 'pickup' | 'dine_in';
+export type AdminScheme = 'auto' | 'dark' | 'light';
+
+/* ── Tipografía granular ──────────────────────────────────────
+   TextStyle describe TODO de un texto: tamaño (multiplicador),
+   grosor, itálica, espaciado, interlineado, mayúsculas, color y
+   familia. Se aplica por ROL (todos los títulos, todos los precios…)
+   y, opcionalmente, override por ELEMENTO (este título en concreto). */
+
+export type FontRole = '' | 'display' | 'poster' | 'body' | 'serif' | 'mono';
+export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+
+export interface TextStyle {
+  size: number;            // multiplicador relativo al tamaño base del rol (1 = base)
+  weight: number;          // 100..900
+  italic: boolean;
+  tracking: number;        // letter-spacing en em (puede ser negativo)
+  lineHeight: number;      // interlineado sin unidad (1.0, 1.3…)
+  transform: TextTransform;
+  color: string;           // '' = color natural del rol; o un color explícito (#hex)
+  font: FontRole;          // '' = familia natural del rol; o forzar otra familia
+}
+
+/* Los 10 roles cubren TODO texto visible del menú del cliente. */
+export type TypographyRole =
+  | 'heading'      // títulos grandes / hero (.t-display)
+  | 'poster'       // kickers grandes / encabezado del catálogo (.t-poster)
+  | 'serif'        // subtítulos / itálicas literarias (.t-serif)
+  | 'kicker'       // mini-mayúsculas con tracking (.t-kicker)
+  | 'body'         // texto de cuerpo / párrafos
+  | 'productName'  // nombre de producto en tarjetas
+  | 'productDesc'  // descripción de producto
+  | 'price'        // precios y números (.t-mono)
+  | 'button'       // texto de botones / CTA
+  | 'tag';         // etiquetas / badges
+
+export type ThemeTypography = Record<TypographyRole, TextStyle>;
 
 export interface ThemeConfig {
   // ── Marca ──
@@ -107,7 +143,92 @@ export interface ThemeConfig {
   adminUseClientTheme: boolean; // true = hereda colores del tema del cliente
   adminPanelBg: string;         // color de fondo del sidebar/topbar (cuando no usa tema del cliente)
   adminPanelAccent: string;     // color de acento (navlinks activos)
+  adminPanelScheme: AdminScheme;// 'auto' = por luminancia del fondo; o forzar dark/light
+  adminPanelText: string;       // '' = auto por luminancia; o color explícito
+  adminPanelCardBg: string;     // '' = auto; fondo de tarjetas/usercard del panel
+  adminPanelFont: string;       // familia del panel (nombre de FONT_OPTIONS) o '' = Geist
+  adminPanelTextScale: number;  // 0.85–1.2 escala de texto del panel
+  adminPanelRadius: number;     // 0.4–1.8 multiplicador de redondeo del panel
+
+  // ── Tipografía avanzada (roles + override por elemento) ──
+  typography: ThemeTypography;
+  /** Override total por texto clave (key de ELEMENT_TARGETS → estilo completo). */
+  elementStyles: Record<string, TextStyle>;
+
+  // ── Superficies / tarjetas (se adaptan a cualquier paleta) ──
+  surfaceTint: number;          // 0.4–2.5 multiplica el alpha de los rellenos sutiles
+  cardShadow: number;           // 0–1.6 multiplica la profundidad de sombras
+  scrimOpacity: number;         // 0–0.85 opacidad del velo detrás de modales
+  badgeBg: string;              // '' = automático por esquema; fondo de badge "No disponible"
+  badgeText: string;            // '' = automático; texto del badge
 }
+
+/* Estilo base por rol (igual al look actual → sin cambios visibles si no se toca). */
+function ts(o: Partial<TextStyle>): TextStyle {
+  return { size: 1, weight: 400, italic: false, tracking: 0, lineHeight: 1.3, transform: 'none', color: '', font: '', ...o };
+}
+
+export const DEFAULT_TYPOGRAPHY: ThemeTypography = {
+  heading:     ts({ weight: 800, tracking: -0.02, lineHeight: 0.95 }),
+  poster:      ts({ weight: 400, tracking: 0.01, lineHeight: 0.95, transform: 'uppercase' }),
+  serif:       ts({ weight: 400, tracking: -0.01, lineHeight: 1.3, italic: true }),
+  kicker:      ts({ weight: 400, tracking: 0.14, transform: 'uppercase' }),
+  body:        ts({ weight: 400, lineHeight: 1.5 }),
+  productName: ts({ weight: 700, tracking: -0.01, lineHeight: 1.14 }),
+  productDesc: ts({ weight: 400, lineHeight: 1.4 }),
+  price:       ts({ weight: 600, tracking: -0.01 }),
+  button:      ts({ weight: 600 }),
+  tag:         ts({ weight: 600, tracking: 0.02 }),
+};
+
+/* Color "natural" de cada rol cuando TextStyle.color === '' (token CSS). */
+export const ROLE_NATURAL_COLOR: Record<TypographyRole, string> = {
+  heading: 'var(--u-text)', poster: 'var(--u-text)', serif: 'var(--u-text-2)',
+  kicker: 'var(--u-text-3)', body: 'var(--u-text)', productName: 'var(--u-text)',
+  productDesc: 'var(--u-text-3)', price: 'var(--u-text)', button: 'inherit', tag: 'var(--u-text)',
+};
+
+/* Familia "natural" de cada rol cuando TextStyle.font === '' (token CSS). */
+export const ROLE_NATURAL_FONT: Record<TypographyRole, string> = {
+  heading: 'var(--font-display)', poster: 'var(--font-poster)', serif: 'var(--font-serif)',
+  kicker: 'var(--font-poster)', body: 'var(--ui-font-sans)', productName: 'var(--font-display)',
+  productDesc: 'var(--ui-font-sans)', price: 'var(--ui-font-mono)', button: 'var(--ui-font-sans)',
+  tag: 'var(--ui-font-sans)',
+};
+
+/** Mapa de FontRole → variable CSS de familia. */
+export const FONT_ROLE_VAR: Record<Exclude<FontRole, ''>, string> = {
+  display: 'var(--font-display)', poster: 'var(--font-poster)', serif: 'var(--font-serif)',
+  body: 'var(--ui-font-sans)', mono: 'var(--ui-font-mono)',
+};
+
+/* Metadatos para el editor: roles editables y su etiqueta. */
+export const TYPO_ROLES: { key: TypographyRole; label: string; hint: string }[] = [
+  { key: 'heading',     label: 'Títulos',           hint: 'Hero, nombre del restaurante, títulos grandes' },
+  { key: 'poster',      label: 'Encabezados poster', hint: 'Título del menú, kickers grandes' },
+  { key: 'serif',       label: 'Subtítulos serif',  hint: 'Tagline, descripciones literarias en itálica' },
+  { key: 'kicker',      label: 'Kickers / etiquetas', hint: 'Mini-mayúsculas con espaciado (labels)' },
+  { key: 'body',        label: 'Texto de cuerpo',   hint: 'Párrafos y texto general' },
+  { key: 'productName', label: 'Nombre de producto', hint: 'Nombre en cada tarjeta del menú' },
+  { key: 'productDesc', label: 'Descripción de producto', hint: 'Texto descriptivo del producto' },
+  { key: 'price',       label: 'Precios y números',  hint: 'Todos los precios del menú' },
+  { key: 'button',      label: 'Botones',           hint: 'Texto de los botones / CTA' },
+  { key: 'tag',         label: 'Etiquetas (tags)',  hint: 'Picante, Nuevo, Veggie…' },
+];
+
+/* Textos clave con override individual ("este texto en particular se ve así"). */
+export const ELEMENT_TARGETS: { key: string; label: string; role: TypographyRole }[] = [
+  { key: 'portadaTitle',        label: 'Portada · Título',        role: 'heading' },
+  { key: 'portadaSubtitle',     label: 'Portada · Subtítulo',     role: 'serif' },
+  { key: 'portadaCta',          label: 'Portada · Botón',         role: 'button' },
+  { key: 'catalogKicker',       label: 'Menú · Kicker',           role: 'kicker' },
+  { key: 'catalogHeading',      label: 'Menú · Título',           role: 'poster' },
+  { key: 'cartTitle',           label: 'Carrito · Título',        role: 'heading' },
+  { key: 'checkoutTitle',       label: 'Checkout · Título',       role: 'heading' },
+  { key: 'productTitle',        label: 'Producto · Título',       role: 'heading' },
+  { key: 'confirmationTitle',   label: 'Confirmación · Título',   role: 'heading' },
+  { key: 'trackingTitle',       label: 'Seguimiento · Título',    role: 'heading' },
+];
 
 export const DEFAULT_CONFIG: ThemeConfig = {
   brandName: 'Tu Restaurante',
@@ -179,6 +300,21 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   adminUseClientTheme: false,
   adminPanelBg: '#0c0c0e',
   adminPanelAccent: '#D97757',
+  adminPanelScheme: 'auto',
+  adminPanelText: '',
+  adminPanelCardBg: '',
+  adminPanelFont: '',
+  adminPanelTextScale: 1,
+  adminPanelRadius: 1,
+
+  typography: DEFAULT_TYPOGRAPHY,
+  elementStyles: {},
+
+  surfaceTint: 1,
+  cardShadow: 1,
+  scrimOpacity: 0.55,
+  badgeBg: '',
+  badgeText: '',
 };
 
 /* ── ThemeContent (todos los textos del cliente) ─────────── */

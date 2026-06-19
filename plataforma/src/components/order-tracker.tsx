@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, PrimaryButton } from '@/components/menu/ui';
-import { useThemeConfig, useThemeContent } from '@/lib/theme/context';
+import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actions/orders';
 import type { OrderStatus } from '@/types';
 
@@ -46,6 +46,7 @@ export default function OrderTracker({
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  const trackTitleT = useText('heading', 'trackingTitle');
   const [order, setOrder] = useState<PublicOrder>(initialOrder);
   const orderRef = useRef(initialOrder);
   useEffect(() => {
@@ -148,14 +149,14 @@ export default function OrderTracker({
   const subtitle = content.tracking.subtitle || 'El estado se actualiza solo, en vivo.';
 
   return (
-    <main className="anim-fade-up" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
+    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <Icon name="chevronLeft" size={16} /> {content.tracking.back}
         </Link>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-          <h1 className="t-display" style={{ fontSize: 28 }}>{content.tracking.title}</h1>
+          <h1 className="t-display" style={{ ...trackTitleT.vars, fontSize: 28 * trackTitleT.size }}>{content.tracking.title}</h1>
           <span className="t-mono" style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{order.orderNumber}</span>
         </div>
         {!cancelled && !TERMINAL.includes(order.status) && (
@@ -199,7 +200,7 @@ export default function OrderTracker({
                     style={{
                       flex: 1, padding: '10px 12px', borderRadius: 12,
                       fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                      background: 'rgba(255,255,255,0.06)',
+                      background: 'var(--surface-2)',
                       border: '1px solid var(--u-hair)',
                       color: 'var(--u-text-2)',
                     }}
@@ -270,7 +271,7 @@ export default function OrderTracker({
                     <div
                       style={{
                         width: 38, height: 38, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0,
-                        background: active ? 'var(--u-text)' : done ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+                        background: active ? 'var(--u-text)' : done ? 'var(--surface-strong)' : 'var(--surface-1)',
                         color: active ? 'var(--brand-bg)' : color,
                         border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
                         boxShadow: active && config.animations ? '0 0 0 0 rgba(255,255,255,0.4)' : undefined,
