@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { Icon, ICON_PATHS } from '@/components/icons';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import DeleteButton from './delete-button';
@@ -150,7 +151,11 @@ function CategoryCard({
         ) : (
           <>
             <span style={{ flex: 1, fontWeight: 600, fontSize: 15 }}>
-              {category.icon && `${category.icon} `}{category.name}
+              {category.icon && (
+                ICON_PATHS[category.icon]
+                  ? <><Icon name={category.icon} size={14} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} /></>
+                  : <span style={{ marginRight: 4 }}>{category.icon}</span>
+              )}{category.name}
             </span>
 
             {/* Activo / inactivo */}

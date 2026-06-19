@@ -66,8 +66,8 @@ export default function FloorMap({
   const baseScaleRef = useRef(1);
 
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const gesture = useRef<{ moved: boolean; lastDist: number; lastMid: { x: number; y: number } | null; last: { x: number; y: number } | null; downN: number | null }>({
-    moved: false, lastDist: 0, lastMid: null, last: null, downN: null,
+  const gesture = useRef<{ moved: boolean; lastDist: number; lastMid: { x: number; y: number } | null; last: { x: number; y: number } | null; start: { x: number; y: number } | null; downN: number | null }>({
+    moved: false, lastDist: 0, lastMid: null, last: null, start: null, downN: null,
   });
 
   /* Limita el paneo: el mundo virtual nunca se sale por completo de la vista. */
@@ -131,8 +131,17 @@ export default function FloorMap({
       const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
       zoomBy(factor, e.clientX - rect.left, e.clientY - rect.top);
     };
+    // Evita que el browser móvil tome control del touch (scroll nativo) y dispare
+    // pointercancel, lo que interrumpe el paneo.
+    const stopDefault = (e: Event) => e.preventDefault();
     vp.addEventListener('wheel', onWheel, { passive: false });
-    return () => vp.removeEventListener('wheel', onWheel);
+    vp.addEventListener('touchstart', stopDefault, { passive: false });
+    vp.addEventListener('touchmove', stopDefault, { passive: false });
+    return () => {
+      vp.removeEventListener('wheel', onWheel);
+      vp.removeEventListener('touchstart', stopDefault);
+      vp.removeEventListener('touchmove', stopDefault);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -142,6 +151,7 @@ export default function FloorMap({
   }
 
   function onPointerDown(e: React.PointerEvent) {
+    e.preventDefault(); // impide que el browser tome control y dispare pointercancel
     vpRef.current?.setPointerCapture(e.pointerId);
     const p = rel(e);
     pointers.current.set(e.pointerId, p);
@@ -149,6 +159,7 @@ export default function FloorMap({
     if (pointers.current.size === 1) {
       gesture.current.moved = false;
       gesture.current.last = p;
+      gesture.current.start = p; // punto de origen para medir distancia acumulada
       gesture.current.downN = tokenAttr ? Number(tokenAttr) : null;
     } else if (pointers.current.size === 2) {
       const pts = [...pointers.current.values()];
@@ -178,7 +189,14 @@ export default function FloorMap({
     const last = gesture.current.last;
     if (!last) return;
     const dx = p.x - last.x, dy = p.y - last.y;
-    if (Math.abs(dx) > TAP_THRESHOLD || Math.abs(dy) > TAP_THRESHOLD) gesture.current.moved = true;
+    // Mide distancia ACUMULADA desde el inicio (no por-paso): en móvil los eventos
+    // llegan muy seguido con pasos de 2-3px; el check por-paso nunca superaba el
+    // umbral aunque el dedo se moviera 30px → el paneo nunca arrancaba.
+    if (!gesture.current.moved && gesture.current.start) {
+      const tdx = p.x - gesture.current.start.x;
+      const tdy = p.y - gesture.current.start.y;
+      if (Math.abs(tdx) > TAP_THRESHOLD || Math.abs(tdy) > TAP_THRESHOLD) gesture.current.moved = true;
+    }
     if (gesture.current.moved) panBy(dx, dy);
     gesture.current.last = p;
   }

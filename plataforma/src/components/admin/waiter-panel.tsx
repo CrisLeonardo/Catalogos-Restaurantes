@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Icon } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
@@ -862,7 +862,11 @@ export default function WaiterPanel({
                 flexShrink: 0,
               }}
             >
-              {cat.icon ? `${cat.icon} ` : ''}{cat.name}
+              {cat.icon && (
+                ICON_PATHS[cat.icon]
+                  ? <><Icon name={cat.icon} size={13} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} /></>
+                  : <span style={{ marginRight: 4 }}>{cat.icon}</span>
+              )}{cat.name}
             </button>
           ))}
         </div>
@@ -901,7 +905,11 @@ export default function WaiterPanel({
                       className="press"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--u-text)' }}
                     >
-                      {p.icon && <span style={{ fontSize: 22 }}>{p.icon}</span>}
+                      {p.icon && (
+                        ICON_PATHS[p.icon]
+                          ? <Icon name={p.icon} size={22} />
+                          : <span style={{ fontSize: 22 }}>{p.icon}</span>
+                      )}
                       <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, paddingRight: qty > 0 ? 22 : 0 }}>{p.name}</span>
                       <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brand-accent)' }}>{money(p.price, currency)}</span>
                     </button>
