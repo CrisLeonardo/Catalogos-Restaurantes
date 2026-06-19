@@ -352,19 +352,37 @@ function buildAdminPanelVars(config: ThemeConfig): Record<string, string> {
   const scale  = useClient ? 1 : (config.adminPanelTextScale ?? 1);
   const radius = useClient ? 1 : (config.adminPanelRadius ?? 1);
 
+  // Color de los botones del panel (CTA del dashboard). Por defecto el acento.
+  const btnBg = useClient
+    ? config.colorAccent
+    : (config.adminPanelButtonBg || accent);
+  // Texto del botón: explícito o auto-contraste por luminancia del fondo del botón.
+  const btnText = useClient
+    ? config.onAccent
+    : (config.adminPanelButtonText || (isLight(btnBg) ? '#15130f' : '#ffffff'));
+
+  // Fondo del área de contenido (distinto al de los laterales). Vacío = transparente
+  // (deja ver el fondo de la página, comportamiento clásico).
+  const contentBg = useClient
+    ? 'transparent'
+    : (config.adminPanelContentBg || 'transparent');
+
   return {
-    '--admin-panel-bg':       bg,
-    '--admin-panel-accent':   accent,
-    '--admin-panel-text':     adminText,
-    '--admin-panel-text-2':   rgba(adminText, 0.74),
-    '--admin-panel-text-3':   rgba(adminText, 0.50),
-    '--admin-panel-text-4':   rgba(adminText, 0.48),
-    '--admin-panel-hair':     adminLight ? rgba('#000000', 0.10) : rgba(adminText, 0.10),
-    '--admin-panel-hair-2':   adminLight ? rgba('#000000', 0.16) : rgba(adminText, 0.18),
-    '--admin-panel-card':     cardBg,
-    '--admin-panel-font':     adminFont,
-    '--admin-panel-scale':    String(scale),
-    '--admin-panel-radius':   String(radius),
+    '--admin-panel-bg':         bg,
+    '--admin-panel-accent':     accent,
+    '--admin-panel-text':       adminText,
+    '--admin-panel-text-2':     rgba(adminText, 0.74),
+    '--admin-panel-text-3':     rgba(adminText, 0.50),
+    '--admin-panel-text-4':     rgba(adminText, 0.48),
+    '--admin-panel-hair':       adminLight ? rgba('#000000', 0.10) : rgba(adminText, 0.10),
+    '--admin-panel-hair-2':     adminLight ? rgba('#000000', 0.16) : rgba(adminText, 0.18),
+    '--admin-panel-card':       cardBg,
+    '--admin-panel-font':       adminFont,
+    '--admin-panel-scale':      String(scale),
+    '--admin-panel-radius':     String(radius),
+    '--admin-panel-btn':        btnBg,
+    '--admin-panel-btn-text':   btnText,
+    '--admin-panel-content-bg': contentBg,
   };
 }
 

@@ -438,7 +438,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Colores del panel de administración">
               <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
-                Personaliza el sidebar y el topbar que tú y tu equipo ven al administrar el restaurante. No afecta el menú del cliente.
+                Personaliza el panel que tú y tu equipo ven al administrar el restaurante. No afecta el menú del cliente.
               </p>
               <Toggle
                 label="Usar los mismos colores que el menú del cliente"
@@ -448,14 +448,52 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               {!config.adminUseClientTheme && (
                 <>
                   <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
-                  <ColorCtl label="Color de fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
-                  <ColorCtl label="Color de acento (ítem activo en el menú)" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
-                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
-                    El color del texto se calcula automáticamente según el fondo elegido.
+                  <ColorCtl label="Fondo de los laterales (sidebar / topbar)" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
+                  <OptColorCtl
+                    label="Fondo del contenido distinto"
+                    hint="Da al área central un color propio, diferente al de los laterales."
+                    value={config.adminPanelContentBg}
+                    fallback={config.adminPanelBg}
+                    onChange={(v) => setC('adminPanelContentBg', v)}
+                  />
+                  <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
+                  <ColorCtl label="Acento (ítem activo del menú)" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
+                  <OptColorCtl
+                    label="Color de los botones"
+                    hint="Botones principales del panel. Vacío = usa el acento."
+                    value={config.adminPanelButtonBg}
+                    fallback={config.adminPanelAccent}
+                    onChange={(v) => setC('adminPanelButtonBg', v)}
+                  />
+                  {config.adminPanelButtonBg && (
+                    <OptColorCtl
+                      label="Texto sobre los botones"
+                      hint="Vacío = se calcula automáticamente según el color del botón."
+                      value={config.adminPanelButtonText}
+                      fallback="#ffffff"
+                      onChange={(v) => setC('adminPanelButtonText', v)}
+                    />
+                  )}
+                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -2, lineHeight: 1.5 }}>
+                    El color del texto general se calcula automáticamente según el modo elegido abajo.
                   </p>
                 </>
               )}
             </Section>
+
+            {!config.adminUseClientTheme && (
+              <Section title="Apariencia del panel">
+                <Segmented
+                  label="Modo de color"
+                  value={config.adminPanelScheme}
+                  options={[['auto', 'Automático'], ['dark', 'Oscuro'], ['light', 'Claro']]}
+                  onChange={(v) => setC('adminPanelScheme', v as ThemeConfig['adminPanelScheme'])}
+                />
+                <PanelFontCtl value={config.adminPanelFont} onChange={(v) => setC('adminPanelFont', v)} />
+                <Slider label="Tamaño del texto" value={config.adminPanelTextScale} min={0.85} max={1.2} step={0.05} onChange={(v) => setC('adminPanelTextScale', v)} />
+                <Slider label="Redondez" value={config.adminPanelRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('adminPanelRadius', v)} />
+              </Section>
+            )}
 
             <Section title="Otras opciones">
               <Toggle label="Animaciones del menú del cliente" value={config.animations} onChange={(v) => setC('animations', v)} />
@@ -546,6 +584,48 @@ function ColorCtl({ label, value, onChange }: { label: string; value: string; on
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
       <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
     </div>
+  );
+}
+
+/** Color opcional: un interruptor "automático/personalizado". Vacío = automático. */
+function OptColorCtl({ label, hint, value, fallback, onChange }: { label: string; hint?: string; value: string; fallback: string; onChange: (v: string) => void }) {
+  const custom = !!value;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</div>
+          {hint && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.4 }}>{hint}</div>}
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(custom ? '' : fallback)}
+          className="press"
+          style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: custom ? 'var(--u-text)' : 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: custom ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}
+        >
+          <span style={{ width: 19, height: 19, borderRadius: 99, background: custom ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+        </button>
+      </div>
+      {custom && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
+          <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 110, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Selector de fuente del panel (fuentes de cuerpo + opción "Predeterminada"). */
+function PanelFontCtl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const opts = fontsForRole('body');
+  return (
+    <Field label="Tipografía del panel">
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...selectStyle, cursor: 'pointer' }}>
+        <option value="" style={optionStyle}>Predeterminada (Geist)</option>
+        {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
+      </select>
+    </Field>
   );
 }
 

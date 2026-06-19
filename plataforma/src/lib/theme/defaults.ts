@@ -60,6 +60,34 @@ export type TypographyRole =
 
 export type ThemeTypography = Record<TypographyRole, TextStyle>;
 
+/* ── Plano del salón (mesas posicionables por nivel) ──────────
+   El restaurante coloca cada mesa donde está físicamente, en uno
+   o varios niveles (pisos). Las posiciones son relativas (0..1)
+   al lienzo, así se ven igual en cualquier pantalla. Las mesas se
+   siguen identificando por NÚMERO (1..dineInTableCount); el plano
+   solo guarda dónde se dibuja cada una. */
+export type TableShape = 'circle' | 'square';
+
+export interface FloorTable {
+  n: number;        // número de mesa (coincide con el selector y "Mesa N" del pedido)
+  level: string;    // id del nivel al que pertenece
+  x: number;        // 0..1 posición horizontal relativa al lienzo
+  y: number;        // 0..1 posición vertical relativa al lienzo
+  shape?: TableShape;
+  seats?: number;   // sillas (opcional, informativo)
+}
+
+export interface FloorLevel {
+  id: string;
+  name: string;     // "Planta baja", "Segundo nivel", "Terraza"…
+}
+
+export interface FloorPlan {
+  enabled: boolean;       // false = cuadrícula automática (comportamiento clásico)
+  levels: FloorLevel[];   // 1..3 niveles
+  tables: FloorTable[];   // mesas colocadas; las no colocadas caen en "otras mesas"
+}
+
 export interface ThemeConfig {
   // ── Marca ──
   brandName: string;
@@ -149,6 +177,12 @@ export interface ThemeConfig {
   adminPanelFont: string;       // familia del panel (nombre de FONT_OPTIONS) o '' = Geist
   adminPanelTextScale: number;  // 0.85–1.2 escala de texto del panel
   adminPanelRadius: number;     // 0.4–1.8 multiplicador de redondeo del panel
+  adminPanelButtonBg: string;   // '' = usa el acento; color de los botones del panel
+  adminPanelButtonText: string; // '' = auto por luminancia; texto sobre los botones
+  adminPanelContentBg: string;  // '' = transparente (deja ver el fondo); fondo del área de contenido
+
+  // ── Plano del salón (mesas) ──
+  floorPlan: FloorPlan;
 
   // ── Tipografía avanzada (roles + override por elemento) ──
   typography: ThemeTypography;
@@ -306,6 +340,15 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   adminPanelFont: '',
   adminPanelTextScale: 1,
   adminPanelRadius: 1,
+  adminPanelButtonBg: '',
+  adminPanelButtonText: '',
+  adminPanelContentBg: '',
+
+  floorPlan: {
+    enabled: false,
+    levels: [{ id: 'l1', name: 'Planta baja' }],
+    tables: [],
+  },
 
   typography: DEFAULT_TYPOGRAPHY,
   elementStyles: {},

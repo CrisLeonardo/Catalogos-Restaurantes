@@ -64,6 +64,7 @@ export default async function MeseroPage() {
       initialOrders={activeOrders}
       occupiedTables={occupiedTables}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
+      floorPlan={resolvedConfig?.floorPlan ?? null}
       tipEnabled={resolvedConfig?.tipEnabled ?? false}
       tipPercent={resolvedConfig?.tipPercent ?? 10}
       currency={{

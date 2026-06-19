@@ -135,7 +135,7 @@ export default function AdminShell({
 
   if (isWaiter) {
     return (
-      <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--u-bg)', zIndex: 0 }}>
+      <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
         {children}
       </div>
     );

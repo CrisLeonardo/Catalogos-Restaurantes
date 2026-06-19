@@ -4,12 +4,13 @@ import { useState, useTransition } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
-import type { ThemeConfig } from '@/lib/theme/defaults';
+import FloorPlanEditor from '@/components/admin/floor-plan-editor';
+import type { ThemeConfig, FloorPlan } from '@/lib/theme/defaults';
 
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
   'tipEnabled' | 'tipPercent' | 'acceptsCard' |
-  'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
+  'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' | 'floorPlan'
 >;
 
 interface Props {
@@ -122,8 +123,14 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
 
   function save() {
     setMsg(null);
+    // Limpia mesas del plano que ya no existen (si se redujo el número de mesas).
+    const fp = patch.floorPlan;
+    const cleaned: Patch = {
+      ...patch,
+      floorPlan: fp ? { ...fp, tables: fp.tables.filter((t) => t.n <= patch.dineInTableCount) } : fp,
+    };
     start(async () => {
-      const res = await saveOrdersAndCurrency({ restaurantId, patch });
+      const res = await saveOrdersAndCurrency({ restaurantId, patch: cleaned });
       if (res.error) setMsg(`Error: ${res.error}`);
       else setMsg('Guardado ✓');
     });
@@ -196,6 +203,16 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
                 +
               </button>
             </div>
+          </div>
+        )}
+
+        {dineInEnabled && (
+          <div style={{ paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
+            <FloorPlanEditor
+              tableCount={patch.dineInTableCount}
+              value={patch.floorPlan ?? { enabled: false, levels: [{ id: 'l1', name: 'Planta baja' }], tables: [] }}
+              onChange={(fp: FloorPlan) => { set('floorPlan', fp); setMsg(null); }}
+            />
           </div>
         )}
 

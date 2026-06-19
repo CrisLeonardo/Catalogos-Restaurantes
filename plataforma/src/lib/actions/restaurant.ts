@@ -302,7 +302,7 @@ export async function saveOrdersAndCurrency(input: {
     'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
     'tipEnabled' | 'tipPercent' | 'acceptsCard' |
     'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
-  >;
+  > & Partial<Pick<ThemeConfig, 'floorPlan'>>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -339,6 +339,8 @@ export async function saveOrdersAndCurrency(input: {
 
   revalidatePath('/admin/perfil');
   revalidatePath('/admin/personalizacion');
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
   revalidatePath('/');
   return { ok: true };
 }

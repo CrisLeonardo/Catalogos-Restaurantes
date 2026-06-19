@@ -77,6 +77,9 @@
   --admin-panel-text-4:  rgba(245,243,239,0.48);
   --admin-panel-hair:    rgba(245,243,239,0.10);
   --admin-panel-hair-2:  rgba(245,243,239,0.18);
+  --admin-panel-btn:         var(--admin-panel-accent);
+  --admin-panel-btn-text:    #ffffff;
+  --admin-panel-content-bg:  transparent;
 
   /* â”€â”€ Fondo avanzado (sobreescritos por buildThemeVars) â”€â”€â”€â”€â”€ */
   --bg-overlay-opacity: 1;
@@ -469,7 +472,18 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   --u-hair:   var(--admin-panel-hair);
   --u-hair-2: var(--admin-panel-hair-2);
 }
-.admin-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.admin-main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  /* Fondo del área de contenido (puede diferir del de los laterales). */
+  background: var(--admin-panel-content-bg, transparent);
+}
+/* Botones primarios del dashboard: color personalizable (no afecta al mesero,
+   que vive fuera de .admin-main y conserva el acento de la marca). */
+.admin-main .btn-accent {
+  background: var(--admin-panel-btn);
+  color: var(--admin-panel-btn-text);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--admin-panel-btn) 35%, transparent);
+}
 .admin-topbar {
   min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 24px;
   border-bottom: 1px solid var(--admin-panel-hair); position: sticky; top: 0; z-index: 20;
@@ -653,6 +667,23 @@ html { overflow-x: clip; }
   border-radius: 18px; padding: 8px;
 }
 .preview-frame.is-wide iframe { border-radius: 12px; }
+
+/* ============================================================
+   PANEL DE MESERO — contenedor centrado + hojas responsive
+   ------------------------------------------------------------
+   En PC/tablet grande el contenido se centra en una columna
+   cómoda (estilo POS) en vez de estirarse a todo lo ancho.
+   ============================================================ */
+.waiter-wrap { width: 100%; max-width: 960px; margin-inline: auto; }
+.waiter-wrap-narrow { width: 100%; max-width: 720px; margin-inline: auto; }
+
+/* Hoja modal: pegada abajo en móvil, tarjeta centrada en escritorio. */
+.waiter-sheet-scrim { display: flex; justify-content: center; align-items: flex-end; }
+.waiter-sheet { border-radius: 20px 20px 0 0; }
+@media (min-width: 720px) {
+  .waiter-sheet-scrim { align-items: center; padding: 24px; }
+  .waiter-sheet { border-radius: 22px; max-height: 86dvh; }
+}
 
 .press { transition: transform 90ms var(--ease-out); }
 .press:active { transform: scale(0.97); }

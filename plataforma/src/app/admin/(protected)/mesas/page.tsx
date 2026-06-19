@@ -61,6 +61,7 @@ export default async function MesasPage() {
         currencyPosition: c.currencyPosition,
         locale: c.locale,
         animations: c.animations,
+        floorPlan: c.floorPlan,
       }}
     />
   );
