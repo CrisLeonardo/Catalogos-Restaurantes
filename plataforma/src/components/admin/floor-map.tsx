@@ -1,19 +1,19 @@
 'use client';
 
 /* FloorMap — visor del plano del salón para el mesero.
-   Mapa ampliable y desplazable (zoom + paneo) para que las mesas se vean
-   bien en CUALQUIER dispositivo: en un teléfono angosto se acerca con los
-   dedos (pinch) o con los botones + / −; en PC con la rueda o los botones.
-   Las posiciones de las mesas son relativas (0..1), así que el plano se
-   mantiene fiel a lo diseñado y solo cambia el nivel de acercamiento. */
+   Canvas virtual 1000×625: las mesas se posicionan en unidades virtuales y un
+   único factor baseScale (containerWidth / 1000) escala TODO (posiciones Y
+   tamaños) para que el plano se vea proporcionalmente idéntico en cualquier
+   pantalla. El usuario puede hacer zoom adicional (pinch / botones). */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { FloorTable } from '@/lib/theme/defaults';
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 4;
-const TAP_THRESHOLD = 7; // px de movimiento por debajo del cual cuenta como "toque"
+const VIRT_W = 1000;
+const VIRT_H = 625;
+const MAX_USER_ZOOM = 4;
+const TAP_THRESHOLD = 7;
 
 function clamp(v: number, min: number, max: number): number {
   return v < min ? min : v > max ? max : v;
@@ -63,27 +63,50 @@ export default function FloorMap({
 }) {
   const vpRef = useRef<HTMLDivElement | null>(null);
   const [t, setT] = useState<Transform>({ s: 1, x: 0, y: 0 });
+  const baseScaleRef = useRef(1);
 
-  // Estado del gesto (refs → no provocan re-render por cada movimiento).
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const gesture = useRef<{ moved: boolean; lastDist: number; lastMid: { x: number; y: number } | null; last: { x: number; y: number } | null; downN: number | null }>({
     moved: false, lastDist: 0, lastMid: null, last: null, downN: null,
   });
 
-  /* Limita el paneo para que el plano nunca se salga por completo de la vista. */
-  function clampPan(s: number, x: number, y: number) {
-    const vp = vpRef.current;
-    if (!vp) return { x, y };
-    const w = vp.clientWidth, h = vp.clientHeight;
-    const minX = w - w * s; // ≤ 0 cuando s ≥ 1
-    const minY = h - h * s;
+  /* Limita el paneo: el mundo virtual nunca se sale por completo de la vista. */
+  function clampPanWith(s: number, x: number, y: number, vpW: number, vpH: number) {
+    const minX = vpW - VIRT_W * s;
+    const minY = vpH - VIRT_H * s;
     return { x: clamp(x, minX, 0), y: clamp(y, minY, 0) };
   }
 
-  /* Zoom multiplicativo manteniendo fijo el punto (cx,cy) relativo a la vista. */
+  function clampPan(s: number, x: number, y: number) {
+    const vp = vpRef.current;
+    if (!vp) return { x, y };
+    return clampPanWith(s, x, y, vp.clientWidth, vp.clientHeight);
+  }
+
+  /* Calcula baseScale inicial y lo actualiza al redimensionar la ventana. */
+  useLayoutEffect(() => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    const update = () => {
+      const newBase = vp.clientWidth / VIRT_W;
+      const ratio = newBase / baseScaleRef.current;
+      baseScaleRef.current = newBase;
+      setT((prev) => {
+        const s = Math.max(prev.s * ratio, newBase);
+        return { s, ...clampPanWith(s, prev.x * ratio, prev.y * ratio, vp.clientWidth, vp.clientHeight) };
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(vp);
+    return () => ro.disconnect();
+  }, []);
+
+  /* Zoom multiplicativo manteniendo fijo el punto (cx,cy). */
   function zoomBy(factor: number, cx: number, cy: number) {
     setT((prev) => {
-      const s = clamp(prev.s * factor, MIN_SCALE, MAX_SCALE);
+      const minS = baseScaleRef.current;
+      const s = clamp(prev.s * factor, minS, minS * MAX_USER_ZOOM);
       if (s === prev.s) return prev;
       const wx = (cx - prev.x) / prev.s;
       const wy = (cy - prev.y) / prev.s;
@@ -99,7 +122,6 @@ export default function FloorMap({
     });
   }
 
-  // Rueda del ratón: listener nativo no-pasivo para poder preventDefault.
   useEffect(() => {
     const vp = vpRef.current;
     if (!vp) return;
@@ -132,7 +154,7 @@ export default function FloorMap({
       const pts = [...pointers.current.values()];
       gesture.current.lastDist = dist(pts[0], pts[1]);
       gesture.current.lastMid = mid(pts[0], pts[1]);
-      gesture.current.moved = true; // un pinch nunca es un toque
+      gesture.current.moved = true;
       gesture.current.downN = null;
     }
   }
@@ -166,7 +188,6 @@ export default function FloorMap({
     pointers.current.delete(e.pointerId);
     if (!had) return;
     if (pointers.current.size === 0) {
-      // Toque (sin arrastre) sobre una mesa → seleccionar.
       if (!gesture.current.moved && gesture.current.downN != null) {
         onSelect(gesture.current.downN);
       }
@@ -174,14 +195,13 @@ export default function FloorMap({
       gesture.current.downN = null;
       gesture.current.lastMid = null;
     } else if (pointers.current.size === 1) {
-      // Quedó un dedo: reanuda paneo desde su posición actual.
       const [pt] = [...pointers.current.values()];
       gesture.current.last = pt;
       gesture.current.lastMid = null;
     }
   }
 
-  const zoomed = t.s > 1.001;
+  const zoomed = t.s > baseScaleRef.current * 1.001;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -202,8 +222,13 @@ export default function FloorMap({
           touchAction: 'none', cursor: zoomed ? 'grab' : 'default', userSelect: 'none',
         }}
       >
-        {/* Capa "mundo": se escala/desplaza en conjunto. */}
-        <div style={{ position: 'absolute', inset: 0, transformOrigin: '0 0', transform: `translate(${t.x}px, ${t.y}px) scale(${t.s})` }}>
+        {/* Mundo virtual: 1000×625 unidades, escalado para caber en el viewport. */}
+        <div style={{
+          position: 'absolute', left: 0, top: 0,
+          width: VIRT_W, height: VIRT_H,
+          transformOrigin: '0 0',
+          transform: `translate(${t.x}px, ${t.y}px) scale(${t.s})`,
+        }}>
           {tables.length === 0 && (
             <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20 }}>
               Este nivel no tiene mesas colocadas.
@@ -216,8 +241,11 @@ export default function FloorMap({
                 key={tb.n}
                 data-table={tb.n}
                 style={{
-                  position: 'absolute', left: `${tb.x * 100}%`, top: `${tb.y * 100}%`,
-                  width: 64, height: 64, transform: 'translate(-50%, -50%)',
+                  position: 'absolute',
+                  left: tb.x * VIRT_W,
+                  top: tb.y * VIRT_H,
+                  width: 64, height: 64,
+                  transform: 'translate(-50%, -50%)',
                   borderRadius: tb.shape === 'square' ? 14 : 99, cursor: 'pointer',
                   border: `1.5px solid ${isOcc ? 'rgba(251,191,36,0.55)' : 'var(--u-hair-2)'}`,
                   background: isOcc ? 'rgba(251,191,36,0.14)' : 'rgba(255,255,255,0.06)',
@@ -239,7 +267,7 @@ export default function FloorMap({
           <ZoomBtn label="Acercar" onTap={() => { const vp = vpRef.current!; zoomBy(1.3, vp.clientWidth / 2, vp.clientHeight / 2); }}>+</ZoomBtn>
           <ZoomBtn label="Alejar" onTap={() => { const vp = vpRef.current!; zoomBy(1 / 1.3, vp.clientWidth / 2, vp.clientHeight / 2); }}>−</ZoomBtn>
           {zoomed && (
-            <ZoomBtn label="Restablecer" onTap={() => setT({ s: 1, x: 0, y: 0 })}>
+            <ZoomBtn label="Restablecer" onTap={() => setT({ s: baseScaleRef.current, x: 0, y: 0 })}>
               <Icon name="x" size={15} />
             </ZoomBtn>
           )}

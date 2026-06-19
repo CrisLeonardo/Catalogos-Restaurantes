@@ -1,17 +1,20 @@
 'use client';
 
 /* FloorPlanEditor — diseñador del plano del salón.
-   El restaurante coloca cada mesa donde está físicamente, en uno o varios
-   niveles (pisos). "Toca para colocar, arrastra para posicionar". Las
-   posiciones son relativas (0..1) al lienzo → se ven igual en cualquier
-   pantalla. Funciona con mouse y con el dedo (pointer events). */
+   Canvas virtual 1000×625: las mesas se posicionan en unidades virtuales y un
+   factor baseScale (containerWidth / 1000) escala el mundo completo, de modo
+   que el plano se ve proporcionalmente idéntico al visor en cualquier pantalla.
+   El arrastre se calcula sobre el wrapper exterior (coordenadas relativas 0..1)
+   igual que antes, sin necesidad de conocer el baseScale. */
 
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { FloorPlan, FloorTable } from '@/lib/theme/defaults';
 
 const MAX_LEVELS = 3;
-const TOKEN = 54; // px del token de mesa
+const VIRT_W = 1000;
+const VIRT_H = 625;
+const TOKEN = 64; // px en unidades virtuales
 
 function uid(): string {
   return `l${Math.random().toString(36).slice(2, 8)}`;
@@ -34,15 +37,26 @@ export default function FloorPlanEditor({
   value: FloorPlan;
   onChange: (fp: FloorPlan) => void;
 }) {
-  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const outerRef = useRef<HTMLDivElement | null>(null);
+  const [baseScale, setBaseScale] = useState(1);
   const [activeLevel, setActiveLevel] = useState<string>(value.levels[0]?.id ?? 'l1');
   const [renaming, setRenaming] = useState<string | null>(null);
   const dragRef = useRef<{ n: number; pointerId: number } | null>(null);
 
+  /* Calcula el factor de escala al montar y al redimensionar. */
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    if (!outer) return;
+    const update = () => setBaseScale(outer.clientWidth / VIRT_W);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(outer);
+    return () => ro.disconnect();
+  }, []);
+
   const levels = value.levels.length > 0 ? value.levels : [{ id: 'l1', name: 'Planta baja' }];
   const active = levels.some((l) => l.id === activeLevel) ? activeLevel : levels[0].id;
 
-  // Solo mesas válidas (n ≤ tableCount) y del nivel activo.
   const tablesOnLevel = value.tables.filter((t) => t.level === active && t.n <= tableCount);
   const tray = unplacedTables(tableCount, value.tables.filter((t) => t.n <= tableCount));
 
@@ -66,7 +80,6 @@ export default function FloorPlanEditor({
   function removeLevel(id: string) {
     if (levels.length <= 1) return;
     const remaining = levels.filter((l) => l.id !== id);
-    // Las mesas del nivel borrado vuelven a "sin ubicar".
     setTables(value.tables.filter((t) => t.level !== id));
     patch({ levels: remaining });
     if (active === id) setActiveLevel(remaining[0].id);
@@ -104,8 +117,10 @@ export default function FloorPlanEditor({
   function onTokenPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
     if (!d || d.pointerId !== e.pointerId) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
+    const rect = outerRef.current?.getBoundingClientRect();
     if (!rect) return;
+    // rect corresponde al wrapper exterior (mismo aspecto que el mundo virtual),
+    // por lo que dividir por rect.width/height da las coordenadas relativas 0..1.
     const x = clamp((e.clientX - rect.left) / rect.width, 0.05, 0.95);
     const y = clamp((e.clientY - rect.top) / rect.height, 0.06, 0.94);
     moveTable(d.n, x, y);
@@ -205,12 +220,13 @@ export default function FloorPlanEditor({
             )}
           </div>
 
-          {/* Lienzo */}
+          {/* Lienzo — wrapper exterior captura eventos y sirve de referencia de coordenadas */}
           <div
-            ref={canvasRef}
+            ref={outerRef}
             onPointerMove={onTokenPointerMove}
+            onPointerUp={onTokenPointerUp}
             style={{
-              position: 'relative', width: '100%', aspectRatio: '16 / 10',
+              position: 'relative', width: '100%', aspectRatio: `${VIRT_W} / ${VIRT_H}`,
               borderRadius: 16, overflow: 'hidden',
               border: '1px solid var(--u-hair-2)',
               background:
@@ -220,40 +236,50 @@ export default function FloorPlanEditor({
               touchAction: 'none',
             }}
           >
-            {tablesOnLevel.length === 0 && (
-              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20, pointerEvents: 'none' }}>
-                Toca una mesa de abajo para colocarla aquí,<br />luego arrástrala a su lugar.
-              </div>
-            )}
-            {tablesOnLevel.map((t) => (
-              <div
-                key={t.n}
-                onPointerDown={(e) => onTokenPointerDown(e, t.n)}
-                onPointerUp={onTokenPointerUp}
-                style={{
-                  position: 'absolute', left: `${t.x * 100}%`, top: `${t.y * 100}%`,
-                  width: TOKEN, height: TOKEN, transform: 'translate(-50%, -50%)',
-                  borderRadius: t.shape === 'square' ? 12 : 99,
-                  background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)',
-                  display: 'grid', placeItems: 'center', cursor: 'grab',
-                  fontWeight: 800, fontSize: 18, userSelect: 'none', touchAction: 'none',
-                  boxShadow: '0 4px 14px color-mix(in srgb, var(--brand-accent) 40%, transparent)',
-                  border: '2px solid rgba(255,255,255,0.25)',
-                }}
-              >
-                {t.n}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); unplaceTable(t.n); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') unplaceTable(t.n); }}
-                  style={{ position: 'absolute', top: -7, right: -7, width: 20, height: 20, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+            {/* Mundo virtual: 1000×625 unidades escaladas a caber en el wrapper. */}
+            <div style={{
+              position: 'absolute', left: 0, top: 0,
+              width: VIRT_W, height: VIRT_H,
+              transformOrigin: '0 0',
+              transform: `scale(${baseScale})`,
+            }}>
+              {tablesOnLevel.length === 0 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20, pointerEvents: 'none' }}>
+                  Toca una mesa de abajo para colocarla aquí,<br />luego arrástrala a su lugar.
+                </div>
+              )}
+              {tablesOnLevel.map((t) => (
+                <div
+                  key={t.n}
+                  onPointerDown={(e) => onTokenPointerDown(e, t.n)}
+                  style={{
+                    position: 'absolute',
+                    left: t.x * VIRT_W,
+                    top: t.y * VIRT_H,
+                    width: TOKEN, height: TOKEN,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: t.shape === 'square' ? 12 : 99,
+                    background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)',
+                    display: 'grid', placeItems: 'center', cursor: 'grab',
+                    fontWeight: 800, fontSize: 18, userSelect: 'none', touchAction: 'none',
+                    boxShadow: '0 4px 14px color-mix(in srgb, var(--brand-accent) 40%, transparent)',
+                    border: '2px solid rgba(255,255,255,0.25)',
+                  }}
                 >
-                  <Icon name="x" size={11} />
-                </span>
-              </div>
-            ))}
+                  {t.n}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); unplaceTable(t.n); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') unplaceTable(t.n); }}
+                    style={{ position: 'absolute', top: -7, right: -7, width: 20, height: 20, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                  >
+                    <Icon name="x" size={11} />
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Bandeja: mesas sin ubicar */}
