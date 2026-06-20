@@ -4,14 +4,14 @@
    Tabs bien organizadas, paletas de color, controles orientados al negocio.
    No incluye: plantillas, CSS propio, pedidos/moneda (esos van en /admin/perfil). */
 
-import { useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
 import { saveAdminRestaurantTheme } from '@/lib/actions/restaurant';
-import { fontsForRole, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 
 /* ── Paletas de color prediseñadas ───────────────────────── */
 const PALETTES: { name: string; colorBg: string; colorBg2: string; colorText: string; colorAccent: string; onAccent: string; scheme: ThemeConfig['scheme'] }[] = [
@@ -324,6 +324,26 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 <TextCtl label="Veggie" value={content.tags.veg} onChange={(v) => setT('tags', 'veg', v)} />
               </div>
             </Section>
+
+            <Section title="Checkout y pago" defaultOpen={false}>
+              <Segmented
+                label="Color del estado activo (tabs / opciones)"
+                value={config.checkoutActiveColor}
+                options={[['text', 'Blanco / texto'], ['accent', 'Acento']]}
+                onChange={(v) => setC('checkoutActiveColor', v as ThemeConfig['checkoutActiveColor'])}
+              />
+              <Toggle label="Glass en opciones de pago (efectivo / tarjeta)" value={config.checkoutPayGlass !== false} onChange={(v) => setC('checkoutPayGlass', v)} />
+              <Toggle label="Glass en los campos del formulario" value={config.checkoutFormGlass} onChange={(v) => setC('checkoutFormGlass', v)} />
+              <Segmented
+                label="Sombra de texto (legibilidad)"
+                value={config.checkoutTextShadow ?? 'soft'}
+                options={SHADOW_OPTIONS}
+                onChange={(v) => setC('checkoutTextShadow', v as ThemeConfig['checkoutTextShadow'])}
+              />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
+                La sombra hace que el texto resalte sobre fondos vivos o con imagen. El glass distingue las opciones de pago con cualquier paleta.
+              </p>
+            </Section>
           </div>
         )}
 
@@ -540,11 +560,44 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 
 /* ── Controles reutilizables ─────────────────────────────── */
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/* Panel colapsable: reduce el ruido visual del editor. El estado (abierto/
+   cerrado) se recuerda por título en localStorage para que cada quien deje
+   abierto solo lo que usa. */
+function Section({ title, children, defaultOpen = true }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
+  const storageKey = `admin-theme-sec:${title}`;
+  const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(storageKey);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored !== null) setOpen(stored === '1');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function toggle() {
+    setOpen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(storageKey, next ? '1' : '0'); } catch {}
+      return next;
+    });
+  }
+
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="t-kicker" style={{ fontSize: 10.5 }}>{title}</div>
-      {children}
+    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: open ? 12 : 0 }}>
+      <button
+        type="button"
+        onClick={toggle}
+        className="press"
+        aria-expanded={open}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left',
+        }}
+      >
+        <span className="t-kicker" style={{ fontSize: 10.5 }}>{title}</span>
+        <Icon name="chevronDown" size={16} style={{ color: 'var(--u-text-3)', transition: 'transform 180ms var(--ease-out)', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+      </button>
+      {open && children}
     </Glass>
   );
 }

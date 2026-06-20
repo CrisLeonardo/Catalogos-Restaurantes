@@ -58,7 +58,7 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || m.email}</span>
             {isMesero && (
-              <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 99, padding: '2px 8px' }}>🙋 Mesero</span>
+              <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
             )}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -191,16 +191,17 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
                         border: `1px solid ${on ? 'transparent' : accent ? 'rgba(251,191,36,0.3)' : 'var(--u-hair)'}`,
                         background: on ? (accent ? '#fbbf24' : 'var(--u-text)') : accent ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.04)',
                         color: on ? (accent ? '#1a1206' : 'var(--brand-bg)') : accent ? '#fbbf24' : 'var(--u-text-3)',
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
                       }}
                     >
-                      {accent ? '🙋 ' : ''}{s.label}
+                      {accent && <Icon name="userPlus" size={12} />}{s.label}
                     </button>
                   );
                 })}
               </div>
               <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
                 {isMesero
-                  ? '🙋 Con la sección Mesero podrá tomar pedidos en mesa desde /admin/mesero. Si además marcas otras secciones, también entrará al panel admin.'
+                  ? 'Con la sección Mesero podrá tomar pedidos en mesa desde /admin/mesero. Si además marcas otras secciones, también entrará al panel admin.'
                   : 'Marca las secciones del panel a las que tendrá acceso. Marca Mesero para que tome pedidos en mesa.'}
               </p>
             </div>

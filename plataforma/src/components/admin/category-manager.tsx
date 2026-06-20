@@ -185,18 +185,19 @@ function CategoryCard({
             <button
               type="button"
               onClick={onEdit}
+              aria-label="Editar categoría"
               className="press"
               style={{
                 background: 'none',
                 border: '1px solid var(--u-hair)',
                 borderRadius: 'var(--radius-full)',
-                padding: '3px 10px',
-                fontSize: 12,
+                padding: '5px 9px',
+                display: 'grid', placeItems: 'center',
                 color: 'var(--u-text-3)',
                 cursor: 'pointer',
               }}
             >
-              ✎
+              <Icon name="edit" size={13} />
             </button>
 
             {/* Reordenar */}
@@ -338,15 +339,15 @@ function ProductRow({
           borderRadius: 8,
           background: product.image_url
             ? `url(${product.image_url}) center/cover no-repeat`
-            : 'rgba(255,255,255,0.06)',
+            : 'var(--surface-3)',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 18,
+          color: 'var(--u-text-3)',
         }}
       >
-        {!product.image_url && '🍽'}
+        {!product.image_url && <Icon name="utensils" size={18} />}
       </div>
 
       {/* Nombre + precio */}
@@ -410,18 +411,19 @@ function ProductRow({
       <Link
         href={`/admin/menu/productos/${product.id}`}
         className="press"
+        aria-label="Editar producto"
         style={{
           background: 'none',
           border: '1px solid var(--u-hair)',
           borderRadius: 'var(--radius-full)',
-          padding: '4px 10px',
-          fontSize: 12,
+          padding: '6px 9px',
+          display: 'grid', placeItems: 'center',
           color: 'var(--u-text-3)',
           textDecoration: 'none',
           whiteSpace: 'nowrap',
         }}
       >
-        ✎
+        <Icon name="edit" size={13} />
       </Link>
 
       {/* Reordenar */}
@@ -550,13 +552,14 @@ function EditCategoryForm({
       <button
         type="submit"
         disabled={isPending}
+        aria-label="Guardar"
         className="press btn-accent"
-        style={submitBtnSmall}
+        style={{ ...submitBtnSmall, display: 'grid', placeItems: 'center' }}
       >
-        {isPending ? '…' : '✓'}
+        {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
       </button>
-      <button type="button" onClick={onClose} className="press" style={cancelBtnSmall}>
-        ×
+      <button type="button" onClick={onClose} aria-label="Cancelar" className="press" style={{ ...cancelBtnSmall, display: 'grid', placeItems: 'center' }}>
+        <Icon name="x" size={15} />
       </button>
       {state?.error && (
         <span style={{ fontSize: 11, color: '#f87171' }}>{state.error}</span>

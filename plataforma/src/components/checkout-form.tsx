@@ -8,7 +8,7 @@ import { Icon } from '@/components/icons';
 import { Price, Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
-import { formatPrice } from '@/lib/theme/resolve';
+import { formatPrice, shadowCss } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
 import { validatePromo } from '@/lib/actions/promos';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
@@ -81,6 +81,10 @@ export default function CheckoutForm({
 
   const activeBg   = config.checkoutActiveColor === 'accent' ? 'var(--brand-accent)' : 'var(--u-text)';
   const activeText = config.checkoutActiveColor === 'accent' ? 'var(--brand-on-accent)' : 'var(--brand-bg)';
+
+  // Legibilidad: sombra por defecto del checkout (item #2) + glass en pago (item #3).
+  const labelShadow = shadowCss(config.checkoutTextShadow);
+  const payGlass    = config.checkoutPayGlass !== false;
 
   const [step, setStep] = useState<Step>('form');
   const [orderNumber, setOrderNumber] = useState('');
@@ -546,7 +550,7 @@ export default function CheckoutForm({
         {/* Tipo de pedido */}
         {typeOptions.length > 1 && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.typeLabel}</label>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.typeLabel}</label>
             <div className="glass-quiet" style={{ display: 'flex', padding: 4, borderRadius: 14, marginTop: 6 }}>
               {typeOptions.map((o) => {
                 const on = type === o.id;
@@ -581,7 +585,7 @@ export default function CheckoutForm({
         {/* ── DINE_IN: mesa asignada por QR (solo lectura) ── */}
         {type === 'DINE_IN' && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.mesa}</label>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.mesa}</label>
             {tableNumber ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 13, marginTop: 8,
@@ -620,7 +624,7 @@ export default function CheckoutForm({
         {/* ── DINE_IN: preferencia de servicio ── */}
         {type === 'DINE_IN' && config.dineInCourseOptions.length > 0 && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
               {['', ...config.dineInCourseOptions].map((opt) => {
                 const on = coursePreference === opt;
@@ -650,7 +654,7 @@ export default function CheckoutForm({
         {/* ── DELIVERY: zona de cobertura ── */}
         {type === 'DELIVERY' && zonesActive && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>Zona de entrega</label>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>Zona de entrega</label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 6 }}>
               {[...deliveryZones, NO_ZONE].map((z) => {
                 const isOther = z === NO_ZONE;
@@ -679,8 +683,9 @@ export default function CheckoutForm({
               <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{errs.zone}</p>
             )}
             {outOfZone && (
-              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
-                😔 Por ahora el delivery no llega a tu zona.
+              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+                <Icon name="mapPin" size={16} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+                <span>Por ahora el delivery no llega a tu zona.
                 {typeOptions.some((o) => o.id === 'PICKUP') && (
                   <>
                     {' '}Pero puedes pasar por tu pedido:
@@ -694,6 +699,7 @@ export default function CheckoutForm({
                     </button>
                   </>
                 )}
+                </span>
               </div>
             )}
           </div>
@@ -702,7 +708,7 @@ export default function CheckoutForm({
         {/* ── DELIVERY: mapa interactivo ── */}
         {type === 'DELIVERY' && !outOfZone && geoActive && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>
               Tu ubicación de entrega
             </label>
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '4px 0 8px', lineHeight: 1.5 }}>
@@ -756,7 +762,7 @@ export default function CheckoutForm({
         {/* ── DINE_IN: propina (automática, no opcional) ── */}
         {showTip && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>Propina</label>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>Propina</label>
             <div
               style={{
                 display: 'flex', alignItems: 'center', gap: 13,
@@ -787,7 +793,7 @@ export default function CheckoutForm({
         {/* Pago — solo DELIVERY y PICKUP; en DINE_IN el mesero lo maneja */}
         {type !== 'DINE_IN' && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.payLabel}</label>
+            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.payLabel}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
               {/* Efectivo */}
               <PayOption
@@ -798,6 +804,8 @@ export default function CheckoutForm({
                 onClick={() => setPaymentMethod('CASH')}
                 activeBg={activeBg}
                 activeText={activeText}
+                glass={payGlass}
+                textShadow={labelShadow}
               />
               {/* Tarjeta — solo si el restaurante lo habilita */}
               {config.acceptsCard && (
@@ -809,6 +817,8 @@ export default function CheckoutForm({
                   onClick={() => setPaymentMethod('CARD')}
                   activeBg={activeBg}
                   activeText={activeText}
+                  glass={payGlass}
+                  textShadow={labelShadow}
                 />
               )}
             </div>
@@ -816,7 +826,7 @@ export default function CheckoutForm({
             {/* Efectivo con cambio — solo DELIVERY + CASH */}
             {type === 'DELIVERY' && paymentMethod === 'CASH' && (
               <div style={{ marginTop: 12 }}>
-                <label className="t-kicker" style={{ fontSize: 10.5 }}>{content.checkout.cashAmountLabel}</label>
+                <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.cashAmountLabel}</label>
                 <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '3px 0 8px', lineHeight: 1.5 }}>
                   {content.checkout.cashAmountSub}
                 </p>
@@ -871,20 +881,24 @@ export default function CheckoutForm({
   );
 }
 
-function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeText }: {
+function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeText, glass, textShadow }: {
   icon: string; label: string; sublabel: string; selected: boolean; onClick: () => void;
-  activeBg: string; activeText: string;
+  activeBg: string; activeText: string; glass?: boolean; textShadow?: string;
 }) {
+  // Glass: fondo translúcido + blur para que la opción se distinga de cualquier
+  // paleta de fondo (resuelve "no se ve qué dice"). El seleccionado gana un aro
+  // de acento + sombra para destacar sin depender solo del color.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="press"
+      className={`press${glass ? ' glass-quiet' : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 13,
         padding: 15, borderRadius: 14, width: '100%', textAlign: 'left', cursor: 'pointer',
-        border: `1.5px solid ${selected ? activeBg : 'var(--u-hair-2)'}`,
-        background: selected ? 'var(--surface-2)' : 'var(--surface-1)',
+        border: `1.5px solid ${selected ? activeBg : (glass ? 'var(--u-hair-2)' : 'var(--u-hair-2)')}`,
+        background: glass ? undefined : (selected ? 'var(--surface-2)' : 'var(--surface-1)'),
+        boxShadow: selected ? `0 0 0 1.5px ${activeBg}, 0 8px 22px rgba(0,0,0,0.28)` : undefined,
         transition: 'all 160ms',
       }}
     >
@@ -892,8 +906,8 @@ function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeT
         <Icon name={icon} size={20} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>{label}</div>
-        <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>{sublabel}</div>
+        <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', textShadow }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2, textShadow }}>{sublabel}</div>
       </div>
       <span style={{ width: 22, height: 22, borderRadius: 99, flexShrink: 0, border: `2px solid ${selected ? activeBg : 'var(--u-hair-2)'}`, background: selected ? activeBg : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
         {selected && <Icon name="check" size={12} strokeWidth={3} style={{ color: activeText }} />}

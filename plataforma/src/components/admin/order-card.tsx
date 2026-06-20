@@ -2,6 +2,7 @@
 
 import { useTransition, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Icon } from '@/components/icons';
 import { updateOrderStatus, printReceiptViaAgent } from '@/lib/actions/orders';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
@@ -354,24 +355,27 @@ export default function OrderCard({
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginTop: 2 }}>
             {order.customer_name}
           </h3>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
-            📱 {order.customer_phone}
-            {' · '}
-            {order.order_type === 'PICKUP' ? '🥡 Para llevar' : order.order_type === 'DINE_IN' ? '🍽 En local' : '🛵 Domicilio'}
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            <Icon name="phone" size={12} style={{ display: 'inline' }} /> {order.customer_phone}
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name={order.order_type === 'PICKUP' ? 'bag' : order.order_type === 'DINE_IN' ? 'utensils' : 'truck'} size={12} style={{ display: 'inline' }} />
+              {order.order_type === 'PICKUP' ? 'Para llevar' : order.order_type === 'DINE_IN' ? 'En local' : 'Domicilio'}
+            </span>
           </p>
           {order.order_type === 'DELIVERY' && order.address && (
-            <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2 }}>
-              📍 {order.address}{order.delivery_zone ? ` · ${order.delivery_zone}` : ''}
+            <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+              <Icon name="mapPin" size={12} style={{ display: 'inline', flexShrink: 0, marginTop: 2 }} /> <span>{order.address}{order.delivery_zone ? ` · ${order.delivery_zone}` : ''}</span>
             </p>
           )}
           {order.order_type === 'DINE_IN' && order.address && (
-            <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2 }}>
-              🪑 {order.address}
+            <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Icon name="grid" size={12} style={{ display: 'inline' }} /> {order.address}
             </p>
           )}
           {order.waiter_name && (
-            <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2 }}>
-              🙋 Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong>
+            <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Icon name="userPlus" size={12} style={{ display: 'inline' }} /> Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong>
             </p>
           )}
         </div>
@@ -419,7 +423,7 @@ export default function OrderCard({
         )}
         {Number(order.tip) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>🙏 Propina</span>
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Propina</span>
             <span style={{ fontSize: 12.5, color: 'var(--u-text-2)' }}>
               {money(Number(order.tip), currency)}
             </span>
@@ -432,7 +436,7 @@ export default function OrderCard({
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
           }}>
             <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
-              🏷 Cupón
+              <Icon name="tag" size={12} style={{ display: 'inline' }} /> Cupón
               {order.promo_code && (
                 <span style={{
                   fontFamily: 'var(--ui-font-mono)', fontSize: 10.5, fontWeight: 700,
@@ -465,9 +469,10 @@ export default function OrderCard({
         {order.order_type !== 'DINE_IN' && (
           <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700,
+              <span style={{ fontSize: 12.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5,
                 color: order.payment_method === 'CARD' ? '#a78bfa' : '#4ade80' }}>
-                {order.payment_method === 'CARD' ? '💳 Tarjeta al recibir' : '💵 Efectivo'}
+                <Icon name={order.payment_method === 'CARD' ? 'creditCard' : 'banknote'} size={13} style={{ display: 'inline' }} />
+                {order.payment_method === 'CARD' ? 'Tarjeta al recibir' : 'Efectivo'}
               </span>
             </div>
             {order.payment_method !== 'CARD' && order.cash_amount != null && order.cash_amount > 0 && (
@@ -479,8 +484,8 @@ export default function OrderCard({
           </div>
         )}
         {order.notes && (
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontStyle: 'italic', marginTop: 2 }}>
-            📝 {order.notes}
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontStyle: 'italic', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+            <Icon name="edit" size={12} style={{ display: 'inline', flexShrink: 0, marginTop: 2 }} /> <span>{order.notes}</span>
           </p>
         )}
       </div>
@@ -498,7 +503,7 @@ export default function OrderCard({
               fontSize: 12, fontWeight: 600, cursor: 'pointer',
             }}
           >
-            🗺 {mapOpen ? 'Ocultar mapa' : 'Ver ubicación del cliente'}
+            <Icon name="mapPin" size={13} /> {mapOpen ? 'Ocultar mapa' : 'Ver ubicación del cliente'}
           </button>
           {mapOpen && (
             <div style={{ marginTop: 8 }}>
@@ -611,7 +616,7 @@ export default function OrderCard({
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}
       >
-        🖨 Imprimir recibo
+        <Icon name="print" size={14} /> Imprimir recibo
       </button>
     </div>
   );

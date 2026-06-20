@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 
 /* ── Tipos ──────────────────────────────────────────────── */
 type Platform = 'ios' | 'android';
@@ -206,9 +207,9 @@ function AndroidBanner({
             width: 48, height: 48, borderRadius: 14, flexShrink: 0,
             background: 'var(--brand-accent)',
             display: 'grid', placeItems: 'center',
-            fontSize: 22,
+            color: 'var(--brand-on-accent, #fff)',
           }}>
-            🍽️
+            <Icon name="utensils" size={24} />
           </div>
           <div>
             <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--u-text)', lineHeight: 1.3 }}>

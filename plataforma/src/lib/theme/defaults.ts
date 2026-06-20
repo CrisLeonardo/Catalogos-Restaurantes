@@ -34,6 +34,23 @@ export type AdminScheme = 'auto' | 'dark' | 'light';
 export type FontRole = '' | 'display' | 'poster' | 'body' | 'serif' | 'mono';
 export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
+/* Sombra de texto: presets que mejoran la legibilidad sobre fondos vivos o
+   con imagen. El "ink" (color de la sombra) se invierte según el esquema
+   (oscuro = sombra negra; claro = halo blanco) vía la var CSS --shadow-ink. */
+export type ShadowPreset = 'none' | 'soft' | 'medium' | 'strong' | 'glow';
+
+export const SHADOW_PRESETS: Record<ShadowPreset, string> = {
+  none:   'none',
+  soft:   '0 1px 2px rgba(var(--shadow-ink, 0,0,0), 0.40)',
+  medium: '0 1px 3px rgba(var(--shadow-ink, 0,0,0), 0.58)',
+  strong: '0 2px 5px rgba(var(--shadow-ink, 0,0,0), 0.80)',
+  glow:   '0 0 9px rgba(var(--shadow-ink, 0,0,0), 0.72), 0 1px 2px rgba(var(--shadow-ink, 0,0,0), 0.55)',
+};
+
+export const SHADOW_OPTIONS: Array<[ShadowPreset, string]> = [
+  ['none', 'Sin sombra'], ['soft', 'Suave'], ['medium', 'Media'], ['strong', 'Fuerte'], ['glow', 'Halo'],
+];
+
 export interface TextStyle {
   size: number;            // multiplicador relativo al tamaño base del rol (1 = base)
   weight: number;          // 100..900
@@ -43,6 +60,7 @@ export interface TextStyle {
   transform: TextTransform;
   color: string;           // '' = color natural del rol; o un color explícito (#hex)
   font: FontRole;          // '' = familia natural del rol; o forzar otra familia
+  shadow: ShadowPreset;    // 'none' = sin sombra; los demás mejoran legibilidad
 }
 
 /* Los 10 roles cubren TODO texto visible del menú del cliente. */
@@ -130,6 +148,8 @@ export interface ThemeConfig {
   ctaStyle: CtaStyle;
   checkoutActiveColor: CheckoutActiveColor; // color del estado activo en tabs/pills/opciones del checkout
   checkoutFormGlass: boolean;               // envuelve los campos de info del cliente en una tarjeta glass
+  checkoutPayGlass: boolean;                // opciones de pago (efectivo/tarjeta) como tarjetas glass para distinguirlas
+  checkoutTextShadow: ShadowPreset;         // sombra por defecto en títulos/etiquetas del checkout (legibilidad)
 
   // ── Portada ──
   portadaVariant: PortadaVariant;
@@ -199,7 +219,7 @@ export interface ThemeConfig {
 
 /* Estilo base por rol (igual al look actual → sin cambios visibles si no se toca). */
 function ts(o: Partial<TextStyle>): TextStyle {
-  return { size: 1, weight: 400, italic: false, tracking: 0, lineHeight: 1.3, transform: 'none', color: '', font: '', ...o };
+  return { size: 1, weight: 400, italic: false, tracking: 0, lineHeight: 1.3, transform: 'none', color: '', font: '', shadow: 'none', ...o };
 }
 
 export const DEFAULT_TYPOGRAPHY: ThemeTypography = {
@@ -300,6 +320,8 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   ctaStyle: 'white',
   checkoutActiveColor: 'text',
   checkoutFormGlass: false,
+  checkoutPayGlass: true,
+  checkoutTextShadow: 'soft',
 
   portadaVariant: 'spotlight',
   portadaShowLogo: true,

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
+import { Icon } from '@/components/icons';
 import { exportOrdersStructured } from '@/lib/actions/orders';
 import { localDateKey } from '@/lib/hours';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
@@ -206,10 +207,10 @@ ${printScript}
             position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
             zIndex: 80, padding: '12px 20px', borderRadius: 'var(--radius-full)',
             fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap',
-            pointerEvents: 'none',
+            pointerEvents: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
           }}
         >
-          🔔 {toast}
+          <Icon name="bell" size={15} /> {toast}
         </div>
       )}
 
@@ -257,7 +258,7 @@ ${printScript}
                 opacity: isExportingXls ? 0.7 : 1,
               }}
             >
-              {isExportingXls ? '…' : '⬇ Excel'}
+              {isExportingXls ? '…' : <><Icon name="download" size={13} /> Excel</>}
             </button>
             <button
               onClick={downloadPdf}
@@ -271,7 +272,7 @@ ${printScript}
                 opacity: isExportingPdf ? 0.7 : 1,
               }}
             >
-              {isExportingPdf ? '…' : '⬇ PDF'}
+              {isExportingPdf ? '…' : <><Icon name="download" size={13} /> PDF</>}
             </button>
           </div>
         </aside>

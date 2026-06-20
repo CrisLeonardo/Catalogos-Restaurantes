@@ -20,6 +20,7 @@ import {
   TYPO_ROLES,
   ELEMENT_TARGETS,
   DEFAULT_TYPOGRAPHY,
+  SHADOW_OPTIONS,
   type ThemeConfig,
   type ThemeContent,
   type TextStyle,
@@ -348,6 +349,14 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Glass en campos del formulario" value={config.checkoutFormGlass} onChange={(v) => setC('checkoutFormGlass', v)} />
         <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
           Agrupa los campos (nombre, mesa, notas…) en una tarjeta con efecto glass + blur. Útil cuando el fondo es una imagen o watermark intenso.
+        </p>
+        <Toggle label="Glass en opciones de pago (efectivo/tarjeta)" value={config.checkoutPayGlass} onChange={(v) => setC('checkoutPayGlass', v)} />
+        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+          Da a las tarjetas de Efectivo y Tarjeta un fondo glass con blur para que se distingan con cualquier paleta (resuelve el «no se ve qué dice»).
+        </p>
+        <Segmented label="Sombra de texto en checkout (legibilidad)" value={config.checkoutTextShadow} options={SHADOW_OPTIONS} onChange={(v) => setC('checkoutTextShadow', v as ThemeConfig['checkoutTextShadow'])} />
+        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+          Aplica una sombra a títulos y etiquetas del checkout para que el texto resalte sobre fondos vivos. Cada texto del menú también puede llevar su propia sombra en la sección de tipografía.
         </p>
         <TextCtl label="Símbolo de moneda" value={config.currencySymbol} onChange={(v) => setC('currencySymbol', v)} />
         <Segmented label="Posición del símbolo" value={config.currencyPosition} options={[['prefix', 'Antes (Q10)'], ['suffix', 'Después (10Q)']]} onChange={(v) => setC('currencyPosition', v as ThemeConfig['currencyPosition'])} />
@@ -690,6 +699,12 @@ function TextStyleCtl({ value, onChange }: { value: TextStyle; onChange: (patch:
         value={value.font}
         options={[['', 'Auto'], ['display', 'Display'], ['poster', 'Poster'], ['body', 'Cuerpo'], ['serif', 'Serif'], ['mono', 'Mono']]}
         onChange={(v) => onChange({ font: v as TextStyle['font'] })}
+      />
+      <Segmented
+        label="Sombra de texto"
+        value={value.shadow ?? 'none'}
+        options={SHADOW_OPTIONS}
+        onChange={(v) => onChange({ shadow: v as TextStyle['shadow'] })}
       />
       <ColorOrAuto label="Color" value={value.color} fallback="#ffffff" onChange={(v) => onChange({ color: v })} />
     </div>

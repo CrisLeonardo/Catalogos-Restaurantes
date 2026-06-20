@@ -296,11 +296,11 @@ function WaiterHeader({
           <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {title}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1 }}>🙋 {waiterName}</div>
+          <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="userPlus" size={12} /> {waiterName}</div>
         </div>
         {showOrders ? (
           <button type="button" onClick={onShowOrders} className="press glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-            📋 Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
+            <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
           </button>
         ) : (
           <LogoutButton />
@@ -538,7 +538,7 @@ export default function WaiterPanel({
                         </span>
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginTop: 3 }}>{order.customer_name}</div>
-                      {order.address && <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>🪑 {order.address}</div>}
+                      {order.address && <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="grid" size={12} /> {order.address}</div>}
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--u-text)' }}>
@@ -711,7 +711,7 @@ export default function WaiterPanel({
                   className="press"
                   style={{ padding: '14px', borderRadius: 14, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
                 >
-                  {freeing ? 'Liberando…' : '✓ Marcar como libre'}
+                  {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar como libre</>}
                 </button>
               </div>
             </div>
@@ -779,7 +779,7 @@ export default function WaiterPanel({
             )}
             {tipEnabled && tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>🙏 Propina ({tipPercent}%)</span>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({tipPercent}%)</span>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{money(tipAmount, currency)}</span>
               </div>
             )}
@@ -796,7 +796,7 @@ export default function WaiterPanel({
               className="press btn-accent"
               style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', cursor: submitting || cart.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 16, opacity: submitting || cart.length === 0 ? 0.6 : 1 }}
             >
-              {submitting ? 'Enviando…' : '🛎 Enviar a cocina'}
+              {submitting ? 'Enviando…' : <><Icon name="bell" size={16} style={{ display: 'inline', verticalAlign: '-3px' }} /> Enviar a cocina</>}
             </button>
           </div>
         </div>

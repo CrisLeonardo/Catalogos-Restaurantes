@@ -14,6 +14,7 @@ import AdminNotifications from '@/components/admin/notifications';
 import { can } from '@/lib/permissions';
 
 const BG_KEY = 'admin-bg-visible';
+const NAV_KEY = 'admin-nav-collapsed';
 
 interface NavItem { href: string; label: string; icon: string; key: string }
 
@@ -46,13 +47,29 @@ export default function AdminShell({
 }: Props) {
   const realPathname = usePathname();
   const [bgVisible, setBgVisible] = useState(true);
+  // Secciones del nav plegadas (solo escritorio). 'Cuenta' arranca plegada
+  // para reducir el ruido visual; la elección se recuerda por sección.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ Cuenta: true });
 
   useEffect(() => {
     const stored = localStorage.getItem(BG_KEY);
     const visible = stored !== 'false';
     setBgVisible(visible);
     document.documentElement.setAttribute('data-admin-bg', visible ? 'on' : 'off');
+
+    try {
+      const navStored = localStorage.getItem(NAV_KEY);
+      if (navStored) setCollapsed(JSON.parse(navStored));
+    } catch {}
   }, []);
+
+  function toggleSection(title: string) {
+    setCollapsed((prev) => {
+      const next = { ...prev, [title]: !prev[title] };
+      try { localStorage.setItem(NAV_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
 
   function toggleBg() {
     const next = !bgVisible;
@@ -176,14 +193,28 @@ export default function AdminShell({
           </div>
         </div>
 
-        {/* Nav: secciones en escritorio; barra inferior scrollable en móvil */}
+        {/* Nav: secciones colapsables en escritorio; barra inferior scrollable en móvil.
+            data-collapsed oculta los links (solo ≥821px vía CSS) sin afectar la tab bar. */}
         <nav className="admin-nav">
-          {sections.map((s) => (
-            <div key={s.title} className="admin-navgroup">
-              <div className="t-kicker admin-navgroup-title" style={{ fontSize: 9.5, padding: '4px 10px' }}>{s.title}</div>
-              {s.items.map(renderLink)}
-            </div>
-          ))}
+          {sections.map((s) => {
+            const isCollapsed = !!collapsed[s.title];
+            const hasActive = s.items.some((it) => pathname.startsWith(it.href));
+            return (
+              <div key={s.title} className="admin-navgroup" data-collapsed={isCollapsed ? '1' : '0'}>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(s.title)}
+                  className="admin-navgroup-toggle"
+                  aria-expanded={!isCollapsed}
+                >
+                  <span className="t-kicker admin-navgroup-title" style={{ fontSize: 9.5 }}>{s.title}</span>
+                  {hasActive && isCollapsed && <span className="admin-navgroup-dot" aria-hidden />}
+                  <Icon name="chevronDown" size={13} className="admin-navgroup-chevron" />
+                </button>
+                {s.items.map(renderLink)}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>

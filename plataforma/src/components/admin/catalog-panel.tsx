@@ -404,7 +404,7 @@ function ProductModal({
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
         display: 'grid', placeItems: 'center',
-        background: 'rgba(7,7,8,0.65)',
+        background: 'var(--scrim, rgba(7,7,8,0.65))',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       }}
     >
@@ -472,7 +472,7 @@ function ProductModal({
                 style={{
                   width: 120, height: 120, borderRadius: 16, flexShrink: 0,
                   border: '1.5px dashed var(--u-hair-2)',
-                  background: 'rgba(255,255,255,0.03)', cursor: 'pointer',
+                  background: 'var(--surface-1)', cursor: 'pointer',
                   display: 'grid', placeItems: 'center', overflow: 'hidden', position: 'relative',
                 }}
               >

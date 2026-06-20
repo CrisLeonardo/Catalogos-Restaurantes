@@ -18,7 +18,9 @@ import {
   ROLE_NATURAL_COLOR,
   ROLE_NATURAL_FONT,
   FONT_ROLE_VAR,
+  SHADOW_PRESETS,
   findFont,
+  type ShadowPreset,
   type ThemeConfig,
   type ThemeContent,
   type ThemeTypography,
@@ -281,7 +283,13 @@ export function textStyleVars(role: TypographyRole, s: TextStyle): Record<string
     [`--t-${role}-transform`]: s.transform,
     [`--t-${role}-color`]: col,
     [`--t-${role}-family`]: fam,
+    [`--t-${role}-shadow`]: SHADOW_PRESETS[s.shadow ?? 'none'],
   };
+}
+
+/** CSS text-shadow de un preset (para usar inline donde no hay rol). */
+export function shadowCss(preset: ShadowPreset | undefined): string {
+  return SHADOW_PRESETS[preset ?? 'none'];
 }
 
 function buildTypographyVars(typo: ThemeTypography): Record<string, string> {

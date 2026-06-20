@@ -101,6 +101,18 @@
   --scrim:          rgba(0, 0, 0, 0.55);
   --badge-bg:       rgba(0, 0, 0, 0.62);
   --badge-text:     rgba(255, 255, 255, 0.86);
+
+  /* Tinta de la sombra de texto (legibilidad). En oscuro la sombra es negra;
+     en claro se invierte a blanco (halo) para texto oscuro sobre fondo claro. */
+  --shadow-ink:     0, 0, 0;
+
+  /* ── Glass sólido (modales/tarjetas opacas) — derivado de la paleta ──
+     Antes era un near-black fijo → se veía "siempre negro" en cualquier tema.
+     Ahora se mezcla con --brand-bg para seguir el color del restaurante. */
+  --glass-solid-from:   color-mix(in srgb, var(--brand-bg, #141416) 82%, #ffffff 9%);
+  --glass-solid-to:     color-mix(in srgb, var(--brand-bg, #0b0b0c) 90%, #000000 6%);
+  --glass-solid-stroke: var(--u-hair-2);
+  --glass-solid-hi:     rgba(255, 255, 255, 0.08);
 }
 
 /* En modo claro el tinte de las superficies se invierte a negro suave. */
@@ -108,6 +120,7 @@ html[data-scheme="light"] {
   --surface-base:   17, 17, 19;
   --badge-bg:       rgba(20, 20, 22, 0.72);
   --badge-text:     rgba(255, 255, 255, 0.92);
+  --shadow-ink:     255, 255, 255;
 }
 
 /* Presets de glass por intensidad â€” modo oscuro (se aplican con data-glass en <html>) */
@@ -157,10 +170,15 @@ html[data-scheme="light"] .glass-quiet {
   border-color: rgba(0, 0, 0, 0.07);
   box-shadow:   inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+html[data-scheme="light"] {
+  /* En claro la tarjeta sólida es casi-blanca tintada con la paleta. */
+  --glass-solid-from:   color-mix(in srgb, var(--brand-bg, #ffffff) 12%, #ffffff 88%);
+  --glass-solid-to:     color-mix(in srgb, var(--brand-bg, #f8f8fa) 16%, #ffffff 84%);
+  --glass-solid-stroke: rgba(0, 0, 0, 0.06);
+  --glass-solid-hi:     rgba(255, 255, 255, 0.95);
+}
 html[data-scheme="light"] .glass-solid {
-  background:   linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(248, 248, 250, 0.94));
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow:   inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow:   inset 0 1px 0 var(--glass-solid-hi), 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 @media (min-width: 768px) {
@@ -289,11 +307,11 @@ body {
 }
 .glass-solid {
   position: relative;
-  background: linear-gradient(180deg, rgba(28,28,31,0.86), rgba(18,18,20,0.9));
+  background: linear-gradient(180deg, var(--glass-solid-from), var(--glass-solid-to));
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   backdrop-filter: blur(24px) saturate(120%);
-  border: 1px solid var(--u-hair);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 40px rgba(0,0,0,0.5);
+  border: 1px solid var(--glass-solid-stroke, var(--u-hair));
+  box-shadow: inset 0 1px 0 var(--glass-solid-hi, rgba(255,255,255,0.08)), 0 14px 40px rgba(0,0,0,calc(0.5 * var(--card-shadow, 1)));
   border-radius: var(--radius-lg);
 }
 
@@ -340,6 +358,7 @@ body {
   line-height:    var(--t-heading-lh, 0.95);
   text-transform: var(--t-heading-transform, none);
   color:          var(--t-heading-color, var(--u-text));
+  text-shadow:    var(--t-heading-shadow, none);
 }
 .themed-type .t-poster,
 .ct-poster {
@@ -350,6 +369,7 @@ body {
   line-height:    var(--t-poster-lh, 0.95);
   text-transform: var(--t-poster-transform, uppercase);
   color:          var(--t-poster-color, var(--u-text));
+  text-shadow:    var(--t-poster-shadow, none);
 }
 .themed-type .t-serif,
 .ct-serif {
@@ -360,6 +380,7 @@ body {
   line-height:    var(--t-serif-lh, 1.3);
   text-transform: var(--t-serif-transform, none);
   color:          var(--t-serif-color, var(--u-text-2));
+  text-shadow:    var(--t-serif-shadow, none);
 }
 .themed-type .t-kicker,
 .ct-kicker {
@@ -370,6 +391,7 @@ body {
   line-height:    var(--t-kicker-lh, 1.3);
   text-transform: var(--t-kicker-transform, uppercase);
   color:          var(--t-kicker-color, var(--u-text-3));
+  text-shadow:    var(--t-kicker-shadow, none);
 }
 .themed-type .t-mono,
 .ct-price {
@@ -379,6 +401,7 @@ body {
   letter-spacing: var(--t-price-tracking, -0.01em);
   text-transform: var(--t-price-transform, none);
   color:          var(--t-price-color, var(--u-text));
+  text-shadow:    var(--t-price-shadow, none);
 }
 .ct-body {
   font-family:    var(--t-body-family, var(--ui-font-sans));
@@ -388,6 +411,7 @@ body {
   line-height:    var(--t-body-lh, 1.5);
   text-transform: var(--t-body-transform, none);
   color:          var(--t-body-color, var(--u-text));
+  text-shadow:    var(--t-body-shadow, none);
 }
 .ct-product-name {
   font-family:    var(--t-productName-family, var(--font-display));
@@ -397,6 +421,7 @@ body {
   line-height:    var(--t-productName-lh, 1.14);
   text-transform: var(--t-productName-transform, none);
   color:          var(--t-productName-color, var(--u-text));
+  text-shadow:    var(--t-productName-shadow, none);
 }
 .ct-product-desc {
   font-family:    var(--t-productDesc-family, var(--ui-font-sans));
@@ -406,6 +431,7 @@ body {
   line-height:    var(--t-productDesc-lh, 1.4);
   text-transform: var(--t-productDesc-transform, none);
   color:          var(--t-productDesc-color, var(--u-text-3));
+  text-shadow:    var(--t-productDesc-shadow, none);
 }
 .ct-button {
   /* El color del botón lo gobierna btn-white/btn-accent/btn-outline (ctaStyle),
@@ -415,6 +441,7 @@ body {
   font-style:     var(--t-button-style, normal);
   letter-spacing: var(--t-button-tracking, 0em);
   text-transform: var(--t-button-transform, none);
+  text-shadow:    var(--t-button-shadow, none);
 }
 .ct-tag {
   font-family:    var(--t-tag-family, var(--ui-font-sans));
@@ -423,6 +450,7 @@ body {
   letter-spacing: var(--t-tag-tracking, 0.02em);
   text-transform: var(--t-tag-transform, none);
   color:          var(--t-tag-color, var(--u-text));
+  text-shadow:    var(--t-tag-shadow, none);
 }
 
 /* ============================================================
@@ -507,8 +535,22 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 .admin-nav::-webkit-scrollbar-track { background: transparent; }
 .admin-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
 .admin-navgroup { display: flex; flex-direction: column; gap: 4px; }
-.admin-navgroup-title { margin-top: 12px; color: var(--u-text-4); }
-.admin-navgroup:first-child .admin-navgroup-title { margin-top: 0; }
+.admin-navgroup-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 4px 10px; margin-top: 12px; border-radius: 8px;
+  transition: background 140ms;
+}
+.admin-navgroup-toggle:hover { background: rgba(255,255,255,0.05); }
+.admin-navgroup:first-child .admin-navgroup-toggle { margin-top: 0; }
+.admin-navgroup-title { color: var(--u-text-4); flex: 1; }
+.admin-navgroup-chevron { color: var(--u-text-4); transition: transform 180ms var(--ease-out); }
+.admin-navgroup[data-collapsed="1"] .admin-navgroup-chevron { transform: rotate(-90deg); }
+.admin-navgroup-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--admin-panel-accent); flex-shrink: 0; }
+/* Plegado solo en escritorio: la tab bar móvil siempre muestra todo. */
+@media (min-width: 821px) {
+  .admin-navgroup[data-collapsed="1"] .admin-navlink { display: none; }
+}
 .admin-navlink {
   display: flex; align-items: center; gap: 11px; padding: 11px 12px;
   border-radius: calc(12px * var(--admin-panel-radius, 1));
@@ -575,7 +617,9 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   }
   .admin-nav::-webkit-scrollbar { display: none; }
   .admin-navgroup { flex-direction: row; gap: 0; }
-  .admin-navgroup-title { display: none; }
+  .admin-navgroup-toggle { display: none; }
+  /* En la tab bar móvil nunca se ocultan links aunque la sección esté plegada. */
+  .admin-navgroup[data-collapsed="1"] .admin-navlink { display: flex; }
   .admin-navlink {
     flex: 0 0 auto; min-width: 60px; flex-direction: column; justify-content: center; gap: 4px;
     padding: 6px 8px; border-radius: 10px; text-align: center;

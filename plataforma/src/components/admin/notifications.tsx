@@ -352,9 +352,10 @@ export default function AdminNotifications({
             zIndex: 80, padding: '12px 20px', borderRadius: 'var(--radius-full)',
             fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap',
             pointerEvents: 'none', maxWidth: '92vw', overflow: 'hidden', textOverflow: 'ellipsis',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
           }}
         >
-          🔔 {toast}
+          <Icon name="bell" size={15} /> {toast}
         </div>
       )}
     </>
