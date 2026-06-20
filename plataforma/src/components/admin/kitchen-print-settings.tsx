@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore, useCallback } from 'react';
+import { Icon } from '@/components/icons';
 import {
   PRINT_KEYS,
   type PrintRole,
@@ -372,7 +373,7 @@ export default function KitchenPrintSettings() {
                 </div>
               ) : (
                 <button type="button" onClick={() => configureUsb('kitchen')} className="press glass-quiet" style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🖨 Seleccionar impresora de cocina
+                  <Icon name="print" size={14} /> Seleccionar impresora de cocina
                 </button>
               )}
             </div>
@@ -399,7 +400,7 @@ export default function KitchenPrintSettings() {
                 </div>
               ) : (
                 <button type="button" onClick={() => configureUsb('receipt')} className="press glass-quiet" style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🖨 Seleccionar impresora de caja
+                  <Icon name="print" size={14} /> Seleccionar impresora de caja
                 </button>
               )}
             </div>
@@ -508,7 +509,7 @@ export default function KitchenPrintSettings() {
               className="press glass-quiet"
               style={{ ...btnStyle, opacity: qzState === 'checking' ? 0.6 : 1, cursor: qzState === 'checking' ? 'wait' : 'pointer' }}
             >
-              {qzState === 'checking' ? 'Conectando…' : '🔌 Conectar con QZ Tray'}
+              {qzState === 'checking' ? 'Conectando…' : <><Icon name="plug" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Conectar con QZ Tray</>}
             </button>
           </div>
         </div>

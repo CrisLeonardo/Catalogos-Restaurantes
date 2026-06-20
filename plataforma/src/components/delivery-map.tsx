@@ -8,6 +8,7 @@
    si el pin está dentro o fuera. */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Icon } from '@/components/icons';
 
 interface Props {
   /** Posición inicial del pin del cliente (si ya se eligió antes). */
@@ -234,7 +235,7 @@ export default function DeliveryMap({
           opacity: calibrating ? 0.7 : 1,
         }}
       >
-        📍 {calibrating ? 'Buscando…' : 'Mi ubicación'}
+        <Icon name="mapPin" size={14} /> {calibrating ? 'Buscando…' : 'Mi ubicación'}
       </button>
     </div>
   );

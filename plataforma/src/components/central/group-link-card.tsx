@@ -43,9 +43,10 @@ export default function GroupLinkCard({ url, groupName }: { url: string; groupNa
             color: copied ? '#22c55e' : 'var(--u-text)',
             border: `1px solid ${copied ? 'rgba(34,197,94,0.28)' : 'var(--u-hair-2)'}`,
             cursor: 'pointer', whiteSpace: 'nowrap',
+            display: 'inline-flex', alignItems: 'center', gap: 5,
           }}
         >
-          {copied ? '✓ Copiado' : 'Copiar'}
+          {copied ? <><Icon name="check" size={13} strokeWidth={2.6} /> Copiado</> : 'Copiar'}
         </button>
       </div>
 

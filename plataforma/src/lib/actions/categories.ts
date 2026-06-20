@@ -4,9 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-
-export type CatState = { error: string } | null;
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
@@ -38,72 +35,6 @@ async function resolveContext(formData: FormData) {
 function revalidateAll() {
   revalidatePath('/admin/menu');
   revalidatePath('/admin/categorias');
-}
-
-/* ── Legacy actions (usadas por CategoryManager — mantienen redirect) ──────── */
-
-export async function createCategory(prevState: CatState, formData: FormData): Promise<CatState> {
-  const ctx = await resolveContext(formData);
-  if (!ctx) return { error: 'No autorizado.' };
-
-  const name = (formData.get('name') as string)?.trim();
-  if (!name) return { error: 'El nombre es requerido.' };
-
-  const { data: existing } = await ctx.db
-    .from('categories')
-    .select('sort_order')
-    .eq('restaurant_id', ctx.restaurantId)
-    .order('sort_order', { ascending: false })
-    .limit(1);
-
-  const sort_order = existing?.[0]?.sort_order != null ? existing[0].sort_order + 1 : 0;
-
-  const { error } = await ctx.db.from('categories').insert({
-    restaurant_id: ctx.restaurantId,
-    name,
-    icon: (formData.get('icon') as string) || null,
-    sort_order,
-  });
-
-  if (error) return { error: error.message };
-
-  revalidateAll();
-  redirect('/admin/menu');
-}
-
-export async function updateCategory(prevState: CatState, formData: FormData): Promise<CatState> {
-  const ctx = await resolveContext(formData);
-  if (!ctx) return { error: 'No autorizado.' };
-
-  const id = formData.get('id') as string;
-  const name = (formData.get('name') as string)?.trim();
-  if (!name) return { error: 'El nombre es requerido.' };
-
-  const { error } = await ctx.db
-    .from('categories')
-    .update({ name, icon: (formData.get('icon') as string) || null })
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
-
-  if (error) return { error: error.message };
-
-  revalidateAll();
-  redirect('/admin/menu');
-}
-
-export async function deleteCategory(formData: FormData) {
-  const ctx = await resolveContext(formData);
-  if (!ctx) return;
-
-  const id = formData.get('id') as string;
-
-  await ctx.db
-    .from('categories')
-    .delete()
-    .eq('id', id)
-    .eq('restaurant_id', ctx.restaurantId);
-
-  revalidateAll();
 }
 
 export async function toggleCategoryActive(formData: FormData) {

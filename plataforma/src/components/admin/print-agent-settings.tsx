@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/icons';
 import {
   getPrintAgentConfig,
   regenerateAgentToken,
@@ -473,8 +474,8 @@ export default function PrintAgentSettings() {
           {generating
             ? 'Generando…'
             : config?.exists
-              ? '↻ Regenerar token de instalación'
-              : '🔑 Generar token de instalación'}
+              ? <><Icon name="arrowRight" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Regenerar token de instalación</>
+              : <><Icon name="key" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Generar token de instalación</>}
         </button>
 
         {token && (

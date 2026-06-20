@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import ProfileForm from '@/components/admin/profile-form';
+import CollapsibleCard from '@/components/admin/collapsible-card';
+import { Icon } from '@/components/icons';
 import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import OrdersCurrencyEditor from '@/components/admin/orders-currency-editor';
@@ -84,63 +86,35 @@ export default async function AdminPerfilPage({
             border: '1px solid rgba(50,200,100,0.25)',
             color: '#4ade80',
             fontSize: 14,
+            display: 'flex', alignItems: 'center', gap: 8,
           }}
         >
-          ✓ Cambios guardados correctamente
+          <Icon name="checkCircle" size={16} /> Cambios guardados correctamente
         </div>
       )}
 
-      <ProfileForm
-        restaurantId={restaurantId}
-        restaurant={restaurant as Restaurant}
-      />
+      <CollapsibleCard title="Datos del restaurante" icon="user" storageKey="perfil-datos" defaultOpen>
+        <ProfileForm
+          restaurantId={restaurantId}
+          restaurant={restaurant as Restaurant}
+        />
+      </CollapsibleCard>
 
-      {/* ── Operación: horarios, pausa, zona horaria ───────── */}
-      <section style={{ marginTop: 32 }}>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 18,
-            marginBottom: 16,
-          }}
-        >
-          Horario y pedidos
-        </h2>
+      <CollapsibleCard title="Horario y pedidos" icon="clock" storageKey="perfil-horario" defaultOpen={false}>
         <HoursEditor restaurant={restaurant as Restaurant} />
-      </section>
+      </CollapsibleCard>
 
-      {/* ── Ubicación del restaurante + radio de entrega ───── */}
-      <section style={{ marginTop: 32 }}>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 18,
-            marginBottom: 4,
-          }}
-        >
-          Mapa de entrega (por radio)
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
-          Activa esto para que el cliente vea un mapa interactivo en el checkout
-          y coloque su pin. El pedido se rechaza si el pin cae fuera del radio.
-        </p>
+      <CollapsibleCard
+        title="Mapa de entrega (por radio)"
+        icon="mapPin"
+        storageKey="perfil-mapa"
+        defaultOpen={false}
+        subtitle="Activa esto para que el cliente vea un mapa interactivo en el checkout y coloque su pin. El pedido se rechaza si el pin cae fuera del radio."
+      >
         <RestaurantLocationEditor restaurant={restaurant as Restaurant} />
-      </section>
+      </CollapsibleCard>
 
-      {/* ── Tipos de pedido, moneda y animaciones ─────────── */}
-      <section style={{ marginTop: 32 }}>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 18,
-            marginBottom: 16,
-          }}
-        >
-          Pedidos y moneda
-        </h2>
+      <CollapsibleCard title="Pedidos y moneda" icon="wallet" storageKey="perfil-pedidos" defaultOpen={false}>
         <OrdersCurrencyEditor
           restaurantId={restaurantId}
           config={{
@@ -156,29 +130,19 @@ export default async function AdminPerfilPage({
             animations: resolved.config.animations,
           }}
         />
-      </section>
+      </CollapsibleCard>
 
-      {/* ── Impresión: cocina y recibos ────────────────────── */}
-      <section style={{ marginTop: 32 }}>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 18,
-            marginBottom: 6,
-          }}
-        >
-          Impresión (cocina y recibos)
-        </h2>
-        <p style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, lineHeight: 1.5 }}>
-          Configura la impresión de comandas de cocina y recibos. El <strong>Agente Leogin</strong>
-          {' '}(recomendado) imprime desde cualquier dispositivo y se configura una sola vez; abajo
-          quedan QZ Tray y USB como alternativas por dispositivo.
-        </p>
+      <CollapsibleCard
+        title="Impresión (cocina y recibos)"
+        icon="print"
+        storageKey="perfil-impresion"
+        defaultOpen={false}
+        subtitle="Configura la impresión de comandas y recibos. El Agente Leogin (recomendado) imprime desde cualquier dispositivo y se configura una sola vez; abajo quedan QZ Tray y USB como alternativas."
+      >
         <PrintAgentSettings />
         <div style={{ height: 16 }} />
         <KitchenPrintSettings />
-      </section>
+      </CollapsibleCard>
     </div>
   );
 }

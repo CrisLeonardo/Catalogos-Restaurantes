@@ -134,3 +134,24 @@ Verificado: `tsc --noEmit` limpio en cada paso.
   platillo, Catálogo, Categorías, Personalizar, Ver mi menú). El logo del sidebar enlaza al inicio; el topbar
   dice "Inicio". *Verificado en navegador* (login dueño → /admin renderiza KPIs + tarjetas, sin errores).
 - `build` de producción ✓ (`✓ Compiled successfully`, /admin ahora dinámica), `tsc` ✓.
+
+---
+
+## Pendientes cerrados (2026-06-20)
+
+1. **Acordeones en páginas admin (P1):** componente reutilizable `CollapsibleCard`
+   (`src/components/admin/collapsible-card.tsx`) aplicado a **/admin/perfil** — sus 5 bloques
+   (Datos, Horario, Mapa de entrega, Pedidos y moneda, Impresión) ahora son acordeones, con solo el
+   primero abierto y el estado recordado. (Personalización ya tenía acordeones; el resto de páginas son
+   de un solo propósito y no los necesitan.) *Verificado en navegador.*
+2. **Barrido 100% de emojis (P2):** reemplazados todos los emojis de interfaz visible restantes —
+   delivery-map/restaurant-location-map (📍), páginas de error (⚠), landing (✓ de planes), export
+   Excel/PDF (⬇), categorías (✓/×), group-link (✓), floor-plan (🎉), kitchen-print (🖨/🔌), print-agent
+   (🔑), theme-editor (✦). Íconos nuevos `key` y `plug`. **Se mantienen a propósito** los emojis de
+   mensajes de WhatsApp, recibos impresos y notificaciones del sistema operativo.
+3. **Código muerto borrado (P3):** eliminado `category-manager.tsx` y sus acciones legacy
+   (`createCategory`/`updateCategory`/`deleteCategory` + tipo `CatState` + import `redirect`) en
+   `categories.ts`; quitados los bloques de propina muertos del checkout.
+
+Merge de la rama de la noche a `main` hecho (fast-forward). Estos 3 cierres van en su propia rama
+`limpieza-ux-final` → merge a `main`.

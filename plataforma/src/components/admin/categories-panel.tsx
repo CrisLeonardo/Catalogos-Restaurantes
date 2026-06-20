@@ -399,11 +399,11 @@ function InlineEditForm({
       {state && 'error' in state && (
         <span style={{ fontSize: 11, color: '#f87171', flexShrink: 0 }}>{state.error}</span>
       )}
-      <button type="submit" disabled={isPending} className="press" style={{ ...submitBtn, flexShrink: 0 }}>
-        {isPending ? '…' : '✓'}
+      <button type="submit" disabled={isPending} aria-label="Guardar" className="press" style={{ ...submitBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
       </button>
-      <button type="button" onClick={onClose} className="press" style={{ ...cancelBtn, flexShrink: 0 }}>
-        ×
+      <button type="button" onClick={onClose} aria-label="Cancelar" className="press" style={{ ...cancelBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        <Icon name="x" size={15} />
       </button>
     </form>
   );

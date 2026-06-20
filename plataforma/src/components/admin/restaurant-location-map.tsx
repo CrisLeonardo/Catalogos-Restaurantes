@@ -4,6 +4,7 @@
    Importado con dynamic({ ssr: false }) — NO renderizar en el servidor. */
 
 import { useEffect, useRef, useState } from 'react';
+import { Icon } from '@/components/icons';
 
 interface Props {
   lat: number;
@@ -147,7 +148,7 @@ export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationCh
           opacity: calibrating ? 0.7 : 1,
         }}
       >
-        📍 {calibrating ? 'Buscando…' : 'Recalibrar'}
+        <Icon name="mapPin" size={14} /> {calibrating ? 'Buscando…' : 'Recalibrar'}
       </button>
     </div>
   );

@@ -1,5 +1,7 @@
 'use client';
 
+import { Icon } from '@/components/icons';
+
 export default function GlobalError({
   error,
   reset,
@@ -30,10 +32,10 @@ export default function GlobalError({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 24,
+          color: '#ef4444',
         }}
       >
-        ⚠
+        <Icon name="alertCircle" size={26} />
       </div>
 
       <div style={{ maxWidth: 320 }}>

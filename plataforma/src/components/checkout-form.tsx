@@ -505,12 +505,6 @@ export default function CheckoutForm({
                 <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
-            {tipAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
-                <Price amount={tipAmount} size={13.5} muted />
-              </div>
-            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>
               <Price amount={finalTotal} size={20} />
@@ -757,33 +751,6 @@ export default function CheckoutForm({
             placeholder={geoActive ? 'Ej. Portón azul, frente al parque…' : content.checkout.addressPh}
             error={tried && errs.address}
           />
-        )}
-
-        {/* ── DINE_IN: propina (automática, no opcional) ── */}
-        {showTip && (
-          <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>Propina</label>
-            <div
-              style={{
-                display: 'flex', alignItems: 'center', gap: 13,
-                padding: 15, borderRadius: 14, marginTop: 8,
-                border: '1.5px solid var(--u-hair-2)',
-                background: 'var(--surface-1)',
-              }}
-            >
-              <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', fontSize: 22 }}>
-                🙏
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>
-                  Propina del {config.tipPercent}%
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  {formatPrice(tipAmount, config)} · Incluida automáticamente
-                </div>
-              </div>
-            </div>
-          </div>
         )}
 
         <Field label={content.checkout.notes} value={notes} onChange={setNotes} placeholder={content.checkout.notesPh} />

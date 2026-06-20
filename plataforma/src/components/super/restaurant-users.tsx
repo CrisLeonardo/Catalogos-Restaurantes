@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 import DeleteButton from '@/components/admin/delete-button';
 import {
   createRestaurantUser,
@@ -365,9 +366,9 @@ function AddUserForm({
               Generar
             </button>
           </div>
-          <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-            ⚠️ Copia la contraseña ahora: no se vuelve a mostrar. Entrega estas
-            credenciales al restaurante.
+          <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+            <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1, color: '#f59e0b' }} />
+            <span>Copia la contraseña ahora: no se vuelve a mostrar. Entrega estas credenciales al restaurante.</span>
           </p>
         </div>
 

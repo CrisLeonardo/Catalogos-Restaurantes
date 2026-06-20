@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition, useState } from 'react';
+import { Icon } from '@/components/icons';
 import { exportSalesReportXlsx, getSalesReportData } from '@/lib/actions/finanzas';
 
 export default function ExportReportButton({
@@ -107,7 +108,7 @@ export default function ExportReportButton({
         className="press glass-quiet"
         style={{ ...btnStyle, opacity: pendingXlsx ? 0.7 : 1, cursor: pendingXlsx ? 'not-allowed' : 'pointer' }}
       >
-        {pendingXlsx ? '…' : '⬇ Excel'}
+        {pendingXlsx ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> Excel</>}
       </button>
       <button
         onClick={downloadPdf}
@@ -115,7 +116,7 @@ export default function ExportReportButton({
         className="press glass-quiet"
         style={{ ...btnStyle, opacity: pendingPdf ? 0.7 : 1, cursor: pendingPdf ? 'not-allowed' : 'pointer' }}
       >
-        {pendingPdf ? '…' : '⬇ PDF'}
+        {pendingPdf ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> PDF</>}
       </button>
       {err && <span style={{ fontSize: 12, color: '#f87171' }}>{err}</span>}
     </div>

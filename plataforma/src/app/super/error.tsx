@@ -1,5 +1,7 @@
 'use client';
 
+import { Icon } from '@/components/icons';
+
 export default function SuperError({
   error,
   reset,
@@ -29,10 +31,10 @@ export default function SuperError({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 20,
+          color: '#ef4444',
         }}
       >
-        ⚠
+        <Icon name="alertCircle" size={22} />
       </div>
 
       <div style={{ maxWidth: 300 }}>

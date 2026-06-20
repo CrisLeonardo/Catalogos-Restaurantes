@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
 
@@ -194,7 +195,7 @@ export default function LeoginLanding() {
                 <ul style={{ listStyle: 'none', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {p.points.map((pt) => (
                     <li key={pt} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14 }}>
-                      <span style={{ color: 'var(--brand-accent)', flex: '0 0 auto', lineHeight: 1.5 }}>✓</span>
+                      <Icon name="check" size={16} strokeWidth={2.6} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 3 }} />
                       <span style={{ color: 'var(--u-text-2)', lineHeight: 1.5 }}>{pt}</span>
                     </li>
                   ))}
