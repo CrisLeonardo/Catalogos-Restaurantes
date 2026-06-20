@@ -144,7 +144,9 @@ export default function AdminShell({
     '/admin/qr': 'Código QR',
     '/admin/soporte': 'Soporte',
   };
-  const title = Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
+  const title = pathname === '/admin'
+    ? 'Inicio'
+    : Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
 
   const isLive = pathname.startsWith('/admin/pedidos');
   const isWaiter = pathname.startsWith('/admin/mesero');
@@ -179,19 +181,30 @@ export default function AdminShell({
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
-            {logoUrl ? (
-              <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
-            ) : (
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)' }}>{initial}</span>
-            )}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
-            <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
-          </div>
-        </div>
+        {(() => {
+          const brandInner = (
+            <>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
+                {logoUrl ? (
+                  <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
+                ) : (
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)' }}>{initial}</span>
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
+                <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
+              </div>
+            </>
+          );
+          const brandStyle = { display: 'flex', alignItems: 'center', gap: 11 } as const;
+          // Fuera de preview la marca es un enlace al Inicio del panel (logo → home).
+          return preview ? (
+            <div className="admin-brand" style={brandStyle}>{brandInner}</div>
+          ) : (
+            <Link href="/admin" className="admin-brand press" style={{ ...brandStyle, textDecoration: 'none', color: 'inherit' }} title="Ir al inicio">{brandInner}</Link>
+          );
+        })()}
 
         {/* Nav: secciones colapsables en escritorio; barra inferior scrollable en móvil.
             data-collapsed oculta los links (solo ≥821px vía CSS) sin afectar la tab bar. */}

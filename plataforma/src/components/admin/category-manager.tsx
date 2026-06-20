@@ -474,13 +474,7 @@ function NewCategoryForm({
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Nueva categoría</div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            name="icon"
-            type="text"
-            placeholder="🍕"
-            maxLength={4}
-            style={{ ...inlineInputStyle, width: 56 }}
-          />
+          <CategoryIconPicker name="icon" />
           <input
             name="name"
             type="text"
@@ -533,14 +527,7 @@ function EditCategoryForm({
     <form action={formAction} style={{ display: 'flex', gap: 8, flex: 1, alignItems: 'center' }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id" value={category.id} />
-      <input
-        name="icon"
-        type="text"
-        defaultValue={category.icon ?? ''}
-        placeholder="🍕"
-        maxLength={4}
-        style={{ ...inlineInputStyle, width: 48 }}
-      />
+      <CategoryIconPicker name="icon" defaultValue={category.icon ?? ''} />
       <input
         name="name"
         type="text"
@@ -565,6 +552,62 @@ function EditCategoryForm({
         <span style={{ fontSize: 11, color: '#f87171' }}>{state.error}</span>
       )}
     </form>
+  );
+}
+
+/* ── Selector de ícono de categoría (SVG, no emoji) ──────────
+   Antes el ícono se escribía como emoji a mano y NO renderizaba en el menú
+   (Icon ignora nombres que no existen). Ahora se elige de un set curado de
+   íconos SVG; el valor guardado es el nombre del ícono (p. ej. "coffee"). */
+const CATEGORY_ICONS = [
+  'utensils', 'coffee', 'bagel', 'croissant', 'ice', 'cookie',
+  'flame', 'leaf', 'milk', 'wheat', 'star', 'sparkle', 'bag', 'box', 'tag',
+];
+
+function CategoryIconPicker({ name, defaultValue }: { name: string; defaultValue?: string }) {
+  const initial = defaultValue && ICON_PATHS[defaultValue] ? defaultValue : 'utensils';
+  const [icon, setIcon] = useState(initial);
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input type="hidden" name={name} value={icon} />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Elegir ícono"
+        className="press"
+        style={{ ...inlineInputStyle, width: 46, height: 38, display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+      >
+        <Icon name={icon} size={18} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+          <div
+            className="glass-solid anim-pop"
+            style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 14, width: 214 }}
+          >
+            {CATEGORY_ICONS.map((ic) => (
+              <button
+                key={ic}
+                type="button"
+                onClick={() => { setIcon(ic); setOpen(false); }}
+                aria-label={ic}
+                className="press"
+                style={{
+                  width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 9, cursor: 'pointer',
+                  border: `1px solid ${icon === ic ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
+                  background: icon === ic ? 'color-mix(in srgb, var(--brand-accent) 20%, transparent)' : 'transparent',
+                  color: 'var(--u-text)',
+                }}
+              >
+                <Icon name={ic} size={17} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

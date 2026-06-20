@@ -82,12 +82,13 @@ Se reemplazaron emojis decorativos por componentes `<Icon>` en las pantallas:
 
 Cosas que vi "con ojos de usuario nuevo" y que conviene resolver (no las toqué para no romper sin tu visto bueno):
 
-1. **Doble sistema de íconos (inconsistencia real).** Los **productos** usan íconos SVG por nombre
-   (`utensils`, `coffee`…), pero las **categorías** guardan un **emoji** escrito a mano (campo `icon`,
-   `placeholder="🍕"` en `category-manager.tsx`). Resultado: el menú mezcla íconos vectoriales (productos) con
-   emojis (categorías) → se ve disparejo. **Recomendación:** unificar a un selector de íconos SVG también para
-   categorías (ya existe `ICON_PATHS` y el selector del modal de producto se puede reutilizar). Es un cambio
-   con migración de datos suave (los emojis viejos seguirían mostrándose como texto).
+1. **Doble sistema de íconos → RESUELTO (2026-06-20).** El input de emoji estaba en `category-manager.tsx`,
+   que resultó ser **código muerto** (lo reemplazó `catalog-panel.tsx`, no se importa en ningún lado). La
+   gestión real (`/admin/categorias` → `categories-panel.tsx`) ya derivaba un ícono SVG del nombre, pero el
+   usuario **no podía elegirlo** y al editar el nombre **se pisaba** el ícono guardado. Ahora hay un **selector
+   de íconos SVG** (con opción "Automático") en alta y edición; `pickIcon` (catálogo cliente) valida contra
+   `ICON_PATHS` y cae a `utensils` si el valor guardado es un emoji viejo. **Pendiente menor:** `category-manager.tsx`
+   sigue siendo código muerto (se puede borrar junto con las acciones legacy de `categories.ts`).
 
 2. **Código muerto en checkout.** En `checkout-form.tsx` el bloque de **propina** está detrás de
    `const showTip = false` y `tipAmount = 0` (nunca se renderiza). O se conecta a `config.tipEnabled`/`tipPercent`
@@ -119,3 +120,17 @@ Cosas que vi "con ojos de usuario nuevo" y que conviene resolver (no las toqué 
    del editor ahora son acordeones.
 
 Verificado: `tsc --noEmit` limpio en cada paso.
+
+---
+
+## Seguimiento (2026-06-20): íconos de categoría + dashboard de inicio
+
+- **Íconos de categoría a SVG (#5 hallazgo 1):** selector de íconos en `/admin/categorias` (alta y edición)
+  con opción "Automático" (sigue sugiriendo por el nombre) y 12 íconos. Arregla que editar el nombre pisara
+  el ícono. `pickIcon` del catálogo valida contra `ICON_PATHS`. *Verificado en navegador*: popover con 13
+  opciones, elegir "coffee" guarda `icon=coffee`.
+- **Dashboard de inicio (`/admin`):** antes redirigía a `/admin/menu`; ahora es un tablero con saludo,
+  números de hoy (pedidos / ventas / ticket, si hay pedidos en línea) y 6 accesos rápidos (Pedidos, Agregar
+  platillo, Catálogo, Categorías, Personalizar, Ver mi menú). El logo del sidebar enlaza al inicio; el topbar
+  dice "Inicio". *Verificado en navegador* (login dueño → /admin renderiza KPIs + tarjetas, sin errores).
+- `build` de producción ✓ (`✓ Compiled successfully`, /admin ahora dinámica), `tsc` ✓.

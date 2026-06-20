@@ -41,6 +41,53 @@ function CatIconDisplay({ icon }: { icon: string | null }) {
   if (ICON_PATHS[icon]) return <Icon name={icon} size={22} />;
   return <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>;
 }
+
+/* Set de íconos elegibles para una categoría (los mismos que sugiere el auto). */
+const CAT_ICONS = CAT_ICON_MAP.map(([icon]) => icon);
+
+/* Selector de ícono: botón con el ícono actual + popover con la rejilla.
+   `value` = override manual (null = seguir la sugerencia automática del nombre). */
+function CatIconPicker({ value, suggested, onChange }: {
+  value: string | null; suggested: string; onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const effective = value && ICON_PATHS[value] ? value : suggested;
+  const cell = (active: boolean): React.CSSProperties => ({
+    width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 9, cursor: 'pointer',
+    border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
+    background: active ? 'color-mix(in srgb, var(--brand-accent) 20%, transparent)' : 'transparent',
+    color: 'var(--u-text)',
+  });
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Elegir ícono"
+        className="press"
+        style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
+      >
+        <Icon name={effective} size={22} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+          <div className="glass-solid anim-pop" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, padding: 8, borderRadius: 14, width: 214 }}>
+            <button type="button" onClick={() => { onChange(null); setOpen(false); }} className="press"
+              style={{ ...cell(value === null), gridColumn: 'span 5', width: 'auto', height: 32, display: 'flex', gap: 6, justifyContent: 'center', fontSize: 11.5, fontWeight: 600 }}>
+              <Icon name="sparkle" size={13} /> Automático
+            </button>
+            {CAT_ICONS.map((ic) => (
+              <button key={ic} type="button" onClick={() => { onChange(ic); setOpen(false); }} aria-label={ic} className="press" style={cell(value === ic)}>
+                <Icon name={ic} size={17} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 import {
   moveCategoryUp,
   moveCategoryDown,
@@ -261,7 +308,9 @@ function NewCategoryForm({
     null,
   );
   const [catName, setCatName] = useState('');
+  const [iconOverride, setIconOverride] = useState<string | null>(null);
   const iconSuggested = suggestIcon(catName);
+  const iconValue = iconOverride && ICON_PATHS[iconOverride] ? iconOverride : iconSuggested;
 
   useEffect(() => {
     if (state && 'success' in state) onSaved();
@@ -273,15 +322,9 @@ function NewCategoryForm({
       <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Nueva categoría</div>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <input type="hidden" name="icon" value={iconSuggested} />
+        <input type="hidden" name="icon" value={iconValue} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-            background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)',
-            display: 'grid', placeItems: 'center', color: 'var(--u-text-2)',
-          }}>
-            <Icon name={iconSuggested} size={22} />
-          </div>
+          <CatIconPicker value={iconOverride} suggested={iconSuggested} onChange={setIconOverride} />
           <input
             name="name"
             type="text"
@@ -327,7 +370,11 @@ function InlineEditForm({
     null,
   );
   const [catName, setCatName] = useState(category.name);
+  const [iconOverride, setIconOverride] = useState<string | null>(
+    category.icon && ICON_PATHS[category.icon] ? category.icon : null,
+  );
   const iconSuggested = suggestIcon(catName);
+  const iconValue = iconOverride && ICON_PATHS[iconOverride] ? iconOverride : iconSuggested;
 
   useEffect(() => {
     if (state && 'success' in state) onSaved();
@@ -338,7 +385,8 @@ function InlineEditForm({
     <form action={formAction} style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id"           value={category.id} />
-      <input type="hidden" name="icon"         value={iconSuggested} />
+      <input type="hidden" name="icon"         value={iconValue} />
+      <CatIconPicker value={iconOverride} suggested={iconSuggested} onChange={setIconOverride} />
       <input
         name="name"
         type="text"

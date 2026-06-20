@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState, type RefObject } from 'react';
 import { Glass } from '@/components/glass';
-import { Icon } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Price, Tag } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
@@ -58,9 +58,11 @@ interface CatalogProps {
   cartIconRef: RefObject<HTMLButtonElement | null>;
 }
 
-/** Ícono para el patrón/categoría: el de la categoría o un default. */
+/** Ícono para el patrón/categoría: el nombre SVG de la categoría o un default.
+   Si el valor guardado no es un ícono SVG válido (p. ej. un emoji viejo), cae
+   a 'utensils' para no renderizar un ícono vacío. */
 function pickIcon(icon: string | null | undefined): string {
-  return icon && icon.trim() ? icon : 'utensils';
+  return icon && ICON_PATHS[icon.trim()] ? icon.trim() : 'utensils';
 }
 
 export default function Catalog({
