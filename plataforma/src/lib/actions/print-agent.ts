@@ -3,10 +3,31 @@
 // Server actions del panel para configurar el agente de impresión propio.
 // Toda la lógica de tokens/encolado vive en @/lib/print-agent.
 
+import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
+import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { generateToken, hashToken, enqueuePrintJob } from '@/lib/print-agent';
 import { buildTestKitchenEscPos, buildTestReceiptEscPos } from '@/lib/escpos';
+
+/**
+ * Devuelve el restaurant_id efectivo para las acciones del panel.
+ * - OWNER/STAFF: usa profile.restaurant_id del contexto.
+ * - SUPER_ADMIN: resuelve desde el header x-tenant-slug que pone el proxy.
+ */
+async function resolveRestaurantId(
+  ctx: NonNullable<Awaited<ReturnType<typeof getAdminContext>>>,
+): Promise<string | null> {
+  if (ctx.restaurant) return ctx.restaurant.id as string;
+  if (ctx.profile.role === 'SUPER_ADMIN') {
+    const h = await headers();
+    const slug = h.get('x-tenant-slug');
+    if (!slug) return null;
+    const tenantData = await getRestaurantBySlug(slug);
+    return (tenantData?.restaurant.id as string) ?? null;
+  }
+  return null;
+}
 
 export interface ReportedPrinter {
   name: string;
@@ -40,13 +61,15 @@ const EMPTY: PrintAgentConfig = {
 /** Lee la configuración del agente del restaurante en sesión. */
 export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error: string }> {
   const ctx = await getAdminContext();
-  if (!ctx?.restaurant) return { error: 'No autorizado.' };
+  if (!ctx) return { error: 'No autorizado.' };
+  const restaurantId = await resolveRestaurantId(ctx);
+  if (!restaurantId) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
   const { data } = await db
     .from('print_agents')
     .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version')
-    .eq('restaurant_id', ctx.restaurant.id)
+    .eq('restaurant_id', restaurantId)
     .single();
 
   if (!data) return EMPTY;
@@ -66,16 +89,18 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
 /** Genera (o rota) el token del agente. El token en claro se devuelve UNA vez. */
 export async function regenerateAgentToken(): Promise<{ token?: string; error?: string }> {
   const ctx = await getAdminContext();
-  if (!ctx?.restaurant) return { error: 'No autorizado.' };
+  if (!ctx) return { error: 'No autorizado.' };
   if (ctx.profile.role === 'RESTAURANT_STAFF') {
     return { error: 'Solo el dueño puede configurar el agente.' };
   }
+  const restaurantId = await resolveRestaurantId(ctx);
+  if (!restaurantId) return { error: 'No autorizado.' };
 
   const token = generateToken();
   const db = createServiceClient();
   // upsert deja intactas las columnas no provistas (destinos e impresoras).
   const { error } = await db.from('print_agents').upsert(
-    { restaurant_id: ctx.restaurant.id, name: 'Agente principal', token_hash: hashToken(token) },
+    { restaurant_id: restaurantId, name: 'Agente principal', token_hash: hashToken(token) },
     { onConflict: 'restaurant_id' },
   );
   if (error) return { error: error.message };
@@ -88,10 +113,12 @@ export async function setPrintTargets(input: {
   receipt: string | null;
 }): Promise<{ error?: string }> {
   const ctx = await getAdminContext();
-  if (!ctx?.restaurant) return { error: 'No autorizado.' };
+  if (!ctx) return { error: 'No autorizado.' };
   if (ctx.profile.role === 'RESTAURANT_STAFF') {
     return { error: 'Solo el dueño puede configurar el agente.' };
   }
+  const restaurantId = await resolveRestaurantId(ctx);
+  if (!restaurantId) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
   const { error } = await db
@@ -100,7 +127,7 @@ export async function setPrintTargets(input: {
       kitchen_target: input.kitchen?.trim() || null,
       receipt_target: input.receipt?.trim() || null,
     })
-    .eq('restaurant_id', ctx.restaurant.id);
+    .eq('restaurant_id', restaurantId);
 
   if (error) return { error: error.message };
   return {};
@@ -112,12 +139,14 @@ export async function sendTestPrint(input: {
   target?: string | null;
 }): Promise<{ jobId?: string; error?: string }> {
   const ctx = await getAdminContext();
-  if (!ctx?.restaurant) return { error: 'No autorizado.' };
+  if (!ctx) return { error: 'No autorizado.' };
+  const restaurantId = await resolveRestaurantId(ctx);
+  if (!restaurantId) return { error: 'No autorizado.' };
 
   const role = input.role === 'receipt' ? 'receipt' : 'kitchen';
   const bytes = role === 'kitchen' ? buildTestKitchenEscPos() : buildTestReceiptEscPos();
   const res = await enqueuePrintJob({
-    restaurantId: ctx.restaurant.id,
+    restaurantId,
     role,
     bytes,
     targetOverride: input.target ?? null,
