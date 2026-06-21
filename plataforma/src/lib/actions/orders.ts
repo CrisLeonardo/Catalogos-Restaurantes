@@ -604,11 +604,20 @@ export async function updateOrderStatus(
   // Al confirmar (NEW→PREP): encola la comanda de cocina al agente de impresión
   // del restaurante (funciona desde cualquier dispositivo, incl. móvil). No-op
   // si no hay agente configurado; best-effort, no debe romper el cambio de estado.
-  if (status === 'PREP' && profile.restaurant_id) {
-    try {
-      await enqueueKitchenForOrder(profile.restaurant_id, orderId);
-    } catch {
-      /* impresión es best-effort */
+  if (status === 'PREP') {
+    // profile.restaurant_id es null para SUPER_ADMIN: resolver del pedido mismo.
+    let kitchenRid = profile.restaurant_id as string | null;
+    if (!kitchenRid) {
+      const { data: orderRow } = await createServiceClient()
+        .from('orders').select('restaurant_id').eq('id', orderId).single();
+      kitchenRid = (orderRow?.restaurant_id as string) ?? null;
+    }
+    if (kitchenRid) {
+      try {
+        await enqueueKitchenForOrder(kitchenRid, orderId);
+      } catch {
+        /* impresión es best-effort */
+      }
     }
   }
 
