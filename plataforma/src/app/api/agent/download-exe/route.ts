@@ -1,7 +1,8 @@
 /* ============================================================
    GET /api/agent/download-exe
    Sirve LeoginAgent.exe para descarga desde el panel admin.
-   Solo accesible para admins autenticados.
+   En producción redirige a LEOGIN_AGENT_DOWNLOAD_URL (GitHub Releases u otro CDN).
+   En desarrollo sirve el exe desde disco si existe.
    ============================================================ */
 
 import { NextResponse } from 'next/server';
@@ -12,7 +13,7 @@ import { getAdminContext } from '@/lib/db/admin';
 
 export const runtime = 'nodejs';
 
-// Rutas donde puede estar el exe (desarrollo y producción).
+// Rutas donde buscar el exe en desarrollo local.
 const EXE_CANDIDATES = [
   process.env.LEOGIN_AGENT_EXE_PATH,
   path.resolve(process.cwd(), '..', 'agente-impresion', 'dist', 'LeoginAgent.exe'),
@@ -26,11 +27,18 @@ export async function GET() {
     return new NextResponse('No autorizado.', { status: 401 });
   }
 
+  // Producción: redirige a la URL configurada (GitHub Releases, CDN, etc.)
+  const downloadUrl = process.env.LEOGIN_AGENT_DOWNLOAD_URL;
+  if (downloadUrl) {
+    return NextResponse.redirect(downloadUrl, { status: 302 });
+  }
+
+  // Desarrollo: intenta servir el exe desde disco.
   const exePath = EXE_CANDIDATES.find((p) => existsSync(p));
   if (!exePath) {
     return new NextResponse(
-      'LeoginAgent.exe no encontrado en el servidor. ' +
-      'Configura la variable de entorno LEOGIN_AGENT_EXE_PATH o contacta al soporte.',
+      'LeoginAgent.exe no disponible. Configura la variable de entorno ' +
+      'LEOGIN_AGENT_DOWNLOAD_URL apuntando a la URL de descarga del agente.',
       { status: 404 },
     );
   }

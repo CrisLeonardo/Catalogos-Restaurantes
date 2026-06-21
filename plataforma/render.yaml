@@ -21,3 +21,8 @@ services:
       # Solo servidor — NO exponer al cliente
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+
+      # URL de descarga del agente de impresión (GitHub Releases u otro CDN).
+      # Ejemplo: https://github.com/CrisLeonardo/Catalogos-Restaurantes/releases/download/v0.1.0/LeoginAgent.exe
+      - key: LEOGIN_AGENT_DOWNLOAD_URL
+        sync: false
