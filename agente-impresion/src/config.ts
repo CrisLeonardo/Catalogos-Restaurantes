@@ -4,12 +4,44 @@
 // base de datos vive aquí.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, basename } from 'node:path';
 
 export interface AgentConfig {
   apiUrl: string;
   token: string;
   pollMs: number;
+}
+
+export interface InstallParams {
+  apiUrl: string;
+  token: string;
+}
+
+// El panel sirve el instalador con el token embebido en el NOMBRE del archivo:
+//   LeoginAgent~LG1~<base64url({"u":apiUrl,"t":token})>~.exe
+// Así el restaurante solo hace doble clic — sin copiar/pegar nada. El marcador
+// "~LG1~...~" sobrevive a sufijos del navegador como " (1)".
+const FILENAME_MARKER = /~LG1~([A-Za-z0-9_-]+)~/;
+
+/**
+ * Lee los parámetros de instalación (apiUrl + token) embebidos en el nombre del
+ * propio ejecutable. Devuelve null si el nombre no los trae (ej. ya instalado o
+ * corriendo en desarrollo).
+ */
+export function extractInstallParams(execPath = process.execPath): InstallParams | null {
+  const match = basename(execPath).match(FILENAME_MARKER);
+  if (!match) return null;
+  try {
+    const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = Buffer.from(b64, 'base64').toString('utf8');
+    const obj = JSON.parse(json) as { u?: unknown; t?: unknown };
+    if (typeof obj.u === 'string' && typeof obj.t === 'string' && obj.u && obj.t) {
+      return { apiUrl: obj.u.replace(/\/+$/, ''), token: obj.t };
+    }
+  } catch {
+    /* nombre malformado → se ignora */
+  }
+  return null;
 }
 
 interface FileConfig {

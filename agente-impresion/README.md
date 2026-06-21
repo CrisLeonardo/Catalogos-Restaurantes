@@ -104,22 +104,38 @@ Genera un ejecutable autónomo (el restaurante NO necesita instalar Node):
 
 ```powershell
 npm install            # esbuild + postject (una vez)
-npm run build:exe      # → dist/LeoginAgent.exe (+ scripts/ + installer/)
+npm run build:exe      # → dist/LeoginAgent.exe (autocontenido)
 ```
 
-En la PC del local, desde la carpeta `dist/`:
+### Instalación del cliente: UN solo archivo, doble clic
+
+El `LeoginAgent.exe` es **autocontenido** (lleva los scripts `.ps1` incrustados)
+y **se autoinstala**. El cliente NO necesita PowerShell, ni permisos de
+administrador, ni copiar/pegar nada:
+
+1. En el panel (Perfil → Agente Leogin) pulsa **Descargar instalador**. El panel
+   sirve el exe con el token embebido en el nombre
+   (`LeoginAgent~LG1~<token>~.exe`).
+2. En la PC del local: **doble clic** en el archivo descargado.
+3. El exe se copia a `%LOCALAPPDATA%\Leogin\Agente`, escribe su config, se
+   registra para arrancar solo (carpeta Inicio + Tarea Programada) y se lanza.
+   Muestra un aviso «Instalado correctamente».
+
+> **No le cambies el nombre al archivo:** el token viaja en él. Si Windows
+> SmartScreen advierte la 1ª vez ("Windows protegió tu PC"), pulsa
+> **Más información → Ejecutar de todos modos**. Se elimina comprando un
+> certificado de firma de código (Fase 5).
+
+### Instalación avanzada (línea de comandos)
+
+Equivalente manual, desde la carpeta `dist/` (PowerShell como Administrador):
 
 ```powershell
-# Instala y deja el agente arrancando solo al iniciar sesión (oculto)
+.\LeoginAgent.exe setup            # autoinstala usando el token del nombre / env / config.local.json
+# o el instalador clásico:
 .\installer\install.ps1 -ApiUrl "https://tudominio.com" -Token "EL_TOKEN_DEL_PANEL"
-
-# Para quitarlo
-.\installer\uninstall.ps1
+.\installer\uninstall.ps1          # para quitarlo
 ```
-
-> El exe aún **no está firmado**: Windows SmartScreen puede advertir la primera
-> vez ("Más información → Ejecutar de todos modos"). Se resuelve comprando un
-> certificado de firma de código (Fase 5).
 
 ## Estructura
 

@@ -54,10 +54,14 @@ step('Inyectando el código (postject)…');
 const postject = join(root, 'node_modules', 'postject', 'dist', 'cli.js');
 execFileSync(process.execPath, [postject, exe, 'NODE_SEA_BLOB', join(dist, 'sea-prep.blob'), '--sentinel-fuse', FUSE], { stdio: 'inherit' });
 
-// 5. Copia la carpeta scripts/ y el instalador al lado del exe.
-step('Copiando scripts e instalador…');
+// 5. Copia scripts/ e instalador al lado del exe SOLO como referencia/fallback.
+//    El exe ya es AUTOCONTENIDO: lleva los .ps1 incrustados (src/ps-scripts.ts)
+//    y se autoinstala al doble clic. Para el cliente basta el ÚNICO archivo
+//    LeoginAgent.exe — la carpeta dist/ completa es solo para instalación avanzada.
+step('Copiando scripts e instalador (referencia)…');
 cpSync(join(root, 'scripts'), join(dist, 'scripts'), { recursive: true });
 cpSync(join(root, 'installer'), join(dist, 'installer'), { recursive: true });
 
 console.log(`\n✓ Listo → ${exe}`);
-console.log('  Distribuye la carpeta dist/ completa (exe + scripts/ + installer/).');
+console.log('  Para el cliente: sube SOLO LeoginAgent.exe (es autocontenido y se');
+console.log('  autoinstala). El panel lo sirve con el token embebido en el nombre.');

@@ -173,76 +173,114 @@ function InstallSteps({
     gap: 7,
   };
 
+  // El token viaja embebido en el nombre del archivo → el exe se autoinstala con
+  // doble clic, sin copiar/pegar nada.
+  const downloadHref = `/api/agent/download-exe?token=${encodeURIComponent(token)}`;
+
   return (
     <div style={{
       background: 'rgba(74,222,128,0.06)',
       border: '1px solid rgba(74,222,128,0.22)',
       borderRadius: 10,
-      padding: '14px 16px',
+      padding: '16px',
       display: 'flex',
       flexDirection: 'column',
       gap: 16,
     }}>
       <div style={{ fontSize: 12, color: '#4ade80', fontWeight: 700 }}>
-        ✓ Token generado — sigue los pasos para instalar el agente en la PC del local
+        ✓ Listo para instalar — solo descarga y haz doble clic en la PC del local
       </div>
 
-      {/* Paso 1: Descargar el agente */}
+      {/* Paso 1: Descargar */}
       <div style={stepBoxStyle}>
         <span style={stepNumStyle}>1</span>
         <div style={stepContentStyle}>
           <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
-            Descarga el agente en la PC del local
+            Descarga el instalador en la PC del local
           </span>
           <a
-            href="/api/agent/download-exe"
-            download="LeoginAgent.exe"
+            href={downloadHref}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              padding: '7px 12px',
+              gap: 7,
+              padding: '11px 16px',
               borderRadius: 'var(--radius-md)',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid var(--u-hair)',
-              color: 'var(--u-text-2)',
-              fontSize: 12,
-              fontWeight: 600,
+              background: 'var(--brand-accent, rgba(99,102,241,0.85))',
+              border: 'none',
+              color: '#fff',
+              fontSize: 13.5,
+              fontWeight: 700,
               textDecoration: 'none',
               alignSelf: 'flex-start',
             }}
+            className="press"
           >
-            ⬇ Descargar LeoginAgent.exe
+            ⬇ Descargar instalador (Windows)
           </a>
           <span style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
-            Si Windows SmartScreen advierte al abrir el exe, haz clic en
-            {' '}<strong style={{ color: 'var(--u-text-3)' }}>"Más información → Ejecutar de todos modos"</strong>.
+            Tu código de vinculación ya viene dentro del archivo: no hay nada que copiar.
+            {' '}<strong style={{ color: 'var(--u-text-3)' }}>No le cambies el nombre.</strong>
           </span>
         </div>
       </div>
 
-      {/* Paso 2: Ejecutar el instalador */}
+      {/* Paso 2: Doble clic */}
       <div style={stepBoxStyle}>
         <span style={stepNumStyle}>2</span>
         <div style={stepContentStyle}>
           <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
-            Abre <strong>PowerShell como Administrador</strong> en esa PC y ejecuta
+            Haz <strong>doble clic</strong> en el archivo descargado
+          </span>
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.55 }}>
+            Se instala solo y queda funcionando — sin abrir nada más. Aparecerá un aviso
+            {' '}<strong style={{ color: 'var(--u-text-3)' }}>«Agente instalado correctamente»</strong>.
+          </span>
+          <div style={{
+            fontSize: 11,
+            color: 'var(--u-text-4)',
+            background: 'rgba(245,158,11,0.08)',
+            border: '1px solid rgba(245,158,11,0.15)',
+            borderRadius: 6,
+            padding: '6px 9px',
+            lineHeight: 1.5,
+          }}>
+            <strong style={{ color: 'var(--u-text-3)' }}>Si Windows muestra una pantalla azul</strong> («Windows protegió tu PC»),
+            haz clic en <strong style={{ color: '#fcd34d' }}>Más información → Ejecutar de todos modos</strong>. Es normal: el aviso aparece porque el programa es nuevo.
+          </div>
+        </div>
+      </div>
+
+      {/* Paso 3: Verificar */}
+      <div style={stepBoxStyle}>
+        <span style={stepNumStyle}>3</span>
+        <div style={stepContentStyle}>
+          <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
+            Vuelve aquí y pulsa «Actualizar»
+          </span>
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
+            En unos segundos el estado cambiará a{' '}
+            <span style={{ color: '#4ade80', fontWeight: 600 }}>● Agente conectado</span>
+            {' '}y verás las impresoras detectadas.
+          </span>
+        </div>
+      </div>
+
+      {/* Alternativa: instalación manual avanzada (PowerShell) */}
+      <details style={{ marginTop: 4 }}>
+        <summary style={{ fontSize: 11.5, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
+          Instalación avanzada (PowerShell / config manual)
+        </summary>
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+            Equivalente por línea de comandos (PowerShell como Administrador, desde la carpeta <code>dist</code>):
           </span>
           <pre style={{
-            margin: 0,
-            padding: '9px 11px',
-            borderRadius: 8,
-            background: 'rgba(0,0,0,0.4)',
-            border: '1px solid var(--u-hair)',
-            fontSize: 11,
-            color: '#a5f3fc',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all',
-            lineHeight: 1.6,
-          }}>
-            {psCommand}
-          </pre>
+            margin: 0, padding: '9px 11px', borderRadius: 8,
+            background: 'rgba(0,0,0,0.4)', border: '1px solid var(--u-hair)',
+            fontSize: 11, color: '#a5f3fc', fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6,
+          }}>{psCommand}</pre>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -253,46 +291,8 @@ function InstallSteps({
               Copiar comando
             </button>
           </div>
-          <div style={{
-            fontSize: 11,
-            color: 'var(--u-text-4)',
-            background: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.15)',
-            borderRadius: 6,
-            padding: '6px 9px',
-            lineHeight: 1.5,
-          }}>
-            <strong style={{ color: 'var(--u-text-3)' }}>Si PowerShell dice "no se puede ejecutar scripts":</strong>
-            {' '}primero ejecuta{' '}
-            <code style={{ color: '#fcd34d' }}>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code>
-            {' '}y vuelve a intentarlo.
-          </div>
-        </div>
-      </div>
-
-      {/* Paso 3: Verificar */}
-      <div style={stepBoxStyle}>
-        <span style={stepNumStyle}>3</span>
-        <div style={stepContentStyle}>
-          <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
-            Vuelve aquí y pulsa "Actualizar"
-          </span>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
-            En unos segundos el estado cambiará a{' '}
-            <span style={{ color: '#4ade80', fontWeight: 600 }}>● Agente conectado</span>
-            {' '}y verás las impresoras detectadas.
-          </span>
-        </div>
-      </div>
-
-      {/* Alternativa: config manual */}
-      <details style={{ marginTop: 4 }}>
-        <summary style={{ fontSize: 11.5, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
-          Instalación manual (sin parámetros)
-        </summary>
-        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-            Descarga el config y colócalo junto al exe antes de ejecutar el instalador sin parámetros:
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 4 }}>
+            O descarga el config y colócalo junto al exe:
           </span>
           <pre style={{
             margin: 0, padding: '9px 11px', borderRadius: 8,

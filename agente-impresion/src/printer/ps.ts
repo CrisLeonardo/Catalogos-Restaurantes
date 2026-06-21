@@ -1,21 +1,47 @@
-// Ejecuta scripts de PowerShell que acompañan al agente.
-// Resuelve la carpeta `scripts/` tanto en dev (árbol fuente) como empaquetado
-// (junto al .exe). No usa import.meta.url para ser compatible con el bundle CJS.
+// Ejecuta scripts de PowerShell. Los scripts viajan INCRUSTADOS en el binario
+// (ver ../ps-scripts.ts) y se materializan a una carpeta temporal la primera vez
+// que se usan, para que el agente sea un único archivo .exe sin carpeta scripts/
+// al lado. (Compatibilidad: si existe un scripts/ junto al exe o en el árbol
+// fuente, se respeta — útil en desarrollo.)
 
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { PS_SCRIPTS } from '../ps-scripts.ts';
+import { AGENT_VERSION } from '../version.ts';
+
+let cachedDir: string | null = null;
+
+/** Escribe los scripts incrustados en una carpeta temporal (una sola vez). */
+function materializeEmbedded(): string {
+  if (cachedDir) return cachedDir;
+  // La versión en la ruta hace que un agente actualizado reescriba sus scripts.
+  const dir = join(tmpdir(), 'leogin-agente', `scripts-${AGENT_VERSION}`);
+  mkdirSync(dir, { recursive: true });
+  for (const [name, content] of Object.entries(PS_SCRIPTS)) {
+    const path = join(dir, name);
+    if (!existsSync(path)) {
+      // BOM UTF-8: PowerShell 5.1 lee así los acentos correctamente.
+      writeFileSync(path, '﻿' + content, 'utf8');
+    }
+  }
+  cachedDir = dir;
+  return dir;
+}
 
 function resolveScript(name: string): string {
-  const candidates = [
-    join(dirname(process.execPath), 'scripts', name), // empaquetado: exe + scripts/ al lado
-    join(process.cwd(), 'scripts', name),             // dev: corrido desde la carpeta del agente
+  // Preferimos un scripts/ real si existe (dev o instalación con sidecar);
+  // si no, usamos los scripts incrustados.
+  const sidecars = [
+    join(dirname(process.execPath), 'scripts', name),
+    join(process.cwd(), 'scripts', name),
     join(process.cwd(), 'agente-impresion', 'scripts', name),
   ];
-  for (const c of candidates) {
+  for (const c of sidecars) {
     if (existsSync(c)) return c;
   }
-  return candidates[0];
+  return join(materializeEmbedded(), name);
 }
 
 export function runPsFile(
