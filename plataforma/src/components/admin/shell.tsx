@@ -24,6 +24,7 @@ interface Props {
   ordersEnabled?: boolean;
   analiticaEnabled?: boolean;
   inventarioEnabled?: boolean;
+  ingredientesEnabled?: boolean;
   promocionesEnabled?: boolean;
   personalEnabled?: boolean;
   finanzasEnabled?: boolean;
@@ -41,7 +42,7 @@ interface Props {
 
 export default function AdminShell({
   restaurantName, restaurantId, ordersEnabled = false,
-  analiticaEnabled = false, inventarioEnabled = false,
+  analiticaEnabled = false, inventarioEnabled = false, ingredientesEnabled = false,
   promocionesEnabled = false, personalEnabled = false, finanzasEnabled = false,
   logoUrl, zone, role, permissions, canManageStaff, preview = false, children,
 }: Props) {
@@ -96,7 +97,8 @@ export default function AdminShell({
         ...(on(ordersEnabled)    ? [{ href: '/admin/mesas',     label: 'Mesas',       icon: 'grid',  key: 'mesas'     }] : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
-        ...(on(inventarioEnabled) ? [{ href: '/admin/inventario', label: 'Inventario',  icon: 'box',   key: 'inventario' }] : []),
+        ...(on(inventarioEnabled) ? [{ href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }] : []),
+        ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
       ],
     },
     {
@@ -130,6 +132,7 @@ export default function AdminShell({
     '/admin/pedidos': 'Pedidos en vivo',
     '/admin/categorias': 'Categorías',
     '/admin/inventario': 'Inventario',
+    '/admin/ingredientes': 'Ingredientes',
     '/admin/clientes': 'Clientes',
     '/admin/metricas': 'Métricas',
     '/admin/analitica': 'Analítica',

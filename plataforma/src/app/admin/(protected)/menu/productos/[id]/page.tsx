@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu, getProductById } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { getIngredients, getProductRecipe } from '@/lib/db/recipes';
+import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
@@ -34,9 +36,13 @@ export default async function EditProductPage({
 
   if (!restaurantId) redirect('/admin/login');
 
-  const [product, { categories }] = await Promise.all([
+  const canIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
+
+  const [product, { categories }, ingredients, recipe] = await Promise.all([
     getProductById(id, restaurantId),
     getAdminMenu(restaurantId),
+    canIngredientes ? getIngredients(restaurantId) : Promise.resolve(undefined),
+    canIngredientes ? getProductRecipe(id) : Promise.resolve(undefined),
   ]);
 
   if (!product) notFound();
@@ -95,6 +101,8 @@ export default async function EditProductPage({
         restaurantId={restaurantId}
         categories={categories}
         product={product}
+        ingredients={ingredients}
+        initialRecipe={recipe}
       />
     </div>
   );

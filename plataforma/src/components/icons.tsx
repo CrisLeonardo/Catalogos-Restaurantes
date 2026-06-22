@@ -71,6 +71,7 @@ export const ICON_PATHS: Record<string, ReactNode> = {
   banknote: <><rect width="20" height="12" x="2" y="6" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></>,
   key: <><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3" /></>,
   plug: <><path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" /><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" /></>,
+  flask: <><path d="M9 3h6" /><path d="M10 3v6l-4.5 9a2 2 0 0 0 1.8 2.9h9.4A2 2 0 0 0 18.5 18L14 9V3" /><path d="M8 15h8" /></>,
 };
 
 export type IconName = keyof typeof ICON_PATHS;

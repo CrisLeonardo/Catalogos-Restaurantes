@@ -14,6 +14,7 @@ export const ADMIN_SECTIONS = [
   { key: 'catalogo',     label: 'Catálogo' },
   { key: 'categorias',   label: 'Categorías' },
   { key: 'inventario',   label: 'Inventario' },
+  { key: 'ingredientes', label: 'Ingredientes' },
   { key: 'clientes',     label: 'Clientes' },
   { key: 'metricas',     label: 'Métricas' },
   { key: 'analitica',    label: 'Analítica' },

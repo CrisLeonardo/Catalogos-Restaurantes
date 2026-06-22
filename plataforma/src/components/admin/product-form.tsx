@@ -4,19 +4,23 @@ import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import ImageUpload from './image-upload';
 import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
+import RecipeEditor from '@/components/admin/recipe-editor';
 import { createProduct, updateProduct, type ProductState } from '@/lib/actions/products';
 import type { Category, Product, ProductOptionGroup } from '@/types';
+import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
 
 interface ProductFormProps {
   restaurantId: string;
   categories: Category[];
   product?: Product;
   defaultCategoryId?: string;
+  ingredients?: Ingredient[];
+  initialRecipe?: RecipeItem[];
 }
 
 const emptyState: ProductState = null;
 
-export default function ProductForm({ restaurantId, categories, product, defaultCategoryId }: ProductFormProps) {
+export default function ProductForm({ restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe }: ProductFormProps) {
   const isEdit = Boolean(product);
   const action = isEdit ? updateProduct : createProduct;
 
@@ -25,6 +29,14 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
   const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
+  // Si hay receta → costo auto; null = usar manual
+  const [recipeCost, setRecipeCost] = useState<number | null>(
+    initialRecipe && initialRecipe.length > 0
+      ? initialRecipe.reduce((acc, l) => acc + l.line_cost, 0)
+      : null,
+  );
+  const hasRecipe = recipeCost !== null;
+  const displayCost = hasRecipe ? recipeCost.toFixed(4) : costVal;
   const [options, setOptions] = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
@@ -103,17 +115,21 @@ export default function ProductForm({ restaurantId, categories, product, default
             />
           </div>
           <div>
-            <label htmlFor="cost" style={labelStyle}>Costo</label>
+            <label htmlFor="cost" style={labelStyle}>
+              Costo{hasRecipe && <span style={{ color: 'var(--brand-accent)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
+            </label>
             <input
               id="cost"
               name="cost"
               type="number"
               min="0"
-              step="0.01"
-              value={costVal}
-              onChange={(e) => setCostVal(e.target.value)}
+              step="0.0001"
+              value={hasRecipe ? displayCost : costVal}
+              onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
+              readOnly={hasRecipe}
               placeholder="0.00"
-              style={inputStyle}
+              style={{ ...inputStyle, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
+              title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
             />
           </div>
         </div>
@@ -251,6 +267,32 @@ export default function ProductForm({ restaurantId, categories, product, default
           </button>
         </div>
       </Glass>
+
+      {/* Receta / costeo por ingrediente (solo en edición) */}
+      {product && ingredients && (
+        <Glass variant="quiet" style={{ padding: 16 }}>
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>Receta</p>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 3 }}>
+              Define los ingredientes y cantidades. El costo del platillo se calcula automáticamente.
+            </p>
+          </div>
+          <RecipeEditor
+            productId={product.id}
+            restaurantId={restaurantId}
+            ingredients={ingredients}
+            initialRecipe={initialRecipe ?? []}
+            onCostChange={(c) => setRecipeCost(c)}
+          />
+        </Glass>
+      )}
+      {product && !ingredients && (
+        <Glass variant="quiet" style={{ padding: '12px 16px' }}>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
+            Activa el módulo de Inventario para gestionar ingredientes y recetas.
+          </p>
+        </Glass>
+      )}
 
       {/* Error */}
       {state?.error && (

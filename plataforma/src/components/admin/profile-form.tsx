@@ -20,7 +20,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
     if (!v.trim()) return '';
     const digits = v.replace(/[\s\-\(\)\+\.]/g, '');
     if (/^\d{8}$/.test(digits) || /^502\d{8}$/.test(digits)) return '';
-    return 'Ingresa 8 dígitos (ej. 49340483 ó 4934-0483)';
+    return 'Ingresa 8 dígitos (ej. 12345678 ó 1234-5678) o con código de país (ej. +502 12345678)';
   }
 
   const whatsappErr = validateWhatsApp(whatsappVal);
@@ -110,7 +110,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               type="tel"
               value={whatsappVal}
               onChange={(e) => setWhatsappVal(e.target.value)}
-              placeholder="49340483 · 4934-0483 · 4934 0483"
+              placeholder="12345678 · 1234-5678 · 1234 5678 · +502 12345678"
               style={{
                 ...inputStyle,
                 borderColor: whatsappErr ? 'rgba(248,113,113,0.6)' : undefined,
@@ -122,7 +122,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               <p style={{ fontSize: 12, color: '#4ade80', marginTop: 6 }}>Número válido ✓</p>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-                Acepta: 49340483 · 4934-0483 · 4934 0483 · +502 4934 0483
+                Acepta: 12345678 · 1234-5678 · 1234 5678 · +502 1234 5678
               </p>
             )}
           </Glass>
