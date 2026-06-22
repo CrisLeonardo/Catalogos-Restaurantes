@@ -235,6 +235,9 @@ export default function CheckoutForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Anti doble-submit: si ya se está enviando, ignora clics repetidos
+    // (evita pedidos duplicados aunque el botón quede visible).
+    if (isPending) return;
     setError('');
     if (!valid) { setTried(true); return; }
 
@@ -840,7 +843,7 @@ export default function CheckoutForm({
           <p style={{ fontSize: 13, color: '#ff6b6b', background: 'rgba(255,107,107,0.10)', border: '1px solid rgba(255,107,107,0.20)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
-        <PrimaryButton size="lg" full iconRight="arrowRight" style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
+        <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
           {isPending ? 'Enviando…' : content.checkout.confirm}
         </PrimaryButton>
       </form>

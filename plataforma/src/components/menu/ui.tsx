@@ -79,7 +79,7 @@ export function ctaClass(style: 'white' | 'accent' | 'outline'): string {
 }
 
 export function PrimaryButton({
-  children, onClick, href, iconRight, full = false, size = 'md', style, elementKey,
+  children, onClick, href, iconRight, full = false, size = 'md', style, elementKey, disabled = false,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -90,6 +90,8 @@ export function PrimaryButton({
   style?: CSSProperties;
   /** Override de tipografía por elemento (ej. 'portadaCta'). */
   elementKey?: string;
+  /** Deshabilita el botón (p.ej. mientras se envía un pedido) — evita doble-submit. */
+  disabled?: boolean;
 }) {
   const config = useThemeConfig();
   const t = useText('button', elementKey);
@@ -98,16 +100,28 @@ export function PrimaryButton({
   const sharedStyle: CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     padding: pad, borderRadius: 'var(--radius-lg)', fontSize: fs,
-    cursor: 'pointer', border: 'none', textDecoration: 'none', width: full ? '100%' : undefined,
+    cursor: disabled ? 'not-allowed' : 'pointer', border: 'none', textDecoration: 'none',
+    width: full ? '100%' : undefined,
     ...t.vars, ...style,
   };
   const cls = `press ct-button ${ctaClass(config.ctaStyle)}`;
   const inner = (<>{children}{iconRight && <Icon name={iconRight} size={size === 'lg' ? 18 : 16} />}</>);
 
+  // Variante enlace: si está deshabilitado, no navega (bloquea el click).
   if (href) {
-    return <Link href={href} onClick={onClick} className={cls} style={sharedStyle}>{inner}</Link>;
+    return (
+      <Link
+        href={disabled ? '#' : href}
+        onClick={disabled ? (e) => e.preventDefault() : onClick}
+        aria-disabled={disabled || undefined}
+        className={cls}
+        style={{ ...sharedStyle, ...(disabled ? { pointerEvents: 'none' } : {}) }}
+      >
+        {inner}
+      </Link>
+    );
   }
-  return <button onClick={onClick} className={cls} style={sharedStyle}>{inner}</button>;
+  return <button onClick={onClick} disabled={disabled} className={cls} style={sharedStyle}>{inner}</button>;
 }
 
 /* ── Stepper de cantidad ──────────────────────────────────── */

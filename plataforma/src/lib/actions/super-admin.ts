@@ -121,6 +121,15 @@ export async function createRestaurant(
     brand_name: name,
   });
 
+  // Cobro listo desde el día 1: modo automático según el plan (default Básico).
+  // El precio se calcula y guarda con leogin_apply_auto_price (mig. 035).
+  await db.from('restaurant_billing').insert({
+    restaurant_id: restaurant.id,
+    auto_price: true,
+    active: true,
+  });
+  await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurant.id });
+
   revalidatePath('/super/restaurantes');
   redirect(`/super/restaurantes/${restaurant.id}?new=1`);
 }
@@ -202,6 +211,9 @@ export async function updateRestaurantPlan(
     .eq('id', id);
 
   if (error) return { error: error.message };
+
+  // El plan determina el precio: refresca la mensualidad si está en automático.
+  await db.rpc('leogin_apply_auto_price', { p_restaurant_id: id });
 
   revalidatePath('/super/restaurantes');
   revalidatePath(`/super/restaurantes/${id}`);
@@ -652,7 +664,10 @@ export async function assignRestaurantToOrg(formData: FormData) {
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
   if (!orgId || !restaurantId) return;
   await db.from('restaurants').update({ organization_id: orgId }).eq('id', restaurantId);
+  // El conteo de sucursales Premium cambió → recalcula precios automáticos.
+  await db.rpc('leogin_apply_auto_price_all');
   revalidatePath(`/super/grupos/${orgId}`);
+  revalidatePath('/super/cobros');
 }
 
 export async function unassignRestaurant(formData: FormData) {
@@ -662,7 +677,10 @@ export async function unassignRestaurant(formData: FormData) {
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
   if (!restaurantId) return;
   await db.from('restaurants').update({ organization_id: null }).eq('id', restaurantId);
+  // El conteo de sucursales Premium cambió → recalcula precios automáticos.
+  await db.rpc('leogin_apply_auto_price_all');
   if (orgId) revalidatePath(`/super/grupos/${orgId}`);
+  revalidatePath('/super/cobros');
 }
 
 export async function createGroupOwner(

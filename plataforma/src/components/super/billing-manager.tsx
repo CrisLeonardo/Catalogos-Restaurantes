@@ -48,8 +48,18 @@ function isOverdue(inv: Invoice) {
 }
 
 export default function BillingManager({
-  restaurantId, config, invoices,
-}: { restaurantId: string; config: BillingConfig | null; invoices: Invoice[] }) {
+  restaurantId, config, invoices, suggestedFee, planName, globalGraceDays,
+}: {
+  restaurantId: string;
+  config: BillingConfig | null;
+  invoices: Invoice[];
+  /** Precio mensual sugerido por el plan + sucursales (RPC org-aware). */
+  suggestedFee: number;
+  /** Nombre legible del plan (Básico / Popular / Premium). */
+  planName: string;
+  /** Días de gracia globales por defecto (placeholder del campo). */
+  globalGraceDays: number;
+}) {
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
   const currency = config?.currency ?? 'GTQ';
 
@@ -74,7 +84,14 @@ export default function BillingManager({
       )}
 
       {/* Config */}
-      <ConfigCard restaurantId={restaurantId} config={config} onResult={setToast} />
+      <ConfigCard
+        restaurantId={restaurantId}
+        config={config}
+        suggestedFee={suggestedFee}
+        planName={planName}
+        globalGraceDays={globalGraceDays}
+        onResult={setToast}
+      />
 
       {/* Acciones de cobro */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -117,9 +134,20 @@ export default function BillingManager({
 
 /* ── Card de configuración ──────────────────────────────────── */
 function ConfigCard({
-  restaurantId, config, onResult,
-}: { restaurantId: string; config: BillingConfig | null; onResult: (t: { ok: boolean; msg: string }) => void }) {
+  restaurantId, config, suggestedFee, planName, globalGraceDays, onResult,
+}: {
+  restaurantId: string;
+  config: BillingConfig | null;
+  suggestedFee: number;
+  planName: string;
+  globalGraceDays: number;
+  onResult: (t: { ok: boolean; msg: string }) => void;
+}) {
   const [state, formAction, pending] = useActionState<BillingState, FormData>(saveBillingConfig, null);
+  // Modo de precio: automático (del plan) vs manual (override). Default automático.
+  const [auto, setAuto] = useState(config?.auto_price ?? true);
+  const currency = config?.currency ?? 'GTQ';
+
   useEffect(() => {
     if (state && 'ok' in state) onResult({ ok: true, msg: state.msg ?? 'Guardado.' });
     else if (state && 'error' in state) onResult({ ok: false, msg: state.error });
@@ -131,14 +159,52 @@ function ConfigCard({
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Configuración del cobro</div>
 
+        {config?.suspended_for_nonpayment && (
+          <div style={{
+            padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+            background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171',
+          }}>
+            ⚠ Suspendido automáticamente por impago. Se reactiva solo al registrar el pago pendiente.
+          </div>
+        )}
+
+        {/* Toggle de precio automático */}
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 11,
+          background: auto ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${auto ? 'rgba(74,222,128,0.25)' : 'var(--u-hair)'}`, cursor: 'pointer',
+        }}>
+          <input
+            type="checkbox" name="auto_price" checked={auto}
+            onChange={(e) => setAuto(e.target.checked)} style={{ width: 16, height: 16 }}
+          />
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
+              Precio automático según el plan
+            </span>
+            <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+              {auto
+                ? `Plan ${planName}: ${fmtMoney(suggestedFee, currency)}/mes (incluye sucursales extra). Se actualiza solo al cambiar de plan.`
+                : 'Precio manual: escribe el monto que quieras (descuento, trato especial).'}
+            </span>
+          </span>
+        </label>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>Implementación (una vez)</label>
             <input name="setup_fee" type="number" min="0" step="0.01" defaultValue={config?.setup_fee ?? 0} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Mensualidad</label>
-            <input name="monthly_fee" type="number" min="0" step="0.01" defaultValue={config?.monthly_fee ?? 0} style={inputStyle} />
+            <label style={labelStyle}>Mensualidad {auto && <span style={{ color: '#4ade80' }}>· auto</span>}</label>
+            {auto ? (
+              <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--u-text)', opacity: 0.85 }}>
+                <span style={{ fontWeight: 700, fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(suggestedFee, currency)}</span>
+                <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{planName}</span>
+              </div>
+            ) : (
+              <input name="monthly_fee" type="number" min="0" step="0.01" defaultValue={config?.monthly_fee ?? suggestedFee} style={inputStyle} />
+            )}
           </div>
           <div>
             <label style={labelStyle}>Moneda</label>
@@ -151,6 +217,10 @@ function ConfigCard({
           <div>
             <label style={labelStyle}>Día de cobro</label>
             <input name="billing_day" type="number" min="1" max="28" defaultValue={config?.billing_day ?? 1} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Días de gracia</label>
+            <input name="grace_days" type="number" min="0" max="90" defaultValue={config?.grace_days ?? ''} placeholder={`${globalGraceDays} (global)`} style={inputStyle} />
           </div>
           <div>
             <label style={labelStyle}>Inicio del servicio</label>

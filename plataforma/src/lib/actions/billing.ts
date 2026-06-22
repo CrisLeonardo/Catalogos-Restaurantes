@@ -65,13 +65,28 @@ export async function saveBillingConfig(
   const currency = (String(formData.get('currency') ?? 'GTQ').trim() || 'GTQ').slice(0, 8);
   const billingDay = Math.min(28, Math.max(1, Math.round(num(formData, 'billing_day') || 1)));
   const startedAt = String(formData.get('started_at') ?? '').trim() || null;
+  const autoPrice = formData.get('auto_price') === 'on' || formData.get('auto_price') === 'true';
+
+  // Días de gracia: vacío = usa el global (null). Entero 0..90.
+  const graceRaw = String(formData.get('grace_days') ?? '').trim();
+  const graceDays = graceRaw === '' ? null : Math.min(90, Math.max(0, Math.round(parseFloat(graceRaw) || 0)));
+
+  // En modo automático la mensualidad la calcula el plan (RPC org-aware); en
+  // modo manual respeta el monto tecleado (override).
+  let monthlyFee = Math.max(0, num(formData, 'monthly_fee'));
+  if (autoPrice) {
+    const { data } = await db.rpc('leogin_compute_monthly_fee', { p_restaurant_id: restaurantId });
+    if (data != null) monthlyFee = Number(data);
+  }
 
   const { error } = await db.from('restaurant_billing').upsert({
     restaurant_id: restaurantId,
     currency,
     setup_fee: Math.max(0, num(formData, 'setup_fee')),
-    monthly_fee: Math.max(0, num(formData, 'monthly_fee')),
+    monthly_fee: monthlyFee,
     billing_day: billingDay,
+    auto_price: autoPrice,
+    grace_days: graceDays,
     active: formData.get('active') === 'on' || formData.get('active') === 'true',
     started_at: startedAt,
     notes: String(formData.get('notes') ?? '').trim() || null,
@@ -120,36 +135,38 @@ async function ensureMonthly(
   return !error;
 }
 
-/** Genera las mensualidades del periodo actual para TODOS los activos (idempotente). */
+/** Corre el motor de cobro ahora mismo (mismo que el cron diario): genera las
+ *  mensualidades del mes (precio auto refrescado) y procesa impago/reactivación.
+ *  Respaldo manual por si pg_cron no está habilitado. */
 export async function generateMonthlyInvoices(): Promise<BillingState> {
   const db = await verifySuperAdmin();
   if (!db) return { error: 'No autorizado.' };
 
   const period = currentPeriod();
-  const { data: configs } = await db
-    .from('restaurant_billing')
-    .select('*')
-    .eq('active', true);
-
-  let created = 0;
-  for (const c of configs ?? []) {
-    const cfg: BillingConfig = {
-      restaurant_id: c.restaurant_id,
-      currency: c.currency ?? 'GTQ',
-      setup_fee: Number(c.setup_fee ?? 0),
-      monthly_fee: Number(c.monthly_fee ?? 0),
-      billing_day: Number(c.billing_day ?? 1),
-      active: c.active !== false,
-      started_at: c.started_at ?? null,
-      notes: c.notes ?? null,
-      created_at: c.created_at,
-      updated_at: c.updated_at,
-    };
-    if (await ensureMonthly(db, cfg, period)) created += 1;
-  }
+  const { data: created, error } = await db.rpc('leogin_generate_monthly_invoices');
+  if (error) return { error: error.message };
+  const { data: changed } = await db.rpc('leogin_process_overdue');
 
   revalidateBilling();
-  return { ok: true, msg: created > 0 ? `${created} cobro(s) generado(s) para ${period.slice(0, 7)}.` : 'Todos los cobros del mes ya estaban generados.' };
+  revalidatePath('/super/restaurantes');
+
+  const n = Number(created ?? 0);
+  const c = Number(changed ?? 0);
+  const parts: string[] = [];
+  parts.push(n > 0 ? `${n} cobro(s) generado(s) para ${period.slice(0, 7)}` : `Sin cobros nuevos para ${period.slice(0, 7)}`);
+  if (c > 0) parts.push(`${c} restaurante(s) actualizaron su estado por impago/pago`);
+  return { ok: true, msg: parts.join('. ') + '.' };
+}
+
+/** Recalcula la mensualidad de todos los restaurantes en modo automático
+ *  (útil tras cambiar los precios globales o reasignar sucursales). */
+export async function recomputeAutoPrices(): Promise<BillingState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+  const { data, error } = await db.rpc('leogin_apply_auto_price_all');
+  if (error) return { error: error.message };
+  revalidateBilling();
+  return { ok: true, msg: `Precios recalculados en ${Number(data ?? 0)} restaurante(s).` };
 }
 
 /** Genera la mensualidad SOLO de un restaurante (desde su ficha). */
@@ -170,6 +187,41 @@ export async function generateMonthlyForRestaurant(
   const ok = await ensureMonthly(db, cfg, period);
   revalidateBilling(restaurantId);
   return { ok: true, msg: ok ? `Cobro de ${period.slice(0, 7)} generado.` : 'La mensualidad de este mes ya estaba generada.' };
+}
+
+/* ── Precios globales del plan + gracia (platform_settings) ─── */
+
+export async function savePricingSettings(
+  prevState: BillingState,
+  formData: FormData,
+): Promise<BillingState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+
+  const nonNeg = (key: string) => String(Math.max(0, num(formData, key)));
+  const intMin1 = (key: string) => String(Math.max(1, Math.round(num(formData, key) || 1)));
+  const graceDays = String(Math.min(90, Math.max(0, Math.round(num(formData, 'grace_days') || 0))));
+
+  const rows = [
+    { key: 'plan_price_BASICO', value: nonNeg('plan_price_BASICO') },
+    { key: 'plan_price_POPULAR', value: nonNeg('plan_price_POPULAR') },
+    { key: 'plan_price_PREMIUM', value: nonNeg('plan_price_PREMIUM') },
+    { key: 'extra_branch_fee', value: nonNeg('extra_branch_fee') },
+    { key: 'premium_included_branches', value: intMin1('premium_included_branches') },
+    { key: 'setup_fee_default', value: nonNeg('setup_fee_default') },
+    { key: 'billing_grace_days', value: graceDays },
+    { key: 'billing_auto_suspend', value: formData.get('billing_auto_suspend') === 'on' || formData.get('billing_auto_suspend') === 'true' ? 'true' : 'false' },
+    { key: 'billing_auto_generate', value: formData.get('billing_auto_generate') === 'on' || formData.get('billing_auto_generate') === 'true' ? 'true' : 'false' },
+  ];
+
+  const { error } = await db.from('platform_settings').upsert(rows, { onConflict: 'key' });
+  if (error) return { error: error.message };
+
+  // Aplica los precios nuevos a quienes estén en modo automático.
+  const { data: count } = await db.rpc('leogin_apply_auto_price_all');
+  revalidateBilling();
+  revalidatePath('/super/configuracion');
+  return { ok: true, msg: `Precios guardados. ${Number(count ?? 0)} restaurante(s) recalculado(s).` };
 }
 
 /* ── Cobro prorrateado por lo que resta del mes ─────────────── */
@@ -291,8 +343,16 @@ export async function markInvoicePaid(
     payment_method: String(formData.get('payment_method') ?? '').trim() || 'Efectivo',
   }).eq('id', invoiceId);
   if (error) return { error: error.message };
+
+  // Si ya no quedan cobros vencidos, reactiva al restaurante suspendido por impago.
+  let reactivated = false;
+  if (UUID_RE.test(restaurantId)) {
+    const { data } = await db.rpc('leogin_sync_restaurant_status', { p_restaurant_id: restaurantId });
+    reactivated = data === 'reactivated';
+  }
   revalidateBilling(restaurantId);
-  return { ok: true, msg: 'Pago registrado.' };
+  revalidatePath('/super/restaurantes');
+  return { ok: true, msg: reactivated ? 'Pago registrado. El restaurante se reactivó.' : 'Pago registrado.' };
 }
 
 export async function markInvoiceUnpaid(

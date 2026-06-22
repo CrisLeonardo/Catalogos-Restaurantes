@@ -10,7 +10,7 @@ import RestaurantUsers from '@/components/super/restaurant-users';
 import BillingManager from '@/components/super/billing-manager';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import DeleteButton from '@/components/admin/delete-button';
-import { getBillingConfig, getInvoices } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, getPricingSettings, computeSuggestedFee, planLabel } from '@/lib/db/billing';
 import {
   deleteRestaurant,
   duplicateRestaurant,
@@ -47,11 +47,13 @@ export default async function EditRestaurantePage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
-  const [users, templates, billingConfig, invoices] = await Promise.all([
+  const [users, templates, billingConfig, invoices, suggestedFee, pricing] = await Promise.all([
     getRestaurantUsers(id),
     listThemeTemplates(),
     getBillingConfig(id),
     getInvoices(id),
+    computeSuggestedFee(id),
+    getPricingSettings(),
   ]);
   const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
     brandName: row.name,
@@ -233,7 +235,15 @@ export default async function EditRestaurantePage({
             Ver métricas a fondo →
           </Link>
         </p>
-        <BillingManager key={row.id} restaurantId={row.id} config={billingConfig} invoices={invoices} />
+        <BillingManager
+          key={row.id}
+          restaurantId={row.id}
+          config={billingConfig}
+          invoices={invoices}
+          suggestedFee={suggestedFee}
+          planName={planLabel(row.plan_actual)}
+          globalGraceDays={pricing.graceDays}
+        />
       </section>
 
       {/* ── 6. Duplicar ────────────────────────────────────── */}

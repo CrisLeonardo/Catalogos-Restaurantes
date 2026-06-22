@@ -5,23 +5,57 @@ import type { Customer, Order } from '@/types';
    Como el resto de src/lib/db, usa el service role: las páginas
    que llaman ya validaron la sesión y el restaurante del admin. */
 
-export async function getCustomers(restaurantId: string): Promise<Customer[]> {
+export const CUSTOMERS_PAGE_SIZE = 20;
+
+export interface CustomersPage {
+  customers: Customer[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/**
+ * Clientes del restaurante, PAGINADOS (de 20 en 20 por defecto). Devuelve solo
+ * la página pedida + el total para construir los controles. Los totales gastados
+ * se calculan únicamente para los clientes de la página (no se traen todos los
+ * pedidos), así no se degrada con miles de registros.
+ */
+export async function getCustomers(
+  restaurantId: string,
+  page = 1,
+  pageSize = CUSTOMERS_PAGE_SIZE,
+): Promise<CustomersPage> {
   const db = createServiceClient();
-  const [{ data: customers }, { data: delivered }] = await Promise.all([
-    db
-      .from('customers')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .order('last_order_at', { ascending: false, nullsFirst: false })
-      .limit(500),
-    // Solo pedidos entregados para los totales (cancelados no cuentan).
-    db
-      .from('orders')
-      .select('customer_id, total')
-      .eq('restaurant_id', restaurantId)
-      .eq('status', 'DELIVERED')
-      .not('customer_id', 'is', null),
-  ]);
+  const size = Math.min(Math.max(pageSize, 1), 100);
+
+  // Total para la paginación.
+  const { count } = await db
+    .from('customers')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId);
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const from = (safePage - 1) * size;
+
+  const { data: customers } = await db
+    .from('customers')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('last_order_at', { ascending: false, nullsFirst: false })
+    .range(from, from + size - 1);
+
+  const ids = (customers ?? []).map((c) => c.id as string);
+  // Solo pedidos entregados de ESTA página (cancelados no cuentan).
+  const { data: delivered } = ids.length
+    ? await db
+        .from('orders')
+        .select('customer_id, total')
+        .eq('restaurant_id', restaurantId)
+        .eq('status', 'DELIVERED')
+        .in('customer_id', ids)
+    : { data: [] };
 
   const deliveredMap = new Map<string, { orders: number; spent: number }>();
   for (const o of delivered ?? []) {
@@ -32,10 +66,43 @@ export async function getCustomers(restaurantId: string): Promise<Customer[]> {
     deliveredMap.set(cid, curr);
   }
 
-  return (customers ?? []).map((c) => {
+  const rows = (customers ?? []).map((c) => {
     const d = deliveredMap.get(c.id as string) ?? { orders: 0, spent: 0 };
     return { ...c, total_orders: d.orders, total_spent: d.spent };
   }) as Customer[];
+
+  return { customers: rows, total, page: safePage, pageSize: size, totalPages };
+}
+
+export interface CustomersSummary {
+  totalCustomers: number;
+  recurrentCount: number;
+  totalSpent: number;
+}
+
+/** KPIs globales (no por página): total de clientes, recurrentes y gasto histórico. */
+export async function getCustomersSummary(restaurantId: string): Promise<CustomersSummary> {
+  const db = createServiceClient();
+  const [{ count }, { data: delivered }] = await Promise.all([
+    db.from('customers').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+    db.from('orders').select('customer_id, total')
+      .eq('restaurant_id', restaurantId).eq('status', 'DELIVERED').not('customer_id', 'is', null),
+  ]);
+
+  const perCustomer = new Map<string, { orders: number; spent: number }>();
+  let totalSpent = 0;
+  for (const o of delivered ?? []) {
+    const cid = o.customer_id as string;
+    const curr = perCustomer.get(cid) ?? { orders: 0, spent: 0 };
+    curr.orders++;
+    curr.spent += Number(o.total);
+    perCustomer.set(cid, curr);
+    totalSpent += Number(o.total);
+  }
+  let recurrentCount = 0;
+  for (const v of perCustomer.values()) if (v.orders > 1) recurrentCount++;
+
+  return { totalCustomers: count ?? 0, recurrentCount, totalSpent };
 }
 
 export async function getCustomerOrders(

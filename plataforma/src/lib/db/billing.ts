@@ -22,8 +22,34 @@ export interface BillingConfig {
   active: boolean;
   started_at: string | null;
   notes: string | null;
+  /** true = la mensualidad se calcula del plan; false = monto manual (override). */
+  auto_price: boolean;
+  /** Override de días de gracia; null = usa el global. */
+  grace_days: number | null;
+  /** El sistema lo suspendió por impago (no una suspensión manual). */
+  suspended_for_nonpayment: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/** Parámetros globales de precio + gracia (platform_settings, mig. 035). */
+export interface PricingSettings {
+  basico: number;
+  popular: number;
+  premium: number;
+  extraBranchFee: number;
+  premiumIncludedBranches: number;
+  setupFeeDefault: number;
+  graceDays: number;
+  autoSuspend: boolean;
+  autoGenerate: boolean;
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  BASICO: 'Básico', POPULAR: 'Popular', PREMIUM: 'Premium',
+};
+export function planLabel(plan: string | null | undefined): string {
+  return PLAN_LABEL[plan ?? ''] ?? (plan ?? '—');
 }
 
 export interface Invoice {
@@ -79,20 +105,61 @@ export const getBillingConfig = cache(
       .eq('restaurant_id', restaurantId)
       .maybeSingle();
     if (!data) return null;
-    return {
-      restaurant_id: data.restaurant_id,
-      currency: data.currency ?? 'GTQ',
-      setup_fee: Number(data.setup_fee ?? 0),
-      monthly_fee: Number(data.monthly_fee ?? 0),
-      billing_day: Number(data.billing_day ?? 1),
-      active: data.active !== false,
-      started_at: data.started_at ?? null,
-      notes: data.notes ?? null,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-    };
+    return normConfig(data);
   },
 );
+
+function normConfig(data: Record<string, unknown>): BillingConfig {
+  return {
+    restaurant_id: data.restaurant_id as string,
+    currency: (data.currency as string) ?? 'GTQ',
+    setup_fee: Number(data.setup_fee ?? 0),
+    monthly_fee: Number(data.monthly_fee ?? 0),
+    billing_day: Number(data.billing_day ?? 1),
+    active: data.active !== false,
+    started_at: (data.started_at as string | null) ?? null,
+    notes: (data.notes as string | null) ?? null,
+    auto_price: data.auto_price !== false,
+    grace_days: data.grace_days != null ? Number(data.grace_days) : null,
+    suspended_for_nonpayment: data.suspended_for_nonpayment === true,
+    created_at: data.created_at as string,
+    updated_at: data.updated_at as string,
+  };
+}
+
+/** Parámetros globales de precio + gracia. */
+export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
+  const db = createServiceClient();
+  const { data } = await db.from('platform_settings').select('key, value');
+  const map = new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  const n = (k: string, d: number) => {
+    const v = parseFloat(map.get(k) ?? '');
+    return isNaN(v) ? d : v;
+  };
+  const b = (k: string, d: boolean) => {
+    const v = map.get(k);
+    return v == null || v === '' ? d : v === 'true';
+  };
+  return {
+    basico: n('plan_price_BASICO', 200),
+    popular: n('plan_price_POPULAR', 600),
+    premium: n('plan_price_PREMIUM', 1200),
+    extraBranchFee: n('extra_branch_fee', 600),
+    premiumIncludedBranches: n('premium_included_branches', 2),
+    setupFeeDefault: n('setup_fee_default', 500),
+    graceDays: n('billing_grace_days', 10),
+    autoSuspend: b('billing_auto_suspend', true),
+    autoGenerate: b('billing_auto_generate', true),
+  };
+});
+
+/** Precio mensual sugerido por el plan + sucursales (vía RPC org-aware). */
+export async function computeSuggestedFee(restaurantId: string): Promise<number> {
+  const db = createServiceClient();
+  const { data, error } = await db.rpc('leogin_compute_monthly_fee', { p_restaurant_id: restaurantId });
+  if (error || data == null) return 0;
+  return Number(data);
+}
 
 export const getInvoices = cache(
   async (restaurantId: string, limit = 100): Promise<Invoice[]> => {
@@ -189,18 +256,7 @@ export const getBillingDashboard = cache(async (): Promise<BillingDashboard> => 
 
   const configMap = new Map<string, BillingConfig>();
   for (const c of configs ?? []) {
-    configMap.set(c.restaurant_id as string, {
-      restaurant_id: c.restaurant_id,
-      currency: c.currency ?? 'GTQ',
-      setup_fee: Number(c.setup_fee ?? 0),
-      monthly_fee: Number(c.monthly_fee ?? 0),
-      billing_day: Number(c.billing_day ?? 1),
-      active: c.active !== false,
-      started_at: c.started_at ?? null,
-      notes: c.notes ?? null,
-      created_at: c.created_at,
-      updated_at: c.updated_at,
-    });
+    configMap.set(c.restaurant_id as string, normConfig(c as Record<string, unknown>));
   }
 
   // Agrupar facturas por restaurante.

@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getCustomers, getCustomerOrders } from '@/lib/db/customers';
+import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/customers';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import type { Customer, Order } from '@/types';
@@ -52,7 +52,7 @@ const STATUS_ES: Record<string, string> = {
 export default async function AdminClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string }>;
+  searchParams: Promise<{ c?: string; page?: string }>;
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
@@ -76,20 +76,25 @@ export default async function AdminClientesPage({
   if (!restaurantId) redirect('/admin/login');
 
   const sp = await searchParams;
-  const customers = await getCustomers(restaurantId);
+  const pageNum = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+  const [{ customers, page, totalPages, total }, summary] = await Promise.all([
+    getCustomers(restaurantId, pageNum),
+    getCustomersSummary(restaurantId),
+  ]);
   const selected = sp.c ? customers.find((c) => c.id === sp.c) ?? null : null;
   const selectedOrders: Order[] = selected
     ? await getCustomerOrders(restaurantId, selected.id)
     : [];
 
-  const totalSpent = customers.reduce((sum, c) => sum + Number(c.total_spent), 0);
-  const recurrent = customers.filter((c) => c.total_orders > 1).length;
+  const totalSpent = summary.totalSpent;
+  const recurrent = summary.recurrentCount;
+  const pageHref = (p: number) => `/admin/clientes?page=${p}`;
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Clientes" value={String(customers.length)} sub="registrados al pedir" />
+        <Kpi label="Clientes" value={String(total)} sub="registrados al pedir" />
         <Kpi label="Recurrentes" value={String(recurrent)} sub="con 2+ pedidos" />
         <Kpi label="Total histórico" value={fmtQ(totalSpent)} sub="de estos clientes" />
       </div>
@@ -174,9 +179,31 @@ export default async function AdminClientesPage({
           })}
         </div>
       )}
+
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 4 }}>
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className="press" style={pagBtn}>← Anteriores</Link>
+          ) : (
+            <span style={{ ...pagBtn, opacity: 0.4, cursor: 'default' }}>← Anteriores</span>
+          )}
+          <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Página {page} de {totalPages}</span>
+          {page < totalPages ? (
+            <Link href={pageHref(page + 1)} className="press" style={pagBtn}>Siguientes →</Link>
+          ) : (
+            <span style={{ ...pagBtn, opacity: 0.4, cursor: 'default' }}>Siguientes →</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+const pagBtn: React.CSSProperties = {
+  padding: '8px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+  textDecoration: 'none', color: 'var(--u-text)',
+  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)',
+};
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (

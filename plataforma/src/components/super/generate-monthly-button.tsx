@@ -1,14 +1,20 @@
 'use client';
 
 import { useActionState } from 'react';
-import { generateMonthlyInvoices, type BillingState } from '@/lib/actions/billing';
+import { generateMonthlyInvoices, recomputeAutoPrices, type BillingState } from '@/lib/actions/billing';
 
-/* Botón "Generar cobros del mes" (idempotente). Para /super/cobros. */
+/* Acciones de cobro para /super/cobros. El cron diario ya genera y procesa
+   impago solo; estos botones son el respaldo manual del mismo motor. */
 export default function GenerateMonthlyButton() {
-  const [state, formAction, pending] = useActionState<BillingState, FormData>(
+  const [genState, genAction, genPending] = useActionState<BillingState, FormData>(
     () => generateMonthlyInvoices(),
     null,
   );
+  const [recState, recAction, recPending] = useActionState<BillingState, FormData>(
+    () => recomputeAutoPrices(),
+    null,
+  );
+  const state = genState ?? recState;
   const msg = state && 'ok' in state
     ? { ok: true, text: state.msg ?? 'Listo.' }
     : state && 'error' in state
@@ -16,18 +22,33 @@ export default function GenerateMonthlyButton() {
     : null;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <form action={formAction}>
-        <button type="submit" disabled={pending} className="press btn-accent" style={{
-          padding: '10px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600,
-          fontSize: 14, border: 'none', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
-        }}>
-          {pending ? 'Generando…' : 'Generar cobros del mes'}
-        </button>
-      </form>
-      {msg && (
-        <span style={{ fontSize: 13, fontWeight: 500, color: msg.ok ? '#4ade80' : '#f87171' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <form action={recAction}>
+          <button type="submit" disabled={recPending} className="press" style={{
+            padding: '10px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13.5,
+            border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text)',
+            cursor: recPending ? 'not-allowed' : 'pointer', opacity: recPending ? 0.6 : 1,
+          }}>
+            {recPending ? 'Recalculando…' : 'Recalcular precios'}
+          </button>
+        </form>
+        <form action={genAction}>
+          <button type="submit" disabled={genPending} className="press btn-accent" style={{
+            padding: '10px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600,
+            fontSize: 14, border: 'none', cursor: genPending ? 'not-allowed' : 'pointer', opacity: genPending ? 0.6 : 1,
+          }}>
+            {genPending ? 'Generando…' : 'Generar cobros ahora'}
+          </button>
+        </form>
+      </div>
+      {msg ? (
+        <span style={{ fontSize: 13, fontWeight: 500, color: msg.ok ? '#4ade80' : '#f87171', textAlign: 'right' }}>
           {msg.text}
+        </span>
+      ) : (
+        <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'right' }}>
+          Se genera y revisa el impago automáticamente cada día.
         </span>
       )}
     </div>
