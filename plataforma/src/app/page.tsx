@@ -9,6 +9,7 @@ import { getGroupBranches } from '@/lib/db/org-public';
 import { getMenuData } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow } from '@/lib/hours';
+import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls } from '@/lib/tenant';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
 
@@ -124,6 +125,9 @@ export default async function Home({
     data.restaurant.timezone || 'America/Guatemala',
   );
 
+  const mod = data.restaurant.modules as Record<string, boolean> | null;
+  const modSettings = data.restaurant.module_settings ?? null;
+
   return (
     <MenuShell
       config={data.resolved.config}
@@ -134,6 +138,7 @@ export default async function Home({
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
       initialMesa={initialMesa}
+      llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
     />
   );
 }

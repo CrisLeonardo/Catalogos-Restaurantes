@@ -24,9 +24,11 @@ interface Props {
   isOpen?: boolean;
   /** Mesa pre-seleccionada desde el QR de la mesa. */
   initialMesa?: number;
+  /** Módulos activos para mostrar funciones opcionales en el menú. */
+  llamadaMeseroEnabled?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, initialMesa }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, initialMesa, llamadaMeseroEnabled = false }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       try {
@@ -42,7 +44,7 @@ export default function MenuShell({ config, content, categories, products, resta
         <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} llamadaMeseroEnabled={llamadaMeseroEnabled} />
           </div>
         </main>
         <InstallBanner brandName={config.brandName} />

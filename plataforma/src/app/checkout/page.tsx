@@ -29,11 +29,10 @@ export default async function CheckoutPage() {
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala');
   const hasPromos = await hasActiveCodePromos(restaurant.id);
-  const loyaltyActive = isModuleActive(
-    restaurant.modules as Record<string, boolean> | null,
-    restaurant.module_settings ?? null,
-    'loyalty',
-  );
+  const mod = restaurant.modules as Record<string, boolean> | null;
+  const modSettings = restaurant.module_settings ?? null;
+  const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
+  const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
 
   if (paused || !open) {
     return (
@@ -59,6 +58,7 @@ export default async function CheckoutPage() {
           deliveryRadiusKm={restaurant.delivery_radius_km}
           hasPromos={hasPromos}
           loyaltyActive={loyaltyActive}
+          encuestasActive={encuestasActive}
         />
       </CartProvider>
     </ThemeProvider>

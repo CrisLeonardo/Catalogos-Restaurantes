@@ -14,6 +14,7 @@ import { validatePromo } from '@/lib/actions/promos';
 import { getLoyaltyRedeemInfo } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
+import { submitRating } from '@/lib/actions/encuestas';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -51,6 +52,7 @@ interface Props {
   deliveryRadiusKm?: number | null;
   hasPromos?: boolean;
   loyaltyActive?: boolean;
+  encuestasActive?: boolean;
 }
 
 type Step = 'form' | 'success';
@@ -69,6 +71,7 @@ export default function CheckoutForm({
   deliveryRadiusKm,
   hasPromos = false,
   loyaltyActive = false,
+  encuestasActive = false,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -92,9 +95,17 @@ export default function CheckoutForm({
   const [step, setStep] = useState<Step>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [trackToken, setTrackToken] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
+
+  // Encuesta de satisfacción
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingSent, setRatingSent] = useState(false);
+  const [ratingPending, startRating] = useTransition();
 
   const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
   const [snapshotTotal, setSnapshotTotal] = useState(0);
@@ -340,6 +351,7 @@ export default function CheckoutForm({
       setSnapshotOrderType(type);
       setOrderNumber(result.orderNumber ?? '');
       setTrackToken(result.publicToken ?? '');
+      setOrderId(result.orderId ?? '');
       clearCart();
       setStep('success');
 
@@ -493,6 +505,90 @@ export default function CheckoutForm({
               {content.confirmation.track}
             </PrimaryButton>
           )}
+
+          {/* Encuesta de satisfacción */}
+          {encuestasActive && !ratingSent && (
+            <Glass style={{ borderRadius: 18, padding: 18, width: '100%', display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', textAlign: 'center' }}>
+                ¿Cómo fue tu experiencia?
+              </div>
+              {/* Estrellas */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                {[1, 2, 3, 4, 5].map((s) => {
+                  const filled = s <= (ratingHover || ratingValue);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      className="press"
+                      onMouseEnter={() => setRatingHover(s)}
+                      onMouseLeave={() => setRatingHover(0)}
+                      onClick={() => setRatingValue(s)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 28, lineHeight: 1 }}
+                      aria-label={`${s} estrella${s !== 1 ? 's' : ''}`}
+                    >
+                      <svg width={28} height={28} viewBox="0 0 24 24"
+                        fill={filled ? '#fbbf24' : 'none'}
+                        stroke={filled ? '#fbbf24' : 'var(--u-text-3)'}
+                        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transition: 'all 120ms' }}
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Comentario (solo si eligió estrella) */}
+              {ratingValue > 0 && (
+                <textarea
+                  value={ratingComment}
+                  onChange={(e) => setRatingComment(e.target.value)}
+                  placeholder="Comentario opcional…"
+                  rows={2}
+                  style={{
+                    background: 'var(--surface-1)', border: '1px solid var(--u-hair)',
+                    borderRadius: 10, padding: '10px 12px', color: 'var(--u-text)',
+                    fontSize: 13, resize: 'none', width: '100%', outline: 'none',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              )}
+              {ratingValue > 0 && (
+                <button
+                  type="button"
+                  disabled={ratingPending}
+                  className="press"
+                  onClick={() => {
+                    startRating(async () => {
+                      await submitRating({
+                        restaurantId,
+                        rating: ratingValue,
+                        comment: ratingComment || undefined,
+                        orderId: orderId || undefined,
+                        customerName: name || undefined,
+                      });
+                      setRatingSent(true);
+                    });
+                  }}
+                  style={{
+                    padding: '11px', borderRadius: 12, border: 'none',
+                    background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)',
+                    fontWeight: 700, fontSize: 14, cursor: ratingPending ? 'default' : 'pointer',
+                    opacity: ratingPending ? 0.7 : 1,
+                  }}
+                >
+                  {ratingPending ? 'Enviando…' : 'Enviar calificación'}
+                </button>
+              )}
+            </Glass>
+          )}
+          {encuestasActive && ratingSent && (
+            <p style={{ fontSize: 14, color: '#4ade80', fontWeight: 600, textAlign: 'center' }}>
+              ¡Gracias por tu calificación! ⭐
+            </p>
+          )}
+
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
               Mis pedidos

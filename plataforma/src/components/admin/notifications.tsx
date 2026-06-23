@@ -182,6 +182,31 @@ export default function AdminNotifications({
             }
           } catch {}
         })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls' }, (payload) => {
+          const call = payload.new as { restaurant_id: string; table_number: number | null };
+          if (call.restaurant_id !== restaurantId) return;
+
+          const tableLabel = call.table_number ? ` · Mesa ${call.table_number}` : '';
+          chime();
+          if (toastTimer.current) clearTimeout(toastTimer.current);
+          setToast(`🔔 Llamada al mesero${tableLabel}`);
+          toastTimer.current = setTimeout(() => setToast(null), 8000);
+
+          try {
+            if (Notification.permission === 'granted') {
+              const reg = swRegRef.current;
+              const body = `Un cliente${tableLabel} necesita atención.`;
+              if (reg) {
+                reg.showNotification('🔔 Llamada al mesero', {
+                  body, icon: '/icon-192.png', badge: '/badge.svg',
+                  data: { url: '/admin/mesas' },
+                });
+              } else {
+                new Notification('🔔 Llamada al mesero', { body });
+              }
+            }
+          } catch {}
+        })
         .subscribe();
     })();
 

@@ -5,8 +5,6 @@ import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getIngredients } from '@/lib/db/recipes';
 import { can } from '@/lib/permissions';
-import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { createServiceClient } from '@/lib/supabase/service';
 import ProductForm from '@/components/admin/product-form';
 
 export const metadata = { title: 'Nuevo producto – Panel admin' };
@@ -34,22 +32,7 @@ export default async function NewProductPage({
 
   if (!restaurantId) redirect('/admin/login');
 
-  const userCanIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
-
-  let canIngredientes = userCanIngredientes;
-  if (userCanIngredientes) {
-    const db = createServiceClient();
-    const { data: restMod } = await db
-      .from('restaurants')
-      .select('modules, module_settings')
-      .eq('id', restaurantId)
-      .single();
-    canIngredientes = isModuleActive(
-      restMod?.modules as ModulesMap,
-      restMod?.module_settings as ModuleSettings,
-      'recetas',
-    );
-  }
+  const canIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
 
   const [{ categories }, ingredients] = await Promise.all([
     getAdminMenu(restaurantId),

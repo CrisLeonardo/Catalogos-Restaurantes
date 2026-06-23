@@ -5,6 +5,7 @@ import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
 import ActiveOrderChip from '@/components/active-order-chip';
+import WaiterCallButton from '@/components/menu/waiter-call-button';
 import { useCart } from '@/lib/cart-context';
 import type { Category, Product } from '@/types';
 
@@ -19,6 +20,7 @@ interface Props {
   products: ProdItem[];
   ordersEnabled?: boolean;
   restaurantId?: string;
+  llamadaMeseroEnabled?: boolean;
 }
 
 /** ¿El producto tiene variantes/extras que el comensal debe ver? */
@@ -26,7 +28,7 @@ function hasOptions(p: ProdItem): boolean {
   return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
 }
 
-export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId }: Props) {
+export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId, llamadaMeseroEnabled = false }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -103,6 +105,25 @@ export default function MenuClient({ categories, products, ordersEnabled = false
       {ordersEnabled && cartOpen && <CartPanel onClose={() => setCartOpen(false)} />}
       {ordersEnabled && restaurantId && !selected && !cartOpen && (
         <ActiveOrderChip restaurantId={restaurantId} />
+      )}
+
+      {/* Botón "Llamar al mesero" flotante — solo cuando el módulo está activo */}
+      {llamadaMeseroEnabled && restaurantId && !selected && !cartOpen && (
+        <div style={{
+          position: 'fixed',
+          bottom: ordersEnabled ? 80 : 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          maxWidth: 428,
+          padding: '0 16px',
+          zIndex: 50,
+          pointerEvents: 'none',
+        }}>
+          <div style={{ pointerEvents: 'auto' }}>
+            <WaiterCallButton restaurantId={restaurantId} />
+          </div>
+        </div>
       )}
     </>
   );

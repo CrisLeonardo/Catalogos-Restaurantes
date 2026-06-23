@@ -5,8 +5,6 @@ import { getAdminContext, getAdminMenu, getProductById } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getIngredients, getProductRecipe } from '@/lib/db/recipes';
 import { can } from '@/lib/permissions';
-import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { createServiceClient } from '@/lib/supabase/service';
 import ProductForm from '@/components/admin/product-form';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
@@ -38,23 +36,7 @@ export default async function EditProductPage({
 
   if (!restaurantId) redirect('/admin/login');
 
-  const userCanIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
-
-  // Verificar que el módulo recetas esté habilitado para este restaurante.
-  let canIngredientes = userCanIngredientes;
-  if (userCanIngredientes) {
-    const db = createServiceClient();
-    const { data: restMod } = await db
-      .from('restaurants')
-      .select('modules, module_settings')
-      .eq('id', restaurantId)
-      .single();
-    canIngredientes = isModuleActive(
-      restMod?.modules as ModulesMap,
-      restMod?.module_settings as ModuleSettings,
-      'recetas',
-    );
-  }
+  const canIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
 
   const [product, { categories }, ingredients, recipe] = await Promise.all([
     getProductById(id, restaurantId),

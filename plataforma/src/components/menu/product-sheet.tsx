@@ -275,7 +275,7 @@ export default function ProductSheet({
             <>
               <QtyStepper value={qty} size="lg" onMinus={() => setQty(Math.max(1, qty - 1))} onPlus={() => setQty(qty + 1)} />
               <PrimaryButton size="lg" full onClick={add} style={{ flex: 1, opacity: missingRequired ? 0.55 : 1 }}>
-                {content.product.add} · <span className="t-mono" style={{ fontWeight: 700 }}>{formatPrice(unitPrice * qty, config)}</span>
+                {content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty, config)}</span>
               </PrimaryButton>
             </>
           ) : (
