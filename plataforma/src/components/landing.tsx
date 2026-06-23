@@ -30,23 +30,25 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: '01', title: 'Creamos tu restaurante', body: 'Lo damos de alta y lo personalizamos a tu gusto: marca, colores y menú.' },
-  { n: '02', title: 'Recibes tu acceso', body: 'Entras a tu panel y administras catálogo, precios y pedidos cuando quieras.' },
-  { n: '03', title: 'Tus clientes escanean', body: 'El comensal abre tu menú desde un QR y, si activas Premium, ordena en línea.' },
+  { n: '01', title: 'Regístrate en minutos', body: 'Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, 14 días gratis.' },
+  { n: '02', title: 'Personalízalo, guiado', body: 'Colores, logo y tu primer menú con un asistente paso a paso. No necesitas saber de tecnología.' },
+  { n: '03', title: 'Comparte tu QR', body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
 ];
 
 const PLANS = [
   {
-    code: 'Catálogo',
-    tagline: 'Tu menú, vivo',
-    points: ['Menú web interactivo por QR', 'Panel para gestionar el catálogo', 'Personalización de marca', 'Subdominio propio'],
-    accent: false,
+    code: 'Estándar',
+    tagline: 'Todo para vender en línea',
+    points: ['Menú web interactivo por QR', 'Carrito y checkout en línea', 'Pedidos para llevar / domicilio / en mesa', 'Alerta en tiempo real + WhatsApp', 'Personalización total de tu marca', 'Módulos opcionales que activas tú'],
+    accent: true,
+    cta: 'self' as const,
   },
   {
-    code: 'Premium',
-    tagline: 'Catálogo + pedidos',
-    points: ['Todo lo de Catálogo', 'Carrito y checkout en línea', 'Pedidos para llevar / domicilio', 'Alerta en tiempo real + WhatsApp'],
-    accent: true,
+    code: 'Multi-sucursal',
+    tagline: 'Para cadenas y franquicias',
+    points: ['Todo lo del plan Estándar', 'Panel de grupo con métricas consolidadas', 'Selector de sucursal para tus clientes', 'Precio preferente por volumen'],
+    accent: false,
+    cta: 'contact' as const,
   },
 ];
 
@@ -79,13 +81,23 @@ export default function LeoginLanding() {
             href="/login"
             className="press"
             style={{
-              padding: '7px 16px', borderRadius: 'var(--radius-full)',
+              padding: '7px 14px', borderRadius: 'var(--radius-full)',
               fontSize: 13, fontWeight: 600, textDecoration: 'none',
               color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
               background: 'rgba(255,255,255,0.06)',
             }}
           >
             Acceder
+          </Link>
+          <Link
+            href="/registro"
+            className="press btn-accent"
+            style={{
+              padding: '7px 16px', borderRadius: 'var(--radius-full)',
+              fontSize: 13, fontWeight: 700, textDecoration: 'none', color: '#fff',
+            }}
+          >
+            Crear mi restaurante
           </Link>
         </nav>
       </header>
@@ -112,18 +124,18 @@ export default function LeoginLanding() {
             con su propio panel de administración y pedidos en línea opcionales.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28 }}>
-            <a
-              href={demoUrl}
+            <Link
+              href="/registro"
               className="press btn-accent"
               style={{
                 padding: '13px 26px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 15, textDecoration: 'none', color: '#fff',
+                fontWeight: 700, fontSize: 15, textDecoration: 'none', color: '#fff',
               }}
             >
-              Ver demo en vivo
-            </a>
+              Crear mi restaurante
+            </Link>
             <a
-              href={ctaHref}
+              href={demoUrl}
               className="press"
               style={{
                 padding: '13px 26px', borderRadius: 'var(--radius-full)',
@@ -132,9 +144,12 @@ export default function LeoginLanding() {
                 background: 'rgba(255,255,255,0.06)',
               }}
             >
-              Solicita tu demo
+              Ver demo en vivo
             </a>
           </div>
+          <p className="t-mute" style={{ fontSize: 13, marginTop: 14 }}>
+            14 días de prueba gratis · sin tarjeta · listo en minutos
+          </p>
         </section>
 
         {/* ── Features ──────────────────────────────────────── */}
@@ -187,12 +202,12 @@ export default function LeoginLanding() {
               >
                 {p.accent && (
                   <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)', marginBottom: 10 }}>
-                    Más popular
+                    Recomendado
                   </div>
                 )}
                 <h3 className="t-display" style={{ fontSize: 22, fontWeight: 800 }}>{p.code}</h3>
                 <p className="t-mute" style={{ fontSize: 13.5, marginTop: 4 }}>{p.tagline}</p>
-                <ul style={{ listStyle: 'none', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <ul style={{ listStyle: 'none', margin: '16px 0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {p.points.map((pt) => (
                     <li key={pt} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14 }}>
                       <Icon name="check" size={16} strokeWidth={2.6} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 3 }} />
@@ -200,6 +215,23 @@ export default function LeoginLanding() {
                     </li>
                   ))}
                 </ul>
+                {p.cta === 'self' ? (
+                  <Link
+                    href="/registro"
+                    className="press btn-accent"
+                    style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, textDecoration: 'none', color: '#fff' }}
+                  >
+                    Empezar gratis
+                  </Link>
+                ) : (
+                  <a
+                    href={ctaHref}
+                    className="press"
+                    style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 14, textDecoration: 'none', color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)' }}
+                  >
+                    Contáctanos
+                  </a>
+                )}
               </Glass>
             ))}
           </div>
@@ -212,19 +244,33 @@ export default function LeoginLanding() {
               ¿Listo para modernizar tu menú?
             </h2>
             <p className="t-mute" style={{ fontSize: 15, maxWidth: 440, margin: '12px auto 0', lineHeight: 1.5 }}>
-              Te montamos una demo con tu marca para que la veas funcionando antes de decidir.
+              Crea tu restaurante ahora y pruébalo gratis 14 días. ¿Prefieres que te acompañemos? Escríbenos.
             </p>
-            <a
-              href={ctaHref}
-              className="press btn-accent"
-              style={{
-                display: 'inline-block', marginTop: 22,
-                padding: '14px 30px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 15, textDecoration: 'none', color: '#fff',
-              }}
-            >
-              Solicita tu demo
-            </a>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 22 }}>
+              <Link
+                href="/registro"
+                className="press btn-accent"
+                style={{
+                  display: 'inline-block',
+                  padding: '14px 30px', borderRadius: 'var(--radius-full)',
+                  fontWeight: 700, fontSize: 15, textDecoration: 'none', color: '#fff',
+                }}
+              >
+                Crear mi restaurante
+              </Link>
+              <a
+                href={ctaHref}
+                className="press"
+                style={{
+                  display: 'inline-block',
+                  padding: '14px 30px', borderRadius: 'var(--radius-full)',
+                  fontWeight: 600, fontSize: 15, textDecoration: 'none',
+                  color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)',
+                }}
+              >
+                Hablar con ventas
+              </a>
+            </div>
           </Glass>
         </section>
       </main>

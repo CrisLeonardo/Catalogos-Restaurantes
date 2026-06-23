@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
-import { getBillingDashboard } from '@/lib/db/billing';
+import { getBillingDashboard, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
 import GenerateMonthlyButton from '@/components/super/generate-monthly-button';
 
@@ -66,6 +66,7 @@ export default async function CobrosPage() {
             <tbody>
               {sorted.map((r, i) => {
                 const cur = r.config?.currency ?? stats.currency;
+                const trial = isOnTrial(r.config);
                 return (
                   <tr key={r.restaurantId} style={{ borderBottom: i < sorted.length - 1 ? '1px solid var(--u-hair)' : 'none' }}>
                     <td style={{ padding: '12px 14px' }}>
@@ -78,13 +79,19 @@ export default async function CobrosPage() {
                     </td>
                     <td style={{ padding: '12px 14px', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-2)' }}>
                       {r.config && r.config.monthly_fee > 0 ? (
-                        <span>{fmtMoney(r.config.monthly_fee, cur)}{!r.config.active && <span style={{ color: 'var(--u-text-4)' }}> (pausado)</span>}</span>
+                        <span>{fmtMoney(r.config.monthly_fee, cur)}{!r.config.active && !trial && <span style={{ color: 'var(--u-text-4)' }}> (pausado)</span>}</span>
                       ) : (
                         <span style={{ color: 'var(--u-text-4)', fontFamily: 'var(--font-sans)', fontSize: 12.5 }}>sin configurar</span>
                       )}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <MonthBadge hasOverdue={r.hasOverdue} status={r.currentMonthlyStatus} hasMonthly={r.hasCurrentMonthly} configured={!!r.config && r.config.monthly_fee > 0 && r.config.active} />
+                      {trial ? (
+                        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(129,140,248,0.14)', color: '#818cf8', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                          PRUEBA · {trialDaysLeft(r.config)}d
+                        </span>
+                      ) : (
+                        <MonthBadge hasOverdue={r.hasOverdue} status={r.currentMonthlyStatus} hasMonthly={r.hasCurrentMonthly} configured={!!r.config && r.config.monthly_fee > 0 && r.config.active} />
+                      )}
                     </td>
                     <td style={{ padding: '12px 14px', fontFamily: 'var(--ui-font-mono)', color: r.pendingTotal > 0 ? '#fbbf24' : 'var(--u-text-4)' }}>
                       {r.pendingTotal > 0 ? fmtMoney(r.pendingTotal, cur) : '—'}

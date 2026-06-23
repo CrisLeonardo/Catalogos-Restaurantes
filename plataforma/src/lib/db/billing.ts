@@ -30,6 +30,8 @@ export interface BillingConfig {
   suspended_for_nonpayment: boolean;
   /** El admin pausó la suspensión automática; el cron no suspenderá aunque haya mora. */
   admin_override_suspend: boolean;
+  /** Fin de la prueba gratis (null = sin prueba). En prueba: active=false y esta fecha futura. */
+  trial_ends_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,6 +47,7 @@ export interface PricingSettings {
   graceDays: number;
   autoSuspend: boolean;
   autoGenerate: boolean;
+  trialDays: number;
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -125,9 +128,23 @@ function normConfig(data: Record<string, unknown>): BillingConfig {
     grace_days: data.grace_days != null ? Number(data.grace_days) : null,
     suspended_for_nonpayment: data.suspended_for_nonpayment === true,
     admin_override_suspend: data.admin_override_suspend === true,
+    trial_ends_at: (data.trial_ends_at as string | null) ?? null,
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };
+}
+
+/** ¿El restaurante está en prueba gratis ahora mismo? */
+export function isOnTrial(cfg: { active: boolean; trial_ends_at: string | null } | null): boolean {
+  if (!cfg || cfg.active || !cfg.trial_ends_at) return false;
+  return new Date(cfg.trial_ends_at).getTime() > Date.now();
+}
+
+/** Días que faltan para que termine la prueba (0 si ya venció o no hay). */
+export function trialDaysLeft(cfg: { trial_ends_at: string | null } | null): number {
+  if (!cfg?.trial_ends_at) return 0;
+  const ms = new Date(cfg.trial_ends_at).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
 /** Parámetros globales de precio + gracia. */
@@ -153,6 +170,7 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
     graceDays: n('billing_grace_days', 10),
     autoSuspend: b('billing_auto_suspend', true),
     autoGenerate: b('billing_auto_generate', true),
+    trialDays: n('trial_days', 14),
   };
 });
 

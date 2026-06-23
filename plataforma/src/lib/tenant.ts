@@ -41,6 +41,20 @@ export function subdomainUrl(sub: string): string {
   return `${proto}://${sub}.${root}`;
 }
 
+/**
+ * URL del PANEL de administración de un restaurante.
+ *   prod:  https://azucar-negra-admin.leogin.online
+ *   local: http://azucar-negra.localhost:3000/admin
+ * En prod el panel vive en su propio subdominio (PWA aparte); en local se
+ * sirve bajo /admin del subdominio del tenant.
+ */
+export function adminUrl(slug: string): string {
+  const root = rootDomainForUrls();
+  const isLocal = root.includes("localhost") || root.startsWith("127.");
+  if (isLocal) return `http://${slug}.${root}/admin`;
+  return `https://${slug}-admin.${root}`;
+}
+
 export function getTenantSlug(host: string | null | undefined): string | null {
   if (!host) return null;
   const hostname = host.toLowerCase().split(":")[0]; // quita el puerto

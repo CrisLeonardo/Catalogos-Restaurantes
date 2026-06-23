@@ -4,6 +4,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import ModulesPanel from '@/components/admin/modules-panel';
+import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 import type { ModulesMap, ModuleSettings } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
 
@@ -31,9 +32,10 @@ export default async function ModulosPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [{ data: rest }, { data: theme }] = await Promise.all([
+  const [{ data: rest }, { data: theme }, contact] = await Promise.all([
     db.from('restaurants').select('modules, module_settings').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
+    getPlatformContactSettings(),
   ]);
 
   const defaultOrderTypes: OrderType[] = ['dine_in', 'delivery', 'pickup'];
@@ -48,6 +50,7 @@ export default async function ModulosPage() {
         modules={(rest?.modules as ModulesMap) ?? null}
         settings={(rest?.module_settings as ModuleSettings) ?? {}}
         orderTypes={orderTypes}
+        supportWhatsapp={contact.support_whatsapp}
       />
     </div>
   );

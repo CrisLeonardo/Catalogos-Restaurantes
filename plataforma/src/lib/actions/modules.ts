@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import {
   ACTIVATABLE_MODULES,
-  isEntitled,
+  isManaged,
+  moduleMeta,
   type ActivatableModuleKey,
   type ModuleSettings,
 } from '@/lib/modules';
@@ -15,9 +16,13 @@ export type ModuleActionResult = { error?: string; ok?: boolean };
 const VALID_KEYS = ACTIVATABLE_MODULES.map((m) => m.key) as string[];
 
 /**
- * El restaurante (dueño) o Leogin (super admin) prende/apaga un módulo activable.
- * Solo se puede ENCENDER si Leogin concedió el entitlement (modules[key] === true).
- * Activar módulos es decisión de propietario → no se delega a staff.
+ * El restaurante (dueño) prende/apaga un módulo self-service. No hay gating de
+ * plan: son herramientas que el dueño activa a voluntad.
+ *
+ * Excepciones:
+ *  · Módulos requiresSetup (FEL) los activa Leogin, no el restaurante.
+ *  · Módulos gestionados por Leogin (modules[key] === true) están forzados ON
+ *    y no se pueden apagar desde aquí.
  */
 export async function setModuleEnabled(
   restaurantId: string,
@@ -46,6 +51,11 @@ export async function setModuleEnabled(
     return { error: 'No autorizado para este restaurante.' };
   }
 
+  const meta = moduleMeta(key);
+  if (meta.requiresSetup && !isSuper) {
+    return { error: 'Este módulo lo activa el equipo de Leogin. Solicítalo desde Soporte.' };
+  }
+
   const db = createServiceClient();
   const { data: rest } = await db
     .from('restaurants')
@@ -54,9 +64,9 @@ export async function setModuleEnabled(
     .single();
   if (!rest) return { error: 'Restaurante no encontrado.' };
 
-  // Solo se puede encender un módulo habilitado por Leogin.
-  if (enabled && !isEntitled(rest.modules as Record<string, boolean> | null, key)) {
-    return { error: 'Este módulo no está habilitado en tu plan. Contacta a Leogin.' };
+  // Si Leogin lo gestiona, está forzado ON y no se apaga desde el panel.
+  if (isManaged(rest.modules as Record<string, boolean> | null, key) && !isSuper) {
+    return { error: 'Leogin gestiona este módulo por ti. Contáctanos para cambiarlo.' };
   }
 
   const current = (rest.module_settings as ModuleSettings | null) ?? {};

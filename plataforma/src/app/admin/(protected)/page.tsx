@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats } from '@/lib/db/orders';
+import { getBillingConfig, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
 import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
 import { formatPrice } from '@/lib/theme/resolve';
+import OnboardingChecklist, { type OnboardingStep } from '@/components/admin/onboarding-checklist';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant } from '@/types';
 
@@ -52,6 +55,30 @@ export default async function AdminHomePage() {
     ? await getOrderStats(restaurantId, timezone)
     : null;
 
+  // ── Prueba gratis (banner) ──────────────────────────────────
+  const billing = restaurantId ? await getBillingConfig(restaurantId) : null;
+  const onTrial = isOnTrial(billing);
+  const trialLeft = onTrial ? trialDaysLeft(billing) : 0;
+
+  // ── Onboarding guiado (solo el dueño, primera vez) ──────────
+  const needsOnboarding =
+    profile.role === 'RESTAURANT_OWNER' && restaurant?.onboarding_done === false && !!restaurantId;
+  let onboardingSteps: OnboardingStep[] = [];
+  if (needsOnboarding && restaurantId) {
+    const db = createServiceClient();
+    const [{ count: catCount }, { count: prodCount }] = await Promise.all([
+      db.from('categories').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+      db.from('products').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+    ]);
+    const hasLogo = !!resolved?.config.logoUrl;
+    onboardingSteps = [
+      { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: '/admin/personalizacion', done: hasLogo },
+      { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: '/admin/categorias', done: (catCount ?? 0) > 0 },
+      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: '/admin/menu/productos/new', done: (prodCount ?? 0) > 0 },
+      { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: '/admin/qr', done: false },
+    ];
+  }
+
   const allow = (key: string) => can(profile.role, profile.permissions, key);
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
   const firstName = (profile.full_name || '').trim().split(' ')[0];
@@ -76,6 +103,35 @@ export default async function AdminHomePage() {
           Esto es lo que pasa hoy en {brandName}.
         </p>
       </div>
+
+      {/* Banner de prueba gratis */}
+      {onTrial && (
+        <Link
+          href="/admin/suscripcion"
+          className="glass press"
+          style={{
+            borderRadius: 14, padding: '12px 16px', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 11,
+            border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
+          }}
+        >
+          <span style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.14)', color: 'var(--brand-accent)' }}>
+            <Icon name="sparkle" size={17} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              Prueba gratis · {trialLeft} día{trialLeft !== 1 ? 's' : ''} restante{trialLeft !== 1 ? 's' : ''}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>Tu menú ya está en vivo. Aprovéchalo al máximo.</div>
+          </div>
+          <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        </Link>
+      )}
+
+      {/* Onboarding guiado (primera vez) */}
+      {needsOnboarding && onboardingSteps.length > 0 && restaurantId && (
+        <OnboardingChecklist restaurantId={restaurantId} firstName={firstName} steps={onboardingSteps} />
+      )}
 
       {/* Números de hoy (solo si tiene pedidos en línea) */}
       {stats && (

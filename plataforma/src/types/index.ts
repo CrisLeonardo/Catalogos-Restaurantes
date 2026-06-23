@@ -27,10 +27,15 @@ export interface Restaurant {
     personal: boolean;
     finanzas: boolean;
     multi_branch: boolean;
-    /** Entitlements de módulos activables en 2 niveles (migración 038). */
+    /** "Gestionado por Leogin" de módulos activables (true = forzado ON + oculto). */
     fel?: boolean;
     proveedores?: boolean;
     loyalty?: boolean;
+    reservaciones?: boolean;
+    llamada_mesero?: boolean;
+    encuestas?: boolean;
+    cupones?: boolean;
+    recetas?: boolean;
   };
   /** On/off de módulos que controla el restaurante (migración 038). */
   module_settings?: import('@/lib/modules').ModuleSettings;
@@ -53,6 +58,8 @@ export interface Restaurant {
   organization_id: string | null;
   /** Dirección legible del local (migración 026). Se muestra en el selector de sucursal. */
   address: string | null;
+  /** false = mostrar el asistente de configuración inicial (registro self-serve, mig. 047). */
+  onboarding_done?: boolean;
   created_at: string;
 }
 

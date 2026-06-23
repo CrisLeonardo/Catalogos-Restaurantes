@@ -4,7 +4,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import { getMyBilling } from '@/lib/actions/billing';
-import { isOverdue, type Invoice } from '@/lib/db/billing';
+import { isOverdue, isOnTrial, trialDaysLeft, type Invoice } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
@@ -43,6 +43,8 @@ export default async function SuscripcionPage() {
 
   const pending = invoices.filter((i) => i.status === 'PENDING');
   const hasOverdue = pending.some((i) => isOverdue(i));
+  const onTrial = isOnTrial(config);
+  const trialLeft = trialDaysLeft(config);
 
   if (!config || (config.monthly_fee <= 0 && invoices.length === 0)) {
     return (
@@ -58,6 +60,26 @@ export default async function SuscripcionPage() {
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Prueba gratis */}
+      {onTrial && (
+        <div
+          className="glass"
+          style={{
+            borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 6,
+            border: '1px solid color-mix(in srgb, var(--brand-accent) 32%, transparent)',
+          }}
+        >
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Prueba gratis</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--u-text)', lineHeight: 1.1 }}>
+            {trialLeft} día{trialLeft !== 1 ? 's' : ''} restante{trialLeft !== 1 ? 's' : ''}
+          </div>
+          <div style={{ fontSize: 13.5, color: 'var(--u-text-3)' }}>
+            Tu restaurante está en vivo sin costo. Cuando termine la prueba, tu mensualidad será de{' '}
+            <strong style={{ color: 'var(--u-text)' }}>{fmtMoney(config.monthly_fee, currency)}</strong>. Te avisaremos antes.
+          </div>
+        </div>
+      )}
+
       {/* Estado de cuenta */}
       <div
         className="glass"

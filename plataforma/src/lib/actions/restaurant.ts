@@ -387,6 +387,38 @@ export async function updateOwnOrderTypes(
   return { ok: true };
 }
 
+/**
+ * Marca el onboarding guiado como completado (oculta el asistente del Inicio).
+ * Solo el dueño de su propio restaurante (o super admin).
+ */
+export async function dismissOnboarding(restaurantId: string): Promise<SaveThemeResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('restaurant_id, role')
+    .eq('id', user.id)
+    .single();
+  if (!profile) return { error: 'No autorizado.' };
+
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && profile.restaurant_id !== restaurantId) {
+    return { error: 'No autorizado para este restaurante.' };
+  }
+
+  const db = createServiceClient();
+  const { error } = await db
+    .from('restaurants')
+    .update({ onboarding_done: true })
+    .eq('id', restaurantId);
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin');
+  return { ok: true };
+}
+
 export async function saveAdminRestaurantTheme(input: {
   restaurantId: string;
   config: ThemeConfig;

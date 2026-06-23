@@ -2,15 +2,17 @@
 
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 import {
   updateRestaurantPlan,
   type SuperState,
 } from '@/lib/actions/super-admin';
+import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import type { Restaurant } from '@/types';
 
 type Plan = 'BASICO' | 'POPULAR' | 'PREMIUM';
 
-interface Modules {
+interface PlanFeatures {
   orders: boolean;
   whatsapp_notify: boolean;
   analitica: boolean;
@@ -19,40 +21,35 @@ interface Modules {
   personal: boolean;
   finanzas: boolean;
   multi_branch: boolean;
-  // Módulos activables en 2 niveles (el restaurante los prende/apaga después).
-  fel: boolean;
-  proveedores: boolean;
-  loyalty: boolean;
 }
 
-const PLAN_PRESETS: Record<Plan, Modules> = {
-  BASICO: {
-    orders: false, whatsapp_notify: false, analitica: false,
-    inventario: false, promociones: false, personal: false,
-    finanzas: false, multi_branch: false,
-    fel: false, proveedores: false, loyalty: false,
-  },
+/** Módulos activables que Leogin puede "gestionar" (forzar ON + ocultar del panel). */
+type ManagedModules = Record<string, boolean>;
+
+const FEATURE_KEYS: (keyof PlanFeatures)[] = [
+  'orders', 'whatsapp_notify', 'analitica', 'inventario',
+  'promociones', 'personal', 'finanzas', 'multi_branch',
+];
+
+// El plan estándar (POPULAR) incluye toda la operación. Multi-sucursal (PREMIUM)
+// es lo mismo + varias sucursales. Básico quedó deprecado (no se ofrece).
+const PLAN_PRESETS: Record<'POPULAR' | 'PREMIUM', PlanFeatures> = {
   POPULAR: {
-    orders: true, whatsapp_notify: true, analitica: true,
-    inventario: true, promociones: true, personal: true,
-    finanzas: true, multi_branch: true,
-    fel: false, proveedores: false, loyalty: false,
+    orders: true, whatsapp_notify: true, analitica: true, inventario: true,
+    promociones: true, personal: true, finanzas: true, multi_branch: false,
   },
   PREMIUM: {
-    orders: true, whatsapp_notify: true, analitica: true,
-    inventario: true, promociones: true, personal: true,
-    finanzas: true, multi_branch: true,
-    fel: false, proveedores: false, loyalty: false,
+    orders: true, whatsapp_notify: true, analitica: true, inventario: true,
+    promociones: true, personal: true, finanzas: true, multi_branch: true,
   },
 };
 
-const PLAN_META: Record<Plan, { label: string; price: string; sub: string; popular?: boolean }> = {
-  BASICO:   { label: 'Básico',   price: 'Q200',       sub: 'por sucursal / mes' },
-  POPULAR:  { label: 'Popular',  price: 'Q600',       sub: 'por sucursal / mes', popular: true },
-  PREMIUM:  { label: 'Premium',  price: 'Q1,200',     sub: '2 sucursales incluidas' },
+const PLAN_META: Record<'POPULAR' | 'PREMIUM', { label: string; price: string; sub: string; popular?: boolean }> = {
+  POPULAR: { label: 'Estándar', price: 'Q600', sub: 'experiencia completa · 1 sucursal', popular: true },
+  PREMIUM: { label: 'Multi-sucursal', price: 'Q1,200', sub: '2 sucursales incluidas + extra' },
 };
 
-const MODULE_LIST: { key: keyof Modules; label: string; description: string }[] = [
+const FEATURE_LIST: { key: keyof PlanFeatures; label: string; description: string }[] = [
   { key: 'orders',         label: 'Pedidos en línea',      description: 'Carrito + checkout + estados en tiempo real' },
   { key: 'whatsapp_notify',label: 'Notificación WhatsApp', description: 'Mensaje wa.me al confirmar pedido' },
   { key: 'analitica',      label: 'Analítica',             description: 'Horas pico, más vendidos, conversión' },
@@ -61,9 +58,6 @@ const MODULE_LIST: { key: keyof Modules; label: string; description: string }[] 
   { key: 'promociones',    label: 'Promociones',           description: 'Cupones y descuentos en checkout' },
   { key: 'personal',       label: 'Personal',              description: 'Gestión de staff y permisos por sección' },
   { key: 'multi_branch',   label: 'Multi-sucursal',        description: 'Panel de grupo y selector de sucursal' },
-  { key: 'fel',            label: 'Factura Electrónica',   description: 'Habilita FEL (SAT). El restaurante lo activa/configura después' },
-  { key: 'proveedores',    label: 'Proveedores y compras', description: 'Habilita proveedores y órdenes de compra. El restaurante lo activa después' },
-  { key: 'loyalty',        label: 'Lealtad / Puntos',      description: 'Habilita programa de puntos. El restaurante lo activa después' },
 ];
 
 const empty: SuperState = null;
@@ -71,55 +65,63 @@ const empty: SuperState = null;
 export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantPlan, empty);
 
-  const [plan, setPlan] = useState<Plan>(
-    (restaurant.plan_actual as Plan) ?? 'BASICO',
-  );
-  const [mods, setMods] = useState<Modules>({
-    orders:          restaurant.modules.orders,
-    whatsapp_notify: restaurant.modules.whatsapp_notify,
-    analitica:       restaurant.modules.analitica        ?? false,
-    inventario:      restaurant.modules.inventario       ?? false,
-    promociones:     restaurant.modules.promociones      ?? false,
-    personal:        restaurant.modules.personal         ?? false,
-    finanzas:        restaurant.modules.finanzas         ?? false,
-    multi_branch:    restaurant.modules.multi_branch     ?? false,
-    fel:             restaurant.modules.fel              ?? false,
-    proveedores:     restaurant.modules.proveedores      ?? false,
-    loyalty:         restaurant.modules.loyalty          ?? false,
+  const initialPlan = (restaurant.plan_actual as Plan) ?? 'POPULAR';
+  const [plan, setPlan] = useState<Plan>(initialPlan);
+  const isLegacyBasico = plan === 'BASICO';
+
+  const mod = restaurant.modules as Record<string, boolean | undefined>;
+  const [feats, setFeats] = useState<PlanFeatures>({
+    orders:          mod.orders === true,
+    whatsapp_notify: mod.whatsapp_notify === true,
+    analitica:       mod.analitica === true,
+    inventario:      mod.inventario === true,
+    promociones:     mod.promociones === true,
+    personal:        mod.personal === true,
+    finanzas:        mod.finanzas === true,
+    multi_branch:    mod.multi_branch === true,
   });
 
-  function selectPlan(p: Plan) {
+  // Estado de "gestionado por Leogin" para cada módulo activable.
+  const [managed, setManaged] = useState<ManagedModules>(
+    Object.fromEntries(ACTIVATABLE_MODULES.map((m) => [m.key, mod[m.key] === true])),
+  );
+
+  function selectPlan(p: 'POPULAR' | 'PREMIUM') {
     setPlan(p);
-    setMods(PLAN_PRESETS[p]);
+    setFeats(PLAN_PRESETS[p]);
   }
 
-  function toggle(key: keyof Modules) {
-    setMods((prev) => ({ ...prev, [key]: !prev[key] }));
+  function toggleFeat(key: keyof PlanFeatures) {
+    setFeats((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function toggleManaged(key: string) {
+    setManaged((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <input type="hidden" name="id"                  value={restaurant.id} />
-      <input type="hidden" name="plan_actual"          value={plan} />
-      <input type="hidden" name="module_orders"        value={String(mods.orders)} />
-      <input type="hidden" name="module_whatsapp"      value={String(mods.whatsapp_notify)} />
-      <input type="hidden" name="module_analitica"     value={String(mods.analitica)} />
-      <input type="hidden" name="module_inventario"    value={String(mods.inventario)} />
-      <input type="hidden" name="module_promociones"   value={String(mods.promociones)} />
-      <input type="hidden" name="module_personal"      value={String(mods.personal)} />
-      <input type="hidden" name="module_finanzas"      value={String(mods.finanzas)} />
-      <input type="hidden" name="module_multi_branch"  value={String(mods.multi_branch)} />
-      <input type="hidden" name="module_fel"           value={String(mods.fel)} />
-      <input type="hidden" name="module_proveedores"   value={String(mods.proveedores)} />
-      <input type="hidden" name="module_loyalty"       value={String(mods.loyalty)} />
+      <input type="hidden" name="id"               value={restaurant.id} />
+      <input type="hidden" name="plan_actual"       value={plan} />
+      {FEATURE_KEYS.map((k) => (
+        <input key={k} type="hidden" name={`feature_${k}`} value={String(feats[k])} />
+      ))}
+      {ACTIVATABLE_MODULES.map((m) => (
+        <input key={m.key} type="hidden" name={`managed_${m.key}`} value={String(managed[m.key] === true)} />
+      ))}
 
       {/* Plan selector */}
       <Glass variant="quiet" style={{ padding: 16 }}>
         <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
           Plan
         </p>
+        {isLegacyBasico && (
+          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: 12.5 }}>
+            Plan heredado «Básico». Elige <strong>Estándar</strong> o <strong>Multi-sucursal</strong> para actualizarlo.
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8 }}>
-          {(['BASICO', 'POPULAR', 'PREMIUM'] as const).map((p) => {
+          {(['POPULAR', 'PREMIUM'] as const).map((p) => {
             const active = plan === p;
             const meta = PLAN_META[p];
             return (
@@ -148,7 +150,7 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
                     fontSize: 9, fontWeight: 700, letterSpacing: '0.05em',
                     padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap',
                   }}>
-                    MÁS VENDIDO
+                    ESTÁNDAR
                   </span>
                 )}
                 <div style={{ fontWeight: 700, fontSize: 14, color: active ? 'var(--brand-accent)' : 'var(--u-text-3)', marginBottom: 2 }}>
@@ -166,22 +168,47 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
         </div>
       </Glass>
 
-      {/* Módulos */}
+      {/* Incluido en el plan */}
       <Glass variant="quiet" style={{ padding: 16 }}>
         <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
-          Módulos
+          Incluido en el plan
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {/* Catálogo — siempre activo */}
           <ModuleRow label="Catálogo" description="Menú QR público — siempre activo" enabled locked />
-
-          {MODULE_LIST.map(({ key, label, description }) => (
+          {FEATURE_LIST.map(({ key, label, description }) => (
             <ModuleRow
               key={key}
               label={label}
               description={description}
-              enabled={mods[key]}
-              onToggle={() => toggle(key)}
+              enabled={feats[key]}
+              onToggle={() => toggleFeat(key)}
+            />
+          ))}
+        </div>
+      </Glass>
+
+      {/* Módulos gestionados por Leogin */}
+      <Glass variant="quiet" style={{ padding: 16 }}>
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+          Módulos gestionados por Leogin
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', gap: 7 }}>
+          <Icon name="helpCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>
+            Estos módulos son <strong>self-service</strong>: el restaurante los prende/apaga solo. Actívalos aquí
+            únicamente si tú quieres gestionarlos por él: quedarán <strong>forzados ON</strong> y <strong>ocultos</strong> de
+            su panel de módulos (útil para FEL o casos especiales). Si los dejas apagados, el dueño los controla a su gusto.
+          </span>
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {ACTIVATABLE_MODULES.map((m) => (
+            <ModuleRow
+              key={m.key}
+              label={m.label}
+              description={m.requiresSetup ? 'Requiere configuración de Leogin · actívalo aquí' : `${m.description.slice(0, 60)}…`}
+              enabled={managed[m.key] === true}
+              onToggle={() => toggleManaged(m.key)}
             />
           ))}
         </div>

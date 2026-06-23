@@ -1,27 +1,48 @@
 /* ============================================================
-   ACTIVACIÓN DE MÓDULOS EN 2 NIVELES (migración 038)
+   MÓDULOS — modelo self-service + gestionado (rediseño 2026-06-23)
    ------------------------------------------------------------
-   Nivel 1 — ENTITLEMENT (lo concede Leogin/super admin):
-     restaurants.modules[key] === true
-   Nivel 2 — ACTIVACIÓN del restaurante:
-     restaurants.module_settings[key].enabled === true
+   El restaurante decide qué módulos opcionales quiere usar. No hay
+   "mejorar plan": son herramientas que prende/apaga a voluntad.
 
-   Un módulo está ACTIVO solo si AMBOS niveles son verdaderos.
-   Si Leogin retira el entitlement, el restaurante no puede activarlo
-   (la UI lo muestra bloqueado y la acción lo rechaza en el servidor).
+   Dos formas de que un módulo quede ACTIVO:
 
-   Para agregar un módulo nuevo activable: añade su meta a
-   ACTIVATABLE_MODULES y la llave a `restaurants.modules` (super admin).
+   1) SELF-SERVICE — el restaurante lo enciende él mismo:
+        restaurants.module_settings[key].enabled === true
+      (lo controla desde /admin/modulos)
+
+   2) GESTIONADO POR LEOGIN — Leonardo lo habilita desde el super admin:
+        restaurants.modules[key] === true
+      En este caso el módulo queda forzado ON y NO aparece en el panel
+      del restaurante (Leogin lo administra; menos ruido para el cliente).
+
+   Módulo ACTIVO  =  gestionado(modules[k])  Ó  encendido(module_settings[k]).
+
+   Algunos módulos (requiresSetup, p.ej. FEL) necesitan configuración de
+   Leogin y NO se ofrecen como self-service: solo se activan gestionados.
+
+   Para agregar un módulo nuevo: añade su meta a ACTIVATABLE_MODULES.
+   No requiere cambio de esquema (modules y module_settings son jsonb).
    ============================================================ */
 
 export type ActivatableModuleKey =
-  | 'fel'
-  | 'proveedores'
-  | 'loyalty'
   | 'reservaciones'
-  | 'encuestas'
   | 'llamada_mesero'
-  | 'cupones';
+  | 'encuestas'
+  | 'cupones'
+  | 'loyalty'
+  | 'proveedores'
+  | 'recetas'
+  | 'fel';
+
+/** Grupos visuales del panel de módulos (para ordenar las tarjetas). */
+export type ModuleGroup = 'atencion' | 'crecimiento' | 'operacion' | 'facturacion';
+
+export const MODULE_GROUPS: { id: ModuleGroup; label: string; description: string }[] = [
+  { id: 'atencion',    label: 'Atención en sala',  description: 'Mejora la experiencia del comensal mientras está en tu local.' },
+  { id: 'crecimiento', label: 'Crecimiento y fidelidad', description: 'Herramientas para vender más y que vuelvan.' },
+  { id: 'operacion',   label: 'Operación avanzada', description: 'Control fino de tu cocina e inventario.' },
+  { id: 'facturacion', label: 'Facturación', description: 'Documentos fiscales para tus ventas.' },
+];
 
 export interface ModuleMeta {
   key: ActivatableModuleKey;
@@ -37,77 +58,114 @@ export interface ModuleMeta {
   navLabel: string | null;
   /** Sección del nav donde aparece. */
   navSection: 'Operación' | 'Negocio';
+  /** Grupo del panel de módulos. */
+  group: ModuleGroup;
   /** Chip visual en la tarjeta. */
   badge?: 'POPULAR' | 'NUEVO';
+  /** Visibilidad inicial cuando el restaurante aún no lo ha tocado. */
+  defaultOn?: boolean;
+  /** Necesita configuración de Leogin: solo se activa gestionado (no self-service). */
+  requiresSetup?: boolean;
+  /** Sugerencia contextual (p.ej. "funciona mejor con Comer en local"). */
+  hint?: string;
 }
 
 export const ACTIVATABLE_MODULES: ModuleMeta[] = [
+  /* ── Atención en sala ─────────────────────────────────── */
   {
     key: 'reservaciones',
     label: 'Reservaciones',
-    description: 'Gestiona reservas de mesa: registra clientes, fecha, hora y personas. Confirma, sienta y completa cada reserva desde tu panel.',
+    description: 'Gestiona reservas de mesa: cliente, fecha, hora y personas. Confirma, sienta y completa cada reserva desde tu panel.',
     icon: 'calendar',
     href: '/admin/reservaciones',
     navLabel: 'Reservaciones',
     navSection: 'Operación',
+    group: 'atencion',
     badge: 'NUEVO',
   },
   {
     key: 'llamada_mesero',
     label: 'Llamar al mesero',
-    description: 'Muestra un botón "Llamar al mesero" en tu menú QR. Los clientes lo presionan y aparece una alerta en tiempo real en tu panel de pedidos.',
+    description: 'Un botón "Llamar al mesero" en tu menú QR. El cliente lo presiona y aparece una alerta en tiempo real en tu panel.',
     icon: 'bell',
     href: '/admin/mesas',
     navLabel: null,
     navSection: 'Operación',
+    group: 'atencion',
+    hint: 'Funciona mejor con el modo "Comer en local" activo.',
   },
   {
     key: 'encuestas',
     label: 'Encuestas de satisfacción',
-    description: 'Recibe calificaciones de 1-5 estrellas y comentarios post-pedido. Visualiza tu promedio, distribución y reseñas recientes.',
+    description: 'Recibe calificaciones de 1-5 estrellas y comentarios después de cada pedido. Visualiza tu promedio y reseñas recientes.',
     icon: 'thumbsUp',
     href: '/admin/encuestas',
     navLabel: 'Encuestas',
     navSection: 'Negocio',
+    group: 'atencion',
     badge: 'NUEVO',
   },
+
+  /* ── Crecimiento y fidelidad ──────────────────────────── */
   {
     key: 'cupones',
     label: 'Cupones y descuentos',
-    description: 'Crea códigos de descuento (% o monto fijo) con límite de usos y fecha de expiración. Tus clientes los aplican en el checkout.',
+    description: 'Crea códigos de descuento (% o monto fijo) con límite de usos y expiración. Tus clientes los aplican en el checkout.',
     icon: 'ticket',
     href: '/admin/cupones',
     navLabel: 'Cupones',
     navSection: 'Negocio',
+    group: 'crecimiento',
     badge: 'NUEVO',
-  },
-  {
-    key: 'fel',
-    label: 'Factura Electrónica (FEL)',
-    description: 'Emite facturas electrónicas certificadas (SAT Guatemala) desde tus pedidos.',
-    icon: 'receipt',
-    href: '/admin/facturacion',
-    navLabel: 'Facturación',
-    navSection: 'Negocio',
-  },
-  {
-    key: 'proveedores',
-    label: 'Proveedores y compras',
-    description: 'Registra proveedores y genera órdenes de compra para reabastecer tu inventario.',
-    icon: 'truck',
-    href: '/admin/proveedores',
-    navLabel: 'Proveedores',
-    navSection: 'Operación',
   },
   {
     key: 'loyalty',
     label: 'Lealtad / Puntos',
-    description: 'Programa de puntos: tus clientes acumulan por compra y canjean en el checkout.',
+    description: 'Programa de puntos: tus clientes acumulan por cada compra y canjean por descuentos en el checkout.',
     icon: 'star',
     href: '/admin/lealtad',
     navLabel: 'Lealtad',
     navSection: 'Negocio',
+    group: 'crecimiento',
     badge: 'POPULAR',
+  },
+
+  /* ── Operación avanzada ───────────────────────────────── */
+  {
+    key: 'recetas',
+    label: 'Recetas e ingredientes',
+    description: 'Define los ingredientes de cada platillo y descuenta tu stock por receta. Para cocinas que controlan costos a fondo.',
+    icon: 'flask',
+    href: '/admin/ingredientes',
+    navLabel: 'Ingredientes',
+    navSection: 'Operación',
+    group: 'operacion',
+    // Estuvo siempre visible: lo dejamos encendido por defecto para no
+    // quitárselo a quien ya lo usaba, pero ahora se puede ocultar.
+    defaultOn: true,
+  },
+  {
+    key: 'proveedores',
+    label: 'Proveedores y compras',
+    description: 'Registra proveedores y genera órdenes de compra para reabastecer tu inventario sin perder el control del gasto.',
+    icon: 'truck',
+    href: '/admin/proveedores',
+    navLabel: 'Proveedores',
+    navSection: 'Operación',
+    group: 'operacion',
+  },
+
+  /* ── Facturación (requiere configuración de Leogin) ───── */
+  {
+    key: 'fel',
+    label: 'Factura Electrónica (FEL)',
+    description: 'Emite facturas electrónicas certificadas (SAT Guatemala) desde tus pedidos. Requiere conectar tu certificador.',
+    icon: 'receipt',
+    href: '/admin/facturacion',
+    navLabel: 'Facturación',
+    navSection: 'Negocio',
+    group: 'facturacion',
+    requiresSetup: true,
   },
 ];
 
@@ -120,24 +178,56 @@ export function moduleMeta(key: ActivatableModuleKey): ModuleMeta {
 /** Estado controlado por el restaurante (restaurants.module_settings). */
 export type ModuleSettings = Partial<Record<ActivatableModuleKey, { enabled?: boolean }>>;
 
-/** Mapa de entitlements (restaurants.modules) — jsonb libre. */
+/** Mapa de "gestionado por Leogin" (restaurants.modules) — jsonb libre. */
 export type ModulesMap = Record<string, boolean> | null | undefined;
 
-/** ¿Leogin habilitó este módulo para el restaurante? (Nivel 1) */
-export function isEntitled(modules: ModulesMap, key: ActivatableModuleKey): boolean {
+/**
+ * ¿Leogin gestiona este módulo? (modules[key] === true)
+ * Cuando es true, el módulo queda forzado ON y se oculta del panel del
+ * restaurante (lo administra Leogin directamente).
+ */
+export function isManaged(modules: ModulesMap, key: ActivatableModuleKey): boolean {
   return modules?.[key] === true;
 }
 
-/** ¿El restaurante activó este módulo? (Nivel 2, sin verificar entitlement) */
-export function isTurnedOn(settings: ModuleSettings | null | undefined, key: ActivatableModuleKey): boolean {
-  return settings?.[key]?.enabled === true;
+/**
+ * ¿El restaurante encendió este módulo él mismo? (module_settings[key].enabled)
+ * Si nunca lo ha tocado, usa el valor por defecto del módulo (defaultOn).
+ */
+export function isSelfEnabled(
+  settings: ModuleSettings | null | undefined,
+  key: ActivatableModuleKey,
+): boolean {
+  const v = settings?.[key]?.enabled;
+  if (v === undefined || v === null) {
+    return ACTIVATABLE_MODULES.find((m) => m.key === key)?.defaultOn === true;
+  }
+  return v === true;
 }
 
-/** ¿El módulo está realmente ACTIVO? Requiere ambos niveles. */
+/**
+ * ¿El módulo está ACTIVO?  Gestionado por Leogin  Ó  encendido por el restaurante.
+ * (Misma firma de siempre: todos los call-sites heredan la nueva semántica.)
+ */
 export function isModuleActive(
   modules: ModulesMap,
   settings: ModuleSettings | null | undefined,
   key: ActivatableModuleKey,
 ): boolean {
-  return isEntitled(modules, key) && isTurnedOn(settings, key);
+  return isManaged(modules, key) || isSelfEnabled(settings, key);
+}
+
+/**
+ * ¿El módulo debe mostrarse como tarjeta self-service en el panel del
+ * restaurante?  No, si Leogin lo gestiona (modules[key] === true): en ese
+ * caso queda oculto para no generar ruido. Los módulos requiresSetup SÍ se
+ * muestran siempre (como gestionados o con opción de solicitar).
+ */
+export function showsInPanel(
+  modules: ModulesMap,
+  key: ActivatableModuleKey,
+): boolean {
+  const meta = ACTIVATABLE_MODULES.find((m) => m.key === key);
+  if (meta?.requiresSetup) return true;
+  return !isManaged(modules, key);
 }

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { slugify, validateSlug, crossSlugCollision } from '@/lib/slug';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 
 export type SuperState = { error: string } | null;
@@ -26,53 +28,8 @@ async function verifySuperAdmin() {
   return createServiceClient();
 }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
-
-// Subdominios que no pueden ser de un restaurante: `demo` es la demo pública
-// de Leogin y `www` se trata como dominio raíz en lib/tenant.ts.
-const RESERVED_SLUGS = ['demo', 'www', 'admin', 'api', 'app', 'super', 'preview', 'login', 'central'];
-
-/** Valida un slug de subdominio; devuelve mensaje de error o null si es válido. */
-function validateSlug(slug: string): string | null {
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
-    return 'El slug solo puede tener minúsculas, números y guiones (sin espacios ni acentos).';
-  }
-  if (RESERVED_SLUGS.includes(slug)) {
-    return `El slug "${slug}" está reservado por la plataforma. Elige otro.`;
-  }
-  // Estos sufijos son subdominios especiales (panel admin / panel de grupo).
-  if (slug.endsWith('-admin') || slug.endsWith('-central')) {
-    return `El slug no puede terminar en "-admin" ni "-central" (son subdominios reservados).`;
-  }
-  return null;
-}
-
-/**
- * El subdominio (slug) es un namespace COMPARTIDO entre restaurantes y grupos:
- * `grupo-slug.dominio` solo enruta al selector de sucursal si NINGÚN restaurante
- * usa ese slug (el restaurante gana). Esta verificación cruzada evita esa colisión.
- * `table` es la tabla donde se va a guardar; se revisa la OTRA. null = sin colisión.
- */
-async function crossSlugCollision(
-  db: ReturnType<typeof createServiceClient>,
-  slug: string,
-  table: 'restaurants' | 'organizations',
-): Promise<string | null> {
-  const other = table === 'restaurants' ? 'organizations' : 'restaurants';
-  const { data } = await db.from(other).select('id').eq('slug', slug).maybeSingle();
-  if (!data) return null;
-  return other === 'organizations'
-    ? `El slug "${slug}" ya lo usa un grupo. Elige otro.`
-    : `El slug "${slug}" ya lo usa una sucursal. Elige otro.`;
-}
+// Generación/validación de slugs vive en lib/slug.ts (compartido con el
+// registro self-serve para aplicar exactamente las mismas reglas).
 
 export async function createRestaurant(
   prevState: SuperState,
@@ -192,20 +149,23 @@ export async function updateRestaurantPlan(
   const id = formData.get('id') as string;
   const plan_actual = formData.get('plan_actual') as string;
 
-  const bool = (key: string) => formData.get(key) === 'true';
+  const feat = (key: string) => formData.get(`feature_${key}`) === 'true';
+  // "Gestionado por Leogin" de cada módulo activable: true = forzado ON + oculto
+  // del panel del restaurante. false/ausente = self-service (lo controla el dueño).
+  const managedFlags = Object.fromEntries(
+    ACTIVATABLE_MODULES.map((m) => [m.key, formData.get(`managed_${m.key}`) === 'true']),
+  );
   const modules = {
     catalog: true,
-    orders:         bool('module_orders'),
-    whatsapp_notify:bool('module_whatsapp'),
-    analitica:      bool('module_analitica'),
-    inventario:     bool('module_inventario'),
-    promociones:    bool('module_promociones'),
-    personal:       bool('module_personal'),
-    finanzas:       bool('module_finanzas'),
-    multi_branch:   bool('module_multi_branch'),
-    fel:            bool('module_fel'),
-    proveedores:    bool('module_proveedores'),
-    loyalty:        bool('module_loyalty'),
+    orders:          feat('orders'),
+    whatsapp_notify: feat('whatsapp_notify'),
+    analitica:       feat('analitica'),
+    inventario:      feat('inventario'),
+    promociones:     feat('promociones'),
+    personal:        feat('personal'),
+    finanzas:        feat('finanzas'),
+    multi_branch:    feat('multi_branch'),
+    ...managedFlags,
   };
 
   const { error } = await db

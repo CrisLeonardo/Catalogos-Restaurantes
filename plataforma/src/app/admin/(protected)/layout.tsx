@@ -78,6 +78,7 @@ export default async function AdminProtectedLayout({
   const reservacionesActive = isModuleActive(mod, modSettings, 'reservaciones');
   const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
   const cuponesActive = isModuleActive(mod, modSettings, 'cupones');
+  const recetasActive = isModuleActive(mod, modSettings, 'recetas');
 
   return (
     <AdminShell
@@ -86,7 +87,7 @@ export default async function AdminProtectedLayout({
       ordersEnabled={m('orders')}
       analiticaEnabled={m('analitica')}
       inventarioEnabled={m('inventario')}
-      ingredientesEnabled={true}
+      ingredientesEnabled={recetasActive}
       promocionesEnabled={m('promociones')}
       personalEnabled={m('personal')}
       finanzasEnabled={m('finanzas')}
