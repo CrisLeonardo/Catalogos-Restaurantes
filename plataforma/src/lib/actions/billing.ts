@@ -88,6 +88,7 @@ export async function saveBillingConfig(
     auto_price: autoPrice,
     grace_days: graceDays,
     active: formData.get('active') === 'on' || formData.get('active') === 'true',
+    admin_override_suspend: formData.get('admin_override_suspend') === 'on' || formData.get('admin_override_suspend') === 'true',
     started_at: startedAt,
     notes: String(formData.get('notes') ?? '').trim() || null,
     updated_at: new Date().toISOString(),
@@ -386,6 +387,40 @@ export async function deleteInvoice(
   if (error) return { error: error.message };
   revalidateBilling(restaurantId);
   return { ok: true, msg: 'Cobro eliminado.' };
+}
+
+/* ── Habilitar manualmente un restaurante suspendido por impago ── */
+
+/** Reactiva el restaurante y activa el override para que el cron no lo
+ *  vuelva a suspender automáticamente. El admin desactiva el override
+ *  cuando el restaurante regularice su pago. */
+export async function liftSuspension(
+  prevState: BillingState,
+  formData: FormData,
+): Promise<BillingState> {
+  const db = await verifySuperAdmin();
+  if (!db) return { error: 'No autorizado.' };
+  const restaurantId = String(formData.get('restaurantId') ?? '').trim();
+  if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
+
+  const { error: e1 } = await db
+    .from('restaurants')
+    .update({ status: 'active' })
+    .eq('id', restaurantId);
+  if (e1) return { error: e1.message };
+
+  const { error: e2 } = await db
+    .from('restaurant_billing')
+    .update({ suspended_for_nonpayment: false, admin_override_suspend: true })
+    .eq('restaurant_id', restaurantId);
+  if (e2) return { error: e2.message };
+
+  revalidateBilling(restaurantId);
+  revalidatePath('/super/restaurantes');
+  return {
+    ok: true,
+    msg: 'Restaurante habilitado. La suspensión automática está pausada; desactiva el override cuando regularice el pago.',
+  };
 }
 
 /* ── Lectura del propio cobro (panel del dueño) ─────────────── */

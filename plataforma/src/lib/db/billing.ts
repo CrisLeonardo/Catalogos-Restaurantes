@@ -28,6 +28,8 @@ export interface BillingConfig {
   grace_days: number | null;
   /** El sistema lo suspendió por impago (no una suspensión manual). */
   suspended_for_nonpayment: boolean;
+  /** El admin pausó la suspensión automática; el cron no suspenderá aunque haya mora. */
+  admin_override_suspend: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -122,6 +124,7 @@ function normConfig(data: Record<string, unknown>): BillingConfig {
     auto_price: data.auto_price !== false,
     grace_days: data.grace_days != null ? Number(data.grace_days) : null,
     suspended_for_nonpayment: data.suspended_for_nonpayment === true,
+    admin_override_suspend: data.admin_override_suspend === true,
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };

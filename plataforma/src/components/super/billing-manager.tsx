@@ -12,6 +12,7 @@ import { Glass } from '@/components/glass';
 import { fmtMoney } from '@/lib/money';
 import {
   saveBillingConfig,
+  liftSuspension,
   generateMonthlyForRestaurant,
   generateProrate,
   generateSetupInvoice,
@@ -160,11 +161,16 @@ function ConfigCard({
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Configuración del cobro</div>
 
         {config?.suspended_for_nonpayment && (
+          <SuspensionBanner restaurantId={restaurantId} onResult={onResult} />
+        )}
+
+        {!config?.suspended_for_nonpayment && config?.admin_override_suspend && (
           <div style={{
             padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
-            background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171',
+            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24',
           }}>
-            ⚠ Suspendido automáticamente por impago. Se reactiva solo al registrar el pago pendiente.
+            ⚡ Override activo: la suspensión automática por impago está pausada para este restaurante.
+            Desactiva el override (abajo) cuando regularice su pago.
           </div>
         )}
 
@@ -236,6 +242,12 @@ function ConfigCard({
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--u-text-2)', cursor: 'pointer' }}>
           <input type="checkbox" name="active" defaultChecked={config?.active ?? true} style={{ width: 16, height: 16 }} />
           Cobro activo (se le sigue facturando la mensualidad)
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: config?.admin_override_suspend ? '#fbbf24' : 'var(--u-text-2)', cursor: 'pointer' }}>
+          <input type="checkbox" name="admin_override_suspend" defaultChecked={config?.admin_override_suspend ?? false} style={{ width: 16, height: 16 }} />
+          Pausar suspensión automática (override manual)
+          {config?.admin_override_suspend && <span style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700 }}>ACTIVO</span>}
         </label>
 
         <button type="submit" disabled={pending} className="press btn-accent" style={{
@@ -402,6 +414,43 @@ function PayForm({
         padding: '10px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', opacity: pending ? 0.6 : 1,
       }}>{pending ? '…' : 'Confirmar pago'}</button>
     </form>
+  );
+}
+
+/* ── Banner de suspensión por impago con botón de habilitación manual ── */
+function SuspensionBanner({
+  restaurantId, onResult,
+}: { restaurantId: string; onResult: (t: { ok: boolean; msg: string }) => void }) {
+  const [state, formAction, pending] = useActionState<BillingState, FormData>(liftSuspension, null);
+  useEffect(() => {
+    if (state && 'ok' in state) onResult({ ok: true, msg: state.msg ?? 'Restaurante habilitado.' });
+    else if (state && 'error' in state) onResult({ ok: false, msg: state.error });
+  }, [state, onResult]);
+
+  return (
+    <div style={{
+      padding: '12px 14px', borderRadius: 10, fontSize: 12.5,
+      background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+    }}>
+      <div style={{ fontWeight: 600, color: '#f87171' }}>
+        ⚠ Suspendido automáticamente por impago.
+        <span style={{ fontWeight: 400, color: 'var(--u-text-3)', marginLeft: 6 }}>
+          Se reactiva solo al registrar el pago, o puedes habilitarlo manualmente.
+        </span>
+      </div>
+      <form action={formAction} style={{ flexShrink: 0 }}>
+        <input type="hidden" name="restaurantId" value={restaurantId} />
+        <button type="submit" disabled={pending} className="press" style={{
+          padding: '8px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5,
+          border: '1px solid rgba(74,222,128,0.4)', background: 'rgba(74,222,128,0.1)',
+          color: '#4ade80', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
+          whiteSpace: 'nowrap',
+        }}>
+          {pending ? 'Habilitando…' : 'Habilitar manualmente'}
+        </button>
+      </form>
+    </div>
   );
 }
 
