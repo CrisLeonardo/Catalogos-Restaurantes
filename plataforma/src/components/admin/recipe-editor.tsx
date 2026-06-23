@@ -32,6 +32,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
   const [error, setError] = useState<string | null>(null);
 
   const totalCost = lines.reduce((acc, l) => acc + l.line_cost, 0);
+  const hasZeroCost = lines.some((l) => l.ingredient_cost <= 0);
 
   function notifyParent(newLines: RecipeItem[]) {
     if (onCostChange) {
@@ -136,8 +137,8 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 style={{ ...inputStyle, textAlign: 'right' }}
               />
               <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{l.ingredient_unit}</span>
-              <span style={{ fontSize: 12, color: 'var(--u-text-3)', textAlign: 'right', fontFamily: 'monospace' }}>
-                Q {l.line_cost.toFixed(4)}
+              <span style={{ fontSize: 12, color: l.ingredient_cost <= 0 ? '#fbbf24' : 'var(--u-text-3)', textAlign: 'right', fontFamily: 'monospace' }} title={l.ingredient_cost <= 0 ? 'Este insumo tiene costo 0 — actualízalo en Ingredientes' : undefined}>
+                Q {l.line_cost.toFixed(2)}
               </span>
               <button
                 type="button"
@@ -152,9 +153,14 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6, borderTop: '1px solid var(--u-hair)' }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>
               Costo total:{' '}
-              <span style={{ color: 'var(--brand-accent)', fontFamily: 'monospace' }}>Q {totalCost.toFixed(4)}</span>
+              <span style={{ color: 'var(--brand-accent)', fontFamily: 'monospace' }}>Q {totalCost.toFixed(2)}</span>
             </span>
           </div>
+          {hasZeroCost && (
+            <p style={{ fontSize: 11.5, color: '#fbbf24', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+              <Icon name="alertCircle" size={12} /> Hay insumos con costo Q0 — el costo total puede estar incompleto.
+            </p>
+          )}
         </div>
       )}
 

@@ -8,7 +8,8 @@ import type { ThemeConfig } from '@/lib/theme/defaults';
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
   'tipEnabled' | 'tipPercent' | 'acceptsCard' |
-  'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
+  'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
+  'kdsYellowMin' | 'kdsRedMin'
 >;
 
 interface Props {
@@ -171,6 +172,13 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         Domicilio y Para llevar solo se activan desde el panel Leogin.
       </p>
       <Toggle label="Aceptar pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
+
+      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cocina (KDS)</div>
+      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+        Minutos de espera para el semáforo de la pantalla de cocina. 🟢 a tiempo · 🟡 apúrate · 🔴 tarde.
+      </p>
+      <NumberCtl label="Pasar a ámbar a los (min)" value={patch.kdsYellowMin} min={1} max={120} onChange={(v) => set('kdsYellowMin', Math.min(v, patch.kdsRedMin - 1))} />
+      <NumberCtl label="Pasar a rojo a los (min)" value={patch.kdsRedMin} min={2} max={240} onChange={(v) => set('kdsRedMin', Math.max(v, patch.kdsYellowMin + 1))} />
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Moneda y formato</div>
       <Field label="Símbolo de moneda">

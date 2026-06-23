@@ -49,6 +49,32 @@ export async function getWaiterActiveOrders(
   } as OrderWithItems));
 }
 
+/**
+ * Pedidos para la pantalla de cocina (KDS): solo los que la cocina debe cocinar
+ * AHORA — NEW (recién entró) y PREP (en preparación). Orden FIFO: el que más
+ * lleva esperando va primero, así el cocinero ataca lo más urgente.
+ */
+export async function getKitchenOrders(
+  restaurantId: string,
+): Promise<OrderWithItems[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('orders')
+    .select('*, items:order_items(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
+    .eq('restaurant_id', restaurantId)
+    .in('status', ['NEW', 'PREP'])
+    .order('created_at', { ascending: true })
+    .limit(60);
+
+  return ((data ?? []) as (Record<string, unknown>)[]).map((row) => {
+    const { waiter, ...order } = row as Record<string, unknown> & { waiter?: { full_name: string | null } | null };
+    return {
+      ...order,
+      waiter_name: waiter?.full_name ?? null,
+    } as OrderWithItems;
+  });
+}
+
 /** Números de mesa con un pedido DINE_IN activo (no entregado/cancelado).
    Se usa para marcar mesas ocupadas en el panel del mesero. */
 export async function getActiveTableNumbers(restaurantId: string): Promise<number[]> {

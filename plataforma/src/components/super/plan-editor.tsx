@@ -19,6 +19,10 @@ interface Modules {
   personal: boolean;
   finanzas: boolean;
   multi_branch: boolean;
+  // Módulos activables en 2 niveles (el restaurante los prende/apaga después).
+  fel: boolean;
+  proveedores: boolean;
+  loyalty: boolean;
 }
 
 const PLAN_PRESETS: Record<Plan, Modules> = {
@@ -26,16 +30,19 @@ const PLAN_PRESETS: Record<Plan, Modules> = {
     orders: false, whatsapp_notify: false, analitica: false,
     inventario: false, promociones: false, personal: false,
     finanzas: false, multi_branch: false,
+    fel: false, proveedores: false, loyalty: false,
   },
   POPULAR: {
     orders: true, whatsapp_notify: true, analitica: true,
     inventario: true, promociones: true, personal: true,
     finanzas: true, multi_branch: true,
+    fel: false, proveedores: false, loyalty: false,
   },
   PREMIUM: {
     orders: true, whatsapp_notify: true, analitica: true,
     inventario: true, promociones: true, personal: true,
     finanzas: true, multi_branch: true,
+    fel: false, proveedores: false, loyalty: false,
   },
 };
 
@@ -54,6 +61,9 @@ const MODULE_LIST: { key: keyof Modules; label: string; description: string }[] 
   { key: 'promociones',    label: 'Promociones',           description: 'Cupones y descuentos en checkout' },
   { key: 'personal',       label: 'Personal',              description: 'Gestión de staff y permisos por sección' },
   { key: 'multi_branch',   label: 'Multi-sucursal',        description: 'Panel de grupo y selector de sucursal' },
+  { key: 'fel',            label: 'Factura Electrónica',   description: 'Habilita FEL (SAT). El restaurante lo activa/configura después' },
+  { key: 'proveedores',    label: 'Proveedores y compras', description: 'Habilita proveedores y órdenes de compra. El restaurante lo activa después' },
+  { key: 'loyalty',        label: 'Lealtad / Puntos',      description: 'Habilita programa de puntos. El restaurante lo activa después' },
 ];
 
 const empty: SuperState = null;
@@ -73,6 +83,9 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
     personal:        restaurant.modules.personal         ?? false,
     finanzas:        restaurant.modules.finanzas         ?? false,
     multi_branch:    restaurant.modules.multi_branch     ?? false,
+    fel:             restaurant.modules.fel              ?? false,
+    proveedores:     restaurant.modules.proveedores      ?? false,
+    loyalty:         restaurant.modules.loyalty          ?? false,
   });
 
   function selectPlan(p: Plan) {
@@ -96,6 +109,9 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
       <input type="hidden" name="module_personal"      value={String(mods.personal)} />
       <input type="hidden" name="module_finanzas"      value={String(mods.finanzas)} />
       <input type="hidden" name="module_multi_branch"  value={String(mods.multi_branch)} />
+      <input type="hidden" name="module_fel"           value={String(mods.fel)} />
+      <input type="hidden" name="module_proveedores"   value={String(mods.proveedores)} />
+      <input type="hidden" name="module_loyalty"       value={String(mods.loyalty)} />
 
       {/* Plan selector */}
       <Glass variant="quiet" style={{ padding: 16 }}>

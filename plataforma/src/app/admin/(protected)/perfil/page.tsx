@@ -128,6 +128,8 @@ export default async function AdminPerfilPage({
             currencyPosition: resolved.config.currencyPosition,
             locale: resolved.config.locale,
             animations: resolved.config.animations,
+            kdsYellowMin: resolved.config.kdsYellowMin,
+            kdsRedMin: resolved.config.kdsRedMin,
           }}
         />
       </CollapsibleCard>

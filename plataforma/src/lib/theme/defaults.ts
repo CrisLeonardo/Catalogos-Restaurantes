@@ -174,6 +174,10 @@ export interface ThemeConfig {
   tipEnabled: boolean;            // propina sugerida en pedidos DINE_IN
   tipPercent: number;             // porcentaje a cobrar (ej. 10 = 10 %)
 
+  // ── Cocina (KDS) ──
+  kdsYellowMin: number;           // minutos de espera para que la tarjeta pase a ámbar
+  kdsRedMin: number;              // minutos de espera para que la tarjeta pase a rojo
+
   // ── Moneda ──
   currencySymbol: string;       // 'Q', '$', '€'
   currencyPosition: 'prefix' | 'suffix';
@@ -342,6 +346,9 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   acceptsCard: false,
   tipEnabled: false,
   tipPercent: 10,
+
+  kdsYellowMin: 10,
+  kdsRedMin: 20,
 
   currencySymbol: 'Q',
   currencyPosition: 'prefix',

@@ -68,6 +68,8 @@ export const createOrderSchema = z
     cashAmount: z.number().min(0).max(1_000_000).optional(),
     /** Indica si el cliente aceptó incluir propina. Solo DINE_IN cuando el restaurante la habilita. */
     tipAccepted: z.boolean().default(false),
+    /** Puntos de lealtad que el cliente quiere canjear como descuento (validado en servidor). */
+    redeemPoints: z.number().int().min(0).max(10_000_000).default(0),
   })
   .refine(
     (data) => {

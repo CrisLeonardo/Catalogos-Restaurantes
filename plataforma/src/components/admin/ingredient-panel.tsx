@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { saveIngredient, deleteIngredient } from '@/lib/actions/recipes';
@@ -43,6 +44,7 @@ type EditState = {
 } | null;
 
 export default function IngredientPanel({ restaurantId, initialIngredients, usageCounts }: Props) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>(null);
@@ -70,6 +72,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       const res = await saveIngredient(fd);
       if (res?.error) { setError(res.error); return; }
       resetAdd();
+      router.refresh();
     });
   }
 
@@ -87,6 +90,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       const res = await saveIngredient(fd);
       if (res?.error) { setError(res.error); return; }
       setEditState(null);
+      router.refresh();
     });
   }
 
@@ -99,7 +103,8 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
     setError(null);
     startTransition(async () => {
       const res = await deleteIngredient(ing.id, restaurantId);
-      if (res?.error) setError(res.error);
+      if (res?.error) { setError(res.error); return; }
+      router.refresh();
     });
   }
 

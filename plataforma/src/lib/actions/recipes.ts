@@ -4,9 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
-type ActionResult = { error?: string; ok?: boolean };
+export type ActionResult = { error?: string; ok?: boolean };
+type Resolved = { restaurantId: string } | { error: string };
 
-async function resolveRestaurantId(formRestaurantId?: string | null): Promise<{ restaurantId: string } | ActionResult> {
+async function resolveRestaurantId(formRestaurantId?: string | null): Promise<Resolved> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado' };
@@ -28,7 +29,7 @@ async function resolveRestaurantId(formRestaurantId?: string | null): Promise<{ 
 
 // ── Ingredientes ─────────────────────────────────────────────
 
-export async function saveIngredient(formData: FormData) {
+export async function saveIngredient(formData: FormData): Promise<ActionResult> {
   const resolved = await resolveRestaurantId(formData.get('restaurantId') as string);
   if ('error' in resolved) return resolved;
   const { restaurantId } = resolved;
@@ -61,7 +62,7 @@ export async function saveIngredient(formData: FormData) {
   return { ok: true };
 }
 
-export async function deleteIngredient(id: string, formRestaurantId: string) {
+export async function deleteIngredient(id: string, formRestaurantId: string): Promise<ActionResult> {
   const resolved = await resolveRestaurantId(formRestaurantId);
   if ('error' in resolved) return resolved;
   const { restaurantId } = resolved;
@@ -96,7 +97,7 @@ export async function saveProductRecipe(
   productId: string,
   formRestaurantId: string,
   lines: RecipeLineInput[],
-) {
+): Promise<ActionResult> {
   const resolved = await resolveRestaurantId(formRestaurantId);
   if ('error' in resolved) return resolved;
   const { restaurantId } = resolved;

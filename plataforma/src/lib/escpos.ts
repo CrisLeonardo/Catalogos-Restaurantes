@@ -195,6 +195,9 @@ export function buildReceiptEscPos(
     const label = `Descuento${order.promo_code ? ` (${order.promo_code})` : ''}`;
     b.row(label, `-${fm(Number(order.discount))}`);
   }
+  if (Number(order.loyalty_discount) > 0) {
+    b.row(`Puntos (${Number(order.loyalty_points_redeemed)})`, `-${fm(Number(order.loyalty_discount))}`);
+  }
 
   b.sep('=')
    .bold(true).row('TOTAL', fm(Number(order.total))).bold(false)

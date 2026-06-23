@@ -183,6 +183,9 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
     const promoLabel = order.promo_code ? ` (${order.promo_code})` : '';
     extraRows.push(`<tr class="sub discount"><td colspan="2">Descuento${promoLabel}</td><td class="amount">−${fmt(Number(order.discount))}</td></tr>`);
   }
+  if (Number(order.loyalty_discount) > 0) {
+    extraRows.push(`<tr class="sub discount"><td colspan="2">Puntos canjeados (${Number(order.loyalty_points_redeemed)})</td><td class="amount">−${fmt(Number(order.loyalty_discount))}</td></tr>`);
+  }
 
   const paymentHtml = order.order_type !== 'DINE_IN' ? (() => {
     const method = order.payment_method === 'CARD' ? 'Tarjeta al recibir' : 'Efectivo';
@@ -452,12 +455,26 @@ export default function OrderCard({
             </span>
           </div>
         )}
+        {Number(order.loyalty_discount) > 0 && (
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '5px 8px', borderRadius: 8,
+            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+          }}>
+            <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Icon name="star" size={12} style={{ display: 'inline' }} /> {Number(order.loyalty_points_redeemed)} puntos canjeados
+            </span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4ade80' }}>
+              −{money(Number(order.loyalty_discount), currency)}
+            </span>
+          </div>
+        )}
         <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Total</span>
           <div style={{ textAlign: 'right' }}>
-            {Number(order.discount) > 0 && (
+            {(Number(order.discount) > 0 || Number(order.loyalty_discount) > 0) && (
               <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
-                {money(Number(order.total) + Number(order.discount), currency)}
+                {money(Number(order.total) + Number(order.discount) + Number(order.loyalty_discount), currency)}
               </div>
             )}
             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>

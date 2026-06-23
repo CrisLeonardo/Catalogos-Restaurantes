@@ -13,6 +13,8 @@ import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
+import { awardLoyaltyForOrder } from '@/lib/actions/loyalty';
+import { getRedeemContextByPhone } from '@/lib/db/loyalty';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -245,7 +247,26 @@ export async function createOrder(
   const tipPercent = tipEnabled ? Math.max(0, Number(themeConfig.tipPercent) || 0) : 0;
   const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
 
-  const total = Math.max(0, subtotal + fee - discount + tip);
+  // Canje de puntos de lealtad. Autoritativo en el servidor: el saldo y el valor
+  // del punto se leen de la BD; el cliente solo pide cuántos puntos canjear.
+  let loyaltyPoints = 0;
+  let loyaltyDiscount = 0;
+  const requestedPoints = parsed.data.redeemPoints ?? 0;
+  if (requestedPoints > 0) {
+    const ctx = await getRedeemContextByPhone(restaurantId, customer.phone);
+    if (ctx.active && ctx.redeemValue > 0 && ctx.balance >= ctx.minRedeem) {
+      // Tope: ni más puntos que el saldo, ni más descuento que el total restante.
+      const remaining = Math.max(0, subtotal + fee - discount + tip);
+      const maxByTotal = Math.floor(remaining / ctx.redeemValue);
+      const points = Math.min(requestedPoints, ctx.balance, maxByTotal);
+      if (points >= ctx.minRedeem) {
+        loyaltyPoints = points;
+        loyaltyDiscount = Math.round(points * ctx.redeemValue * 100) / 100;
+      }
+    }
+  }
+
+  const total = Math.max(0, subtotal + fee - discount + tip - loyaltyDiscount);
 
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
@@ -317,6 +338,28 @@ export async function createOrder(
       promo_code: applied.promo.code ?? null,
     }).eq('id', order.id);
     await db.rpc('increment_promo_usage', { p_id: applied.promo.id });
+  }
+
+  // Canje de puntos: registra en el pedido y descuenta del saldo del cliente.
+  // El RPC re-valida el saldo (no deja negativo); best-effort para no romper el
+  // pedido ya creado si hubiera una carrera.
+  if (loyaltyPoints > 0 && loyaltyDiscount > 0 && customerId) {
+    await db.from('orders').update({
+      loyalty_points_redeemed: loyaltyPoints,
+      loyalty_discount: loyaltyDiscount,
+    }).eq('id', order.id);
+    try {
+      await db.rpc('leogin_loyalty_apply', {
+        p_restaurant_id: restaurantId,
+        p_customer_id:   customerId,
+        p_order_id:      order.id,
+        p_tipo:          'REDEEM',
+        p_points:        -loyaltyPoints,
+        p_note:          'Canje en pedido',
+      });
+    } catch {
+      /* best-effort: la lealtad no debe romper el pedido */
+    }
   }
 
   // Notificación push server-side: llega a la barra del sistema aunque la
@@ -621,6 +664,24 @@ export async function updateOrderStatus(
     }
   }
 
+  // Acumula puntos de lealtad al entregar (best-effort; no-op si el módulo está
+  // inactivo o el pedido no tiene cliente). No debe romper el cambio de estado.
+  if (status === 'DELIVERED') {
+    let rid = profile.restaurant_id as string | null;
+    if (!rid) {
+      const { data: orderRow } = await createServiceClient()
+        .from('orders').select('restaurant_id').eq('id', orderId).single();
+      rid = (orderRow?.restaurant_id as string) ?? null;
+    }
+    if (rid) {
+      try {
+        await awardLoyaltyForOrder(rid, orderId);
+      } catch {
+        /* best-effort */
+      }
+    }
+  }
+
   if (profile.restaurant_id) {
     logActivity({
       restaurantId: profile.restaurant_id,
@@ -633,6 +694,7 @@ export async function updateOrderStatus(
 
   revalidatePath('/admin/pedidos');
   revalidatePath('/admin/mesero');
+  revalidatePath('/admin/cocina');
   return {};
 }
 
@@ -812,6 +874,9 @@ export interface PublicOrder {
   customerName: string;
   subtotal: number;
   deliveryFee: number;
+  discount: number;
+  loyaltyPoints: number;
+  loyaltyDiscount: number;
   total: number;
   createdAt: string;
   items: PublicOrderItem[];
@@ -871,7 +936,7 @@ export async function getPublicOrder(
   const { data } = await db
     .from('orders')
     .select(
-      'order_number, status, order_type, customer_name, subtotal, delivery_fee, total, created_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot)',
+      'order_number, status, order_type, customer_name, subtotal, delivery_fee, discount, loyalty_points_redeemed, loyalty_discount, total, created_at, restaurant_id, items:order_items(name_snapshot, quantity, subtotal, options_snapshot)',
     )
     .eq('public_token', token)
     .single();
@@ -886,6 +951,9 @@ export async function getPublicOrder(
     customerName: data.customer_name as string,
     subtotal: Number(data.subtotal),
     deliveryFee: Number(data.delivery_fee),
+    discount: Number(data.discount ?? 0),
+    loyaltyPoints: Number(data.loyalty_points_redeemed ?? 0),
+    loyaltyDiscount: Number(data.loyalty_discount ?? 0),
     total: Number(data.total),
     createdAt: data.created_at as string,
     items: ((data.items as Record<string, unknown>[] | null) ?? []).map((it) => ({

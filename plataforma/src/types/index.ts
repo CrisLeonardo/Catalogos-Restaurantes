@@ -27,7 +27,13 @@ export interface Restaurant {
     personal: boolean;
     finanzas: boolean;
     multi_branch: boolean;
+    /** Entitlements de módulos activables en 2 niveles (migración 038). */
+    fel?: boolean;
+    proveedores?: boolean;
+    loyalty?: boolean;
   };
+  /** On/off de módulos que controla el restaurante (migración 038). */
+  module_settings?: import('@/lib/modules').ModuleSettings;
   status: 'active' | 'suspended';
   whatsapp_number: string | null;
   contact_email: string | null;
@@ -191,6 +197,9 @@ export interface Order {
   promo_code: string | null;
   /** Propina aplicada (migración 027); solo DINE_IN cuando el restaurante la habilita. */
   tip: number;
+  /** Canje de puntos de lealtad (migración 042): puntos usados y su descuento. */
+  loyalty_points_redeemed: number;
+  loyalty_discount: number;
   total: number;
   notes: string | null;
   public_token: string;

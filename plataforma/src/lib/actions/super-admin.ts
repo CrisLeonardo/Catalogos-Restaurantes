@@ -203,6 +203,9 @@ export async function updateRestaurantPlan(
     personal:       bool('module_personal'),
     finanzas:       bool('module_finanzas'),
     multi_branch:   bool('module_multi_branch'),
+    fel:            bool('module_fel'),
+    proveedores:    bool('module_proveedores'),
+    loyalty:        bool('module_loyalty'),
   };
 
   const { error } = await db

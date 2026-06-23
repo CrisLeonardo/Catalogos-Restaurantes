@@ -11,6 +11,7 @@ import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice, shadowCss } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
 import { validatePromo } from '@/lib/actions/promos';
+import { getLoyaltyRedeemInfo } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 
@@ -49,6 +50,7 @@ interface Props {
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
   hasPromos?: boolean;
+  loyaltyActive?: boolean;
 }
 
 type Step = 'form' | 'success';
@@ -66,6 +68,7 @@ export default function CheckoutForm({
   restaurantLng,
   deliveryRadiusKm,
   hasPromos = false,
+  loyaltyActive = false,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -101,6 +104,7 @@ export default function CheckoutForm({
   const [snapshotCashAmount, setSnapshotCashAmount] = useState(0);
   const [snapshotOrderType, setSnapshotOrderType] = useState<OrderType>('DINE_IN');
   const [snapshotTip, setSnapshotTip] = useState(0);
+  const [snapshotLoyalty, setSnapshotLoyalty] = useState(0);
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -127,6 +131,10 @@ export default function CheckoutForm({
   const [appliedPromo, setAppliedPromo] = useState<{ discount: number; name: string; code: string } | null>(null);
   const [promoMsg, setPromoMsg] = useState('');
   const [promoChecking, setPromoChecking] = useState(false);
+
+  // Lealtad / canje de puntos
+  const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
+  const [redeemOn, setRedeemOn] = useState(false);
 
   useEffect(() => {
     const p = getLocalProfile(restaurantId);
@@ -179,6 +187,22 @@ export default function CheckoutForm({
     setCashAmount('');
   }, [type, paymentMethod]);
 
+  // Lealtad: al escribir un teléfono válido, consulta el saldo de puntos del
+  // cliente (si el módulo está activo). Deferido (setTimeout) para no llamar
+  // setState de forma síncrona dentro del efecto.
+  useEffect(() => {
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      if (!loyaltyActive || !isValidGuatemalaPhone(phone)) {
+        if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); }
+        return;
+      }
+      const info = await getLoyaltyRedeemInfo(restaurantId, phone);
+      if (!cancelled) setRedeemInfo(info.active ? info : null);
+    }, 400);
+    return () => { cancelled = true; clearTimeout(id); };
+  }, [phone, loyaltyActive, restaurantId]);
+
   const errs = {
     name:  !name.trim() ? content.checkout.errName : '',
     phone: type === 'DINE_IN'
@@ -199,7 +223,18 @@ export default function CheckoutForm({
   const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
   const showTip      = false;
   const tipAmount    = 0;
-  const finalTotal   = Math.max(0, total + deliveryFee - discount + tipAmount);
+
+  // Lealtad: máximo de puntos canjeables = min(saldo, lo que cabe en el total).
+  const redeemValue     = redeemInfo?.redeemValue ?? 0;
+  const baseForLoyalty  = Math.max(0, total + deliveryFee - discount);
+  const maxRedeemPoints = redeemInfo?.active && redeemValue > 0
+    ? Math.min(redeemInfo.balance, Math.floor(baseForLoyalty / redeemValue))
+    : 0;
+  const canRedeem       = !!redeemInfo?.active && maxRedeemPoints > 0 && maxRedeemPoints >= (redeemInfo?.minRedeem ?? 0);
+  const redeemPoints    = redeemOn && canRedeem ? maxRedeemPoints : 0;
+  const loyaltyDiscount = Math.round(redeemPoints * redeemValue * 100) / 100;
+
+  const finalTotal   = Math.max(0, total + deliveryFee - discount - loyaltyDiscount + tipAmount);
 
   // cashAmount: validación después de finalTotal porque depende del total final
   const cashAmountNum = parseFloat(cashAmount.replace(',', '.')) || 0;
@@ -276,6 +311,7 @@ export default function CheckoutForm({
         paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
         ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
         tipAccepted: showTip,
+        ...(redeemPoints > 0 ? { redeemPoints } : {}),
       });
       if (result.error) { setError(result.error); return; }
 
@@ -296,6 +332,7 @@ export default function CheckoutForm({
       setSnapshot(itemsSnapshot);
       setSnapshotFee(feeSnapshot);
       setSnapshotDiscount(discount);
+      setSnapshotLoyalty(loyaltyDiscount);
       setSnapshotTip(tipSnapshot);
       setSnapshotTotal(totalSnapshot);
       setSnapshotPayment(type === 'DINE_IN' ? 'CASH' : paymentMethod);
@@ -313,6 +350,7 @@ export default function CheckoutForm({
         tip: tipSnapshot,
         total: totalSnapshot,
         discount,
+        loyalty: loyaltyDiscount,
         payment: type === 'DINE_IN' ? 'CASH' : paymentMethod,
         cashAmt: needsCashAmount ? cashAmountNum : 0,
         orderType: type,
@@ -330,6 +368,7 @@ export default function CheckoutForm({
     tip: number;
     total: number;
     discount?: number;
+    loyalty?: number;
     payment?: 'CASH' | 'CARD';
     cashAmt?: number;
     orderType?: OrderType;
@@ -339,6 +378,7 @@ export default function CheckoutForm({
     const lineItems = data?.snapshot ?? snapshot;
     const fee       = data?.fee ?? snapshotFee;
     const disc      = data?.discount ?? snapshotDiscount;
+    const loyaltyAmt = data?.loyalty ?? snapshotLoyalty;
     const tipAmt    = data?.tip ?? snapshotTip;
     const tot       = data?.total ?? snapshotTotal;
     const pmeth     = data?.payment ?? snapshotPayment;
@@ -371,6 +411,9 @@ export default function CheckoutForm({
     }
     if (disc > 0) {
       lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
+    }
+    if (loyaltyAmt > 0) {
+      lines.push(`⭐ Puntos canjeados: -${formatPrice(loyaltyAmt, config)}`);
     }
     if (tipAmt > 0) {
       lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);
@@ -508,6 +551,12 @@ export default function CheckoutForm({
                 <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
+            {loyaltyDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="star" size={13} /> {redeemPoints} puntos canjeados</span>
+                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(loyaltyDiscount, config)}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>
               <Price amount={finalTotal} size={20} />
@@ -540,6 +589,40 @@ export default function CheckoutForm({
             )}
             {promoMsg && <p style={{ fontSize: 12, color: '#f87171', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
+
+          {/* Lealtad — canje de puntos (si el cliente tiene cuenta con saldo) */}
+          {redeemInfo?.active && redeemInfo.balance > 0 && (
+            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
+                  Tienes <strong>{redeemInfo.balance.toLocaleString('es-GT')}</strong> puntos
+                  <span style={{ color: 'var(--u-text-4)' }}>≈ {formatPrice(redeemInfo.balance * redeemInfo.redeemValue, config)}</span>
+                </span>
+                {canRedeem ? (
+                  <button
+                    type="button"
+                    onClick={() => setRedeemOn((v) => !v)}
+                    className="press"
+                    style={{
+                      fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                      padding: '7px 13px', borderRadius: 'var(--radius-full)',
+                      border: redeemOn ? 'none' : '1px solid var(--u-hair)',
+                      background: redeemOn ? 'var(--brand-accent)' : 'transparent',
+                      color: redeemOn ? 'var(--brand-on-accent)' : 'var(--u-text-2)',
+                    }}
+                  >
+                    {redeemOn ? 'Quitar' : `Canjear −${formatPrice(maxRedeemPoints * redeemValue, config)}`}
+                  </button>
+                ) : null}
+              </div>
+              {!canRedeem && (
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                  Necesitas al menos {redeemInfo.minRedeem.toLocaleString('es-GT')} puntos para canjear.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </Glass>
 

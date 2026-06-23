@@ -5,6 +5,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
 import { isMeseroOnly } from '@/lib/permissions';
+import { isModuleActive } from '@/lib/modules';
 import type { Restaurant } from '@/types';
 
 export default async function AdminProtectedLayout({
@@ -69,6 +70,12 @@ export default async function AdminProtectedLayout({
   const mod = currentRestaurant?.modules as Record<string, boolean> | null;
   const m = (k: string) => mod?.[k] === true;
 
+  // Módulos activables: activos solo si Leogin los habilitó Y el restaurante los prendió.
+  const modSettings = currentRestaurant?.module_settings ?? null;
+  const felActive = isModuleActive(mod, modSettings, 'fel');
+  const proveedoresActive = isModuleActive(mod, modSettings, 'proveedores');
+  const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
+
   return (
     <AdminShell
       restaurantName={restaurantName}
@@ -80,6 +87,9 @@ export default async function AdminProtectedLayout({
       promocionesEnabled={m('promociones')}
       personalEnabled={m('personal')}
       finanzasEnabled={m('finanzas')}
+      felActive={felActive}
+      proveedoresActive={proveedoresActive}
+      loyaltyActive={loyaltyActive}
       logoUrl={logoUrl}
       zone={zone}
       role={profile.role}

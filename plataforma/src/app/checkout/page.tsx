@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isOpenNow } from '@/lib/hours';
 import { hasActiveCodePromos } from '@/lib/db/promos';
+import { isModuleActive } from '@/lib/modules';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
 
@@ -28,6 +29,11 @@ export default async function CheckoutPage() {
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala');
   const hasPromos = await hasActiveCodePromos(restaurant.id);
+  const loyaltyActive = isModuleActive(
+    restaurant.modules as Record<string, boolean> | null,
+    restaurant.module_settings ?? null,
+    'loyalty',
+  );
 
   if (paused || !open) {
     return (
@@ -52,6 +58,7 @@ export default async function CheckoutPage() {
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
           hasPromos={hasPromos}
+          loyaltyActive={loyaltyActive}
         />
       </CartProvider>
     </ThemeProvider>

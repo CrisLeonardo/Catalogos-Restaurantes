@@ -15,6 +15,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
+import { formatPrice } from '@/lib/theme/resolve';
 import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actions/orders';
 import type { OrderStatus } from '@/types';
 
@@ -320,17 +321,29 @@ export default function OrderTracker({
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {(order.deliveryFee > 0 || order.discount > 0 || order.loyaltyDiscount > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
+                <Price amount={order.subtotal} size={13.5} muted />
+              </div>
+            )}
             {order.deliveryFee > 0 && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
-                  <Price amount={order.subtotal} size={13.5} muted />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
-                  <Price amount={order.deliveryFee} size={13.5} muted />
-                </div>
-              </>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
+                <Price amount={order.deliveryFee} size={13.5} muted />
+              </div>
+            )}
+            {order.discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#4ade80' }}>Descuento</span>
+                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(order.discount, config)}</span>
+              </div>
+            )}
+            {order.loyaltyDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: '#4ade80' }}>⭐ {order.loyaltyPoints} puntos canjeados</span>
+                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(order.loyaltyDiscount, config)}</span>
+              </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>

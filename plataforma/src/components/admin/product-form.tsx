@@ -36,7 +36,7 @@ export default function ProductForm({ restaurantId, categories, product, default
       : null,
   );
   const hasRecipe = recipeCost !== null;
-  const displayCost = hasRecipe ? recipeCost.toFixed(4) : costVal;
+  const displayCost = hasRecipe ? recipeCost.toFixed(2) : costVal;
   const [options, setOptions] = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
@@ -135,8 +135,8 @@ export default function ProductForm({ restaurantId, categories, product, default
         </div>
         {(() => {
           const p = parseFloat(priceVal);
-          const c = parseFloat(costVal);
-          if (isNaN(p) || isNaN(c) || costVal.trim() === '') {
+          const c = hasRecipe ? recipeCost : parseFloat(costVal);
+          if (isNaN(p) || isNaN(c) || (!hasRecipe && costVal.trim() === '')) {
             return (
               <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8, display: 'block' }}>
                 Captura el costo para ver tu utilidad y margen por venta.
