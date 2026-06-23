@@ -345,6 +345,48 @@ export async function saveOrdersAndCurrency(input: {
   return { ok: true };
 }
 
+export async function updateOwnOrderTypes(
+  restaurantId: string,
+  orderTypes: ThemeConfig['orderTypes'],
+): Promise<SaveThemeResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('restaurant_id, role')
+    .eq('id', user.id)
+    .single();
+  if (!profile) return { error: 'No autorizado.' };
+
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && profile.restaurant_id !== restaurantId) {
+    return { error: 'No autorizado para este restaurante.' };
+  }
+  // Mínimo un tipo de pedido activo
+  if (orderTypes.length === 0) return { error: 'Debe haber al menos un modo de pedido activo.' };
+
+  const db = createServiceClient();
+  const { data: row } = await db
+    .from('restaurant_themes')
+    .select('config')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+
+  const existing = (row?.config as Record<string, unknown>) ?? {};
+  const { error } = await db
+    .from('restaurant_themes')
+    .upsert({ restaurant_id: restaurantId, config: { ...existing, orderTypes } }, { onConflict: 'restaurant_id' });
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/modulos');
+  revalidatePath('/admin/personalizacion');
+  revalidatePath('/admin/mesas');
+  revalidatePath('/');
+  return { ok: true };
+}
+
 export async function saveAdminRestaurantTheme(input: {
   restaurantId: string;
   config: ThemeConfig;

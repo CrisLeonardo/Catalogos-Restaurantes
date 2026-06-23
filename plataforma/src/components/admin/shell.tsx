@@ -32,6 +32,9 @@ interface Props {
   felActive?: boolean;
   proveedoresActive?: boolean;
   loyaltyActive?: boolean;
+  reservacionesActive?: boolean;
+  encuestasActive?: boolean;
+  cuponesActive?: boolean;
   logoUrl?: string | null;
   zone?: string;
   /** Rol y permisos del usuario (para filtrar el nav). */
@@ -49,6 +52,7 @@ export default function AdminShell({
   analiticaEnabled = false, inventarioEnabled = false, ingredientesEnabled = false,
   promocionesEnabled = false, personalEnabled = false, finanzasEnabled = false,
   felActive = false, proveedoresActive = false, loyaltyActive = false,
+  reservacionesActive = false, encuestasActive = false, cuponesActive = false,
   logoUrl, zone, role, permissions, canManageStaff, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -105,7 +109,8 @@ export default function AdminShell({
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
         ...(on(inventarioEnabled) ? [{ href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }] : []),
         ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
-        // ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
+        ...(on(reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', icon: 'calendar', key: 'reservaciones' }] : []),
+        ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
       ],
     },
     {
@@ -116,8 +121,10 @@ export default function AdminShell({
         ...(on(finanzasEnabled)    ? [{ href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }] : []),
         ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
         ...(on(promocionesEnabled) ? [{ href: '/admin/promociones', label: 'Promos',    icon: 'percent',   key: 'promociones' }] : []),
-        ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt', key: 'fel'         }] : []),
-        // ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',   icon: 'star',      key: 'loyalty'     }] : []),
+        ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt',   key: 'fel'         }] : []),
+        ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
+        ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
+        ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
       ],
     },
     {
@@ -156,6 +163,11 @@ export default function AdminShell({
     '/admin/perfil': 'Perfil',
     '/admin/qr': 'Código QR',
     '/admin/soporte': 'Soporte',
+    '/admin/reservaciones': 'Reservaciones',
+    '/admin/encuestas': 'Encuestas',
+    '/admin/cupones': 'Cupones',
+    '/admin/lealtad': 'Lealtad',
+    '/admin/modulos': 'Módulos',
   };
   const title = pathname === '/admin'
     ? 'Inicio'

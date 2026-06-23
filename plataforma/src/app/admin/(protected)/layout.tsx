@@ -75,6 +75,9 @@ export default async function AdminProtectedLayout({
   const felActive = isModuleActive(mod, modSettings, 'fel');
   const proveedoresActive = isModuleActive(mod, modSettings, 'proveedores');
   const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
+  const reservacionesActive = isModuleActive(mod, modSettings, 'reservaciones');
+  const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
+  const cuponesActive = isModuleActive(mod, modSettings, 'cupones');
 
   return (
     <AdminShell
@@ -90,6 +93,9 @@ export default async function AdminProtectedLayout({
       felActive={felActive}
       proveedoresActive={proveedoresActive}
       loyaltyActive={loyaltyActive}
+      reservacionesActive={reservacionesActive}
+      encuestasActive={encuestasActive}
+      cuponesActive={cuponesActive}
       logoUrl={logoUrl}
       zone={zone}
       role={profile.role}

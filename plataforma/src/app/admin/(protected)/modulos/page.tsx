@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import ModulesPanel from '@/components/admin/modules-panel';
 import type { ModulesMap, ModuleSettings } from '@/lib/modules';
+import type { OrderType } from '@/lib/theme/defaults';
 
 export const metadata = { title: 'Módulos – Panel admin' };
 
@@ -30,11 +31,15 @@ export default async function ModulosPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const { data: rest } = await db
-    .from('restaurants')
-    .select('modules, module_settings')
-    .eq('id', restaurantId)
-    .single();
+  const [{ data: rest }, { data: theme }] = await Promise.all([
+    db.from('restaurants').select('modules, module_settings').eq('id', restaurantId).single(),
+    db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
+  ]);
+
+  const defaultOrderTypes: OrderType[] = ['dine_in', 'delivery', 'pickup'];
+  const orderTypes: OrderType[] =
+    (theme?.config as Record<string, unknown> | null)?.orderTypes as OrderType[] | undefined
+    ?? defaultOrderTypes;
 
   return (
     <div className="anim-fade-up">
@@ -42,6 +47,7 @@ export default async function ModulosPage() {
         restaurantId={restaurantId}
         modules={(rest?.modules as ModulesMap) ?? null}
         settings={(rest?.module_settings as ModuleSettings) ?? {}}
+        orderTypes={orderTypes}
       />
     </div>
   );
