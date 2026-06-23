@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { isMeseroOnly } from '@/lib/permissions';
+import { adminUrl } from '@/lib/tenant';
+import { headers } from 'next/headers';
 
 export type AuthState = { error: string } | null;
 
@@ -25,7 +27,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // Redirigir según rol
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, permissions')
+    .select('role, permissions, restaurant_id')
     .eq('id', signInData.user.id)
     .single();
 
@@ -36,6 +38,27 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // El jefe de grupo entra a su panel consolidado (host slug-central.dominio).
   if (profile?.role === 'GROUP_OWNER') {
     redirect('/central');
+  }
+
+  // Detectar si el login se hizo desde el dominio raíz (leogin.online) y no
+  // desde el subdominio del restaurante. Si es así, redirigir al subdominio
+  // correcto usando la URL absoluta para que la cookie de sesión quede en el host correcto.
+  const tenantSlug = (await headers()).get('x-tenant-slug');
+  const isRootDomain = !tenantSlug;
+
+  if (isRootDomain && profile?.restaurant_id) {
+    const { data: rest } = await supabase
+      .from('restaurants')
+      .select('slug')
+      .eq('id', profile.restaurant_id)
+      .single();
+
+    if (rest?.slug) {
+      const destination = isMeseroOnly(profile?.role, profile?.permissions as string[] | null)
+        ? `${adminUrl(rest.slug)}/mesero`
+        : `${adminUrl(rest.slug)}/menu`;
+      redirect(destination);
+    }
   }
 
   // El mesero puro entra directo a su panel de toma de pedidos.
