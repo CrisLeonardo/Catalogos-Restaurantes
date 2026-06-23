@@ -268,6 +268,16 @@ export default function ProductForm({ restaurantId, categories, product, default
         </div>
       </Glass>
 
+      {/* Receta: nota cuando es producto nuevo pero ya hay insumos */}
+      {!product && ingredients !== undefined && (
+        <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+            Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular el food cost automáticamente.
+          </p>
+        </Glass>
+      )}
+
       {/* Receta / costeo por ingrediente (solo en edición) */}
       {product && ingredients && (
         <Glass variant="quiet" style={{ padding: 16 }}>

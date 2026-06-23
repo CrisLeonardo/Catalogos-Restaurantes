@@ -9,7 +9,7 @@ type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
   'tipEnabled' | 'tipPercent' | 'acceptsCard' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
-  'kdsYellowMin' | 'kdsRedMin'
+  'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst'
 >;
 
 interface Props {
@@ -174,8 +174,18 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
       <Toggle label="Aceptar pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cocina (KDS)</div>
-      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
-        Minutos de espera para el semáforo de la pantalla de cocina. 🟢 a tiempo · 🟡 apúrate · 🔴 tarde.
+      <Toggle
+        label="Pedidos solo al confirmar"
+        value={patch.kdsConfirmFirst}
+        onChange={(v) => set('kdsConfirmFirst', v)}
+      />
+      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -6 }}>
+        {patch.kdsConfirmFirst
+          ? 'Los pedidos llegan a la pantalla de cocina solo después de que el admin los confirme en el panel de pedidos.'
+          : 'Los pedidos aparecen en cocina en cuanto el cliente los envía (comportamiento clásico).'}
+      </p>
+      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 4, borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
+        Semáforo: minutos de espera para cambiar de color. 🟢 a tiempo · 🟡 apúrate · 🔴 tarde.
       </p>
       <NumberCtl label="Pasar a ámbar a los (min)" value={patch.kdsYellowMin} min={1} max={120} onChange={(v) => set('kdsYellowMin', Math.min(v, patch.kdsRedMin - 1))} />
       <NumberCtl label="Pasar a rojo a los (min)" value={patch.kdsRedMin} min={2} max={240} onChange={(v) => set('kdsRedMin', Math.max(v, patch.kdsYellowMin + 1))} />

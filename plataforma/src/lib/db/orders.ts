@@ -50,19 +50,22 @@ export async function getWaiterActiveOrders(
 }
 
 /**
- * Pedidos para la pantalla de cocina (KDS): solo los que la cocina debe cocinar
- * AHORA — NEW (recién entró) y PREP (en preparación). Orden FIFO: el que más
- * lleva esperando va primero, así el cocinero ataca lo más urgente.
+ * Pedidos para la pantalla de cocina (KDS).
+ * - confirmFirst=true: solo muestra PREP (confirmados desde el panel de pedidos).
+ * - confirmFirst=false: muestra NEW + PREP (llegan directamente a cocina).
+ * Orden FIFO: el que más lleva esperando va primero.
  */
 export async function getKitchenOrders(
   restaurantId: string,
+  confirmFirst = false,
 ): Promise<OrderWithItems[]> {
   const db = createServiceClient();
+  const statuses = confirmFirst ? ['PREP'] : ['NEW', 'PREP'];
   const { data } = await db
     .from('orders')
     .select('*, items:order_items(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
-    .in('status', ['NEW', 'PREP'])
+    .in('status', statuses)
     .order('created_at', { ascending: true })
     .limit(60);
 

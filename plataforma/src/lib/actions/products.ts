@@ -115,7 +115,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
 
   const sort_order = existing?.[0]?.sort_order != null ? existing[0].sort_order + 1 : 0;
 
-  const { error } = await ctx.db.from('products').insert({
+  const { data: created, error } = await ctx.db.from('products').insert({
     restaurant_id: ctx.restaurantId,
     category_id: (formData.get('category_id') as string) || null,
     name,
@@ -129,12 +129,12 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     is_available: formData.get('is_available') === 'true',
     is_active: formData.get('is_active') !== 'false',
     sort_order,
-  });
+  }).select('id').single();
 
   if (error) return { error: error.message };
 
   revalidatePath('/admin/menu');
-  redirect('/admin/menu');
+  redirect(`/admin/menu/productos/${created.id}`);
 }
 
 export async function updateProduct(prevState: ProductState, formData: FormData): Promise<ProductState> {

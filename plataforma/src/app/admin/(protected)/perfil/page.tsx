@@ -130,6 +130,7 @@ export default async function AdminPerfilPage({
             animations: resolved.config.animations,
             kdsYellowMin: resolved.config.kdsYellowMin,
             kdsRedMin: resolved.config.kdsRedMin,
+            kdsConfirmFirst: resolved.config.kdsConfirmFirst,
           }}
         />
       </CollapsibleCard>

@@ -16,6 +16,8 @@ interface Props {
      Configurables por el restaurante en Personalización → Cocina. */
   yellowMin: number;
   redMin: number;
+  /** true = solo muestra pedidos ya confirmados (PREP); false = también muestra los recién llegados (NEW). */
+  confirmFirst?: boolean;
 }
 
 /* Paleta fija de alto contraste — una cocina necesita legibilidad constante,
@@ -78,7 +80,7 @@ function semaforo(elapsedMin: number, yellowMin: number, redMin: number): string
   return C.green;
 }
 
-export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin }: Props) {
+export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false }: Props) {
   const router = useRouter();
   const orders = initialOrders;
   // `now` arranca en null: el servidor y el primer render del cliente NO pintan
@@ -182,7 +184,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: C.dim }}>
             <Icon name="checkCircle" size={52} style={{ color: C.green }} />
             <p style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Todo al día</p>
-            <p style={{ fontSize: 14 }}>No hay pedidos pendientes en cocina.</p>
+            <p style={{ fontSize: 14 }}>{confirmFirst ? 'Los pedidos aparecen aquí al ser confirmados desde el panel.' : 'No hay pedidos pendientes en cocina.'}</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14, alignItems: 'start' }}>

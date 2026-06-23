@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { getIngredients } from '@/lib/db/recipes';
+import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
 
 export const metadata = { title: 'Nuevo producto – Panel admin' };
@@ -30,7 +32,11 @@ export default async function NewProductPage({
 
   if (!restaurantId) redirect('/admin/login');
 
-  const { categories } = await getAdminMenu(restaurantId);
+  const canIngredientes = can(ctx.profile.role, ctx.profile.permissions, 'ingredientes');
+  const [{ categories }, ingredients] = await Promise.all([
+    getAdminMenu(restaurantId),
+    canIngredientes ? getIngredients(restaurantId) : Promise.resolve(undefined),
+  ]);
 
   return (
     <div className="anim-fade-up">
@@ -66,6 +72,7 @@ export default async function NewProductPage({
         restaurantId={restaurantId}
         categories={categories}
         defaultCategoryId={(await searchParams).cat}
+        ingredients={ingredients}
       />
     </div>
   );

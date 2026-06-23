@@ -40,11 +40,9 @@ export default async function CocinaPage() {
     restaurantName = (r?.name as string | null) ?? 'Cocina';
   }
 
-  const [{ data: themeRow }, orders] = await Promise.all([
-    db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
-    getKitchenOrders(restaurantId),
-  ]);
+  const { data: themeRow } = await db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single();
   const cfg = resolveTheme((themeRow as ThemeRow) ?? null).config;
+  const orders = await getKitchenOrders(restaurantId, cfg.kdsConfirmFirst);
 
   return (
     <KitchenDisplay
@@ -53,6 +51,7 @@ export default async function CocinaPage() {
       initialOrders={orders}
       yellowMin={cfg.kdsYellowMin}
       redMin={cfg.kdsRedMin}
+      confirmFirst={cfg.kdsConfirmFirst}
     />
   );
 }

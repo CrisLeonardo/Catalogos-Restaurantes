@@ -302,7 +302,7 @@ export async function saveOrdersAndCurrency(input: {
     'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
     'tipEnabled' | 'tipPercent' | 'acceptsCard' |
     'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
-  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin'>>;
+  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst'>>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

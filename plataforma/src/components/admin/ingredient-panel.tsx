@@ -20,6 +20,11 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
 };
 
+const optionStyle: React.CSSProperties = {
+  color: '#111',
+  background: '#fff',
+};
+
 const labelStyle: React.CSSProperties = {
   fontSize: 11,
   color: 'var(--u-text-3)',
@@ -127,6 +132,31 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
         </button>
       </div>
 
+      {/* Guía: cómo asignar insumos a platillos */}
+      <div style={{
+        display: 'flex',
+        gap: 14,
+        alignItems: 'flex-start',
+        padding: '14px 16px',
+        borderRadius: 'var(--radius-lg)',
+        background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.08)',
+        border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.2)',
+      }}>
+        <div style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>📋</div>
+        <div>
+          <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>¿Cómo asignar insumos a un platillo?</p>
+          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>
+            Ve a{' '}
+            <a href="/admin/menu" style={{ color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 500 }}>
+              Menú
+            </a>
+            , haz clic en cualquier platillo para editarlo y busca la sección{' '}
+            <strong style={{ color: 'var(--u-text-2)' }}>Receta</strong>{' '}
+            al final del formulario. Ahí agregas ingredientes con su cantidad y el costo del platillo se calcula solo.
+          </p>
+        </div>
+      </div>
+
       {error && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>
           {error}
@@ -147,7 +177,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               <div>
                 <label style={labelStyle}>Unidad</label>
                 <select style={inputStyle} value={newUnit} onChange={(e) => setNewUnit(e.target.value)}>
-                  {UNITS.map((u) => <option key={u}>{u}</option>)}
+                  {UNITS.map((u) => <option key={u} style={optionStyle}>{u}</option>)}
                 </select>
               </div>
               <div>
@@ -175,7 +205,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
           <p style={{ color: 'var(--u-text-4)', fontSize: 12, marginTop: 4 }}>Crea tu primer insumo para poder asignarlo a las recetas de tus platillos.</p>
         </Glass>
       ) : (
-        <Glass variant="quiet" style={{ overflow: 'hidden' }}>
+        <Glass variant="quiet" style={{ overflow: 'visible' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
@@ -197,7 +227,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                         <div style={{ width: 120 }}>
                           <label style={labelStyle}>Unidad</label>
                           <select style={inputStyle} value={editState.unit} onChange={(e) => setEditState({ ...editState, unit: e.target.value })}>
-                            {UNITS.map((u) => <option key={u}>{u}</option>)}
+                            {UNITS.map((u) => <option key={u} style={optionStyle}>{u}</option>)}
                           </select>
                         </div>
                         <div style={{ width: 140 }}>

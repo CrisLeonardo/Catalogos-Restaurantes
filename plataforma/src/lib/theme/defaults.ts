@@ -177,6 +177,7 @@ export interface ThemeConfig {
   // ── Cocina (KDS) ──
   kdsYellowMin: number;           // minutos de espera para que la tarjeta pase a ámbar
   kdsRedMin: number;              // minutos de espera para que la tarjeta pase a rojo
+  kdsConfirmFirst: boolean;       // true = solo muestra pedidos PREP (confirmados); false = muestra NEW+PREP
 
   // ── Moneda ──
   currencySymbol: string;       // 'Q', '$', '€'
@@ -349,6 +350,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
 
   kdsYellowMin: 10,
   kdsRedMin: 20,
+  kdsConfirmFirst: false,
 
   currencySymbol: 'Q',
   currencyPosition: 'prefix',
