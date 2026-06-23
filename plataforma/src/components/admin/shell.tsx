@@ -105,7 +105,7 @@ export default function AdminShell({
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
         ...(on(inventarioEnabled) ? [{ href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }] : []),
         ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
-        ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
+        // ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
       ],
     },
     {
@@ -117,7 +117,7 @@ export default function AdminShell({
         ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
         ...(on(promocionesEnabled) ? [{ href: '/admin/promociones', label: 'Promos',    icon: 'percent',   key: 'promociones' }] : []),
         ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt', key: 'fel'         }] : []),
-        ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',   icon: 'star',      key: 'loyalty'     }] : []),
+        // ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',   icon: 'star',      key: 'loyalty'     }] : []),
       ],
     },
     {

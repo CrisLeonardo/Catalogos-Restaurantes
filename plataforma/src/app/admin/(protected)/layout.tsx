@@ -83,7 +83,7 @@ export default async function AdminProtectedLayout({
       ordersEnabled={m('orders')}
       analiticaEnabled={m('analitica')}
       inventarioEnabled={m('inventario')}
-      ingredientesEnabled={m('inventario')}
+      ingredientesEnabled={true}
       promocionesEnabled={m('promociones')}
       personalEnabled={m('personal')}
       finanzasEnabled={m('finanzas')}
