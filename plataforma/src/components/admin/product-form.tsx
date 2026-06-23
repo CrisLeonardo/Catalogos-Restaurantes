@@ -297,9 +297,13 @@ export default function ProductForm({ restaurantId, categories, product, default
         </Glass>
       )}
       {product && !ingredients && (
-        <Glass variant="quiet" style={{ padding: '12px 16px' }}>
+        <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
           <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
-            Activa el módulo de Inventario para gestionar ingredientes y recetas.
+            Activa el módulo <strong style={{ color: 'var(--u-text-2)' }}>Recetas e ingredientes</strong> desde tu{' '}
+            <a href="/admin/modulos" style={{ color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+              panel de Módulos
+            </a>{' '}
+            para gestionar el food cost de tus platillos.
           </p>
         </Glass>
       )}

@@ -196,9 +196,9 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', gap: 7 }}>
           <Icon name="helpCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>
-            Estos módulos son <strong>self-service</strong>: el restaurante los prende/apaga solo. Actívalos aquí
-            únicamente si tú quieres gestionarlos por él: quedarán <strong>forzados ON</strong> y <strong>ocultos</strong> de
-            su panel de módulos (útil para FEL o casos especiales). Si los dejas apagados, el dueño los controla a su gusto.
+            Activa los módulos que quieres que este restaurante pueda usar. Si los <strong>activas</strong>, aparecerán en el
+            panel del restaurante como <strong>encendidos</strong> y el dueño decidirá si los mantiene activos. Si los
+            <strong> dejas apagados</strong>, el restaurante no los verá ni podrá usarlos.
           </span>
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>

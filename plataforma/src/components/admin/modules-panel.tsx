@@ -10,7 +10,6 @@ import {
   ACTIVATABLE_MODULES,
   MODULE_GROUPS,
   isModuleActive,
-  isSelfEnabled,
   showsInPanel,
   type ActivatableModuleKey,
   type ModuleMeta,
@@ -260,7 +259,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   const visible = ACTIVATABLE_MODULES.filter((m) => showsInPanel(modules, m.key));
   const activeCount = ACTIVATABLE_MODULES.filter((m) => isModuleActive(modules, settings, m.key)).length;
   const selfCount = visible.filter((m) => !m.requiresSetup).length;
-  const selfActive = visible.filter((m) => !m.requiresSetup && isSelfEnabled(settings, m.key)).length;
+  const selfActive = visible.filter((m) => !m.requiresSetup && settings?.[m.key as keyof typeof settings]?.enabled !== false).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -361,7 +360,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     />
                   );
                 }
-                const on = isSelfEnabled(settings, m.key);
+                const on = settings?.[m.key]?.enabled !== false; // defaults ON para módulos habilitados
                 const busy = busyKey === m.key && isPending;
                 return (
                   <SelfServiceCard

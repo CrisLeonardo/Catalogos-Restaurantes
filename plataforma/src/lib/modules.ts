@@ -1,24 +1,28 @@
 /* ============================================================
-   MÓDULOS — modelo self-service + gestionado (rediseño 2026-06-23)
+   MÓDULOS — modelo habilitado-por-Leogin + toggleable por restaurante
    ------------------------------------------------------------
-   El restaurante decide qué módulos opcionales quiere usar. No hay
-   "mejorar plan": son herramientas que prende/apaga a voluntad.
+   Leogin decide qué módulos están DISPONIBLES para cada restaurante.
+   El restaurante solo puede prender/apagar los que Leogin habilitó.
 
-   Dos formas de que un módulo quede ACTIVO:
+   restaurants.modules[key] === true  →  Leogin habilitó este módulo.
+     · El restaurante lo VE en su panel de módulos.
+     · Empieza ACTIVO (ON) salvo que el restaurante lo haya apagado.
+     · El restaurante puede prenderlo o apagarlo a su gusto.
 
-   1) SELF-SERVICE — el restaurante lo enciende él mismo:
-        restaurants.module_settings[key].enabled === true
-      (lo controla desde /admin/modulos)
+   restaurants.modules[key] falso/ausente  →  módulo NO disponible.
+     · El restaurante NO lo ve en su panel ni puede usarlo.
 
-   2) GESTIONADO POR LEOGIN — Leonardo lo habilita desde el super admin:
-        restaurants.modules[key] === true
-      En este caso el módulo queda forzado ON y NO aparece en el panel
-      del restaurante (Leogin lo administra; menos ruido para el cliente).
+   El estado que controla el restaurante vive en:
+     restaurants.module_settings[key].enabled (boolean | undefined)
+     · undefined / ausente = ON por defecto (se asume activo al habilitar)
+     · true  = el restaurante lo prendió
+     · false = el restaurante lo apagó
 
-   Módulo ACTIVO  =  gestionado(modules[k])  Ó  encendido(module_settings[k]).
+   Módulo ACTIVO  =  habilitado-por-Leogin (modules[k])
+                     Y  restaurante NO lo apagó (module_settings[k].enabled !== false)
 
-   Algunos módulos (requiresSetup, p.ej. FEL) necesitan configuración de
-   Leogin y NO se ofrecen como self-service: solo se activan gestionados.
+   Los módulos requiresSetup (p.ej. FEL) siempre quedan ON al habilitarlos
+   (el restaurante no puede apagarlos; los gestiona Leogin).
 
    Para agregar un módulo nuevo: añade su meta a ACTIVATABLE_MODULES.
    No requiere cambio de esquema (modules y module_settings son jsonb).
@@ -206,28 +210,30 @@ export function isSelfEnabled(
 }
 
 /**
- * ¿El módulo está ACTIVO?  Gestionado por Leogin  Ó  encendido por el restaurante.
- * (Misma firma de siempre: todos los call-sites heredan la nueva semántica.)
+ * ¿El módulo está ACTIVO?
+ * Requiere que Leogin lo haya habilitado (modules[key] === true) Y que el
+ * restaurante no lo haya apagado (module_settings[key].enabled !== false).
+ * Los módulos requiresSetup siempre están ON cuando Leogin los habilita.
  */
 export function isModuleActive(
   modules: ModulesMap,
   settings: ModuleSettings | null | undefined,
   key: ActivatableModuleKey,
 ): boolean {
-  return isManaged(modules, key) || isSelfEnabled(settings, key);
+  if (!isManaged(modules, key)) return false;
+  const meta = ACTIVATABLE_MODULES.find((m) => m.key === key);
+  if (meta?.requiresSetup) return true;
+  return settings?.[key]?.enabled !== false; // undefined/true = ON por defecto
 }
 
 /**
- * ¿El módulo debe mostrarse como tarjeta self-service en el panel del
- * restaurante?  No, si Leogin lo gestiona (modules[key] === true): en ese
- * caso queda oculto para no generar ruido. Los módulos requiresSetup SÍ se
- * muestran siempre (como gestionados o con opción de solicitar).
+ * ¿El módulo debe mostrarse en el panel del restaurante?
+ * Solo si Leogin lo habilitó (modules[key] === true).
+ * Si no está habilitado, el restaurante no lo ve ni puede activarlo.
  */
 export function showsInPanel(
   modules: ModulesMap,
   key: ActivatableModuleKey,
 ): boolean {
-  const meta = ACTIVATABLE_MODULES.find((m) => m.key === key);
-  if (meta?.requiresSetup) return true;
-  return !isManaged(modules, key);
+  return isManaged(modules, key);
 }
