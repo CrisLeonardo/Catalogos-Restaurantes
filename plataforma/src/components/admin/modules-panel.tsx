@@ -48,6 +48,8 @@ interface Props {
   orderTypes: OrderType[];
   /** Datos de contacto del soporte para "solicitar activación". */
   supportWhatsapp?: string;
+  /** Plan actual — determina qué tipos de pedido están disponibles. */
+  planActual?: string | null;
 }
 
 const BADGE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -205,7 +207,7 @@ function ManagedCard({ m, active, supportHref }: { m: ModuleMeta; active: boolea
   );
 }
 
-export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp }: Props) {
+export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -272,11 +274,51 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginBottom: 12, marginTop: 0 }}>
           Controla qué canales de compra están disponibles en tu menú. Al menos uno debe estar activo.
         </p>
+        {planActual === 'BASICO' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
+            <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
+            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
+              El plan Básico incluye <strong style={{ color: 'var(--u-text-2)' }}>Pedidos para llevar</strong>.
+              Delivery y Comer en local están disponibles a partir de <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q599/mes)</strong>.{' '}
+              <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
+            </p>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {ORDER_TYPE_META.map((m) => {
+            const isLockedForBasico = planActual === 'BASICO' && m.id !== 'pickup';
             const on = localOrderTypes.includes(m.id);
             const busy = orderBusy === m.id && isPending;
             const isLast = localOrderTypes.length === 1 && on;
+
+            if (isLockedForBasico) {
+              return (
+                <Glass key={m.id} variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, opacity: 0.6, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{
+                    position: 'absolute', top: 10, right: 10,
+                    fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
+                    background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent)',
+                    letterSpacing: '0.06em',
+                  }}>
+                    PREMIUM
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', color: 'var(--u-text-4)' }}>
+                      <Icon name={m.icon} size={20} />
+                    </span>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-3)' }}>{m.label}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                        <Icon name="key" size={11} style={{ color: 'var(--u-text-4)' }} />
+                        <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>Requiere Premium</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
+                </Glass>
+              );
+            }
+
             return (
               <Glass key={m.id} variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>

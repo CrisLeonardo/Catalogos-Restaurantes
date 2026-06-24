@@ -112,14 +112,17 @@ export default function AdminShell({
 
   const on = (flag: boolean) => preview || flag;
 
+  // BASICO no incluye panel de mesero ni gestión de mesas (hasWaiterPanel: false)
+  const hasWaiterPanel = planActual !== 'BASICO';
+
   const sections: { title: string; items: NavItem[] }[] = [
     {
       title: 'Operación',
       items: [
-        ...(on(ordersEnabled)    ? [{ href: '/admin/mesero',    label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }] : []),
+        ...(on(ordersEnabled) && on(hasWaiterPanel) ? [{ href: '/admin/mesero', label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }] : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/cocina',    label: 'Cocina',      icon: 'flame', key: 'cocina'    }] : []),
-        ...(on(ordersEnabled)    ? [{ href: '/admin/mesas',     label: 'Mesas',       icon: 'grid',  key: 'mesas'     }] : []),
+        ...(on(ordersEnabled) && on(hasWaiterPanel) ? [{ href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }] : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
         ...(on(inventarioEnabled) ? [{ href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }] : []),

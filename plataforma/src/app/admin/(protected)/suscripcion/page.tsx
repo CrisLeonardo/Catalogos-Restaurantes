@@ -247,16 +247,99 @@ export default async function SuscripcionPage() {
       )}
 
       {/* ── Actualizar plan ──────────────────────────────────── */}
-      {nextPlanInfo && currentPlan !== 'VARIABLE' && (
+      {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
+      {currentPlan === 'BASICO' && nextPlanInfo && (
         <div
           className="glass"
           style={{
             borderRadius: 16, padding: 20,
-            border: (gmvPct >= 0.8 || currentPlan === 'BASICO') ? '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' : undefined,
+            border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)',
+          }}
+        >
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium (Q599/mes) desbloqueas</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
+            Todo lo que falta en tu plan actual
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
+            {nextPlanInfo.gmvLimitLabel} · Sin compromiso · Tu menú sigue en vivo
+          </div>
+
+          {/* Feature grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 9, marginTop: 16 }}>
+            {[
+              { icon: 'whatsapp',  label: 'Aviso por WhatsApp',      desc: 'Alerta inmediata en cada pedido' },
+              { icon: 'thumbsUp', label: 'Programa de lealtad',      desc: 'Puntos que hacen volver a tus clientes' },
+              { icon: 'ticket',   label: 'Cupones y descuentos',     desc: 'Convierte visitas en pedidos' },
+              { icon: 'calendar', label: 'Reservaciones en línea',   desc: 'Mesas llenas incluso entre semana' },
+              { icon: 'chart',    label: 'Estadísticas avanzadas',   desc: 'Ventas, horas pico y ticket promedio' },
+              { icon: 'users',    label: 'Hasta 3 usuarios',         desc: 'Tu equipo opera sin depender de ti' },
+              { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Canal de delivery con mapa integrado' },
+              { icon: 'grid',     label: 'Comer en local (QR)',      desc: 'Pedidos desde la mesa del cliente' },
+              { icon: 'userPlus', label: 'Panel de mesero',          desc: 'Tablet para tomar pedidos en sala' },
+              { icon: 'bellRing', label: 'Alertas en tiempo real',   desc: 'Panel de cocina y pedidos en vivo' },
+              { icon: 'sparkle',  label: 'Personalización completa', desc: 'Fuentes, colores, estilos sin límite' },
+              { icon: 'print',    label: 'Impresión de comandas',    desc: 'Tickets directo a tu impresora' },
+            ].map(({ icon, label, desc }) => (
+              <div key={label} style={{
+                display: 'flex', gap: 9, alignItems: 'flex-start',
+                padding: '10px 11px', borderRadius: 11,
+                background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
+                border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.12)',
+              }}>
+                <Icon name={icon} size={15} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.35 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+            <a
+              href={upgradeHref(restaurantName, nextPlanInfo.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="press btn-accent"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '11px 20px', borderRadius: 'var(--radius-full)',
+                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
+              }}
+            >
+              <Icon name="sparkle" size={14} />
+              Actualizar a Premium — Q599/mes
+            </a>
+            <a
+              href={planesUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="press"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '11px 16px', borderRadius: 'var(--radius-full)',
+                fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
+                color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
+                background: 'rgba(255,255,255,0.06)',
+              }}
+            >
+              Ver todos los planes <Icon name="chevronRight" size={14} />
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── Actualizar plan (planes PREMIUM en adelante) ───── */}
+      {nextPlanInfo && currentPlan !== 'VARIABLE' && currentPlan !== 'BASICO' && (
+        <div
+          className="glass"
+          style={{
+            borderRadius: 16, padding: 20,
+            border: gmvPct >= 0.8 ? '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' : undefined,
           }}
         >
           <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>
-            {currentPlan === 'BASICO' ? 'Desbloquea más funciones' : 'Siguiente plan disponible'}
+            Siguiente plan disponible
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)', marginTop: 4 }}>
             {nextPlanInfo.name} — {nextPlanInfo.priceLabel}

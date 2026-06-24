@@ -24,6 +24,12 @@ export default async function CheckoutPage() {
 
   if (!modules?.orders || restaurant.status !== 'active') notFound();
 
+  // BASICO solo soporta pedidos para llevar — forzar orderTypes a ['pickup']
+  const planActual = (restaurant.plan_actual as string | null) ?? null;
+  const safeConfig = planActual === 'BASICO'
+    ? { ...resolved.config, orderTypes: ['pickup' as const] }
+    : resolved.config;
+
   // Operación: pausa manual ("cocina saturada") y horario real.
   // createOrder vuelve a validar en el servidor; esto es solo la UX.
   const paused = restaurant.orders_paused === true;
@@ -46,7 +52,7 @@ export default async function CheckoutPage() {
   }
 
   return (
-    <ThemeProvider config={resolved.config} content={resolved.content}>
+    <ThemeProvider config={safeConfig} content={resolved.content}>
       <CartProvider restaurantId={restaurant.id}>
         <CheckoutForm
           restaurantId={restaurant.id}

@@ -153,9 +153,11 @@ export async function signupRestaurant(
   const restaurantId = restaurant.id as string;
 
   // ── 3. Tema (marca) ─────────────────────────────────────────
+  // BASICO solo admite pedidos para llevar; Premium y superior tienen todos los tipos.
   await db.from('restaurant_themes').insert({
     restaurant_id: restaurantId,
     brand_name: name,
+    config: planCode === 'BASICO' ? { orderTypes: ['pickup'] } : { orderTypes: ['dine_in', 'delivery', 'pickup'] },
   });
 
   // ── 4. Cobro pausado con prueba gratis ──────────────────────

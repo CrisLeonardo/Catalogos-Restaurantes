@@ -3,144 +3,279 @@
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
 
-interface LockedFeature {
+interface UpgradeFeature {
   icon: string;
   name: string;
-  desc: string;
+  hook: string;
+  impact: string;
+  basicLabel: string;
+  premiumLabel: string;
 }
 
-const LOCKED_FEATURES: LockedFeature[] = [
-  { icon: 'whatsapp',  name: 'Aviso WhatsApp',          desc: 'Recibe cada pedido al instante en WhatsApp' },
-  { icon: 'thumbsUp',  name: 'Programa de lealtad',     desc: 'Puntos y recompensas para tus clientes' },
-  { icon: 'ticket',    name: 'Cupones y descuentos',     desc: 'Códigos de descuento en el checkout' },
-  { icon: 'calendar',  name: 'Reservaciones',            desc: 'Agenda mesas con anticipación' },
-  { icon: 'chart',     name: 'Estadísticas avanzadas',   desc: 'Horas pico, más vendidos, conversión' },
-  { icon: 'users',     name: 'Multi-usuario',            desc: 'Hasta 3 usuarios en el panel' },
+const UPGRADE_FEATURES: UpgradeFeature[] = [
+  {
+    icon: 'whatsapp',
+    name: 'Aviso por WhatsApp',
+    hook: 'Nunca pierdas un pedido nuevo',
+    impact: 'Cada nuevo pedido llega a tu WhatsApp al instante. Los restaurantes que responden rápido completan más pedidos y reciben mejores reseñas.',
+    basicLabel: 'Solo visible en el panel',
+    premiumLabel: 'Alerta inmediata en WhatsApp',
+  },
+  {
+    icon: 'thumbsUp',
+    name: 'Programa de lealtad',
+    hook: 'Clientes que regresan solos',
+    impact: 'Tus clientes acumulan puntos por cada compra y los canjean en su próxima visita. La lealtad convierte compradores únicos en clientes recurrentes sin gasto en publicidad.',
+    basicLabel: 'Cada pedido es una sola vez',
+    premiumLabel: 'Puntos que generan retorno',
+  },
+  {
+    icon: 'ticket',
+    name: 'Cupones y descuentos',
+    hook: 'Convierte visitas en pedidos',
+    impact: 'Crea códigos de descuento con límite de usos y fecha de vencimiento. Un cupón de bienvenida bien colocado convierte visitantes del menú en compradores activos.',
+    basicLabel: 'Sin herramientas de conversión',
+    premiumLabel: 'Cupones con control total',
+  },
+  {
+    icon: 'calendar',
+    name: 'Reservaciones',
+    hook: 'Mesas llenas incluso entre semana',
+    impact: 'Tus clientes reservan mesa desde el menú digital. Sabes con anticipación cuántos comensales llegan y puedes planificar tu cocina sin sorpresas.',
+    basicLabel: 'Sin reservas en línea',
+    premiumLabel: 'Agenda integrada en tu menú',
+  },
+  {
+    icon: 'chart',
+    name: 'Estadísticas avanzadas',
+    hook: 'Decide con datos, no suposiciones',
+    impact: 'Descubre cuáles platillos son más rentables, en qué horas vendes más y cuál es tu ticket promedio. Información real para tomar decisiones que impacten tu negocio.',
+    basicLabel: 'Solo métricas básicas del día',
+    premiumLabel: 'Análisis completo de ventas',
+  },
+  {
+    icon: 'users',
+    name: 'Multi-usuario',
+    hook: 'Tu equipo opera sin depender de ti',
+    impact: 'Hasta 3 usuarios con roles distintos: cajero, mesero y gerente pueden usar el panel con los accesos que cada uno necesita. Delegas sin perder control.',
+    basicLabel: 'Solo 1 usuario administrador',
+    premiumLabel: 'Hasta 3 usuarios con roles',
+  },
 ];
 
 const CONTACT_WA = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_CONTACT_WHATSAPP : undefined;
+const CONTACT_EMAIL = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com' : 'crisleonardo100@gmail.com';
 
 export default function LockedFeatureSection({ restaurantName }: { restaurantName?: string }) {
-  const [selected, setSelected] = useState<LockedFeature | null>(null);
+  const [selected, setSelected] = useState<UpgradeFeature | null>(null);
 
   const waMsg = `Hola, quiero actualizar mi plan de Básico a Premium para ${restaurantName ?? 'mi restaurante'}`;
   const ctaHref = CONTACT_WA
     ? `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent(waMsg)}`
-    : `mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com'}?subject=${encodeURIComponent('Actualizar a Premium')}`;
+    : `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Quiero actualizar a Premium')}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div>
-        <div className="t-kicker" style={{ fontSize: 10, marginBottom: 6 }}>Desbloquea más con Premium</div>
-        <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0 }}>
-          Actualiza a Premium (Q599/mes) para activar pedidos sin límite, WhatsApp, lealtad y más.
-        </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+          background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)',
+          display: 'grid', placeItems: 'center', color: 'var(--brand-accent)',
+        }}>
+          <Icon name="sparkle" size={18} />
+        </div>
+        <div>
+          <div style={{
+            fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display)',
+            color: 'var(--u-text)', lineHeight: 1.2, marginBottom: 3,
+          }}>
+            6 herramientas que tu competencia ya usa
+          </div>
+          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
+            Están incluidas en Premium (Q599/mes). Toca cualquiera para ver cómo impacta tu negocio.
+          </p>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-        {LOCKED_FEATURES.map((feat) => (
+      {/* Feature grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 9 }}>
+        {UPGRADE_FEATURES.map((feat) => (
           <button
             key={feat.name}
             type="button"
             onClick={() => setSelected(feat)}
-            className="glass press"
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-              gap: 8, padding: '14px 14px', borderRadius: 14, textAlign: 'left',
-              cursor: 'pointer', border: 'none', background: 'transparent',
-              position: 'relative', color: 'inherit',
+              display: 'flex', flexDirection: 'column', gap: 8,
+              padding: '13px 12px', borderRadius: 14, textAlign: 'left',
+              cursor: 'pointer', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.15)',
+              background: 'rgba(var(--brand-accent-rgb,99,102,241),0.04)',
+              color: 'inherit', position: 'relative', overflow: 'hidden',
+              transition: 'border-color 0.15s, background 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(var(--brand-accent-rgb,99,102,241),0.35)';
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(var(--brand-accent-rgb,99,102,241),0.08)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(var(--brand-accent-rgb,99,102,241),0.15)';
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(var(--brand-accent-rgb,99,102,241),0.04)';
             }}
           >
-            <div style={{ position: 'relative', display: 'inline-flex' }}>
-              <Icon name={feat.icon} size={20} style={{ color: 'var(--u-text-3)' }} />
-              <Icon name="key" size={11} style={{
-                position: 'absolute', bottom: -3, right: -5,
-                color: 'var(--u-text-4)',
-              }} />
-            </div>
+            {/* Premium chip */}
+            <span style={{
+              position: 'absolute', top: 8, right: 8,
+              fontSize: 8.5, fontWeight: 800, padding: '2px 7px', borderRadius: 99,
+              background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)',
+              color: 'var(--brand-accent)', letterSpacing: '0.05em',
+            }}>
+              PREMIUM
+            </span>
+
+            <Icon name={feat.icon} size={20} style={{ color: 'var(--brand-accent)', opacity: 0.8 }} />
+
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)' }}>{feat.name}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.35 }}>{feat.desc}</div>
-            </div>
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: 14, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s',
-              background: 'rgba(var(--brand-accent-rgb, 99,102,241), 0.08)',
-            }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '0'; }}
-            >
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-accent)', background: 'var(--surface-1)', padding: '4px 10px', borderRadius: 99 }}>
-                Disponible en Premium
-              </span>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2, paddingRight: 44 }}>
+                {feat.name}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 3, lineHeight: 1.35 }}>
+                {feat.hook}
+              </div>
             </div>
           </button>
         ))}
       </div>
 
-      {/* Modal */}
+      {/* CTA row */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', paddingTop: 2 }}>
+        <a
+          href={ctaHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '11px 20px', borderRadius: 'var(--radius-full)',
+            fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
+            background: 'var(--brand-accent)', color: '#fff',
+          }}
+        >
+          <Icon name="sparkle" size={14} />
+          Actualizar a Premium — Q599/mes
+        </a>
+        <a
+          href="/admin/suscripcion"
+          style={{
+            fontSize: 13, color: 'var(--brand-accent)', textDecoration: 'none',
+            fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5,
+          }}
+        >
+          Ver comparativa <Icon name="arrowRight" size={13} />
+        </a>
+      </div>
+
+      {/* Detail modal */}
       {selected && (
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 9000,
-            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+            background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', padding: 20,
           }}
           onClick={() => setSelected(null)}
         >
           <div
-            className="glass-solid"
-            style={{ borderRadius: 20, padding: '28px 24px', maxWidth: 420, width: '100%' }}
+            className="glass-solid anim-fade-up"
+            style={{ borderRadius: 22, padding: '26px 22px', maxWidth: 430, width: '100%' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 20 }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-display)' }}>{selected.name}</div>
-                <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>{selected.desc}</div>
+            {/* Modal header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+                  background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)',
+                  display: 'grid', placeItems: 'center', color: 'var(--brand-accent)',
+                }}>
+                  <Icon name={selected.icon} size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--u-text)', lineHeight: 1.1 }}>
+                    {selected.name}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--brand-accent)', fontWeight: 700, marginTop: 3 }}>
+                    Incluido en Premium
+                  </div>
+                </div>
               </div>
-              <button type="button" onClick={() => setSelected(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--u-text-3)', padding: 4 }}>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--u-text-3)', padding: 4, flexShrink: 0 }}
+              >
                 <Icon name="x" size={20} />
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginBottom: 22 }}>
-              <div style={{ padding: '10px 14px', borderRadius: '10px 0 0 10px', border: '1px solid var(--u-hair)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--u-text-4)', textTransform: 'uppercase', marginBottom: 6 }}>Básico</div>
-                {['Menú digital QR', 'Pedidos para llevar', 'Llamar al mesero', '30 productos', '1 usuario'].map((f) => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--u-text-3)', marginBottom: 4 }}>
-                    <Icon name="check" size={12} style={{ color: '#4ade80' }} />{f}
-                  </div>
-                ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--u-text-4)', marginBottom: 4 }}>
-                  <Icon name="x" size={12} />{selected.name}
+            {/* Impact text */}
+            <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.65, marginBottom: 18 }}>
+              {selected.impact}
+            </p>
+
+            {/* Básico vs Premium comparison */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
+              <div style={{
+                padding: '12px 14px',
+                border: '1px solid var(--u-hair)', borderRadius: '12px 0 0 12px',
+              }}>
+                <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--u-text-4)', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Tu plan actual
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-3)', marginTop: 10 }}>Q299/mes</div>
+                <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
+                  <Icon name="x" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 1 }} />
+                  <span>{selected.basicLabel}</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text-3)', marginTop: 12, lineHeight: 1 }}>
+                  Q299
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>/mes · Básico</div>
               </div>
-              <div style={{ padding: '10px 14px', borderRadius: '0 10px 10px 0', border: '2px solid var(--brand-accent)', marginLeft: -1 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--brand-accent)', textTransform: 'uppercase', marginBottom: 6 }}>Premium</div>
-                {['Menú digital QR', 'Pedidos sin límite GMV', 'Productos ilimitados', '3 usuarios'].map((f) => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--u-text-2)', marginBottom: 4 }}>
-                    <Icon name="check" size={12} style={{ color: '#4ade80' }} />{f}
-                  </div>
-                ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#4ade80', marginBottom: 4 }}>
-                  <Icon name="check" size={12} />{selected.name}
+              <div style={{
+                padding: '12px 14px', marginLeft: -1,
+                border: '2px solid var(--brand-accent)', borderRadius: '0 12px 12px 0',
+                background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
+              }}>
+                <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--brand-accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Premium
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-accent)', marginTop: 10 }}>Q599/mes</div>
+                <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.4 }}>
+                  <Icon name="check" size={13} style={{ color: '#4ade80', flexShrink: 0, marginTop: 1 }} />
+                  <span>{selected.premiumLabel}</span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', marginTop: 12, lineHeight: 1 }}>
+                  Q599
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · GMV hasta Q20k</div>
               </div>
             </div>
 
+            {/* CTA */}
             <a
               href={ctaHref}
-              target="_blank" rel="noopener noreferrer"
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 0',
-                borderRadius: 12, fontWeight: 700, fontSize: 14,
-                background: 'var(--brand-accent)', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                textDecoration: 'none', padding: '13px 0', borderRadius: 14,
+                fontWeight: 700, fontSize: 14, background: 'var(--brand-accent)', color: '#fff',
               }}
             >
-              Actualizar a Premium — Q599/mes
+              <Icon name="sparkle" size={14} />
+              Actualizar a Premium
             </a>
+            <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 9, lineHeight: 1.4 }}>
+              Sin compromiso · Tu menú sigue en vivo
+            </p>
           </div>
         </div>
       )}

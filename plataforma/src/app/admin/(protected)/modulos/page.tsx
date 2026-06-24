@@ -33,12 +33,14 @@ export default async function ModulosPage() {
 
   const db = createServiceClient();
   const [{ data: rest }, { data: theme }, contact] = await Promise.all([
-    db.from('restaurants').select('modules, module_settings').eq('id', restaurantId).single(),
+    db.from('restaurants').select('modules, module_settings, plan_actual').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
     getPlatformContactSettings(),
   ]);
 
-  const defaultOrderTypes: OrderType[] = ['dine_in', 'delivery', 'pickup'];
+  const planActual = (rest?.plan_actual as string | null) ?? null;
+  // BASICO solo puede usar pickup; los otros tipos quedan bloqueados en la UI.
+  const defaultOrderTypes: OrderType[] = planActual === 'BASICO' ? ['pickup'] : ['dine_in', 'delivery', 'pickup'];
   const orderTypes: OrderType[] =
     (theme?.config as Record<string, unknown> | null)?.orderTypes as OrderType[] | undefined
     ?? defaultOrderTypes;
@@ -51,6 +53,7 @@ export default async function ModulosPage() {
         settings={(rest?.module_settings as ModuleSettings) ?? {}}
         orderTypes={orderTypes}
         supportWhatsapp={contact.support_whatsapp}
+        planActual={planActual}
       />
     </div>
   );
