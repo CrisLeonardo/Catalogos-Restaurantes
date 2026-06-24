@@ -35,12 +35,24 @@ const SIGNUP_MODULES_PREMIUM = {
   personal: true,
   finanzas: true,
   multi_branch: false,
+  // Módulos activables incluidos en Premium y superiores
+  llamada_mesero: true,
+  encuestas: true,
+  cupones: true,
+  recetas: true,
+  reservaciones: true,
+  loyalty: true,
+  proveedores: false,
+  fel: false,
 };
 
 const SIGNUP_MODULES_BASICO = {
   catalog: true,
+  orders: true,
   analitica: false,
   multi_branch: false,
+  // Módulos activables incluidos en Básico
+  llamada_mesero: true,
 };
 
 function validEmail(email: string): boolean {

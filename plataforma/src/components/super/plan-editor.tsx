@@ -30,7 +30,7 @@ const FEATURE_KEYS: (keyof PlanFeatures)[] = [
 ];
 
 const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
-  BASICO:        { orders: false, whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
+  BASICO:        { orders: true,  whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
   PREMIUM:       { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
   PREMIUM_PRO:   { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
   PREMIUM_ULTRA: { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
@@ -38,13 +38,22 @@ const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
   VARIABLE:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
 };
 
+const MANAGED_PRESETS: Record<PlanCode, Record<string, boolean>> = {
+  BASICO:        { reservaciones: false, llamada_mesero: true,  encuestas: false, cupones: false, loyalty: false, proveedores: false, recetas: false, fel: false },
+  PREMIUM:       { reservaciones: true,  llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: true,  proveedores: false, recetas: true,  fel: false },
+  PREMIUM_PRO:   { reservaciones: true,  llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: true,  proveedores: true,  recetas: true,  fel: false },
+  PREMIUM_ULTRA: { reservaciones: true,  llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: true,  proveedores: true,  recetas: true,  fel: true  },
+  ALTO_VOLUMEN:  { reservaciones: true,  llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: true,  proveedores: true,  recetas: true,  fel: true  },
+  VARIABLE:      { reservaciones: true,  llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: true,  proveedores: true,  recetas: true,  fel: true  },
+};
+
 const PLAN_META: Record<PlanCode, { label: string; price: string; sub: string; badge?: string }> = {
-  BASICO:        { label: 'Básico',        price: 'Q299',  sub: 'menú digital · sin pedidos' },
-  PREMIUM:       { label: 'Premium',       price: 'Q600',  sub: 'hasta Q20,000 GMV/mes', badge: 'MÁS POPULAR' },
-  PREMIUM_PRO:   { label: 'Premium Pro',   price: 'Q1,000', sub: 'hasta Q40,000 GMV/mes' },
-  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 'Q1,500', sub: 'hasta Q75,000 GMV/mes' },
-  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 'Q2,250', sub: 'hasta Q150,000 GMV/mes' },
-  VARIABLE:      { label: 'Variable',      price: '1% GMV', sub: 'sin tope · mín. Q2,250' },
+  BASICO:        { label: 'Básico',        price: 'Q299',   sub: 'hasta Q10,000 GMV/mes' },
+  PREMIUM:       { label: 'Premium',       price: 'Q599',   sub: 'hasta Q20,000 GMV/mes', badge: 'MÁS POPULAR' },
+  PREMIUM_PRO:   { label: 'Premium Pro',   price: 'Q999',   sub: 'hasta Q40,000 GMV/mes' },
+  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 'Q1,499', sub: 'hasta Q75,000 GMV/mes' },
+  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 'Q2,249', sub: 'hasta Q150,000 GMV/mes' },
+  VARIABLE:      { label: 'Variable',      price: '1% GMV', sub: 'sin tope · mín. Q2,249' },
 };
 
 const ALL_PLANS: PlanCode[] = ['BASICO', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE'];
@@ -92,6 +101,7 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
   function selectPlan(p: PlanCode) {
     setPlan(p);
     setFeats(PLAN_PRESETS[p]);
+    setManaged(MANAGED_PRESETS[p]);
   }
 
   function toggleFeat(key: keyof PlanFeatures) {

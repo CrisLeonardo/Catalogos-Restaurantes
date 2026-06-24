@@ -7,7 +7,17 @@ import { Icon } from '@/components/icons';
 import { saveIngredient, deleteIngredient } from '@/lib/actions/recipes';
 import type { Ingredient } from '@/lib/db/recipes';
 
-const UNITS = ['g', 'kg', 'ml', 'L', 'taza', 'cucharada', 'cucharadita', 'pieza', 'unidad', 'porción'];
+const UNITS = [
+  // Peso
+  'g', 'kg', 'lbs', 'oz',
+  // Volumen
+  'ml', 'L', 'fl oz', 'galón',
+  // Medidas de cocina
+  'taza', 'cucharada', 'cucharadita',
+  // Conteo / empaque
+  'pieza', 'unidad', 'porción', 'rebanada',
+  'botella', 'lata', 'caja', 'bolsa', 'paquete', 'rollo',
+];
 
 const inputStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',

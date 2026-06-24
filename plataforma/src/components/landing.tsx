@@ -39,14 +39,14 @@ const LANDING_PLANS = [
   {
     code: 'Básico',
     price: 'Q299 / mes',
-    tagline: 'Menú digital sin pedidos online',
-    points: ['Menú web por QR', 'Hasta 30 productos', 'Personalización con tu logo y color', 'QR listo para imprimir'],
+    tagline: 'Menú digital con pedidos para llevar y llamada al mesero',
+    points: ['Pedidos para llevar (hasta Q10k/mes)', 'Llamar al mesero por QR', 'Hasta 30 productos · 1 usuario', 'Personalización con logo y color'],
     accent: false,
     cta: 'self' as const,
   },
   {
     code: 'Premium',
-    price: 'Q600 / mes',
+    price: 'Q599 / mes',
     tagline: 'Pedidos online, tiempo real y personalización completa',
     points: ['Carrito y checkout en línea', 'Alerta en tiempo real + WhatsApp', 'Todos los módulos disponibles', 'Hasta Q20,000 en ventas / mes'],
     accent: true,
@@ -55,7 +55,7 @@ const LANDING_PLANS = [
   },
   {
     code: 'Premium Pro',
-    price: 'Q1,000 / mes',
+    price: 'Q999 / mes',
     tagline: 'Para mayor flujo de pedidos',
     points: ['Todo lo del plan Premium', 'Hasta Q40,000 en ventas / mes', 'Proveedores y recetas incluidos', '5 usuarios del panel'],
     accent: false,

@@ -61,7 +61,7 @@ const FAQS = [
   },
   {
     q: '¿Qué incluye el plan Básico?',
-    a: 'Un menú digital interactivo (reemplaza el PDF aburrido del QR), hasta 30 productos en catálogo, personalización con tu logo y color de marca, y un código QR listo para imprimir. No incluye pedidos online.',
+    a: 'Un menú digital interactivo con hasta 30 productos, pedidos para llevar con hasta Q10,000 en ventas digitales al mes, botón "Llamar al mesero" en el QR, tu logo y color de marca, y código QR listo para imprimir.',
   },
   {
     q: '¿Cómo funciona Multisucursal?',
@@ -195,8 +195,11 @@ export default function PlanesPage() {
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {[
-                    { label: p.hasOrders ? 'Pedidos online' : 'Sin pedidos online', ok: p.hasOrders },
-                    { label: p.hasWhatsapp ? 'Notificación WhatsApp' : 'Sin WhatsApp', ok: p.hasWhatsapp },
+                    { label: code === 'BASICO' ? 'Pedidos para llevar (hasta Q10k/mes)' : 'Pedidos online', ok: p.hasOrders },
+                    ...(code === 'BASICO'
+                      ? [{ label: 'Llamar al mesero (QR)', ok: true }]
+                      : [{ label: p.hasWhatsapp ? 'Notificación WhatsApp' : 'Sin WhatsApp', ok: p.hasWhatsapp }]
+                    ),
                     { label: p.hasRealtime ? 'Alertas en tiempo real' : 'Sin alertas tiempo real', ok: p.hasRealtime },
                     { label: p.hasFullTheme ? 'Personalización completa' : 'Personalización básica', ok: p.hasFullTheme },
                     { label: p.hasWaiterPanel ? 'Panel de mesero' : 'Sin panel mesero', ok: p.hasWaiterPanel },

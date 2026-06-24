@@ -42,19 +42,19 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   BASICO: {
     code: 'BASICO',
     name: 'Básico',
-    tagline: 'Para restaurantes que inician su presencia digital',
+    tagline: 'Menú digital con pedidos para llevar y llamada al mesero',
     priceMonthly: 299,
     priceLabel: 'Q299 / mes',
-    gmvLimit: null,
-    gmvLimitLabel: 'Sin pedidos online',
+    gmvLimit: 10000,
+    gmvLimitLabel: 'Hasta Q10,000 en ventas / mes',
     products: 30,
     users: 1,
-    hasOrders: false,
+    hasOrders: true,
     hasWhatsapp: false,
     hasRealtime: false,
     hasFullTheme: false,
     hasWaiterPanel: false,
-    hasWaiterCall: false,
+    hasWaiterCall: true,
     hasSurveys: false,
     hasReservations: false,
     hasCoupons: false,
@@ -72,8 +72,8 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     tagline: 'Pedidos online, tiempo real y personalización completa',
     badge: 'MÁS POPULAR',
     highlight: true,
-    priceMonthly: 600,
-    priceLabel: 'Q600 / mes',
+    priceMonthly: 599,
+    priceLabel: 'Q599 / mes',
     gmvLimit: 20000,
     gmvLimitLabel: 'Hasta Q20,000 en ventas / mes',
     products: 'unlimited',
@@ -100,8 +100,8 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     tagline: 'Para restaurantes con mayor flujo de pedidos',
     badge: 'PARA CRECER',
     highlight: false,
-    priceMonthly: 1000,
-    priceLabel: 'Q1,000 / mes',
+    priceMonthly: 999,
+    priceLabel: 'Q999 / mes',
     gmvLimit: 40000,
     gmvLimitLabel: 'Hasta Q40,000 en ventas / mes',
     products: 'unlimited',
@@ -128,8 +128,8 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     tagline: 'Control total de operación y alto volumen',
     badge: 'MEJOR VALOR',
     highlight: false,
-    priceMonthly: 1500,
-    priceLabel: 'Q1,500 / mes',
+    priceMonthly: 1499,
+    priceLabel: 'Q1,499 / mes',
     gmvLimit: 75000,
     gmvLimitLabel: 'Hasta Q75,000 en ventas / mes',
     products: 'unlimited',
@@ -155,8 +155,8 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     name: 'Alto Volumen',
     tagline: 'Restaurantes de alta afluencia con facturación electrónica',
     highlight: false,
-    priceMonthly: 2250,
-    priceLabel: 'Q2,250 / mes',
+    priceMonthly: 2249,
+    priceLabel: 'Q2,249 / mes',
     gmvLimit: 150000,
     gmvLimitLabel: 'Hasta Q150,000 en ventas / mes',
     products: 'unlimited',
@@ -226,9 +226,10 @@ export function nextPlan(current: PlanCode): PlanCode | null {
 
 export function recommendPlan(gmv: number): { plan: PlanCode; price: number; pct: string } {
   if (gmv === 0)     return { plan: 'BASICO',        price: 299,              pct: '—' };
-  if (gmv <= 20000)  return { plan: 'PREMIUM',       price: 600,              pct: ((600  / gmv) * 100).toFixed(1) + '%' };
-  if (gmv <= 40000)  return { plan: 'PREMIUM_PRO',   price: 1000,             pct: ((1000 / gmv) * 100).toFixed(1) + '%' };
-  if (gmv <= 75000)  return { plan: 'PREMIUM_ULTRA', price: 1500,             pct: ((1500 / gmv) * 100).toFixed(1) + '%' };
-  if (gmv <= 225000) return { plan: 'ALTO_VOLUMEN',  price: 2250,             pct: ((2250 / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 10000)  return { plan: 'BASICO',        price: 299,              pct: ((299  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 20000)  return { plan: 'PREMIUM',       price: 599,              pct: ((599  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 40000)  return { plan: 'PREMIUM_PRO',   price: 999,              pct: ((999  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 75000)  return { plan: 'PREMIUM_ULTRA', price: 1499,             pct: ((1499 / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 225000) return { plan: 'ALTO_VOLUMEN',  price: 2249,             pct: ((2249 / gmv) * 100).toFixed(1) + '%' };
   return              { plan: 'VARIABLE',            price: Math.round(gmv * 0.01), pct: '1.0%' };
 }

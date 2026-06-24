@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import Link from 'next/link';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
@@ -10,6 +9,7 @@ import {
   getRestaurantGmvCurrentMonth, type Invoice,
 } from '@/lib/db/billing';
 import { PLANS, PLAN_ORDER, nextPlan, isUpgrade, type PlanCode } from '@/lib/plans';
+import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -109,8 +109,11 @@ export default async function SuscripcionPage() {
     { label: 'Llamar al mesero',         active: planInfo.hasWaiterCall },
     { label: 'Estadísticas y reportes',  active: planInfo.hasAnalytics },
     { label: 'Puntos de lealtad',        active: planInfo.hasLoyalty },
-    { label: 'Factura electrónica (SAT)', active: planInfo.hasFEL },
   ] : [];
+
+  const rootDomain = rootDomainForUrls();
+  const isLocalDev = rootDomain.includes('localhost');
+  const planesUrl = `${isLocalDev ? 'http' : 'https'}://${rootDomain}/planes`;
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 640 }}>
@@ -198,12 +201,14 @@ export default async function SuscripcionPage() {
           ))}
         </div>
 
-        <Link
-          href="/planes"
+        <a
+          href={planesUrl}
+          target="_blank"
+          rel="noopener noreferrer"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
-        </Link>
+        </a>
       </div>
 
       {/* ── GMV del mes actual (solo planes con límite) ──────── */}
@@ -251,7 +256,7 @@ export default async function SuscripcionPage() {
           }}
         >
           <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>
-            {currentPlan === 'BASICO' ? 'Desbloquea pedidos online' : 'Siguiente plan disponible'}
+            {currentPlan === 'BASICO' ? 'Desbloquea más funciones' : 'Siguiente plan disponible'}
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)', marginTop: 4 }}>
             {nextPlanInfo.name} — {nextPlanInfo.priceLabel}
@@ -269,14 +274,16 @@ export default async function SuscripcionPage() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 padding: '10px 18px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none', color: '#fff',
+                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
               }}
             >
               <Icon name="sparkle" size={14} />
               Actualizar a {nextPlanInfo.name}
             </a>
-            <Link
-              href="/planes"
+            <a
+              href={planesUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="press"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -287,7 +294,7 @@ export default async function SuscripcionPage() {
               }}
             >
               Ver todos los planes <Icon name="chevronRight" size={14} />
-            </Link>
+            </a>
           </div>
         </div>
       )}
@@ -345,7 +352,7 @@ export default async function SuscripcionPage() {
       {currentPlan === 'VARIABLE' && (
         <div className="glass" style={{ borderRadius: 14, padding: '14px 18px', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55 }}>
           <Icon name="chart" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--brand-accent)' }} />
-          Estás en el plan Variable. Tu cobro mensual es el 1% de tus ventas digitales del mes (mínimo Q2,250). Se calcula al cierre de cada periodo.
+          Estás en el plan Variable. Tu cobro mensual es el 1% de tus ventas digitales del mes (mínimo Q2,249). Se calcula al cierre de cada periodo.
         </div>
       )}
 

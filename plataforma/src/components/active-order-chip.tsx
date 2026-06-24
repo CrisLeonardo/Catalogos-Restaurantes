@@ -78,11 +78,13 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
       className="glass-solid press anim-slide-up"
       style={{
         // Si la barra del carrito está visible, el chip flota encima de ella.
+        // Anclado a la izquierda (no centrado) para no solapar el FAB
+        // "Llamar al mesero" que vive en el lado derecho.
         position: 'fixed', bottom: `calc(${count > 0 ? 88 : 16}px + env(safe-area-inset-bottom, 0px))`,
-        left: '50%', transform: 'translateX(-50%)',
+        left: 16,
         zIndex: 70, display: 'flex', alignItems: 'center', gap: 10,
         padding: '11px 18px', borderRadius: 99, textDecoration: 'none',
-        maxWidth: 'calc(100vw - 32px)', whiteSpace: 'nowrap',
+        maxWidth: 'calc(100vw - 210px)', whiteSpace: 'nowrap',
         transition: 'bottom 200ms var(--ease-out)',
       }}
     >

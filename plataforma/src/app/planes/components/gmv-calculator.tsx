@@ -10,10 +10,11 @@ function fmtQ(n: number) {
 
 function recommendPlan(gmv: number): { plan: PlanCode; price: number; pct: string } {
   if (gmv === 0)     return { plan: 'BASICO',        price: 299,  pct: '—' };
-  if (gmv <= 20000)  return { plan: 'PREMIUM',       price: 600,  pct: ((600 / gmv) * 100).toFixed(1) + '%' };
-  if (gmv <= 40000)  return { plan: 'PREMIUM_PRO',   price: 1000, pct: ((1000 / gmv) * 100).toFixed(1) + '%' };
-  if (gmv <= 75000)  return { plan: 'PREMIUM_ULTRA', price: 1500, pct: ((1500 / gmv) * 100).toFixed(1) + '%' };
-  if (gmv <= 225000) return { plan: 'ALTO_VOLUMEN',  price: 2250, pct: ((2250 / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 10000)  return { plan: 'BASICO',        price: 299,  pct: ((299  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 20000)  return { plan: 'PREMIUM',       price: 599,  pct: ((599  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 40000)  return { plan: 'PREMIUM_PRO',   price: 999,  pct: ((999  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 75000)  return { plan: 'PREMIUM_ULTRA', price: 1499, pct: ((1499 / gmv) * 100).toFixed(1) + '%' };
+  if (gmv <= 225000) return { plan: 'ALTO_VOLUMEN',  price: 2249, pct: ((2249 / gmv) * 100).toFixed(1) + '%' };
   return { plan: 'VARIABLE', price: Math.round(gmv * 0.01), pct: '1.0%' };
 }
 
@@ -120,8 +121,8 @@ export default function GmvCalculator() {
               key={code}
               type="button"
               onClick={() => {
-                const mid = code === 'BASICO' ? 0
-                  : code === 'PREMIUM' ? 10000
+                const mid = code === 'BASICO' ? 5000
+                  : code === 'PREMIUM' ? 15000
                   : code === 'PREMIUM_PRO' ? 30000
                   : code === 'PREMIUM_ULTRA' ? 60000
                   : 100000;

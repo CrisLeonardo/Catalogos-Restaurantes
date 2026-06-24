@@ -17,10 +17,22 @@ const inputStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
   border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)',
-  padding: '8px 10px',
+  padding: '9px 11px',
   color: 'var(--u-text)',
   fontSize: 13,
   outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 10.5,
+  color: 'var(--u-text-4)',
+  fontWeight: 600,
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase' as const,
+  marginBottom: 5,
+  display: 'block',
 };
 
 export default function RecipeEditor({ productId, restaurantId, ingredients, initialRecipe, onCostChange }: Props) {
@@ -31,8 +43,10 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedIng = ingredients.find((i) => i.id === selIngredient);
   const totalCost = lines.reduce((acc, l) => acc + l.line_cost, 0);
   const hasZeroCost = lines.some((l) => l.ingredient_cost <= 0);
+  const canAdd = !!selIngredient && !!selQty && parseFloat(selQty) > 0;
 
   function notifyParent(newLines: RecipeItem[]) {
     if (onCostChange) {
@@ -42,10 +56,9 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
   }
 
   function addLine() {
-    if (!selIngredient || !selQty || parseFloat(selQty) <= 0) return;
+    if (!canAdd) return;
     const ing = ingredients.find((i) => i.id === selIngredient);
     if (!ing) return;
-    // Prevenir duplicados
     if (lines.some((l) => l.ingredient_id === selIngredient)) {
       setError('Ese ingrediente ya está en la receta. Edita la cantidad directamente.');
       return;
@@ -118,87 +131,193 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
       {/* Lista de líneas */}
       {lines.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {lines.map((l) => (
+        <div style={{ border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          {/* Encabezados */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 128px 76px 36px',
+            gap: 8,
+            padding: '7px 12px',
+            background: 'rgba(255,255,255,0.03)',
+            borderBottom: '1px solid var(--u-hair)',
+          }}>
+            {['Insumo', 'Cantidad', 'Costo', ''].map((h) => (
+              <span key={h} style={{ fontSize: 10, color: 'var(--u-text-4)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h}</span>
+            ))}
+          </div>
+
+          {/* Filas */}
+          {lines.map((l, i) => (
             <div
               key={l.id}
-              style={{ display: 'grid', gridTemplateColumns: '1fr 90px 60px 80px 32px', gap: 8, alignItems: 'center' }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 128px 76px 36px',
+                gap: 8,
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderBottom: i < lines.length - 1 ? '1px solid var(--u-hair)' : 'none',
+              }}
             >
-              <span style={{ fontSize: 13, color: 'var(--u-text)' }}>{l.ingredient_name}</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {l.ingredient_name}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--u-text-4)', flexShrink: 0 }}>
+                  {l.ingredient_unit}
+                </span>
+              </div>
               <input
                 type="number"
                 min="0.0001"
                 step="0.0001"
                 defaultValue={l.quantity}
                 onBlur={(e) => updateQty(l.id, e.target.value)}
-                style={{ ...inputStyle, textAlign: 'right' }}
+                style={{ ...inputStyle, textAlign: 'right', padding: '6px 10px', width: '100%' }}
               />
-              <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{l.ingredient_unit}</span>
-              <span style={{ fontSize: 12, color: l.ingredient_cost <= 0 ? '#fbbf24' : 'var(--u-text-3)', textAlign: 'right', fontFamily: 'monospace' }} title={l.ingredient_cost <= 0 ? 'Este insumo tiene costo 0 — actualízalo en Ingredientes' : undefined}>
+              <span
+                style={{
+                  fontSize: 12.5,
+                  color: l.ingredient_cost <= 0 ? '#fbbf24' : 'var(--u-text-2)',
+                  textAlign: 'right',
+                  fontFamily: 'monospace',
+                  fontWeight: 500,
+                }}
+                title={l.ingredient_cost <= 0 ? 'Este insumo tiene costo 0 — actualízalo en Ingredientes' : undefined}
+              >
                 Q {l.line_cost.toFixed(2)}
               </span>
               <button
                 type="button"
                 onClick={() => removeLine(l.id)}
-                style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#f87171' }}
+                className="press"
+                style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  border: '1px solid rgba(220,50,50,0.15)',
+                  background: 'rgba(220,50,50,0.05)',
+                  cursor: 'pointer',
+                  display: 'grid', placeItems: 'center',
+                  color: '#f87171',
+                }}
               >
                 <Icon name="x" size={12} />
               </button>
             </div>
           ))}
+
           {/* Total */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6, borderTop: '1px solid var(--u-hair)' }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>
-              Costo total:{' '}
-              <span style={{ color: 'var(--brand-accent)', fontFamily: 'monospace' }}>Q {totalCost.toFixed(2)}</span>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 12px',
+            background: 'rgba(255,255,255,0.025)',
+            borderTop: '1px solid var(--u-hair)',
+          }}>
+            {hasZeroCost && (
+              <span style={{ fontSize: 11, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4, marginRight: 'auto' }}>
+                <Icon name="alertCircle" size={11} /> Insumos con costo Q0
+              </span>
+            )}
+            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Costo total:</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent)', fontFamily: 'monospace' }}>
+              Q {totalCost.toFixed(2)}
             </span>
           </div>
-          {hasZeroCost && (
-            <p style={{ fontSize: 11.5, color: '#fbbf24', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
-              <Icon name="alertCircle" size={12} /> Hay insumos con costo Q0 — el costo total puede estar incompleto.
-            </p>
-          )}
         </div>
       )}
 
-      {/* Agregar ingrediente */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px auto', gap: 8 }}>
-        <select
-          value={selIngredient}
-          onChange={(e) => setSelIngredient(e.target.value)}
-          style={inputStyle}
-        >
-          <option value="">Seleccionar insumo…</option>
-          {ingredients.map((ing) => (
-            <option key={ing.id} value={ing.id}>
-              {ing.name} ({ing.unit})
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          min="0.0001"
-          step="0.0001"
-          placeholder="Cantidad"
-          value={selQty}
-          onChange={(e) => setSelQty(e.target.value)}
-          style={{ ...inputStyle, textAlign: 'right' }}
-        />
-        <button
-          type="button"
-          onClick={addLine}
-          className="press"
-          style={{ padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.05)', cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}
-        >
-          + Agregar
-        </button>
+      {/* Formulario agregar ingrediente */}
+      <div style={{
+        border: '1px dashed var(--u-hair-2)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px',
+      }}>
+        <p style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
+          Agregar ingrediente
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Insumo */}
+          <div>
+            <label style={labelStyle}>Insumo</label>
+            <select
+              value={selIngredient}
+              onChange={(e) => setSelIngredient(e.target.value)}
+              style={{ ...inputStyle, color: selIngredient ? 'var(--u-text)' : 'var(--u-text-4)' }}
+            >
+              <option value="">Seleccionar insumo…</option>
+              {ingredients.map((ing) => (
+                <option key={ing.id} value={ing.id} style={{ color: '#111', background: '#fff' }}>
+                  {ing.name} ({ing.unit})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Cantidad */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+            <div style={{ flex: 1, maxWidth: 180 }}>
+              <label style={labelStyle}>
+                Cantidad{selectedIng ? ` (${selectedIng.unit})` : ''}
+              </label>
+              <input
+                type="number"
+                min="0.0001"
+                step="0.0001"
+                placeholder="0.00"
+                value={selQty}
+                onChange={(e) => setSelQty(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+            {selectedIng && selQty && parseFloat(selQty) > 0 && (
+              <div style={{
+                padding: '9px 12px',
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 12,
+                color: 'var(--u-text-3)',
+                whiteSpace: 'nowrap',
+                border: '1px solid var(--u-hair)',
+                fontFamily: 'monospace',
+              }}>
+                {parseFloat(selQty).toFixed(selectedIng.unit === 'g' || selectedIng.unit === 'ml' ? 0 : 2)} {selectedIng.unit}
+              </div>
+            )}
+          </div>
+
+          {/* Botón agregar */}
+          <button
+            type="button"
+            onClick={addLine}
+            disabled={!canAdd}
+            className="press btn-accent"
+            style={{
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              cursor: canAdd ? 'pointer' : 'not-allowed',
+              fontSize: 13.5,
+              fontWeight: 600,
+              opacity: canAdd ? 1 : 0.4,
+              transition: 'opacity 150ms',
+              alignSelf: 'flex-start',
+            }}
+          >
+            + Agregar a la receta
+          </button>
+        </div>
       </div>
 
       {error && (
-        <p style={{ fontSize: 12, color: '#f87171', margin: 0 }}>{error}</p>
+        <p style={{ fontSize: 12, color: '#f87171', margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Icon name="alertCircle" size={12} /> {error}
+        </p>
       )}
 
       {/* Guardar */}
@@ -208,7 +327,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
           onClick={handleSave}
           disabled={isPending}
           className="press btn-accent"
-          style={{ padding: '8px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
+          style={{ padding: '9px 22px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
         >
           {isPending ? 'Guardando…' : 'Guardar receta'}
         </button>

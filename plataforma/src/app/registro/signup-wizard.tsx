@@ -63,9 +63,9 @@ const PLAN_CARDS: PlanCardDef[] = [
     trialLabel: 'Con 30 días gratis',
     features: [
       { text: 'Menú web con QR', positive: true },
-      { text: 'Hasta 30 productos', positive: true },
-      { text: 'Logo y colores de marca', positive: true },
-      { text: 'Sin pedidos online', positive: false },
+      { text: 'Pedidos para llevar (hasta Q10k/mes)', positive: true },
+      { text: 'Llamar al mesero por QR', positive: true },
+      { text: 'Hasta 30 productos · 1 usuario', positive: true },
     ],
     highlight: false,
   },
@@ -75,7 +75,7 @@ const PLAN_CARDS: PlanCardDef[] = [
     badge: 'RECOMENDADO',
     priceLabel: 'Gratis 30 días',
     priceUnit: '',
-    trialLabel: 'luego Q600 / mes',
+    trialLabel: 'luego Q599 / mes',
     features: [
       { text: 'Todo lo del Básico', positive: true },
       { text: 'Pedidos online en tu menú', positive: true },
@@ -278,7 +278,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 3: Confirmar ── */}
       <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q600/mes' : 'Básico · Q299/mes (30 días gratis)'} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q599/mes' : 'Básico · Q299/mes (30 días gratis)'} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Tu cuenta" value={email || '—'} />

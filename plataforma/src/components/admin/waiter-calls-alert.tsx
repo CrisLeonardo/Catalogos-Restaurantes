@@ -5,11 +5,12 @@
    ------------------------------------------------------------
    Se monta en el AdminShell (lo ven dueño, staff y meseros) cuando
    el módulo "Llamar al mesero" está activo. Muestra una lista fija
-   de llamadas pendientes con botón "Atendido". Realtime + carga
-   inicial; el chime/toast lo dispara notifications.tsx en paralelo.
+   de llamadas pendientes con botón "Atendido". Realtime + polling
+   de respaldo cada 20 s; el chime/toast lo dispara notifications.tsx
+   en paralelo.
    ============================================================ */
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
 import {
@@ -32,16 +33,34 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
   const [, setTick] = useState(0);
   const [resolving, startResolve] = useTransition();
 
-  // Carga inicial de pendientes.
-  useEffect(() => {
-    let cancelled = false;
-    getPendingWaiterCalls(restaurantId).then((list) => { if (!cancelled) setCalls(list); });
-    return () => { cancelled = true; };
+  // Carga (o recarga) de llamadas pendientes del servidor.
+  const refresh = useCallback(async () => {
+    const list = await getPendingWaiterCalls(restaurantId);
+    // Merge: añadir nuevas, conservar las ya conocidas, quitar las resueltas.
+    setCalls((prev) => {
+      const serverIds = new Set(list.map((c) => c.id));
+      // Quitar las que el servidor ya no devuelve (resueltas desde otro dispositivo).
+      const still = prev.filter((c) => serverIds.has(c.id));
+      // Añadir las que no teníamos aún.
+      const newOnes = list.filter((c) => !prev.some((p) => p.id === c.id));
+      return [...still, ...newOnes];
+    });
   }, [restaurantId]);
+
+  // Carga inicial.
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Polling de respaldo cada 20 s — garantiza actualización aunque Realtime falle.
+  useEffect(() => {
+    const id = setInterval(() => refresh(), 20_000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   // Refresca el "hace X min" cada 30 s.
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
     return () => clearInterval(id);
   }, []);
 
@@ -71,11 +90,14 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
           if (c.restaurant_id !== restaurantId) return;
           if (c.resolved_at) setCalls((prev) => prev.filter((x) => x.id !== c.id));
         })
-        .subscribe();
+        .subscribe((status) => {
+          // Si Realtime falla, el polling de 20 s actúa como respaldo automático.
+          if (status === 'CHANNEL_ERROR') refresh();
+        });
     })();
 
     return () => { cancelled = true; channel?.unsubscribe(); };
-  }, [restaurantId]);
+  }, [restaurantId, refresh]);
 
   function resolve(id: string) {
     setCalls((prev) => prev.filter((x) => x.id !== id)); // optimista
@@ -88,7 +110,7 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
     <div style={{
       position: 'fixed', left: 16, bottom: 16, zIndex: 70,
       display: 'flex', flexDirection: 'column', gap: 8,
-      maxWidth: 'min(340px, calc(100vw - 32px))',
+      maxWidth: 'min(360px, calc(100vw - 32px))',
     }}>
       {calls.map((c) => (
         <div
@@ -96,39 +118,64 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
           className="glass-solid anim-slide-up"
           style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '11px 13px', borderRadius: 14,
-            border: '1px solid rgba(245,158,11,0.4)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+            padding: '12px 14px', borderRadius: 16,
+            border: '1px solid rgba(245,158,11,0.45)',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
         >
-          <div style={{
-            width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-            display: 'grid', placeItems: 'center',
-            background: 'rgba(245,158,11,0.16)', color: '#fbbf24',
-          }}>
-            <Icon name="bell" size={18} />
+          {/* Icono con pulso */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
+              display: 'grid', placeItems: 'center',
+              background: 'rgba(245,158,11,0.18)', color: '#fbbf24',
+            }}>
+              <Icon name="bell" size={19} />
+            </div>
+            {/* Anillo de pulso */}
+            <span style={{
+              position: 'absolute', inset: -3, borderRadius: 15,
+              border: '2px solid rgba(251,191,36,0.5)',
+              animation: 'waiter-ping 1.6s ease-out infinite',
+              pointerEvents: 'none',
+            }} />
           </div>
+
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1.2 }}>
               {c.table_number ? `Mesa ${c.table_number}` : 'Llamada al mesero'}
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{timeAgo(c.created_at)}</div>
+            <div style={{ fontSize: 11.5, color: '#fbbf24', marginTop: 2 }}>
+              Solicita atención · {timeAgo(c.created_at)}
+            </div>
           </div>
+
           <button
             type="button"
             onClick={() => resolve(c.id)}
             disabled={resolving}
             className="press"
             style={{
-              flexShrink: 0, padding: '7px 12px', borderRadius: 10, border: 'none',
-              cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+              flexShrink: 0, padding: '8px 14px', borderRadius: 10, border: 'none',
+              cursor: resolving ? 'not-allowed' : 'pointer',
+              fontSize: 12.5, fontWeight: 700,
               background: 'var(--u-text)', color: 'var(--brand-bg)',
+              opacity: resolving ? 0.7 : 1,
             }}
           >
             Atendido
           </button>
         </div>
       ))}
+
+      {/* Animación keyframe via style tag (solo se inserta una vez) */}
+      <style>{`
+        @keyframes waiter-ping {
+          0%   { transform: scale(1);   opacity: 0.7; }
+          70%  { transform: scale(1.5); opacity: 0; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

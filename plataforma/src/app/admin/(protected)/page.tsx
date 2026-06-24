@@ -154,7 +154,7 @@ export default async function AdminHomePage() {
       )}
 
       {/* Barra GMV (solo para planes con límite mensual) */}
-      {restaurantId && restaurant?.plan_actual && !['BASICO', 'VARIABLE'].includes(restaurant.plan_actual) && (
+      {restaurantId && restaurant?.plan_actual && !['VARIABLE'].includes(restaurant.plan_actual) && (
         <PlanGmvBar restaurantId={restaurantId} />
       )}
 

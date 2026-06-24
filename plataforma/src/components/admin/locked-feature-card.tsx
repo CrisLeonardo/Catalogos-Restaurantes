@@ -10,12 +10,12 @@ interface LockedFeature {
 }
 
 const LOCKED_FEATURES: LockedFeature[] = [
-  { icon: 'list',      name: 'Pedidos online',       desc: 'Carrito y checkout para tus clientes' },
-  { icon: 'whatsapp',  name: 'Aviso WhatsApp',        desc: 'Recibe cada pedido al instante' },
-  { icon: 'thumbsUp',  name: 'Programa de lealtad',   desc: 'Puntos y recompensas para tus clientes' },
-  { icon: 'ticket',    name: 'Cupones',                desc: 'Descuentos y promociones especiales' },
-  { icon: 'bell',      name: 'Llamar al mesero',       desc: 'Tus clientes te llaman por QR' },
-  { icon: 'calendar',  name: 'Reservaciones',          desc: 'Agenda mesas con anticipación' },
+  { icon: 'whatsapp',  name: 'Aviso WhatsApp',          desc: 'Recibe cada pedido al instante en WhatsApp' },
+  { icon: 'thumbsUp',  name: 'Programa de lealtad',     desc: 'Puntos y recompensas para tus clientes' },
+  { icon: 'ticket',    name: 'Cupones y descuentos',     desc: 'Códigos de descuento en el checkout' },
+  { icon: 'calendar',  name: 'Reservaciones',            desc: 'Agenda mesas con anticipación' },
+  { icon: 'chart',     name: 'Estadísticas avanzadas',   desc: 'Horas pico, más vendidos, conversión' },
+  { icon: 'users',     name: 'Multi-usuario',            desc: 'Hasta 3 usuarios en el panel' },
 ];
 
 const CONTACT_WA = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_CONTACT_WHATSAPP : undefined;
@@ -33,7 +33,7 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
       <div>
         <div className="t-kicker" style={{ fontSize: 10, marginBottom: 6 }}>Desbloquea más con Premium</div>
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0 }}>
-          Actualiza a Premium (Q600/mes) para activar pedidos online y mucho más.
+          Actualiza a Premium (Q599/mes) para activar pedidos sin límite, WhatsApp, lealtad y más.
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginBottom: 22 }}>
               <div style={{ padding: '10px 14px', borderRadius: '10px 0 0 10px', border: '1px solid var(--u-hair)' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--u-text-4)', textTransform: 'uppercase', marginBottom: 6 }}>Básico</div>
-                {['Menú digital QR', '30 productos', '1 usuario'].map((f) => (
+                {['Menú digital QR', 'Pedidos para llevar', 'Llamar al mesero', '30 productos', '1 usuario'].map((f) => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--u-text-3)', marginBottom: 4 }}>
                     <Icon name="check" size={12} style={{ color: '#4ade80' }} />{f}
                   </div>
@@ -118,7 +118,7 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
               </div>
               <div style={{ padding: '10px 14px', borderRadius: '0 10px 10px 0', border: '2px solid var(--brand-accent)', marginLeft: -1 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--brand-accent)', textTransform: 'uppercase', marginBottom: 6 }}>Premium</div>
-                {['Menú digital QR', 'Productos ilimitados', '3 usuarios', 'Pedidos en línea'].map((f) => (
+                {['Menú digital QR', 'Pedidos sin límite GMV', 'Productos ilimitados', '3 usuarios'].map((f) => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--u-text-2)', marginBottom: 4 }}>
                     <Icon name="check" size={12} style={{ color: '#4ade80' }} />{f}
                   </div>
@@ -126,7 +126,7 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#4ade80', marginBottom: 4 }}>
                   <Icon name="check" size={12} />{selected.name}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-accent)', marginTop: 10 }}>Q600/mes</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-accent)', marginTop: 10 }}>Q599/mes</div>
               </div>
             </div>
 
@@ -139,7 +139,7 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
                 background: 'var(--brand-accent)', color: '#fff',
               }}
             >
-              Actualizar a Premium — Q600/mes
+              Actualizar a Premium — Q599/mes
             </a>
           </div>
         </div>

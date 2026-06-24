@@ -85,7 +85,8 @@ export default function CheckoutForm({
 
   const typeOptions = [
     config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
-    config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
+    // Delivery no aplica cuando el cliente está sentado en una mesa (escaneó QR).
+    config.orderTypes.includes('delivery') && !hasScannedTable && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
     config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
   ].filter(Boolean) as { id: OrderType; label: string; icon: string }[];
 
