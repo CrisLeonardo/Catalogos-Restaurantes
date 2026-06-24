@@ -10,6 +10,8 @@ import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
 import { formatPrice } from '@/lib/theme/resolve';
 import OnboardingChecklist, { type OnboardingStep } from '@/components/admin/onboarding-checklist';
+import PlanGmvBar from '@/components/admin/plan-gmv-bar';
+import LockedFeatureSection from '@/components/admin/locked-feature-card';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant } from '@/types';
 
@@ -112,17 +114,35 @@ export default async function AdminHomePage() {
           style={{
             borderRadius: 14, padding: '12px 16px', textDecoration: 'none',
             display: 'flex', alignItems: 'center', gap: 11,
-            border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
+            border: trialLeft <= 3
+              ? '1px solid rgba(248,113,113,0.45)'
+              : trialLeft <= 7
+              ? '1px solid rgba(251,146,60,0.45)'
+              : '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
           }}
         >
-          <span style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.14)', color: 'var(--brand-accent)' }}>
-            <Icon name="sparkle" size={17} />
+          <span style={{
+            width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
+            background: trialLeft <= 3
+              ? 'rgba(248,113,113,0.14)'
+              : trialLeft <= 7
+              ? 'rgba(251,146,60,0.14)'
+              : 'rgba(var(--brand-accent-rgb, 99,102,241),0.14)',
+            color: trialLeft <= 3 ? '#f87171' : trialLeft <= 7 ? '#fb923c' : 'var(--brand-accent)',
+          }}>
+            <Icon name={trialLeft <= 7 ? 'alertCircle' : 'sparkle'} size={17} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
-              Prueba gratis · {trialLeft} día{trialLeft !== 1 ? 's' : ''} restante{trialLeft !== 1 ? 's' : ''}
+              {trialLeft <= 3
+                ? `¡Tu prueba termina en ${trialLeft} día${trialLeft !== 1 ? 's' : ''}!`
+                : `Prueba gratis · ${trialLeft} día${trialLeft !== 1 ? 's' : ''} restante${trialLeft !== 1 ? 's' : ''}`}
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>Tu menú ya está en vivo. Aprovéchalo al máximo.</div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+              {trialLeft <= 3
+                ? 'Contáctanos para continuar sin interrupciones.'
+                : 'Tu menú ya está en vivo. Aprovéchalo al máximo.'}
+            </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
         </Link>
@@ -133,12 +153,24 @@ export default async function AdminHomePage() {
         <OnboardingChecklist restaurantId={restaurantId} firstName={firstName} steps={onboardingSteps} />
       )}
 
+      {/* Barra GMV (solo para planes con límite mensual) */}
+      {restaurantId && restaurant?.plan_actual && !['BASICO', 'VARIABLE'].includes(restaurant.plan_actual) && (
+        <PlanGmvBar restaurantId={restaurantId} />
+      )}
+
       {/* Números de hoy (solo si tiene pedidos en línea) */}
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
           <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} icon="list" hero />
           <Kpi label="Ventas hoy" value={fmt(stats.todaySales)} icon="wallet" />
           <Kpi label="Ticket promedio" value={fmt(stats.todayTicket)} icon="chart" />
+        </div>
+      )}
+
+      {/* Funciones bloqueadas (solo plan BASICO) */}
+      {restaurant?.plan_actual === 'BASICO' && (
+        <div className="glass" style={{ borderRadius: 18, padding: '20px 18px' }}>
+          <LockedFeatureSection restaurantName={brandName} />
         </div>
       )}
 

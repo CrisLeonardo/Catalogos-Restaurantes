@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
+import PlanGmvAlert from '@/components/admin/plan-gmv-alert';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
 import type { Restaurant } from '@/types';
@@ -67,6 +68,9 @@ export default async function AdminProtectedLayout({
     }
   }
 
+  const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
+  const showGmvAlert = !!currentRestaurant?.id && planActual !== null && !['BASICO', 'VARIABLE'].includes(planActual);
+
   const mod = currentRestaurant?.modules as Record<string, boolean> | null;
   const m = (k: string) => mod?.[k] === true;
 
@@ -85,6 +89,7 @@ export default async function AdminProtectedLayout({
     <AdminShell
       restaurantName={restaurantName}
       restaurantId={currentRestaurant?.id ?? null}
+      planActual={planActual}
       ordersEnabled={m('orders')}
       analiticaEnabled={m('analitica')}
       inventarioEnabled={m('inventario')}
@@ -105,6 +110,9 @@ export default async function AdminProtectedLayout({
       permissions={profile.permissions}
       canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
     >
+      {showGmvAlert && (
+        <PlanGmvAlert restaurantId={currentRestaurant!.id} />
+      )}
       {children}
     </AdminShell>
   );

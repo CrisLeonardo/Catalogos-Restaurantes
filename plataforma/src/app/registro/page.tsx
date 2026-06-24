@@ -8,7 +8,7 @@ import SignupWizard from './signup-wizard';
 
 export const metadata: Metadata = {
   title: 'Crea tu restaurante — Leogin',
-  description: 'Crea tu menú digital con pedidos en línea en minutos. 14 días de prueba gratis, sin tarjeta.',
+  description: 'Crea tu menú digital con pedidos en línea en minutos. 1 mes de prueba gratis, sin tarjeta.',
   robots: { index: true, follow: true },
 };
 
@@ -16,7 +16,7 @@ const PERKS = [
   { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
   { icon: 'list', text: 'Pedidos en línea con alerta en tiempo real' },
   { icon: 'sparkle', text: 'Personalización total: colores, logo y estilo' },
-  { icon: 'wallet', text: '14 días gratis · sin tarjeta · cancela cuando quieras' },
+  { icon: 'wallet', text: '1 mes gratis · sin tarjeta · cancela cuando quieras' },
 ];
 
 export default function RegistroPage() {

@@ -30,25 +30,36 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: '01', title: 'Regístrate en minutos', body: 'Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, 14 días gratis.' },
+  { n: '01', title: 'Regístrate en minutos', body: 'Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, 1 mes gratis.' },
   { n: '02', title: 'Personalízalo, guiado', body: 'Colores, logo y tu primer menú con un asistente paso a paso. No necesitas saber de tecnología.' },
   { n: '03', title: 'Comparte tu QR', body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
 ];
 
-const PLANS = [
+const LANDING_PLANS = [
   {
-    code: 'Estándar',
-    tagline: 'Todo para vender en línea',
-    points: ['Menú web interactivo por QR', 'Carrito y checkout en línea', 'Pedidos para llevar / domicilio / en mesa', 'Alerta en tiempo real + WhatsApp', 'Personalización total de tu marca', 'Módulos opcionales que activas tú'],
-    accent: true,
+    code: 'Básico',
+    price: 'Q299 / mes',
+    tagline: 'Menú digital sin pedidos online',
+    points: ['Menú web por QR', 'Hasta 30 productos', 'Personalización con tu logo y color', 'QR listo para imprimir'],
+    accent: false,
     cta: 'self' as const,
   },
   {
-    code: 'Multi-sucursal',
-    tagline: 'Para cadenas y franquicias',
-    points: ['Todo lo del plan Estándar', 'Panel de grupo con métricas consolidadas', 'Selector de sucursal para tus clientes', 'Precio preferente por volumen'],
+    code: 'Premium',
+    price: 'Q600 / mes',
+    tagline: 'Pedidos online, tiempo real y personalización completa',
+    points: ['Carrito y checkout en línea', 'Alerta en tiempo real + WhatsApp', 'Todos los módulos disponibles', 'Hasta Q20,000 en ventas / mes'],
+    accent: true,
+    badge: 'MÁS POPULAR',
+    cta: 'self' as const,
+  },
+  {
+    code: 'Premium Pro',
+    price: 'Q1,000 / mes',
+    tagline: 'Para mayor flujo de pedidos',
+    points: ['Todo lo del plan Premium', 'Hasta Q40,000 en ventas / mes', 'Proveedores y recetas incluidos', '5 usuarios del panel'],
     accent: false,
-    cta: 'contact' as const,
+    cta: 'self' as const,
   },
 ];
 
@@ -148,7 +159,7 @@ export default function LeoginLanding() {
             </a>
           </div>
           <p className="t-mute" style={{ fontSize: 13, marginTop: 14 }}>
-            14 días de prueba gratis · sin tarjeta · listo en minutos
+            1 mes de prueba gratis · sin tarjeta · listo en minutos
           </p>
         </section>
 
@@ -188,52 +199,57 @@ export default function LeoginLanding() {
 
         {/* ── Planes ────────────────────────────────────────── */}
         <section id="planes" style={{ marginTop: 56, scrollMarginTop: 72 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 26 }}>
-            Planes
+          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
+            Planes y precios
           </h2>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', maxWidth: 620, margin: '0 auto' }}>
-            {PLANS.map((p) => (
+          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
+            El precio crece con tus ventas. Sin cobros sorpresa.
+          </p>
+          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+            {LANDING_PLANS.map((p) => (
               <Glass
                 key={p.code}
                 style={{
-                  padding: '26px 22px',
-                  border: p.accent ? '1px solid color-mix(in srgb, var(--brand-accent) 55%, transparent)' : undefined,
+                  padding: '24px 20px',
+                  border: p.accent ? '1.5px solid color-mix(in srgb, var(--brand-accent) 60%, transparent)' : undefined,
+                  position: 'relative',
                 }}
               >
-                {p.accent && (
-                  <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)', marginBottom: 10 }}>
-                    Recomendado
+                {'badge' in p && p.badge && (
+                  <div className="t-kicker" style={{ fontSize: 9, color: 'var(--brand-accent)', marginBottom: 10, letterSpacing: '0.08em' }}>
+                    {p.badge}
                   </div>
                 )}
-                <h3 className="t-display" style={{ fontSize: 22, fontWeight: 800 }}>{p.code}</h3>
-                <p className="t-mute" style={{ fontSize: 13.5, marginTop: 4 }}>{p.tagline}</p>
-                <ul style={{ listStyle: 'none', margin: '16px 0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <h3 className="t-display" style={{ fontSize: 20, fontWeight: 800 }}>{p.code}</h3>
+                <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 16, color: 'var(--brand-accent)', marginTop: 4 }}>{p.price}</div>
+                <p className="t-mute" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.45 }}>{p.tagline}</p>
+                <ul style={{ listStyle: 'none', margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {p.points.map((pt) => (
-                    <li key={pt} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14 }}>
-                      <Icon name="check" size={16} strokeWidth={2.6} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 3 }} />
-                      <span style={{ color: 'var(--u-text-2)', lineHeight: 1.5 }}>{pt}</span>
+                    <li key={pt} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
+                      <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ color: 'var(--u-text-2)', lineHeight: 1.45 }}>{pt}</span>
                     </li>
                   ))}
                 </ul>
-                {p.cta === 'self' ? (
-                  <Link
-                    href="/registro"
-                    className="press btn-accent"
-                    style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, textDecoration: 'none', color: '#fff' }}
-                  >
-                    Empezar gratis
-                  </Link>
-                ) : (
-                  <a
-                    href={ctaHref}
-                    className="press"
-                    style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 14, textDecoration: 'none', color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)' }}
-                  >
-                    Contáctanos
-                  </a>
-                )}
+                <Link
+                  href="/registro"
+                  className="press btn-accent"
+                  style={{ display: 'block', textAlign: 'center', padding: '11px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, textDecoration: 'none', color: '#fff' }}
+                >
+                  Empezar gratis
+                </Link>
               </Glass>
             ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 18 }}>
+            <Link
+              href="/planes"
+              className="t-mute"
+              style={{ fontSize: 13.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--u-text-3)' }}
+            >
+              Ver todos los planes (hasta Q150,000 GMV) y comparativa completa
+              <Icon name="arrowRight" size={14} />
+            </Link>
           </div>
         </section>
 
@@ -244,7 +260,7 @@ export default function LeoginLanding() {
               ¿Listo para modernizar tu menú?
             </h2>
             <p className="t-mute" style={{ fontSize: 15, maxWidth: 440, margin: '12px auto 0', lineHeight: 1.5 }}>
-              Crea tu restaurante ahora y pruébalo gratis 14 días. ¿Prefieres que te acompañemos? Escríbenos.
+              Crea tu restaurante ahora y pruébalo gratis 1 mes completo. ¿Prefieres que te acompañemos? Escríbenos.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 22 }}>
               <Link

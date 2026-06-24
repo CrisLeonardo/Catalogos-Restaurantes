@@ -148,6 +148,8 @@ export async function updateRestaurantPlan(
 
   const id = formData.get('id') as string;
   const plan_actual = formData.get('plan_actual') as string;
+  const VALID_PLANS = ['BASICO','PREMIUM','PREMIUM_PRO','PREMIUM_ULTRA','ALTO_VOLUMEN','VARIABLE'];
+  if (!VALID_PLANS.includes(plan_actual)) return { error: 'Plan inválido.' };
 
   const feat = (key: string) => formData.get(`feature_${key}`) === 'true';
   // "Gestionado por Leogin" de cada módulo activable: true = forzado ON + oculto

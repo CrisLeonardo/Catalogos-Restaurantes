@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
-import { getBillingDashboard, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
+import { getBillingDashboard, isOnTrial, trialDaysLeft, planLabel, planGmvLimit } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
 import GenerateMonthlyButton from '@/components/super/generate-monthly-button';
 
@@ -26,6 +26,11 @@ export default async function CobrosPage() {
   };
   const sorted = [...rows].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 
+  const gmvOverLimit = sorted.filter((r) => {
+    const limit = planGmvLimit(r.plan);
+    return limit !== null && r.salesRevenue30 > limit;
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
@@ -45,7 +50,60 @@ export default async function CobrosPage() {
         <Kpi label="Pendiente de cobro" value={fmtMoney(stats.pendingTotal, stats.currency)} color="#fbbf24" />
         <Kpi label="Con pagos vencidos" value={String(stats.overdueCount)} color={stats.overdueCount > 0 ? '#f87171' : undefined} />
         <Kpi label="Cobro activo" value={String(stats.activeBilling)} />
+        <Kpi label="Sobre límite GMV" value={String(gmvOverLimit.length)} color={gmvOverLimit.length > 0 ? '#fb923c' : undefined} />
       </div>
+
+      {/* Alertas GMV */}
+      {gmvOverLimit.length > 0 && (
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#fb923c', margin: 0 }}>
+              Superaron límite GMV
+            </h2>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(251,146,60,0.13)', color: '#fb923c' }}>
+              {gmvOverLimit.length}
+            </span>
+          </div>
+          <Glass variant="quiet" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {gmvOverLimit.map((r, i) => {
+              const limit = planGmvLimit(r.plan)!;
+              const pct = Math.round((r.salesRevenue30 / limit) * 100);
+              return (
+                <div
+                  key={r.restaurantId}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 16px', gap: 16,
+                    borderBottom: i < gmvOverLimit.length - 1 ? '1px solid var(--u-hair)' : 'none',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', marginBottom: 3 }}>
+                      {r.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+                      Plan {planLabel(r.plan)} · límite{' '}
+                      <span style={{ fontFamily: 'var(--ui-font-mono)' }}>Q{limit.toLocaleString()}</span>
+                      {' · '}venta{' '}
+                      <span style={{ fontFamily: 'var(--ui-font-mono)', color: '#fb923c' }}>Q{r.salesRevenue30.toLocaleString()}</span>
+                      {' · '}{pct}% del límite
+                    </div>
+                  </div>
+                  <Link
+                    href={`/super/restaurantes/${r.restaurantId}`}
+                    style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-accent)', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  >
+                    Gestionar →
+                  </Link>
+                </div>
+              );
+            })}
+          </Glass>
+          <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
+            Estos restaurantes superaron su límite GMV mensual este mes. Contáctalos para ajustar su plan.
+          </p>
+        </section>
+      )}
 
       {/* Tabla */}
       <section>
@@ -56,7 +114,7 @@ export default async function CobrosPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 720 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                {['Restaurante', 'Mensualidad', 'Mes actual', 'Pendiente', 'Visitas 30d', 'Pedidos 30d', 'Su venta 30d', ''].map((h) => (
+                {['Restaurante', 'Plan', 'Mensualidad', 'Mes actual', 'Pendiente', 'Visitas 30d', 'Pedidos 30d', 'Su venta 30d', ''].map((h) => (
                   <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10.5, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
@@ -76,6 +134,9 @@ export default async function CobrosPage() {
                       <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'monospace' }}>
                         {r.slug}{r.status === 'suspended' ? ' · suspendido' : ''}
                       </div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <PlanBadge plan={r.plan} gmv={r.salesRevenue30} />
                     </td>
                     <td style={{ padding: '12px 14px', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-2)' }}>
                       {r.config && r.config.monthly_fee > 0 ? (
@@ -135,6 +196,39 @@ function MonthBadge({ hasOverdue, status, hasMonthly, configured }: {
     <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: bg, color, letterSpacing: '0.05em' }}>
       {label}
     </span>
+  );
+}
+
+const PLAN_COLORS: Record<string, { bg: string; color: string }> = {
+  BASICO:        { bg: 'rgba(148,163,184,0.13)', color: '#94a3b8' },
+  PREMIUM:       { bg: 'rgba(99,102,241,0.13)',  color: '#6366f1' },
+  PREMIUM_PRO:   { bg: 'rgba(168,85,247,0.13)',  color: '#a855f7' },
+  PREMIUM_ULTRA: { bg: 'rgba(20,184,166,0.13)',  color: '#14b8a6' },
+  ALTO_VOLUMEN:  { bg: 'rgba(249,115,22,0.13)',  color: '#f97316' },
+  VARIABLE:      { bg: 'rgba(245,158,11,0.13)',  color: '#f59e0b' },
+};
+
+function PlanBadge({ plan, gmv }: { plan: string; gmv: number }) {
+  const colors = PLAN_COLORS[plan] ?? { bg: 'rgba(148,163,184,0.13)', color: '#94a3b8' };
+  const limit = planGmvLimit(plan);
+  const isOver = limit !== null && gmv > limit;
+  const isNear = limit !== null && !isOver && gmv > limit * 0.8;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+      <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: colors.bg, color: colors.color, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+        {planLabel(plan)}
+      </span>
+      {isOver && (
+        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(248,113,113,0.13)', color: '#f87171', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+          SUPERA LÍMITE
+        </span>
+      )}
+      {isNear && (
+        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(251,191,36,0.13)', color: '#fbbf24', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+          CERCA DEL LÍMITE
+        </span>
+      )}
+    </div>
   );
 }
 

@@ -200,18 +200,25 @@ export async function savePricingSettings(
   if (!db) return { error: 'No autorizado.' };
 
   const nonNeg = (key: string) => String(Math.max(0, num(formData, key)));
-  const intMin1 = (key: string) => String(Math.max(1, Math.round(num(formData, key) || 1)));
   const graceDays = String(Math.min(90, Math.max(0, Math.round(num(formData, 'grace_days') || 0))));
 
   const rows = [
-    { key: 'plan_price_BASICO', value: nonNeg('plan_price_BASICO') },
-    { key: 'plan_price_POPULAR', value: nonNeg('plan_price_POPULAR') },
-    { key: 'plan_price_PREMIUM', value: nonNeg('plan_price_PREMIUM') },
-    { key: 'extra_branch_fee', value: nonNeg('extra_branch_fee') },
-    { key: 'premium_included_branches', value: intMin1('premium_included_branches') },
-    { key: 'setup_fee_default', value: nonNeg('setup_fee_default') },
-    { key: 'billing_grace_days', value: graceDays },
-    { key: 'billing_auto_suspend', value: formData.get('billing_auto_suspend') === 'on' || formData.get('billing_auto_suspend') === 'true' ? 'true' : 'false' },
+    { key: 'plan_price_BASICO',        value: nonNeg('plan_price_BASICO') },
+    { key: 'plan_price_PREMIUM',       value: nonNeg('plan_price_PREMIUM') },
+    { key: 'plan_price_PREMIUM_PRO',   value: nonNeg('plan_price_PREMIUM_PRO') },
+    { key: 'plan_price_PREMIUM_ULTRA', value: nonNeg('plan_price_PREMIUM_ULTRA') },
+    { key: 'plan_price_ALTO_VOLUMEN',  value: nonNeg('plan_price_ALTO_VOLUMEN') },
+    { key: 'plan_gmv_limit_PREMIUM',       value: nonNeg('plan_gmv_limit_PREMIUM') },
+    { key: 'plan_gmv_limit_PREMIUM_PRO',   value: nonNeg('plan_gmv_limit_PREMIUM_PRO') },
+    { key: 'plan_gmv_limit_PREMIUM_ULTRA', value: nonNeg('plan_gmv_limit_PREMIUM_ULTRA') },
+    { key: 'plan_gmv_limit_ALTO_VOLUMEN',  value: nonNeg('plan_gmv_limit_ALTO_VOLUMEN') },
+    { key: 'plan_gmv_variable_threshold',  value: nonNeg('plan_gmv_variable_threshold') },
+    { key: 'plan_gmv_variable_pct',        value: nonNeg('plan_gmv_variable_pct') },
+    { key: 'plan_gmv_alert_pct',           value: nonNeg('plan_gmv_alert_pct') },
+    { key: 'group_panel_fee',              value: nonNeg('group_panel_fee') },
+    { key: 'setup_fee_default',            value: nonNeg('setup_fee_default') },
+    { key: 'billing_grace_days',           value: graceDays },
+    { key: 'billing_auto_suspend',  value: formData.get('billing_auto_suspend')  === 'on' || formData.get('billing_auto_suspend')  === 'true' ? 'true' : 'false' },
     { key: 'billing_auto_generate', value: formData.get('billing_auto_generate') === 'on' || formData.get('billing_auto_generate') === 'true' ? 'true' : 'false' },
   ];
 

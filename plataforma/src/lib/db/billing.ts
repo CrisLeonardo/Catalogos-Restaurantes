@@ -36,13 +36,21 @@ export interface BillingConfig {
   updated_at: string;
 }
 
-/** Parámetros globales de precio + gracia (platform_settings, mig. 035). */
+/** Parámetros globales de precio + gracia (platform_settings, mig. 035 + 049). */
 export interface PricingSettings {
   basico: number;
-  popular: number;
   premium: number;
-  extraBranchFee: number;
-  premiumIncludedBranches: number;
+  premiumPro: number;
+  premiumUltra: number;
+  altoVolumen: number;
+  gmvLimitPremium: number;
+  gmvLimitPremiumPro: number;
+  gmvLimitPremiumUltra: number;
+  gmvLimitAltoVolumen: number;
+  gmvVariableThreshold: number;
+  gmvVariablePct: number;
+  gmvAlertPct: number;
+  groupPanelFee: number;
   setupFeeDefault: number;
   graceDays: number;
   autoSuspend: boolean;
@@ -50,11 +58,31 @@ export interface PricingSettings {
   trialDays: number;
 }
 
-const PLAN_LABEL: Record<string, string> = {
-  BASICO: 'Básico', POPULAR: 'Popular', PREMIUM: 'Premium',
+export const PLAN_META: Record<string, {
+  label: string;
+  price: number;
+  gmvLimit: number | null;
+  hasOrders: boolean;
+  color: string;
+}> = {
+  BASICO:        { label: 'Básico',        price: 299,  gmvLimit: null,   hasOrders: false, color: 'gray'   },
+  PREMIUM:       { label: 'Premium',       price: 600,  gmvLimit: 20000,  hasOrders: true,  color: 'blue'   },
+  PREMIUM_PRO:   { label: 'Premium Pro',   price: 1000, gmvLimit: 40000,  hasOrders: true,  color: 'purple' },
+  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 1500, gmvLimit: 75000,  hasOrders: true,  color: 'teal'   },
+  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 2250, gmvLimit: 150000, hasOrders: true,  color: 'orange' },
+  VARIABLE:      { label: 'Variable',      price: 0,    gmvLimit: null,   hasOrders: true,  color: 'amber'  },
 };
+
 export function planLabel(plan: string | null | undefined): string {
-  return PLAN_LABEL[plan ?? ''] ?? (plan ?? '—');
+  return PLAN_META[plan ?? '']?.label ?? (plan ?? '—');
+}
+
+export function planHasOrders(plan: string | null | undefined): boolean {
+  return PLAN_META[plan ?? '']?.hasOrders ?? false;
+}
+
+export function planGmvLimit(plan: string | null | undefined): number | null {
+  return PLAN_META[plan ?? '']?.gmvLimit ?? null;
 }
 
 export interface Invoice {
@@ -152,27 +180,50 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
   const db = createServiceClient();
   const { data } = await db.from('platform_settings').select('key, value');
   const map = new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
-  const n = (k: string, d: number) => {
-    const v = parseFloat(map.get(k) ?? '');
-    return isNaN(v) ? d : v;
-  };
-  const b = (k: string, d: boolean) => {
-    const v = map.get(k);
-    return v == null || v === '' ? d : v === 'true';
-  };
+  const n = (k: string, d: number) => { const v = parseFloat(map.get(k) ?? ''); return isNaN(v) ? d : v; };
+  const b = (k: string, d: boolean) => { const v = map.get(k); return v == null || v === '' ? d : v === 'true'; };
   return {
-    basico: n('plan_price_BASICO', 200),
-    popular: n('plan_price_POPULAR', 600),
-    premium: n('plan_price_PREMIUM', 1200),
-    extraBranchFee: n('extra_branch_fee', 600),
-    premiumIncludedBranches: n('premium_included_branches', 2),
-    setupFeeDefault: n('setup_fee_default', 500),
-    graceDays: n('billing_grace_days', 10),
-    autoSuspend: b('billing_auto_suspend', true),
-    autoGenerate: b('billing_auto_generate', true),
-    trialDays: n('trial_days', 14),
+    basico:               n('plan_price_BASICO',        299),
+    premium:              n('plan_price_PREMIUM',        600),
+    premiumPro:           n('plan_price_PREMIUM_PRO',   1000),
+    premiumUltra:         n('plan_price_PREMIUM_ULTRA', 1500),
+    altoVolumen:          n('plan_price_ALTO_VOLUMEN',  2250),
+    gmvLimitPremium:      n('plan_gmv_limit_PREMIUM',       20000),
+    gmvLimitPremiumPro:   n('plan_gmv_limit_PREMIUM_PRO',   40000),
+    gmvLimitPremiumUltra: n('plan_gmv_limit_PREMIUM_ULTRA', 75000),
+    gmvLimitAltoVolumen:  n('plan_gmv_limit_ALTO_VOLUMEN',  150000),
+    gmvVariableThreshold: n('plan_gmv_variable_threshold',  225000),
+    gmvVariablePct:       n('plan_gmv_variable_pct',        0.01),
+    gmvAlertPct:          n('plan_gmv_alert_pct',           0.80),
+    groupPanelFee:        n('group_panel_fee',              250),
+    setupFeeDefault:      n('setup_fee_default',            500),
+    graceDays:            n('billing_grace_days',           10),
+    autoSuspend:          b('billing_auto_suspend',         true),
+    autoGenerate:         b('billing_auto_generate',        true),
+    trialDays:            n('trial_days',                   30),
   };
 });
+
+/** GMV del restaurante en el mes actual. */
+export async function getRestaurantGmvCurrentMonth(restaurantId: string): Promise<{
+  gmv: number;
+  orders: number;
+  limit: number | null;
+  pct: number | null;
+  plan: string;
+}> {
+  const db = createServiceClient();
+  const [{ data: rest }, { data: gmvData }] = await Promise.all([
+    db.from('restaurants').select('plan_actual').eq('id', restaurantId).single(),
+    db.from('restaurant_gmv_current_month').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
+  ]);
+  const plan = (rest?.plan_actual as string) ?? 'BASICO';
+  const gmv = Number(gmvData?.gmv_current_month ?? 0);
+  const orders = Number(gmvData?.orders_current_month ?? 0);
+  const limit = planGmvLimit(plan);
+  const pct = limit ? Math.min(gmv / limit, 1) : null;
+  return { gmv, orders, limit, pct, plan };
+}
 
 /** Precio mensual sugerido por el plan + sucursales (vía RPC org-aware). */
 export async function computeSuggestedFee(restaurantId: string): Promise<number> {

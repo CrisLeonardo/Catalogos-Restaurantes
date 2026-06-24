@@ -25,9 +25,7 @@ import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from
 
 export type SignupState = { error: string } | null;
 
-// El registro arranca en el plan Estándar (todas las funciones de operación).
-// Los módulos activables quedan ausentes = self-service (el dueño los prende).
-const SIGNUP_MODULES = {
+const SIGNUP_MODULES_PREMIUM = {
   catalog: true,
   orders: true,
   whatsapp_notify: true,
@@ -36,7 +34,13 @@ const SIGNUP_MODULES = {
   promociones: true,
   personal: true,
   finanzas: true,
-  multi_branch: false, // multi-sucursal se contrata aparte
+  multi_branch: false,
+};
+
+const SIGNUP_MODULES_BASICO = {
+  catalog: true,
+  analitica: false,
+  multi_branch: false,
 };
 
 function validEmail(email: string): boolean {
@@ -61,6 +65,8 @@ export async function signupRestaurant(
   const whatsapp = (formData.get('whatsapp') as string)?.trim() || null;
   const rawSlug = (formData.get('slug') as string)?.trim().toLowerCase() || '';
   const terms = formData.get('terms');
+  const rawPlan = formData.get('plan_code') as string | null;
+  const planCode: 'BASICO' | 'PREMIUM' = rawPlan === 'BASICO' ? 'BASICO' : 'PREMIUM';
 
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
@@ -108,14 +114,14 @@ export async function signupRestaurant(
   }
   const userId = created.user.id;
 
-  // ── 2. Restaurante (en vivo, plan Estándar, onboarding pendiente) ──
+  // ── 2. Restaurante (en vivo, plan elegido, onboarding pendiente) ──
   const { data: restaurant, error: rErr } = await db
     .from('restaurants')
     .insert({
       name,
       slug,
-      plan_actual: 'POPULAR',
-      modules: SIGNUP_MODULES,
+      plan_actual: planCode,
+      modules: planCode === 'BASICO' ? SIGNUP_MODULES_BASICO : SIGNUP_MODULES_PREMIUM,
       status: 'active',
       onboarding_done: false,
       whatsapp_number: whatsapp,
@@ -142,7 +148,7 @@ export async function signupRestaurant(
 
   // ── 4. Cobro pausado con prueba gratis ──────────────────────
   const pricing = await getPricingSettings();
-  const trialDays = Math.max(0, Math.round(pricing.trialDays || 14));
+  const trialDays = Math.max(0, Math.round(pricing.trialDays || 30));
   const trialEnds = new Date(Date.now() + trialDays * 86_400_000).toISOString();
   await db.from('restaurant_billing').insert({
     restaurant_id: restaurantId,
@@ -177,5 +183,5 @@ export async function signupRestaurant(
     // en su panel. La página de éxito lo guía igual.
   }
 
-  redirect(`/registro/listo?slug=${encodeURIComponent(slug)}`);
+  redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
 }

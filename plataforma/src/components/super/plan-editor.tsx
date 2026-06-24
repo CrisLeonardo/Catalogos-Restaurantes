@@ -9,8 +9,7 @@ import {
 } from '@/lib/actions/super-admin';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import type { Restaurant } from '@/types';
-
-type Plan = 'BASICO' | 'POPULAR' | 'PREMIUM';
+import type { PlanCode } from '@/lib/plans';
 
 interface PlanFeatures {
   orders: boolean;
@@ -23,7 +22,6 @@ interface PlanFeatures {
   multi_branch: boolean;
 }
 
-/** Módulos activables que Leogin puede "gestionar" (forzar ON + ocultar del panel). */
 type ManagedModules = Record<string, boolean>;
 
 const FEATURE_KEYS: (keyof PlanFeatures)[] = [
@@ -31,43 +29,49 @@ const FEATURE_KEYS: (keyof PlanFeatures)[] = [
   'promociones', 'personal', 'finanzas', 'multi_branch',
 ];
 
-// El plan estándar (POPULAR) incluye toda la operación. Multi-sucursal (PREMIUM)
-// es lo mismo + varias sucursales. Básico quedó deprecado (no se ofrece).
-const PLAN_PRESETS: Record<'POPULAR' | 'PREMIUM', PlanFeatures> = {
-  POPULAR: {
-    orders: true, whatsapp_notify: true, analitica: true, inventario: true,
-    promociones: true, personal: true, finanzas: true, multi_branch: false,
-  },
-  PREMIUM: {
-    orders: true, whatsapp_notify: true, analitica: true, inventario: true,
-    promociones: true, personal: true, finanzas: true, multi_branch: true,
-  },
+const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
+  BASICO:        { orders: false, whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
+  PREMIUM:       { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  PREMIUM_PRO:   { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  PREMIUM_ULTRA: { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  ALTO_VOLUMEN:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  VARIABLE:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
 };
 
-const PLAN_META: Record<'POPULAR' | 'PREMIUM', { label: string; price: string; sub: string; popular?: boolean }> = {
-  POPULAR: { label: 'Estándar', price: 'Q600', sub: 'experiencia completa · 1 sucursal', popular: true },
-  PREMIUM: { label: 'Multi-sucursal', price: 'Q1,200', sub: '2 sucursales incluidas + extra' },
+const PLAN_META: Record<PlanCode, { label: string; price: string; sub: string; badge?: string }> = {
+  BASICO:        { label: 'Básico',        price: 'Q299',  sub: 'menú digital · sin pedidos' },
+  PREMIUM:       { label: 'Premium',       price: 'Q600',  sub: 'hasta Q20,000 GMV/mes', badge: 'MÁS POPULAR' },
+  PREMIUM_PRO:   { label: 'Premium Pro',   price: 'Q1,000', sub: 'hasta Q40,000 GMV/mes' },
+  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 'Q1,500', sub: 'hasta Q75,000 GMV/mes' },
+  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 'Q2,250', sub: 'hasta Q150,000 GMV/mes' },
+  VARIABLE:      { label: 'Variable',      price: '1% GMV', sub: 'sin tope · mín. Q2,250' },
 };
+
+const ALL_PLANS: PlanCode[] = ['BASICO', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE'];
 
 const FEATURE_LIST: { key: keyof PlanFeatures; label: string; description: string }[] = [
-  { key: 'orders',         label: 'Pedidos en línea',      description: 'Carrito + checkout + estados en tiempo real' },
-  { key: 'whatsapp_notify',label: 'Notificación WhatsApp', description: 'Mensaje wa.me al confirmar pedido' },
-  { key: 'analitica',      label: 'Analítica',             description: 'Horas pico, más vendidos, conversión' },
-  { key: 'inventario',     label: 'Inventario',            description: 'Control de stock y anti-sobreventa' },
-  { key: 'finanzas',       label: 'Finanzas',              description: 'Reportes, corte de caja, exportación' },
-  { key: 'promociones',    label: 'Promociones',           description: 'Cupones y descuentos en checkout' },
-  { key: 'personal',       label: 'Personal',              description: 'Gestión de staff y permisos por sección' },
-  { key: 'multi_branch',   label: 'Multi-sucursal',        description: 'Panel de grupo y selector de sucursal' },
+  { key: 'orders',          label: 'Pedidos en línea',      description: 'Carrito + checkout + estados en tiempo real' },
+  { key: 'whatsapp_notify', label: 'Notificación WhatsApp', description: 'Mensaje wa.me al confirmar pedido' },
+  { key: 'analitica',       label: 'Analítica',             description: 'Horas pico, más vendidos, conversión' },
+  { key: 'inventario',      label: 'Inventario',            description: 'Control de stock y anti-sobreventa' },
+  { key: 'finanzas',        label: 'Finanzas',              description: 'Reportes, corte de caja, exportación' },
+  { key: 'promociones',     label: 'Promociones',           description: 'Cupones y descuentos en checkout' },
+  { key: 'personal',        label: 'Personal',              description: 'Gestión de staff y permisos por sección' },
+  { key: 'multi_branch',    label: 'Multi-sucursal',        description: 'Panel de grupo y selector de sucursal' },
 ];
+
+const VALID_PLANS = new Set<string>(ALL_PLANS);
 
 const empty: SuperState = null;
 
 export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantPlan, empty);
 
-  const initialPlan = (restaurant.plan_actual as Plan) ?? 'POPULAR';
-  const [plan, setPlan] = useState<Plan>(initialPlan);
-  const isLegacyBasico = plan === 'BASICO';
+  const rawPlan = restaurant.plan_actual as string;
+  const initialPlan: PlanCode = VALID_PLANS.has(rawPlan) ? (rawPlan as PlanCode) : 'PREMIUM';
+  const isLegacy = !VALID_PLANS.has(rawPlan);
+
+  const [plan, setPlan] = useState<PlanCode>(initialPlan);
 
   const mod = restaurant.modules as Record<string, boolean | undefined>;
   const [feats, setFeats] = useState<PlanFeatures>({
@@ -81,12 +85,11 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
     multi_branch:    mod.multi_branch === true,
   });
 
-  // Estado de "gestionado por Leogin" para cada módulo activable.
   const [managed, setManaged] = useState<ManagedModules>(
     Object.fromEntries(ACTIVATABLE_MODULES.map((m) => [m.key, mod[m.key] === true])),
   );
 
-  function selectPlan(p: 'POPULAR' | 'PREMIUM') {
+  function selectPlan(p: PlanCode) {
     setPlan(p);
     setFeats(PLAN_PRESETS[p]);
   }
@@ -101,8 +104,8 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
 
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <input type="hidden" name="id"               value={restaurant.id} />
-      <input type="hidden" name="plan_actual"       value={plan} />
+      <input type="hidden" name="id"         value={restaurant.id} />
+      <input type="hidden" name="plan_actual" value={plan} />
       {FEATURE_KEYS.map((k) => (
         <input key={k} type="hidden" name={`feature_${k}`} value={String(feats[k])} />
       ))}
@@ -115,13 +118,13 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
         <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
           Plan
         </p>
-        {isLegacyBasico && (
+        {isLegacy && (
           <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: 12.5 }}>
-            Plan heredado «Básico». Elige <strong>Estándar</strong> o <strong>Multi-sucursal</strong> para actualizarlo.
+            Plan heredado «{rawPlan}». Selecciona el nuevo plan para actualizarlo.
           </div>
         )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['POPULAR', 'PREMIUM'] as const).map((p) => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {ALL_PLANS.map((p) => {
             const active = plan === p;
             const meta = PLAN_META[p];
             return (
@@ -131,8 +134,7 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
                 onClick={() => selectPlan(p)}
                 className="press"
                 style={{
-                  flex: 1,
-                  padding: '12px 8px',
+                  padding: '10px 6px',
                   borderRadius: 'var(--radius-lg)',
                   border: '1.5px solid',
                   borderColor: active ? 'var(--brand-accent)' : 'var(--u-hair)',
@@ -143,23 +145,23 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
                   position: 'relative',
                 }}
               >
-                {meta.popular && (
+                {meta.badge && (
                   <span style={{
-                    position: 'absolute', top: -9, left: '50%', transform: 'translateX(-50%)',
+                    position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: 'var(--brand-accent)', color: '#fff',
-                    fontSize: 9, fontWeight: 700, letterSpacing: '0.05em',
-                    padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap',
+                    fontSize: 8, fontWeight: 700, letterSpacing: '0.05em',
+                    padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
                   }}>
-                    ESTÁNDAR
+                    {meta.badge}
                   </span>
                 )}
-                <div style={{ fontWeight: 700, fontSize: 14, color: active ? 'var(--brand-accent)' : 'var(--u-text-3)', marginBottom: 2 }}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: active ? 'var(--brand-accent)' : 'var(--u-text-3)', marginBottom: 1 }}>
                   {meta.label}
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: active ? 'var(--u-text)' : 'var(--u-text-2)', marginBottom: 2 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: active ? 'var(--u-text)' : 'var(--u-text-2)', marginBottom: 1 }}>
                   {meta.price}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>
+                <div style={{ fontSize: 9, color: 'var(--u-text-4)' }}>
                   {meta.sub}
                 </div>
               </button>
@@ -174,7 +176,6 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
           Incluido en el plan
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {/* Catálogo — siempre activo */}
           <ModuleRow label="Catálogo" description="Menú QR público — siempre activo" enabled locked />
           {FEATURE_LIST.map(({ key, label, description }) => (
             <ModuleRow

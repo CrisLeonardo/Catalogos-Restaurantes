@@ -45,10 +45,21 @@ interface Props {
   permissions?: string[] | null;
   /** El dueño/super admin puede ver la sección Personal. */
   canManageStaff?: boolean;
+  /** Plan actual del restaurante — para mostrar badge en la barra lateral. */
+  planActual?: string | null;
   /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
   preview?: boolean;
   children: React.ReactNode;
 }
+
+const PLAN_COLORS: Record<string, string> = {
+  BASICO: '#94a3b8', PREMIUM: '#6366f1', PREMIUM_PRO: '#a855f7',
+  PREMIUM_ULTRA: '#14b8a6', ALTO_VOLUMEN: '#f97316', VARIABLE: '#f59e0b',
+};
+const PLAN_NAMES: Record<string, string> = {
+  BASICO: 'Básico', PREMIUM: 'Premium', PREMIUM_PRO: 'Premium Pro',
+  PREMIUM_ULTRA: 'Premium Ultra', ALTO_VOLUMEN: 'Alto Volumen', VARIABLE: 'Variable',
+};
 
 export default function AdminShell({
   restaurantName, restaurantId, ordersEnabled = false,
@@ -57,7 +68,7 @@ export default function AdminShell({
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
-  logoUrl, zone, role, permissions, canManageStaff, preview = false, children,
+  logoUrl, zone, role, permissions, canManageStaff, planActual, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
   const [bgVisible, setBgVisible] = useState(true);
@@ -258,6 +269,24 @@ export default function AdminShell({
             );
           })}
         </nav>
+
+        {/* Plan badge — link to /admin/suscripcion, hides its label on mobile bottom bar */}
+        {planActual && !preview && (
+          <Link
+            href="/admin/suscripcion"
+            className="admin-navlink press"
+            data-active="0"
+            style={{ gap: 8, marginBottom: 4 }}
+          >
+            <span style={{
+              width: 9, height: 9, borderRadius: 99, flexShrink: 0,
+              background: PLAN_COLORS[planActual] ?? '#94a3b8',
+            }} />
+            <span className="nav-label" style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
+              Plan {PLAN_NAMES[planActual] ?? planActual}
+            </span>
+          </Link>
+        )}
 
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'rgba(255,255,255,0.1)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
