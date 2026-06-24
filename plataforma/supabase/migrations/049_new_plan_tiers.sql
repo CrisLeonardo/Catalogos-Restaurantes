@@ -1,19 +1,23 @@
 -- 049_new_plan_tiers.sql
 -- Nuevos tiers de planes con límites GMV + trial_days a 30
 
--- 1. Ampliar el CHECK constraint de plan_actual en restaurants
+-- 1. Quitar constraint viejo primero
 ALTER TABLE restaurants DROP CONSTRAINT IF EXISTS restaurants_plan_actual_check;
+
+-- 2. Migrar datos ANTES de añadir el nuevo constraint
+UPDATE restaurants SET plan_actual = 'PREMIUM' WHERE plan_actual = 'POPULAR';
+-- Cualquier otro valor legacy que no esté en la nueva lista → PREMIUM
+UPDATE restaurants
+  SET plan_actual = 'PREMIUM'
+  WHERE plan_actual NOT IN ('BASICO','PREMIUM','PREMIUM_PRO','PREMIUM_ULTRA','ALTO_VOLUMEN','VARIABLE');
+
+-- 3. Ahora que los datos están limpios, añadir el nuevo constraint
 ALTER TABLE restaurants ADD CONSTRAINT restaurants_plan_actual_check
   CHECK (plan_actual IN (
     'BASICO','PREMIUM','PREMIUM_PRO','PREMIUM_ULTRA','ALTO_VOLUMEN','VARIABLE'
   ));
 
--- 2. Migrar planes existentes
-UPDATE restaurants SET plan_actual = 'PREMIUM'      WHERE plan_actual = 'POPULAR';
-UPDATE restaurants SET plan_actual = 'ALTO_VOLUMEN' WHERE plan_actual = 'PREMIUM'
-  AND plan_actual != 'ALTO_VOLUMEN';
-
--- 3. Nuevas claves en platform_settings para los precios de cada plan
+-- 4. Nuevas claves en platform_settings para los precios de cada plan
 INSERT INTO platform_settings (key, value) VALUES
   ('plan_price_BASICO',        '299'),
   ('plan_price_PREMIUM',       '600'),
@@ -37,10 +41,10 @@ DELETE FROM platform_settings WHERE key IN (
   'premium_included_branches'
 );
 
--- 4. Actualizar trial_days a 30 (un mes completo)
+-- 5. Actualizar trial_days a 30 (un mes completo)
 UPDATE platform_settings SET value = '30' WHERE key = 'trial_days';
 
--- 5. Vista helper: GMV del mes actual por restaurante
+-- 6. Vista helper: GMV del mes actual por restaurante
 CREATE OR REPLACE VIEW restaurant_gmv_current_month AS
 SELECT
   restaurant_id,
@@ -55,7 +59,7 @@ GROUP BY restaurant_id;
 
 ALTER VIEW restaurant_gmv_current_month OWNER TO postgres;
 
--- 6. Actualizar la RPC leogin_compute_monthly_fee para nuevos planes
+-- 7. Actualizar la RPC leogin_compute_monthly_fee para nuevos planes
 CREATE OR REPLACE FUNCTION leogin_compute_monthly_fee(p_restaurant_id uuid)
 RETURNS numeric
 LANGUAGE plpgsql SECURITY DEFINER AS $$
