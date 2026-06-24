@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
-import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
+import { resolveModuleContext } from '@/lib/modules-server';
 import { getIngredients, getIngredientUsageCounts } from '@/lib/db/recipes';
 import IngredientPanel from '@/components/admin/ingredient-panel';
 
@@ -13,19 +12,11 @@ export default async function AdminIngredientesPage() {
   if (!ctx) redirect('/admin/login');
   if (!can(ctx.profile.role, ctx.profile.permissions, 'ingredientes')) redirect('/admin/menu');
 
-  let restaurantId: string | null = null;
-
-  if (ctx.profile.role === 'SUPER_ADMIN') {
-    const slug = (await headers()).get('x-tenant-slug');
-    if (slug) {
-      const t = await getRestaurantBySlug(slug);
-      restaurantId = t?.restaurant.id ?? null;
-    }
-  } else {
-    restaurantId = ctx.profile.restaurant_id;
-  }
-
-  if (!restaurantId) redirect('/admin/login');
+  // El módulo de recetas debe estar ACTIVO (entitlement + on del restaurante),
+  // igual que el resto de módulos — no basta con tener el permiso.
+  const mod = await resolveModuleContext('recetas');
+  if (!mod.ok) redirect('/admin/menu');
+  const restaurantId = mod.restaurantId;
 
   const [ingredients, usageCounts] = await Promise.all([
     getIngredients(restaurantId),

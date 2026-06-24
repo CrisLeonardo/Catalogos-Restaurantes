@@ -2,6 +2,9 @@
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { createServiceClient } from '@/lib/supabase/service';
+import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { getIngredients, type Ingredient } from '@/lib/db/recipes';
 import CatalogPanel from '@/components/admin/catalog-panel';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
@@ -27,12 +30,29 @@ export default async function AdminMenuPage() {
 
   const { categories, products } = await getAdminMenu(restaurantId);
 
+  // Módulo de recetas: si está activo, traemos los insumos para que el editor
+  // de platillo permita armar la receta y costear automáticamente.
+  const db = createServiceClient();
+  const { data: rest } = await db
+    .from('restaurants')
+    .select('modules, module_settings')
+    .eq('id', restaurantId)
+    .single();
+  const recetasActive = isModuleActive(
+    rest?.modules as ModulesMap,
+    rest?.module_settings as ModuleSettings,
+    'recetas',
+  );
+  const ingredients: Ingredient[] = recetasActive ? await getIngredients(restaurantId) : [];
+
   return (
     <div className="anim-fade-up">
       <CatalogPanel
         restaurantId={restaurantId}
         categories={categories}
         products={products}
+        ingredients={ingredients}
+        recetasActive={recetasActive}
       />
     </div>
   );

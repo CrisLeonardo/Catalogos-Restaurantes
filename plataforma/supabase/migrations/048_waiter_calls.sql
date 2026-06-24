@@ -35,3 +35,12 @@ create policy "staff can manage waiter_calls"
 create policy "public can insert waiter_call"
   on waiter_calls for insert
   with check (true);
+
+-- Realtime: el panel admin y el mesero reciben las llamadas en vivo.
+-- (Sin esto el canal `waiter_calls` de notifications.tsx nunca dispara.)
+do $$
+begin
+  alter publication supabase_realtime add table waiter_calls;
+exception
+  when duplicate_object then null;
+end $$;

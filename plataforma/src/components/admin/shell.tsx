@@ -11,6 +11,7 @@ import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
+import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
 import { can } from '@/lib/permissions';
 
 const BG_KEY = 'admin-bg-visible';
@@ -35,6 +36,8 @@ interface Props {
   reservacionesActive?: boolean;
   encuestasActive?: boolean;
   cuponesActive?: boolean;
+  /** Módulo "Llamar al mesero" activo → muestra la alerta de llamadas pendientes. */
+  llamadaMeseroActive?: boolean;
   logoUrl?: string | null;
   zone?: string;
   /** Rol y permisos del usuario (para filtrar el nav). */
@@ -53,6 +56,7 @@ export default function AdminShell({
   promocionesEnabled = false, personalEnabled = false, finanzasEnabled = false,
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, encuestasActive = false, cuponesActive = false,
+  llamadaMeseroActive = false,
   logoUrl, zone, role, permissions, canManageStaff, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -297,6 +301,9 @@ export default function AdminShell({
         </div>
         <div className="admin-content">{children}</div>
       </div>
+      {!preview && restaurantId && llamadaMeseroActive && (
+        <WaiterCallsAlert restaurantId={restaurantId} />
+      )}
     </div>
   );
 }

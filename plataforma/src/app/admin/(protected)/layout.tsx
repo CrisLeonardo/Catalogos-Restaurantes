@@ -79,6 +79,7 @@ export default async function AdminProtectedLayout({
   const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
   const cuponesActive = isModuleActive(mod, modSettings, 'cupones');
   const recetasActive = isModuleActive(mod, modSettings, 'recetas');
+  const llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
 
   return (
     <AdminShell
@@ -97,6 +98,7 @@ export default async function AdminProtectedLayout({
       reservacionesActive={reservacionesActive}
       encuestasActive={encuestasActive}
       cuponesActive={cuponesActive}
+      llamadaMeseroActive={llamadaMeseroActive}
       logoUrl={logoUrl}
       zone={zone}
       role={profile.role}

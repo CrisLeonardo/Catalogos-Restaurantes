@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getProductRecipe, type RecipeItem } from '@/lib/db/recipes';
 
 export type ActionResult = { error?: string; ok?: boolean };
 type Resolved = { restaurantId: string } | { error: string };
@@ -92,6 +93,31 @@ export async function deleteIngredient(id: string, formRestaurantId: string): Pr
 // ── Recetas ──────────────────────────────────────────────────
 
 export type RecipeLineInput = { ingredient_id: string; quantity: number };
+
+/**
+ * Carga la receta de un producto (con auth). La usa el modal del catálogo para
+ * traer la receta de forma perezosa al abrir el editor de un platillo existente.
+ */
+export async function getRecipeForProduct(
+  productId: string,
+  formRestaurantId: string,
+): Promise<{ recipe?: RecipeItem[]; error?: string }> {
+  const resolved = await resolveRestaurantId(formRestaurantId);
+  if ('error' in resolved) return { error: resolved.error };
+  const { restaurantId } = resolved;
+
+  const supabase = createServiceClient();
+  const { data: prod } = await supabase
+    .from('products')
+    .select('id')
+    .eq('id', productId)
+    .eq('restaurant_id', restaurantId)
+    .single();
+  if (!prod) return { error: 'Producto no encontrado' };
+
+  const recipe = await getProductRecipe(productId);
+  return { recipe };
+}
 
 export async function saveProductRecipe(
   productId: string,

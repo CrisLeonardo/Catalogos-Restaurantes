@@ -1,32 +1,34 @@
 'use client';
 
-/* Botón flotante "Llamar al mesero" que aparece en el menú QR cuando
-   el módulo está activo. Lee la mesa desde localStorage (guardada al
-   escanear el QR de mesa: ?mesa=N). */
+/* FAB compacto "Llamar al mesero". Solo se renderiza (lo decide menu-client)
+   cuando el módulo está activo Y el comensal escaneó el QR de su mesa.
+   Lee la mesa desde el helper table-session y envía la llamada. */
 
 import { useEffect, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { callWaiter } from '@/lib/actions/waiter-call';
+import { getScannedTable } from '@/lib/table-session';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
-export default function WaiterCallButton({ restaurantId }: { restaurantId: string }) {
+export default function WaiterCallButton({
+  restaurantId,
+  raised = false,
+}: {
+  restaurantId: string;
+  /** Elevar el FAB por encima de la barra del carrito cuando hay pedidos. */
+  raised?: boolean;
+}) {
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    try {
-      // La mesa se guarda cuando el cliente escanea el QR de su mesa (?mesa=N)
-      const stored = localStorage.getItem(`qr-mesa-${restaurantId}`);
-      if (stored) {
-        const n = parseInt(stored, 10);
-        if (n > 0) setTableNumber(n);
-      }
-    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTableNumber(getScannedTable(restaurantId));
   }, [restaurantId]);
 
-  // Resetea el estado después de mostrarlo brevemente
+  // Vuelve a 'idle' tras mostrar el resultado un momento.
   useEffect(() => {
     if (status === 'sent' || status === 'error') {
       const t = setTimeout(() => setStatus('idle'), 3500);
@@ -35,7 +37,7 @@ export default function WaiterCallButton({ restaurantId }: { restaurantId: strin
   }, [status]);
 
   function handleCall() {
-    if (status === 'sending' || isPending) return;
+    if (status === 'sending' || status === 'sent' || isPending) return;
     setStatus('sending');
     startTransition(async () => {
       const res = await callWaiter(restaurantId, tableNumber);
@@ -43,58 +45,62 @@ export default function WaiterCallButton({ restaurantId }: { restaurantId: strin
     });
   }
 
+  const sending = status === 'sending' || isPending;
+  const done = status === 'sent';
+  const failed = status === 'error';
+
   const label =
-    status === 'sending' ? 'Llamando…' :
-    status === 'sent'    ? '¡El mesero ya viene!' :
-    status === 'error'   ? 'No se pudo llamar' :
-    tableNumber          ? `Llamar al mesero · Mesa ${tableNumber}` :
-                           'Llamar al mesero';
+    sending ? 'Llamando…' :
+    done    ? '¡El mesero ya viene!' :
+    failed  ? 'Reintentar' :
+              'Llamar al mesero';
 
   const bg =
-    status === 'sent'  ? 'rgba(74,222,128,0.18)' :
-    status === 'error' ? 'rgba(248,113,113,0.18)' :
-    'var(--surface-2)';
-
+    done   ? 'rgba(74,222,128,0.16)' :
+    failed ? 'rgba(248,113,113,0.16)' :
+             'var(--surface-2, rgba(22,22,24,0.94))';
   const borderColor =
-    status === 'sent'  ? 'rgba(74,222,128,0.4)' :
-    status === 'error' ? 'rgba(248,113,113,0.4)' :
-    'var(--u-hair-2)';
-
-  const textColor =
-    status === 'sent'  ? '#4ade80' :
-    status === 'error' ? '#f87171' :
-    'var(--u-text-2)';
-
-  const iconName =
-    status === 'sent'  ? 'check' :
-    status === 'error' ? 'x' :
-    'bell';
+    done   ? 'rgba(74,222,128,0.45)' :
+    failed ? 'rgba(248,113,113,0.45)' :
+             'var(--u-hair-2)';
+  const color =
+    done   ? '#4ade80' :
+    failed ? '#f87171' :
+             'var(--u-text)';
+  const iconName = done ? 'check' : failed ? 'x' : 'bell';
 
   return (
     <button
       type="button"
       onClick={handleCall}
-      disabled={status === 'sending' || isPending || status === 'sent'}
-      className="press"
+      disabled={sending || done}
+      aria-label={tableNumber ? `Llamar al mesero · mesa ${tableNumber}` : 'Llamar al mesero'}
+      className="press glass-solid"
       style={{
-        display: 'flex',
+        position: 'fixed',
+        right: 16,
+        bottom: raised ? 92 : 24,
+        zIndex: 60,
+        display: 'inline-flex',
         alignItems: 'center',
         gap: 8,
-        width: '100%',
-        padding: '13px 16px',
-        borderRadius: 14,
+        height: 46,
+        padding: '0 16px',
+        borderRadius: 999,
         border: `1px solid ${borderColor}`,
         background: bg,
-        color: textColor,
-        cursor: (status === 'sending' || isPending || status === 'sent') ? 'default' : 'pointer',
-        fontSize: 14,
+        color,
+        fontSize: 13.5,
         fontWeight: 600,
-        transition: 'all 200ms',
-        opacity: (status === 'sending' || isPending) ? 0.7 : 1,
+        cursor: sending || done ? 'default' : 'pointer',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        transition: 'background 220ms, border-color 220ms, color 220ms, bottom 220ms',
+        opacity: sending ? 0.85 : 1,
+        maxWidth: 'calc(100vw - 32px)',
       }}
     >
       <Icon name={iconName} size={18} />
-      {label}
+      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
     </button>
   );
 }

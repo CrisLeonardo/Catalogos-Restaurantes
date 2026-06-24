@@ -249,12 +249,44 @@ Si el cambio incluye **cambios en la base de datos** (nuevas tablas/columnas):
 
 ---
 
+# PARTE 8 — Poner la nube al día (módulos, recetas, llamada al mesero)
+
+El esquema fue creciendo. Si tu Supabase de producción está **atrasado**, aplica
+los paquetes consolidados **en orden**, en el **SQL Editor**:
+
+1. Si estás en la 024 → ejecuta `plataforma/supabase/actualizacion_025_a_036.sql`.
+2. Luego ejecuta `plataforma/supabase/actualizacion_037_a_048.sql`
+   (recetas/ingredientes, framework de **módulos** + columna `module_settings`,
+   FEL, proveedores, lealtad, reservaciones, encuestas, cupones y
+   **llamada al mesero**).
+
+Cada paquete se ejecuta **una sola vez**. Si re-ejecutas y ves
+`policy already exists`, esa parte ya estaba aplicada — puedes ignorarlo.
+
+### Realtime (imprescindible para pedidos y llamada al mesero)
+En **Database → Replication → `supabase_realtime`**, confirma que estén
+publicadas las tablas:
+- `orders` (avisos de pedido nuevo)
+- `waiter_calls` (botón "Llamar al mesero")
+
+La migración 048 intenta agregar `waiter_calls` por SQL; si no quedó, actívala
+ahí manualmente. **Sin Realtime, las alertas no llegan al panel.**
+
+### Activar los módulos por restaurante
+Los módulos NO se encienden solos: desde el **Super Admin → restaurante → Plan**
+concede el entitlement, y el dueño los prende en **/admin/modulos**. Un módulo
+solo funciona si su migración ya está aplicada en la nube.
+
+---
+
 # Checklist final
 
 - [ ] Supabase: claves copiadas
 - [ ] Supabase: `setup_produccion.sql` ejecutado (7 tablas creadas)
+- [ ] Supabase: `actualizacion_025_a_036.sql` y `actualizacion_037_a_048.sql` ejecutados (en orden)
 - [ ] Supabase: bucket `restaurant-assets` existe
 - [ ] Supabase: Realtime en `orders` (solo si venderás Premium)
+- [ ] Supabase: Realtime en `waiter_calls` (módulo Llamar al mesero)
 - [ ] Supabase: Super Admin creado
 - [ ] GitHub: código subido (sin `.env.local`)
 - [ ] Render: Web Service con Root Directory = `plataforma`

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { setScannedTable } from '@/lib/table-session';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import Portada from '@/components/menu/portada';
@@ -31,9 +32,7 @@ interface Props {
 export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, initialMesa, llamadaMeseroEnabled = false }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
-      try {
-        localStorage.setItem(`qr-mesa-${restaurantId}`, String(initialMesa));
-      } catch {}
+      setScannedTable(restaurantId, initialMesa);
     }
   }, [initialMesa, restaurantId]);
 
@@ -44,7 +43,7 @@ export default function MenuShell({ config, content, categories, products, resta
         <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} llamadaMeseroEnabled={llamadaMeseroEnabled} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} />
           </div>
         </main>
         <InstallBanner brandName={config.brandName} />

@@ -15,6 +15,7 @@ import { getLoyaltyRedeemInfo } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
+import { getScannedTable } from '@/lib/table-session';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -79,8 +80,11 @@ export default function CheckoutForm({
   const confirmTitleT  = useText('heading', 'confirmationTitle');
   const { items, total, clearCart } = useCart();
 
+  // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
+  const [hasScannedTable, setHasScannedTable] = useState(false);
+
   const typeOptions = [
-    config.orderTypes.includes('dine_in')  && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
+    config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
     config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
     config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
   ].filter(Boolean) as { id: OrderType; label: string; icon: string }[];
@@ -161,20 +165,15 @@ export default function CheckoutForm({
 
   useEffect(() => {
     if (!config.orderTypes.includes('dine_in')) return;
-    try {
-      const key = `qr-mesa-${restaurantId}`;
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        const n = parseInt(stored, 10);
-        if (n > 0 && n <= config.dineInTableCount) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setType('DINE_IN');
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setTableNumber(n);
-          localStorage.removeItem(key);
-        }
-      }
-    } catch {}
+    // No se borra la mesa al leerla: el botón "Llamar al mesero" también la usa.
+    // Se mantiene mientras el comensal está sentado (la sobrescribe el próximo escaneo).
+    const n = getScannedTable(restaurantId);
+    if (n != null && n <= config.dineInTableCount) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHasScannedTable(true);
+      setType('DINE_IN');
+      setTableNumber(n);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 

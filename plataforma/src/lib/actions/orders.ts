@@ -545,6 +545,15 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     url: '/admin/pedidos',
   }).catch(() => {});
 
+  // Auto-disparo a cocina: la comanda se imprime al instante vía el Agente de
+  // impresión del local (no espera a que alguien confirme NEW→PREP). Best-effort:
+  // no-op si el restaurante no tiene agente/destino de cocina configurado.
+  try {
+    await enqueueKitchenForOrder(restaurantId, order.id);
+  } catch {
+    // No bloquea el pedido del mesero si la impresión falla.
+  }
+
   revalidatePath('/admin/mesero');
   return { success: true, orderId: order.id, orderNumber: order.order_number };
 }

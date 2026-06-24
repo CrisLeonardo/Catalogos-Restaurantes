@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
+import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import AdminShell from '@/components/admin/shell';
 import type { Metadata } from 'next';
 
@@ -48,20 +49,25 @@ export default async function WaiterLayout({ children }: { children: React.React
   let ordersEnabled = false;
   let logoUrl: string | null = null;
   let zone = '';
+  let llamadaMeseroActive = false;
 
   if (tenantSlug) {
     const tenantData = await getRestaurantBySlug(tenantSlug);
     if (!tenantData || tenantData.restaurant.id !== restaurantId) redirect('/');
     restaurantName = tenantData.restaurant.name;
-    const mod = tenantData.restaurant.modules as Record<string, boolean> | null;
+    const mod = tenantData.restaurant.modules as ModulesMap;
+    const modSettings = tenantData.restaurant.module_settings as ModuleSettings;
     ordersEnabled = mod?.['orders'] === true;
+    llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
     zone = tenantData.resolved.config.zone ?? '';
   } else {
-    const { data: r } = await db.from('restaurants').select('name, modules').eq('id', restaurantId).single();
+    const { data: r } = await db.from('restaurants').select('name, modules, module_settings').eq('id', restaurantId).single();
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
-    const mod = r?.modules as Record<string, boolean> | null;
+    const mod = r?.modules as ModulesMap;
+    const modSettings = r?.module_settings as ModuleSettings;
     ordersEnabled = mod?.['orders'] === true;
+    llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
   }
 
   return (
@@ -69,6 +75,7 @@ export default async function WaiterLayout({ children }: { children: React.React
       restaurantName={restaurantName}
       restaurantId={restaurantId}
       ordersEnabled={ordersEnabled}
+      llamadaMeseroActive={llamadaMeseroActive}
       logoUrl={logoUrl}
       zone={zone}
       role={profile.role}

@@ -1,7 +1,30 @@
 'use server';
 
+import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
+export type WaiterCall = {
+  id: string;
+  table_number: number | null;
+  created_at: string;
+};
+
+/** ¿El usuario autenticado pertenece a este restaurante (o es super admin)? */
+async function authorizedFor(restaurantId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const db = createServiceClient();
+  const { data: profile } = await db
+    .from('profiles')
+    .select('role, restaurant_id')
+    .eq('id', user.id)
+    .single();
+  if (!profile) return false;
+  return profile.role === 'SUPER_ADMIN' || profile.restaurant_id === restaurantId;
+}
+
+/** El comensal llama al mesero (público, anónimo). */
 export async function callWaiter(
   restaurantId: string,
   tableNumber: number | null,
@@ -18,8 +41,36 @@ export async function callWaiter(
   return { ok: true };
 }
 
-export async function resolveWaiterCall(callId: string): Promise<{ ok?: boolean; error?: string }> {
+/** Llamadas pendientes (sin resolver) de un restaurante — para el panel. */
+export async function getPendingWaiterCalls(restaurantId: string): Promise<WaiterCall[]> {
+  if (!restaurantId) return [];
+  if (!(await authorizedFor(restaurantId))) return [];
+
   const db = createServiceClient();
+  const { data, error } = await db
+    .from('waiter_calls')
+    .select('id, table_number, created_at')
+    .eq('restaurant_id', restaurantId)
+    .is('resolved_at', null)
+    .order('created_at', { ascending: true });
+
+  if (error) return [];
+  return (data ?? []) as WaiterCall[];
+}
+
+/** Marca una llamada como atendida (solo staff/dueño del restaurante). */
+export async function resolveWaiterCall(callId: string): Promise<{ ok?: boolean; error?: string }> {
+  if (!callId) return { error: 'Llamada no especificada.' };
+
+  const db = createServiceClient();
+  const { data: call } = await db
+    .from('waiter_calls')
+    .select('restaurant_id')
+    .eq('id', callId)
+    .single();
+  if (!call) return { error: 'Llamada no encontrada.' };
+  if (!(await authorizedFor(call.restaurant_id as string))) return { error: 'No autorizado.' };
+
   const { error } = await db
     .from('waiter_calls')
     .update({ resolved_at: new Date().toISOString() })

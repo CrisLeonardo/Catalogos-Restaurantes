@@ -11,6 +11,7 @@ import { compressImage } from '@/components/admin/image-upload';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
+import RecipeEditor from '@/components/admin/recipe-editor';
 import {
   createProductModal,
   updateProductModal,
@@ -19,7 +20,9 @@ import {
   deleteProduct,
   type ProductModalState,
 } from '@/lib/actions/products';
+import { getRecipeForProduct } from '@/lib/actions/recipes';
 import type { Category, Product, ProductOptionGroup } from '@/types';
+import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
 
 /* ── constantes ───────────────────────────────────────────── */
 
@@ -78,9 +81,13 @@ interface Props {
   restaurantId: string;
   categories: Category[];
   products: Product[];
+  /** Insumos del restaurante (solo si el módulo de recetas está activo). */
+  ingredients?: Ingredient[];
+  /** ¿El módulo de recetas/ingredientes está activo? */
+  recetasActive?: boolean;
 }
 
-export default function CatalogPanel({ restaurantId, categories, products }: Props) {
+export default function CatalogPanel({ restaurantId, categories, products, ingredients = [], recetasActive = false }: Props) {
   const [activeCat, setActiveCat] = useState<string>('todos');
   const [editor, setEditor] = useState<{ open: boolean; product: Product | null }>({
     open: false,
@@ -310,6 +317,8 @@ export default function CatalogPanel({ restaurantId, categories, products }: Pro
           categories={categories}
           product={editor.product}
           catIconMap={catIconMap}
+          ingredients={ingredients}
+          recetasActive={recetasActive}
           onClose={closeEditor}
           onSaved={handleSaved}
         />
@@ -325,6 +334,8 @@ function ProductModal({
   categories,
   product,
   catIconMap,
+  ingredients = [],
+  recetasActive = false,
   onClose,
   onSaved,
 }: {
@@ -332,6 +343,8 @@ function ProductModal({
   categories: Category[];
   product: Product | null;
   catIconMap: Map<string, string>;
+  ingredients?: Ingredient[];
+  recetasActive?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -356,10 +369,35 @@ function ProductModal({
   const [uploading,    setUploading]    = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Receta (solo platillos existentes): se carga perezosamente al abrir el modal.
+  const showRecipe = recetasActive && !isNew;
+  const [recipe,       setRecipe]       = useState<RecipeItem[] | null>(null);
+  const [recipeLoading, setRecipeLoading] = useState<boolean>(showRecipe);
+  // null = costo manual; número = costo calculado desde la receta.
+  const [recipeCost,   setRecipeCost]   = useState<number | null>(null);
+  const hasRecipe = recipeCost !== null;
+  const displayCost = hasRecipe ? recipeCost.toFixed(2) : costVal;
+
   useEffect(() => {
     if (state && 'success' in state) onSaved();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  // Carga perezosa de la receta del platillo al abrir el editor.
+  useEffect(() => {
+    if (!showRecipe || !product) return;
+    let cancelled = false;
+    (async () => {
+      const res = await getRecipeForProduct(product.id, restaurantId);
+      if (cancelled) return;
+      const lines = res.recipe ?? [];
+      setRecipe(lines);
+      setRecipeCost(lines.length > 0 ? lines.reduce((acc, l) => acc + l.line_cost, 0) : null);
+      setRecipeLoading(false);
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRecipe, product?.id, restaurantId]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -646,27 +684,36 @@ function ProductModal({
                 <div>
                   <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
                     Costo (Q)
+                    {hasRecipe && (
+                      <span style={{ color: 'var(--brand-accent)', marginLeft: 6, fontSize: 9, fontWeight: 600 }}>
+                        DESDE RECETA
+                      </span>
+                    )}
                   </label>
                   <input
                     name="cost"
                     type="number"
                     min="0"
                     step="0.01"
-                    value={costVal}
-                    onChange={(e) => setCostVal(e.target.value)}
+                    value={hasRecipe ? displayCost : costVal}
+                    onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
+                    readOnly={hasRecipe}
                     placeholder="0.00"
+                    title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
                     style={{
                       width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
                       fontSize: 14, color: 'var(--u-text)',
                       background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
                       fontFamily: 'var(--ui-font-mono)',
+                      opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text',
                     }}
                   />
                 </div>
               </div>
               {(() => {
                 const p = parseFloat(priceVal);
-                const c = parseFloat(costVal);
+                const c = hasRecipe ? (recipeCost as number) : parseFloat(costVal);
+                const costKnown = hasRecipe || (costVal.trim() !== '' && !isNaN(c));
                 const comboDelta = options
                   .filter((g) => g.type === 'combo')
                   .reduce((sum, g) => sum + g.choices.reduce((s, ch) => s + (Number(ch.priceDelta) || 0), 0), 0);
@@ -683,7 +730,7 @@ function ProductModal({
                         <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: '#4ade80' }}>= Q{totalPrice.toFixed(2)}</span>
                       </div>
                     )}
-                    {!isNaN(p) && !isNaN(c) && costVal.trim() !== '' && (
+                    {!isNaN(p) && costKnown && (
                       <div style={{ display: 'flex', gap: 16, fontSize: 12.5 }}>
                         <span style={{ color: 'var(--u-text-3)' }}>
                           Utilidad: <strong style={{ color: p - c >= 0 ? 'var(--u-text)' : '#f87171' }}>Q{(p - c).toFixed(2)}</strong>
@@ -693,7 +740,7 @@ function ProductModal({
                         </span>
                       </div>
                     )}
-                    {(isNaN(c) || costVal.trim() === '') && comboDelta === 0 && (
+                    {!costKnown && comboDelta === 0 && (
                       <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
                         Captura el costo para ver utilidad y margen por venta.
                       </span>
@@ -702,6 +749,39 @@ function ProductModal({
                 );
               })()}
             </div>
+
+            {/* Receta / costeo por ingrediente (solo platillos existentes, módulo activo) */}
+            {showRecipe && (
+              <div style={{ borderRadius: 13, padding: '14px 15px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--u-hair)' }}>
+                <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 4 }}>
+                  Receta
+                  <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--u-text-4)' }}>
+                    · define ingredientes y el costo se calcula solo
+                  </span>
+                </label>
+                {recipeLoading ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '10px 0' }}>Cargando receta…</div>
+                ) : (
+                  <RecipeEditor
+                    productId={product!.id}
+                    restaurantId={restaurantId}
+                    ingredients={ingredients}
+                    initialRecipe={recipe ?? []}
+                    onCostChange={setRecipeCost}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Nota de receta para platillos nuevos */}
+            {recetasActive && isNew && (
+              <div style={{ borderRadius: 13, padding: '11px 14px', display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--u-hair)' }}>
+                <Icon name="flask" size={15} />
+                <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+                  Guarda el platillo y vuelve a abrirlo para asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes.
+                </p>
+              </div>
+            )}
 
             {/* Descripción */}
             <div>

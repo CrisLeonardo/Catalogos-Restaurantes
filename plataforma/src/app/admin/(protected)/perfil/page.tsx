@@ -140,7 +140,7 @@ export default async function AdminPerfilPage({
         icon="print"
         storageKey="perfil-impresion"
         defaultOpen={false}
-        subtitle="Configura la impresión de comandas y recibos. El Agente Leogin (recomendado) imprime desde cualquier dispositivo y se configura una sola vez; abajo quedan QZ Tray y USB como alternativas."
+        subtitle="Configura la impresión de comandas y recibos. El Agente Leogin (recomendado) imprime desde cualquier dispositivo y se configura una sola vez; abajo queda la impresión por USB o navegador como alternativa."
       >
         <PrintAgentSettings />
         <div style={{ height: 16 }} />
