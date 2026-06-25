@@ -28,8 +28,19 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
 
 function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: string }) {
   const [downloading, setDownloading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const tableUrl = `${menuUrl}?mesa=${tableNumber}`;
   const qrSrc = `/api/qr?url=${encodeURIComponent(tableUrl)}`;
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(tableUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback: seleccionar texto
+    }
+  }
 
   async function downloadPng() {
     setDownloading(true);
@@ -87,25 +98,63 @@ function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: s
         <img src={qrSrc} alt={`Mesa ${tableNumber}`} width={96} height={96} style={{ display: 'block' }} />
       </div>
       <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)' }}>Mesa {tableNumber}</span>
-      <button
-        onClick={downloadPng}
-        disabled={downloading}
-        className="press"
+
+      {/* Enlace para NFC */}
+      <div
+        title={tableUrl}
         style={{
-          padding: '5px 11px',
-          borderRadius: 99,
-          border: '1px solid var(--u-hair-2)',
-          background: 'transparent',
-          color: 'var(--u-text-3)',
-          fontSize: 11,
-          fontWeight: 600,
-          cursor: downloading ? 'wait' : 'pointer',
-          opacity: downloading ? 0.6 : 1,
-          whiteSpace: 'nowrap',
+          fontSize: 9.5,
+          color: 'var(--u-text-4)',
+          wordBreak: 'break-all',
+          textAlign: 'center',
+          lineHeight: 1.4,
+          maxWidth: 120,
+          cursor: 'text',
+          userSelect: 'all',
         }}
       >
-        {downloading ? '…' : '↓ PNG'}
-      </button>
+        {tableUrl}
+      </div>
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          onClick={copyLink}
+          className="press"
+          style={{
+            padding: '5px 11px',
+            borderRadius: 99,
+            border: '1px solid var(--u-hair-2)',
+            background: copied ? 'rgba(74,222,128,0.15)' : 'transparent',
+            color: copied ? '#4ade80' : 'var(--u-text-3)',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'background 200ms, color 200ms',
+          }}
+        >
+          {copied ? '✓ Copiado' : 'Copiar'}
+        </button>
+        <button
+          onClick={downloadPng}
+          disabled={downloading}
+          className="press"
+          style={{
+            padding: '5px 11px',
+            borderRadius: 99,
+            border: '1px solid var(--u-hair-2)',
+            background: 'transparent',
+            color: 'var(--u-text-3)',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: downloading ? 'wait' : 'pointer',
+            opacity: downloading ? 0.6 : 1,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {downloading ? '…' : '↓ PNG'}
+        </button>
+      </div>
     </div>
   );
 }
