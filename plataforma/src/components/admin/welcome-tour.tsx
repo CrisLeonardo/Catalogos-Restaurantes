@@ -198,14 +198,13 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
 
       {/* Bubble */}
       <div
+        className="glass-solid"
         style={{
           ...bubbleStyle,
           zIndex: 9998,
-          background: 'var(--surface-1, #181a27)',
-          border: '1px solid var(--u-hair)',
           borderRadius: 18,
           padding: '20px 20px 16px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -292,7 +291,8 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
               style={{
                 border: 'none', cursor: 'pointer', borderRadius: 10,
                 padding: '8px 18px', fontSize: 12.5, fontWeight: 700,
-                background: 'var(--brand-accent, #6366f1)', color: '#fff',
+                background: 'var(--brand-accent, #6366f1)',
+                color: 'var(--brand-on-accent, #fff)',
                 display: 'flex', alignItems: 'center', gap: 5,
               }}
             >
