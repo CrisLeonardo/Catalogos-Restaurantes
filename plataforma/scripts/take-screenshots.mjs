@@ -1,11 +1,14 @@
 /**
  * take-screenshots.mjs
- * Toma capturas automáticas del panel admin de Bistró La Plaza
- * y las guarda en public/tutorial/screenshots/ con la convención
- * {sectionId}-paso{N}.png
+ * Retoma capturas del panel admin para las secciones que tenían el overlay del
+ * tour de bienvenida superpuesto. Solo reemplaza las imágenes afectadas.
+ *
+ * Secciones que NO se tocan (ya están bien):
+ *   cocina, cupones, encuestas, fel, loyalty, meseros, personal,
+ *   primeros-pasos, promociones, qr, recetas
  *
  * Uso: node scripts/take-screenshots.mjs
- * Requiere: dev server corriendo en bistro-la-plaza.localhost:3000
+ * Requiere: npm run dev corriendo en otra terminal (puerto 3000)
  */
 
 import { chromium } from 'playwright';
@@ -15,9 +18,9 @@ import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SS_DIR = path.join(__dirname, '..', 'public', 'tutorial', 'screenshots');
-const BASE = 'http://bistro-la-plaza.localhost:3000';
-const EMAIL = 'owner@bistroplaza.com';
-const PASS  = 'Demo1234!';
+const BASE = 'http://127.0.0.1:3000';
+const EMAIL = 'dueno@azucarnegra.test';
+const PASS  = 'Dueno12345';
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
@@ -41,60 +44,52 @@ async function expandSidebar(page) {
 
 // Navega a una ruta y espera que cargue
 async function goto(page, path) {
-  await page.goto(`${BASE}${path}`);
-  await page.waitForLoadState('domcontentloaded');
-  await delay(1200); // espera animaciones
+  await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await delay(1500); // espera animaciones y renders
 }
 
 async function run() {
   fs.mkdirSync(SS_DIR, { recursive: true });
 
   const browser = await chromium.launch({
-    headless: false,
-    channel: 'chrome',
-    args: ['--window-size=1280,900'],
+    headless: true,
+    args: ['--no-sandbox', '--disable-web-security'],
   });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
 
-  // ── LOGIN ────────────────────────────────────────────────
-  console.log('\n[ primeros-pasos ]');
-  await goto(page, '/admin/login');
-  await shot(page, 'primeros-pasos-paso1.png');   // pantalla de login
+  // Silenciar errores JS de la app (hot-reload, etc.)
+  page.on('console', () => {});
+  page.on('pageerror', () => {});
 
-  // Inicia sesión
+  // ── LOGIN ────────────────────────────────────────────────
+  console.log('\n[ login ]');
+  await goto(page, '/admin/login');
+
   await page.fill('input[type="email"]', EMAIL);
   await page.fill('input[type="password"]', PASS);
   await page.click('button[type="submit"]');
-  try { await page.waitForURL(`${BASE}/admin`, { timeout: 8000 }); } catch {}
+  try { await page.waitForURL(`${BASE}/admin/**`, { timeout: 12000 }); } catch {}
   await page.waitForLoadState('domcontentloaded');
   await delay(1500);
 
-  // Marca el tour como completado para que no interfiera con clics
+  // Marca el tour como completado para que no interfiera con ninguna navegación
   await page.evaluate(() => localStorage.setItem('leogin_tour_completed', 'true'));
-  // Si hay un overlay del tour activo, lo cierra con Escape
   await page.keyboard.press('Escape');
   await delay(300);
+  console.log('  ✅ Sesión iniciada, tour descartado');
 
-  // ── PRIMEROS PASOS ───────────────────────────────────────
-  await shot(page, 'primeros-pasos-paso2.png');   // dashboard
-
-  // Asegura sidebar expandida para paso 3
-  await expandSidebar(page);
-  await delay(500);
-  await shot(page, 'primeros-pasos-paso3.png');   // sidebar con grupos
-
-  // Scroll al fondo del sidebar para ver el badge del plan
-  await page.evaluate(() => {
-    const nav = document.querySelector('nav, aside, [class*="sidebar"]');
-    if (nav) nav.scrollTop = nav.scrollHeight;
-  });
-  await delay(400);
-  await shot(page, 'primeros-pasos-paso4.png');   // badge del plan
+  // Helper: navega y vuelve a descartar el tour por si acaso
+  const safeGoto = async (path) => {
+    await goto(page, path);
+    await page.evaluate(() => localStorage.setItem('leogin_tour_completed', 'true'));
+    // Espera brevemente por si el tour apareció y luego se quita
+    await delay(100);
+  };
 
   // ── PERFIL ───────────────────────────────────────────────
   console.log('\n[ perfil ]');
-  await goto(page, '/admin/perfil');
+  await safeGoto('/admin/perfil');
   await shot(page, 'perfil-paso1.png');           // formulario arriba
 
   await page.evaluate(() => window.scrollBy(0, 350));
@@ -111,12 +106,12 @@ async function run() {
 
   // ── CATÁLOGO ─────────────────────────────────────────────
   console.log('\n[ catalogo ]');
-  await goto(page, '/admin/menu');
+  await safeGoto('/admin/menu');
   await shot(page, 'catalogo-paso1.png');         // vista del catálogo
 
   // Abre formulario de nuevo producto
   const btnNuevo = page.locator('button, a').filter({ hasText: /nuevo producto/i }).first();
-  if (await btnNuevo.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await btnNuevo.isVisible({ timeout: 3000 }).catch(() => false)) {
     await btnNuevo.click();
     await delay(1200);
     await shot(page, 'catalogo-paso2.png');       // formulario nuevo producto
@@ -131,24 +126,25 @@ async function run() {
     await page.goBack();
     await page.waitForLoadState('domcontentloaded');
     await delay(1000);
+    await page.evaluate(() => localStorage.setItem('leogin_tour_completed', 'true'));
   } else {
-    // Si no encontró el botón, copia capturas del catálogo
+    // Si no encontró el botón, usa capturas de la misma vista del catálogo
     await shot(page, 'catalogo-paso2.png');
     await shot(page, 'catalogo-paso3.png');
     await shot(page, 'catalogo-paso4.png');
   }
 
-  await goto(page, '/admin/menu');
+  await safeGoto('/admin/menu');
   await shot(page, 'catalogo-paso5.png');         // toggles de disponibilidad
   await shot(page, 'catalogo-paso6.png');         // íconos de arrastre (misma vista)
 
   // ── CATEGORÍAS ───────────────────────────────────────────
   console.log('\n[ categorias ]');
-  await goto(page, '/admin/categorias');
+  await safeGoto('/admin/categorias');
   await shot(page, 'categorias-paso1.png');       // lista de categorías
 
   const btnNuevaCat = page.locator('button, a').filter({ hasText: /nueva categor/i }).first();
-  if (await btnNuevaCat.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await btnNuevaCat.isVisible({ timeout: 3000 }).catch(() => false)) {
     await btnNuevaCat.click();
     await delay(1000);
     await shot(page, 'categorias-paso2.png');     // modal nueva categoría
@@ -163,8 +159,8 @@ async function run() {
 
   // ── PERSONALIZAR ─────────────────────────────────────────
   console.log('\n[ personalizar ]');
-  await goto(page, '/admin/personalizacion');
-  await delay(1500);                              // espera la vista previa
+  await safeGoto('/admin/personalizacion');
+  await delay(1500);                              // espera la vista previa en tiempo real
   await shot(page, 'personalizar-paso1.png');     // panel con preview
 
   await page.evaluate(() => window.scrollBy(0, 200));
@@ -187,17 +183,9 @@ async function run() {
   await delay(400);
   await shot(page, 'personalizar-paso6.png');     // botón guardar visible
 
-  // ── QR ───────────────────────────────────────────────────
-  console.log('\n[ qr ]');
-  await goto(page, '/admin/qr');
-  await shot(page, 'qr-paso1.png');              // código QR y enlace
-  await shot(page, 'qr-paso2.png');              // botón descargar
-  await shot(page, 'qr-paso3.png');              // misma vista (probar escaneo es manual)
-  await shot(page, 'qr-paso4.png');              // idem (tips de colocación)
-
   // ── MÉTRICAS ─────────────────────────────────────────────
   console.log('\n[ metricas ]');
-  await goto(page, '/admin/metricas');
+  await safeGoto('/admin/metricas');
   await shot(page, 'metricas-paso1.png');         // panel de visitas
 
   await page.evaluate(() => window.scrollBy(0, 300));
@@ -208,46 +196,59 @@ async function run() {
   await delay(400);
   await shot(page, 'metricas-paso3.png');         // productos más vistos
 
-  // ── POPULAR: PEDIDOS ─────────────────────────────────────
+  // ── CONFIGURAR PEDIDOS ────────────────────────────────────
   console.log('\n[ pedidos ]');
-  await goto(page, '/admin/pedidos');
+  await safeGoto('/admin/pedidos');
   await delay(500);
-  await shot(page, 'pedidos-paso1.png');
-  await shot(page, 'pedidos-paso2.png');
-  await shot(page, 'pedidos-paso3.png');
-  await shot(page, 'pedidos-paso4.png');
-  await shot(page, 'pedidos-paso5.png');
+  await shot(page, 'pedidos-paso1.png');          // panel de módulos/pedidos
+  await shot(page, 'pedidos-paso2.png');          // tipos de orden
+  await shot(page, 'pedidos-paso3.png');          // tarifa de envío
+  await shot(page, 'pedidos-paso4.png');          // pausar pedidos
+  await shot(page, 'pedidos-paso5.png');          // notificaciones
 
-  // ── PANEL DE PEDIDOS ─────────────────────────────────────
+  // ── PANEL DE PEDIDOS EN TIEMPO REAL ──────────────────────
   console.log('\n[ panel-pedidos ]');
-  await goto(page, '/admin/pedidos');
-  await shot(page, 'panel-pedidos-paso1.png');
+  await safeGoto('/admin/pedidos');
+  await shot(page, 'panel-pedidos-paso1.png');    // vista en tiempo real
   await page.evaluate(() => window.scrollBy(0, 300));
   await delay(300);
-  await shot(page, 'panel-pedidos-paso2.png');
-  await shot(page, 'panel-pedidos-paso3.png');
-  await shot(page, 'panel-pedidos-paso4.png');
-  await shot(page, 'panel-pedidos-paso5.png');
+  await shot(page, 'panel-pedidos-paso2.png');    // avanzar estado
+  await shot(page, 'panel-pedidos-paso3.png');    // detalle del pedido
+  await shot(page, 'panel-pedidos-paso4.png');    // imprimir
+  // Intenta click en tab historial
+  const histTab = page.locator('[role="tab"], button').filter({ hasText: /historial/i }).first();
+  if (await histTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await histTab.click(); await delay(500);
+  }
+  await shot(page, 'panel-pedidos-paso5.png');    // historial
 
   // ── INVENTARIO ───────────────────────────────────────────
   console.log('\n[ inventario ]');
-  await goto(page, '/admin/inventario');
+  await safeGoto('/admin/inventario');
   await shot(page, 'inventario-paso1.png');
   await shot(page, 'inventario-paso2.png');
+  await page.evaluate(() => window.scrollBy(0, 200));
+  await delay(300);
   await shot(page, 'inventario-paso3.png');
   await shot(page, 'inventario-paso4.png');
 
   // ── ANALÍTICA ────────────────────────────────────────────
   console.log('\n[ analitica ]');
-  await goto(page, '/admin/analitica');
+  await safeGoto('/admin/analitica');
   await shot(page, 'analitica-paso1.png');
-  await shot(page, 'analitica-paso2.png');
-  await shot(page, 'analitica-paso3.png');
-  await shot(page, 'analitica-paso4.png');
+  // Intenta navegar entre tabs de analítica
+  const analiticaTabs = [/más vendidos|vendidos/i, /cancelac/i, /tiemp/i];
+  for (let i = 0; i < analiticaTabs.length; i++) {
+    const tab = page.locator('[role="tab"], button, a').filter({ hasText: analiticaTabs[i] }).first();
+    if (await tab.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await tab.click(); await delay(500);
+    }
+    await shot(page, `analitica-paso${i + 2}.png`);
+  }
 
   // ── FINANZAS ─────────────────────────────────────────────
   console.log('\n[ finanzas ]');
-  await goto(page, '/admin/finanzas');
+  await safeGoto('/admin/finanzas');
   await shot(page, 'finanzas-paso1.png');
   await page.evaluate(() => window.scrollBy(0, 300));
   await delay(300);
@@ -262,71 +263,19 @@ async function run() {
 
   // ── CLIENTES ─────────────────────────────────────────────
   console.log('\n[ clientes ]');
-  await goto(page, '/admin/clientes');
+  await safeGoto('/admin/clientes');
   await shot(page, 'clientes-paso1.png');
+  await page.evaluate(() => window.scrollBy(0, 200));
+  await delay(300);
   await shot(page, 'clientes-paso2.png');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await delay(300);
   await shot(page, 'clientes-paso3.png');
-
-  // ── PROMOCIONES ──────────────────────────────────────────
-  console.log('\n[ promociones ]');
-  await goto(page, '/admin/promociones');
-  await shot(page, 'promociones-paso1.png');
-  const btnPromo = page.locator('button, a').filter({ hasText: /nueva promoci/i }).first();
-  if (await btnPromo.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await btnPromo.click(); await delay(1000);
-    await shot(page, 'promociones-paso2.png');
-    await page.keyboard.press('Escape'); await delay(300);
-  } else { await shot(page, 'promociones-paso2.png'); }
-  await shot(page, 'promociones-paso3.png');
-  await shot(page, 'promociones-paso4.png');
-
-  // ── PERSONAL ─────────────────────────────────────────────
-  console.log('\n[ personal ]');
-  await goto(page, '/admin/personal');
-  await shot(page, 'personal-paso1.png');
-  await shot(page, 'personal-paso2.png');
-  await shot(page, 'personal-paso3.png');
-  await shot(page, 'personal-paso4.png');
-  await shot(page, 'personal-paso5.png');
-
-  // ── COCINA (KDS) ─────────────────────────────────────────
-  console.log('\n[ cocina ]');
-  await goto(page, '/admin/cocina');
-  await shot(page, 'cocina-paso1.png');
-  await shot(page, 'cocina-paso2.png');
-  await shot(page, 'cocina-paso3.png');
-  await shot(page, 'cocina-paso4.png');
-  await shot(page, 'cocina-paso5.png');
-
-  // ── MESEROS ──────────────────────────────────────────────
-  console.log('\n[ meseros ]');
-  await goto(page, '/admin/mesero');
-  await shot(page, 'meseros-paso1.png');
-  await shot(page, 'meseros-paso2.png');
-  await shot(page, 'meseros-paso3.png');
-  await shot(page, 'meseros-paso4.png');
-  await shot(page, 'meseros-paso5.png');
-
-  // ── LEALTAD ──────────────────────────────────────────────
-  console.log('\n[ loyalty ]');
-  await goto(page, '/admin/lealtad');
-  await shot(page, 'loyalty-paso1.png');
-  await shot(page, 'loyalty-paso2.png');
-  await shot(page, 'loyalty-paso3.png');
-  await shot(page, 'loyalty-paso4.png');
-  await shot(page, 'loyalty-paso5.png');
-  await shot(page, 'loyalty-paso6.png');
-
-  // ── RECETAS ──────────────────────────────────────────────
-  console.log('\n[ recetas ]');
-  await goto(page, '/admin/ingredientes');
-  await shot(page, 'recetas-paso1.png');
-  await shot(page, 'recetas-paso2.png');
-  await shot(page, 'recetas-paso3.png');
-  await shot(page, 'recetas-paso4.png');
 
   await browser.close();
   console.log(`\n🎉 Listo! ${saved} capturas guardadas en public/tutorial/screenshots/`);
+  console.log('   (Secciones NO modificadas: cocina, cupones, encuestas, fel, loyalty,');
+  console.log('    meseros, personal, primeros-pasos, promociones, qr, recetas)');
 }
 
 run().catch(e => { console.error('\n❌', e.message); process.exit(1); });
