@@ -30,6 +30,7 @@ export const ADMIN_SECTIONS = [
   { key: 'perfil',       label: 'Perfil' },
   { key: 'mesas',        label: 'Mesas' },
   { key: 'qr',           label: 'QR' },
+  { key: 'ayuda',        label: 'Centro de ayuda' },
   { key: 'soporte',      label: 'Soporte' },
 ] as const;
 

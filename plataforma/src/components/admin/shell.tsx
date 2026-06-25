@@ -12,6 +12,8 @@ import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
+import WelcomeTour from '@/components/admin/welcome-tour';
+import HelpButton from '@/components/admin/help-button';
 import { can } from '@/lib/permissions';
 
 const BG_KEY = 'admin-bg-visible';
@@ -153,8 +155,9 @@ export default function AdminShell({
         { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle',   key: 'personalizar' },
         { href: '/admin/perfil',        label: 'Perfil',         icon: 'user',      key: 'perfil'      },
         ...(showStaff && on(personalEnabled) ? [{ href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }] : []),
-        { href: '/admin/qr',            label: 'QR',             icon: 'image',     key: 'qr'          },
-        { href: '/admin/soporte',       label: 'Soporte',        icon: 'helpCircle', key: 'soporte'     },
+        { href: '/admin/qr',            label: 'QR',             icon: 'image',      key: 'qr'          },
+        { href: '/admin/ayuda',         label: 'Ayuda',          icon: 'helpCircle', key: 'ayuda'       },
+        { href: '/admin/soporte',       label: 'Soporte',        icon: 'headphones', key: 'soporte'     },
       ],
     },
   ]
@@ -180,6 +183,7 @@ export default function AdminShell({
     '/admin/menu': 'Catálogo',
     '/admin/perfil': 'Perfil',
     '/admin/qr': 'Código QR',
+    '/admin/ayuda': 'Centro de ayuda',
     '/admin/soporte': 'Soporte',
     '/admin/reservaciones': 'Reservaciones',
     '/admin/encuestas': 'Encuestas',
@@ -190,6 +194,32 @@ export default function AdminShell({
   const title = pathname === '/admin'
     ? 'Inicio'
     : Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
+
+  const HELP_SECTIONS: Record<string, string> = {
+    '/admin/menu':             'catalogo',
+    '/admin/categorias':       'categorias',
+    '/admin/pedidos':          'panel-pedidos',
+    '/admin/inventario':       'inventario',
+    '/admin/analitica':        'analitica',
+    '/admin/finanzas':         'finanzas',
+    '/admin/clientes':         'clientes',
+    '/admin/promociones':      'promociones',
+    '/admin/personal':         'personal',
+    '/admin/cocina':           'cocina',
+    '/admin/mesero':           'meseros',
+    '/admin/personalizacion':  'personalizar',
+    '/admin/qr':               'qr',
+    '/admin/perfil':           'perfil',
+    '/admin/metricas':         'metricas',
+    '/admin/lealtad':          'loyalty',
+    '/admin/facturacion':      'fel',
+    '/admin/proveedores':      'proveedores',
+    '/admin/encuestas':        'encuestas',
+    '/admin/reservaciones':    'reservaciones',
+    '/admin/cupones':          'cupones',
+    '/admin/ingredientes':     'recetas',
+  };
+  const helpSection = Object.entries(HELP_SECTIONS).find(([p]) => pathname.startsWith(p))?.[1] ?? null;
 
   const isLive = pathname.startsWith('/admin/pedidos');
   const isWaiter = pathname.startsWith('/admin/mesero');
@@ -207,14 +237,14 @@ export default function AdminShell({
     const active = pathname.startsWith(n.href);
     if (preview) {
       return (
-        <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} style={{ cursor: 'default' }}>
+        <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={n.key} style={{ cursor: 'default' }}>
           <Icon name={n.icon} size={18} />
           <span className="nav-label">{n.label}</span>
         </div>
       );
     }
     return (
-      <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'}>
+      <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={n.key}>
         <Icon name={n.icon} size={18} />
         <span className="nav-label">{n.label}</span>
       </Link>
@@ -251,7 +281,7 @@ export default function AdminShell({
 
         {/* Nav: secciones colapsables en escritorio; barra inferior scrollable en móvil.
             data-collapsed oculta los links (solo ≥821px vía CSS) sin afectar la tab bar. */}
-        <nav className="admin-nav">
+        <nav className="admin-nav" data-tour-step="nav">
           {sections.map((s) => {
             const isCollapsed = !!collapsed[s.title];
             const hasActive = s.items.some((it) => pathname.startsWith(it.href));
@@ -308,6 +338,7 @@ export default function AdminShell({
       <div className="admin-main">
         <div className="admin-topbar">
           <h1 className="t-display" style={{ fontSize: 22, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
+          {!preview && helpSection && <HelpButton section={helpSection} />}
           {isLive && (
             <span className="glass-quiet admin-live" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 99, fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>
               <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--u-text)', boxShadow: '0 0 8px var(--u-text)', animation: 'pulse-ring 2s infinite' }} /> En vivo
@@ -336,6 +367,7 @@ export default function AdminShell({
       {!preview && restaurantId && llamadaMeseroActive && (
         <WaiterCallsAlert restaurantId={restaurantId} />
       )}
+      <WelcomeTour restaurantName={restaurantName} preview={preview} />
     </div>
   );
 }
