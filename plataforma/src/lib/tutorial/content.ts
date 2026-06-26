@@ -33,9 +33,9 @@ export interface TutorialSectionDef {
 
 export function getPlanLevelNum(plan: string | null): number {
   if (!plan) return 1;
-  if (['PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN'].includes(plan)) return 3;
-  if (plan === 'POPULAR') return 2;
-  return 1;
+  if (['PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE'].includes(plan)) return 3;
+  if (['ESTANDAR', 'POPULAR'].includes(plan)) return 2;
+  return 1; // BASICO
 }
 
 export function isSectionLocked(
@@ -111,17 +111,17 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'nav-grupos',
         title: 'Las tres secciones del menú',
         description:
-          'El menú lateral tiene tres grupos que puedes expandir o contraer: Operación (pedidos, catálogo, cocina), Negocio (métricas, finanzas, clientes) y Cuenta (perfil, personalización, QR, ayuda). Clic en el nombre del grupo para expandirlo.',
-        route: 'Barra lateral → Clic en "Operación", "Negocio" o "Cuenta" para expandir',
-        tip: 'El panel recuerda cuáles secciones dejaste expandidas entre sesiones.',
-        screenshotDesc: 'Sidebar con los tres grupos Operación / Negocio / Cuenta',
+          'El menú lateral tiene tres grupos: Operación (pedidos, catálogo, cocina), Negocio (métricas, finanzas, clientes) y Cuenta. La sección Cuenta empieza oculta por defecto — haz clic en "Cuenta" para expandirla. Ahí encontrarás Perfil, Personalizar, QR, Módulos, Mi suscripción, Ayuda y Soporte.',
+        route: 'Barra lateral → Clic en "Cuenta" para expandirla → Aparecen Perfil, QR, Personalizar y más',
+        tip: 'Si no ves "Personalizar" o "QR" en el menú, busca el encabezado "Cuenta" y haz clic para expandirlo.',
+        screenshotDesc: 'Sidebar con los tres grupos Operación / Negocio / Cuenta expandida',
       },
       {
         id: 'plan-badge',
         title: 'Tu plan activo',
         description:
-          'En la parte inferior de la barra lateral verás el badge de tu plan (Básico, Popular o Premium). Clic en él te lleva a "Mi suscripción" donde puedes ver el estado de tu cuenta.',
-        route: 'Barra lateral → Esquina inferior → Badge del plan',
+          'En la parte inferior de la barra lateral verás el badge con el nombre de tu plan (Básico, Estándar o Premium). Clic en él te lleva a "Mi suscripción" donde puedes ver el estado de tu cuenta y actualizar tu plan.',
+        route: 'Barra lateral → Esquina inferior → Badge del plan → Mi suscripción',
         screenshotDesc: 'Badge del plan en la parte inferior del sidebar',
       },
     ],

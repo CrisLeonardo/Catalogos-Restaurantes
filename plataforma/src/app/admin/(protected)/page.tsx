@@ -167,10 +167,10 @@ export default async function AdminHomePage() {
         </div>
       )}
 
-      {/* Funciones bloqueadas (solo plan BASICO) */}
-      {restaurant?.plan_actual === 'BASICO' && (
+      {/* Funciones bloqueadas (planes BASICO y ESTANDAR) */}
+      {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'ESTANDAR') && (
         <div className="glass" style={{ borderRadius: 18, padding: '20px 18px' }}>
-          <LockedFeatureSection restaurantName={brandName} />
+          <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />
         </div>
       )}
 

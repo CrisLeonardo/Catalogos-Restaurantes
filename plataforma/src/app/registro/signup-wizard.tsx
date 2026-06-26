@@ -41,7 +41,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-type PlanOption = 'BASICO' | 'PREMIUM';
+type PlanOption = 'BASICO' | 'ESTANDAR' | 'PREMIUM';
 
 interface PlanCardDef {
   code: PlanOption;
@@ -58,14 +58,28 @@ const PLAN_CARDS: PlanCardDef[] = [
   {
     code: 'BASICO',
     name: 'Básico',
-    priceLabel: 'Q299',
+    priceLabel: 'Q199',
     priceUnit: '/ mes',
     trialLabel: 'Con 30 días gratis',
     features: [
-      { text: 'Menú web con QR', positive: true },
-      { text: 'Pedidos para llevar (hasta Q10k/mes)', positive: true },
-      { text: 'Llamar al mesero por QR', positive: true },
-      { text: 'Hasta 30 productos · 1 usuario', positive: true },
+      { text: 'Menú digital con QR imprimible', positive: true },
+      { text: 'Productos ilimitados · 1 usuario', positive: true },
+      { text: 'Tu logo y color de marca', positive: true },
+      { text: 'Sin pedidos en línea', positive: false },
+    ],
+    highlight: false,
+  },
+  {
+    code: 'ESTANDAR',
+    name: 'Estándar',
+    priceLabel: 'Q399',
+    priceUnit: '/ mes',
+    trialLabel: 'Con 30 días gratis',
+    features: [
+      { text: 'Menú QR + pedidos para llevar', positive: true },
+      { text: 'Alertas en tiempo real · WhatsApp', positive: true },
+      { text: 'Productos ilimitados · 2 usuarios', positive: true },
+      { text: 'Hasta Q10,000 en ventas / mes', positive: true },
     ],
     highlight: false,
   },
@@ -77,10 +91,10 @@ const PLAN_CARDS: PlanCardDef[] = [
     priceUnit: '',
     trialLabel: 'luego Q599 / mes',
     features: [
-      { text: 'Todo lo del Básico', positive: true },
-      { text: 'Pedidos online en tu menú', positive: true },
-      { text: 'WhatsApp al pedir', positive: true },
-      { text: 'Tiempo real en el panel', positive: true },
+      { text: 'Para llevar, comer en local y delivery', positive: true },
+      { text: 'Panel de mesero, recetas y cupones', positive: true },
+      { text: 'Usuarios ilimitados · sin restricciones', positive: true },
+      { text: 'Hasta Q20,000 en ventas / mes', positive: true },
     ],
     highlight: true,
   },
@@ -278,7 +292,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 3: Confirmar ── */}
       <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q599/mes' : 'Básico · Q299/mes (30 días gratis)'} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q599/mes' : selectedPlan === 'ESTANDAR' ? 'Estándar · Q399/mes (30 días gratis)' : 'Básico · Q199/mes (30 días gratis)'} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Tu cuenta" value={email || '—'} />
@@ -289,9 +303,11 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
             30 días de prueba gratis
           </div>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            {selectedPlan === 'PREMIUM'
-              ? 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'
-              : 'Tu restaurante queda en vivo con tu menú digital. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'}
+            {selectedPlan === 'BASICO'
+              ? 'Tu restaurante queda en vivo con tu menú digital. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'
+              : selectedPlan === 'ESTANDAR'
+              ? 'Tu restaurante queda en vivo con pedidos para llevar activos. Sin tarjeta. Sin compromiso.'
+              : 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'}
           </p>
         </Glass>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12.5, color: 'var(--u-text-3)', cursor: 'pointer' }}>

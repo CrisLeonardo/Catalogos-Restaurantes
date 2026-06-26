@@ -8,7 +8,7 @@ import type { PlanCode } from '@/lib/plans';
 
 export const metadata = {
   title: 'Planes y precios — Leogin',
-  description: 'Menú digital con pedidos en línea para tu restaurante. Planes desde Q299/mes con 30 días de prueba gratis.',
+  description: 'Menú digital con pedidos en línea para tu restaurante. Planes desde Q199/mes con 30 días de prueba gratis.',
 };
 
 const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
@@ -21,6 +21,7 @@ function waLink(msg: string) {
 
 const ACCENT_BY_PLAN: Record<PlanCode, string> = {
   BASICO:        '#94a3b8',
+  ESTANDAR:      '#10b981',
   PREMIUM:       '#6366f1',
   PREMIUM_PRO:   '#a855f7',
   PREMIUM_ULTRA: '#14b8a6',
@@ -42,7 +43,6 @@ const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
   { label: 'Impresión de comandas', key: 'hasPrinting' },
   { label: 'Estadísticas y reportes', key: 'hasAnalytics' },
   { label: 'Módulo de recetas', key: 'hasRecipes' },
-  { label: 'Módulo de proveedores', key: 'hasSuppliers' },
   { label: 'Factura electrónica (FEL)', key: 'hasFEL' },
 ];
 
@@ -60,8 +60,8 @@ const FAQS = [
     a: 'Porque un pedido puede ser de Q50 o de Q2,000. Con el modelo GMV pagas en proporción al valor real que obtienes de la plataforma. Si tuviste un mes difícil con menos ventas, pagas proporcionalmente menos.',
   },
   {
-    q: '¿Qué incluye el plan Básico?',
-    a: 'Un menú digital interactivo con hasta 30 productos, pedidos para llevar con hasta Q10,000 en ventas digitales al mes, botón "Llamar al mesero" en el QR, tu logo y color de marca, y código QR listo para imprimir.',
+    q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
+    a: 'Básico (Q199) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (Q399) agrega pedidos para llevar con alertas en tiempo real, ideal para que el cliente pida con anticipación. Premium (Q599) incluye todo: para llevar, comer en local, delivery, panel de mesero, recetas, lealtad, cupones, reservaciones y más — usuarios ilimitados.',
   },
   {
     q: '¿Cómo funciona Multisucursal?',
@@ -91,8 +91,8 @@ function PlanFeatureRow({ value }: { value: boolean | number | string }) {
 }
 
 export default function PlanesPage() {
-  const mainPlans: PlanCode[] = ['BASICO', 'PREMIUM', 'PREMIUM_PRO'];
-  const extendedPlans: PlanCode[] = ['PREMIUM_ULTRA', 'ALTO_VOLUMEN'];
+  const mainPlans: PlanCode[] = ['BASICO', 'ESTANDAR', 'PREMIUM'];
+  const extendedPlans: PlanCode[] = ['PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN'];
 
   return (
     <div style={{ width: '100%', minHeight: '100svh' }}>
@@ -194,23 +194,28 @@ export default function PlanesPage() {
                 </div>
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {[
-                    { label: code === 'BASICO' ? 'Pedidos para llevar (hasta Q10k/mes)' : 'Pedidos online', ok: p.hasOrders },
-                    ...(code === 'BASICO'
-                      ? [{ label: 'Llamar al mesero (QR)', ok: true }]
-                      : [{ label: p.hasWhatsapp ? 'Notificación WhatsApp' : 'Sin WhatsApp', ok: p.hasWhatsapp }]
-                    ),
-                    { label: p.hasRealtime ? 'Alertas en tiempo real' : 'Sin alertas tiempo real', ok: p.hasRealtime },
-                    { label: p.hasFullTheme ? 'Personalización completa' : 'Personalización básica', ok: p.hasFullTheme },
-                    { label: p.hasWaiterPanel ? 'Panel de mesero' : 'Sin panel mesero', ok: p.hasWaiterPanel },
-                    { label: typeof p.products === 'number' ? `Hasta ${p.products} productos` : 'Productos ilimitados', ok: true },
-                    { label: typeof p.users === 'number' ? `Hasta ${p.users} usuario${p.users !== 1 ? 's' : ''}` : 'Usuarios ilimitados', ok: true },
-                    ...(code !== 'BASICO' ? [
-                      { label: 'Cupones, lealtad y encuestas', ok: true },
-                      { label: 'Estadísticas y reportes', ok: true },
-                    ] : []),
-                    ...(code === 'PREMIUM_PRO' ? [{ label: 'Módulo de proveedores', ok: true }] : []),
-                  ].map(({ label, ok }) => (
+                  {(code === 'BASICO' ? [
+                    { label: 'Menú digital con QR imprimible', ok: true },
+                    { label: 'Catálogo de productos ilimitados', ok: true },
+                    { label: 'Fotos, descripciones y precios', ok: true },
+                    { label: 'Tu logo y color de marca', ok: true },
+                    { label: 'Pedidos en línea', ok: false },
+                    { label: 'Panel de mesero', ok: false },
+                  ] : code === 'ESTANDAR' ? [
+                    { label: 'Todo lo del Básico', ok: true },
+                    { label: 'Pedidos para llevar (hasta Q10k/mes)', ok: true },
+                    { label: 'Notificaciones WhatsApp y panel en tiempo real', ok: true },
+                    { label: 'Hasta 2 usuarios del panel', ok: true },
+                    { label: 'Delivery y comer en local', ok: false },
+                    { label: 'Panel de mesero y recetas', ok: false },
+                  ] : [
+                    { label: 'Todo lo del Estándar', ok: true },
+                    { label: 'Para llevar, comer en local y delivery', ok: true },
+                    { label: 'Panel de mesero, mesas y KDS de cocina', ok: true },
+                    { label: 'Recetas, cupones, lealtad y encuestas', ok: true },
+                    { label: 'Reservaciones y estadísticas avanzadas', ok: true },
+                    { label: 'Usuarios ilimitados', ok: true },
+                  ]).map(({ label, ok }) => (
                     <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5 }}>
                       <span style={{ color: ok ? '#4ade80' : 'var(--u-text-4)', flexShrink: 0 }}>
                         <Icon name={ok ? 'check' : 'x'} size={15} />
@@ -230,7 +235,7 @@ export default function PlanesPage() {
                     marginTop: 'auto',
                   }}
                 >
-                  {code === 'BASICO' ? 'Empezar con Básico' : code === 'PREMIUM' ? 'Elegir Premium' : 'Elegir Premium Pro'}
+                  {code === 'BASICO' ? 'Empezar con Básico' : code === 'ESTANDAR' ? 'Elegir Estándar' : 'Elegir Premium'}
                 </Link>
               </div>
             );
@@ -246,12 +251,12 @@ export default function PlanesPage() {
             color: 'var(--u-text-2)', display: 'flex', alignItems: 'center', gap: 8, userSelect: 'none',
           }}>
             <Icon name="chevronDown" size={18} />
-            Ver planes para alto volumen — Premium Ultra y Alto Volumen
+            Ver planes para alto volumen — Premium Pro, Premium Ultra y Alto Volumen
           </summary>
 
           <div style={{ paddingTop: 16 }}>
             <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginBottom: 20, fontStyle: 'italic' }}>
-              Para restaurantes con alta afluencia y ventas digitales superiores a Q40,000/mes.
+              Para restaurantes con alta afluencia y ventas digitales superiores a Q20,000/mes. Mismas funciones que Premium, solo varía el límite de ventas.
             </div>
             <div style={{
               display: 'grid',
@@ -283,9 +288,9 @@ export default function PlanesPage() {
                     </div>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
                       {[
-                        { label: 'Todo lo de Premium Pro', ok: true },
-                        { label: 'Productos y usuarios ilimitados', ok: true },
-                        { label: 'Factura electrónica (FEL SAT)', ok: true },
+                        { label: 'Todas las funciones de Premium', ok: true },
+                        { label: 'Usuarios ilimitados', ok: true },
+                        ...(p.hasFEL ? [{ label: 'Factura electrónica (FEL SAT)', ok: true }] : []),
                         { label: p.gmvLimitLabel, ok: true },
                       ].map(({ label, ok }) => (
                         <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5 }}>
