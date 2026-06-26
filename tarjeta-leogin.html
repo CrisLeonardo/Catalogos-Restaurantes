@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarjeta de Presentación — Leogin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #111;
+    color: #fff;
+    padding: 50px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .page-title {
+    font-size: 11px; font-weight: 400; color: #444;
+    letter-spacing: 4px; text-transform: uppercase;
+    margin-bottom: 6px; text-align: center;
+  }
+  .page-sub {
+    font-size: 10px; color: #333;
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 50px; text-align: center;
+  }
+
+  .cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+    align-items: center;
+  }
+
+  .card-section { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .card-label {
+    font-size: 10px; color: #3a3a3a; letter-spacing: 2px;
+    text-transform: uppercase; text-align: center;
+  }
+
+  /* ============================================
+     ESTRUCTURA COMPARTIDA
+  ============================================ */
+  .lcard {
+    width: 340px; height: 190px;
+    border-radius: 12px;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: row;
+  }
+
+  .l-left {
+    flex: 1; padding: 22px 18px 22px 26px;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    position: relative; z-index: 1;
+  }
+  .l-logo { display: flex; align-items: center; gap: 9px; }
+  .l-logo-mark {
+    width: 34px; height: 34px; border-radius: 7px;
+    background: linear-gradient(135deg, #ff6b35, #e8402a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .l-logo-text { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; }
+  .l-tagline { font-size: 7.5px; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+  .l-divider { width: 32px; height: 1px; }
+  .l-name { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .l-role { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 9px; }
+  .l-contacts { display: flex; flex-direction: column; gap: 3px; }
+  .l-contact { font-size: 8px; display: flex; align-items: center; gap: 5px; }
+  .l-contact svg { width: 8px; height: 8px; flex-shrink: 0; }
+
+  .l-vsep {
+    width: 1px; margin: 22px 0; flex-shrink: 0; position: relative; z-index: 1;
+  }
+
+  .l-right {
+    width: 96px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 7px; position: relative; z-index: 1; padding: 0 14px;
+  }
+  .l-qr-wrap {
+    width: 60px; height: 60px; border-radius: 6px;
+    background: #fff; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .l-qr-wrap canvas, .l-qr-wrap img { width: 52px !important; height: 52px !important; display: block; }
+  .l-qr-label { font-size: 6.5px; letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
+  .l-qr-sub   { font-size: 6px; letter-spacing: 1px; text-transform: uppercase; text-align: center; margin-top: -4px; }
+  .l-qr-url   { font-size: 7px; letter-spacing: 0.5px; text-align: center; }
+
+  /* ============================================
+     VARIANTE DARK
+  ============================================ */
+  .card-dark {
+    background: linear-gradient(135deg, #110a07 0%, #0d0906 50%, #120b08 100%);
+    border: 1px solid rgba(255,107,53,0.18);
+    box-shadow: 0 0 0 1px rgba(255,107,53,0.04), 0 24px 70px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .card-dark::before {
+    content:''; position:absolute; top:-70px; right:-50px;
+    width:200px; height:200px;
+    background:radial-gradient(circle, rgba(255,107,53,0.1) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .card-dark::after {
+    content:''; position:absolute; bottom:-50px; left:-30px;
+    width:160px; height:160px;
+    background:radial-gradient(circle, rgba(232,64,42,0.06) 0%, transparent 70%);
+    pointer-events:none;
+  }
+
+  .card-dark .l-logo-mark { box-shadow: 0 4px 14px rgba(255,107,53,0.4); }
+  .card-dark .l-logo-text { color: #fff; }
+  .card-dark .l-logo-text span {
+    background: linear-gradient(90deg, #ff6b35, #e8402a);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .card-dark .l-tagline { color: #ffffff; }
+  .card-dark .l-divider { background: linear-gradient(90deg, rgba(255,107,53,0.5), transparent); }
+  .card-dark .l-name    { color: #fff; }
+  .card-dark .l-role    { color: rgba(255,107,53,0.85); }
+  .card-dark .l-contact { color: rgba(255,255,255,0.88); }
+  .card-dark .l-contact svg { color: rgba(255,107,53,0.5); }
+  .card-dark .l-vsep    { background: linear-gradient(180deg, transparent, rgba(255,107,53,0.2) 30%, rgba(255,107,53,0.2) 70%, transparent); }
+  .card-dark .l-qr-wrap { box-shadow: 0 0 0 1px rgba(255,107,53,0.15); }
+  .card-dark .l-qr-label { color: rgba(255,255,255,0.88); }
+  .card-dark .l-qr-sub   { color: rgba(255,255,255,0.88); }
+  .card-dark .l-qr-url   { color: rgba(255,107,53,0.65); }
+
+  /* ============================================
+     VARIANTE WHITE
+  ============================================ */
+  .card-white {
+    background: #ffffff;
+    border: 1px solid rgba(255,107,53,0.12);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 1px 0 rgba(255,107,53,0.08);
+  }
+  /* Franja naranja superior */
+  .card-white::before {
+    content:''; position:absolute; top:0; left:0; right:0;
+    height: 3px;
+    background: linear-gradient(90deg, #ff6b35, #e8402a);
+    pointer-events:none;
+    z-index: 2;
+  }
+  /* Sombra cálida sutil */
+  .card-white::after {
+    content:''; position:absolute; bottom:-30px; right:-20px;
+    width:160px; height:160px;
+    background:radial-gradient(circle, rgba(255,107,53,0.04) 0%, transparent 70%);
+    pointer-events:none;
+  }
+
+  .card-white .l-logo-text { color: #1a0e08; }
+  .card-white .l-logo-text span {
+    background: linear-gradient(90deg, #ff6b35, #e8402a);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .card-white .l-tagline { color: #000000; }
+  .card-white .l-divider { background: linear-gradient(90deg, rgba(255,107,53,0.4), transparent); }
+  .card-white .l-name    { color: #1a0e08; }
+  .card-white .l-role    { color: #e8502a; }
+  .card-white .l-contact { color: #1a0e08; }
+  .card-white .l-contact svg { color: #d4895a; }
+  .card-white .l-vsep    { background: linear-gradient(180deg, transparent, rgba(255,107,53,0.15) 30%, rgba(255,107,53,0.15) 70%, transparent); }
+  .card-white .l-qr-wrap { border: 1px solid rgba(255,107,53,0.15); }
+  .card-white .l-qr-label { color: #000000; }
+  .card-white .l-qr-sub   { color: #000000; }
+  .card-white .l-qr-url   { color: #e8502a; }
+
+  /* ============================================
+     ACCIONES
+  ============================================ */
+  .actions {
+    display: flex; gap: 12px; margin-top: 40px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .btn {
+    padding: 10px 22px; border-radius: 8px;
+    border: 1px solid #2a2a2a; background: #181818; color: #888;
+    font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn:hover { border-color: #444; color: #ccc; background: #222; }
+  .btn-orange {
+    background: linear-gradient(135deg, #ff6b35, #e8402a);
+    border: none; color: #fff; font-weight: 600;
+  }
+  .btn-orange:hover { opacity: 0.88; }
+
+  .print-note {
+    margin-top: 16px; font-size: 10px; color: #333;
+    letter-spacing: 1px; text-align: center;
+  }
+
+  /* ============================================
+     PRINT
+  ============================================ */
+  @media print {
+    @page { size: 90mm 50mm; margin: 0; }
+    body {
+      background: transparent; padding: 0; margin: 0; display: block;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .page-title, .page-sub, .actions, .print-note, .card-label { display: none !important; }
+    .cards-grid { gap: 0; }
+    .card-section.hidden-print { display: none !important; }
+    .lcard {
+      width: 90mm; height: 50mm; border-radius: 3mm;
+      margin: 0; box-shadow: none !important;
+      page-break-after: always;
+    }
+    .l-left { padding: 18px 14px 18px 18px; }
+    .l-logo-text { font-size: 17px; }
+    .l-logo-mark { width: 28px; height: 28px; font-size: 14px; }
+    .l-tagline { font-size: 6.5px; }
+    .l-name { font-size: 10.5px; }
+    .l-role { font-size: 7px; }
+    .l-contact { font-size: 7px; }
+    .l-right { width: 84px; padding: 0 12px; }
+    .l-qr-wrap { width: 52px; height: 52px; }
+    .l-qr-wrap canvas, .l-qr-wrap img { width: 44px !important; height: 44px !important; }
+    .l-qr-label, .l-qr-sub { font-size: 5.5px; }
+    .l-qr-url { font-size: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<p class="page-title">Leogin — Tarjeta de Presentación</p>
+<p class="page-sub">Dark · White · Con QR + NFC</p>
+
+<div class="cards-grid" id="cards">
+
+  <!-- ===== DARK ===== -->
+  <div class="card-section" id="sec-dark">
+    <div class="lcard card-dark">
+      <div class="l-left">
+        <div class="l-logo">
+          <div class="l-logo-mark">L</div>
+          <div>
+            <div class="l-logo-text">Leo<span>gin</span></div>
+            <div class="l-tagline">Tu restaurante, completamente digital</div>
+          </div>
+        </div>
+        <div class="l-divider"></div>
+        <div>
+          <div class="l-name">Cristopher Leonardo Zepeda</div>
+          <div class="l-role">CEO / Fundador</div>
+          <div class="l-contacts">
+            <div class="l-contact">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/></svg>
+              4934-0483
+            </div>
+            <div class="l-contact">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              leogin.gt@gmail.com
+            </div>
+            <div class="l-contact">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              leogin.online
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="l-vsep"></div>
+      <div class="l-right">
+        <div class="l-qr-wrap" id="qr-dark"></div>
+        <div class="l-qr-label">Acerca tu móvil</div>
+        <div class="l-qr-sub">o escanea el QR</div>
+        <div class="l-qr-url">leogin.online</div>
+      </div>
+    </div>
+    <span class="card-label">✦ Dark</span>
+  </div>
+
+  <!-- ===== WHITE ===== -->
+  <div class="card-section" id="sec-white">
+    <div class="lcard card-white">
+      <div class="l-left">
+        <div class="l-logo">
+          <div class="l-logo-mark">L</div>
+          <div>
+            <div class="l-logo-text">Leo<span>gin</span></div>
+            <div class="l-tagline">Tu restaurante, completamente digital</div>
+          </div>
+        </div>
+        <div class="l-divider"></div>
+        <div>
+          <div class="l-name">Cristopher Leonardo Zepeda</div>
+          <div class="l-role">CEO / Fundador</div>
+          <div class="l-contacts">
+            <div class="l-contact">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/></svg>
+              4934-0483
+            </div>
+            <div class="l-contact">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              leogin.gt@gmail.com
+            </div>
+            <div class="l-contact">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              leogin.online
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="l-vsep"></div>
+      <div class="l-right">
+        <div class="l-qr-wrap" id="qr-white"></div>
+        <div class="l-qr-label">Acerca tu móvil</div>
+        <div class="l-qr-sub">o escanea el QR</div>
+        <div class="l-qr-url">leogin.online</div>
+      </div>
+    </div>
+    <span class="card-label">✦ White</span>
+  </div>
+
+</div>
+
+<div class="actions">
+  <button class="btn" onclick="printCard('dark')">Imprimir — Dark</button>
+  <button class="btn-orange btn" onclick="printCard('white')">Imprimir — White</button>
+  <button class="btn" onclick="printCard('both')">Imprimir ambas</button>
+</div>
+<p class="print-note">Tamaño: 90 × 50 mm · Ctrl+P / Cmd+P</p>
+
+<script>
+  const qrOpts = {
+    text: "https://leogin.online",
+    width: 52, height: 52,
+    colorDark: "#1a0a04", colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  };
+  new QRCode(document.getElementById("qr-dark"),  qrOpts);
+  new QRCode(document.getElementById("qr-white"), qrOpts);
+
+  function printCard(which) {
+    const secs = ['dark','white'];
+    secs.forEach(v => {
+      document.getElementById('sec-'+v).classList.toggle('hidden-print', which !== 'both' && v !== which);
+    });
+    window.print();
+    setTimeout(() => secs.forEach(v => document.getElementById('sec-'+v).classList.remove('hidden-print')), 2000);
+  }
+</script>
+
+</body>
+</html>
