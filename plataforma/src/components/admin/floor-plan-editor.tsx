@@ -7,14 +7,13 @@
    El arrastre se calcula sobre el wrapper exterior (coordenadas relativas 0..1)
    igual que antes, sin necesidad de conocer el baseScale. */
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { FloorPlan, FloorTable } from '@/lib/theme/defaults';
 
 const MAX_LEVELS = 3;
 const VIRT_W = 1000;
 const VIRT_H = 625;
-const TOKEN = 64; // px en unidades virtuales
 
 function uid(): string {
   return `l${Math.random().toString(36).slice(2, 8)}`;
@@ -38,21 +37,10 @@ export default function FloorPlanEditor({
   onChange: (fp: FloorPlan) => void;
 }) {
   const outerRef = useRef<HTMLDivElement | null>(null);
-  const [baseScale, setBaseScale] = useState(1);
   const [activeLevel, setActiveLevel] = useState<string>(value.levels[0]?.id ?? 'l1');
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [dragN, setDragN] = useState<number | null>(null);
   const dragRef = useRef<{ n: number; pointerId: number } | null>(null);
-
-  /* Calcula el factor de escala al montar y al redimensionar. */
-  useLayoutEffect(() => {
-    const outer = outerRef.current;
-    if (!outer) return;
-    const update = () => setBaseScale(outer.clientWidth / VIRT_W);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(outer);
-    return () => ro.disconnect();
-  }, []);
 
   const levels = value.levels.length > 0 ? value.levels : [{ id: 'l1', name: 'Planta baja' }];
   const active = levels.some((l) => l.id === activeLevel) ? activeLevel : levels[0].id;
@@ -110,8 +98,9 @@ export default function FloorPlanEditor({
   /* ── Arrastre (pointer events) ───────────────────────── */
   function onTokenPointerDown(e: React.PointerEvent, n: number) {
     e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = { n, pointerId: e.pointerId };
+    setDragN(n);
   }
 
   function onTokenPointerMove(e: React.PointerEvent) {
@@ -127,7 +116,7 @@ export default function FloorPlanEditor({
   }
 
   function onTokenPointerUp(e: React.PointerEvent) {
-    if (dragRef.current?.pointerId === e.pointerId) dragRef.current = null;
+    if (dragRef.current?.pointerId === e.pointerId) { dragRef.current = null; setDragN(null); }
   }
 
   const enabled = value.enabled;
@@ -220,13 +209,18 @@ export default function FloorPlanEditor({
             )}
           </div>
 
-          {/* Lienzo — wrapper exterior captura eventos y sirve de referencia de coordenadas */}
+          {/* Lienzo — los tokens se posicionan en % (coordenadas 0..1) con tamaño
+              FIJO cómodo para el dedo, independiente del ancho de pantalla.
+              El wrapper exterior captura el arrastre y sirve de referencia. */}
           <div
             ref={outerRef}
             onPointerMove={onTokenPointerMove}
             onPointerUp={onTokenPointerUp}
+            onPointerCancel={onTokenPointerUp}
+            className="floor-edit-canvas"
             style={{
               position: 'relative', width: '100%', aspectRatio: `${VIRT_W} / ${VIRT_H}`,
+              minHeight: 300,
               borderRadius: 16, overflow: 'hidden',
               border: '1px solid var(--u-hair-2)',
               background:
@@ -236,52 +230,50 @@ export default function FloorPlanEditor({
               touchAction: 'none',
             }}
           >
-            {/* Mundo virtual: 1000×625 unidades escaladas a caber en el wrapper. */}
-            <div style={{
-              position: 'absolute', left: 0, top: 0,
-              width: VIRT_W, height: VIRT_H,
-              transformOrigin: '0 0',
-              transform: `scale(${baseScale})`,
-            }}>
-              {tablesOnLevel.length === 0 && (
-                <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20, pointerEvents: 'none' }}>
-                  Toca una mesa de abajo para colocarla aquí,<br />luego arrástrala a su lugar.
-                </div>
-              )}
-              {tablesOnLevel.map((t) => (
+            {tablesOnLevel.length === 0 && (
+              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20, pointerEvents: 'none' }}>
+                Toca una mesa de abajo para colocarla aquí,<br />luego arrástrala a su lugar con el dedo.
+              </div>
+            )}
+            {tablesOnLevel.map((t) => {
+              const dragging = dragN === t.n;
+              return (
                 <div
                   key={t.n}
                   onPointerDown={(e) => onTokenPointerDown(e, t.n)}
                   style={{
                     position: 'absolute',
-                    left: t.x * VIRT_W,
-                    top: t.y * VIRT_H,
-                    width: TOKEN, height: TOKEN,
-                    transform: 'translate(-50%, -50%)',
+                    left: `${t.x * 100}%`,
+                    top: `${t.y * 100}%`,
+                    width: 'var(--floor-token, 56px)', height: 'var(--floor-token, 56px)',
+                    transform: `translate(-50%, -50%) scale(${dragging ? 1.12 : 1})`,
+                    transition: dragging ? 'none' : 'transform 120ms',
                     borderRadius: t.shape === 'square' ? 14 : 99,
-                    border: '1.5px solid var(--u-hair-2)',
-                    background: 'rgba(255,255,255,0.06)',
+                    border: `2px solid ${dragging ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
+                    background: dragging ? 'color-mix(in srgb, var(--brand-accent) 18%, var(--brand-bg))' : 'rgba(255,255,255,0.07)',
                     color: 'var(--u-text)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0,
                     cursor: 'grab', userSelect: 'none', touchAction: 'none',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+                    boxShadow: dragging ? '0 8px 24px rgba(0,0,0,0.35)' : '0 2px 10px rgba(0,0,0,0.22)',
+                    zIndex: dragging ? 5 : 1,
                   }}
                 >
-                  <span style={{ fontSize: 9.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none' }}>Mesa</span>
-                  <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{t.n}</span>
+                  <span style={{ fontSize: 8.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mesa</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{t.n}</span>
                   <span
                     role="button"
+                    aria-label={`Quitar mesa ${t.n}`}
                     tabIndex={0}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); unplaceTable(t.n); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') unplaceTable(t.n); }}
-                    style={{ position: 'absolute', top: -7, right: -7, width: 20, height: 20, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                    style={{ position: 'absolute', top: -9, right: -9, width: 24, height: 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
                   >
-                    <Icon name="x" size={11} />
+                    <Icon name="x" size={12} />
                   </span>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
           {/* Bandeja: mesas sin ubicar */}

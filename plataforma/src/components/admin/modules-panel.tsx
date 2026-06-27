@@ -294,6 +294,16 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             </p>
           </div>
         )}
+        {(planActual === 'PREMIUM' || planActual === 'PREMIUM_PRO' || planActual === 'PREMIUM_ULTRA' || planActual === 'ALTO_VOLUMEN') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: 12 }}>
+            <Icon name="sparkle" size={14} style={{ color: '#4ade80', flexShrink: 0 }} />
+            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
+              <strong style={{ color: 'var(--u-text-2)' }}>Plan a tu medida:</strong> cada canal que desactives baja tu
+              mensualidad Q100 (hasta Q200). Pagas solo por lo que usas.{' '}
+              <a href="/admin/suscripcion" style={{ color: '#4ade80', fontWeight: 700, textDecoration: 'none' }}>Ver mi mensualidad →</a>
+            </p>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {ORDER_TYPE_META.map((m) => {
             const isLockedForBasico = (planActual === 'BASICO' || planActual === 'ESTANDAR') && m.id !== 'pickup';

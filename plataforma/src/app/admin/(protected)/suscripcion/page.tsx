@@ -6,7 +6,7 @@ import { can } from '@/lib/permissions';
 import { getMyBilling } from '@/lib/actions/billing';
 import {
   isOverdue, isOnTrial, trialDaysLeft, planLabel, planGmvLimit,
-  getRestaurantGmvCurrentMonth, type Invoice,
+  getRestaurantGmvCurrentMonth, getFeeBreakdown, type Invoice, type FeeBreakdown,
 } from '@/lib/db/billing';
 import { PLANS, PLAN_ORDER, nextPlan, isUpgrade, type PlanCode } from '@/lib/plans';
 import { rootDomainForUrls } from '@/lib/tenant';
@@ -65,9 +65,10 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, gmvData] = await Promise.all([
+  const [billingResult, gmvData, feeBreakdown] = await Promise.all([
     getMyBilling(restaurantId),
     getRestaurantGmvCurrentMonth(restaurantId),
+    getFeeBreakdown(restaurantId),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
 
@@ -210,6 +211,11 @@ export default async function SuscripcionPage() {
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
       </div>
+
+      {/* ── Plan a tu medida (descuento por canal) ───────────── */}
+      {feeBreakdown?.discountApplies && (
+        <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
+      )}
 
       {/* ── GMV del mes actual (solo planes con límite) ──────── */}
       {hasGmvLimit && (
@@ -535,6 +541,69 @@ function Row({ inv, currency }: { inv: Invoice; currency: string }) {
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)', minWidth: 90, textAlign: 'right' }}>
         {fmtMoney(inv.amount, inv.currency || currency)}
       </div>
+    </div>
+  );
+}
+
+function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
+  const saving = b.discount > 0;
+  return (
+    <div className="glass" style={{
+      borderRadius: 16, padding: 20,
+      border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Icon name="sparkle" size={15} style={{ color: saving ? '#4ade80' : 'var(--brand-accent)' }} />
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>Plan a tu medida</div>
+      </div>
+      <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
+        Tu mensualidad se ajusta a los canales de servicio que usas: cada canal que
+        desactivas baja tu pago {fmtMoney(b.discountPer, currency)} (hasta {fmtMoney(b.discountPer * 2, currency)}).
+      </div>
+
+      {/* Desglose */}
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
+        {saving ? (
+          <LineItem
+            label={`${b.channelsOff} canal${b.channelsOff !== 1 ? 'es' : ''} sin usar`}
+            value={`− ${fmtMoney(b.discount, currency)}`}
+            accent="#4ade80"
+          />
+        ) : (
+          <div style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>
+            Usas los {b.channelsActive} canales — sin descuento aplicable.
+          </div>
+        )}
+        <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            {autoPrice ? 'Tu mensualidad' : 'Mensualidad sugerida'}
+          </span>
+          <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: saving ? '#4ade80' : 'var(--u-text)' }}>
+            {fmtMoney(b.final, currency)}
+          </span>
+        </div>
+      </div>
+
+      {!autoPrice && (
+        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.45 }}>
+          Tienes un precio acordado con nosotros; este desglose es informativo.
+        </div>
+      )}
+
+      <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 700 }}>
+        Cambiar mis canales de servicio <Icon name="arrowRight" size={13} />
+      </a>
+    </div>
+  );
+}
+
+function LineItem({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
+      <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 13.5, fontWeight: 600, color: accent ?? 'var(--u-text-2)' }}>{value}</span>
     </div>
   );
 }

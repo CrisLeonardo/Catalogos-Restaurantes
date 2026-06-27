@@ -101,7 +101,50 @@ export async function proxy(request: NextRequest) {
     await supabase.auth.getUser();
   }
 
+  applySecurityHeaders(response.headers);
   return response;
+}
+
+/**
+ * Cabeceras de seguridad para toda la app.
+ *
+ * Notas de diseño (probadas contra cómo funciona Leogin):
+ *  · CSP sin nonce: la app usa estilos en línea por todos lados → se requiere
+ *    'unsafe-inline' en style-src. Se mantiene 'unsafe-eval' por exports PDF/Excel
+ *    (jspdf/exceljs) y debug de React en dev.
+ *  · frame-ancestors 'self' (NO 'none'): la vista previa del super admin embebe
+ *    /preview/* en un iframe del MISMO origen; 'none' la rompería.
+ *  · connect-src permite https:/wss: (Supabase + Realtime) y localhost (impresión
+ *    QZ / agente Leogin). NO se usa upgrade-insecure-requests para no romper
+ *    la impresión local por ws://localhost en producción.
+ *  · HSTS solo en producción (en localhost rompería el dev por http).
+ */
+function applySecurityHeaders(headers: Headers): void {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' blob: data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https: wss: http://localhost:* ws://localhost:*",
+    "worker-src 'self' blob:",
+    "frame-src 'self'",
+    "frame-ancestors 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; ');
+
+  headers.set('Content-Security-Policy', csp);
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'SAMEORIGIN');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('X-DNS-Prefetch-Control', 'on');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), payment=(), geolocation=(self)');
+
+  if (process.env.NODE_ENV === 'production') {
+    headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
 }
 
 export const config = {

@@ -10,57 +10,78 @@ import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
 const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP; // solo dígitos, con código de país
 
-const FEATURES = [
-  {
-    title: 'Personalización total',
-    body: 'Colores, logo, fondo y estilo glass únicos por restaurante. Cada cliente se siente único.',
-  },
-  {
-    title: 'Panel para el dueño',
-    body: 'El restaurante gestiona su propio menú: precios, fotos, disponibilidad. Sin depender de nadie.',
-  },
-  {
-    title: 'Pedidos en tiempo real',
-    body: 'Carrito, checkout y alerta instantánea (sonido + visual) con aviso automático a WhatsApp.',
-  },
-  {
-    title: 'Carga instantánea por QR',
-    body: 'Menú web renderizado en servidor: abre al toque, sin apps, sin PDFs lentos.',
-  },
+/* Beneficios para el dueño y para el comensal. */
+const FOR_OWNER = [
+  { icon: 'bell',     title: 'Pedidos en tiempo real', body: 'Cada pedido suena y aparece al instante en tu panel y cocina. Nada se te escapa.' },
+  { icon: 'chart',    title: 'Sabes qué se vende',      body: 'Ventas, horas pico, platos estrella y ticket promedio. Decide con datos, no a ciegas.' },
+  { icon: 'wallet',   title: 'Control de tu dinero',    body: 'Costos, margen por plato, corte de caja y reportes exportables. Tu negocio claro.' },
+  { icon: 'sparkle',  title: 'Tu marca, no la nuestra', body: 'Colores, logo, fotos y estilo propios. Tus clientes ven tu restaurante, no “otra app”.' },
+];
+const FOR_DINER = [
+  { icon: 'grid',     title: 'Abre con un QR',          body: 'Escanea y ve el menú al instante. Sin descargar apps, sin PDFs lentos.' },
+  { icon: 'bag',      title: 'Ordena en segundos',      body: 'Para llevar, a domicilio o desde la mesa. Con fotos que dan ganas de pedir.' },
+  { icon: 'truck',    title: 'Sigue su pedido',         body: 'El cliente ve el estado en vivo y recibe aviso cuando está listo.' },
+  { icon: 'star',     title: 'Vuelve por más',          body: 'Puntos de lealtad y cupones que convierten una visita en un cliente fiel.' },
+];
+
+/* Catálogo completo de capacidades (muestra la amplitud del sistema). */
+const CAPABILITIES = [
+  { icon: 'bag',      label: 'Menú digital QR' },
+  { icon: 'truck',    label: 'Pedidos a domicilio' },
+  { icon: 'grid',     label: 'Comer en local (mesa)' },
+  { icon: 'list',     label: 'Pedidos para llevar' },
+  { icon: 'flame',    label: 'Pantalla de cocina (KDS)' },
+  { icon: 'userPlus', label: 'Panel de mesero' },
+  { icon: 'print',    label: 'Impresión de comandas' },
+  { icon: 'star',     label: 'Programa de lealtad' },
+  { icon: 'ticket',   label: 'Cupones y descuentos' },
+  { icon: 'calendar', label: 'Reservaciones' },
+  { icon: 'box',      label: 'Inventario y stock' },
+  { icon: 'chart',    label: 'Analítica avanzada' },
+  { icon: 'wallet',   label: 'Finanzas y caja' },
+  { icon: 'receipt',  label: 'Factura electrónica (FEL)' },
+  { icon: 'users',    label: 'Usuarios con roles' },
+  { icon: 'dashboard',label: 'Multisucursal' },
 ];
 
 const STEPS = [
   { n: '01', title: 'Regístrate en minutos', body: 'Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, 1 mes gratis.' },
   { n: '02', title: 'Personalízalo, guiado', body: 'Colores, logo y tu primer menú con un asistente paso a paso. No necesitas saber de tecnología.' },
-  { n: '03', title: 'Comparte tu QR', body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
+  { n: '03', title: 'Comparte tu QR',        body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
 ];
 
 const LANDING_PLANS = [
   {
     code: 'Básico',
-    price: 'Q199 / mes',
-    tagline: 'Solo menú digital — ideal para empezar',
-    points: ['Menú digital con código QR', 'Productos ilimitados', '1 usuario administrador', 'Personalización con logo y color'],
+    price: 'Q199',
+    tagline: 'Tu menú digital con QR — ideal para empezar',
+    points: ['Menú digital con código QR', 'Productos ilimitados', 'Personalización con logo y color', 'Métricas de visitas'],
     accent: false,
-    cta: 'self' as const,
   },
   {
     code: 'Estándar',
-    price: 'Q399 / mes',
+    price: 'Q399',
     tagline: 'Pedidos para llevar y alertas en tiempo real',
-    points: ['Todo lo del plan Básico', 'Pedidos para llevar online', 'Alerta en tiempo real + WhatsApp', 'Hasta Q10,000 en ventas / mes'],
+    points: ['Todo lo del plan Básico', 'Pedidos para llevar en línea', 'Alerta en tiempo real + WhatsApp', 'Hasta Q10,000 en ventas / mes'],
     accent: false,
-    cta: 'self' as const,
   },
   {
     code: 'Premium',
-    price: 'Q599 / mes',
-    tagline: 'Todas las funciones sin límites de usuarios',
-    points: ['Para llevar, en local y delivery', 'Lealtad, cupones y reservaciones', 'Usuarios ilimitados con roles', 'Hasta Q20,000 en ventas / mes'],
+    price: 'Q599',
+    tagline: 'Todas las funciones, sin límite de usuarios',
+    points: ['Para llevar, en local y a domicilio', 'Lealtad, cupones y reservaciones', 'Cocina, finanzas e inventario', 'Hasta Q20,000 en ventas / mes'],
     accent: true,
     badge: 'MÁS POPULAR',
-    cta: 'self' as const,
   },
+];
+
+const FAQS = [
+  { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres, lo configuramos por ti.' },
+  { q: '¿Cobran comisión por cada pedido?', a: 'No. Pagas una mensualidad fija según tu plan. Lo que vendes es tuyo, sin comisiones por pedido.' },
+  { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Opcionalmente pueden “instalarlo” como app.' },
+  { q: '¿Puedo cambiar de plan después?', a: 'Sí, cuando quieras. Empiezas en el plan que más te convenga y subes a medida que creces.' },
+  { q: '¿Y si no hago domicilio o solo atiendo en local?', a: 'Con “Plan a tu medida” pagas solo por los canales que usas: cada canal que no necesites baja tu mensualidad.' },
+  { q: '¿Sirve si tengo varias sucursales?', a: 'Sí. Cada sucursal tiene su menú y QR, y tú ves todo consolidado en un panel de grupo.' },
 ];
 
 export default function LeoginLanding() {
@@ -77,16 +98,22 @@ export default function LeoginLanding() {
         style={{
           position: 'sticky', top: 0, zIndex: 50,
           borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-          height: 56, padding: '0 18px',
+          height: 58, padding: '0 18px',
           display: 'flex', alignItems: 'center', gap: 12,
         }}
       >
         <span style={{ flex: '0 0 auto' }}>
           <LeoginLogo size={26} />
         </span>
-        <nav style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-          <a href="#planes" className="press t-mute" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
+        <nav style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <a href="#funciones" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
+            Funciones
+          </a>
+          <a href="#planes" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
             Planes
+          </a>
+          <a href={demoUrl} className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
+            Demo
           </a>
           <Link
             href="/login"
@@ -113,106 +140,180 @@ export default function LeoginLanding() {
         </nav>
       </header>
 
-      <main className="anim-fade-up" style={{ maxWidth: 960, margin: '0 auto', padding: '16px 18px 72px' }}>
+      <main className="anim-fade-up" style={{ maxWidth: 1040, margin: '0 auto', padding: '8px 18px 80px' }}>
         {/* ── Hero ──────────────────────────────────────────── */}
-        <section style={{ position: 'relative', textAlign: 'center', padding: '56px 8px 36px' }}>
+        <section style={{ position: 'relative', textAlign: 'center', padding: '60px 8px 40px' }}>
           <div
             aria-hidden
             style={{
-              position: 'absolute', inset: '-20px -20px auto', height: 320,
-              background: 'radial-gradient(60% 70% at 50% 0%, color-mix(in srgb, var(--brand-accent) 24%, transparent), transparent 70%)',
+              position: 'absolute', inset: '-20px -20px auto', height: 360,
+              background: 'radial-gradient(60% 70% at 50% 0%, color-mix(in srgb, var(--brand-accent) 26%, transparent), transparent 70%)',
               pointerEvents: 'none',
             }}
           />
           <div className="t-kicker" style={{ fontSize: 11, marginBottom: 18 }}>
-            Menús digitales para restaurantes
+            La plataforma de menús digitales para restaurantes
           </div>
-          <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)', maxWidth: 560, margin: '0 auto' }}>
-            El menú de tu restaurante, vivo.
+          <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)', maxWidth: 680, margin: '0 auto', lineHeight: 1.05 }}>
+            El menú de tu restaurante, <span style={{ color: 'var(--brand-accent)' }}>vivo</span>.
           </h1>
-          <p className="t-mute" style={{ fontSize: 16, lineHeight: 1.5, maxWidth: 520, margin: '18px auto 0' }}>
-            Cambia el QR que lleva a un PDF lento por un menú web rápido y espectacular,
-            con su propio panel de administración y pedidos en línea opcionales.
+          <p className="t-mute" style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 560, margin: '20px auto 0' }}>
+            Cambia el QR que lleva a un PDF lento por un menú web rápido y espectacular —
+            con pedidos en línea, panel de administración y todo lo que tu negocio necesita.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28 }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
             <Link
               href="/registro"
               className="press btn-accent"
               style={{
-                padding: '13px 26px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 15, textDecoration: 'none', color: '#fff',
+                padding: '14px 28px', borderRadius: 'var(--radius-full)',
+                fontWeight: 700, fontSize: 15.5, textDecoration: 'none', color: '#fff',
               }}
             >
-              Crear mi restaurante
+              Crear mi restaurante gratis
             </Link>
             <a
               href={demoUrl}
               className="press"
               style={{
-                padding: '13px 26px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 15, textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '14px 26px', borderRadius: 'var(--radius-full)',
+                fontWeight: 600, fontSize: 15.5, textDecoration: 'none',
                 color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
                 background: 'rgba(255,255,255,0.06)',
               }}
             >
-              Ver demo en vivo
+              <Icon name="grid" size={16} /> Ver demo en vivo
             </a>
           </div>
-          <p className="t-mute" style={{ fontSize: 13, marginTop: 14 }}>
-            1 mes de prueba gratis · sin tarjeta · listo en minutos
+          <p className="t-mute" style={{ fontSize: 13, marginTop: 16 }}>
+            1 mes de prueba gratis · sin tarjeta · sin comisiones por pedido
           </p>
+
+          {/* Tira de confianza */}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 34 }}>
+            {[
+              { icon: 'bell',   label: 'Pedidos en tiempo real' },
+              { icon: 'wallet', label: 'Sin comisión por pedido' },
+              { icon: 'grid',   label: 'Sin apps que descargar' },
+              { icon: 'sparkle',label: 'Con tu propia marca' },
+            ].map((c) => (
+              <span key={c.label} className="glass-quiet" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 99, fontSize: 12.5, color: 'var(--u-text-2)' }}>
+                <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent)' }} /> {c.label}
+              </span>
+            ))}
+          </div>
         </section>
 
-        {/* ── Features ──────────────────────────────────────── */}
-        <section
-          style={{
-            display: 'grid', gap: 14, marginTop: 24,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          }}
-        >
-          {FEATURES.map((f) => (
-            <Glass key={f.title} style={{ padding: '20px 18px' }}>
-              <h3 className="t-display" style={{ fontSize: 16, fontWeight: 700 }}>{f.title}</h3>
-              <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 8 }}>{f.body}</p>
+        {/* ── Antes / Después ──────────────────────────────── */}
+        <section style={{ marginTop: 28 }}>
+          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            <Glass variant="quiet" style={{ padding: '22px 20px' }}>
+              <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--u-text-4)' }}>Antes</div>
+              <h3 className="t-display" style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Un PDF lento y plano</h3>
+              <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {['Tarda en abrir y se ve mal en el celular', 'Sin pedidos: el cliente llama o se va', 'Cambiar un precio es un dolor de cabeza'].map((t) => (
+                  <li key={t} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--u-text-3)' }}>
+                    <Icon name="x" size={15} style={{ color: '#f87171', flexShrink: 0, marginTop: 2 }} /> {t}
+                  </li>
+                ))}
+              </ul>
             </Glass>
-          ))}
+            <Glass style={{ padding: '22px 20px', border: '1.5px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)' }}>
+              <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Leogin</div>
+              <h3 className="t-display" style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Un menú vivo que vende</h3>
+              <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {['Abre al toque, con fotos que dan hambre', 'Pedidos en línea que llegan en tiempo real', 'Tú editas precios y fotos cuando quieras'].map((t) => (
+                  <li key={t} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--u-text-2)' }}>
+                    <Icon name="check" size={15} strokeWidth={2.6} style={{ color: '#4ade80', flexShrink: 0, marginTop: 2 }} /> {t}
+                  </li>
+                ))}
+              </ul>
+            </Glass>
+          </div>
+        </section>
+
+        {/* ── Funciones por beneficio ───────────────────────── */}
+        <section id="funciones" style={{ marginTop: 64, scrollMarginTop: 72 }}>
+          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
+            Hecho para vender más y operar mejor
+          </h2>
+          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14.5, marginBottom: 30, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+            Una experiencia que enamora a tus clientes y un panel que te da el control total de tu restaurante.
+          </p>
+
+          <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+            <div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 12 }}>Para tus clientes</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {FOR_DINER.map((f) => <FeatureRow key={f.title} {...f} />)}
+              </div>
+            </div>
+            <div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 12 }}>Para ti, el dueño</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {FOR_OWNER.map((f) => <FeatureRow key={f.title} {...f} />)}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Todo en un solo lugar ─────────────────────────── */}
+        <section style={{ marginTop: 64 }}>
+          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
+            Todo tu restaurante, en un solo lugar
+          </h2>
+          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
+            Activa lo que necesites según tu plan. Crece sin cambiar de sistema.
+          </p>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+            {CAPABILITIES.map((c) => (
+              <div key={c.label} className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 13 }}>
+                <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent)' }}>
+                  <Icon name={c.icon} size={16} />
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', lineHeight: 1.25 }}>{c.label}</span>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* ── Cómo funciona ─────────────────────────────────── */}
-        <section style={{ marginTop: 56 }}>
+        <section style={{ marginTop: 64 }}>
           <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Cómo funciona
+            De cero a tu menú en línea
           </h2>
           <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
-            De cero a tu menú en línea, sin que toques una línea de código.
+            Sin que toques una línea de código.
           </p>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             {STEPS.map((s) => (
-              <Glass key={s.n} variant="quiet" style={{ padding: '22px 18px' }}>
-                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)', fontWeight: 600 }}>{s.n}</div>
-                <h3 className="t-display" style={{ fontSize: 16, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
-                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 8 }}>{s.body}</p>
+              <Glass key={s.n} variant="quiet" style={{ padding: '24px 20px' }}>
+                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)', fontWeight: 700 }}>{s.n}</div>
+                <h3 className="t-display" style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
+                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8 }}>{s.body}</p>
               </Glass>
             ))}
           </div>
         </section>
 
         {/* ── Planes ────────────────────────────────────────── */}
-        <section id="planes" style={{ marginTop: 56, scrollMarginTop: 72 }}>
+        <section id="planes" style={{ marginTop: 64, scrollMarginTop: 72 }}>
           <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Planes y precios
+            Planes claros, sin sorpresas
           </h2>
           <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
-            El precio crece con tus ventas. Sin cobros sorpresa.
+            Empieza gratis. Sin comisiones por pedido. Cancela cuando quieras.
           </p>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', alignItems: 'start' }}>
             {LANDING_PLANS.map((p) => (
               <Glass
                 key={p.code}
                 style={{
-                  padding: '24px 20px',
+                  padding: '26px 22px',
                   border: p.accent ? '1.5px solid color-mix(in srgb, var(--brand-accent) 60%, transparent)' : undefined,
                   position: 'relative',
+                  boxShadow: p.accent ? '0 12px 40px color-mix(in srgb, var(--brand-accent) 18%, transparent)' : undefined,
                 }}
               >
                 {'badge' in p && p.badge && (
@@ -220,10 +321,13 @@ export default function LeoginLanding() {
                     {p.badge}
                   </div>
                 )}
-                <h3 className="t-display" style={{ fontSize: 20, fontWeight: 800 }}>{p.code}</h3>
-                <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 16, color: 'var(--brand-accent)', marginTop: 4 }}>{p.price}</div>
-                <p className="t-mute" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.45 }}>{p.tagline}</p>
-                <ul style={{ listStyle: 'none', margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                <h3 className="t-display" style={{ fontSize: 21, fontWeight: 800 }}>{p.code}</h3>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
+                  <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--brand-accent)' }}>{p.price}</span>
+                  <span className="t-mute" style={{ fontSize: 13 }}>/ mes</span>
+                </div>
+                <p className="t-mute" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{p.tagline}</p>
+                <ul style={{ listStyle: 'none', margin: '16px 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {p.points.map((pt) => (
                     <li key={pt} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
                       <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 2 }} />
@@ -233,36 +337,82 @@ export default function LeoginLanding() {
                 </ul>
                 <Link
                   href="/registro"
-                  className="press btn-accent"
-                  style={{ display: 'block', textAlign: 'center', padding: '11px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, textDecoration: 'none', color: '#fff' }}
+                  className={p.accent ? 'press btn-accent' : 'press'}
+                  style={{
+                    display: 'block', textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-full)',
+                    fontWeight: 700, fontSize: 14, textDecoration: 'none',
+                    color: p.accent ? '#fff' : 'var(--u-text)',
+                    border: p.accent ? 'none' : '1px solid var(--u-hair-2)',
+                    background: p.accent ? undefined : 'rgba(255,255,255,0.06)',
+                  }}
                 >
                   Empezar gratis
                 </Link>
               </Glass>
             ))}
           </div>
+
+          {/* Plan a tu medida */}
+          <Glass variant="quiet" style={{ marginTop: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
+              <Icon name="sparkle" size={20} />
+            </span>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>Plan a tu medida</div>
+              <div className="t-mute" style={{ fontSize: 13, marginTop: 2, lineHeight: 1.45 }}>
+                ¿No haces domicilio o solo atiendes en local? Pagas solo por los canales que usas — cada canal que no necesites baja tu mensualidad.
+              </div>
+            </div>
+          </Glass>
+
           <div style={{ textAlign: 'center', marginTop: 18 }}>
             <Link
               href="/planes"
               className="t-mute"
               style={{ fontSize: 13.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--u-text-3)' }}
             >
-              Ver todos los planes (hasta Q150,000 GMV) y comparativa completa
+              Ver todos los planes (hasta Q150,000 en ventas) y comparativa completa
               <Icon name="arrowRight" size={14} />
             </Link>
           </div>
         </section>
 
+        {/* ── Preguntas frecuentes ──────────────────────────── */}
+        <section style={{ marginTop: 64 }}>
+          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 26 }}>
+            Preguntas frecuentes
+          </h2>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', maxWidth: 880, margin: '0 auto' }}>
+            {FAQS.map((f) => (
+              <Glass key={f.q} variant="quiet" style={{ padding: '18px 18px' }}>
+                <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+                  {f.q}
+                </h3>
+                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8, paddingLeft: 24 }}>{f.a}</p>
+              </Glass>
+            ))}
+          </div>
+        </section>
+
         {/* ── CTA final ─────────────────────────────────────── */}
-        <section style={{ marginTop: 56 }}>
-          <Glass variant="solid" style={{ padding: '36px 24px', textAlign: 'center' }}>
-            <h2 className="t-display" style={{ fontSize: 'var(--fs-display)' }}>
-              ¿Listo para modernizar tu menú?
+        <section style={{ marginTop: 64 }}>
+          <Glass variant="solid" style={{ padding: '40px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', inset: 'auto -20px -40px', height: 220,
+                background: 'radial-gradient(60% 80% at 50% 100%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)',
+                pointerEvents: 'none',
+              }}
+            />
+            <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', position: 'relative' }}>
+              Moderniza tu restaurante hoy
             </h2>
-            <p className="t-mute" style={{ fontSize: 15, maxWidth: 440, margin: '12px auto 0', lineHeight: 1.5 }}>
-              Crea tu restaurante ahora y pruébalo gratis 1 mes completo. ¿Prefieres que te acompañemos? Escríbenos.
+            <p className="t-mute" style={{ fontSize: 15, maxWidth: 480, margin: '12px auto 0', lineHeight: 1.55, position: 'relative' }}>
+              Crea tu restaurante ahora y pruébalo gratis 1 mes completo. ¿Prefieres que te acompañemos? Escríbenos por WhatsApp.
             </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 22 }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24, position: 'relative' }}>
               <Link
                 href="/registro"
                 className="press btn-accent"
@@ -272,19 +422,21 @@ export default function LeoginLanding() {
                   fontWeight: 700, fontSize: 15, textDecoration: 'none', color: '#fff',
                 }}
               >
-                Crear mi restaurante
+                Crear mi restaurante gratis
               </Link>
               <a
                 href={ctaHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="press"
                 style={{
-                  display: 'inline-block',
-                  padding: '14px 30px', borderRadius: 'var(--radius-full)',
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '14px 28px', borderRadius: 'var(--radius-full)',
                   fontWeight: 600, fontSize: 15, textDecoration: 'none',
                   color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)',
                 }}
               >
-                Hablar con ventas
+                <Icon name="whatsapp" size={16} style={{ color: '#4ade80' }} /> Hablar con ventas
               </a>
             </div>
           </Glass>
@@ -292,20 +444,48 @@ export default function LeoginLanding() {
       </main>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid var(--u-hair)', padding: '24px 18px' }}>
+      <footer style={{ borderTop: '1px solid var(--u-hair)', padding: '28px 18px' }}>
         <div
           style={{
-            maxWidth: 960, margin: '0 auto',
-            display: 'flex', flexWrap: 'wrap', gap: 12,
+            maxWidth: 1040, margin: '0 auto',
+            display: 'flex', flexWrap: 'wrap', gap: 16,
             alignItems: 'center', justifyContent: 'space-between',
           }}
         >
-          <LeoginLogo size={20} />
-          <span className="t-mute" style={{ fontSize: 12.5 }}>
-            © {new Date().getFullYear()} Leogin · Menús interactivos para restaurantes
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <LeoginLogo size={22} />
+            <span className="t-mute" style={{ fontSize: 12.5 }}>
+              Menús interactivos para restaurantes
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+            <a href="#funciones" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Funciones</a>
+            <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
+            <a href={demoUrl} className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Demo</a>
+            <a href={ctaHref} target="_blank" rel="noopener noreferrer" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Contacto</a>
+          </div>
+        </div>
+        <div style={{ maxWidth: 1040, margin: '16px auto 0' }}>
+          <span className="t-mute" style={{ fontSize: 12 }}>
+            © {new Date().getFullYear()} Leogin · Todos los derechos reservados
           </span>
         </div>
       </footer>
     </div>
+  );
+}
+
+/* ── Fila de característica con ícono ─────────────────────────── */
+function FeatureRow({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <Glass variant="quiet" style={{ padding: '16px 16px', display: 'flex', gap: 13, alignItems: 'flex-start' }}>
+      <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent)' }}>
+        <Icon name={icon} size={19} />
+      </span>
+      <div>
+        <h3 className="t-display" style={{ fontSize: 15, fontWeight: 700 }}>{title}</h3>
+        <p className="t-mute" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{body}</p>
+      </div>
+    </Glass>
   );
 }

@@ -42,6 +42,10 @@ export default function OrderTypesEditor({
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0 }}>
         Tipos de pedido
       </p>
+      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>
+        En planes Premium+, cada canal desactivado descuenta Q100 de la mensualidad
+        automática (hasta Q200). Mínimo un canal activo.
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {OPTIONS.map(({ id, label, desc }) => {
           const enabled = selected.includes(id);

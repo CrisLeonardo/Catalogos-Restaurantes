@@ -4,7 +4,7 @@
    se convierte en una barra inferior fija tipo app. Envuelve /admin/*.
    El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -63,6 +63,46 @@ const PLAN_NAMES: Record<string, string> = {
   PREMIUM_ULTRA: 'Premium Ultra', ALTO_VOLUMEN: 'Alto Volumen', VARIABLE: 'Variable',
 };
 
+const NAV_DEFAULT: Record<string, boolean> = { Cuenta: true };
+const readBg = (raw: string | null): boolean => raw !== 'false';
+const readNav = (raw: string | null): Record<string, boolean> => {
+  if (!raw) return NAV_DEFAULT;
+  try { return JSON.parse(raw) as Record<string, boolean>; } catch { return NAV_DEFAULT; }
+};
+
+/**
+ * Lee un valor de localStorage de forma SSR-safe vía useSyncExternalStore.
+ * En el servidor (y primer render) devuelve `serverDefault`; en el cliente
+ * sincroniza con localStorage sin llamar setState dentro de un efecto (evita
+ * renders en cascada). Las escrituras disparan el evento `ls:<key>` para
+ * notificar a los suscriptores. El snapshot se cachea para devolver la MISMA
+ * referencia mientras el string crudo no cambie (requisito de useSyncExternalStore).
+ */
+function usePersisted<T>(key: string, read: (raw: string | null) => T, serverDefault: T): T {
+  const cache = useRef<{ raw: string | null; val: T; init: boolean }>({ raw: null, val: serverDefault, init: false });
+  const getSnapshot = useCallback((): T => {
+    let raw: string | null = null;
+    try { raw = localStorage.getItem(key); } catch { /* no-op */ }
+    if (!cache.current.init || raw !== cache.current.raw) {
+      cache.current = { raw, val: read(raw), init: true };
+    }
+    return cache.current.val;
+  }, [key, read]);
+  const subscribe = useCallback((cb: () => void) => {
+    const evt = `ls:${key}`;
+    window.addEventListener('storage', cb);
+    window.addEventListener(evt, cb);
+    return () => { window.removeEventListener('storage', cb); window.removeEventListener(evt, cb); };
+  }, [key]);
+  return useSyncExternalStore(subscribe, getSnapshot, () => serverDefault);
+}
+
+/** Persiste un valor y notifica a los suscriptores de `usePersisted`. */
+function writePersisted(key: string, value: string): void {
+  try { localStorage.setItem(key, value); } catch { /* no-op */ }
+  window.dispatchEvent(new Event(`ls:${key}`));
+}
+
 export default function AdminShell({
   restaurantName, restaurantId, ordersEnabled = false,
   analiticaEnabled = false, inventarioEnabled = false, ingredientesEnabled = false,
@@ -73,36 +113,31 @@ export default function AdminShell({
   logoUrl, zone, role, permissions, canManageStaff, planActual, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
-  const [bgVisible, setBgVisible] = useState(true);
-  // Secciones del nav plegadas (solo escritorio). 'Cuenta' arranca plegada
-  // para reducir el ruido visual; la elección se recuerda por sección.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ Cuenta: true });
+  // Fondo del panel y secciones del nav plegadas: se leen de localStorage de
+  // forma SSR-safe (sin setState en efecto). 'Cuenta' arranca plegada.
+  const bgVisible = usePersisted(BG_KEY, readBg, true);
+  const collapsed = usePersisted(NAV_KEY, readNav, NAV_DEFAULT);
 
+  // Sincroniza el atributo del <html> con el estado del fondo (efecto = OK,
+  // solo toca el DOM externo, no llama setState).
   useEffect(() => {
-    const stored = localStorage.getItem(BG_KEY);
-    const visible = stored !== 'false';
-    setBgVisible(visible);
-    document.documentElement.setAttribute('data-admin-bg', visible ? 'on' : 'off');
+    document.documentElement.setAttribute('data-admin-bg', bgVisible ? 'on' : 'off');
+  }, [bgVisible]);
 
-    try {
-      const navStored = localStorage.getItem(NAV_KEY);
-      if (navStored) setCollapsed(JSON.parse(navStored));
-    } catch {}
-  }, []);
+  // En móvil, centra el ítem activo de la barra inferior al navegar (la barra
+  // scrollea en horizontal y así el usuario siempre ve dónde está).
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.innerWidth > 820) return;
+    const el = document.querySelector('.admin-nav [data-active="1"]');
+    el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, [realPathname]);
 
   function toggleSection(title: string) {
-    setCollapsed((prev) => {
-      const next = { ...prev, [title]: !prev[title] };
-      try { localStorage.setItem(NAV_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
+    writePersisted(NAV_KEY, JSON.stringify({ ...collapsed, [title]: !collapsed[title] }));
   }
 
   function toggleBg() {
-    const next = !bgVisible;
-    setBgVisible(next);
-    localStorage.setItem(BG_KEY, String(next));
-    document.documentElement.setAttribute('data-admin-bg', next ? 'on' : 'off');
+    writePersisted(BG_KEY, String(!bgVisible));
   }
 
   const pathname = preview ? '/admin/menu' : realPathname;

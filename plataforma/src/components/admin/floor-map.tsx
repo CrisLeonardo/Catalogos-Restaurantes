@@ -50,7 +50,7 @@ export function TableToken({
   );
 }
 
-interface Transform { s: number; x: number; y: number }
+interface Transform { s: number; x: number; y: number; base: number }
 
 export default function FloorMap({
   tables,
@@ -62,8 +62,9 @@ export default function FloorMap({
   onSelect: (n: number) => void;
 }) {
   const vpRef = useRef<HTMLDivElement | null>(null);
-  const [t, setT] = useState<Transform>({ s: 1, x: 0, y: 0 });
-  const baseScaleRef = useRef(1);
+  // `base` = escala mínima (todo el plano cabe). Vive en el estado (no en un ref)
+  // para poder leerlo en render sin romper la regla react-hooks/refs.
+  const [t, setT] = useState<Transform>({ s: 1, x: 0, y: 0, base: 1 });
 
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const gesture = useRef<{ moved: boolean; lastDist: number; lastMid: { x: number; y: number } | null; last: { x: number; y: number } | null; start: { x: number; y: number } | null; downN: number | null }>({
@@ -89,11 +90,10 @@ export default function FloorMap({
     if (!vp) return;
     const update = () => {
       const newBase = vp.clientWidth / VIRT_W;
-      const ratio = newBase / baseScaleRef.current;
-      baseScaleRef.current = newBase;
       setT((prev) => {
+        const ratio = newBase / prev.base;
         const s = Math.max(prev.s * ratio, newBase);
-        return { s, ...clampPanWith(s, prev.x * ratio, prev.y * ratio, vp.clientWidth, vp.clientHeight) };
+        return { s, base: newBase, ...clampPanWith(s, prev.x * ratio, prev.y * ratio, vp.clientWidth, vp.clientHeight) };
       });
     };
     update();
@@ -105,13 +105,13 @@ export default function FloorMap({
   /* Zoom multiplicativo manteniendo fijo el punto (cx,cy). */
   function zoomBy(factor: number, cx: number, cy: number) {
     setT((prev) => {
-      const minS = baseScaleRef.current;
+      const minS = prev.base;
       const s = clamp(prev.s * factor, minS, minS * MAX_USER_ZOOM);
       if (s === prev.s) return prev;
       const wx = (cx - prev.x) / prev.s;
       const wy = (cy - prev.y) / prev.s;
       const c = clampPan(s, cx - wx * s, cy - wy * s);
-      return { s, x: c.x, y: c.y };
+      return { s, x: c.x, y: c.y, base: prev.base };
     });
   }
 
@@ -222,7 +222,7 @@ export default function FloorMap({
     }
   }
 
-  const zoomed = t.s > baseScaleRef.current * 1.001;
+  const zoomed = t.s > t.base * 1.001;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -255,40 +255,46 @@ export default function FloorMap({
               Este nivel no tiene mesas colocadas.
             </div>
           )}
-          {tables.map((tb) => {
-            const isOcc = occupied.has(tb.n);
-            return (
-              <div
-                key={tb.n}
-                data-table={tb.n}
-                style={{
-                  position: 'absolute',
-                  left: tb.x * VIRT_W,
-                  top: tb.y * VIRT_H,
-                  width: 64, height: 64,
-                  transform: 'translate(-50%, -50%)',
-                  borderRadius: tb.shape === 'square' ? 14 : 99, cursor: 'pointer',
-                  border: `1.5px solid ${isOcc ? 'rgba(251,191,36,0.55)' : 'var(--u-hair-2)'}`,
-                  background: isOcc ? 'rgba(251,191,36,0.14)' : 'rgba(255,255,255,0.06)',
-                  color: isOcc ? '#fbbf24' : 'var(--u-text)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-                  boxShadow: isOcc ? '0 4px 14px rgba(251,191,36,0.2)' : '0 2px 10px rgba(0,0,0,0.22)',
-                }}
-              >
-                <span style={{ fontSize: 9.5, color: isOcc ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none' }}>Mesa</span>
-                <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
-                {isOcc && <span style={{ fontSize: 8.5, fontWeight: 700, marginTop: 1, pointerEvents: 'none' }}>● activa</span>}
-              </div>
-            );
-          })}
         </div>
+
+        {/* Pines de mesa: tamaño FIJO en pantalla (como pines de mapa) → siempre
+            cómodos de tocar en móvil/tablet sin importar el zoom. La posición se
+            calcula aplicando el mismo transform (pan + zoom) al centro de la mesa. */}
+        {tables.map((tb) => {
+          const isOcc = occupied.has(tb.n);
+          const sx = tb.x * VIRT_W * t.s + t.x;
+          const sy = tb.y * VIRT_H * t.s + t.y;
+          return (
+            <div
+              key={tb.n}
+              data-table={tb.n}
+              style={{
+                position: 'absolute',
+                left: sx, top: sy,
+                width: 'var(--floor-pin, 50px)', height: 'var(--floor-pin, 50px)',
+                transform: 'translate(-50%, -50%)',
+                borderRadius: tb.shape === 'square' ? 13 : 99, cursor: 'pointer',
+                border: `1.5px solid ${isOcc ? 'rgba(251,191,36,0.6)' : 'var(--u-hair-2)'}`,
+                background: isOcc ? 'rgba(251,191,36,0.18)' : 'color-mix(in srgb, var(--brand-bg) 80%, transparent)',
+                color: isOcc ? '#fbbf24' : 'var(--u-text)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0,
+                boxShadow: isOcc ? '0 4px 14px rgba(251,191,36,0.22)' : '0 2px 10px rgba(0,0,0,0.3)',
+                WebkitBackdropFilter: 'blur(2px)', backdropFilter: 'blur(2px)',
+              }}
+            >
+              <span style={{ fontSize: 8.5, color: isOcc ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
+              <span style={{ fontSize: 19, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
+              {isOcc && <span style={{ fontSize: 8, fontWeight: 700, pointerEvents: 'none' }}>● activa</span>}
+            </div>
+          );
+        })}
 
         {/* Controles de zoom */}
         <div style={{ position: 'absolute', right: 10, bottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <ZoomBtn label="Acercar" onTap={() => { const vp = vpRef.current!; zoomBy(1.3, vp.clientWidth / 2, vp.clientHeight / 2); }}>+</ZoomBtn>
           <ZoomBtn label="Alejar" onTap={() => { const vp = vpRef.current!; zoomBy(1 / 1.3, vp.clientWidth / 2, vp.clientHeight / 2); }}>−</ZoomBtn>
           {zoomed && (
-            <ZoomBtn label="Restablecer" onTap={() => setT({ s: baseScaleRef.current, x: 0, y: 0 })}>
+            <ZoomBtn label="Restablecer" onTap={() => setT((prev) => ({ s: prev.base, x: 0, y: 0, base: prev.base }))}>
               <Icon name="x" size={15} />
             </ZoomBtn>
           )}

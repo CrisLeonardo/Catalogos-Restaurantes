@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { isMeseroOnly } from '@/lib/permissions';
 import { adminUrl } from '@/lib/tenant';
 import { headers } from 'next/headers';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export type AuthState = { error: string } | null;
 
@@ -14,6 +15,13 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
 
   if (!email || !password) {
     return { error: 'Email y contraseña son requeridos.' };
+  }
+
+  // Anti fuerza bruta: límite por IP (10 intentos / 5 min) y por IP+email.
+  const ip = clientIp(await headers());
+  if (!rateLimit(`login:${ip}`, 10, 5 * 60_000) ||
+      !rateLimit(`login:${ip}:${email.toLowerCase()}`, 6, 5 * 60_000)) {
+    return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 
   const supabase = await createClient();

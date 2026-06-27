@@ -49,7 +49,14 @@ export default function SuperNav() {
         </span>
       </span>
 
-      <nav style={{ display: 'flex', gap: 4, flex: 1 }}>
+      <nav
+        className="super-nav-scroll"
+        style={{
+          display: 'flex', gap: 4, flex: 1,
+          overflowX: 'auto', flexWrap: 'nowrap', scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         {links.map(({ href, label }) => {
           const active = pathname.startsWith(href);
           return (
@@ -58,11 +65,13 @@ export default function SuperNav() {
               href={href}
               className="press"
               style={{
-                padding: '5px 12px',
+                padding: '6px 13px',
                 borderRadius: 'var(--radius-full)',
                 fontSize: 13,
                 fontWeight: 500,
                 textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                flex: '0 0 auto',
                 background: active ? 'rgba(255,255,255,0.10)' : 'transparent',
                 color: active ? 'var(--u-text)' : 'var(--u-text-3)',
                 border: active ? '1px solid var(--u-hair-2)' : '1px solid transparent',

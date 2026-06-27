@@ -39,10 +39,15 @@ export interface BillingConfig {
 /** Parámetros globales de precio + gracia (platform_settings, mig. 035 + 049). */
 export interface PricingSettings {
   basico: number;
+  estandar: number;
   premium: number;
   premiumPro: number;
   premiumUltra: number;
   altoVolumen: number;
+  /** "Plan a tu medida": Q de descuento por cada canal de servicio desactivado. */
+  channelDiscountPer: number;
+  /** Máximo de canales descontables (piso: siempre se paga al menos 1 canal). */
+  channelDiscountMax: number;
   gmvLimitPremium: number;
   gmvLimitPremiumPro: number;
   gmvLimitPremiumUltra: number;
@@ -184,11 +189,14 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
   const n = (k: string, d: number) => { const v = parseFloat(map.get(k) ?? ''); return isNaN(v) ? d : v; };
   const b = (k: string, d: boolean) => { const v = map.get(k); return v == null || v === '' ? d : v === 'true'; };
   return {
-    basico:               n('plan_price_BASICO',        299),
-    premium:              n('plan_price_PREMIUM',        600),
-    premiumPro:           n('plan_price_PREMIUM_PRO',   1000),
-    premiumUltra:         n('plan_price_PREMIUM_ULTRA', 1500),
-    altoVolumen:          n('plan_price_ALTO_VOLUMEN',  2250),
+    basico:               n('plan_price_BASICO',         199),
+    estandar:             n('plan_price_ESTANDAR',       399),
+    premium:              n('plan_price_PREMIUM',         599),
+    premiumPro:           n('plan_price_PREMIUM_PRO',    999),
+    premiumUltra:         n('plan_price_PREMIUM_ULTRA', 1499),
+    altoVolumen:          n('plan_price_ALTO_VOLUMEN',  2249),
+    channelDiscountPer:   n('channel_discount_per',      100),
+    channelDiscountMax:   n('channel_discount_max',        2),
     gmvLimitPremium:      n('plan_gmv_limit_PREMIUM',       20000),
     gmvLimitPremiumPro:   n('plan_gmv_limit_PREMIUM_PRO',   40000),
     gmvLimitPremiumUltra: n('plan_gmv_limit_PREMIUM_ULTRA', 75000),
@@ -232,6 +240,38 @@ export async function computeSuggestedFee(restaurantId: string): Promise<number>
   const { data, error } = await db.rpc('leogin_compute_monthly_fee', { p_restaurant_id: restaurantId });
   if (error || data == null) return 0;
   return Number(data);
+}
+
+/** Desglose "Plan a tu medida" para mostrar al dueño / super admin. */
+export interface FeeBreakdown {
+  plan: string | null;
+  base: number;
+  channelsActive: number;
+  channelsTotal: number;
+  discountApplies: boolean;
+  discountPer: number;
+  channelsOff: number;
+  discount: number;
+  final: number;
+}
+
+export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdown | null> {
+  const db = createServiceClient();
+  const { data, error } = await db.rpc('leogin_fee_breakdown', { p_restaurant_id: restaurantId });
+  if (error || !data) return null;
+  const d = data as Record<string, unknown>;
+  if (!d.plan) return null;
+  return {
+    plan:            (d.plan as string) ?? null,
+    base:            Number(d.base ?? 0),
+    channelsActive:  Number(d.channels_active ?? 3),
+    channelsTotal:   Number(d.channels_total ?? 3),
+    discountApplies: Boolean(d.discount_applies),
+    discountPer:     Number(d.discount_per ?? 0),
+    channelsOff:     Number(d.channels_off ?? 0),
+    discount:        Number(d.discount ?? 0),
+    final:           Number(d.final ?? 0),
+  };
 }
 
 export const getInvoices = cache(

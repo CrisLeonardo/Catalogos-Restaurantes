@@ -380,9 +380,14 @@ export async function updateOwnOrderTypes(
     .upsert({ restaurant_id: restaurantId, config: { ...existing, orderTypes } }, { onConflict: 'restaurant_id' });
   if (error) return { error: error.message };
 
+  // "Plan a tu medida": al cambiar canales, recalcula la mensualidad de los
+  // restaurantes en modo automático (la función solo toca filas auto_price=true).
+  await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
+
   revalidatePath('/admin/modulos');
   revalidatePath('/admin/personalizacion');
   revalidatePath('/admin/mesas');
+  revalidatePath('/admin/suscripcion');
   revalidatePath('/');
   return { ok: true };
 }

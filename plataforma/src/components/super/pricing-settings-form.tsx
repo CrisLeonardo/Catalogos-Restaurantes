@@ -53,10 +53,25 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
           <p style={sectionStyle}>Precio mensual por plan (Q)</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field name="plan_price_BASICO"        label="Básico"        value={pricing.basico} />
+            <Field name="plan_price_ESTANDAR"      label="Estándar"      value={pricing.estandar} />
             <Field name="plan_price_PREMIUM"       label="Premium"       value={pricing.premium} />
             <Field name="plan_price_PREMIUM_PRO"   label="Premium Pro"   value={pricing.premiumPro} />
             <Field name="plan_price_PREMIUM_ULTRA" label="Premium Ultra" value={pricing.premiumUltra} />
             <Field name="plan_price_ALTO_VOLUMEN"  label="Alto Volumen"  value={pricing.altoVolumen} />
+          </div>
+        </div>
+
+        {/* Plan a tu medida — descuento por canal de servicio desactivado */}
+        <div>
+          <p style={sectionStyle}>Plan a tu medida (descuento por canal)</p>
+          <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '-4px 0 10px', lineHeight: 1.5 }}>
+            En planes Premium en adelante, cada canal de servicio que el restaurante NO use
+            (domicilio / comer en local / para llevar) descuenta este monto de su mensualidad.
+            El máximo de canales descontables fija el piso (siempre se paga al menos un canal).
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+            <Field name="channel_discount_per" label="Descuento por canal (Q)" value={pricing.channelDiscountPer} step="1" />
+            <Field name="channel_discount_max" label="Máx. canales descontables" value={pricing.channelDiscountMax} step="1" />
           </div>
         </div>
 
