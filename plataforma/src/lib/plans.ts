@@ -6,6 +6,7 @@
 
 export type PlanCode =
   | 'BASICO'
+  | 'ESTANDAR'
   | 'PREMIUM'
   | 'PREMIUM_PRO'
   | 'PREMIUM_ULTRA'
@@ -28,6 +29,7 @@ export interface PlanFeatures {
   hasPrinting: boolean;
   hasAnalytics: boolean;
   hasRecipes: boolean;
+  /** Siempre false — módulo desactivado hasta nuevo aviso. */
   hasSuppliers: boolean;
   hasFEL: boolean;
   gmvLimit: number | null;
@@ -42,19 +44,46 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   BASICO: {
     code: 'BASICO',
     name: 'Básico',
-    tagline: 'Menú digital con pedidos para llevar y llamada al mesero',
-    priceMonthly: 299,
-    priceLabel: 'Q299 / mes',
-    gmvLimit: 10000,
-    gmvLimitLabel: 'Hasta Q10,000 en ventas / mes',
-    products: 30,
+    tagline: 'Menú digital con QR — muestra tu carta sin pedidos en línea',
+    priceMonthly: 199,
+    priceLabel: 'Q199 / mes',
+    gmvLimit: null,
+    gmvLimitLabel: 'Solo menú digital · sin pedidos en línea',
+    products: 'unlimited',
     users: 1,
-    hasOrders: true,
+    hasOrders: false,
     hasWhatsapp: false,
     hasRealtime: false,
     hasFullTheme: false,
     hasWaiterPanel: false,
-    hasWaiterCall: true,
+    hasWaiterCall: false,
+    hasSurveys: false,
+    hasReservations: false,
+    hasCoupons: false,
+    hasLoyalty: false,
+    hasPrinting: false,
+    hasAnalytics: false,
+    hasRecipes: false,
+    hasSuppliers: false,
+    hasFEL: false,
+    highlight: false,
+  },
+  ESTANDAR: {
+    code: 'ESTANDAR',
+    name: 'Estándar',
+    tagline: 'Pedidos para llevar con notificaciones en tiempo real',
+    priceMonthly: 399,
+    priceLabel: 'Q399 / mes',
+    gmvLimit: 10000,
+    gmvLimitLabel: 'Hasta Q10,000 en ventas / mes',
+    products: 'unlimited',
+    users: 2,
+    hasOrders: true,
+    hasWhatsapp: true,
+    hasRealtime: true,
+    hasFullTheme: false,
+    hasWaiterPanel: false,
+    hasWaiterCall: false,
     hasSurveys: false,
     hasReservations: false,
     hasCoupons: false,
@@ -69,7 +98,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   PREMIUM: {
     code: 'PREMIUM',
     name: 'Premium',
-    tagline: 'Pedidos online, tiempo real y personalización completa',
+    tagline: 'Para llevar, comer en local y todas las funciones de negocio',
     badge: 'MÁS POPULAR',
     highlight: true,
     priceMonthly: 599,
@@ -77,7 +106,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     gmvLimit: 20000,
     gmvLimitLabel: 'Hasta Q20,000 en ventas / mes',
     products: 'unlimited',
-    users: 3,
+    users: 'unlimited',
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
@@ -105,7 +134,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     gmvLimit: 40000,
     gmvLimitLabel: 'Hasta Q40,000 en ventas / mes',
     products: 'unlimited',
-    users: 5,
+    users: 'unlimited',
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
@@ -119,7 +148,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: true,
     hasAnalytics: true,
     hasRecipes: true,
-    hasSuppliers: true,
+    hasSuppliers: false,
     hasFEL: false,
   },
   PREMIUM_ULTRA: {
@@ -133,7 +162,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     gmvLimit: 75000,
     gmvLimitLabel: 'Hasta Q75,000 en ventas / mes',
     products: 'unlimited',
-    users: 10,
+    users: 'unlimited',
     hasOrders: true,
     hasWhatsapp: true,
     hasRealtime: true,
@@ -147,7 +176,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: true,
     hasAnalytics: true,
     hasRecipes: true,
-    hasSuppliers: true,
+    hasSuppliers: false,
     hasFEL: true,
   },
   ALTO_VOLUMEN: {
@@ -174,7 +203,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: true,
     hasAnalytics: true,
     hasRecipes: true,
-    hasSuppliers: true,
+    hasSuppliers: false,
     hasFEL: true,
   },
   VARIABLE: {
@@ -201,18 +230,18 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: true,
     hasAnalytics: true,
     hasRecipes: true,
-    hasSuppliers: true,
+    hasSuppliers: false,
     hasFEL: true,
   },
 };
 
 /** Planes ordenados para mostrar en la página pública (excluye VARIABLE en la vista principal). */
 export const PUBLIC_PLANS: PlanCode[] = [
-  'BASICO', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN',
+  'BASICO', 'ESTANDAR', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN',
 ];
 
 export const PLAN_ORDER: PlanCode[] = [
-  'BASICO', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE',
+  'BASICO', 'ESTANDAR', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE',
 ];
 
 export function isUpgrade(current: PlanCode, target: PlanCode): boolean {
@@ -225,8 +254,8 @@ export function nextPlan(current: PlanCode): PlanCode | null {
 }
 
 export function recommendPlan(gmv: number): { plan: PlanCode; price: number; pct: string } {
-  if (gmv === 0)     return { plan: 'BASICO',        price: 299,              pct: '—' };
-  if (gmv <= 10000)  return { plan: 'BASICO',        price: 299,              pct: ((299  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv === 0)     return { plan: 'BASICO',        price: 199,              pct: '—' };
+  if (gmv <= 10000)  return { plan: 'ESTANDAR',      price: 399,              pct: ((399  / gmv) * 100).toFixed(1) + '%' };
   if (gmv <= 20000)  return { plan: 'PREMIUM',       price: 599,              pct: ((599  / gmv) * 100).toFixed(1) + '%' };
   if (gmv <= 40000)  return { plan: 'PREMIUM_PRO',   price: 999,              pct: ((999  / gmv) * 100).toFixed(1) + '%' };
   if (gmv <= 75000)  return { plan: 'PREMIUM_ULTRA', price: 1499,             pct: ((1499 / gmv) * 100).toFixed(1) + '%' };

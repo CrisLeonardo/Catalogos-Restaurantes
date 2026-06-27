@@ -46,13 +46,23 @@ const SIGNUP_MODULES_PREMIUM = {
   fel: false,
 };
 
-const SIGNUP_MODULES_BASICO = {
+const SIGNUP_MODULES_ESTANDAR = {
   catalog: true,
   orders: true,
+  whatsapp_notify: true,
+  analitica: false,
+  inventario: false,
+  promociones: false,
+  personal: false,
+  finanzas: false,
+  multi_branch: false,
+};
+
+const SIGNUP_MODULES_BASICO = {
+  catalog: true,
+  orders: false,
   analitica: false,
   multi_branch: false,
-  // Módulos activables incluidos en Básico
-  llamada_mesero: true,
 };
 
 function validEmail(email: string): boolean {
@@ -78,7 +88,8 @@ export async function signupRestaurant(
   const rawSlug = (formData.get('slug') as string)?.trim().toLowerCase() || '';
   const terms = formData.get('terms');
   const rawPlan = formData.get('plan_code') as string | null;
-  const planCode: 'BASICO' | 'PREMIUM' = rawPlan === 'BASICO' ? 'BASICO' : 'PREMIUM';
+  const planCode: 'BASICO' | 'ESTANDAR' | 'PREMIUM' =
+    rawPlan === 'BASICO' ? 'BASICO' : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
 
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
@@ -133,7 +144,7 @@ export async function signupRestaurant(
       name,
       slug,
       plan_actual: planCode,
-      modules: planCode === 'BASICO' ? SIGNUP_MODULES_BASICO : SIGNUP_MODULES_PREMIUM,
+      modules: planCode === 'BASICO' ? SIGNUP_MODULES_BASICO : planCode === 'ESTANDAR' ? SIGNUP_MODULES_ESTANDAR : SIGNUP_MODULES_PREMIUM,
       status: 'active',
       onboarding_done: false,
       whatsapp_number: whatsapp,
@@ -153,11 +164,12 @@ export async function signupRestaurant(
   const restaurantId = restaurant.id as string;
 
   // ── 3. Tema (marca) ─────────────────────────────────────────
-  // BASICO solo admite pedidos para llevar; Premium y superior tienen todos los tipos.
+  // BASICO y ESTANDAR solo admiten pickup; Premium+ tienen todos los tipos.
+  const pickupOnly = planCode === 'BASICO' || planCode === 'ESTANDAR';
   await db.from('restaurant_themes').insert({
     restaurant_id: restaurantId,
     brand_name: name,
-    config: planCode === 'BASICO' ? { orderTypes: ['pickup'] } : { orderTypes: ['dine_in', 'delivery', 'pickup'] },
+    config: pickupOnly ? { orderTypes: ['pickup'] } : { orderTypes: ['dine_in', 'delivery', 'pickup'] },
   });
 
   // ── 4. Cobro pausado con prueba gratis ──────────────────────

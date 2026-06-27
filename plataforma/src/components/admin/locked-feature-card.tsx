@@ -8,25 +8,27 @@ interface UpgradeFeature {
   name: string;
   hook: string;
   impact: string;
-  basicLabel: string;
+  currentLabel: string;
   premiumLabel: string;
+  excludeFor?: string[];
 }
 
-const UPGRADE_FEATURES: UpgradeFeature[] = [
+const ALL_UPGRADE_FEATURES: UpgradeFeature[] = [
   {
     icon: 'whatsapp',
     name: 'Aviso por WhatsApp',
     hook: 'Nunca pierdas un pedido nuevo',
     impact: 'Cada nuevo pedido llega a tu WhatsApp al instante. Los restaurantes que responden rápido completan más pedidos y reciben mejores reseñas.',
-    basicLabel: 'Solo visible en el panel',
+    currentLabel: 'Solo visible en el panel',
     premiumLabel: 'Alerta inmediata en WhatsApp',
+    excludeFor: ['ESTANDAR'],
   },
   {
     icon: 'thumbsUp',
     name: 'Programa de lealtad',
     hook: 'Clientes que regresan solos',
     impact: 'Tus clientes acumulan puntos por cada compra y los canjean en su próxima visita. La lealtad convierte compradores únicos en clientes recurrentes sin gasto en publicidad.',
-    basicLabel: 'Cada pedido es una sola vez',
+    currentLabel: 'Cada pedido es una sola vez',
     premiumLabel: 'Puntos que generan retorno',
   },
   {
@@ -34,7 +36,7 @@ const UPGRADE_FEATURES: UpgradeFeature[] = [
     name: 'Cupones y descuentos',
     hook: 'Convierte visitas en pedidos',
     impact: 'Crea códigos de descuento con límite de usos y fecha de vencimiento. Un cupón de bienvenida bien colocado convierte visitantes del menú en compradores activos.',
-    basicLabel: 'Sin herramientas de conversión',
+    currentLabel: 'Sin herramientas de conversión',
     premiumLabel: 'Cupones con control total',
   },
   {
@@ -42,7 +44,7 @@ const UPGRADE_FEATURES: UpgradeFeature[] = [
     name: 'Reservaciones',
     hook: 'Mesas llenas incluso entre semana',
     impact: 'Tus clientes reservan mesa desde el menú digital. Sabes con anticipación cuántos comensales llegan y puedes planificar tu cocina sin sorpresas.',
-    basicLabel: 'Sin reservas en línea',
+    currentLabel: 'Sin reservas en línea',
     premiumLabel: 'Agenda integrada en tu menú',
   },
   {
@@ -50,29 +52,49 @@ const UPGRADE_FEATURES: UpgradeFeature[] = [
     name: 'Estadísticas avanzadas',
     hook: 'Decide con datos, no suposiciones',
     impact: 'Descubre cuáles platillos son más rentables, en qué horas vendes más y cuál es tu ticket promedio. Información real para tomar decisiones que impacten tu negocio.',
-    basicLabel: 'Solo métricas básicas del día',
+    currentLabel: 'Solo métricas básicas del día',
     premiumLabel: 'Análisis completo de ventas',
   },
   {
     icon: 'users',
-    name: 'Multi-usuario',
+    name: 'Usuarios ilimitados',
     hook: 'Tu equipo opera sin depender de ti',
-    impact: 'Hasta 3 usuarios con roles distintos: cajero, mesero y gerente pueden usar el panel con los accesos que cada uno necesita. Delegas sin perder control.',
-    basicLabel: 'Solo 1 usuario administrador',
-    premiumLabel: 'Hasta 3 usuarios con roles',
+    impact: 'Usuarios ilimitados con roles distintos: cajero, mesero y gerente pueden usar el panel con los accesos que cada uno necesita. Delegas sin perder control.',
+    currentLabel: 'Solo 1 usuario administrador',
+    premiumLabel: 'Usuarios ilimitados con roles',
   },
 ];
 
 const CONTACT_WA = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_CONTACT_WHATSAPP : undefined;
 const CONTACT_EMAIL = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com' : 'crisleonardo100@gmail.com';
 
-export default function LockedFeatureSection({ restaurantName }: { restaurantName?: string }) {
+interface Props {
+  restaurantName?: string;
+  planActual?: string;
+}
+
+export default function LockedFeatureSection({ restaurantName, planActual = 'BASICO' }: Props) {
   const [selected, setSelected] = useState<UpgradeFeature | null>(null);
 
-  const waMsg = `Hola, quiero actualizar mi plan de Básico a Premium para ${restaurantName ?? 'mi restaurante'}`;
+  const isEstandar = planActual === 'ESTANDAR';
+  const currentPrice = isEstandar ? 'Q399' : 'Q199';
+  const currentPlanLabel = isEstandar ? 'Estándar' : 'Básico';
+  const fromPlanLabel = isEstandar ? 'de Estándar' : 'de Básico';
+
+  const features = ALL_UPGRADE_FEATURES.filter(f => !f.excludeFor?.includes(planActual));
+
+  const waMsg = `Hola, quiero actualizar mi plan ${fromPlanLabel} a Premium para ${restaurantName ?? 'mi restaurante'}`;
   const ctaHref = CONTACT_WA
     ? `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent(waMsg)}`
     : `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Quiero actualizar a Premium')}`;
+
+  const headerTitle = isEstandar
+    ? 'Funciones disponibles en Premium'
+    : `${features.length} herramientas que tu competencia ya usa`;
+
+  const headerDesc = isEstandar
+    ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas delivery, comer en local y todo lo siguiente.'
+    : 'Están incluidas en Premium (Q599/mes). Toca cualquiera para ver cómo impacta tu negocio.';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -91,17 +113,17 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
             fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display)',
             color: 'var(--u-text)', lineHeight: 1.2, marginBottom: 3,
           }}>
-            6 herramientas que tu competencia ya usa
+            {headerTitle}
           </div>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-            Están incluidas en Premium (Q599/mes). Toca cualquiera para ver cómo impacta tu negocio.
+            {headerDesc}
           </p>
         </div>
       </div>
 
       {/* Feature grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 9 }}>
-        {UPGRADE_FEATURES.map((feat) => (
+        {features.map((feat) => (
           <button
             key={feat.name}
             type="button"
@@ -222,7 +244,7 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
               {selected.impact}
             </p>
 
-            {/* Básico vs Premium comparison */}
+            {/* Current plan vs Premium comparison */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
               <div style={{
                 padding: '12px 14px',
@@ -233,12 +255,12 @@ export default function LockedFeatureSection({ restaurantName }: { restaurantNam
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
                   <Icon name="x" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 1 }} />
-                  <span>{selected.basicLabel}</span>
+                  <span>{selected.currentLabel}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text-3)', marginTop: 12, lineHeight: 1 }}>
-                  Q299
+                  {currentPrice}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>/mes · Básico</div>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>/mes · {currentPlanLabel}</div>
               </div>
               <div style={{
                 padding: '12px 14px', marginLeft: -1,

@@ -19,7 +19,27 @@ const PLAN_INFO = {
     detail: 'luego Q599 / mes · sin tarjeta ni compromiso',
     subtitle: 'Tu prueba de 30 días comienza hoy.',
     features: [
-      'Pedidos online activos en tu menú',
+      'Pedidos para llevar, en local y delivery',
+      'Alerta WhatsApp al recibir pedido',
+      'Notificaciones en tiempo real',
+      'Usuarios ilimitados con roles',
+    ],
+    nextSteps: [
+      'Sube tus productos y fotos',
+      'Personaliza colores y logo',
+      'Comparte tu código QR con clientes',
+      'Activa WhatsApp en Módulos para alertas',
+    ],
+  },
+  ESTANDAR: {
+    name: 'Estándar',
+    badge: 'PRUEBA 30 DÍAS',
+    badgeColor: '#10b981',
+    badgeBg: 'rgba(16,185,129,0.14)',
+    detail: 'luego Q399 / mes · sin tarjeta ni compromiso',
+    subtitle: 'Tu prueba de 30 días comienza hoy.',
+    features: [
+      'Pedidos para llevar activos en tu menú',
       'Alerta WhatsApp al recibir pedido',
       'Notificaciones en tiempo real',
       'Personalización completa de marca',
@@ -36,11 +56,11 @@ const PLAN_INFO = {
     badge: 'PRUEBA 30 DÍAS',
     badgeColor: '#818cf8',
     badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'Q299 / mes al vencer la prueba',
-    subtitle: 'Tu plan Básico está activo.',
+    detail: 'luego Q199 / mes · sin tarjeta ni compromiso',
+    subtitle: 'Tu plan Básico (menú digital) está activo.',
     features: [
       'Menú digital con QR listo para imprimir',
-      'Hasta 30 productos en catálogo',
+      'Productos ilimitados en catálogo',
       'Logo y colores de tu marca',
       'Panel de administración completo',
     ],
@@ -48,7 +68,7 @@ const PLAN_INFO = {
       'Sube tus productos y fotos',
       'Personaliza colores y logo',
       'Imprime o comparte tu código QR',
-      'Actualiza a Premium para agregar pedidos online',
+      'Actualiza a Estándar (Q399) para agregar pedidos para llevar',
     ],
   },
 } as const;
@@ -60,7 +80,7 @@ export default async function RegistroListoPage({
 }) {
   const { slug, plan } = await searchParams;
   const safeSlug = (slug ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '');
-  const safePlan = plan === 'BASICO' ? 'BASICO' : 'PREMIUM';
+  const safePlan = plan === 'BASICO' ? 'BASICO' : plan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
   const panelUrl = safeSlug ? adminUrl(safeSlug) : '/login';
   const menuUrl = safeSlug ? subdomainUrl(safeSlug) : '/';
   const info = PLAN_INFO[safePlan];

@@ -55,11 +55,11 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  BASICO: '#94a3b8', PREMIUM: '#6366f1', PREMIUM_PRO: '#a855f7',
+  BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PREMIUM_PRO: '#a855f7',
   PREMIUM_ULTRA: '#14b8a6', ALTO_VOLUMEN: '#f97316', VARIABLE: '#f59e0b',
 };
 const PLAN_NAMES: Record<string, string> = {
-  BASICO: 'Básico', PREMIUM: 'Premium', PREMIUM_PRO: 'Premium Pro',
+  BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PREMIUM_PRO: 'Premium Pro',
   PREMIUM_ULTRA: 'Premium Ultra', ALTO_VOLUMEN: 'Alto Volumen', VARIABLE: 'Variable',
 };
 
@@ -114,8 +114,8 @@ export default function AdminShell({
 
   const on = (flag: boolean) => preview || flag;
 
-  // BASICO no incluye panel de mesero ni gestión de mesas (hasWaiterPanel: false)
-  const hasWaiterPanel = planActual !== 'BASICO';
+  // BASICO y ESTANDAR no incluyen panel de mesero ni gestión de mesas
+  const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
 
   const sections: { title: string; items: NavItem[] }[] = [
     {

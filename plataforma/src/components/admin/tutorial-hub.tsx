@@ -523,8 +523,9 @@ function TutorialCaptura({
 
 function getPlanDisplayName(plan: string): string {
   const names: Record<string, string> = {
-    BASICO: 'Básico', POPULAR: 'Popular',
+    BASICO: 'Básico', ESTANDAR: 'Estándar', POPULAR: 'Popular',
     PREMIUM: 'Premium', PREMIUM_PRO: 'Premium Pro',
+    PREMIUM_ULTRA: 'Premium Ultra', ALTO_VOLUMEN: 'Alto Volumen', VARIABLE: 'Variable',
   };
   return names[plan] ?? plan;
 }

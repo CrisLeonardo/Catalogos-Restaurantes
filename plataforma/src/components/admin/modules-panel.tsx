@@ -278,7 +278,17 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-              El plan Básico incluye <strong style={{ color: 'var(--u-text-2)' }}>Pedidos para llevar</strong>.
+              El plan <strong style={{ color: 'var(--u-text-2)' }}>Básico</strong> es solo menú digital — no incluye pedidos en línea.
+              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent)' }}>Estándar (Q399/mes)</strong>.{' '}
+              <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
+            </p>
+          </div>
+        )}
+        {planActual === 'ESTANDAR' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
+            <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
+            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
+              El plan Estándar incluye <strong style={{ color: 'var(--u-text-2)' }}>Pedidos para llevar</strong>.
               Delivery y Comer en local están disponibles a partir de <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q599/mes)</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
@@ -286,7 +296,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {ORDER_TYPE_META.map((m) => {
-            const isLockedForBasico = planActual === 'BASICO' && m.id !== 'pickup';
+            const isLockedForBasico = (planActual === 'BASICO' || planActual === 'ESTANDAR') && m.id !== 'pickup';
             const on = localOrderTypes.includes(m.id);
             const busy = orderBusy === m.id && isPending;
             const isLast = localOrderTypes.length === 1 && on;

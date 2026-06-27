@@ -39,8 +39,9 @@ export default async function ModulosPage() {
   ]);
 
   const planActual = (rest?.plan_actual as string | null) ?? null;
-  // BASICO solo puede usar pickup; los otros tipos quedan bloqueados en la UI.
-  const defaultOrderTypes: OrderType[] = planActual === 'BASICO' ? ['pickup'] : ['dine_in', 'delivery', 'pickup'];
+  // BASICO y ESTANDAR solo pueden usar pickup; los otros tipos quedan bloqueados en la UI.
+  const pickupOnlyPlan = planActual === 'BASICO' || planActual === 'ESTANDAR';
+  const defaultOrderTypes: OrderType[] = pickupOnlyPlan ? ['pickup'] : ['dine_in', 'delivery', 'pickup'];
   const orderTypes: OrderType[] =
     (theme?.config as Record<string, unknown> | null)?.orderTypes as OrderType[] | undefined
     ?? defaultOrderTypes;

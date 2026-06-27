@@ -65,11 +65,12 @@ export const PLAN_META: Record<string, {
   hasOrders: boolean;
   color: string;
 }> = {
-  BASICO:        { label: 'Básico',        price: 299,  gmvLimit: null,   hasOrders: false, color: 'gray'   },
-  PREMIUM:       { label: 'Premium',       price: 600,  gmvLimit: 20000,  hasOrders: true,  color: 'blue'   },
-  PREMIUM_PRO:   { label: 'Premium Pro',   price: 1000, gmvLimit: 40000,  hasOrders: true,  color: 'purple' },
-  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 1500, gmvLimit: 75000,  hasOrders: true,  color: 'teal'   },
-  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 2250, gmvLimit: 150000, hasOrders: true,  color: 'orange' },
+  BASICO:        { label: 'Básico',        price: 199,  gmvLimit: null,   hasOrders: false, color: 'gray'   },
+  ESTANDAR:      { label: 'Estándar',      price: 399,  gmvLimit: 10000,  hasOrders: true,  color: 'emerald'},
+  PREMIUM:       { label: 'Premium',       price: 599,  gmvLimit: 20000,  hasOrders: true,  color: 'blue'   },
+  PREMIUM_PRO:   { label: 'Premium Pro',   price: 999,  gmvLimit: 40000,  hasOrders: true,  color: 'purple' },
+  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 1499, gmvLimit: 75000,  hasOrders: true,  color: 'teal'   },
+  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 2249, gmvLimit: 150000, hasOrders: true,  color: 'orange' },
   VARIABLE:      { label: 'Variable',      price: 0,    gmvLimit: null,   hasOrders: true,  color: 'amber'  },
 };
 

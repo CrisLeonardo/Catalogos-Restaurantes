@@ -9,8 +9,8 @@ function fmtQ(n: number) {
 }
 
 function recommendPlan(gmv: number): { plan: PlanCode; price: number; pct: string } {
-  if (gmv === 0)     return { plan: 'BASICO',        price: 299,  pct: '—' };
-  if (gmv <= 10000)  return { plan: 'BASICO',        price: 299,  pct: ((299  / gmv) * 100).toFixed(1) + '%' };
+  if (gmv === 0)     return { plan: 'BASICO',        price: 199,  pct: '—' };
+  if (gmv <= 10000)  return { plan: 'ESTANDAR',      price: 399,  pct: ((399  / gmv) * 100).toFixed(1) + '%' };
   if (gmv <= 20000)  return { plan: 'PREMIUM',       price: 599,  pct: ((599  / gmv) * 100).toFixed(1) + '%' };
   if (gmv <= 40000)  return { plan: 'PREMIUM_PRO',   price: 999,  pct: ((999  / gmv) * 100).toFixed(1) + '%' };
   if (gmv <= 75000)  return { plan: 'PREMIUM_ULTRA', price: 1499, pct: ((1499 / gmv) * 100).toFixed(1) + '%' };
@@ -20,6 +20,7 @@ function recommendPlan(gmv: number): { plan: PlanCode; price: number; pct: strin
 
 const ACCENT_BY_PLAN: Record<PlanCode, string> = {
   BASICO:        '#94a3b8',
+  ESTANDAR:      '#10b981',
   PREMIUM:       '#6366f1',
   PREMIUM_PRO:   '#a855f7',
   PREMIUM_ULTRA: '#14b8a6',
@@ -35,7 +36,7 @@ export default function GmvCalculator() {
 
   const motivation =
     gmv === 0
-      ? 'Con el plan Básico tienes tu menú digital activo sin pedidos online.'
+      ? 'Con el plan Básico tienes tu menú digital con QR, sin pedidos en línea. Perfecta para empezar.'
       : plan === 'VARIABLE'
       ? `Con ${fmtQ(gmv)} en ventas digitales, pagas ${fmtQ(price)} al mes — solo el 1%.`
       : `Con ${fmtQ(gmv)} en ventas digitales, pagas ${fmtQ(price)} al mes — solo el ${pct} de tus ventas.`;
@@ -121,7 +122,8 @@ export default function GmvCalculator() {
               key={code}
               type="button"
               onClick={() => {
-                const mid = code === 'BASICO' ? 5000
+                const mid = code === 'BASICO' ? 0
+                  : code === 'ESTANDAR' ? 7000
                   : code === 'PREMIUM' ? 15000
                   : code === 'PREMIUM_PRO' ? 30000
                   : code === 'PREMIUM_ULTRA' ? 60000
