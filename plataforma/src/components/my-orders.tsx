@@ -31,7 +31,7 @@ export default function MyOrders({ restaurantId }: { restaurantId: string }) {
 
   useEffect(() => {
     const list = getLocalOrders(restaurantId);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setOrders(list);
     setLoaded(true);
 

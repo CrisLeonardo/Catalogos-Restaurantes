@@ -100,6 +100,9 @@ export default function RestaurantLocationMap({ lat, lng, radiusKm, onLocationCh
   useEffect(() => {
     if (!circleRef.current || !markerRef.current) return;
     import('leaflet').then((mod) => {
+      // L se usa solo en posición de tipo (typeof L.marker/circle) pero debe
+      // existir como valor para esas consultas de tipo.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const L = mod.default;
       const pos = (markerRef.current as ReturnType<typeof L.marker>).getLatLng();
       (circleRef.current as ReturnType<typeof L.circle>).setRadius(radiusKm * 1000);

@@ -53,8 +53,10 @@ export default function DeliveryMap({
     && restaurantLng !== undefined && restaurantLng !== null;
   const hasRadius = hasRestaurant && radiusKm !== undefined && radiusKm !== null;
 
-  // Callback estable para no volver a correr el efecto
-  const stableOnChange = useCallback(onLocationChange, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Callback estable para no volver a correr el efecto (se fija al montar a
+  // propósito; los cambios del padre no deben recrear el mapa Leaflet).
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/use-memo
+  const stableOnChange = useCallback(onLocationChange, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;

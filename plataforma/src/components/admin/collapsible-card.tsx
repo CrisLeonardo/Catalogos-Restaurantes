@@ -25,7 +25,7 @@ export default function CollapsibleCard({ title, subtitle, icon, defaultOpen = t
   useEffect(() => {
     if (!key) return;
     const stored = localStorage.getItem(key);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     if (stored !== null) setOpen(stored === '1');
   }, [key]);
 

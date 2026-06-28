@@ -879,7 +879,7 @@ export interface PublicOrderItem {
 export interface PublicOrder {
   orderNumber: string;
   status: OrderStatus;
-  orderType: 'PICKUP' | 'DELIVERY';
+  orderType: 'PICKUP' | 'DELIVERY' | 'DINE_IN';
   customerName: string;
   subtotal: number;
   deliveryFee: number;
@@ -956,7 +956,7 @@ export async function getPublicOrder(
   return {
     orderNumber: data.order_number as string,
     status: data.status as OrderStatus,
-    orderType: data.order_type as 'PICKUP' | 'DELIVERY',
+    orderType: data.order_type as 'PICKUP' | 'DELIVERY' | 'DINE_IN',
     customerName: data.customer_name as string,
     subtotal: Number(data.subtotal),
     deliveryFee: Number(data.delivery_fee),

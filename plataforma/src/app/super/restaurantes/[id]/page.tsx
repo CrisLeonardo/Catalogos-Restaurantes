@@ -10,7 +10,7 @@ import RestaurantUsers from '@/components/super/restaurant-users';
 import BillingManager from '@/components/super/billing-manager';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import DeleteButton from '@/components/admin/delete-button';
-import { getBillingConfig, getInvoices, getPricingSettings, computeSuggestedFee, planLabel, planGmvLimit, getRestaurantGmvCurrentMonth } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, getPricingSettings, computeSuggestedFee, planLabel, getRestaurantGmvCurrentMonth } from '@/lib/db/billing';
 import {
   deleteRestaurant,
   duplicateRestaurant,

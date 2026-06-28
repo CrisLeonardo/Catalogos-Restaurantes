@@ -162,7 +162,12 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
           <StringListCtl label="Preferencias de servicio" items={patch.dineInCourseOptions} onChange={(v) => set('dineInCourseOptions', v)} />
           <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />
           {patch.tipEnabled && (
-            <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
+            <>
+              <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+                Se sugiere al comensal al pedir desde la mesa (puede quitarla) y el mesero también la ve.
+              </p>
+            </>
           )}
         </>
       )}

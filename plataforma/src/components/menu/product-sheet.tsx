@@ -135,7 +135,7 @@ export default function ProductSheet({
         {/* Hero */}
         <div style={{ borderRadius: 22, overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
           {usePhoto ? (
-            <Image src={product.image_url!} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="460px" unoptimized />
+            <Image src={product.image_url!} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="460px" />
           ) : (
             <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
               <BrandPattern icon={icon} seed={seedFromString(product.id)} iconScale={1.5} faint={0.2} />

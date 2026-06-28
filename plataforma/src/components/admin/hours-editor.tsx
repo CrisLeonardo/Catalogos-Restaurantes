@@ -184,7 +184,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       <Glass variant="quiet" style={{ padding: 16 }}>
         <label style={labelStyle}>Horario de apertura</label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12 }}>
-          El badge "Abierto/Cerrado" y el checkout se rigen por este horario.
+          El badge “Abierto/Cerrado” y el checkout se rigen por este horario.
           Sin días activos = siempre abierto. Puedes agregar varios turnos por día
           (p. ej. 7:00–10:00 y 13:00–21:00). Un cierre de madrugada (p. ej.
           20:00 a 02:00) cruza la medianoche sin problema.

@@ -292,7 +292,7 @@ export default function PlanesPage() {
                         { label: 'Usuarios ilimitados', ok: true },
                         ...(p.hasFEL ? [{ label: 'Factura electrónica (FEL SAT)', ok: true }] : []),
                         { label: p.gmvLimitLabel, ok: true },
-                      ].map(({ label, ok }) => (
+                      ].map(({ label }) => (
                         <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5 }}>
                           <span style={{ color: '#4ade80', flexShrink: 0 }}><Icon name="check" size={15} /></span>
                           <span style={{ color: 'var(--u-text-2)' }}>{label}</span>
@@ -475,6 +475,10 @@ export default function PlanesPage() {
         <Link href="/" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Leogin</Link>
         {' · '}
         <Link href="/" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Inicio</Link>
+        {' · '}
+        <Link href="/terminos" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Términos</Link>
+        {' · '}
+        <Link href="/privacidad" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Privacidad</Link>
         {' · '}
         <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Contacto</a>
       </footer>

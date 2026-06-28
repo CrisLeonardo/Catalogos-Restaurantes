@@ -16,8 +16,6 @@ import {
   createProductModal,
   updateProductModal,
   toggleProductAvailability,
-  toggleProductActive,
-  deleteProduct,
   type ProductModalState,
 } from '@/lib/actions/products';
 import { getRecipeForProduct } from '@/lib/actions/recipes';
@@ -515,6 +513,9 @@ function ProductModal({
                 }}
               >
                 {imagePreview ? (
+                  // Preview local del archivo recién elegido (blob:) — next/image
+                  // no optimiza object URLs; <img> es lo correcto aquí.
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={imagePreview}
                     alt=""

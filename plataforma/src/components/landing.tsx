@@ -205,8 +205,32 @@ export default function LeoginLanding() {
           </div>
         </section>
 
+        {/* ── Vistazo al producto (mockup) ─────────────────── */}
+        <section style={{ marginTop: 44 }}>
+          <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', alignItems: 'center' }}>
+            <div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 10 }}>Un vistazo</div>
+              <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
+                Así de bien se ve tu menú
+              </h2>
+              <p className="t-mute" style={{ fontSize: 14.5, lineHeight: 1.6, marginTop: 12, maxWidth: 420 }}>
+                Fotos que dan hambre, tu marca y un botón para ordenar. Tus clientes lo abren
+                con el QR, sin instalar nada.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
+                {['🇬🇹 Hecho en Guatemala', 'Soporte real por WhatsApp', 'Listo el mismo día'].map((t) => (
+                  <span key={t} className="glass-quiet" style={{ fontSize: 12, color: 'var(--u-text-2)', padding: '7px 13px', borderRadius: 99 }}>{t}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <PhoneMockup />
+            </div>
+          </div>
+        </section>
+
         {/* ── Antes / Después ──────────────────────────────── */}
-        <section style={{ marginTop: 28 }}>
+        <section style={{ marginTop: 64 }}>
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
             <Glass variant="quiet" style={{ padding: '22px 20px' }}>
               <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--u-text-4)' }}>Antes</div>
@@ -462,6 +486,8 @@ export default function LeoginLanding() {
             <a href="#funciones" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Funciones</a>
             <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
             <a href={demoUrl} className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Demo</a>
+            <Link href="/terminos" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Términos</Link>
+            <Link href="/privacidad" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Privacidad</Link>
             <a href={ctaHref} target="_blank" rel="noopener noreferrer" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Contacto</a>
           </div>
         </div>
@@ -487,5 +513,51 @@ function FeatureRow({ icon, title, body }: { icon: string; title: string; body: 
         <p className="t-mute" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{body}</p>
       </div>
     </Glass>
+  );
+}
+
+/* ── Mockup del menú en un teléfono (CSS puro, sin imágenes) ──── */
+function PhoneMockup() {
+  const items = [
+    { name: 'Tacos al pastor', desc: 'Con piña, cilantro y cebolla', price: 'Q45', g: 'linear-gradient(135deg,#d97706,#b45309)' },
+    { name: 'Burrito de res',  desc: 'Frijol, arroz, queso y pico',  price: 'Q52', g: 'linear-gradient(135deg,#65a30d,#3f6212)' },
+  ];
+  return (
+    <div style={{ position: 'relative' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: -30, background: 'radial-gradient(50% 50% at 50% 40%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', width: 268, borderRadius: 38, padding: 10, background: 'linear-gradient(160deg,#2a2a2e,#161618)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 70px rgba(0,0,0,0.45)' }}>
+        <div style={{ borderRadius: 30, overflow: 'hidden', background: 'var(--brand-bg, #0c0c0e)', aspectRatio: '9 / 19' }}>
+          {/* Portada */}
+          <div style={{ padding: '16px 16px 12px', background: 'linear-gradient(180deg, color-mix(in srgb, var(--brand-accent) 16%, transparent), transparent)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--u-text, #fff)' }}>Tu Restaurante</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.15)', padding: '3px 8px', borderRadius: 99 }}>● Abierto</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: 'var(--u-text-3, #aaa)', marginTop: 3 }}>Cocina de la casa · Zona 1</div>
+          </div>
+          {/* Productos */}
+          <div style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {items.map((it) => (
+              <div key={it.name} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 8 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, background: it.g }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text, #fff)' }}>{it.name}</div>
+                  <div style={{ fontSize: 9.5, color: 'var(--u-text-3, #999)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent)', marginTop: 3 }}>{it.price}</div>
+                </div>
+                <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, display: 'grid', placeItems: 'center', background: 'var(--brand-accent)', color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
+              </div>
+            ))}
+          </div>
+          {/* Barra de carrito */}
+          <div style={{ margin: '14px 12px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--brand-accent)', color: '#fff', borderRadius: 12, padding: '10px 14px' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700 }}>Ver carrito</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800 }}>Q97</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

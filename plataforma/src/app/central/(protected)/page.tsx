@@ -62,7 +62,7 @@ export default async function CentralDashboardPage() {
       {/* Tabla de sucursales */}
       <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
         <div className="t-kicker" style={{ fontSize: 9.5, padding: '14px 18px 8px' }}>Sucursales · hoy</div>
-        {dash.branches.map((b, i) => {
+        {dash.branches.map((b) => {
           const adminUrl = subdomainUrl(`${b.slug}-admin`);
           return (
             <div key={b.id} style={{ padding: '12px 18px', borderTop: '1px solid var(--u-hair)', display: 'flex', alignItems: 'center', gap: 12 }}>

@@ -569,7 +569,7 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     if (stored !== null) setOpen(stored === '1');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

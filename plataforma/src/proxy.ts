@@ -123,9 +123,12 @@ function applySecurityHeaders(headers: Headers): void {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
+    // style-src incluye Google Fonts (tipografía de cada tenant) y unpkg
+    // (CSS de Leaflet). Sin esto el CSP bloquearía las fuentes personalizadas
+    // de los restaurantes y dejaría los mapas sin estilo.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
     "img-src 'self' blob: data: https:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://fonts.gstatic.com",
     "connect-src 'self' https: wss: http://localhost:* ws://localhost:*",
     "worker-src 'self' blob:",
     "frame-src 'self'",
@@ -137,6 +140,9 @@ function applySecurityHeaders(headers: Headers): void {
 
   headers.set('Content-Security-Policy', csp);
   headers.set('X-Content-Type-Options', 'nosniff');
+  // Filtro XSS legacy del navegador desactivado (recomendación OWASP actual):
+  // confiar en escapado + CSP. "1; mode=block" podía abrir vectores.
+  headers.set('X-XSS-Protection', '0');
   headers.set('X-Frame-Options', 'SAMEORIGIN');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   headers.set('X-DNS-Prefetch-Control', 'on');

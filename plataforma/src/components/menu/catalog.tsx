@@ -211,7 +211,7 @@ function ProductArt({ p, icon, scale = 1 }: { p: ProdItem; icon: string; scale?:
   const config = useThemeConfig();
   const usePhoto = p.image_url && config.productArt !== 'pattern';
   if (usePhoto) {
-    return <Image src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes="(max-width: 440px) 50vw, 220px" unoptimized />;
+    return <Image src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes="(max-width: 440px) 50vw, 220px" />;
   }
   return (
     <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>

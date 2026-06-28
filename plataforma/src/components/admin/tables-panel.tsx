@@ -312,7 +312,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
         <Glass variant="quiet" style={{ padding: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
           <Icon name="utensils" size={28} style={{ color: 'var(--u-text-4)' }} />
           <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', fontWeight: 500 }}>
-            Activa "Comer en local" y guarda para generar los QR por mesa.
+            Activa “Comer en local” y guarda para generar los QR por mesa.
           </div>
         </Glass>
       ) : null}

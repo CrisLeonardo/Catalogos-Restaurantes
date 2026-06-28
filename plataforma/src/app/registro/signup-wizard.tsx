@@ -168,9 +168,9 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 0: Tu plan ── */}
       <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
         <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          Elige el plan con el que quieres empezar. Ambos incluyen 30 días gratis.
+          Elige el plan con el que quieres empezar. Todos incluyen 30 días gratis.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="signup-plans">
           {PLAN_CARDS.map((plan) => {
             const active = selectedPlan === plan.code;
             return (
@@ -312,7 +312,13 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
         </Glass>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12.5, color: 'var(--u-text-3)', cursor: 'pointer' }}>
           <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--brand-accent)' }} />
-          <span>Acepto los términos del servicio y la política de privacidad de Leogin.</span>
+          <span>
+            Acepto los{' '}
+            <Link href="/terminos" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent)', fontWeight: 600, textDecoration: 'none' }}>términos del servicio</Link>
+            {' '}y la{' '}
+            <Link href="/privacidad" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent)', fontWeight: 600, textDecoration: 'none' }}>política de privacidad</Link>
+            {' '}de Leogin.
+          </span>
         </label>
       </div>
 

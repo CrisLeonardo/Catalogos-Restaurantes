@@ -8,7 +8,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
 import { getMenuData } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
-import { isOpenNow } from '@/lib/hours';
+import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls } from '@/lib/tenant';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
@@ -18,10 +18,25 @@ export async function generateMetadata(): Promise<Metadata> {
   const slug = (await headers()).get('x-tenant-slug');
 
   if (!slug) {
+    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(',')[0]?.trim();
+    const base = root && !root.includes('localhost') ? `https://${root}` : undefined;
+    const title = 'Leogin — Menús digitales para restaurantes';
+    const description =
+      'Convierte el menú de tu restaurante en una experiencia web rápida y espectacular, con panel de administración y pedidos en línea.';
     return {
-      title: 'Leogin — Menús digitales para restaurantes',
-      description:
-        'Convierte el menú de tu restaurante en una experiencia web rápida y espectacular, con panel de administración y pedidos en línea.',
+      title,
+      description,
+      ...(base ? { metadataBase: new URL(base) } : {}),
+      openGraph: {
+        title,
+        description,
+        siteName: 'Leogin',
+        locale: 'es_GT',
+        type: 'website',
+        ...(base ? { url: base } : {}),
+        images: [{ url: '/icon-512.png', width: 512, height: 512, alt: 'Leogin' }],
+      },
+      twitter: { card: 'summary', title, description, images: ['/icon-512.png'] },
     };
   }
 
@@ -120,10 +135,9 @@ export default async function Home({
 
   const menu = await getMenuData(data.restaurant.id);
   const ordersEnabled = data.restaurant.modules?.orders === true;
-  const isOpen = isOpenNow(
-    data.restaurant.hours,
-    data.restaurant.timezone || 'America/Guatemala',
-  );
+  const tz = data.restaurant.timezone || 'America/Guatemala';
+  const isOpen = isOpenNow(data.restaurant.hours, tz);
+  const reopenHint = !isOpen ? nextOpenLabel(data.restaurant.hours, tz) : null;
 
   const mod = data.restaurant.modules as Record<string, boolean> | null;
   const modSettings = data.restaurant.module_settings ?? null;
@@ -137,6 +151,7 @@ export default async function Home({
       restaurantId={data.restaurant.id}
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
+      reopenHint={reopenHint}
       initialMesa={initialMesa}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
     />

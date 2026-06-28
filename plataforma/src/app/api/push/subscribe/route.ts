@@ -8,28 +8,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
-async function getRestaurantId(req: NextRequest): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('restaurant_id, role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile) return null;
-
-  // El Super Admin puede suscribirse pasando un restaurantId en el body.
-  if (profile.role === 'SUPER_ADMIN') {
-    const body = await req.clone().json().catch(() => ({})) as { restaurantId?: string };
-    return body.restaurantId ?? null;
-  }
-
-  return profile.restaurant_id as string | null;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {

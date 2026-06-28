@@ -411,6 +411,9 @@ export default function PrintAgentSettings() {
   function connectionLabel(): { text: string; color: string } {
     if (!config?.exists) return { text: 'Sin agente vinculado', color: 'var(--u-text-4)' };
     if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: '#f59e0b' };
+    // Etiqueta de "última conexión": el tiempo relativo se calcula al render a
+    // propósito (es texto informativo del panel admin, no estado persistente).
+    // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
     if (ageMs < 90_000) return { text: '● Agente conectado', color: '#4ade80' };
     const mins = Math.round(ageMs / 60_000);

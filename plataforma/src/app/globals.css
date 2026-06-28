@@ -753,6 +753,11 @@ html { overflow-x: clip; }
    resuelve las pantallas chicas. */
 .floor-map-vp { aspect-ratio: 16 / 10; }
 
+/* Registro: tarjetas de plan. Apiladas en móvil (legibles a todo el ancho),
+   3 columnas cuando hay espacio. Evita el caso feo de 2 columnas con 3 cards. */
+.signup-plans { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 560px) { .signup-plans { grid-template-columns: repeat(3, 1fr); } }
+
 .press { transition: transform 90ms var(--ease-out); }
 .press:active { transform: scale(0.97); }
 

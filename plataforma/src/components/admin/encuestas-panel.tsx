@@ -94,7 +94,7 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
                   </div>
                   {r.comment && (
                     <p style={{ fontSize: 12.5, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.4, fontStyle: 'italic' }}>
-                      "{r.comment}"
+                      “{r.comment}”
                     </p>
                   )}
                 </div>

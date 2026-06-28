@@ -62,7 +62,7 @@ export default function OrderTracker({
   const [notifPerm, setNotifPerm] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('unsupported');
   useEffect(() => {
     if (typeof Notification !== 'undefined') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setNotifPerm(Notification.permission);
     }
   }, []);
@@ -100,6 +100,11 @@ export default function OrderTracker({
             notifyStatusChange(`${fresh.orderNumber} · ${labels[fresh.status]}`);
           }
           setOrder(fresh);
+          // Pedido terminado (entregado/cancelado): deja de sondear.
+          if (TERMINAL.includes(fresh.status)) {
+            stopped = true;
+            clearInterval(interval);
+          }
         }
       } catch {}
     };
@@ -144,7 +149,10 @@ export default function OrderTracker({
   }
 
   const pickup = order.orderType === 'PICKUP';
-  const steps = STEPS.filter((s) => !(pickup && s.status === 'TRANSIT'));
+  // DINE_IN y PICKUP no tienen reparto: el paso "En camino" no aplica
+  // (al comensal sentado en su mesa no se le muestra TRANSIT).
+  const noTransit = pickup || order.orderType === 'DINE_IN';
+  const steps = STEPS.filter((s) => !(noTransit && s.status === 'TRANSIT'));
   const cancelled = order.status === 'CANCEL';
   const activeIdx = cancelled ? -1 : steps.findIndex((s) => s.status === order.status);
   const subtitle = content.tracking.subtitle || 'El estado se actualiza solo, en vivo.';

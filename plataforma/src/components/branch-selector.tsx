@@ -38,7 +38,7 @@ export default function BranchSelector({ group }: { group: PublicGroup }) {
     const slug = getPreferredBranch(group.slug);
     const found = slug ? branches.find((b) => b.slug === slug) ?? null : null;
     if (!found && slug) clearPreferredBranch(group.slug);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setRemembered(found);
     setReady(true);
   }, [group.slug, branches]);

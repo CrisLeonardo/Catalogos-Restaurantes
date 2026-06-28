@@ -95,6 +95,42 @@ export function isOpenNow(
   return false;
 }
 
+/**
+ * Texto amable de la PRÓXIMA apertura ("hoy a las 18:00", "mañana a las 08:00",
+ * "el Lunes a las 08:00") o null si no se puede determinar. Útil para avisar al
+ * comensal cuándo vuelve a abrir cuando el restaurante está cerrado ahora.
+ */
+export function nextOpenLabel(
+  hours: WeeklyHours | null | undefined,
+  timezone: string,
+  now: Date = new Date(),
+): string | null {
+  if (!hours) return null;
+  const { day, minutes } = localNowParts(timezone, now);
+
+  for (let offset = 0; offset < 8; offset++) {
+    const d = (day + offset) % 7;
+    const list = hours[String(d) as DayKey] ?? [];
+    let bestOpen = Infinity;
+    for (const [open] of list) {
+      const o = toMinutes(open);
+      if (Number.isNaN(o)) continue;
+      // Hoy: solo aperturas que aún no pasaron.
+      if (offset === 0 && o <= minutes) continue;
+      if (o < bestOpen) bestOpen = o;
+    }
+    if (bestOpen !== Infinity) {
+      const hh = String(Math.floor(bestOpen / 60)).padStart(2, '0');
+      const mm = String(bestOpen % 60).padStart(2, '0');
+      const time = `${hh}:${mm}`;
+      if (offset === 0) return `hoy a las ${time}`;
+      if (offset === 1) return `mañana a las ${time}`;
+      return `el ${DAY_LABELS[String(d) as DayKey]} a las ${time}`;
+    }
+  }
+  return null;
+}
+
 /** ¿Tiene al menos un intervalo válido? (false = "sin horario configurado") */
 export function hasAnyHours(hours: WeeklyHours | null | undefined): boolean {
   if (!hours) return false;

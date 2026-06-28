@@ -41,7 +41,7 @@ export default function MenuClient({ categories, products, ordersEnabled = false
   const [tableScanned, setTableScanned] = useState(false);
   useEffect(() => {
     if (!restaurantId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setTableScanned((initialMesa != null && initialMesa > 0) || getScannedTable(restaurantId) !== null);
   }, [initialMesa, restaurantId]);
 

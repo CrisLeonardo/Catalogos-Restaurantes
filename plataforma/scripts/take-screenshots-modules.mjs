@@ -7,7 +7,6 @@
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SS_DIR = path.join(__dirname, '..', 'public', 'tutorial', 'screenshots');

@@ -32,16 +32,6 @@ async function shot(page, filename) {
   saved++;
 }
 
-// Expande todos los grupos del sidebar para que sean visibles
-async function expandSidebar(page) {
-  // Busca botones de grupo colapsados y los expande
-  const groups = page.locator('button[data-tour-step], nav button').filter({ hasText: /Operación|Negocio|Cuenta/i });
-  const count = await groups.count();
-  for (let i = 0; i < count; i++) {
-    try { await groups.nth(i).click({ timeout: 1000 }); await delay(200); } catch {}
-  }
-}
-
 // Navega a una ruta y espera que cargue
 async function goto(page, path) {
   await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });

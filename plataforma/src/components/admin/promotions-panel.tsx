@@ -11,9 +11,6 @@ import {
 } from '@/lib/actions/promos';
 import type { Promotion } from '@/types';
 
-const KIND_LABEL: Record<string, string> = {
-  PERCENT: '% de descuento', AMOUNT: 'Monto fijo', FREE_DELIVERY: 'Envío gratis',
-};
 function valueLabel(p: Promotion): string {
   if (p.kind === 'PERCENT') return `${p.value}% off`;
   if (p.kind === 'AMOUNT') return `Q${Number(p.value).toFixed(2)} off`;
