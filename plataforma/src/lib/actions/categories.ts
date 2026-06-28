@@ -2,8 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
+import type { DayKey, WeeklyHours } from '@/lib/hours';
 
 async function resolveContext(formData: FormData) {
   const supabase = await createClient();
@@ -21,20 +23,57 @@ async function resolveContext(formData: FormData) {
   // Un staff sin permiso "categorias" no puede modificarlas (candado server-side).
   if (!can(profile.role, profile.permissions as string[] | null, 'categorias')) return null;
 
-  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  const restaurantId = isSuperAdmin
+  // SUPER_ADMIN y GROUP_OWNER administran una sucursal que no es su
+  // restaurant_id: el primero por el id del form, el segundo por el subdominio
+  // verificado contra su organización (resolveGroupBranchId).
+  const elevated = profile.role === 'SUPER_ADMIN' || profile.role === 'GROUP_OWNER';
+  const restaurantId = profile.role === 'SUPER_ADMIN'
     ? (formData.get('restaurantId') as string)
-    : profile.restaurant_id;
+    : profile.role === 'GROUP_OWNER'
+      ? await resolveGroupBranchId()
+      : profile.restaurant_id;
 
   if (!restaurantId) return null;
 
-  const db = isSuperAdmin ? createServiceClient() : supabase;
+  const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role };
 }
 
 function revalidateAll() {
   revalidatePath('/admin/menu');
   revalidatePath('/admin/categorias');
+}
+
+/** "HH:MM" 24h válido (00:00–23:59). */
+function isHHMM(s: unknown): s is string {
+  if (typeof s !== 'string') return false;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
+  return !!m && Number(m[1]) <= 23 && Number(m[2]) <= 59;
+}
+
+/**
+ * Valida y normaliza el horario de disponibilidad de la categoría (mismo
+ * formato que restaurants.hours). Devuelve null si viene vacío o inválido
+ * (null = disponible siempre). Defensa server-side: no se confía en el cliente.
+ */
+function parseAvailability(raw: string | null): WeeklyHours | null {
+  if (!raw?.trim()) return null;
+  let data: unknown;
+  try { data = JSON.parse(raw); } catch { return null; }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+
+  const out: WeeklyHours = {};
+  for (const day of ['0', '1', '2', '3', '4', '5', '6'] as DayKey[]) {
+    const list = (data as Record<string, unknown>)[day];
+    if (!Array.isArray(list)) continue;
+    const valid = list
+      .slice(0, 6) // máx 6 turnos por día
+      .filter((iv): iv is [string, string] =>
+        Array.isArray(iv) && iv.length === 2 && isHHMM(iv[0]) && isHHMM(iv[1]))
+      .map(([o, c]) => [o.trim(), c.trim()] as [string, string]);
+    if (valid.length > 0) out[day] = valid;
+  }
+  return Object.keys(out).length > 0 ? out : null;
 }
 
 export async function toggleCategoryActive(formData: FormData) {
@@ -132,6 +171,7 @@ export async function createCategoryModal(
     restaurant_id: ctx.restaurantId,
     name,
     icon: (formData.get('icon') as string) || null,
+    availability: parseAvailability(formData.get('availability') as string | null),
     sort_order,
   });
 
@@ -154,7 +194,11 @@ export async function updateCategoryModal(
 
   const { error } = await ctx.db
     .from('categories')
-    .update({ name, icon: (formData.get('icon') as string) || null })
+    .update({
+      name,
+      icon: (formData.get('icon') as string) || null,
+      availability: parseAvailability(formData.get('availability') as string | null),
+    })
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 

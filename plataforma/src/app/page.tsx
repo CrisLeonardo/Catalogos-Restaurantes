@@ -152,6 +152,7 @@ export default async function Home({
       ordersEnabled={ordersEnabled}
       isOpen={isOpen}
       reopenHint={reopenHint}
+      timezone={tz}
       initialMesa={initialMesa}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
     />

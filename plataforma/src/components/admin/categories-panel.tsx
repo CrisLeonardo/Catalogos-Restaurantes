@@ -97,6 +97,7 @@ import {
   deleteCategoryModal,
   type CatModalState,
 } from '@/lib/actions/categories';
+import CategorySchedule from '@/components/admin/category-schedule';
 import type { Category, Product } from '@/types';
 
 /* ── CategoriesPanel ──────────────────────────────────────── */
@@ -336,6 +337,7 @@ function NewCategoryForm({
             style={{ ...inlineInput, flex: 1 }}
           />
         </div>
+        <CategorySchedule defaultValue={null} />
         {state && 'error' in state && (
           <span style={{ fontSize: 12, color: '#f87171' }}>{state.error}</span>
         )}
@@ -382,29 +384,32 @@ function InlineEditForm({
   }, [state]);
 
   return (
-    <form action={formAction} style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center' }}>
+    <form action={formAction} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id"           value={category.id} />
       <input type="hidden" name="icon"         value={iconValue} />
-      <CatIconPicker value={iconOverride} suggested={iconSuggested} onChange={setIconOverride} />
-      <input
-        name="name"
-        type="text"
-        required
-        value={catName}
-        onChange={(e) => setCatName(e.target.value)}
-        autoFocus
-        style={{ ...inlineInput, flex: 1 }}
-      />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <CatIconPicker value={iconOverride} suggested={iconSuggested} onChange={setIconOverride} />
+        <input
+          name="name"
+          type="text"
+          required
+          value={catName}
+          onChange={(e) => setCatName(e.target.value)}
+          autoFocus
+          style={{ ...inlineInput, flex: 1, minWidth: 0 }}
+        />
+        <button type="submit" disabled={isPending} aria-label="Guardar" className="press" style={{ ...submitBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+          {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
+        </button>
+        <button type="button" onClick={onClose} aria-label="Cancelar" className="press" style={{ ...cancelBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+          <Icon name="x" size={15} />
+        </button>
+      </div>
+      <CategorySchedule defaultValue={category.availability} />
       {state && 'error' in state && (
-        <span style={{ fontSize: 11, color: '#f87171', flexShrink: 0 }}>{state.error}</span>
+        <span style={{ fontSize: 11, color: '#f87171' }}>{state.error}</span>
       )}
-      <button type="submit" disabled={isPending} aria-label="Guardar" className="press" style={{ ...submitBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-        {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
-      </button>
-      <button type="button" onClick={onClose} aria-label="Cancelar" className="press" style={{ ...cancelBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
-        <Icon name="x" size={15} />
-      </button>
     </form>
   );
 }

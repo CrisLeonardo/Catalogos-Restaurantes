@@ -10,9 +10,10 @@ import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
 import { Icon } from '@/components/icons';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
+import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
-type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
+type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
 
 interface Props {
@@ -26,13 +27,15 @@ interface Props {
   isOpen?: boolean;
   /** Texto de próxima apertura ("hoy a las 18:00") cuando está cerrado. */
   reopenHint?: string | null;
+  /** Zona horaria del restaurante (para los menús por franja horaria). */
+  timezone?: string;
   /** Mesa pre-seleccionada desde el QR de la mesa. */
   initialMesa?: number;
   /** Módulos activos para mostrar funciones opcionales en el menú. */
   llamadaMeseroEnabled?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, initialMesa, llamadaMeseroEnabled = false }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       setScannedTable(restaurantId, initialMesa);
@@ -70,7 +73,7 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} />
           </div>
         </main>
         <InstallBanner brandName={config.brandName} />

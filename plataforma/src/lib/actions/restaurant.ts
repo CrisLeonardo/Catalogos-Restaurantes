@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours } from '@/lib/hours';
@@ -38,13 +39,18 @@ async function resolveContext(formData: FormData) {
   if (!profile) return null;
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  const isGroupOwner = profile.role === 'GROUP_OWNER';
   const restaurantId = isSuperAdmin
     ? (formData.get('restaurantId') as string)
-    : profile.restaurant_id;
+    : isGroupOwner
+      ? await resolveGroupBranchId()
+      : profile.restaurant_id;
 
   if (!restaurantId) return null;
 
-  const db = isSuperAdmin ? createServiceClient() : supabase;
+  // `isSuperAdmin` se mantiene estricto (controla el redirect al panel /super);
+  // el dueño de grupo usa el cliente elevado pero sigue el flujo de /admin.
+  const db = (isSuperAdmin || isGroupOwner) ? createServiceClient() : supabase;
   return { db, restaurantId, isSuperAdmin };
 }
 
@@ -317,7 +323,10 @@ export async function saveOrdersAndCurrency(input: {
   if (!profile) return { error: 'No autorizado.' };
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  if (!isSuperAdmin && profile.restaurant_id !== input.restaurantId) {
+  const allowed = isSuperAdmin
+    || profile.restaurant_id === input.restaurantId
+    || (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === input.restaurantId);
+  if (!allowed) {
     return { error: 'No autorizado.' };
   }
 
@@ -361,7 +370,10 @@ export async function updateOwnOrderTypes(
   if (!profile) return { error: 'No autorizado.' };
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  if (!isSuperAdmin && profile.restaurant_id !== restaurantId) {
+  const allowed = isSuperAdmin
+    || profile.restaurant_id === restaurantId
+    || (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+  if (!allowed) {
     return { error: 'No autorizado para este restaurante.' };
   }
   // Mínimo un tipo de pedido activo

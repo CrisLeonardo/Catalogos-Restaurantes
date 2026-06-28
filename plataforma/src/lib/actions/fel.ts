@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import {
   buildFacturaDte,
@@ -32,11 +33,15 @@ async function authorizeFel(restaurantId: string): Promise<{ error: string } | {
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   if (!isSuper) {
-    if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
-    const role = profile.role as string;
-    const perms = profile.permissions as string[] | null;
-    const allowed = role === 'RESTAURANT_OWNER' || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes('fel')));
-    if (!allowed) return { error: 'No autorizado.' };
+    if (profile.role === 'GROUP_OWNER') {
+      if ((await resolveGroupBranchId()) !== restaurantId) return { error: 'No autorizado.' };
+    } else {
+      if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
+      const role = profile.role as string;
+      const perms = profile.permissions as string[] | null;
+      const allowed = role === 'RESTAURANT_OWNER' || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes('fel')));
+      if (!allowed) return { error: 'No autorizado.' };
+    }
   }
 
   const db = createServiceClient();

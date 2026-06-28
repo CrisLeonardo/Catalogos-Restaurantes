@@ -104,6 +104,12 @@ export interface Category {
   icon: string | null;
   sort_order: number;
   is_active: boolean;
+  /**
+   * Horario de disponibilidad (migración 052). Mismo formato que
+   * `restaurants.hours`. NULL = disponible siempre. Permite menús por
+   * franja: desayuno / almuerzo / cena.
+   */
+  availability: WeeklyHours | null;
 }
 
 /* ── Variantes / extras de producto (migración 009) ───────── */

@@ -8,9 +8,10 @@ import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable } from '@/lib/table-session';
+import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
-type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
+type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
@@ -21,6 +22,8 @@ interface Props {
   products: ProdItem[];
   ordersEnabled?: boolean;
   restaurantId?: string;
+  /** Zona horaria del restaurante (para menús por franja horaria). */
+  timezone?: string;
   llamadaMeseroEnabled?: boolean;
   /** Mesa que llegó por ?mesa=N (QR de mesa). */
   initialMesa?: number;
@@ -31,7 +34,7 @@ function hasOptions(p: ProdItem): boolean {
   return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
 }
 
-export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId, llamadaMeseroEnabled = false, initialMesa }: Props) {
+export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala', llamadaMeseroEnabled = false, initialMesa }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -93,6 +96,7 @@ export default function MenuClient({ categories, products, ordersEnabled = false
         categories={categories}
         products={products}
         ordersEnabled={ordersEnabled}
+        timezone={timezone}
         qtyOf={qtyOfProduct}
         onAdd={onAdd}
         onOpen={(p) => { setCartOpen(false); setSelected(p); }}

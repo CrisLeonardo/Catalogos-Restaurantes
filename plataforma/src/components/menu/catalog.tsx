@@ -5,15 +5,16 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Price, Tag } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
+import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
-type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
+type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
@@ -46,10 +47,28 @@ function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+/** Reloj que avanza cada `ms` para reevaluar los menús por franja sin recargar. */
+function useNowTick(ms: number): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+  return now;
+}
+
+/** ¿La categoría está disponible ahora? Sin horario configurado = siempre. */
+function catAvailableNow(c: CatItem, timezone: string, now: Date): boolean {
+  if (!hasAnyHours(c.availability)) return true;
+  return isOpenNow(c.availability, timezone, now);
+}
+
 interface CatalogProps {
   categories: CatItem[];
   products: ProdItem[];
   ordersEnabled: boolean;
+  /** Zona horaria del restaurante para evaluar los menús por franja horaria. */
+  timezone?: string;
   qtyOf: (productId: string) => number;
   onAdd: (product: ProdItem, sourceEl: HTMLElement) => void;
   onOpen: (product: ProdItem) => void;
@@ -66,7 +85,7 @@ function pickIcon(icon: string | null | undefined): string {
 }
 
 export default function Catalog({
-  categories, products, ordersEnabled, qtyOf, onAdd, onOpen, cartCount, onOpenCart, cartIconRef,
+  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen, cartCount, onOpenCart, cartIconRef,
 }: CatalogProps) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -75,16 +94,40 @@ export default function Catalog({
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
+  // Reloj vivo: los menús por franja (desayuno/almuerzo/cena) se reevalúan
+  // cada minuto, así un menú "abre" o "cierra" sin que el comensal recargue.
+  const now = useNowTick(60_000);
+
   const catIcon = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of categories) m.set(c.id, pickIcon(c.icon));
     return m;
   }, [categories]);
 
+  // Disponibilidad por categoría según hora y zona horaria del restaurante.
+  const catAvail = useMemo(() => {
+    const m = new Map<string, boolean>();
+    for (const c of categories) m.set(c.id, catAvailableNow(c, timezone, now));
+    return m;
+  }, [categories, timezone, now]);
+
+  // Menús programados que ahora están fuera de horario (para la franja "más tarde").
+  const upcoming = categories.filter((c) => hasAnyHours(c.availability) && catAvail.get(c.id) === false);
+
+  // ¿La categoría seleccionada está fuera de su horario? → solo lectura.
+  const activeCatLocked = activeCat !== null && catAvail.get(activeCat) === false;
+  const activeCatItem = activeCat !== null ? categories.find((c) => c.id === activeCat) ?? null : null;
+
   // Busca en nombre, descripción y tags, ignorando acentos.
   const q = fold(query.trim());
   const list = products.filter((p) => {
-    if (activeCat !== null && p.category_id !== activeCat) return false;
+    if (activeCat !== null) {
+      if (p.category_id !== activeCat) return false;
+    } else if (p.category_id != null && catAvail.get(p.category_id) === false) {
+      // Vista "Todos": se ocultan los menús fuera de horario (siguen accesibles
+      // tocando su chip o la franja "Disponibles más tarde").
+      return false;
+    }
     if (!q) return true;
     const haystack = fold([p.name, p.description ?? '', ...(p.tags ?? [])].join(' '));
     return haystack.includes(q);
@@ -157,10 +200,36 @@ export default function Catalog({
             label={c.name}
             icon={config.showCategoryIcons ? catIcon.get(c.id) : undefined}
             active={activeCat === c.id}
+            unavailable={catAvail.get(c.id) === false}
             onClick={() => setActiveCat(c.id)}
           />
         ))}
       </div>
+
+      {/* Aviso: el menú seleccionado está fuera de su horario (solo lectura) */}
+      {activeCatLocked && activeCatItem && (
+        <div
+          role="status"
+          style={{
+            display: 'flex', gap: 10, alignItems: 'center', marginTop: 6, marginBottom: 2,
+            background: 'var(--surface-2)', border: '1px solid var(--u-hair)',
+            borderRadius: 14, padding: '11px 14px',
+          }}
+        >
+          <span style={{ color: 'var(--u-text-3)', flexShrink: 0 }}><Icon name="clock" size={17} /></span>
+          <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
+            <strong style={{ color: 'var(--u-text)' }}>{activeCatItem.name}</strong>{' '}
+            {(() => {
+              const reopen = nextOpenLabel(activeCatItem.availability, timezone, now);
+              const win = todayWindowLabel(activeCatItem.availability, timezone, now);
+              return reopen
+                ? `se sirve ${reopen}.`
+                : win ? `se sirve de ${win}.` : 'no está disponible ahora.';
+            })()}{' '}
+            Puedes verlo, pero aún no pedirlo.
+          </div>
+        </div>
+      )}
 
       {/* Grid / List */}
       {list.length === 0 ? (
@@ -169,7 +238,7 @@ export default function Catalog({
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, marginTop: 12 }}>
           {list.map((p, i) => (
             <div key={p.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
-              <ProductTile p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} onAdd={onAdd} onOpen={onOpen} />
+              <ProductTile p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
             </div>
           ))}
         </div>
@@ -177,30 +246,72 @@ export default function Catalog({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
           {list.map((p, i) => (
             <div key={p.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
-              <ProductRow p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} onAdd={onAdd} onOpen={onOpen} />
+              <ProductRow p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Disponibles más tarde — solo en la vista "Todos" (sin búsqueda) */}
+      {activeCat === null && !q && upcoming.length > 0 && (
+        <div style={{ marginTop: 26 }}>
+          <div className="t-kicker" style={{ fontSize: 10.5, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="clock" size={13} /> Disponibles más tarde
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {upcoming.map((c) => {
+              const reopen = nextOpenLabel(c.availability, timezone, now);
+              const win = todayWindowLabel(c.availability, timezone, now);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setActiveCat(c.id)}
+                  className="press glass-quiet"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
+                    padding: '11px 14px', borderRadius: 14, border: '1px solid var(--u-hair)',
+                    background: 'var(--surface-2)', color: 'var(--u-text)', cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)', color: 'var(--u-text-2)' }}>
+                    <Icon name={config.showCategoryIcons ? (catIcon.get(c.id) ?? 'utensils') : 'clock'} size={17} />
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                      {reopen ? `Se sirve ${reopen}` : win ? `Horario: ${win}` : 'Fuera de horario'}
+                    </span>
+                  </span>
+                  <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function CategoryChip({ label, icon, active, onClick }: { label: string; icon?: string; active: boolean; onClick: () => void }) {
+function CategoryChip({ label, icon, active, unavailable = false, onClick }: { label: string; icon?: string; active: boolean; unavailable?: boolean; onClick: () => void }) {
+  // Fuera de horario (y no seleccionado): se atenúa y muestra un reloj, pero
+  // sigue tocable para que el comensal pueda ver ese menú.
+  const dim = unavailable && !active;
   return (
     <button
       onClick={onClick}
       className="press"
+      title={unavailable ? 'Disponible en otro horario' : undefined}
       style={{
         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 15px', borderRadius: 99, cursor: 'pointer',
         background: active ? 'var(--u-text)' : 'var(--surface-2)',
         color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
         border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
-        fontWeight: 600, fontSize: 13.5,
+        fontWeight: 600, fontSize: 13.5, opacity: dim ? 0.55 : 1,
         backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
       }}
     >
-      {icon && <Icon name={icon} size={15} />}
+      {dim ? <Icon name="clock" size={14} /> : icon && <Icon name={icon} size={15} />}
       {label}
     </button>
   );
@@ -240,9 +351,9 @@ function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: Pr
   );
 }
 
-function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
+function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; forceUnavailable?: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
-  const unavail = isUnavailable(p);
+  const unavail = forceUnavailable || isUnavailable(p);
   return (
     <Glass
       interactive={!unavail}
@@ -275,9 +386,9 @@ function ProductTile({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdIt
   );
 }
 
-function ProductRow({ p, icon, qty, ordersEnabled, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
+function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; forceUnavailable?: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
-  const unavail = isUnavailable(p);
+  const unavail = forceUnavailable || isUnavailable(p);
   return (
     <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
       <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-1)', position: 'relative' }}>

@@ -45,6 +45,7 @@ export default async function CentralComparativaPage({
         ) : report.perBranch.map((b) => {
           const pct = (b.revenue / maxRevenue) * 100;
           const share = report.totalRevenue > 0 ? (b.revenue / report.totalRevenue) * 100 : 0;
+          const m = b.revenue > 0 ? (b.profit / b.revenue) * 100 : null;
           return (
             <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -54,7 +55,7 @@ export default async function CentralComparativaPage({
               <div style={{ height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />
               </div>
-              <div style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>{b.orders} pedidos · utilidad {money(b.profit)}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>{b.orders} pedidos · utilidad {money(b.profit)}{m != null ? ` · margen ${m.toFixed(0)}%` : ''}</div>
             </div>
           );
         })}

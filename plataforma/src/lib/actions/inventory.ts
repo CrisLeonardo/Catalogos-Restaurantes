@@ -10,6 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity';
@@ -31,8 +32,11 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
   // Un staff sin permiso "inventario" no puede ajustar stock (candado server-side).
   if (!can(profile.role, profile.permissions as string[] | null, 'inventario')) return null;
 
-  const isSuper = profile.role === 'SUPER_ADMIN';
-  const restaurantId = isSuper ? (restaurantIdFromForm ?? '') : (profile.restaurant_id ?? '');
+  const restaurantId = profile.role === 'SUPER_ADMIN'
+    ? (restaurantIdFromForm ?? '')
+    : profile.role === 'GROUP_OWNER'
+      ? ((await resolveGroupBranchId()) ?? '')
+      : (profile.restaurant_id ?? '');
   if (!restaurantId) return null;
 
   return { db: createServiceClient(), restaurantId, userId: user.id };

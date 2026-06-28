@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getGroupContext, getGroupReport } from '@/lib/db/group';
 import DateRangeForm from '@/components/admin/date-range-form';
+import GroupFinanceExport from '@/components/central/group-finance-export';
 
 export const metadata = { title: 'Finanzas del grupo' };
 
@@ -25,16 +26,24 @@ export default async function CentralFinanzasPage({
   const report = await getGroupReport(ctx.branches, from, to);
   const maxRev = Math.max(...report.combinedSeries.map((d) => d.revenue), 1);
   const margin = report.totalRevenue > 0 ? (report.totalProfit / report.totalRevenue) * 100 : null;
+  // Costo (COGS) y ticket promedio del grupo se derivan del reporte (sin más consultas).
+  const cost = report.totalRevenue - report.totalProfit;
+  const avgTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="glass" style={{ borderRadius: 16, padding: 16 }}>
+      <div className="glass" style={{ borderRadius: 16, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <DateRangeForm from={from} to={to} basePath="/central/finanzas" />
+        {report.perBranch.length > 0 && (
+          <GroupFinanceExport rows={report.perBranch} from={from} to={to} orgName={ctx.org.name} />
+        )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <Kpi label="Ingreso del grupo" value={money(report.totalRevenue)} hero />
+        <Kpi label="Costo (COGS)" value={money(cost)} />
         <Kpi label="Utilidad" value={money(report.totalProfit)} sub={margin != null ? `margen ${margin.toFixed(0)}%` : undefined} />
+        <Kpi label="Ticket promedio" value={money(avgTicket)} />
         <Kpi label="Pedidos" value={String(report.totalOrders)} />
       </div>
 
@@ -55,19 +64,29 @@ export default async function CentralFinanzasPage({
         </div>
       </div>
 
-      {/* Contribución por sucursal */}
+      {/* Contribución por sucursal — con margen y ticket promedio (P&L por sucursal) */}
       <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 70px 90px', gap: 8, padding: '12px 18px', fontSize: 9.5, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '12px 18px', fontSize: 9.5, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           <span>Sucursal</span><span style={{ textAlign: 'right' }}>Ingreso</span><span style={{ textAlign: 'right' }}>Pedidos</span><span style={{ textAlign: 'right' }}>Utilidad</span>
         </div>
-        {report.perBranch.map((b) => (
-          <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 70px 90px', gap: 8, padding: '11px 18px', borderTop: '1px solid var(--u-hair)', fontSize: 13 }}>
-            <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
-            <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text)' }}>{money(b.revenue)}</span>
-            <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{b.orders}</span>
-            <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{money(b.profit)}</span>
-          </div>
-        ))}
+        {report.perBranch.map((b) => {
+          const m = b.revenue > 0 ? (b.profit / b.revenue) * 100 : null;
+          const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
+          return (
+            <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '11px 18px', borderTop: '1px solid var(--u-hair)', fontSize: 13, alignItems: 'center' }}>
+              <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
+              <span style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text)' }}>{money(b.revenue)}</span>
+              <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
+                {b.orders}
+                <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>{money(ticket)} c/u</div>
+              </div>
+              <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>
+                {money(b.profit)}
+                <div style={{ fontSize: 10, color: m != null && m < 0 ? '#f87171' : 'var(--u-text-4)' }}>{m != null ? `${m.toFixed(0)}% margen` : '—'}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

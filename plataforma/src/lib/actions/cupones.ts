@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import type { DiscountType } from '@/lib/db/cupones';
 
 export type CouponResult = { error?: string; ok?: boolean };
@@ -21,8 +22,13 @@ async function getAuthorized(restaurantId: string) {
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   const isOwner = profile.role === 'RESTAURANT_OWNER';
-  if (!isSuper && !isOwner) return { ok: false as const, error: 'Solo el propietario puede gestionar cupones.' };
-  if (!isSuper && profile.restaurant_id !== restaurantId) return { ok: false as const, error: 'No autorizado.' };
+  const isGroupOwner = profile.role === 'GROUP_OWNER';
+  if (!isSuper && !isOwner && !isGroupOwner) return { ok: false as const, error: 'Solo el propietario puede gestionar cupones.' };
+  if (isGroupOwner) {
+    if ((await resolveGroupBranchId()) !== restaurantId) return { ok: false as const, error: 'No autorizado.' };
+  } else if (!isSuper && profile.restaurant_id !== restaurantId) {
+    return { ok: false as const, error: 'No autorizado.' };
+  }
 
   return { ok: true as const };
 }

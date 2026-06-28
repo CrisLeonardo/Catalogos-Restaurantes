@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -26,14 +27,18 @@ async function resolveContext(formData: FormData) {
   // aunque la UI esté oculta (la verificación de UI no basta como candado).
   if (!can(profile.role, profile.permissions as string[] | null, 'catalogo')) return null;
 
-  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  const restaurantId = isSuperAdmin
+  // GROUP_OWNER administra una sucursal de su grupo (subdominio verificado);
+  // SUPER_ADMIN, cualquiera por el id del form. Ambos usan el cliente elevado.
+  const elevated = profile.role === 'SUPER_ADMIN' || profile.role === 'GROUP_OWNER';
+  const restaurantId = profile.role === 'SUPER_ADMIN'
     ? (formData.get('restaurantId') as string)
-    : profile.restaurant_id;
+    : profile.role === 'GROUP_OWNER'
+      ? await resolveGroupBranchId()
+      : profile.restaurant_id;
 
   if (!restaurantId) return null;
 
-  const db = isSuperAdmin ? createServiceClient() : supabase;
+  const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role };
 }
 

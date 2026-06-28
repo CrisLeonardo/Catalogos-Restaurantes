@@ -27,6 +27,17 @@ export const DAY_LABELS: Record<DayKey, string> = {
   '0': 'Domingo',
 };
 
+/** Etiqueta corta del día ("Lun", "Mar"…) para resúmenes compactos. */
+export const DAY_SHORT: Record<DayKey, string> = {
+  '1': 'Lun',
+  '2': 'Mar',
+  '3': 'Mié',
+  '4': 'Jue',
+  '5': 'Vie',
+  '6': 'Sáb',
+  '0': 'Dom',
+};
+
 /** Orden de edición/visualización: lunes a domingo. */
 export const DAY_ORDER: DayKey[] = ['1', '2', '3', '4', '5', '6', '0'];
 
@@ -135,6 +146,88 @@ export function nextOpenLabel(
 export function hasAnyHours(hours: WeeklyHours | null | undefined): boolean {
   if (!hours) return false;
   return Object.values(hours).some((list) => (list?.length ?? 0) > 0);
+}
+
+/* ============================================================
+   ETIQUETAS LEGIBLES — para menús por franja (categorías) y
+   resúmenes de horario en el panel y en el menú del comensal.
+   ============================================================ */
+
+/** "07:00" → "7:00" (quita el cero a la izquierda de la hora). */
+export function fmtTime(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm?.trim() ?? '');
+  if (!m) return hhmm ?? '';
+  return `${Number(m[1])}:${m[2]}`;
+}
+
+/** Intervalos de un día como texto: "7:00–11:00" o "7:00–10:00, 13:00–16:00". */
+function intervalsLabel(list: HourInterval[]): string {
+  return list
+    .filter(([o, c]) => !Number.isNaN(toMinutes(o)) && !Number.isNaN(toMinutes(c)))
+    .map(([o, c]) => `${fmtTime(o)}–${fmtTime(c)}`)
+    .join(', ');
+}
+
+/** Intervalos válidos de HOY según la zona horaria, o null si hoy no aplica. */
+export function todayWindowLabel(
+  hours: WeeklyHours | null | undefined,
+  timezone: string,
+  now: Date = new Date(),
+): string | null {
+  if (!hours) return null;
+  const { day } = localNowParts(timezone, now);
+  const list = hours[String(day) as DayKey] ?? [];
+  if (list.length === 0) return null;
+  const label = intervalsLabel(list);
+  return label || null;
+}
+
+/**
+ * Resumen semanal compacto y legible del horario, agrupando días
+ * consecutivos con la misma franja. Ejemplos:
+ *   "Todos los días · 7:00–11:00"
+ *   "Lun a Vie · 7:00–11:00 · Sáb y Dom · 8:00–12:00"
+ * Devuelve null si no hay ningún intervalo configurado.
+ */
+export function scheduleSummary(hours: WeeklyHours | null | undefined): string | null {
+  if (!hasAnyHours(hours)) return null;
+
+  // Firma por día (para detectar días con horario idéntico).
+  const sigOf = (d: DayKey): string => {
+    const list = hours![d];
+    if (!list || list.length === 0) return '';
+    return list.map(([o, c]) => `${o}-${c}`).join('|');
+  };
+
+  // Recorre Lun→Dom acumulando rachas de días contiguos con la misma franja.
+  const runs: { days: DayKey[]; list: HourInterval[] }[] = [];
+  for (let i = 0; i < DAY_ORDER.length; i++) {
+    const d = DAY_ORDER[i];
+    const sig = sigOf(d);
+    if (!sig) continue;
+    const last = runs[runs.length - 1];
+    const prevDay = i > 0 ? DAY_ORDER[i - 1] : null;
+    const contiguous = !!last && last.days[last.days.length - 1] === prevDay && sigOf(last.days[0]) === sig;
+    if (contiguous) last.days.push(d);
+    else runs.push({ days: [d], list: hours![d]! });
+  }
+  if (runs.length === 0) return null;
+
+  const activeDays = runs.reduce((n, r) => n + r.days.length, 0);
+  const daysLabel = (days: DayKey[]): string => {
+    if (days.length === 1) return DAY_SHORT[days[0]];
+    if (days.length === 2) return `${DAY_SHORT[days[0]]} y ${DAY_SHORT[days[1]]}`;
+    return `${DAY_SHORT[days[0]]} a ${DAY_SHORT[days[days.length - 1]]}`;
+  };
+
+  return runs
+    .map((r) => {
+      const win = intervalsLabel(r.list);
+      // Si están los 7 días en una sola racha → "Todos los días".
+      const dl = runs.length === 1 && activeDays === 7 ? 'Todos los días' : daysLabel(r.days);
+      return `${dl} · ${win}`;
+    })
+    .join(' · ');
 }
 
 /**

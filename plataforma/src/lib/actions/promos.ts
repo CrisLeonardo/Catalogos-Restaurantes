@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { can } from '@/lib/permissions';
 import { logActivity } from '@/lib/activity';
@@ -47,8 +48,11 @@ async function adminCtx(restaurantIdFromForm?: string | null): Promise<Ctx | nul
     .single();
   if (!profile) return null;
 
-  const isSuper = profile.role === 'SUPER_ADMIN';
-  const restaurantId = isSuper ? (restaurantIdFromForm ?? '') : (profile.restaurant_id ?? '');
+  const restaurantId = profile.role === 'SUPER_ADMIN'
+    ? (restaurantIdFromForm ?? '')
+    : profile.role === 'GROUP_OWNER'
+      ? ((await resolveGroupBranchId()) ?? '')
+      : (profile.restaurant_id ?? '');
   if (!restaurantId) return null;
 
   if (!can(profile.role, profile.permissions as string[] | null, 'promociones')) return null;

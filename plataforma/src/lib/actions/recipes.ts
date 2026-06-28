@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { getProductRecipe, type RecipeItem } from '@/lib/db/recipes';
 
 export type ActionResult = { error?: string; ok?: boolean };
@@ -23,6 +24,11 @@ async function resolveRestaurantId(formRestaurantId?: string | null): Promise<Re
   if (profile.role === 'SUPER_ADMIN') {
     if (!formRestaurantId) return { error: 'Falta restaurant_id' };
     return { restaurantId: formRestaurantId };
+  }
+  if (profile.role === 'GROUP_OWNER') {
+    const id = await resolveGroupBranchId();
+    if (!id) return { error: 'Sin restaurante' };
+    return { restaurantId: id };
   }
   if (!profile.restaurant_id) return { error: 'Sin restaurante' };
   return { restaurantId: profile.restaurant_id };

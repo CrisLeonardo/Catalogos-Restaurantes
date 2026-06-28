@@ -618,6 +618,11 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   .admin-nav::-webkit-scrollbar { display: none; }
   .admin-navgroup { flex-direction: row; gap: 0; }
   .admin-navgroup-toggle { display: none; }
+  /* El panel de grupo (GroupShell) muestra el título de sección como un <div>
+     suelto (no dentro del toggle): en la tab bar móvil debe ocultarse para que
+     no robe espacio a los íconos de navegación. */
+  .admin-navgroup-title { display: none; }
+  .admin-spacer { display: none; }
   /* En la tab bar móvil nunca se ocultan links aunque la sección esté plegada. */
   .admin-navgroup[data-collapsed="1"] .admin-navlink { display: flex; }
   .admin-navlink {

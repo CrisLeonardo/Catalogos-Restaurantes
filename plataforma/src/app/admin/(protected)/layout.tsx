@@ -1,12 +1,15 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
 import PlanGmvAlert from '@/components/admin/plan-gmv-alert';
+import GroupOwnerBanner from '@/components/admin/group-owner-banner';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
+import { subdomainUrl } from '@/lib/tenant';
 import type { Restaurant } from '@/types';
 
 export default async function AdminProtectedLayout({
@@ -42,6 +45,8 @@ export default async function AdminProtectedLayout({
   let currentRestaurant: Restaurant | null = ctx.restaurant;
   let logoUrl: string | null = null;
   let zone = '';
+  // URL del panel del grupo para volver (solo dueño de grupo "entrando" a una sucursal).
+  let groupReturnUrl: string | null = null;
 
   if (profile.role === 'SUPER_ADMIN') {
     if (tenantSlug) {
@@ -50,6 +55,29 @@ export default async function AdminProtectedLayout({
       currentRestaurant = tenantData?.restaurant ?? null;
       logoUrl = tenantData?.resolved.config.logoUrl ?? null;
       zone = tenantData?.resolved.config.zone ?? '';
+    }
+  } else if (profile.role === 'GROUP_OWNER') {
+    // El dueño de grupo entra al admin de una sucursal de su organización sin
+    // re-login. getRestaurantBySlug usa el cliente RLS: la migración 053 solo
+    // devuelve la sucursal si pertenece a su grupo (candado de seguridad).
+    if (!tenantSlug) redirect('/central');
+    const tenantData = await getRestaurantBySlug(tenantSlug);
+    if (!tenantData) redirect('/central'); // no es una sucursal de su grupo
+    restaurantName    = tenantData.restaurant.name;
+    currentRestaurant = tenantData.restaurant;
+    logoUrl = tenantData.resolved.config.logoUrl ?? null;
+    zone = tenantData.resolved.config.zone ?? '';
+
+    // Slug del grupo para el enlace "volver al grupo" (organizations no tiene
+    // RLS para GROUP_OWNER → se lee con el cliente de servicio).
+    if (tenantData.restaurant.organization_id) {
+      const svc = createServiceClient();
+      const { data: org } = await svc
+        .from('organizations')
+        .select('slug')
+        .eq('id', tenantData.restaurant.organization_id)
+        .maybeSingle();
+      if (org?.slug) groupReturnUrl = subdomainUrl(`${org.slug}-central`);
     }
   } else {
     if (!profile.restaurant_id) redirect('/admin/login');
@@ -110,6 +138,9 @@ export default async function AdminProtectedLayout({
       permissions={profile.permissions}
       canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
     >
+      {groupReturnUrl && (
+        <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />
+      )}
       {showGmvAlert && (
         <PlanGmvAlert restaurantId={currentRestaurant!.id} />
       )}

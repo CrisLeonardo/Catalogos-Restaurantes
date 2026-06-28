@@ -26,7 +26,7 @@ export const getMenuData = cache(
     const [{ data: categories }, { data: products }] = await Promise.all([
       supabase
         .from('categories')
-        .select('id, name, icon, sort_order')
+        .select('id, name, icon, sort_order, availability')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('sort_order'),

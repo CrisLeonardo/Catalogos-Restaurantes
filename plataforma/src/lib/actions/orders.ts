@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { createOrderSchema } from '@/lib/schemas';
@@ -579,9 +580,12 @@ export async function freeTable(
     .eq('id', user.id)
     .single();
 
+  const ownsBranch = profile?.role === 'GROUP_OWNER'
+    ? (await resolveGroupBranchId()) === restaurantId
+    : profile?.restaurant_id === restaurantId;
   if (
     !profile ||
-    profile.restaurant_id !== restaurantId ||
+    !ownsBranch ||
     !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
   ) {
     return { error: 'No autorizado.' };
@@ -626,9 +630,11 @@ export async function updateOrderStatus(
 
   if (!profile) return { error: 'No autorizado.' };
 
-  const validRoles = ['SUPER_ADMIN', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'];
+  const validRoles = ['SUPER_ADMIN', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER', 'GROUP_OWNER'];
   if (!validRoles.includes(profile.role)) return { error: 'No autorizado.' };
 
+  // GROUP_OWNER usa el cliente RLS: la migración 053 limita la actualización a
+  // pedidos de sucursales de su grupo (con service no habría filtro por sucursal).
   const db = profile.role === 'SUPER_ADMIN' ? createServiceClient() : supabase;
 
   // Al cancelar, devolver stock de productos con inventario (idempotente en BD:
@@ -737,7 +743,8 @@ export async function printReceiptViaAgent(orderId: string): Promise<{ error?: s
   const allowed =
     profile.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'].includes(profile.role) &&
-      profile.restaurant_id === order.restaurant_id);
+      profile.restaurant_id === order.restaurant_id) ||
+    (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === order.restaurant_id);
   if (!allowed) return { error: 'No autorizado.' };
 
   try {
@@ -781,7 +788,8 @@ async function fetchOrdersForExport(
   const allowed =
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
-      profile?.restaurant_id === restaurantId);
+      profile?.restaurant_id === restaurantId) ||
+    (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
   if (!allowed) return { error: 'No autorizado.' };
 
   const db = createServiceClient();

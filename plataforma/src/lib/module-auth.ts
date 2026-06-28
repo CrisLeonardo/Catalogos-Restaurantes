@@ -1,6 +1,7 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveGroupBranchId } from '@/lib/db/admin';
 import { isModuleActive, type ActivatableModuleKey, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 
 /**
@@ -25,11 +26,16 @@ export async function authorizeModuleAction(
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   if (!isSuper) {
-    if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
-    const role = profile.role as string;
-    const perms = profile.permissions as string[] | null;
-    const allowed = role === 'RESTAURANT_OWNER' || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes(key)));
-    if (!allowed) return { error: 'No autorizado.' };
+    if (profile.role === 'GROUP_OWNER') {
+      // Dueño de grupo: la sucursal debe pertenecer a su organización.
+      if ((await resolveGroupBranchId()) !== restaurantId) return { error: 'No autorizado.' };
+    } else {
+      if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
+      const role = profile.role as string;
+      const perms = profile.permissions as string[] | null;
+      const allowed = role === 'RESTAURANT_OWNER' || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes(key)));
+      if (!allowed) return { error: 'No autorizado.' };
+    }
   }
 
   const db = createServiceClient();
