@@ -878,7 +878,7 @@ alter table print_agents add column if not exists agent_version text;
 -- â”€â”€ 1. ParÃ¡metros globales de precio + gracia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 insert into platform_settings (key, value) values
   ('plan_price_BASICO',         '200'),
-  ('plan_price_POPULAR',        '600'),
+  ('plan_price_POPULAR',        '599'),
   ('plan_price_PREMIUM',        '1200'),
   ('extra_branch_fee',          '600'),
   ('premium_included_branches', '2'),
@@ -946,7 +946,7 @@ begin
   if v_plan = 'BASICO' then
     return leogin_setting_num('plan_price_BASICO', 200);
   elsif v_plan = 'POPULAR' then
-    return leogin_setting_num('plan_price_POPULAR', 600);
+    return leogin_setting_num('plan_price_POPULAR', 599);
   elsif v_plan = 'PREMIUM' then
     v_premium  := leogin_setting_num('plan_price_PREMIUM', 1200);
     v_extra    := leogin_setting_num('extra_branch_fee', 600);

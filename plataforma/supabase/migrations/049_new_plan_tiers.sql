@@ -19,11 +19,11 @@ ALTER TABLE restaurants ADD CONSTRAINT restaurants_plan_actual_check
 
 -- 4. Nuevas claves en platform_settings para los precios de cada plan
 INSERT INTO platform_settings (key, value) VALUES
-  ('plan_price_BASICO',        '299'),
-  ('plan_price_PREMIUM',       '600'),
-  ('plan_price_PREMIUM_PRO',   '1000'),
-  ('plan_price_PREMIUM_ULTRA', '1500'),
-  ('plan_price_ALTO_VOLUMEN',  '2250'),
+  ('plan_price_BASICO',        '199'),
+  ('plan_price_PREMIUM',       '599'),
+  ('plan_price_PREMIUM_PRO',   '999'),
+  ('plan_price_PREMIUM_ULTRA', '1499'),
+  ('plan_price_ALTO_VOLUMEN',  '2249'),
   ('plan_gmv_limit_PREMIUM',       '20000'),
   ('plan_gmv_limit_PREMIUM_PRO',   '40000'),
   ('plan_gmv_limit_PREMIUM_ULTRA', '75000'),

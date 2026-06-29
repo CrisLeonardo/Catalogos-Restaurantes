@@ -217,6 +217,13 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   const [localOrderTypes, setLocalOrderTypes] = useState<OrderType[]>(orderTypes);
   const [orderBusy, setOrderBusy] = useState<OrderType | null>(null);
 
+  // Estándar: el paquete (canales) se fija en el registro y solo lo cambia
+  // Leogin. El dueño ve sus canales como incluidos (no editables).
+  const isEstandar = planActual === 'ESTANDAR';
+  const isBasico = planActual === 'BASICO';
+  const isDeliveryBundle = localOrderTypes.includes('delivery');
+  const estandarBundleLabel = isDeliveryBundle ? 'Solo Delivery' : 'Local';
+
   function toggle(key: ActivatableModuleKey, next: boolean) {
     setError(null);
     setBusyKey(key);
@@ -284,12 +291,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             </p>
           </div>
         )}
-        {planActual === 'ESTANDAR' && (
+        {isEstandar && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-              El plan Estándar incluye <strong style={{ color: 'var(--u-text-2)' }}>Pedidos para llevar</strong>.
-              Delivery y Comer en local están disponibles a partir de <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q599/mes)</strong>.{' '}
+              Tu plan Estándar incluye el paquete <strong style={{ color: 'var(--u-text-2)' }}>{estandarBundleLabel}</strong>.
+              Para combinar delivery y local en un mismo menú, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q599/mes)</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
@@ -298,20 +305,24 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: 12 }}>
             <Icon name="sparkle" size={14} style={{ color: '#4ade80', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-              <strong style={{ color: 'var(--u-text-2)' }}>Plan a tu medida:</strong> cada canal que desactives baja tu
-              mensualidad Q100 (hasta Q200). Pagas solo por lo que usas.{' '}
+              <strong style={{ color: 'var(--u-text-2)' }}>Plan a tu medida:</strong> desactiva un canal que no uses y baja tu
+              mensualidad Q100. Pagas solo por lo que usas.{' '}
               <a href="/admin/suscripcion" style={{ color: '#4ade80', fontWeight: 700, textDecoration: 'none' }}>Ver mi mensualidad →</a>
             </p>
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {ORDER_TYPE_META.map((m) => {
-            const isLockedForBasico = (planActual === 'BASICO' || planActual === 'ESTANDAR') && m.id !== 'pickup';
             const on = localOrderTypes.includes(m.id);
+            // BASICO: solo pickup. ESTANDAR: solo los canales de su paquete
+            // (los demás se ofrecen como mejora a Premium).
+            const lockedPremium = isBasico ? m.id !== 'pickup' : isEstandar ? !on : false;
+            // ESTANDAR: los canales incluidos no son editables por el dueño.
+            const readOnly = isEstandar && on;
             const busy = orderBusy === m.id && isPending;
             const isLast = localOrderTypes.length === 1 && on;
 
-            if (isLockedForBasico) {
+            if (lockedPremium) {
               return (
                 <Glass key={m.id} variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, opacity: 0.6, position: 'relative', overflow: 'hidden' }}>
                   <div style={{
@@ -354,14 +365,14 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     </span>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{m.label}</div>
-                      <StatusDot on={on} label={on ? 'Activo' : 'Inactivo'} />
+                      <StatusDot on={on} label={readOnly ? 'Incluido en tu plan' : on ? 'Activo' : 'Inactivo'} />
                     </div>
                   </div>
                   <Toggle
                     on={on}
                     busy={busy}
-                    disabled={isLast}
-                    onClick={() => toggleOrderType(m.id)}
+                    disabled={isLast || readOnly}
+                    onClick={() => { if (!readOnly) toggleOrderType(m.id); }}
                     label={`${on ? 'Desactivar' : 'Activar'} ${m.label}`}
                   />
                 </div>

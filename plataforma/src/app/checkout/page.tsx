@@ -24,10 +24,10 @@ export default async function CheckoutPage() {
 
   if (!modules?.orders || restaurant.status !== 'active') notFound();
 
-  // BASICO y ESTANDAR solo soportan pedidos para llevar — forzar orderTypes a ['pickup']
+  // BASICO solo soporta pickup. ESTANDAR y Premium+ honran sus orderTypes
+  // configurados (en Estándar es el paquete elegido: Solo Delivery o Local).
   const planActual = (restaurant.plan_actual as string | null) ?? null;
-  const pickupOnly = planActual === 'BASICO' || planActual === 'ESTANDAR';
-  const safeConfig = pickupOnly
+  const safeConfig = planActual === 'BASICO'
     ? { ...resolved.config, orderTypes: ['pickup' as const] }
     : resolved.config;
 

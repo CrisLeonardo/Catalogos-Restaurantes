@@ -76,7 +76,7 @@ const PLAN_CARDS: PlanCardDef[] = [
     priceUnit: '/ mes',
     trialLabel: 'Con 30 días gratis',
     features: [
-      { text: 'Menú QR + pedidos para llevar', positive: true },
+      { text: 'Elige un paquete: Delivery o Local', positive: true },
       { text: 'Alertas en tiempo real · WhatsApp', positive: true },
       { text: 'Productos ilimitados · 2 usuarios', positive: true },
       { text: 'Hasta Q10,000 en ventas / mes', positive: true },
@@ -105,6 +105,8 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
 
   const [step, setStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<PlanOption>('PREMIUM');
+  // Paquete de Estándar: 'local' = Para llevar + Comer en local · 'delivery' = Solo delivery.
+  const [estandarBundle, setEstandarBundle] = useState<'local' | 'delivery'>('local');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
@@ -141,6 +143,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <input type="hidden" name="plan_code" value={selectedPlan} />
+      <input type="hidden" name="estandar_bundle" value={estandarBundle} />
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="slug" value={effectiveSlug} />
       <input type="hidden" name="full_name" value={fullName} />
@@ -237,6 +240,51 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
             );
           })}
         </div>
+
+        {/* Sub-selector de paquete para Estándar */}
+        {selectedPlan === 'ESTANDAR' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
+              Elige tu paquete Estándar (mismo precio, Q399/mes)
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {([
+                { id: 'local', icon: 'utensils', title: 'Local', desc: 'Para llevar + Comer en local con QR de mesa. Ideal para cafeterías.' },
+                { id: 'delivery', icon: 'truck', title: 'Solo Delivery', desc: 'Tus clientes piden en línea y reciben a domicilio.' },
+              ] as const).map((b) => {
+                const active = estandarBundle === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setEstandarBundle(b.id)}
+                    style={{
+                      padding: '12px 12px',
+                      borderRadius: 'var(--radius-lg)',
+                      border: active ? '2px solid var(--brand-accent)' : '2px solid var(--u-hair-2)',
+                      background: active ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)' : 'rgba(255,255,255,0.03)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                      transition: 'border-color 150ms, background 150ms',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <Icon name={b.icon} size={16} style={{ color: active ? 'var(--brand-accent)' : 'var(--u-text-3)' }} />
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
+                    </div>
+                    <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.45 }}>{b.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.45 }}>
+              Para combinar delivery + local en un mismo menú necesitas Premium. Podrás cambiar de paquete escribiéndonos.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Paso 1: Tu restaurante ── */}
@@ -292,7 +340,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 3: Confirmar ── */}
       <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q599/mes' : selectedPlan === 'ESTANDAR' ? 'Estándar · Q399/mes (30 días gratis)' : 'Básico · Q199/mes (30 días gratis)'} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q599/mes' : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · Q399/mes (30 días gratis)` : 'Básico · Q199/mes (30 días gratis)'} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Tu cuenta" value={email || '—'} />
@@ -306,7 +354,9 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
             {selectedPlan === 'BASICO'
               ? 'Tu restaurante queda en vivo con tu menú digital. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'
               : selectedPlan === 'ESTANDAR'
-              ? 'Tu restaurante queda en vivo con pedidos para llevar activos. Sin tarjeta. Sin compromiso.'
+              ? (estandarBundle === 'delivery'
+                  ? 'Tu restaurante queda en vivo con pedidos a domicilio activos. Sin tarjeta. Sin compromiso.'
+                  : 'Tu restaurante queda en vivo con pedidos para llevar y comer en local activos. Sin tarjeta. Sin compromiso.')
               : 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'}
           </p>
         </Glass>

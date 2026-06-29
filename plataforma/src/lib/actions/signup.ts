@@ -35,13 +35,15 @@ const SIGNUP_MODULES_PREMIUM = {
   personal: true,
   finanzas: true,
   multi_branch: false,
-  // Módulos activables incluidos en Premium y superiores
+  // Módulos activables incluidos en Premium y superiores.
+  // reservaciones, loyalty, proveedores y fel se activan manualmente
+  // desde el super admin cuando el módulo esté listo para el restaurante.
   llamada_mesero: true,
   encuestas: true,
   cupones: true,
   recetas: true,
-  reservaciones: true,
-  loyalty: true,
+  reservaciones: false,
+  loyalty: false,
   proveedores: false,
   fel: false,
 };
@@ -90,6 +92,10 @@ export async function signupRestaurant(
   const rawPlan = formData.get('plan_code') as string | null;
   const planCode: 'BASICO' | 'ESTANDAR' | 'PREMIUM' =
     rawPlan === 'BASICO' ? 'BASICO' : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
+  // Paquete de Estándar (elegido en el registro): 'delivery' = Solo Delivery,
+  // 'local' = Para llevar + Comer en local. Solo aplica al plan Estándar.
+  const rawBundle = formData.get('estandar_bundle') as string | null;
+  const estandarBundle: 'delivery' | 'local' = rawBundle === 'delivery' ? 'delivery' : 'local';
 
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
@@ -164,12 +170,20 @@ export async function signupRestaurant(
   const restaurantId = restaurant.id as string;
 
   // ── 3. Tema (marca) ─────────────────────────────────────────
-  // BASICO y ESTANDAR solo admiten pickup; Premium+ tienen todos los tipos.
-  const pickupOnly = planCode === 'BASICO' || planCode === 'ESTANDAR';
+  // Canales según plan:
+  //   BASICO   → ['pickup'] (sin pedidos en línea, valor por defecto).
+  //   ESTANDAR → un paquete: 'delivery' = ['delivery'] o 'local' = ['pickup','dine_in'].
+  //   PREMIUM+ → los tres canales.
+  const orderTypes: ('dine_in' | 'delivery' | 'pickup')[] =
+    planCode === 'BASICO'
+      ? ['pickup']
+      : planCode === 'ESTANDAR'
+        ? (estandarBundle === 'delivery' ? ['delivery'] : ['pickup', 'dine_in'])
+        : ['dine_in', 'delivery', 'pickup'];
   await db.from('restaurant_themes').insert({
     restaurant_id: restaurantId,
     brand_name: name,
-    config: pickupOnly ? { orderTypes: ['pickup'] } : { orderTypes: ['dine_in', 'delivery', 'pickup'] },
+    config: { orderTypes },
   });
 
   // ── 4. Cobro pausado con prueba gratis ──────────────────────

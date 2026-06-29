@@ -43,8 +43,9 @@ export default function OrderTypesEditor({
         Tipos de pedido
       </p>
       <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>
-        En planes Premium+, cada canal desactivado descuenta Q100 de la mensualidad
-        automática (hasta Q200). Mínimo un canal activo.
+        En planes Premium+, desactivar un canal descuenta Q100 de la mensualidad
+        automática (máx. un canal, −Q100). En Estándar define el paquete: Solo delivery,
+        o Para llevar + Comer en local. Mínimo un canal activo.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {OPTIONS.map(({ id, label, desc }) => {

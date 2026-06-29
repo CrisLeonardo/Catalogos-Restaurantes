@@ -380,6 +380,22 @@ export async function updateOwnOrderTypes(
   if (orderTypes.length === 0) return { error: 'Debe haber al menos un modo de pedido activo.' };
 
   const db = createServiceClient();
+
+  // En BASICO/ESTANDAR los canales (el "paquete") los fija Leogin en el
+  // registro y solo el super admin los cambia (updateOrderTypes). Así el
+  // checkout, que ahora honra orderTypes, no puede abusarse para obtener
+  // canales Premium a precio Estándar. Premium+ sí gestiona sus canales.
+  if (!isSuperAdmin) {
+    const { data: rest } = await db
+      .from('restaurants')
+      .select('plan_actual')
+      .eq('id', restaurantId)
+      .single();
+    const plan = (rest?.plan_actual as string | null) ?? null;
+    if (plan === 'BASICO' || plan === 'ESTANDAR') {
+      return { error: 'Tu plan no permite cambiar los canales de pedido. Escríbenos para ajustar tu paquete.' };
+    }
+  }
   const { data: row } = await db
     .from('restaurant_themes')
     .select('config')

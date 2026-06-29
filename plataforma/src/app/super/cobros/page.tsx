@@ -31,6 +31,11 @@ export default async function CobrosPage() {
     return limit !== null && r.salesRevenue30 > limit;
   });
 
+  // Restaurantes activos con mora vencida → requieren suspensión manual
+  const needsSuspension = sorted.filter(
+    (r) => r.hasOverdue && r.status === 'active',
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
@@ -52,6 +57,54 @@ export default async function CobrosPage() {
         <Kpi label="Cobro activo" value={String(stats.activeBilling)} />
         <Kpi label="Sobre límite GMV" value={String(gmvOverLimit.length)} color={gmvOverLimit.length > 0 ? '#fb923c' : undefined} />
       </div>
+
+      {/* Alerta suspensión manual */}
+      {needsSuspension.length > 0 && (
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#f87171', margin: 0 }}>
+              Requieren suspensión manual
+            </h2>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.13)', color: '#f87171' }}>
+              {needsSuspension.length}
+            </span>
+          </div>
+          <Glass variant="quiet" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {needsSuspension.map((r, i) => (
+              <div
+                key={r.restaurantId}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px', gap: 16,
+                  borderBottom: i < needsSuspension.length - 1 ? '1px solid var(--u-hair)' : 'none',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', marginBottom: 3 }}>
+                    {r.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+                    Plan {planLabel(r.plan)} · pendiente{' '}
+                    <span style={{ fontFamily: 'var(--ui-font-mono)', color: '#f87171' }}>
+                      {fmtMoney(r.pendingTotal, r.config?.currency ?? 'GTQ')}
+                    </span>
+                    {' · mora vencida'}
+                  </div>
+                </div>
+                <Link
+                  href={`/super/restaurantes/${r.restaurantId}`}
+                  style={{ fontSize: 13, fontWeight: 600, color: '#f87171', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                  Suspender →
+                </Link>
+              </div>
+            ))}
+          </Glass>
+          <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
+            Estos restaurantes tienen pagos vencidos y siguen activos. La suspensión automática está desactivada — suspéndelos manualmente desde su ficha.
+          </p>
+        </section>
+      )}
 
       {/* Alertas GMV */}
       {gmvOverLimit.length > 0 && (
