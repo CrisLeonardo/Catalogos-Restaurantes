@@ -107,7 +107,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
           </Glass>
         </div>
         <button type="button" onClick={() => setShowForm((v) => !v)} className="press"
-          style={{ padding: '8px 16px', background: 'var(--brand-accent)', color: '#fff', border: 'none', borderRadius: 99, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          style={{ padding: '8px 16px', background: 'var(--admin-panel-btn)', color: 'var(--admin-panel-btn-text)', border: 'none', borderRadius: 99, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon name="plus" size={15} /> Nuevo cupón
         </button>
       </div>
@@ -130,9 +130,9 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
               </div>
               <div>
                 <label style={labelStyle}>Tipo *</label>
-                <select style={inputStyle} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
-                  <option value="PERCENT">Porcentaje (%)</option>
-                  <option value="FIXED">Monto fijo (Q)</option>
+                <select style={{ ...inputStyle, background: '#1a1a1c', colorScheme: 'dark' }} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
+                  <option value="PERCENT" style={{ background: '#1a1a1c', color: '#f0f0f0' }}>Porcentaje (%)</option>
+                  <option value="FIXED" style={{ background: '#1a1a1c', color: '#f0f0f0' }}>Monto fijo (Q)</option>
                 </select>
               </div>
               <div>
@@ -158,7 +158,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
               <button type="submit" disabled={isPending} className="press"
-                style={{ padding: '9px 20px', background: 'var(--brand-accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: 13.5, cursor: isPending ? 'wait' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+                style={{ padding: '9px 20px', background: 'var(--admin-panel-btn)', color: 'var(--admin-panel-btn-text)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: 13.5, cursor: isPending ? 'wait' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
                 {isPending ? 'Guardando…' : 'Crear cupón'}
               </button>
               <button type="button" onClick={() => setShowForm(false)} className="press"
@@ -204,8 +204,8 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   {/* Toggle activo/inactivo */}
                   <button type="button" onClick={() => handleToggle(c.id, c.is_active)} disabled={busy} className="press"
-                    style={{ width: 38, height: 22, borderRadius: 999, flexShrink: 0, padding: 3, background: c.is_active ? 'var(--brand-accent)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: busy ? 'wait' : 'pointer', display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start', transition: 'background 180ms' }}>
-                    <span style={{ width: 16, height: 16, borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                    style={{ width: 38, height: 22, borderRadius: 999, flexShrink: 0, padding: 3, background: c.is_active ? 'var(--admin-panel-btn)' : 'rgba(255,255,255,0.18)', border: 'none', cursor: busy ? 'wait' : 'pointer', display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start', transition: 'background 180ms' }}>
+                    <span style={{ width: 16, height: 16, borderRadius: 999, background: c.is_active ? 'var(--admin-panel-btn-text)' : '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
                   </button>
                   <button type="button" onClick={() => handleDelete(c.id)} disabled={busy} className="press"
                     style={{ padding: '5px 8px', background: 'none', border: 'none', color: 'var(--u-text-4)', cursor: busy ? 'wait' : 'pointer' }}>

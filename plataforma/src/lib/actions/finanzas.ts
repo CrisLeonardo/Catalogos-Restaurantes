@@ -3,9 +3,10 @@
 /* ============================================================
    FINANZAS — Corte de caja + export de reportes (Fase A)
    ------------------------------------------------------------
-   · getCashSummary:   efectivo esperado HOY (por método de pago).
-   · saveCashCount:    guarda un corte de caja (esperado vs contado).
-   · getCashHistory:   últimos cortes del restaurante.
+   · getCashSummary:       efectivo esperado HOY (por método de pago).
+   · saveCashCount:        guarda arqueo con desglose por denominaciones.
+   · getCashHistory:       últimos cortes del restaurante.
+   · deleteCashCount:      elimina un corte si tiene menos de 24 h.
    · exportSalesReportXlsx: reporte de ventas del rango a .xlsx.
    · getSalesReportData:   datos del reporte para PDF en el cliente.
    Todo pasa por service role tras validar el rol del usuario.
@@ -22,13 +23,32 @@ import type { SalesReport } from '@/lib/db/reports';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
+/** Campos y valores en centavos de cada denominación guatemalteca. */
+export const DENOM_FIELDS = [
+  { field: 'bil_200', label: 'Q200',  centavos: 20000, kind: 'B' as const },
+  { field: 'bil_100', label: 'Q100',  centavos: 10000, kind: 'B' as const },
+  { field: 'bil_50',  label: 'Q50',   centavos: 5000,  kind: 'B' as const },
+  { field: 'bil_20',  label: 'Q20',   centavos: 2000,  kind: 'B' as const },
+  { field: 'bil_10',  label: 'Q10',   centavos: 1000,  kind: 'B' as const },
+  { field: 'mon_5',   label: 'Q5',    centavos: 500,   kind: 'M' as const },
+  { field: 'mon_2',   label: 'Q2',    centavos: 200,   kind: 'M' as const },
+  { field: 'mon_1',   label: 'Q1',    centavos: 100,   kind: 'M' as const },
+  { field: 'mon_050', label: 'Q0.50', centavos: 50,    kind: 'M' as const },
+  { field: 'mon_025', label: 'Q0.25', centavos: 25,    kind: 'M' as const },
+  { field: 'mon_010', label: 'Q0.10', centavos: 10,    kind: 'M' as const },
+  { field: 'mon_005', label: 'Q0.05', centavos: 5,     kind: 'M' as const },
+] as const;
+
 /**
  * Valida que el usuario autenticado pueda operar ESTE restaurante.
  * Devuelve el client service-role + la zona horaria, o null si no autorizado.
  */
-async function authRestaurant(
-  restaurantId: string,
-): Promise<{ db: ReturnType<typeof createServiceClient>; tz: string; userId: string } | null> {
+async function authRestaurant(restaurantId: string): Promise<{
+  db: ReturnType<typeof createServiceClient>;
+  tz: string;
+  userId: string;
+  cashierName: string | null;
+} | null> {
   if (!UUID_RE.test(restaurantId)) return null;
 
   const supabase = await createClient();
@@ -37,12 +57,10 @@ async function authRestaurant(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, restaurant_id, permissions')
+    .select('role, restaurant_id, permissions, full_name')
     .eq('id', user.id)
     .single();
 
-  // Pertenencia al restaurante + permiso de sección "finanzas" (los datos
-  // financieros y sus exports son sensibles: un staff sin el permiso no entra).
   const belongs =
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
@@ -58,19 +76,19 @@ async function authRestaurant(
     .eq('id', restaurantId)
     .single();
 
-  return { db, tz: (r?.timezone as string) || 'America/Guatemala', userId: user.id };
+  return {
+    db,
+    tz: (r?.timezone as string) || 'America/Guatemala',
+    userId: user.id,
+    cashierName: (profile?.full_name as string) || null,
+  };
 }
 
 export interface CashSummary {
-  /** Fecha local (YYYY-MM-DD) del corte. */
   date: string;
-  /** Efectivo esperado hoy (pedidos en efectivo, sin cancelados). */
   expectedCash: number;
-  /** Desglose por método de pago: { CASH: monto, ... }. */
   byMethod: Record<string, number>;
-  /** Total de pedidos del día (sin cancelados). */
   orders: number;
-  /** Venta total del día (todos los métodos). */
   totalSales: number;
 }
 
@@ -87,7 +105,6 @@ export async function getCashSummary(restaurantId: string): Promise<CashSummary>
   const { db, tz } = ctx;
   const todayKey = localDateKey(new Date(), tz);
 
-  // Margen de ±1 día para cubrir desfase UTC↔local; filtramos por clave local.
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 1);
 
@@ -109,13 +126,7 @@ export async function getCashSummary(restaurantId: string): Promise<CashSummary>
     orders += 1;
   }
 
-  return {
-    date: todayKey,
-    expectedCash: byMethod.CASH ?? 0,
-    byMethod,
-    orders,
-    totalSales,
-  };
+  return { date: todayKey, expectedCash: byMethod.CASH ?? 0, byMethod, orders, totalSales };
 }
 
 export type CashCount = {
@@ -126,8 +137,12 @@ export type CashCount = {
   counted_cash: number;
   difference: number;
   by_method: Record<string, number> | null;
+  denomination_breakdown: Record<string, number> | null;
+  shift_label: string | null;
+  cashier_name: string | null;
   notes: string | null;
   created_at: string;
+  created_by: string | null;
 };
 
 export async function getCashHistory(
@@ -138,7 +153,7 @@ export async function getCashHistory(
   if (!ctx) return [];
   const { data } = await ctx.db
     .from('cash_counts')
-    .select('id, business_date, opening_float, expected_cash, counted_cash, difference, by_method, notes, created_at')
+    .select('id, business_date, opening_float, expected_cash, counted_cash, difference, by_method, denomination_breakdown, shift_label, cashier_name, notes, created_at, created_by')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200));
@@ -147,7 +162,7 @@ export async function getCashHistory(
 
 export type CashState = { error: string } | { ok: true } | null;
 
-/** Guarda un corte de caja del día (esperado capturado como snapshot). */
+/** Guarda un arqueo de caja con desglose opcional por denominaciones. */
 export async function saveCashCount(
   prevState: CashState,
   formData: FormData,
@@ -162,7 +177,23 @@ export async function saveCashCount(
   };
 
   const opening = Math.max(0, num('opening_float'));
-  const counted = Math.max(0, num('counted_cash'));
+
+  // Calcular total contado desde el desglose por denominaciones.
+  // Si no se ingresó ninguna denominación, usar el campo manual counted_cash.
+  const breakdown: Record<string, number> = {};
+  let denCentavos = 0;
+  for (const { field, centavos } of DENOM_FIELDS) {
+    const n = Math.max(0, parseInt(String(formData.get(field) ?? '0')) || 0);
+    breakdown[field] = n;
+    denCentavos += n * centavos;
+  }
+  const hasDenominations = denCentavos > 0;
+  const counted = hasDenominations
+    ? Math.round(denCentavos) / 100
+    : Math.max(0, num('counted_cash'));
+
+  const shiftLabel = (formData.get('shift_label') as string)?.trim() || null;
+  const notes      = (formData.get('notes') as string)?.trim() || null;
 
   // El esperado se recalcula en el servidor (no se confía en el cliente).
   const summary = await getCashSummary(restaurantId);
@@ -170,15 +201,18 @@ export async function saveCashCount(
   const difference = counted - (opening + expected);
 
   const { error } = await ctx.db.from('cash_counts').insert({
-    restaurant_id: restaurantId,
-    business_date: summary.date,
-    opening_float: opening,
-    expected_cash: expected,
-    counted_cash: counted,
+    restaurant_id:          restaurantId,
+    business_date:          summary.date,
+    opening_float:          opening,
+    expected_cash:          expected,
+    counted_cash:           counted,
     difference,
-    by_method: summary.byMethod,
-    notes: (formData.get('notes') as string)?.trim() || null,
-    created_by: ctx.userId,
+    by_method:              summary.byMethod,
+    denomination_breakdown: hasDenominations ? breakdown : null,
+    shift_label:            shiftLabel,
+    cashier_name:           ctx.cashierName,
+    notes,
+    created_by:             ctx.userId,
   });
 
   if (error) return { error: error.message };
@@ -187,9 +221,41 @@ export async function saveCashCount(
   return { ok: true };
 }
 
+/** Elimina un corte de caja siempre que tenga menos de 24 horas. */
+export async function deleteCashCount(
+  id: string,
+  restaurantId: string,
+): Promise<{ ok: true } | { error: string }> {
+  if (!UUID_RE.test(id) || !UUID_RE.test(restaurantId)) {
+    return { error: 'Parámetros inválidos.' };
+  }
+
+  const ctx = await authRestaurant(restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const { data: record, error: fetchErr } = await ctx.db
+    .from('cash_counts')
+    .select('id, created_at')
+    .eq('id', id)
+    .eq('restaurant_id', restaurantId)
+    .single();
+
+  if (fetchErr || !record) return { error: 'Corte no encontrado.' };
+
+  const ageMs = Date.now() - new Date(record.created_at as string).getTime();
+  if (ageMs > 24 * 60 * 60 * 1000) {
+    return { error: 'Solo puedes eliminar cortes de las últimas 24 horas.' };
+  }
+
+  const { error } = await ctx.db.from('cash_counts').delete().eq('id', id);
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/finanzas');
+  return { ok: true };
+}
+
 /* ── Export del reporte de ventas ───────────────────────────── */
 
-/** Devuelve los datos del reporte para que el cliente genere el PDF. */
 export async function getSalesReportData(
   restaurantId: string,
   from: string,
@@ -201,7 +267,6 @@ export async function getSalesReportData(
   return { report };
 }
 
-/** Exporta el reporte como .xlsx (base64) para descarga directa. */
 export async function exportSalesReportXlsx(
   restaurantId: string,
   from: string,
@@ -212,12 +277,9 @@ export async function exportSalesReportXlsx(
 
   const report = await getSalesReport(restaurantId, from, to, ctx.tz);
 
-  // exceljs (solo escritura, mantenido) en vez de SheetJS, que arrastraba
-  // vulnerabilidades sin parche. Import dinámico → fuera del bundle principal.
   const { Workbook } = await import('exceljs');
   const wb = new Workbook();
 
-  // Hoja 1 – Resumen
   const ws1 = wb.addWorksheet('Resumen');
   ws1.addRows([
     ['Reporte de Ventas', `${from} a ${to}`],
@@ -233,12 +295,10 @@ export async function exportSalesReportXlsx(
     ['Ticket promedio', report.avgTicket],
   ]);
 
-  // Hoja 2 – Ventas por día
   const ws2 = wb.addWorksheet('Ventas por día');
   ws2.addRow(['Fecha', 'Pedidos', 'Ingreso']);
   ws2.addRows(report.series.map((d) => [d.date, d.orders, d.revenue]));
 
-  // Hoja 3 – Productos
   const ws3 = wb.addWorksheet('Productos');
   ws3.addRow(['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad']);
   ws3.addRows(report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]));

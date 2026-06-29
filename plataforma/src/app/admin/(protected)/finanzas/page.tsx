@@ -8,6 +8,7 @@ import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
 import CashCountForm from '@/components/admin/cash-count-form';
+import CashHistoryPanel from '@/components/admin/cash-history-panel';
 
 export const metadata = { title: 'Finanzas – Panel admin' };
 
@@ -152,27 +153,10 @@ export default async function AdminFinanzasPage({
         )}
       </div>
 
-      {/* Corte de caja */}
+      {/* Arqueo de caja */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
         <CashCountForm restaurantId={restaurantId} summary={cashSummary} />
-        <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Cortes recientes</div>
-          {cashHistory.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no has guardado cortes de caja.</div>
-          ) : (
-            cashHistory.map((c) => (
-              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--u-hair)' }}>
-                <div>
-                  <div style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>{c.business_date}</div>
-                  <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>esperado {money(Number(c.expected_cash))} · contado {money(Number(c.counted_cash))}</div>
-                </div>
-                <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 14, color: Math.abs(Number(c.difference)) < 0.005 ? '#4ade80' : '#f87171' }}>
-                  {Number(c.difference) >= 0 ? '+' : ''}{money(Number(c.difference))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <CashHistoryPanel history={cashHistory} restaurantId={restaurantId} />
       </div>
     </div>
   );
