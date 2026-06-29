@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteCashCount, DENOM_FIELDS, type CashCount } from '@/lib/actions/finanzas';
+import { deleteCashCount, type CashCount } from '@/lib/actions/finanzas';
+import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 
 const money = (n: number) => `Q${n.toFixed(2)}`;
 const DENOM_MAP = Object.fromEntries(DENOM_FIELDS.map(d => [d.field, d]));

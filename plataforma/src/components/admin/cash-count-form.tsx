@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveCashCount, DENOM_FIELDS, type CashState, type CashSummary } from '@/lib/actions/finanzas';
+import { saveCashCount, type CashState, type CashSummary } from '@/lib/actions/finanzas';
+import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 
 const money = (n: number) => `Q${n.toFixed(2)}`;
 const BILLETES = DENOM_FIELDS.filter(d => d.kind === 'B');
