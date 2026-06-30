@@ -34,13 +34,17 @@ interface Props {
   initialMesa?: number;
   /** Módulos activos para mostrar funciones opcionales en el menú. */
   llamadaMeseroEnabled?: boolean;
-  /** Recompensas de lealtad (v2). null = no mostrar el apartado. */
+  /** Módulo de lealtad activo (independiente del catálogo de canje). */
+  loyaltyOn?: boolean;
+  /** Recompensas de lealtad (v2). null = canje deshabilitado. */
   rewardsCatalog?: MenuReward[] | null;
   redeemValue?: number;
   googleAuthEnabled?: boolean;
+  /** Número de WhatsApp para el botón de contacto en "Mi cuenta". */
+  whatsappNumber?: string | null;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, rewardsCatalog = null, redeemValue = 0, googleAuthEnabled = false }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, redeemValue = 0, googleAuthEnabled = false, whatsappNumber = null }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       setScannedTable(restaurantId, initialMesa);
@@ -51,7 +55,7 @@ export default function MenuShell({ config, content, categories, products, resta
     <ThemeProvider config={config} content={content}>
       <CartProvider restaurantId={restaurantId}>
         <VisitTracker restaurantId={restaurantId} />
-        <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '0 16px 64px' }}>
+        <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: `0 16px calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (
@@ -78,7 +82,7 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} rewardsCatalog={rewardsCatalog} redeemValue={redeemValue} googleAuthEnabled={googleAuthEnabled} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} redeemValue={redeemValue} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} />
           </div>
         </main>
         <InstallBanner brandName={config.brandName} />

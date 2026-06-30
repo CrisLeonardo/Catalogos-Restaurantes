@@ -144,8 +144,7 @@ export default async function Home({
   const mod = data.restaurant.modules as Record<string, boolean> | null;
   const modSettings = data.restaurant.module_settings ?? null;
 
-  // Lealtad v2: apartado de recompensas en el menú (solo si el módulo está
-  // activo y el restaurante dejó visible el catálogo). Dos lecturas ligeras.
+  // Lealtad v2: pestaña "Fidelidad" en la barra de navegación + panel de canje.
   const loyaltyOn = isModuleActive(mod, modSettings, 'loyalty');
   let rewardsCatalog: Awaited<ReturnType<typeof getPublicRewards>> | null = null;
   let redeemValue = 0;
@@ -157,6 +156,9 @@ export default async function Home({
     redeemValue = Number(settings.redeem_value) || 0;
     if (settings.rewards_enabled) rewardsCatalog = rewards;
   }
+
+  // WhatsApp de contacto para el panel "Mi cuenta".
+  const whatsappNumber = data.restaurant.orders_whatsapp || data.restaurant.whatsapp_number || null;
 
   return (
     <MenuShell
@@ -171,9 +173,11 @@ export default async function Home({
       timezone={tz}
       initialMesa={initialMesa}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
+      loyaltyOn={loyaltyOn}
       rewardsCatalog={rewardsCatalog}
       redeemValue={redeemValue}
       googleAuthEnabled={isGoogleAuthEnabled()}
+      whatsappNumber={whatsappNumber}
     />
   );
 }

@@ -79,7 +79,7 @@ export default function WaiterCallButton({
       style={{
         position: 'fixed',
         right: 16,
-        bottom: raised ? 92 : 24,
+        bottom: raised ? 160 : 92,
         zIndex: 60,
         display: 'inline-flex',
         alignItems: 'center',

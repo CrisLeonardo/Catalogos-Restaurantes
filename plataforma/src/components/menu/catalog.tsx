@@ -4,8 +4,7 @@
    BrandPattern o foto, tags y agregar al carrito. Portado de ClientScreens.jsx. */
 
 import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
@@ -72,9 +71,6 @@ interface CatalogProps {
   qtyOf: (productId: string) => number;
   onAdd: (product: ProdItem, sourceEl: HTMLElement) => void;
   onOpen: (product: ProdItem) => void;
-  cartCount: number;
-  onOpenCart: () => void;
-  cartIconRef: RefObject<HTMLButtonElement | null>;
 }
 
 /** Ícono para el patrón/categoría: el nombre SVG de la categoría o un default.
@@ -85,7 +81,7 @@ function pickIcon(icon: string | null | undefined): string {
 }
 
 export default function Catalog({
-  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen, cartCount, onOpenCart, cartIconRef,
+  categories, products, ordersEnabled, timezone = 'America/Guatemala', qtyOf, onAdd, onOpen,
 }: CatalogProps) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -139,40 +135,11 @@ export default function Catalog({
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
-          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, 44px))`, marginTop: 2 }}>
-            {content.catalog.heading}
-          </h2>
-        </div>
-        {ordersEnabled && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Link
-              href="/mis-pedidos"
-              className="press glass"
-              title="Mis pedidos"
-              style={{ width: 44, height: 44, borderRadius: 13, display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', textDecoration: 'none', flexShrink: 0 }}
-              aria-label="Mis pedidos"
-            >
-              <Icon name="receipt" size={19} />
-            </Link>
-            <button
-              ref={cartIconRef}
-              onClick={onOpenCart}
-              className="press glass"
-              style={{ position: 'relative', width: 48, height: 48, borderRadius: 15, display: 'grid', placeItems: 'center', color: 'var(--u-text)', border: 'none', cursor: 'pointer', flexShrink: 0 }}
-              aria-label="Ver carrito"
-            >
-              <Icon name="bag" size={21} />
-              {cartCount > 0 && (
-                <span className="t-mono" style={{ position: 'absolute', top: -5, right: -5, minWidth: 21, height: 21, padding: '0 5px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center', border: '2px solid var(--brand-bg)' }}>
-                  {cartCount}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
+      <div>
+        <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
+        <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, 44px))`, marginTop: 2 }}>
+          {content.catalog.heading}
+        </h2>
       </div>
 
       {/* Búsqueda */}

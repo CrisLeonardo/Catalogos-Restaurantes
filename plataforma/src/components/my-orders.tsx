@@ -23,7 +23,7 @@ const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT'];
 /** Cuántos pedidos recientes consultan su estado real al servidor. */
 const STATUS_LOOKUPS = 8;
 
-export default function MyOrders({ restaurantId }: { restaurantId: string }) {
+export default function MyOrders({ restaurantId, onBack }: { restaurantId: string; onBack?: () => void }) {
   const content = useThemeContent();
   const [orders, setOrders] = useState<LocalOrderRef[]>([]);
   const [statuses, setStatuses] = useState<Record<string, OrderStatus>>({});
@@ -72,11 +72,17 @@ export default function MyOrders({ restaurantId }: { restaurantId: string }) {
   };
 
   return (
-    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
+    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: `24px 16px ${onBack ? 'calc(88px + env(safe-area-inset-bottom, 0px))' : '80px'}` }}>
       <div style={{ marginBottom: 20 }}>
-        <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <Icon name="chevronLeft" size={16} /> {content.tracking.back}
-        </Link>
+        {onBack ? (
+          <button onClick={onBack} className="press t-mute" style={{ fontSize: 13, background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Icon name="chevronLeft" size={16} /> {content.tracking.back}
+          </button>
+        ) : (
+          <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Icon name="chevronLeft" size={16} /> {content.tracking.back}
+          </Link>
+        )}
         <h1 className="t-display" style={{ fontSize: 28 }}>Mis pedidos</h1>
         <p className="t-serif" style={{ fontSize: 15.5, marginTop: 6 }}>
           Los pedidos hechos desde este dispositivo.

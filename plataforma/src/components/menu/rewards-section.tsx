@@ -42,14 +42,15 @@ interface Props {
   redeemValue: number;
   googleAuthEnabled: boolean;
   ordersEnabled: boolean;
+  open: boolean;
+  onClose: () => void;
 }
 
 const fmtPts = (n: number) => n.toLocaleString('es-GT');
 const pickIcon = (icon: string | null | undefined): string => (icon && ICON_PATHS[icon.trim()] ? icon.trim() : 'utensils');
 
-export default function RewardsSection({ restaurantId, rewards, redeemValue, googleAuthEnabled, ordersEnabled }: Props) {
+export default function RewardsSection({ restaurantId, rewards, redeemValue, googleAuthEnabled, ordersEnabled, open, onClose }: Props) {
   const { items, addItem, removeItem } = useCart();
-  const [open, setOpen] = useState(false);
   const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
   const [savedPhone, setSavedPhone] = useState('');
 
@@ -85,30 +86,9 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
 
   return (
     <>
-      {/* Banner de entrada al menú de recompensas */}
-      <Glass
-        interactive
-        onClick={() => setOpen(true)}
-        className="anim-fade-up"
-        style={{ borderRadius: 18, padding: '15px 17px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', marginBottom: 14, background: 'linear-gradient(100deg, color-mix(in srgb, var(--brand-accent) 16%, transparent), transparent 70%)' }}
-      >
-        <div style={{ width: 46, height: 46, borderRadius: 14, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--brand-accent)', color: 'var(--brand-bg)' }}>
-          <Icon name="gift" size={23} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="t-display" style={{ fontSize: 16.5, fontWeight: 700, lineHeight: 1.1 }}>Canjea tus puntos</div>
-          <div className="t-mute" style={{ fontSize: 12.5, marginTop: 2 }}>
-            {balance != null
-              ? `Tienes ${fmtPts(balance)} ${balance === 1 ? 'punto' : 'puntos'} para canjear`
-              : 'Acumula puntos y cámbialos por productos'}
-          </div>
-        </div>
-        <span className="press btn-accent" style={{ padding: '8px 14px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}>Ver</span>
-      </Glass>
-
       {open && (
         <RewardsMenu
-          onClose={() => setOpen(false)}
+          onClose={onClose}
           rewards={rewards}
           loyalty={loyalty}
           balance={balance}
@@ -242,7 +222,6 @@ function RewardsMenu({
   initialPhone: string;
 }) {
   const config = useThemeConfig();
-  const { count } = useCart();
   const [phone, setPhone] = useState(initialPhone);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -283,7 +262,7 @@ function RewardsMenu({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }} role="dialog" aria-modal="true" aria-label="Recompensas">
-      <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '16px 16px 96px' }}>
+      <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <button onClick={onClose} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }} aria-label="Volver al menú">
@@ -364,14 +343,6 @@ function RewardsMenu({
         </p>
       </main>
 
-      {/* Barra inferior: volver al pedido (revela el carrito del menú) */}
-      {ordersEnabled && count > 0 && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 71, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
-          <button onClick={onClose} className="press btn-accent anim-slide-up" style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 16, padding: '14px 18px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <Icon name="bag" size={18} /> Ver mi pedido ({count})
-          </button>
-        </div>
-      )}
     </div>
   );
 }

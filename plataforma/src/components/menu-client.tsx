@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
 import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
-import RewardsSection, { type MenuReward } from '@/components/menu/rewards-section';
+import RewardsSection from '@/components/menu/rewards-section';
+import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
+import AccountSheet from '@/components/menu/account-sheet';
+import MyOrders from '@/components/my-orders';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable } from '@/lib/table-session';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
+import type { MenuReward } from '@/components/menu/rewards-section';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'> & {
@@ -23,33 +27,38 @@ interface Props {
   products: ProdItem[];
   ordersEnabled?: boolean;
   restaurantId?: string;
-  /** Zona horaria del restaurante (para menús por franja horaria). */
   timezone?: string;
   llamadaMeseroEnabled?: boolean;
-  /** Mesa que llegó por ?mesa=N (QR de mesa). */
   initialMesa?: number;
-  /** Sección de recompensas (lealtad v2). null/undefined = no mostrar. */
+  /** Módulo de lealtad activo (independiente de si el catálogo de canje está habilitado). */
+  loyaltyOn?: boolean;
+  /** Catálogo de recompensas canjeables (null = canje deshabilitado). */
   rewardsCatalog?: MenuReward[] | null;
   redeemValue?: number;
   googleAuthEnabled?: boolean;
+  /** Número de WhatsApp del restaurante para el botón de contacto en "Mi cuenta". */
+  whatsappNumber?: string | null;
 }
 
-/** ¿El producto tiene variantes/extras que el comensal debe ver? */
 function hasOptions(p: ProdItem): boolean {
   return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
 }
 
-export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala', llamadaMeseroEnabled = false, initialMesa, rewardsCatalog = null, redeemValue = 0, googleAuthEnabled = false }: Props) {
+export default function MenuClient({
+  categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala',
+  llamadaMeseroEnabled = false, initialMesa, loyaltyOn = false, rewardsCatalog = null,
+  redeemValue = 0, googleAuthEnabled = false, whatsappNumber = null,
+}: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
-  const cartIconRef = useRef<HTMLButtonElement | null>(null);
-
-  // El comensal "está en una mesa" solo si escaneó el QR de su mesa.
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [pedidosOpen, setPedidosOpen] = useState(false);
   const [tableScanned, setTableScanned] = useState(false);
+
   useEffect(() => {
     if (!restaurantId) return;
-
     setTableScanned((initialMesa != null && initialMesa > 0) || getScannedTable(restaurantId) !== null);
   }, [initialMesa, restaurantId]);
 
@@ -60,50 +69,31 @@ export default function MenuClient({ categories, products, ordersEnabled = false
     return m;
   }, [categories]);
 
-  /* Punto que "vuela" del botón al ícono del carrito. */
-  function fly(fromEl: HTMLElement) {
-    const target = cartIconRef.current;
-    if (!fromEl || !target) return;
-    const a = fromEl.getBoundingClientRect();
-    const b = target.getBoundingClientRect();
-    const dot = document.createElement('div');
-    Object.assign(dot.style, {
-      position: 'fixed', left: `${a.left + a.width / 2 - 9}px`, top: `${a.top + a.height / 2 - 9}px`,
-      width: '18px', height: '18px', borderRadius: '50%', zIndex: '9999', pointerEvents: 'none',
-      background: 'radial-gradient(circle at 35% 30%, #fff, #cbc8c0)', boxShadow: '0 4px 14px rgba(255,255,255,0.4)',
-    } as CSSStyleDeclaration);
-    document.body.appendChild(dot);
-    dot.animate(
-      [
-        { transform: 'translate(0,0) scale(1)', opacity: 1 },
-        { transform: `translate(${(b.left + b.width / 2 - a.left - a.width / 2) * 0.5}px, ${(a.top - b.top) * -0.3 - 60}px) scale(1.3)`, opacity: 1, offset: 0.5 },
-        { transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(0.2)`, opacity: 0.5 },
-      ],
-      { duration: 620, easing: 'cubic-bezier(0.5,0,0.3,1)' },
-    ).onfinish = () => dot.remove();
-    target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.28)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'cubic-bezier(0.16,1,0.3,1)' });
+  function onAdd(product: ProdItem, sourceEl: HTMLElement) {
+    void sourceEl; // sin animación de vuelo (el icono del carrito ahora está en la barra inferior)
+    if (hasOptions(product)) { setCartOpen(false); setSelected(product); return; }
+    addItem({ productId: product.id, name: product.name, price: product.price, image_url: product.image_url });
   }
 
-  function onAdd(product: ProdItem, sourceEl: HTMLElement) {
-    // Con variantes el "+" abre la hoja para elegir; sin variantes agrega directo.
-    if (hasOptions(product)) {
-      setCartOpen(false);
-      setSelected(product);
-      return;
-    }
-    addItem({ productId: product.id, name: product.name, price: product.price, image_url: product.image_url });
-    fly(sourceEl);
-  }
+  // Pestañas de navegación: la activa depende de qué panel está abierto.
+  const activeTab: NavTab = pedidosOpen ? 'pedidos' : accountOpen ? 'cuenta' : rewardsOpen ? 'fidelidad' : 'menu';
+
+  function openRewards()  { setAccountOpen(false); setPedidosOpen(false); setRewardsOpen(true); }
+  function openAccount()  { setRewardsOpen(false); setPedidosOpen(false); setAccountOpen(true); }
+  function openPedidos()  { setRewardsOpen(false); setAccountOpen(false); setPedidosOpen(true); }
+  function closeOverlays() { setRewardsOpen(false); setAccountOpen(false); setPedidosOpen(false); }
 
   return (
     <>
-      {rewardsCatalog && restaurantId && (
+      {loyaltyOn && restaurantId && (
         <RewardsSection
           restaurantId={restaurantId}
-          rewards={rewardsCatalog}
+          rewards={rewardsCatalog ?? []}
           redeemValue={redeemValue}
           googleAuthEnabled={googleAuthEnabled}
           ordersEnabled={ordersEnabled}
+          open={rewardsOpen}
+          onClose={() => setRewardsOpen(false)}
         />
       )}
 
@@ -115,9 +105,6 @@ export default function MenuClient({ categories, products, ordersEnabled = false
         qtyOf={qtyOfProduct}
         onAdd={onAdd}
         onOpen={(p) => { setCartOpen(false); setSelected(p); }}
-        cartCount={count}
-        onOpenCart={() => setCartOpen(true)}
-        cartIconRef={cartIconRef}
       />
 
       {ordersEnabled && <div style={{ height: count > 0 ? 88 : 24 }} />}
@@ -137,9 +124,45 @@ export default function MenuClient({ categories, products, ordersEnabled = false
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
-      {/* FAB "Llamar al mesero" — solo si el módulo está activo Y se escaneó el QR de mesa */}
       {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && (
         <WaiterCallButton restaurantId={restaurantId} raised={ordersEnabled && count > 0} />
+      )}
+
+      {/* Barra de navegación inferior */}
+      {ordersEnabled && (
+        <BottomNav
+          active={activeTab}
+          ordersEnabled={ordersEnabled}
+          loyaltyOn={loyaltyOn}
+          onSelectMenu={closeOverlays}
+          onSelectPedidos={openPedidos}
+          onSelectFidelidad={openRewards}
+          onSelectCuenta={openAccount}
+        />
+      )}
+
+      {/* Panel "Mis pedidos" */}
+      {pedidosOpen && restaurantId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mis pedidos"
+          style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }}
+        >
+          <MyOrders restaurantId={restaurantId} onBack={closeOverlays} />
+        </div>
+      )}
+
+      {/* Panel "Mi cuenta" */}
+      {accountOpen && restaurantId && (
+        <AccountSheet
+          restaurantId={restaurantId}
+          loyaltyOn={loyaltyOn}
+          redeemValue={redeemValue}
+          googleAuthEnabled={googleAuthEnabled}
+          whatsappNumber={whatsappNumber}
+          onClose={() => setAccountOpen(false)}
+        />
       )}
     </>
   );

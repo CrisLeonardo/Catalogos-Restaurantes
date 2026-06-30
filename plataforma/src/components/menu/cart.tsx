@@ -17,7 +17,7 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
   if (count === 0 || cartIconHidden) return null;
 
   return (
-    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: 68, left: 0, right: 0, zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
       <Glass
         interactive
         onClick={onOpen}
