@@ -38,7 +38,7 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
 
 /* Panel del carrito (bottom-sheet). */
 export function CartPanel({ onClose }: { onClose: () => void }) {
-  const { items, updateQuantity, total } = useCart();
+  const { items, updateQuantity, removeItem, total, pointsToRedeem } = useCart();
   const content = useThemeContent();
   const config = useThemeConfig();
   const titleT = useText('heading', 'cartTitle');
@@ -82,24 +82,50 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
               {items.map((item) => (
                 <Glass key={item.lineId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="ct-product-name" style={{ fontSize: 14 * config.typography.productName.size }}>{item.name}</div>
+                    <div className="ct-product-name" style={{ fontSize: 14 * config.typography.productName.size, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {item.rewardId && <Icon name="gift" size={14} style={{ color: 'var(--brand-accent)' }} />}
+                      {item.name}
+                    </div>
                     {item.options && item.options.length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>
                         {item.options.map((o) => o.choiceName).join(' · ')}
                       </div>
                     )}
-                    <Price amount={item.price * item.quantity} size={14} style={{ marginTop: 3 }} />
+                    {item.rewardId ? (
+                      <div style={{ marginTop: 3, fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)' }}>
+                        Gratis · {(item.pointsCost ?? 0).toLocaleString('es-GT')} pts
+                      </div>
+                    ) : (
+                      <Price amount={item.price * item.quantity} size={14} style={{ marginTop: 3 }} />
+                    )}
                   </div>
-                  <QtyStepper
-                    value={item.quantity}
-                    onMinus={() => updateQuantity(item.lineId, item.quantity - 1)}
-                    onPlus={() => updateQuantity(item.lineId, item.quantity + 1)}
-                  />
+                  {item.rewardId ? (
+                    <button
+                      onClick={() => removeItem(item.lineId)}
+                      className="press glass-quiet"
+                      style={{ width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)', cursor: 'pointer', flexShrink: 0 }}
+                      aria-label="Quitar recompensa"
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  ) : (
+                    <QtyStepper
+                      value={item.quantity}
+                      onMinus={() => updateQuantity(item.lineId, item.quantity - 1)}
+                      onPlus={() => updateQuantity(item.lineId, item.quantity + 1)}
+                    />
+                  )}
                 </Glass>
               ))}
             </div>
 
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 14 }}>
+              {pointsToRedeem > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: 'var(--brand-accent)', fontWeight: 600 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={14} /> Puntos a canjear</span>
+                  <span>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--u-text)' }}>{content.cart.total}</span>
                 <Price amount={total} size={22} />

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import type { LoyaltyReward } from '@/types';
 
 export interface RedeemContext {
   active: boolean;       // módulo activo + cuenta con saldo canjeable
@@ -62,6 +63,8 @@ export interface LoyaltySettings {
   redeem_value: number;
   min_redeem: number;
   signup_bonus: number;
+  /** Mostrar el catálogo de recompensas (canje por productos) en el menú. */
+  rewards_enabled: boolean;
   updated_at: string;
 }
 
@@ -89,13 +92,14 @@ export interface LoyaltyTransaction {
 export async function getLoyaltySettings(restaurantId: string): Promise<LoyaltySettings> {
   const db = createServiceClient();
   const { data } = await db.from('loyalty_settings').select('*').eq('restaurant_id', restaurantId).maybeSingle();
-  if (data) return data as LoyaltySettings;
+  if (data) return { rewards_enabled: true, ...data } as LoyaltySettings;
   return {
     restaurant_id: restaurantId,
     earn_rate: 1,
     redeem_value: 0.1,
     min_redeem: 100,
     signup_bonus: 0,
+    rewards_enabled: true,
     updated_at: new Date().toISOString(),
   };
 }
@@ -159,4 +163,168 @@ export async function getCustomersForLoyalty(restaurantId: string, limit = 200):
     .order('name')
     .limit(limit);
   return (data ?? []) as { id: string; name: string; phone: string }[];
+}
+
+/* ════════════════════════════════════════════════════════════
+   Recompensas (catálogo de canje por productos) — migración 058
+   ════════════════════════════════════════════════════════════ */
+
+export interface RewardRow extends LoyaltyReward {
+  /** Nombre del producto enlazado (si aplica) — para el panel admin. */
+  product_name?: string | null;
+  product_available?: boolean | null;
+}
+
+/** Catálogo completo (admin): todas las recompensas, activas o no. */
+export async function getRewards(restaurantId: string): Promise<RewardRow[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('loyalty_rewards')
+    .select('*, product:products(name, is_available, is_active)')
+    .eq('restaurant_id', restaurantId)
+    .order('sort_order')
+    .order('created_at');
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => {
+    const { product, ...r } = row as Record<string, unknown> & {
+      product?: { name: string; is_available: boolean; is_active: boolean } | null;
+    };
+    return {
+      ...(r as unknown as LoyaltyReward),
+      product_name: product?.name ?? null,
+      product_available: product ? product.is_available && product.is_active : null,
+    } as RewardRow;
+  });
+}
+
+/** Productos del menú para elegir como recompensa (admin). */
+export async function getProductsForRewards(restaurantId: string, limit = 500): Promise<{ id: string; name: string; price: number; image_url: string | null; cost: number | null }[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('products')
+    .select('id, name, price, image_url, cost')
+    .eq('restaurant_id', restaurantId)
+    .eq('is_active', true)
+    .order('name')
+    .limit(limit);
+  return (data ?? []) as { id: string; name: string; price: number; image_url: string | null; cost: number | null }[];
+}
+
+export interface PublicReward {
+  id: string;
+  product_id: string | null;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  points_cost: number;
+  sort_order: number;
+  /** Unidades restantes (NULL = ilimitado); 0 = agotado. */
+  stock: number | null;
+}
+
+/** Catálogo público (menú): solo recompensas activas y con stock. */
+export async function getPublicRewards(restaurantId: string): Promise<PublicReward[]> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('loyalty_rewards')
+    .select('id, product_id, title, description, image_url, points_cost, sort_order, stock')
+    .eq('restaurant_id', restaurantId)
+    .eq('active', true)
+    .order('points_cost')
+    .order('sort_order');
+  return ((data ?? []) as PublicReward[]).filter((r) => r.stock === null || r.stock > 0);
+}
+
+export interface DinerLoyalty {
+  /** ¿El módulo de lealtad está activo para este restaurante? */
+  active: boolean;
+  /** ¿Reconocimos al comensal (por cuenta o por teléfono)? */
+  identified: boolean;
+  /** ¿Hay una sesión iniciada (Google)? */
+  loggedIn: boolean;
+  /** ¿La sesión iniciada ya está enlazada a un cliente con historial? */
+  linkedAccount: boolean;
+  name: string | null;
+  balance: number;
+  lifetimePoints: number;
+  redeemValue: number;
+  minRedeem: number;
+}
+
+const NO_DINER: DinerLoyalty = {
+  active: false, identified: false, loggedIn: false, linkedAccount: false,
+  name: null, balance: 0, lifetimePoints: 0, redeemValue: 0, minRedeem: 0,
+};
+
+/**
+ * Saldo y reglas para un comensal concreto. Resuelve la identidad por cuenta
+ * (auth_user_id) primero, y si no, por teléfono. Lo usa la sección de
+ * recompensas del menú. `authUserId` lo provee el server action (cookie).
+ */
+export async function getDinerLoyalty(
+  restaurantId: string,
+  opts: { authUserId?: string | null; phone?: string | null },
+): Promise<DinerLoyalty> {
+  if (!(await loyaltyActive(restaurantId))) return NO_DINER;
+  const db = createServiceClient();
+
+  const { data: settings } = await db
+    .from('loyalty_settings')
+    .select('redeem_value, min_redeem')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+
+  const redeemValue = Number(settings?.redeem_value) || 0;
+  const minRedeem = Number(settings?.min_redeem) || 0;
+  const loggedIn = !!opts.authUserId;
+
+  // 1) Por cuenta enlazada.
+  let customer: { id: string; name: string } | null = null;
+  if (opts.authUserId) {
+    const { data } = await db
+      .from('customers')
+      .select('id, name')
+      .eq('restaurant_id', restaurantId)
+      .eq('auth_user_id', opts.authUserId)
+      .maybeSingle();
+    if (data) customer = data as { id: string; name: string };
+  }
+  const linkedAccount = !!customer;
+
+  // 2) Por teléfono (si no hay cuenta enlazada todavía).
+  if (!customer && opts.phone) {
+    const phoneKey = opts.phone.replace(/\D/g, '');
+    if (phoneKey.length >= 7) {
+      const { data } = await db
+        .from('customers')
+        .select('id, name')
+        .eq('restaurant_id', restaurantId)
+        .eq('phone', phoneKey)
+        .maybeSingle();
+      if (data) customer = data as { id: string; name: string };
+    }
+  }
+
+  if (!customer) {
+    return { ...NO_DINER, active: true, loggedIn, redeemValue, minRedeem };
+  }
+
+  const { data: acct } = await db
+    .from('loyalty_accounts')
+    .select('points_balance, lifetime_points')
+    .eq('restaurant_id', restaurantId)
+    .eq('customer_id', customer.id)
+    .maybeSingle();
+
+  return {
+    active: true,
+    identified: true,
+    loggedIn,
+    linkedAccount,
+    name: customer.name ?? null,
+    balance: Number(acct?.points_balance) || 0,
+    lifetimePoints: Number(acct?.lifetime_points) || 0,
+    redeemValue,
+    minRedeem,
+  };
 }

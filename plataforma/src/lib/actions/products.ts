@@ -55,6 +55,16 @@ function parseCost(raw: string | null): number | null {
 }
 
 /**
+ * Puntos de lealtad por unidad del producto (migración 058). Vacío = null
+ * (usar la regla general del restaurante); número ≥ 0 = puntos fijos.
+ */
+function parseLoyaltyPoints(raw: string | null): number | null {
+  if (raw == null || raw.trim() === '') return null;
+  const n = parseInt(raw, 10);
+  return isNaN(n) || n < 0 ? null : n;
+}
+
+/**
  * Valida los grupos de variantes/extras que manda el editor del admin.
  * Estructura final: [{ id, name, type, required?, max?, choices: [{ id, name, priceDelta }] }]
  * Devuelve null si no hay grupos válidos (producto simple).
@@ -127,6 +137,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     description: (formData.get('description') as string)?.trim() || null,
     price: parseFloat(priceRaw),
     cost: parseCost(formData.get('cost') as string),
+    loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
@@ -164,6 +175,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       description: (formData.get('description') as string)?.trim() || null,
       price: parseFloat(priceRaw),
       cost: parseCost(formData.get('cost') as string),
+    loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
@@ -326,6 +338,7 @@ export async function createProductModal(
     description: (formData.get('description') as string)?.trim() || null,
     price: parseFloat(priceRaw),
     cost: parseCost(formData.get('cost') as string),
+    loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
@@ -366,6 +379,7 @@ export async function updateProductModal(
       description: (formData.get('description') as string)?.trim() || null,
       price: parseFloat(priceRaw),
       cost: parseCost(formData.get('cost') as string),
+    loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),

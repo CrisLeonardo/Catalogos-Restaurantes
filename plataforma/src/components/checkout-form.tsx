@@ -78,7 +78,7 @@ export default function CheckoutForm({
   const content = useThemeContent();
   const checkoutTitleT = useText('heading', 'checkoutTitle');
   const confirmTitleT  = useText('heading', 'confirmationTitle');
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, pointsToRedeem } = useCart();
 
   // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
   const [hasScannedTable, setHasScannedTable] = useState(false);
@@ -295,7 +295,7 @@ export default function CheckoutForm({
     if (!valid) { setTried(true); return; }
 
     const itemsSnapshot = items.map((i) => ({
-      name: i.name,
+      name: i.rewardId ? `🎁 ${i.name}` : i.name,
       opts: i.options?.map((o) => o.choiceName).join(', ') ?? '',
       qty: i.quantity,
       sub: i.price * i.quantity,
@@ -307,13 +307,14 @@ export default function CheckoutForm({
     start(async () => {
       const result = await createOrder({
         restaurantId,
-        items: items.map((i) => ({
+        items: items.filter((i) => !i.rewardId).map((i) => ({
           productId: i.productId,
           name: i.name,
           price: i.price,
           quantity: i.quantity,
           options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
         })),
+        rewardLines: items.filter((i) => i.rewardId).map((i) => ({ rewardId: i.rewardId! })),
         customer: {
           name, phone, type,
           ...(type === 'DELIVERY' ? { address, notes } : { notes }),
@@ -624,15 +625,20 @@ export default function CheckoutForm({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((item) => (
             <div key={item.lineId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
-                {item.quantity}× {item.name}
-                {item.options && item.options.length > 0 && (
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                    {item.options.map((o) => o.choiceName).join(' · ')}
-                  </span>
-                )}
+              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                {item.rewardId && <Icon name="gift" size={13} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />}
+                <span>
+                  {item.quantity}× {item.name}
+                  {item.options && item.options.length > 0 && (
+                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                      {item.options.map((o) => o.choiceName).join(' · ')}
+                    </span>
+                  )}
+                </span>
               </span>
-              <Price amount={item.price * item.quantity} size={13.5} muted />
+              {item.rewardId
+                ? <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', whiteSpace: 'nowrap' }}>{(item.pointsCost ?? 0).toLocaleString('es-GT')} pts</span>
+                : <Price amount={item.price * item.quantity} size={13.5} muted />}
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -664,6 +670,12 @@ export default function CheckoutForm({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
                 <Price amount={tipAmount} size={13.5} muted />
+              </div>
+            )}
+            {pointsToRedeem > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, color: 'var(--brand-accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={13} /> Recompensas (puntos a usar)</span>
+                <span style={{ fontSize: 13.5, color: 'var(--brand-accent)', fontWeight: 600 }}>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>

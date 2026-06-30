@@ -12,6 +12,8 @@ import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls } from '@/lib/tenant';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
+import { getLoyaltySettings, getPublicRewards } from '@/lib/db/loyalty';
+import { isGoogleAuthEnabled } from '@/lib/auth-config';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
 export async function generateMetadata(): Promise<Metadata> {
@@ -142,6 +144,20 @@ export default async function Home({
   const mod = data.restaurant.modules as Record<string, boolean> | null;
   const modSettings = data.restaurant.module_settings ?? null;
 
+  // Lealtad v2: apartado de recompensas en el menú (solo si el módulo está
+  // activo y el restaurante dejó visible el catálogo). Dos lecturas ligeras.
+  const loyaltyOn = isModuleActive(mod, modSettings, 'loyalty');
+  let rewardsCatalog: Awaited<ReturnType<typeof getPublicRewards>> | null = null;
+  let redeemValue = 0;
+  if (loyaltyOn) {
+    const [settings, rewards] = await Promise.all([
+      getLoyaltySettings(data.restaurant.id),
+      getPublicRewards(data.restaurant.id),
+    ]);
+    redeemValue = Number(settings.redeem_value) || 0;
+    if (settings.rewards_enabled) rewardsCatalog = rewards;
+  }
+
   return (
     <MenuShell
       config={data.resolved.config}
@@ -155,6 +171,9 @@ export default async function Home({
       timezone={tz}
       initialMesa={initialMesa}
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
+      rewardsCatalog={rewardsCatalog}
+      redeemValue={redeemValue}
+      googleAuthEnabled={isGoogleAuthEnabled()}
     />
   );
 }

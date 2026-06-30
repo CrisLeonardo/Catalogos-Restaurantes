@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
+import { createClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { getRedeemContextByPhone, type RedeemContext } from '@/lib/db/loyalty';
+import { getRedeemContextByPhone, getDinerLoyalty, type RedeemContext, type DinerLoyalty } from '@/lib/db/loyalty';
 
 /**
  * Consulta pública (checkout): cuántos puntos puede canjear el cliente con su
@@ -22,6 +23,7 @@ export interface LoyaltySettingsPatch {
   redeem_value: number;
   min_redeem: number;
   signup_bonus: number;
+  rewards_enabled: boolean;
 }
 
 export async function saveLoyaltySettings(restaurantId: string, patch: LoyaltySettingsPatch): Promise<LoyaltyActionResult> {
@@ -40,11 +42,121 @@ export async function saveLoyaltySettings(restaurantId: string, patch: LoyaltySe
     redeem_value: redeem,
     min_redeem: Math.max(0, Math.floor(Number(patch.min_redeem) || 0)),
     signup_bonus: Math.max(0, Math.floor(Number(patch.signup_bonus) || 0)),
+    rewards_enabled: patch.rewards_enabled !== false,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'restaurant_id' });
   if (error) return { error: error.message };
 
   revalidatePath('/admin/lealtad');
+  return { ok: true };
+}
+
+/* ── Recompensas (catálogo de canje por productos) ────────── */
+
+export interface RewardPatch {
+  id?: string;
+  product_id: string | null;
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  points_cost: number;
+  active?: boolean;
+  stock?: number | null;
+  per_customer_limit?: number | null;
+  sort_order?: number;
+}
+
+export async function saveReward(restaurantId: string, patch: RewardPatch): Promise<LoyaltyActionResult> {
+  const auth = await authorizeModuleAction(restaurantId, 'loyalty');
+  if ('error' in auth) return auth;
+
+  const cost = Math.floor(Number(patch.points_cost));
+  if (isNaN(cost) || cost <= 0) return { error: 'El costo en puntos debe ser mayor a 0.' };
+  const title = (patch.title || '').trim();
+  if (!title) return { error: 'Ponle un nombre a la recompensa.' };
+
+  const row = {
+    restaurant_id: restaurantId,
+    product_id: patch.product_id || null,
+    title: title.slice(0, 120),
+    description: (patch.description || '').trim().slice(0, 400) || null,
+    image_url: (patch.image_url || '').trim() || null,
+    points_cost: cost,
+    active: patch.active !== false,
+    stock: patch.stock == null || patch.stock === undefined || Number.isNaN(Number(patch.stock)) ? null : Math.max(0, Math.floor(Number(patch.stock))),
+    per_customer_limit: patch.per_customer_limit == null || Number.isNaN(Number(patch.per_customer_limit)) ? null : Math.max(1, Math.floor(Number(patch.per_customer_limit))),
+    sort_order: Math.floor(Number(patch.sort_order) || 0),
+  };
+
+  const db = createServiceClient();
+  const { error } = patch.id
+    ? await db.from('loyalty_rewards').update(row).eq('id', patch.id).eq('restaurant_id', restaurantId)
+    : await db.from('loyalty_rewards').insert(row);
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/lealtad');
+  return { ok: true };
+}
+
+export async function deleteReward(restaurantId: string, rewardId: string): Promise<LoyaltyActionResult> {
+  const auth = await authorizeModuleAction(restaurantId, 'loyalty');
+  if ('error' in auth) return auth;
+  const db = createServiceClient();
+  const { error } = await db.from('loyalty_rewards').delete().eq('id', rewardId).eq('restaurant_id', restaurantId);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/lealtad');
+  return { ok: true };
+}
+
+export async function toggleReward(restaurantId: string, rewardId: string, active: boolean): Promise<LoyaltyActionResult> {
+  const auth = await authorizeModuleAction(restaurantId, 'loyalty');
+  if ('error' in auth) return auth;
+  const db = createServiceClient();
+  const { error } = await db.from('loyalty_rewards').update({ active }).eq('id', rewardId).eq('restaurant_id', restaurantId);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/lealtad');
+  return { ok: true };
+}
+
+/* ── Comensal: ver y enlazar su saldo de puntos ───────────── */
+
+/**
+ * Saldo del comensal para la sección de recompensas del menú. Lee la sesión
+ * (Google) de las cookies; si no, usa el teléfono. Público (lo llama el menú).
+ */
+export async function getMyLoyalty(restaurantId: string, phone?: string): Promise<DinerLoyalty> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return getDinerLoyalty(restaurantId, { authUserId: user?.id ?? null, phone: phone ?? null });
+}
+
+/**
+ * Un usuario con sesión iniciada reclama el historial de puntos de su número
+ * (pedidos hechos antes sin cuenta). Enlace 1:1: no roba un número ya enlazado
+ * a otra cuenta.
+ */
+export async function linkMyAccountByPhone(restaurantId: string, phone: string): Promise<LoyaltyActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Inicia sesión para enlazar tu número.' };
+
+  const phoneKey = (phone || '').replace(/\D/g, '');
+  if (phoneKey.length < 7) return { error: 'Número inválido.' };
+
+  const db = createServiceClient();
+  const { data: c } = await db
+    .from('customers')
+    .select('id, auth_user_id')
+    .eq('restaurant_id', restaurantId)
+    .eq('phone', phoneKey)
+    .maybeSingle();
+  if (!c) return { error: 'No encontramos pedidos con ese número todavía.' };
+  if (c.auth_user_id && c.auth_user_id !== user.id) return { error: 'Ese número ya está enlazado a otra cuenta.' };
+
+  // 1:1 — suelta el enlace previo de esta cuenta y asigna al número pedido.
+  await db.from('customers').update({ auth_user_id: null }).eq('restaurant_id', restaurantId).eq('auth_user_id', user.id);
+  const { error } = await db.from('customers').update({ auth_user_id: user.id }).eq('id', c.id as string);
+  if (error) return { error: error.message };
   return { ok: true };
 }
 
@@ -99,7 +211,7 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
 
     const { data: order } = await db
       .from('orders')
-      .select('id, customer_id, total')
+      .select('id, customer_id')
       .eq('id', orderId)
       .eq('restaurant_id', restaurantId)
       .single();
@@ -113,7 +225,36 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       .eq('tipo', 'EARN');
     if ((count ?? 0) > 0) return;
 
-    const points = Math.floor(Number(order.total) * Number(settings.earn_rate));
+    // Puntos por línea: si el producto define sus propios puntos, esos × cantidad;
+    // si no, la regla general earn_rate × subtotal de la línea. Los canjes (Q0)
+    // no otorgan puntos.
+    const { data: items } = await db
+      .from('order_items')
+      .select('product_id, quantity, subtotal, is_reward')
+      .eq('order_id', orderId);
+
+    const productIds = [...new Set((items ?? [])
+      .filter((i) => i.product_id && !i.is_reward)
+      .map((i) => i.product_id as string))];
+    const { data: prods } = productIds.length
+      ? await db.from('products').select('id, loyalty_points').in('id', productIds)
+      : { data: [] as { id: string; loyalty_points: number | null }[] };
+    const perProduct = new Map<string, number | null>(
+      (prods ?? []).map((p) => [p.id as string, p.loyalty_points as number | null]),
+    );
+
+    const earnRate = Number(settings.earn_rate) || 0;
+    let points = 0;
+    for (const it of items ?? []) {
+      if (it.is_reward) continue;
+      const per = it.product_id ? perProduct.get(it.product_id as string) : undefined;
+      if (per !== null && per !== undefined) {
+        points += Math.max(0, Math.floor(Number(per))) * Number(it.quantity);
+      } else {
+        points += Math.floor(Number(it.subtotal) * earnRate);
+      }
+    }
+    points = Math.floor(points);
     if (points <= 0) return;
 
     await db.rpc('leogin_loyalty_apply', {

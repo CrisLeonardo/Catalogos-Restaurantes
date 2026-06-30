@@ -77,6 +77,8 @@ export interface Customer {
   first_order_at: string | null;
   last_order_at: string | null;
   created_at: string;
+  /** Cuenta de Supabase Auth (Google) enlazada a este cliente (migración 058). */
+  auth_user_id?: string | null;
 }
 
 export interface RestaurantTheme {
@@ -155,6 +157,30 @@ export interface Product {
   stock: number | null;
   low_stock_threshold: number;
   sort_order: number;
+  /**
+   * Puntos de lealtad que otorga UNA unidad de este producto (migración 058).
+   * NULL = usar la regla general del restaurante (earn_rate × subtotal). 0 = ninguno.
+   */
+  loyalty_points?: number | null;
+}
+
+/** Recompensa canjeable por puntos (catálogo de lealtad, migración 058). */
+export interface LoyaltyReward {
+  id: string;
+  restaurant_id: string;
+  /** Producto del menú entregado como canje (NULL = recompensa suelta). */
+  product_id: string | null;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  points_cost: number;
+  active: boolean;
+  sort_order: number;
+  /** Inventario de la recompensa; NULL = ilimitado. */
+  stock: number | null;
+  /** Máximo de canjes por cliente; NULL = ilimitado. */
+  per_customer_limit: number | null;
+  created_at: string;
 }
 
 export interface Profile {
@@ -266,4 +292,11 @@ export interface CartItem {
   quantity: number;
   image_url: string | null;
   options?: CartItemOption[];
+  /**
+   * Si la línea es un canje de recompensa (migración 058): id de la recompensa
+   * y su costo en puntos. El precio en Q es 0; los puntos se descuentan al
+   * confirmar el pedido. No es apilable ni editable en cantidad.
+   */
+  rewardId?: string;
+  pointsCost?: number;
 }

@@ -103,6 +103,12 @@ export async function createOrder(
 
   const db = createServiceClient();
 
+  // Sesión del comensal (Google), si la hay: enlaza la cuenta al cliente
+  // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
+  const authClient = await createClient();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  const authUserId = authUser?.id ?? null;
+
   const { data: restaurant } = await db
     .from('restaurants')
     .select('id, modules, status, whatsapp_number, timezone, hours, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
@@ -192,12 +198,14 @@ export async function createOrder(
   );
 
   const verifiedItems: {
-    productId: string;
+    productId: string | null;
     name: string;
     price: number;
     cost: number | null;
     quantity: number;
     options: OrderItemOption[];
+    is_reward?: boolean;
+    reward_id?: string | null;
   }[] = [];
 
   for (const item of items) {
@@ -223,6 +231,81 @@ export async function createOrder(
       quantity: item.quantity,
       options: resolvedOpts.snapshot,
     });
+  }
+
+  // ── Recompensas de lealtad canjeadas (migración 058) ──────────
+  // El cliente solo manda ids; aquí resolvemos el producto, validamos la cuenta
+  // (por teléfono) y verificamos que el saldo alcance. Si algo falla, NO se crea
+  // el pedido (validamos ANTES de tocar la BD de pedidos). El descuento real de
+  // puntos lo hace el RPC atómico tras crear el pedido.
+  const rewardLines = parsed.data.rewardLines ?? [];
+  let rewardCustomerId: string | null = null;
+  let rewardPointsTotal = 0;
+  const rewardRedeemIds: string[] = [];
+  if (rewardLines.length > 0) {
+    const phoneKeyR = customer.phone.replace(/\D/g, '');
+    if (phoneKeyR.length < 7) {
+      return { error: 'Necesitas tu número de teléfono para canjear recompensas.' };
+    }
+    const { data: rc } = await db
+      .from('customers')
+      .select('id')
+      .eq('restaurant_id', restaurantId)
+      .eq('phone', phoneKeyR)
+      .maybeSingle();
+    if (!rc) {
+      return { error: 'No encontramos puntos con ese número. Haz al menos un pedido para empezar a acumular.' };
+    }
+    rewardCustomerId = rc.id as string;
+
+    const { data: acctR } = await db
+      .from('loyalty_accounts')
+      .select('points_balance')
+      .eq('restaurant_id', restaurantId)
+      .eq('customer_id', rewardCustomerId)
+      .maybeSingle();
+    const balanceR = Number(acctR?.points_balance) || 0;
+
+    const ids = [...new Set(rewardLines.map((r) => r.rewardId))];
+    const { data: rewards } = await db
+      .from('loyalty_rewards')
+      .select('id, product_id, title, points_cost, active, stock')
+      .eq('restaurant_id', restaurantId)
+      .in('id', ids);
+    const rewardById = new Map((rewards ?? []).map((r) => [r.id as string, r]));
+
+    const rProductIds = [...new Set((rewards ?? []).map((r) => r.product_id).filter(Boolean) as string[])];
+    const { data: rProducts } = rProductIds.length
+      ? await db.from('products').select('id, name, cost, is_active').in('id', rProductIds)
+      : { data: [] as { id: string; name: string; cost: number | null; is_active: boolean }[] };
+    const rProductById = new Map((rProducts ?? []).map((p) => [p.id as string, p]));
+
+    for (const line of rewardLines) {
+      const reward = rewardById.get(line.rewardId);
+      if (!reward || !reward.active) {
+        return { error: 'Una de las recompensas ya no está disponible. Actualiza tu carrito.' };
+      }
+      if (reward.stock != null && Number(reward.stock) <= 0) {
+        return { error: `"${reward.title}" está agotada.` };
+      }
+      const prod = reward.product_id ? rProductById.get(reward.product_id as string) : null;
+      rewardPointsTotal += Number(reward.points_cost) || 0;
+      rewardRedeemIds.push(reward.id as string);
+      verifiedItems.push({
+        productId: (reward.product_id as string | null) ?? null,
+        name: `🎁 ${reward.title}`,
+        price: 0,
+        cost: prod?.cost != null ? Number(prod.cost) : null,
+        quantity: 1,
+        options: [],
+        is_reward: true,
+        reward_id: reward.id as string,
+      });
+    }
+
+    if (balanceR < rewardPointsTotal) {
+      return { error: `Te faltan puntos para canjear esas recompensas (tienes ${balanceR}, necesitas ${rewardPointsTotal}).` };
+    }
   }
 
   // El costo de envío también se resuelve en el servidor (tema del restaurante).
@@ -255,11 +338,13 @@ export async function createOrder(
   const requestedPoints = parsed.data.redeemPoints ?? 0;
   if (requestedPoints > 0) {
     const ctx = await getRedeemContextByPhone(restaurantId, customer.phone);
-    if (ctx.active && ctx.redeemValue > 0 && ctx.balance >= ctx.minRedeem) {
+    // Saldo disponible para descuento = saldo − lo ya comprometido en recompensas.
+    const availableBalance = Math.max(0, ctx.balance - rewardPointsTotal);
+    if (ctx.active && ctx.redeemValue > 0 && availableBalance >= ctx.minRedeem) {
       // Tope: ni más puntos que el saldo, ni más descuento que el total restante.
       const remaining = Math.max(0, subtotal + fee - discount + tip);
       const maxByTotal = Math.floor(remaining / ctx.redeemValue);
-      const points = Math.min(requestedPoints, ctx.balance, maxByTotal);
+      const points = Math.min(requestedPoints, availableBalance, maxByTotal);
       if (points >= ctx.minRedeem) {
         loyaltyPoints = points;
         loyaltyDiscount = Math.round(points * ctx.redeemValue * 100) / 100;
@@ -282,6 +367,7 @@ export async function createOrder(
       p_address:       customer.type === 'DELIVERY' ? (customer.address ?? '') : '',
       p_zone:          customer.zone ?? '',
       p_total:         total,
+      p_auth_user_id:  authUserId,
     });
     customerId = (cid as string | null) ?? null;
   }
@@ -323,6 +409,7 @@ export async function createOrder(
       quantity:         i.quantity,
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
+      ...(i.is_reward ? { is_reward: true, reward_id: i.reward_id } : {}),
     })),
   });
 
@@ -360,6 +447,19 @@ export async function createOrder(
       });
     } catch {
       /* best-effort: la lealtad no debe romper el pedido */
+    }
+  }
+
+  // Canje de recompensas (productos): descuenta los puntos de cada una de forma
+  // atómica. Ya validamos saldo arriba; el RPC re-valida y nunca deja negativo.
+  if (rewardRedeemIds.length > 0 && customerId) {
+    for (const rid of rewardRedeemIds) {
+      await db.rpc('leogin_loyalty_redeem_reward', {
+        p_restaurant_id: restaurantId,
+        p_customer_id:   customerId,
+        p_reward_id:     rid,
+        p_order_id:      order.id,
+      });
     }
   }
 

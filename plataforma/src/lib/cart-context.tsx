@@ -10,7 +10,10 @@ import {
 import type { CartItem, CartItemOption } from '@/types';
 
 /** Línea única por producto+opciones: "Pizza (grande, extra queso)" ≠ "Pizza (mediana)". */
-export function buildLineId(productId: string, options?: CartItemOption[]): string {
+export function buildLineId(productId: string, options?: CartItemOption[], rewardId?: string): string {
+  // Las recompensas son una línea propia por recompensa (no se apilan con su
+  // versión pagada del mismo producto, ni entre sí más de una vez).
+  if (rewardId) return `reward:${rewardId}`;
   if (!options?.length) return productId;
   const sig = options
     .map((o) => `${o.groupId}:${o.choiceId}`)
@@ -29,6 +32,10 @@ interface CartContextValue {
   count: number;
   /** Unidades totales de un producto sumando todas sus variantes. */
   qtyOfProduct: (productId: string) => number;
+  /** Total de puntos que costarán las recompensas en el carrito. */
+  pointsToRedeem: number;
+  /** ¿Hay alguna recompensa en el carrito? */
+  hasRewards: boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -39,13 +46,14 @@ function migrate(stored: unknown): CartItem[] {
   return (stored as Partial<CartItem>[])
     .filter((i) => i && typeof i.productId === 'string' && typeof i.price === 'number')
     .map((i) => ({
-      lineId: i.lineId ?? buildLineId(i.productId!, i.options),
+      lineId: i.lineId ?? buildLineId(i.productId!, i.options, i.rewardId),
       productId: i.productId!,
       name: i.name ?? '',
       price: i.price!,
-      quantity: Math.max(1, Number(i.quantity) || 1),
+      quantity: i.rewardId ? 1 : Math.max(1, Number(i.quantity) || 1),
       image_url: i.image_url ?? null,
       options: i.options,
+      ...(i.rewardId ? { rewardId: i.rewardId, pointsCost: Number(i.pointsCost) || 0 } : {}),
     }));
 }
 
@@ -76,9 +84,11 @@ export function CartProvider({
   };
 
   const addItem = useCallback((item: Omit<CartItem, 'quantity' | 'lineId'>, quantity = 1) => {
-    const lineId = buildLineId(item.productId, item.options);
+    const lineId = buildLineId(item.productId, item.options, item.rewardId);
     setItems((prev) => {
       const existing = prev.find((i) => i.lineId === lineId);
+      // Una recompensa solo puede estar una vez (cantidad fija 1): si ya está, no-op.
+      if (existing && item.rewardId) return prev;
       return save(
         existing
           ? prev.map((i) =>
@@ -86,7 +96,7 @@ export function CartProvider({
                 ? { ...i, quantity: i.quantity + quantity }
                 : i,
             )
-          : [...prev, { ...item, lineId, quantity }],
+          : [...prev, { ...item, lineId, quantity: item.rewardId ? 1 : quantity }],
       );
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,6 +127,8 @@ export function CartProvider({
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  const pointsToRedeem = items.reduce((sum, i) => sum + (i.rewardId ? (i.pointsCost ?? 0) : 0), 0);
+  const hasRewards = items.some((i) => i.rewardId);
 
   const qtyOfProduct = useCallback(
     (productId: string) =>
@@ -126,7 +138,7 @@ export function CartProvider({
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, total, count, qtyOfProduct }}
+      value={{ items, addItem, removeItem, updateQuantity, clearCart, total, count, qtyOfProduct, pointsToRedeem, hasRewards }}
     >
       {children}
     </CartContext.Provider>

@@ -6,6 +6,7 @@ import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
 import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
+import RewardsSection, { type MenuReward } from '@/components/menu/rewards-section';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable } from '@/lib/table-session';
 import type { WeeklyHours } from '@/lib/hours';
@@ -27,6 +28,10 @@ interface Props {
   llamadaMeseroEnabled?: boolean;
   /** Mesa que llegó por ?mesa=N (QR de mesa). */
   initialMesa?: number;
+  /** Sección de recompensas (lealtad v2). null/undefined = no mostrar. */
+  rewardsCatalog?: MenuReward[] | null;
+  redeemValue?: number;
+  googleAuthEnabled?: boolean;
 }
 
 /** ¿El producto tiene variantes/extras que el comensal debe ver? */
@@ -34,7 +39,7 @@ function hasOptions(p: ProdItem): boolean {
   return Array.isArray(p.options) && p.options.some((g) => g.choices?.length > 0);
 }
 
-export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala', llamadaMeseroEnabled = false, initialMesa }: Props) {
+export default function MenuClient({ categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala', llamadaMeseroEnabled = false, initialMesa, rewardsCatalog = null, redeemValue = 0, googleAuthEnabled = false }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -92,6 +97,16 @@ export default function MenuClient({ categories, products, ordersEnabled = false
 
   return (
     <>
+      {rewardsCatalog && restaurantId && (
+        <RewardsSection
+          restaurantId={restaurantId}
+          rewards={rewardsCatalog}
+          redeemValue={redeemValue}
+          googleAuthEnabled={googleAuthEnabled}
+          ordersEnabled={ordersEnabled}
+        />
+      )}
+
       <Catalog
         categories={categories}
         products={products}

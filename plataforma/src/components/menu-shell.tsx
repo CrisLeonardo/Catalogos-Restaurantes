@@ -9,6 +9,7 @@ import MenuClient from '@/components/menu-client';
 import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
 import { Icon } from '@/components/icons';
+import type { MenuReward } from '@/components/menu/rewards-section';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
@@ -33,9 +34,13 @@ interface Props {
   initialMesa?: number;
   /** Módulos activos para mostrar funciones opcionales en el menú. */
   llamadaMeseroEnabled?: boolean;
+  /** Recompensas de lealtad (v2). null = no mostrar el apartado. */
+  rewardsCatalog?: MenuReward[] | null;
+  redeemValue?: number;
+  googleAuthEnabled?: boolean;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, rewardsCatalog = null, redeemValue = 0, googleAuthEnabled = false }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       setScannedTable(restaurantId, initialMesa);
@@ -73,7 +78,7 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} rewardsCatalog={rewardsCatalog} redeemValue={redeemValue} googleAuthEnabled={googleAuthEnabled} />
           </div>
         </main>
         <InstallBanner brandName={config.brandName} />

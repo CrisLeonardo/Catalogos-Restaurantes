@@ -56,8 +56,17 @@ export const createOrderSchema = z
     restaurantId: z.string().uuid('ID de restaurante inválido'),
     items: z
       .array(orderItemSchema)
-      .min(1, 'El carrito está vacío')
-      .max(50, 'Demasiados ítems'),
+      .max(50, 'Demasiados ítems')
+      .default([]),
+    /**
+     * Recompensas de lealtad canjeadas (migración 058). El cliente solo manda
+     * el id; el servidor resuelve producto, precio (Q0) y costo en puntos, y
+     * descuenta los puntos de forma autoritativa. Van como ítems con precio 0.
+     */
+    rewardLines: z
+      .array(z.object({ rewardId: z.string().uuid() }))
+      .max(10, 'Demasiadas recompensas')
+      .default([]),
     customer: customerSchema,
     deliveryFee: z.number().min(0).max(10_000).default(0),
     /** Código de cupón opcional escrito en el checkout. */
@@ -70,6 +79,10 @@ export const createOrderSchema = z
     tipAccepted: z.boolean().default(false),
     /** Puntos de lealtad que el cliente quiere canjear como descuento (validado en servidor). */
     redeemPoints: z.number().int().min(0).max(10_000_000).default(0),
+  })
+  .refine((data) => data.items.length + data.rewardLines.length >= 1, {
+    message: 'El carrito está vacío',
+    path: ['items'],
   })
   .refine(
     (data) => {

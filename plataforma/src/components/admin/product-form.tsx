@@ -29,6 +29,7 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
   const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
+  const [loyaltyPtsVal, setLoyaltyPtsVal] = useState<string>(product?.loyalty_points != null ? String(product.loyalty_points) : '');
   // Si hay receta → costo auto; null = usar manual
   const [recipeCost, setRecipeCost] = useState<number | null>(
     initialRecipe && initialRecipe.length > 0
@@ -163,6 +164,26 @@ export default function ProductForm({ restaurantId, categories, product, default
             </div>
           );
         })()}
+        {/* Puntos de lealtad por unidad (módulo Lealtad). Vacío = regla general. */}
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
+          <label htmlFor="loyalty_points" style={labelStyle}>
+            Puntos de lealtad <span style={{ color: 'var(--u-text-4)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(por unidad)</span>
+          </label>
+          <input
+            id="loyalty_points"
+            name="loyalty_points"
+            type="number"
+            min="0"
+            step="1"
+            value={loyaltyPtsVal}
+            onChange={(e) => setLoyaltyPtsVal(e.target.value)}
+            placeholder="Vacío = regla general"
+            style={{ ...inputStyle, maxWidth: 220 }}
+          />
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, display: 'block' }}>
+            Puntos que gana el cliente por cada unidad comprada. Vacío = usar la regla general del programa; 0 = no otorga puntos.
+          </span>
+        </div>
       </Glass>
 
       {/* Categoría */}

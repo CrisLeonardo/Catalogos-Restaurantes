@@ -364,6 +364,7 @@ function ProductModal({
   );
   const [priceVal,     setPriceVal]     = useState<string>(product?.price?.toString() ?? '');
   const [costVal,      setCostVal]      = useState<string>(product?.cost != null ? String(product.cost) : '');
+  const [loyaltyPtsVal, setLoyaltyPtsVal] = useState<string>(product?.loyalty_points != null ? String(product.loyalty_points) : '');
   const [uploading,    setUploading]    = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -710,6 +711,29 @@ function ProductModal({
                     }}
                   />
                 </div>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
+                  Puntos de lealtad (por unidad)
+                </label>
+                <input
+                  name="loyalty_points"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={loyaltyPtsVal}
+                  onChange={(e) => setLoyaltyPtsVal(e.target.value)}
+                  placeholder="Vacío = regla general"
+                  style={{
+                    width: '100%', maxWidth: 240, padding: '12px 14px', borderRadius: 13, outline: 'none',
+                    fontSize: 14, color: 'var(--u-text)',
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                    fontFamily: 'var(--ui-font-mono)',
+                  }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, display: 'block' }}>
+                  Puntos que gana el cliente por unidad. Vacío = regla general del programa; 0 = ninguno.
+                </span>
               </div>
               {(() => {
                 const p = parseFloat(priceVal);
