@@ -19,12 +19,13 @@ self.addEventListener('push', (event) => {
 
   const title = data.title || '🛎 Nuevo pedido';
   const options = {
-    body:             data.body || 'Revisa los pedidos.',
-    icon:             '/icon-192.png',
-    badge:            '/badge.svg',
-    tag:              data.tag  || 'new-order',
-    requireInteraction: false,
-    data:             { url: data.url || '/admin/pedidos' },
+    body:               data.body || 'Revisa los pedidos.',
+    icon:               '/icon-192.png',
+    badge:              '/badge.svg',
+    tag:                data.tag  || 'new-order',
+    requireInteraction: data.requireInteraction === true,
+    vibrate:            data.vibrate || [200, 100, 200],
+    data:               { url: data.url || '/admin/pedidos' },
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

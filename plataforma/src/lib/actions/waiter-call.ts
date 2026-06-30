@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { sendPushToRestaurant } from '@/lib/push';
 
 export type WaiterCall = {
   id: string;
@@ -38,6 +39,17 @@ export async function callWaiter(
   });
 
   if (error) return { error: error.message };
+
+  const tableLabel = tableNumber ? ` · Mesa ${tableNumber}` : '';
+  sendPushToRestaurant(restaurantId, {
+    title: '🔔 Llamada al mesero',
+    body: `Un cliente${tableLabel} necesita atención.`,
+    tag: `waiter-${restaurantId}-${Date.now()}`,
+    url: '/admin/mesas',
+    requireInteraction: true,
+    vibrate: [300, 100, 300, 100, 300, 200, 600],
+  }).catch(() => {});
+
   return { ok: true };
 }
 

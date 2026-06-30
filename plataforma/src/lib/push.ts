@@ -25,6 +25,8 @@ export interface PushPayload {
   body: string;
   tag?: string;
   url?: string;
+  requireInteraction?: boolean;
+  vibrate?: number[];
 }
 
 /**

@@ -42,6 +42,30 @@ function chime() {
   } catch {}
 }
 
+/* Alarma fuerte para llamada al mesero: 3 ráfagas de 3 timbres agudos */
+function waiterAlarm() {
+  try {
+    const ctx = new AudioContext();
+    const totalTones = 9; // 3 ráfagas × 3 timbres
+    for (let i = 0; i < totalTones; i++) {
+      const burst = Math.floor(i / 3);
+      const pos   = i % 3;
+      const t = ctx.currentTime + burst * 1.1 + pos * 0.22;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = pos === 1 ? 1047 : 880; // sol-do-sol patrón
+      osc.type = 'triangle'; // más perceptible que sine a igual volumen
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.75, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    }
+  } catch {}
+}
+
 /* ── Web Push helpers ───────────────────────────────────────── */
 function urlBase64ToUint8Array(b64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (b64.length % 4)) % 4);
@@ -187,7 +211,7 @@ export default function AdminNotifications({
           if (call.restaurant_id !== restaurantId) return;
 
           const tableLabel = call.table_number ? ` · Mesa ${call.table_number}` : '';
-          chime();
+          waiterAlarm();
           if (toastTimer.current) clearTimeout(toastTimer.current);
           setToast(`🔔 Llamada al mesero${tableLabel}`);
           toastTimer.current = setTimeout(() => setToast(null), 8000);

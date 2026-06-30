@@ -328,7 +328,7 @@ function RewardsMenu({
               </div>
             </div>
           )}
-          {loggedIn && identified && !linked && (
+          {googleAuthEnabled && loggedIn && identified && !linked && (
             <button onClick={link} disabled={busy} className="press" style={{ marginTop: 12, background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 999, padding: '8px 14px', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
               Enlazar este número a mi cuenta de Google
             </button>

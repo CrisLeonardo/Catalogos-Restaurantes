@@ -218,7 +218,7 @@ export default function CheckoutForm({
   }, [phone, loyaltyActive, restaurantId]);
 
   const errs = {
-    name:  !name.trim() ? content.checkout.errName : '',
+    name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
     phone: type === 'DINE_IN'
       ? (phone.trim() && !isValidGuatemalaPhone(phone) ? 'Número inválido. Ingresa 8 dígitos (ej. 5555 0000)' : '')
       : (!phone.trim()
@@ -404,6 +404,7 @@ export default function CheckoutForm({
     const pmeth     = data?.payment ?? snapshotPayment;
     const cAmt      = data?.cashAmt ?? snapshotCashAmount;
     const oType     = data?.orderType ?? snapshotOrderType;
+    if (oType === 'DINE_IN') return null;
     const clean     = whatsappNumber.replace(/\D/g, '');
 
     const mapsLink = type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
@@ -807,7 +808,7 @@ export default function CheckoutForm({
           </div>
         )}
 
-        <Field label={content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
+        <Field label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
         <Field label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={(tried || phone.trim().length > 0) && errs.phone} />
         {phone.trim().length > 0 && !errs.phone && (
           <p style={{ fontSize: 11.5, color: '#4ade80', marginTop: -12 }}>
