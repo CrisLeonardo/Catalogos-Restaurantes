@@ -440,13 +440,11 @@ export default function CheckoutForm({
       lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);
     }
     lines.push(`💰 ${content.cart.total}: *${formatPrice(tot, config)}*`);
-    if (oType !== 'DINE_IN') {
-      if (pmeth === 'CARD') {
-        lines.push(`💳 Pago: Tarjeta al recibir`);
-      } else {
-        const changeInfo = cAmt > 0 ? ` — paga con ${formatPrice(cAmt, config)} (cambio: ${formatPrice(cAmt - tot, config)})` : '';
-        lines.push(`💵 Pago: Efectivo${changeInfo}`);
-      }
+    if (pmeth === 'CARD') {
+      lines.push(`💳 Pago: Tarjeta al recibir`);
+    } else {
+      const changeInfo = cAmt > 0 ? ` — paga con ${formatPrice(cAmt, config)} (cambio: ${formatPrice(cAmt - tot, config)})` : '';
+      lines.push(`💵 Pago: Efectivo${changeInfo}`);
     }
     if (notes) lines.push('', `📝 ${notes}`);
     return `https://wa.me/${clean}?text=${encodeURIComponent(lines.join('\n'))}`;
