@@ -10,6 +10,7 @@ import RewardsSection from '@/components/menu/rewards-section';
 import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
 import AccountSheet from '@/components/menu/account-sheet';
 import MyOrders from '@/components/my-orders';
+import OverlayBackground from '@/components/menu/overlay-background';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable } from '@/lib/table-session';
 import type { WeeklyHours } from '@/lib/hours';
@@ -128,8 +129,8 @@ export default function MenuClient({
         <WaiterCallButton restaurantId={restaurantId} raised={ordersEnabled && count > 0} />
       )}
 
-      {/* Barra de navegación inferior */}
-      {ordersEnabled && (
+      {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto o carrito abierto */}
+      {ordersEnabled && !selected && !cartOpen && (
         <BottomNav
           active={activeTab}
           ordersEnabled={ordersEnabled}
@@ -149,7 +150,10 @@ export default function MenuClient({
           aria-label="Mis pedidos"
           style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }}
         >
-          <MyOrders restaurantId={restaurantId} onBack={closeOverlays} />
+          <OverlayBackground />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <MyOrders restaurantId={restaurantId} onBack={closeOverlays} />
+          </div>
         </div>
       )}
 

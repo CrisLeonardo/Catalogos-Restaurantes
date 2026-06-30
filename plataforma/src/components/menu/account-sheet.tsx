@@ -7,6 +7,7 @@ import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/
 import { getMyLoyalty } from '@/lib/actions/loyalty';
 import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
+import OverlayBackground from '@/components/menu/overlay-background';
 import type { DinerLoyalty } from '@/lib/db/loyalty';
 import type { User } from '@supabase/supabase-js';
 
@@ -37,18 +38,24 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [saved, setSaved] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Cargar perfil guardado
   useEffect(() => {
     const p = getLocalProfile(restaurantId);
-    if (p) { setName(p.name); setPhone(p.phone); setAddress(p.address ?? ''); }
+    if (p) {
+      setName(p.name);
+      setPhone(p.phone);
+      setAddress(p.address ?? '');
+      setDeliveryType(p.deliveryType ?? 'delivery');
+    }
   }, [restaurantId]);
 
-  // Cargar sesión de Google y puntos de fidelidad
   useEffect(() => {
     const supabase = createClient();
     (async () => {
@@ -64,7 +71,6 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     })();
   }, [restaurantId, loyaltyOn]);
 
-  // Bloquear scroll del body mientras el sheet está abierto
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -75,10 +81,12 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     const profile: LocalCustomerProfile = {
       name: name.trim(),
       phone: phone.trim(),
-      address: address.trim() || undefined,
+      address: deliveryType === 'delivery' ? (address.trim() || undefined) : undefined,
+      deliveryType,
     };
     saveLocalProfile(restaurantId, profile);
     setSaved(true);
+    setMsg(null);
     setTimeout(() => setSaved(false), 2200);
   }
 
@@ -90,6 +98,31 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     setSigningOut(false);
   }
 
+  async function getLocation() {
+    if (!navigator.geolocation) { setMsg('Tu dispositivo no soporta geolocalización.'); return; }
+    setLocating(true);
+    setMsg(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=es`,
+            { headers: { 'Accept-Language': 'es' } },
+          );
+          const data = await res.json() as { display_name?: string };
+          setAddress(data.display_name ?? `${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+        } catch {
+          setAddress(`${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => { setMsg('No se pudo obtener tu ubicación. Verifica los permisos.'); setLocating(false); },
+      { timeout: 10000 },
+    );
+  }
+
   const balance = loyalty?.identified ? loyalty.balance : null;
 
   return (
@@ -97,30 +130,33 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
       role="dialog"
       aria-modal="true"
       aria-label="Mi cuenta"
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }}
     >
-      {/* Scrim */}
-      <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      <OverlayBackground />
 
-      {/* Sheet */}
-      <div
-        className="glass anim-slide-up themed-type"
-        onClick={(e) => e.stopPropagation()}
+      <main
+        className="anim-fade-up themed-type"
         style={{
-          position: 'relative', width: '100%', maxWidth: 460,
-          borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0',
-          padding: `20px 20px calc(96px + env(safe-area-inset-bottom, 0px))`,
-          maxHeight: '90dvh', overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', gap: 16,
+          position: 'relative', zIndex: 1,
+          width: '100%', maxWidth: 460, margin: '0 auto',
+          padding: `calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))`,
+          display: 'flex', flexDirection: 'column', gap: 14,
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 className="t-display" style={{ fontSize: 24 }}>Mi cuenta</h2>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }} aria-label="Cerrar">
-            <Icon name="x" size={18} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
+          <button
+            onClick={onClose}
+            className="press glass-quiet"
+            style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }}
+            aria-label="Volver"
+          >
+            <Icon name="chevronLeft" size={20} />
           </button>
+          <div>
+            <div className="t-kicker" style={{ fontSize: 11 }}>Perfil</div>
+            <h1 className="t-display" style={{ fontSize: 26, lineHeight: 1 }}>Mi cuenta</h1>
+          </div>
         </div>
 
         {/* Tarjeta de puntos */}
@@ -176,28 +212,83 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
         )}
 
         {/* Formulario de datos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div className="t-kicker" style={{ fontSize: 10.5 }}>Mis datos de entrega</div>
+        <Glass variant="quiet" style={{ borderRadius: 16, padding: '16px' }}>
+          <div className="t-kicker" style={{ fontSize: 10.5, marginBottom: 12 }}>Mis datos</div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label className="t-mute" style={{ fontSize: 12 }}>Nombre</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre completo" style={inputStyle} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label className="t-mute" style={{ fontSize: 12 }}>Nombre</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre completo" style={inputStyle} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label className="t-mute" style={{ fontSize: 12 }}>Teléfono</label>
+              <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)" style={inputStyle} />
+            </div>
+
+            {/* Tipo de entrega */}
+            <div>
+              <div className="t-mute" style={{ fontSize: 12, marginBottom: 8 }}>Tipo de entrega preferido</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['delivery', 'pickup'] as const).map((type) => {
+                  const active = deliveryType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setDeliveryType(type)}
+                      style={{
+                        flex: 1, padding: '10px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                        background: active ? 'var(--u-text)' : 'var(--surface-2)',
+                        color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                        fontWeight: 600, fontSize: 13, transition: 'background 160ms, color 160ms',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}
+                    >
+                      <Icon name={type === 'delivery' ? 'home' : 'bag'} size={15} />
+                      {type === 'delivery' ? 'A domicilio' : 'Para recoger'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Dirección — solo cuando es a domicilio */}
+            {deliveryType === 'delivery' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label className="t-mute" style={{ fontSize: 12 }}>Dirección de entrega</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Calle, número, zona…"
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={getLocation}
+                    disabled={locating}
+                    title="Usar mi ubicación actual"
+                    className="press glass-quiet"
+                    style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}
+                    aria-label="Obtener mi ubicación"
+                  >
+                    {locating
+                      ? <span style={{ fontSize: 13, fontWeight: 700 }}>…</span>
+                      : <Icon name="mapPin" size={18} />
+                    }
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label className="t-mute" style={{ fontSize: 12 }}>Teléfono</label>
-            <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)" style={inputStyle} />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label className="t-mute" style={{ fontSize: 12 }}>Dirección de entrega</label>
-            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Calle, número, colonia…" style={inputStyle} />
-          </div>
+          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: '#f87171', lineHeight: 1.4 }}>{msg}</p>}
 
           <button
             onClick={handleSave}
             className="press btn-accent"
-            style={{ marginTop: 4, padding: '13px 18px', borderRadius: 14, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            style={{ marginTop: 14, width: '100%', padding: '13px 18px', borderRadius: 14, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           >
             {saved
               ? <><Icon name="check" size={16} strokeWidth={2.5} /> Datos guardados</>
@@ -205,10 +296,10 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
             }
           </button>
 
-          <p className="t-mute" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5 }}>
+          <p className="t-mute" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5, marginTop: 8 }}>
             Tus datos se guardan en este dispositivo y se usan para agilizar tus pedidos.
           </p>
-        </div>
+        </Glass>
 
         {/* Contacto por WhatsApp */}
         {whatsappNumber && (
@@ -234,7 +325,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
             <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           </a>
         )}
-      </div>
+      </main>
     </div>
   );
 }

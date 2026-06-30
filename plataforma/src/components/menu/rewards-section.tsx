@@ -22,6 +22,7 @@ import { getMyLoyalty, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { getLocalProfile } from '@/lib/customer-local';
 import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
+import OverlayBackground from '@/components/menu/overlay-background';
 import type { DinerLoyalty } from '@/lib/db/loyalty';
 
 export interface MenuReward {
@@ -262,7 +263,8 @@ function RewardsMenu({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }} role="dialog" aria-modal="true" aria-label="Recompensas">
-      <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))' }}>
+      <OverlayBackground />
+      <main className="themed-type" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 460, margin: '0 auto', padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <button onClick={onClose} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }} aria-label="Volver al menú">

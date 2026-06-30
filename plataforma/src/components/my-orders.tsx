@@ -72,21 +72,22 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
   };
 
   return (
-    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: `24px 16px ${onBack ? 'calc(88px + env(safe-area-inset-bottom, 0px))' : '80px'}` }}>
-      <div style={{ marginBottom: 20 }}>
+    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: `calc(16px + env(safe-area-inset-top, 0px)) 16px ${onBack ? 'calc(88px + env(safe-area-inset-bottom, 0px))' : '80px'}` }}>
+      {/* Header uniforme con Fidelidad y Cuenta */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         {onBack ? (
-          <button onClick={onBack} className="press t-mute" style={{ fontSize: 13, background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <Icon name="chevronLeft" size={16} /> {content.tracking.back}
+          <button onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }} aria-label="Volver al menú">
+            <Icon name="chevronLeft" size={20} />
           </button>
         ) : (
-          <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <Icon name="chevronLeft" size={16} /> {content.tracking.back}
+          <Link href="/" className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, display: 'grid', placeItems: 'center', color: 'var(--u-text)', textDecoration: 'none', flexShrink: 0 }} aria-label="Volver al menú">
+            <Icon name="chevronLeft" size={20} />
           </Link>
         )}
-        <h1 className="t-display" style={{ fontSize: 28 }}>Mis pedidos</h1>
-        <p className="t-serif" style={{ fontSize: 15.5, marginTop: 6 }}>
-          Los pedidos hechos desde este dispositivo.
-        </p>
+        <div>
+          <div className="t-kicker" style={{ fontSize: 11 }}>Seguimiento</div>
+          <h1 className="t-display" style={{ fontSize: 26, lineHeight: 1 }}>Mis pedidos</h1>
+        </div>
       </div>
 
       {loaded && orders.length === 0 && (

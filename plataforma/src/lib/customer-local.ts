@@ -17,6 +17,7 @@ export interface LocalCustomerProfile {
   phone: string;
   address?: string;
   zone?: string;
+  deliveryType?: 'delivery' | 'pickup';
 }
 
 export interface LocalOrderRef {
@@ -44,6 +45,7 @@ export function getLocalProfile(restaurantId: string): LocalCustomerProfile | nu
       phone: p.phone,
       address: typeof p.address === 'string' ? p.address : undefined,
       zone: typeof p.zone === 'string' ? p.zone : undefined,
+      deliveryType: p.deliveryType === 'delivery' || p.deliveryType === 'pickup' ? p.deliveryType : undefined,
     };
   } catch {
     return null;
