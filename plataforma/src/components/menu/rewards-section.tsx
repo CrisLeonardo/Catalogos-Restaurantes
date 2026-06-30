@@ -1,19 +1,23 @@
 'use client';
 
 /* ============================================================
-   RECOMPENSAS — apartado de lealtad en el menú del comensal
+   RECOMPENSAS — apartado de lealtad estilo "menú de canje"
    ------------------------------------------------------------
-   Tarjeta de entrada + hoja (bottom-sheet) con:
-   · saldo de puntos (por cuenta Google o por teléfono),
-   · catálogo de recompensas canjeables ("Canjear" → al carrito a Q0),
-   · login con Google opcional para ver/canjear desde cualquier equipo.
-   Los puntos se descuentan al confirmar el pedido (servidor autoritativo).
+   Reusa EXACTAMENTE el look del menú (mismas tarjetas: foto o
+   patrón de marca, tags, grid/lista según la config del
+   restaurante) pero el precio se muestra en PUNTOS y arriba va
+   el saldo del comensal. Canjear = agrega al carrito a Q0; los
+   puntos se descuentan al confirmar el pedido. Estilo McDonald's.
    ============================================================ */
 
+import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
-import { Icon } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons';
+import { Tag } from '@/components/menu/ui';
+import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { useCart } from '@/lib/cart-context';
+import { useThemeConfig } from '@/lib/theme/context';
 import { getMyLoyalty, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { getLocalProfile } from '@/lib/customer-local';
 import { createClient } from '@/lib/supabase/client';
@@ -26,6 +30,8 @@ export interface MenuReward {
   title: string;
   description: string | null;
   image_url: string | null;
+  icon: string | null;
+  tags: string[] | null;
   points_cost: number;
   stock: number | null;
 }
@@ -39,6 +45,7 @@ interface Props {
 }
 
 const fmtPts = (n: number) => n.toLocaleString('es-GT');
+const pickIcon = (icon: string | null | undefined): string => (icon && ICON_PATHS[icon.trim()] ? icon.trim() : 'utensils');
 
 export default function RewardsSection({ restaurantId, rewards, redeemValue, googleAuthEnabled, ordersEnabled }: Props) {
   const { items, addItem, removeItem } = useCart();
@@ -48,14 +55,12 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
 
   const refresh = useCallback(async (phone?: string) => {
     try {
-      const data = await getMyLoyalty(restaurantId, phone);
-      setLoyalty(data);
+      setLoyalty(await getMyLoyalty(restaurantId, phone));
     } catch {
       setLoyalty(null);
     }
   }, [restaurantId]);
 
-  // Saldo inicial (cuenta Google si hay sesión, si no por el teléfono guardado).
   useEffect(() => {
     const p = getLocalProfile(restaurantId);
     const phone = p?.phone ?? '';
@@ -66,7 +71,7 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
   const balance = loyalty?.identified ? loyalty.balance : null;
   const rewardLineIds = new Set(items.filter((i) => i.rewardId).map((i) => i.rewardId));
 
-  function redeem(r: MenuReward) {
+  function toggle(r: MenuReward) {
     if (rewardLineIds.has(r.id)) { removeItem(`reward:${r.id}`); return; }
     addItem({
       productId: r.product_id ?? `reward-${r.id}`,
@@ -80,29 +85,29 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
 
   return (
     <>
-      {/* Tarjeta de entrada */}
+      {/* Banner de entrada al menú de recompensas */}
       <Glass
         interactive
         onClick={() => setOpen(true)}
         className="anim-fade-up"
-        style={{ borderRadius: 18, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', marginBottom: 14 }}
+        style={{ borderRadius: 18, padding: '15px 17px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', marginBottom: 14, background: 'linear-gradient(100deg, color-mix(in srgb, var(--brand-accent) 16%, transparent), transparent 70%)' }}
       >
-        <div style={{ width: 44, height: 44, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--brand-accent)', color: 'var(--brand-bg)' }}>
-          <Icon name="gift" size={22} />
+        <div style={{ width: 46, height: 46, borderRadius: 14, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--brand-accent)', color: 'var(--brand-bg)' }}>
+          <Icon name="gift" size={23} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="t-display" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.1 }}>Recompensas</div>
+          <div className="t-display" style={{ fontSize: 16.5, fontWeight: 700, lineHeight: 1.1 }}>Canjea tus puntos</div>
           <div className="t-mute" style={{ fontSize: 12.5, marginTop: 2 }}>
             {balance != null
-              ? `Tienes ${fmtPts(balance)} ${balance === 1 ? 'punto' : 'puntos'} · canjéalos por productos`
-              : 'Acumula puntos y canjéalos por productos'}
+              ? `Tienes ${fmtPts(balance)} ${balance === 1 ? 'punto' : 'puntos'} para canjear`
+              : 'Acumula puntos y cámbialos por productos'}
           </div>
         </div>
-        <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        <span className="press btn-accent" style={{ padding: '8px 14px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}>Ver</span>
       </Glass>
 
       {open && (
-        <RewardsSheet
+        <RewardsMenu
           onClose={() => setOpen(false)}
           rewards={rewards}
           loyalty={loyalty}
@@ -111,7 +116,7 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
           googleAuthEnabled={googleAuthEnabled}
           ordersEnabled={ordersEnabled}
           rewardLineIds={rewardLineIds}
-          onRedeem={redeem}
+          onToggle={toggle}
           onRefresh={refresh}
           restaurantId={restaurantId}
           initialPhone={savedPhone}
@@ -121,9 +126,107 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
   );
 }
 
-function RewardsSheet({
+/* ── Arte del producto (idéntico al menú: foto o patrón de marca) ── */
+function RewardArt({ r, icon, scale = 1 }: { r: MenuReward; icon: string; scale?: number }) {
+  const config = useThemeConfig();
+  const usePhoto = r.image_url && config.productArt !== 'pattern';
+  if (usePhoto) {
+    return <Image src={r.image_url!} alt={r.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 440px) 50vw, 220px" />;
+  }
+  return (
+    <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
+      <BrandPattern icon={icon} seed={seedFromString(r.id)} iconScale={scale} />
+    </div>
+  );
+}
+
+/* ── "Precio" en puntos ─────────────────────────────────────── */
+function PointsPrice({ cost, size = 15, dim = false }: { cost: number; size?: number; dim?: boolean }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 800, fontSize: size, color: dim ? 'var(--u-text-4)' : 'var(--brand-accent)', whiteSpace: 'nowrap', fontFamily: 'var(--ui-font-mono)' }}>
+      <Icon name="star" size={size * 0.85} /> {fmtPts(cost)} <span style={{ fontSize: size * 0.7, opacity: 0.8, fontWeight: 700 }}>pts</span>
+    </span>
+  );
+}
+
+/* ── Control de canje (esquina, como el "+" del menú) ───────── */
+function RedeemControl({ inCart, affordable, soldOut }: { inCart: boolean; affordable: boolean; soldOut: boolean }) {
+  if (inCart) {
+    return (
+      <span className="t-mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 12 }}>
+        <Icon name="check" size={11} strokeWidth={3} /> En carrito
+      </span>
+    );
+  }
+  if (soldOut) {
+    return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--u-text-4)' }}>Agotado</span>;
+  }
+  if (!affordable) {
+    return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--u-text-4)' }}>Te faltan puntos</span>;
+  }
+  return (
+    <span className="btn-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 99, fontWeight: 700, fontSize: 12.5 }}>
+      <Icon name="gift" size={13} /> Canjear
+    </span>
+  );
+}
+
+function RewardTile({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuReward; balance: number | null; inCart: boolean; ordersEnabled: boolean; onToggle: (r: MenuReward) => void }) {
+  const config = useThemeConfig();
+  const soldOut = r.stock != null && r.stock <= 0;
+  const affordable = balance == null || balance >= r.points_cost;
+  const canTap = ordersEnabled && !soldOut && (affordable || inCart);
+  return (
+    <Glass
+      interactive={canTap}
+      onClick={() => canTap && onToggle(r)}
+      style={{ borderRadius: 18, overflow: 'hidden', cursor: canTap ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', height: '100%', opacity: soldOut ? 0.6 : 1 }}
+    >
+      <div style={{ position: 'relative', aspectRatio: '1.25', background: 'var(--surface-1)', overflow: 'hidden' }}>
+        <RewardArt r={r} icon={pickIcon(r.icon)} />
+        {config.showTags && r.tags && r.tags.length > 0 && (
+          <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {r.tags.slice(0, 2).map((t) => <Tag key={t} label={t} small />)}
+          </div>
+        )}
+      </div>
+      <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <div className="ct-product-name" style={{ fontSize: 14.5 * config.typography.productName.size, flex: 1 }}>{r.title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <PointsPrice cost={r.points_cost} dim={!affordable && !inCart} />
+          {ordersEnabled && <RedeemControl inCart={inCart} affordable={affordable} soldOut={soldOut} />}
+        </div>
+      </div>
+    </Glass>
+  );
+}
+
+function RewardRow({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuReward; balance: number | null; inCart: boolean; ordersEnabled: boolean; onToggle: (r: MenuReward) => void }) {
+  const config = useThemeConfig();
+  const soldOut = r.stock != null && r.stock <= 0;
+  const affordable = balance == null || balance >= r.points_cost;
+  const canTap = ordersEnabled && !soldOut && (affordable || inCart);
+  return (
+    <Glass interactive={canTap} onClick={() => canTap && onToggle(r)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: canTap ? 'pointer' : 'default', opacity: soldOut ? 0.6 : 1 }}>
+      <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-1)', position: 'relative' }}>
+        <RewardArt r={r} icon={pickIcon(r.icon)} scale={0.9} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="ct-product-name" style={{ fontSize: 15.5 * config.typography.productName.size }}>{r.title}</div>
+          {config.showTags && r.tags?.[0] && <Tag label={r.tags[0]} small />}
+        </div>
+        {r.description && <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * config.typography.productDesc.size }}>{r.description}</div>}
+        <PointsPrice cost={r.points_cost} dim={!affordable && !inCart} />
+      </div>
+      {ordersEnabled && <RedeemControl inCart={inCart} affordable={affordable} soldOut={soldOut} />}
+    </Glass>
+  );
+}
+
+function RewardsMenu({
   onClose, rewards, loyalty, balance, redeemValue, googleAuthEnabled, ordersEnabled,
-  rewardLineIds, onRedeem, onRefresh, restaurantId, initialPhone,
+  rewardLineIds, onToggle, onRefresh, restaurantId, initialPhone,
 }: {
   onClose: () => void;
   rewards: MenuReward[];
@@ -133,11 +236,13 @@ function RewardsSheet({
   googleAuthEnabled: boolean;
   ordersEnabled: boolean;
   rewardLineIds: Set<string | undefined>;
-  onRedeem: (r: MenuReward) => void;
+  onToggle: (r: MenuReward) => void;
   onRefresh: (phone?: string) => void;
   restaurantId: string;
   initialPhone: string;
 }) {
+  const config = useThemeConfig();
+  const { count } = useCart();
   const [phone, setPhone] = useState(initialPhone);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -149,6 +254,9 @@ function RewardsSheet({
   }, []);
 
   const cleanPhone = phone.replace(/\D/g, '');
+  const identified = !!loyalty?.identified;
+  const loggedIn = !!loyalty?.loggedIn;
+  const linked = !!loyalty?.linkedAccount;
 
   async function lookup() {
     if (cleanPhone.length < 8) { setMsg('Ingresa tu número de 8 dígitos.'); return; }
@@ -156,7 +264,6 @@ function RewardsSheet({
     await onRefresh(cleanPhone);
     setBusy(false);
   }
-
   async function link() {
     if (cleanPhone.length < 8) { setMsg('Ingresa tu número de 8 dígitos.'); return; }
     setBusy(true); setMsg(null);
@@ -165,7 +272,6 @@ function RewardsSheet({
     else { setMsg('¡Listo! Tu cuenta quedó enlazada.'); await onRefresh(cleanPhone); }
     setBusy(false);
   }
-
   async function signOut() {
     setBusy(true);
     try { await createClient().auth.signOut({ scope: 'local' }); } catch {}
@@ -173,161 +279,99 @@ function RewardsSheet({
     setBusy(false);
   }
 
-  const loggedIn = !!loyalty?.loggedIn;
-  const linked = !!loyalty?.linkedAccount;
-  const identified = !!loyalty?.identified;
+  const cols = config.catalogColumns;
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Recompensas"
-    >
-      <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
-      <div
-        className="glass anim-slide-up themed-type"
-        onClick={(e) => e.stopPropagation()}
-        style={{ position: 'relative', width: '100%', maxWidth: 460, borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0', padding: '20px 20px 28px', maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h2 className="t-display" style={{ fontSize: 24, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-            <Icon name="gift" size={22} style={{ color: 'var(--brand-accent)' }} /> Recompensas
-          </h2>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }} aria-label="Cerrar">
-            <Icon name="x" size={18} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }} role="dialog" aria-modal="true" aria-label="Recompensas">
+      <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: '16px 16px 96px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <button onClick={onClose} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }} aria-label="Volver al menú">
+            <Icon name="chevronLeft" size={20} />
           </button>
+          <div>
+            <div className="t-kicker" style={{ fontSize: 11 }}>Programa de lealtad</div>
+            <h1 className="t-display" style={{ fontSize: 26, lineHeight: 1 }}>Recompensas</h1>
+          </div>
         </div>
 
-        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Saldo / identidad */}
-          <Glass variant="quiet" style={{ borderRadius: 16, padding: '16px 18px' }}>
-            {identified ? (
-              <>
-                <div className="t-kicker" style={{ fontSize: 10 }}>Tu saldo{loyalty?.name ? ` · ${loyalty.name}` : ''}</div>
+        {/* Tarjeta de saldo / identidad (estilo "tarjeta de puntos") */}
+        <Glass style={{ borderRadius: 20, padding: '18px 20px', marginBottom: 18, background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 75%)' }}>
+          {identified ? (
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div className="t-kicker" style={{ fontSize: 10 }}>Tus puntos{loyalty?.name ? ` · ${loyalty.name.split(' ')[0]}` : ''}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 34, fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 1 }}>{fmtPts(balance ?? 0)}</span>
-                  <span className="t-mute" style={{ fontSize: 14 }}>{(balance ?? 0) === 1 ? 'punto' : 'puntos'}</span>
+                  <span style={{ fontSize: 42, fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 0.9 }}>{fmtPts(balance ?? 0)}</span>
+                  <span className="t-mute" style={{ fontSize: 15 }}>{(balance ?? 0) === 1 ? 'punto' : 'puntos'}</span>
                 </div>
-                {redeemValue > 0 && (
-                  <div className="t-mute" style={{ fontSize: 12, marginTop: 4 }}>≈ Q{((balance ?? 0) * redeemValue).toFixed(2)} en valor</div>
-                )}
-                {loggedIn && (
-                  <button onClick={signOut} disabled={busy} className="press" style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
-                    Cerrar sesión
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="t-display" style={{ fontSize: 16, fontWeight: 700 }}>Mira y canjea tus puntos</div>
-                <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
-                  Inicia sesión o ingresa el número con el que pides para ver tu saldo.
-                </p>
-                {googleAuthEnabled && (
-                  <div style={{ marginBottom: 12 }}>
-                    <GoogleSignInButton full />
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    inputMode="numeric"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Tu número (8 dígitos)"
-                    style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }}
-                  />
-                  <button onClick={lookup} disabled={busy} className="press btn-accent" style={{ padding: '0 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
-                    {busy ? '…' : 'Ver'}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Enlazar historial por teléfono a la cuenta Google */}
-            {loggedIn && !linked && identified && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--u-hair)' }}>
-                <button onClick={link} disabled={busy} className="press" style={{ background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-full)', padding: '8px 14px', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-                  Enlazar este número a mi cuenta
-                </button>
+                {redeemValue > 0 && <div className="t-mute" style={{ fontSize: 12, marginTop: 5 }}>≈ Q{((balance ?? 0) * redeemValue).toFixed(2)} en valor</div>}
               </div>
-            )}
-            {loggedIn && !identified && (
-              <p className="t-mute" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>
-                Sesión iniciada. Haz tu primer pedido y empezarás a acumular, o ingresa el número con el que ya pediste para enlazar tus puntos.
-              </p>
-            )}
-            {!identified && loggedIn && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <input
-                  inputMode="numeric"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Número con el que pediste"
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '10px 13px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}
-                />
-                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '0 16px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                  Enlazar
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                <Icon name="gift" size={30} style={{ color: 'var(--brand-accent)' }} />
+                {loggedIn && <button onClick={signOut} disabled={busy} className="press" style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>}
               </div>
-            )}
-            {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') || msg.startsWith('Listo') ? '#4ade80' : '#f87171' }}>{msg}</p>}
-          </Glass>
-
-          {/* Catálogo */}
-          {rewards.length === 0 ? (
-            <Glass variant="quiet" style={{ borderRadius: 16, padding: '28px 20px', textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
-              Aún no hay recompensas disponibles. ¡Sigue acumulando puntos!
-            </Glass>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {rewards.map((r) => {
-                const inCart = rewardLineIds.has(r.id);
-                const affordable = balance == null || balance >= r.points_cost;
-                const soldOut = r.stock != null && r.stock <= 0;
-                return (
-                  <Glass key={r.id} variant="quiet" style={{ borderRadius: 16, padding: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ width: 52, height: 52, borderRadius: 13, flexShrink: 0, overflow: 'hidden', background: 'var(--surface-2)', display: 'grid', placeItems: 'center' }}>
-                      {r.image_url
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        ? <img src={r.image_url} alt={r.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <Icon name="gift" size={24} style={{ color: 'var(--u-text-4)' }} />}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="t-display" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2 }}>{r.title}</div>
-                      {r.description && <div className="t-mute" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.description}</div>}
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, color: 'var(--brand-accent)', fontWeight: 700, fontSize: 13 }}>
-                        <Icon name="star" size={13} /> {fmtPts(r.points_cost)} pts
-                      </div>
-                    </div>
-                    {ordersEnabled && (
-                      <button
-                        onClick={() => onRedeem(r)}
-                        disabled={!inCart && (soldOut || !affordable)}
-                        className="press"
-                        style={{
-                          flexShrink: 0, padding: '9px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
-                          border: inCart ? '1px solid var(--u-hair-2)' : 'none', cursor: (!inCart && (soldOut || !affordable)) ? 'not-allowed' : 'pointer',
-                          background: inCart ? 'transparent' : (soldOut || !affordable) ? 'var(--surface-2)' : 'var(--brand-accent)',
-                          color: inCart ? 'var(--u-text)' : (soldOut || !affordable) ? 'var(--u-text-4)' : 'var(--brand-bg)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {inCart ? 'Quitar' : soldOut ? 'Agotado' : !affordable ? `Faltan ${fmtPts(r.points_cost - (balance ?? 0))}` : 'Canjear'}
-                      </button>
-                    )}
-                  </Glass>
-                );
-              })}
+            <div>
+              <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Mira y canjea tus puntos</div>
+              <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
+                Inicia sesión o ingresa el número con el que pides para ver tu saldo.
+              </p>
+              {googleAuthEnabled && <div style={{ marginBottom: 11 }}><GoogleSignInButton full /></div>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
+                <button onClick={loggedIn ? link : lookup} disabled={busy} className="press btn-accent" style={{ padding: '0 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+                  {busy ? '…' : loggedIn ? 'Enlazar' : 'Ver'}
+                </button>
+              </div>
             </div>
           )}
+          {loggedIn && identified && !linked && (
+            <button onClick={link} disabled={busy} className="press" style={{ marginTop: 12, background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 999, padding: '8px 14px', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              Enlazar este número a mi cuenta de Google
+            </button>
+          )}
+          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') ? '#4ade80' : '#f87171' }}>{msg}</p>}
+        </Glass>
 
-          <p className="t-mute" style={{ fontSize: 11.5, textAlign: 'center', lineHeight: 1.5, marginTop: 2 }}>
-            Los puntos se descuentan al confirmar tu pedido. Acumulas puntos en cada compra entregada.
-          </p>
+        {/* Catálogo de canje (mismas tarjetas del menú, precio en puntos) */}
+        {rewards.length === 0 ? (
+          <Glass variant="quiet" style={{ borderRadius: 16, padding: '36px 20px', textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
+            Aún no hay recompensas disponibles. ¡Sigue acumulando puntos en cada pedido!
+          </Glass>
+        ) : config.catalogView === 'grid' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
+            {rewards.map((r, i) => (
+              <div key={r.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
+                <RewardTile r={r} balance={balance} inCart={rewardLineIds.has(r.id)} ordersEnabled={ordersEnabled} onToggle={onToggle} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {rewards.map((r, i) => (
+              <div key={r.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
+                <RewardRow r={r} balance={balance} inCart={rewardLineIds.has(r.id)} ordersEnabled={ordersEnabled} onToggle={onToggle} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="t-mute" style={{ fontSize: 11.5, textAlign: 'center', lineHeight: 1.5, marginTop: 18 }}>
+          Toca una recompensa para agregarla a tu pedido. Los puntos se descuentan al confirmar.
+        </p>
+      </main>
+
+      {/* Barra inferior: volver al pedido (revela el carrito del menú) */}
+      {ordersEnabled && count > 0 && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 71, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
+          <button onClick={onClose} className="press btn-accent anim-slide-up" style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 16, padding: '14px 18px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Icon name="bag" size={18} /> Ver mi pedido ({count})
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

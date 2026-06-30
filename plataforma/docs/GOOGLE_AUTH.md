@@ -52,6 +52,38 @@ Sin esta variable el botón no se muestra (el flujo por teléfono sigue intacto)
 - El callback `/auth/callback` intercambia el código por la sesión y regresa al
   menú. Si algo falla, vuelve con `?auth_error=1` sin romper la página.
 
+## Solución de problemas
+
+### "Después de Continuar me manda a leogin.online y NO inicia sesión"
+
+Causa: la URL de retorno del subdominio del restaurante **no está en la lista
+blanca** de Supabase, así que Supabase usa el *Site URL* (la raíz) como respaldo
+y nunca pasa por `/auth/callback`. **Solución:** en Supabase →
+**Authentication → URL Configuration → Redirect URLs** agrega (un patrón por línea):
+
+```
+https://*.leogin.online/auth/callback
+https://*.leogin.online/**
+```
+
+Deja el **Site URL** en `https://leogin.online`. Con eso, al volver de Google
+aterriza en `slug.leogin.online/auth/callback`, se crea la sesión (cookie de
+dominio `.leogin.online`) y queda logueado en el menú del restaurante.
+
+### "La pantalla de Google dice jsvlxfkw…supabase.co, no mi marca"
+
+Eso lo controla Google, no la app:
+
+- **Mejora rápida (gratis):** Google Cloud → *Pantalla de consentimiento OAuth* →
+  pon **Nombre de la app = Leogin** y sube el **logo**. El título pasa a
+  "Iniciar sesión en Leogin".
+- **Marca completa (de pago):** la línea "…supabase.co accederá a tu información"
+  solo desaparece con el add-on **Custom Domain** de Supabase (~US$10/mes), que
+  pone la autenticación en `auth.leogin.online`. Si lo activas, cambia el redirect
+  URI de Google a `https://auth.leogin.online/auth/v1/callback`.
+
+Funciona igual con o sin esto: es solo cosmético / de confianza visual.
+
 ## Nota sobre sesiones
 
 Un navegador mantiene **una** sesión de Supabase por dominio. Si el dueño del

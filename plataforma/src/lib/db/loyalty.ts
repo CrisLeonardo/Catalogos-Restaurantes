@@ -213,26 +213,52 @@ export async function getProductsForRewards(restaurantId: string, limit = 500): 
 export interface PublicReward {
   id: string;
   product_id: string | null;
+  /** Nombre visible (título de la recompensa o, si no, el del producto). */
   title: string;
   description: string | null;
   image_url: string | null;
+  /** Ícono del producto enlazado (para el patrón de marca cuando no hay foto). */
+  icon: string | null;
+  tags: string[] | null;
   points_cost: number;
-  sort_order: number;
   /** Unidades restantes (NULL = ilimitado); 0 = agotado. */
   stock: number | null;
 }
 
-/** Catálogo público (menú): solo recompensas activas y con stock. */
+/**
+ * Catálogo público (menú): solo recompensas activas y con stock. Trae además
+ * los datos del producto enlazado (imagen/ícono/tags/descripción) para que las
+ * tarjetas se vean IDÉNTICAS a las del menú, solo que con precio en puntos.
+ */
 export async function getPublicRewards(restaurantId: string): Promise<PublicReward[]> {
   const db = createServiceClient();
   const { data } = await db
     .from('loyalty_rewards')
-    .select('id, product_id, title, description, image_url, points_cost, sort_order, stock')
+    .select('id, product_id, title, description, image_url, points_cost, sort_order, stock, product:products(name, description, image_url, icon, tags)')
     .eq('restaurant_id', restaurantId)
     .eq('active', true)
     .order('points_cost')
     .order('sort_order');
-  return ((data ?? []) as PublicReward[]).filter((r) => r.stock === null || r.stock > 0);
+
+  return ((data ?? []) as Record<string, unknown>[])
+    .map((row) => {
+      const { product, ...r } = row as Record<string, unknown> & {
+        product?: { name: string; description: string | null; image_url: string | null; icon: string | null; tags: string[] | null } | null;
+      };
+      const base = r as unknown as { id: string; product_id: string | null; title: string; description: string | null; image_url: string | null; points_cost: number; stock: number | null };
+      return {
+        id: base.id,
+        product_id: base.product_id,
+        title: base.title?.trim() || product?.name || 'Recompensa',
+        description: base.description ?? product?.description ?? null,
+        image_url: base.image_url ?? product?.image_url ?? null,
+        icon: product?.icon ?? null,
+        tags: product?.tags ?? null,
+        points_cost: Number(base.points_cost) || 0,
+        stock: base.stock,
+      } as PublicReward;
+    })
+    .filter((r) => r.stock === null || r.stock > 0);
 }
 
 export interface DinerLoyalty {
