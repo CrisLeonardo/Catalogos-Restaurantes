@@ -51,6 +51,39 @@ Sin esta variable el botón no se muestra (el flujo por teléfono sigue intacto)
   o cuando usa "Enlazar este número a mi cuenta" en la sección de Recompensas.
 - El callback `/auth/callback` intercambia el código por la sesión y regresa al
   menú. Si algo falla, vuelve con `?auth_error=1` sin romper la página.
+- **Cuentas de staff quedan excluidas.** Como la cookie de sesión es la MISMA
+  para el panel admin y el menú público, un dueño/mesero que prueba el menú de
+  su restaurante (o el de otro) en el mismo navegador donde tiene abierto el
+  panel aparecería, sin este filtro, como "cliente" enlazable. `getMyLoyalty`,
+  `linkMyAccountByPhone` y `createOrder` pasan el `auth_user_id` por
+  `resolveDinerAuthUserId` (`src/lib/db/loyalty.ts`), que lo descarta si existe
+  en `profiles`. Para probar el flujo de comensal de verdad, usa una ventana de
+  incógnito o cierra sesión del panel admin primero.
+
+## Antes de poner `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` en producción
+
+Esta lista es la causa más común de que el login "no funcione" sin dar ningún
+error visible — Supabase falla en silencio si algo no calza:
+
+- [ ] Google Cloud → credencial OAuth creada, con el redirect URI de Supabase
+      (`https://TU-PROYECTO.supabase.co/auth/v1/callback`) exacto, sin barra final.
+- [ ] Supabase → Authentication → Providers → Google → activado, con Client ID
+      y Secret pegados.
+- [ ] Supabase → Authentication → URL Configuration → **Site URL** =
+      `https://leogin.online` (la raíz, sin subdominio).
+- [ ] Supabase → misma pantalla → **Redirect URLs** incluye, línea por línea:
+      ```
+      https://leogin.online/auth/callback
+      https://*.leogin.online/auth/callback
+      https://*.leogin.online/**
+      ```
+      Si falta el patrón con `*`, Supabase regresa a la raíz en vez del
+      subdominio del restaurante y el comensal nunca queda logueado.
+- [ ] `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` puesto en Render (no solo en
+      `render.yaml` — hay que asignarle el valor en el dashboard porque el
+      repo lo declara con `sync: false`).
+- [ ] Prueba real: incógnito → `slug.leogin.online` → Continuar con Google →
+      debe regresar logueado al MISMO subdominio, no a `leogin.online`.
 
 ## Solución de problemas
 

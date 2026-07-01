@@ -26,3 +26,9 @@ services:
       # Ejemplo: https://github.com/CrisLeonardo/Catalogos-Restaurantes/releases/download/v0.1.0/LeoginAgent.exe
       - key: LEOGIN_AGENT_DOWNLOAD_URL
         sync: false
+
+      # Login con Google para comensales (lealtad). Poner en "1" SOLO después
+      # de completar la lista de chequeo de docs/GOOGLE_AUTH.md (Supabase +
+      # Google Cloud) — si no, el botón aparece pero el login falla.
+      - key: NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
+        sync: false

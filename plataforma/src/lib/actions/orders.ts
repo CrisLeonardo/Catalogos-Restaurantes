@@ -15,7 +15,7 @@ import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder } from '@/lib/actions/loyalty';
-import { getRedeemContextByPhone } from '@/lib/db/loyalty';
+import { getRedeemContextByPhone, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -107,7 +107,7 @@ export async function createOrder(
   // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
   const authClient = await createClient();
   const { data: { user: authUser } } = await authClient.auth.getUser();
-  const authUserId = authUser?.id ?? null;
+  const authUserId = await resolveDinerAuthUserId(authUser?.id ?? null);
 
   const { data: restaurant } = await db
     .from('restaurants')

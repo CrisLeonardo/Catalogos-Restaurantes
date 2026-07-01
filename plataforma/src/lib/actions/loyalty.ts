@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { getRedeemContextByPhone, getDinerLoyalty, type RedeemContext, type DinerLoyalty } from '@/lib/db/loyalty';
+import { getRedeemContextByPhone, getDinerLoyalty, resolveDinerAuthUserId, type RedeemContext, type DinerLoyalty } from '@/lib/db/loyalty';
 
 /**
  * Consulta pública (checkout): cuántos puntos puede canjear el cliente con su
@@ -127,7 +127,8 @@ export async function toggleReward(restaurantId: string, rewardId: string, activ
 export async function getMyLoyalty(restaurantId: string, phone?: string): Promise<DinerLoyalty> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return getDinerLoyalty(restaurantId, { authUserId: user?.id ?? null, phone: phone ?? null });
+  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  return getDinerLoyalty(restaurantId, { authUserId, phone: phone ?? null });
 }
 
 /**
@@ -138,7 +139,8 @@ export async function getMyLoyalty(restaurantId: string, phone?: string): Promis
 export async function linkMyAccountByPhone(restaurantId: string, phone: string): Promise<LoyaltyActionResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Inicia sesión para enlazar tu número.' };
+  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  if (!authUserId) return { error: 'Inicia sesión para enlazar tu número.' };
 
   const phoneKey = (phone || '').replace(/\D/g, '');
   if (phoneKey.length < 7) return { error: 'Número inválido.' };
@@ -151,11 +153,11 @@ export async function linkMyAccountByPhone(restaurantId: string, phone: string):
     .eq('phone', phoneKey)
     .maybeSingle();
   if (!c) return { error: 'No encontramos pedidos con ese número todavía.' };
-  if (c.auth_user_id && c.auth_user_id !== user.id) return { error: 'Ese número ya está enlazado a otra cuenta.' };
+  if (c.auth_user_id && c.auth_user_id !== authUserId) return { error: 'Ese número ya está enlazado a otra cuenta.' };
 
   // 1:1 — suelta el enlace previo de esta cuenta y asigna al número pedido.
-  await db.from('customers').update({ auth_user_id: null }).eq('restaurant_id', restaurantId).eq('auth_user_id', user.id);
-  const { error } = await db.from('customers').update({ auth_user_id: user.id }).eq('id', c.id as string);
+  await db.from('customers').update({ auth_user_id: null }).eq('restaurant_id', restaurantId).eq('auth_user_id', authUserId);
+  const { error } = await db.from('customers').update({ auth_user_id: authUserId }).eq('id', c.id as string);
   if (error) return { error: error.message };
   return { ok: true };
 }

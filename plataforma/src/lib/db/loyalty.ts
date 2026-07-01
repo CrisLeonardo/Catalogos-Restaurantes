@@ -283,6 +283,21 @@ const NO_DINER: DinerLoyalty = {
 };
 
 /**
+ * Resuelve el auth_user_id de un COMENSAL a partir de la sesión de Supabase,
+ * descartando cuentas de staff. La cookie de sesión se comparte entre todos
+ * los subdominios (`.leogin.online`): si el dueño o un mesero prueba el menú
+ * público en el mismo navegador donde tiene abierto el panel admin, `getUser()`
+ * devuelve SU cuenta, no la de un cliente. Sin este filtro, esa cuenta de staff
+ * quedaría enlazada (o mostraría puntos) como si fuera un cliente cualquiera.
+ */
+export async function resolveDinerAuthUserId(rawUserId: string | null | undefined): Promise<string | null> {
+  if (!rawUserId) return null;
+  const db = createServiceClient();
+  const { data } = await db.from('profiles').select('id').eq('id', rawUserId).maybeSingle();
+  return data ? null : rawUserId;
+}
+
+/**
  * Saldo y reglas para un comensal concreto. Resuelve la identidad por cuenta
  * (auth_user_id) primero, y si no, por teléfono. Lo usa la sección de
  * recompensas del menú. `authUserId` lo provee el server action (cookie).

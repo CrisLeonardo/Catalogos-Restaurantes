@@ -1,10 +1,9 @@
 /**
- * Login con Google deshabilitado temporalmente por problemas de configuración.
- * Para reactivarlo: cambiar el return a la línea comentada de abajo y poner
- * NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1 en el entorno.
+ * Login con Google para comensales. Controlado por variable de entorno para
+ * poder activarlo solo cuando la config externa (Supabase + Google Cloud)
+ * esté lista — ver docs/GOOGLE_AUTH.md antes de poner esta variable en 1.
  */
 export function isGoogleAuthEnabled(): boolean {
-  return false;
-  // const v = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED;
-  // return v === '1' || v === 'true';
+  const v = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED;
+  return v === '1' || v === 'true';
 }
