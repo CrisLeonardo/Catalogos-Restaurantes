@@ -11,7 +11,7 @@ import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice, shadowCss } from '@/lib/theme/resolve';
 import { createOrder } from '@/lib/actions/orders';
 import { validatePromo } from '@/lib/actions/promos';
-import { getLoyaltyRedeemInfo } from '@/lib/actions/loyalty';
+import { getLoyaltyRedeemInfo, getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
@@ -155,14 +155,30 @@ export default function CheckoutForm({
   const [redeemOn, setRedeemOn] = useState(false);
 
   useEffect(() => {
-    const p = getLocalProfile(restaurantId);
-    if (!p) return;
+    let cancelled = false;
+    (async () => {
+      // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
+      // dispositivo) sobre el perfil local de este dispositivo únicamente.
+      const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
+      if (cancelled) return;
+      if (remote) {
+        setName(remote.name);
+        setPhone(remote.phone);
+        if (remote.address) setAddress(remote.address);
+        if (remote.zone && deliveryZones.includes(remote.zone)) setZone(remote.zone);
+        setWelcomeBack(true);
+        return;
+      }
 
-    setName(p.name);
-    setPhone(p.phone);
-    if (p.address) setAddress(p.address);
-    if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
-    setWelcomeBack(true);
+      const p = getLocalProfile(restaurantId);
+      if (!p) return;
+      setName(p.name);
+      setPhone(p.phone);
+      if (p.address) setAddress(p.address);
+      if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
+      setWelcomeBack(true);
+    })();
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 

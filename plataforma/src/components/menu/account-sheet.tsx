@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
-import { getMyLoyalty } from '@/lib/actions/loyalty';
+import { getMyLoyalty, getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
@@ -47,13 +47,30 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    const p = getLocalProfile(restaurantId);
-    if (p) {
-      setName(p.name);
-      setPhone(p.phone);
-      setAddress(p.address ?? '');
-      setDeliveryType(p.deliveryType ?? 'delivery');
-    }
+    let cancelled = false;
+    (async () => {
+      const local = getLocalProfile(restaurantId);
+      // El tipo de entrega es preferencia de este dispositivo; no se guarda
+      // en la cuenta, así que siempre se toma de aquí si existe.
+      if (local?.deliveryType) setDeliveryType(local.deliveryType);
+
+      // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
+      // dispositivo) sobre el perfil local de este dispositivo únicamente.
+      const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
+      if (cancelled) return;
+      if (remote) {
+        setName(remote.name);
+        setPhone(remote.phone);
+        setAddress(remote.address ?? '');
+        return;
+      }
+      if (local) {
+        setName(local.name);
+        setPhone(local.phone);
+        setAddress(local.address ?? '');
+      }
+    })();
+    return () => { cancelled = true; };
   }, [restaurantId]);
 
   useEffect(() => {
@@ -297,7 +314,9 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
           </button>
 
           <p className="t-mute" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5, marginTop: 8 }}>
-            Tus datos se guardan en este dispositivo y se usan para agilizar tus pedidos.
+            {user
+              ? 'Estos datos vienen de tu cuenta y se actualizan solos con tu próximo pedido. Lo que cambies aquí es solo para este dispositivo.'
+              : 'Tus datos se guardan en este dispositivo y se usan para agilizar tus pedidos.'}
           </p>
         </Glass>
 

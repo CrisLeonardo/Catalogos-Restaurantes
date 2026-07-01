@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent } from '@/lib/theme/context';
-import { getPublicOrder } from '@/lib/actions/orders';
+import { getPublicOrder, getMyOrderRefs } from '@/lib/actions/orders';
 import { getLocalOrders } from '@/lib/customer-local';
 import type { OrderStatus } from '@/types';
 
@@ -31,36 +31,55 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
 
   useEffect(() => {
     stopped.current = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let onVisible: (() => void) | undefined;
 
-    const candidates = getLocalOrders(restaurantId).filter(
-      (o) => Date.now() - new Date(o.createdAt).getTime() < FRESH_MS,
-    ).slice(0, 3);
-    if (candidates.length === 0) return;
+    (async () => {
+      // Combina lo local (este dispositivo) con lo de la cuenta (si hay
+      // sesión con Google) — así el pedido en curso se ve aunque el comensal
+      // haya iniciado sesión desde otro dispositivo.
+      const local = getLocalOrders(restaurantId);
+      let all = local;
+      try {
+        const remote = await getMyOrderRefs(restaurantId);
+        if (remote.length) {
+          const seen = new Set(local.map((o) => o.token));
+          all = [...local, ...remote.filter((o) => !seen.has(o.token))];
+        }
+      } catch { /* sin sesión o sin cuenta enlazada: se queda con lo local */ }
+      if (stopped.current) return;
 
-    async function check(force = false) {
-      if (stopped.current || (document.hidden && !force)) return;
-      for (const c of candidates) {
-        try {
-          const order = await getPublicOrder(c.token, restaurantId);
-          if (order && ACTIVE.includes(order.status)) {
-            if (!stopped.current) {
-              setActive({ token: c.token, orderNumber: order.orderNumber, status: order.status });
+      const candidates = all.filter(
+        (o) => Date.now() - new Date(o.createdAt).getTime() < FRESH_MS,
+      ).slice(0, 3);
+      if (candidates.length === 0) return;
+
+      async function check(force = false) {
+        if (stopped.current || (document.hidden && !force)) return;
+        for (const c of candidates) {
+          try {
+            const order = await getPublicOrder(c.token, restaurantId);
+            if (order && ACTIVE.includes(order.status)) {
+              if (!stopped.current) {
+                setActive({ token: c.token, orderNumber: order.orderNumber, status: order.status });
+              }
+              return;
             }
-            return;
-          }
-        } catch {}
+          } catch {}
+        }
+        if (!stopped.current) setActive(null);
       }
-      if (!stopped.current) setActive(null);
-    }
 
-    check(true);
-    const interval = setInterval(() => check(), POLL_MS);
-    const onVisible = () => { if (!document.hidden) check(); };
-    document.addEventListener('visibilitychange', onVisible);
+      check(true);
+      interval = setInterval(() => check(), POLL_MS);
+      onVisible = () => { if (!document.hidden) check(); };
+      document.addEventListener('visibilitychange', onVisible);
+    })();
+
     return () => {
       stopped.current = true;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
+      if (interval) clearInterval(interval);
+      if (onVisible) document.removeEventListener('visibilitychange', onVisible);
     };
   }, [restaurantId]);
 

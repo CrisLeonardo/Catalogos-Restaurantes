@@ -15,7 +15,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeContent } from '@/lib/theme/context';
-import { getPublicOrder } from '@/lib/actions/orders';
+import { getPublicOrder, getMyOrderRefs } from '@/lib/actions/orders';
 import { getLocalOrders, type LocalOrderRef } from '@/lib/customer-local';
 import type { OrderStatus } from '@/types';
 
@@ -30,13 +30,27 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const list = getLocalOrders(restaurantId);
+    const local = getLocalOrders(restaurantId);
 
-    setOrders(list);
+    setOrders(local);
     setLoaded(true);
 
     let cancelled = false;
     (async () => {
+      // Combina lo local (este dispositivo) con lo de la cuenta (si hay
+      // sesión con Google), sin duplicar por token — así "Mis pedidos" sigue
+      // al comensal a cualquier dispositivo donde inicie sesión.
+      let list = local;
+      try {
+        const remote = await getMyOrderRefs(restaurantId);
+        if (remote.length) {
+          const seen = new Set(local.map((o) => o.token));
+          list = [...local, ...remote.filter((o) => !seen.has(o.token))]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          if (!cancelled) setOrders(list);
+        }
+      } catch { /* sin sesión o sin cuenta enlazada: se queda con lo local */ }
+
       const recent = list.slice(0, STATUS_LOOKUPS);
       const results = await Promise.all(
         recent.map(async (o) => {

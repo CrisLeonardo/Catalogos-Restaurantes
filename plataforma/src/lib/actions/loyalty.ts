@@ -131,6 +131,43 @@ export async function getMyLoyalty(restaurantId: string, phone?: string): Promis
   return getDinerLoyalty(restaurantId, { authUserId, phone: phone ?? null });
 }
 
+export interface MyCheckoutProfile {
+  name: string;
+  phone: string;
+  address: string | null;
+  zone: string | null;
+}
+
+/**
+ * Perfil guardado en la cuenta (Google) del comensal — nombre/teléfono/
+ * dirección del último pedido enlazado a esta cuenta. Permite autocompletar
+ * el checkout en CUALQUIER dispositivo, no solo el que guardó el localStorage.
+ * Null si no hay sesión o la cuenta todavía no tiene un pedido enlazado (el
+ * checkout sigue funcionando con el perfil local en ese caso).
+ */
+export async function getMyCheckoutProfile(restaurantId: string): Promise<MyCheckoutProfile | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  if (!authUserId) return null;
+
+  const db = createServiceClient();
+  const { data } = await db
+    .from('customers')
+    .select('name, phone, default_address, default_zone')
+    .eq('restaurant_id', restaurantId)
+    .eq('auth_user_id', authUserId)
+    .maybeSingle();
+  if (!data) return null;
+
+  return {
+    name: data.name as string,
+    phone: data.phone as string,
+    address: (data.default_address as string | null) ?? null,
+    zone: (data.default_zone as string | null) ?? null,
+  };
+}
+
 /**
  * Un usuario con sesión iniciada reclama el historial de puntos de su número
  * (pedidos hechos antes sin cuenta). Enlace 1:1: no roba un número ya enlazado

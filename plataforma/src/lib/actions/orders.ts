@@ -1081,3 +1081,50 @@ export async function getPublicOrder(
     })),
   };
 }
+
+export interface MyOrderRef {
+  token: string;
+  orderNumber: string;
+  createdAt: string;
+  total: number;
+}
+
+/**
+ * Pedidos del comensal con SESIÓN INICIADA (Google), resueltos por su cuenta
+ * enlazada (customers.auth_user_id) — no por dispositivo. Se combinan en el
+ * cliente con los guardados en localStorage, así "Mis pedidos" y el pedido en
+ * curso siguen al comensal a cualquier dispositivo donde inicie sesión.
+ * [] si no hay sesión o la cuenta todavía no tiene un pedido enlazado (nunca
+ * lanza: el historial local sigue funcionando igual para invitados).
+ */
+export async function getMyOrderRefs(restaurantId: string): Promise<MyOrderRef[]> {
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  if (!authUserId) return [];
+
+  const db = createServiceClient();
+  const { data: customer } = await db
+    .from('customers')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .eq('auth_user_id', authUserId)
+    .maybeSingle();
+  if (!customer) return [];
+
+  const { data } = await db
+    .from('orders')
+    .select('public_token, order_number, total, created_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('customer_id', customer.id as string)
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  return ((data ?? []) as { public_token: string; order_number: string; total: number; created_at: string }[])
+    .map((o) => ({
+      token: o.public_token,
+      orderNumber: o.order_number,
+      createdAt: o.created_at,
+      total: Number(o.total),
+    }));
+}
