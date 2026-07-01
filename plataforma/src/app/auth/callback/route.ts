@@ -12,12 +12,22 @@ export const runtime = 'nodejs';
  *
  * `next` se sanea: solo se permiten rutas relativas del mismo origen para
  * evitar redirecciones abiertas.
+ *
+ * El origen se arma con las cabeceras `x-forwarded-*` / `host` (igual que
+ * src/proxy.ts), NO con `request.nextUrl.origin`: detrás del proxy de Render
+ * esa propiedad puede resolver al host/puerto interno del contenedor
+ * (`localhost:10000`, el puerto por defecto de Render) en vez del dominio
+ * público, mandando al comensal a una URL que no existe tras un login exitoso.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
   const rawNext = searchParams.get('next') || '/';
   const safeNext = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
+
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host;
+  const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
+  const origin = `${proto}://${host}`;
 
   if (code) {
     const supabase = await createClient();
