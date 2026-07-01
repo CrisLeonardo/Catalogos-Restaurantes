@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
@@ -35,25 +36,6 @@ const C = {
   blue: '#3b82f6',
 };
 
-function chime() {
-  try {
-    const ctx = new AudioContext();
-    const notes = [660, 880, 1100];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const t = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      osc.start(t);
-      osc.stop(t + 0.6);
-    });
-  } catch {}
-}
 
 function orderLabel(o: OrderWithItems): { icon: string; text: string } {
   if (o.order_type === 'DINE_IN') {
@@ -83,21 +65,25 @@ function semaforo(elapsedMin: number, yellowMin: number, redMin: number): string
 export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false }: Props) {
   const router = useRouter();
   const orders = initialOrders;
-  // `now` arranca en null: el servidor y el primer render del cliente NO pintan
-  // valores de tiempo (evita mismatch de hidratación). Se llena al montar.
   const [now, setNow] = useState<number | null>(null);
   const [isFull, setIsFull] = useState(false);
+  const soundSettingsRef = useRef(loadSoundSettings());
 
-  // Reloj/temporizadores: un solo tick por segundo para todo el tablero.
-  // El primer set se difiere (setTimeout 0) para no llamar setState de forma
-  // síncrona dentro del efecto y mantener el SSR sin valores de tiempo.
+  // Reloj/temporizadores
   useEffect(() => {
     const t0 = setTimeout(() => setNow(Date.now()), 0);
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearTimeout(t0); clearInterval(id); };
   }, []);
 
-  // Realtime: pedido nuevo → campana + refresco; cambios de estado → refresco.
+  // Desbloquear AudioContext al primer gesto del usuario en la pantalla de cocina
+  useEffect(() => {
+    const handler = () => primeAudio();
+    document.addEventListener('click', handler, { once: true });
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
+  // Realtime: pedido nuevo → sonido de cocina + refresco; cambio de estado → refresco.
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
 
@@ -117,7 +103,8 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           { event: 'INSERT', schema: 'public', table: 'orders' },
           (payload) => {
             if ((payload.new as Order).restaurant_id !== restaurantId) return;
-            chime();
+            const s = soundSettingsRef.current;
+            playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
             router.refresh();
           },
         )

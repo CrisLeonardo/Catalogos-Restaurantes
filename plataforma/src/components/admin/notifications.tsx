@@ -1,7 +1,7 @@
 'use client';
 
 /* ============================================================
-   NOTIFICACIONES DEL ADMIN — campana del topbar
+   NOTIFICACIONES DEL ADMIN — campana + configuración de sonido
    ------------------------------------------------------------
    Dos capas:
    1. In-app (Realtime): toast + sonido mientras la pestaña está abierta.
@@ -9,64 +9,37 @@
       la app esté cerrada o en segundo plano.
 
    Estados de la campana:
-   · 'off'      → sin configurar → gris → "Activar notificaciones"
-   · 'basic'    → permiso OK, sin push aún → amarillo → "Toca para activar en 2do plano"
-   · 'on'       → permiso + push activo → verde → "Activo · toca para desactivar"
-   · 'blocked'  → bloqueado por el navegador → rojo → instrucción
+   · 'off'      → sin configurar → gris
+   · 'basic'    → permiso OK, sin push aún → amarillo
+   · 'on'       → permiso + push activo → verde
+   · 'blocked'  → bloqueado por el navegador → rojo
    · 'busy'     → procesando → azul
+
+   Sonidos (ver src/lib/sounds.ts):
+   · Pedido nuevo  → playOrderSound   (sine ascendente, do-mi-sol)
+   · Llamar mesero → playWaiterSound  (triangle urgente, 3 ráfagas)
+   · Cocina        → playKitchenSound (sawtooth descendente ding-dong)
+
+   kitchenMode=true → silencia pedidos y llamadas de mesero en la
+   pantalla de cocina; kitchen-display.tsx maneja su propio sonido.
    ============================================================ */
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
+import {
+  primeAudio,
+  playOrderSound,
+  playWaiterSound,
+  loadSoundSettings,
+  saveSoundSettings,
+  DEFAULT_SOUND_SETTINGS,
+  type SoundSettings,
+} from '@/lib/sounds';
 import type { Order } from '@/types';
 
-/* ── Chime ──────────────────────────────────────────────────── */
-function chime() {
-  try {
-    const ctx = new AudioContext();
-    [660, 880, 1100].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const t = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      osc.start(t);
-      osc.stop(t + 0.6);
-    });
-  } catch {}
-}
-
-/* Alarma fuerte para llamada al mesero: 3 ráfagas de 3 timbres agudos */
-function waiterAlarm() {
-  try {
-    const ctx = new AudioContext();
-    const totalTones = 9; // 3 ráfagas × 3 timbres
-    for (let i = 0; i < totalTones; i++) {
-      const burst = Math.floor(i / 3);
-      const pos   = i % 3;
-      const t = ctx.currentTime + burst * 1.1 + pos * 0.22;
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = pos === 1 ? 1047 : 880; // sol-do-sol patrón
-      osc.type = 'triangle'; // más perceptible que sine a igual volumen
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.75, t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      osc.start(t);
-      osc.stop(t + 0.35);
-    }
-  } catch {}
-}
-
-/* ── Web Push helpers ───────────────────────────────────────── */
+/* ── Web Push helpers ────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(b64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (b64.length % 4)) % 4);
   const base64  = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -80,9 +53,7 @@ async function trySubscribePush(
   reg: ServiceWorkerRegistration,
 ): Promise<{ sub: PushSubscription | null; errorMsg: string | null }> {
   const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!vapidKey) {
-    return { sub: null, errorMsg: 'VAPID_MISSING' };
-  }
+  if (!vapidKey) return { sub: null, errorMsg: 'VAPID_MISSING' };
   try {
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -90,78 +61,103 @@ async function trySubscribePush(
     });
     return { sub, errorMsg: null };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { sub: null, errorMsg: msg };
+    return { sub: null, errorMsg: e instanceof Error ? e.message : String(e) };
   }
 }
 
-async function saveSub(sub: PushSubscription): Promise<boolean> {
+async function saveSub(
+  sub: PushSubscription,
+  restaurantId: string,
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const json = sub.toJSON();
-    const res = await fetch('/api/push/subscribe', {
-      method: 'POST',
+    const res  = await fetch('/api/push/subscribe', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        restaurantId,
         endpoint: sub.endpoint,
         keys: { p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '' },
       }),
     });
-    return res.ok;
-  } catch { return false; }
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({})) as { error?: string };
+    return { ok: false, error: data.error ?? `HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Error de red' };
+  }
 }
 
 async function deleteSub(sub: PushSubscription): Promise<void> {
   try {
     await sub.unsubscribe();
     await fetch('/api/push/subscribe', {
-      method: 'DELETE',
+      method:  'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     });
   } catch {}
 }
 
-/* ── Tipos ──────────────────────────────────────────────────── */
+/* ── Tipos ───────────────────────────────────────────────────────────── */
 type BellState = 'off' | 'basic' | 'on' | 'blocked' | 'busy';
 
-/* ── Componente ─────────────────────────────────────────────── */
+/* ── Componente principal ────────────────────────────────────────────── */
 export default function AdminNotifications({
   restaurantId,
-  muteChime = false,
+  muteChime   = false,
+  kitchenMode = false,
 }: {
   restaurantId: string;
-  muteChime?: boolean;
+  muteChime?:   boolean;
+  kitchenMode?: boolean;
 }) {
-  const router  = useRouter();
-  const [state, setState]  = useState<BellState>('off');
-  const [toast, setToast]  = useState<string | null>(null);
-  const [popup, setPopup]  = useState<{ msg: string; type: 'info' | 'error' } | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const popupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const muteRef    = useRef(muteChime);
-  const swRegRef   = useRef<ServiceWorkerRegistration | null>(null);
-  useEffect(() => { muteRef.current = muteChime; }, [muteChime]);
+  const router = useRouter();
 
-  /* ── Detectar estado inicial ─────────────────────────────── */
+  const [state,          setState]          = useState<BellState>('off');
+  const [toast,          setToast]          = useState<string | null>(null);
+  const [popup,          setPopup]          = useState<{ msg: string; type: 'info' | 'error' } | null>(null);
+  const [showSoundPanel, setShowSoundPanel] = useState(false);
+  const [soundSettings,  setSoundSettings]  = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
+
+  const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const popupTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const muteRef     = useRef(muteChime);
+  const kitchenRef  = useRef(kitchenMode);
+  const settingsRef = useRef<SoundSettings>(DEFAULT_SOUND_SETTINGS);
+  const swRegRef    = useRef<ServiceWorkerRegistration | null>(null);
+
+  useEffect(() => { muteRef.current    = muteChime;    }, [muteChime]);
+  useEffect(() => { kitchenRef.current = kitchenMode;  }, [kitchenMode]);
+  useEffect(() => { settingsRef.current = soundSettings; }, [soundSettings]);
+
+  /* Cargar ajustes de sonido desde localStorage */
+  useEffect(() => { setSoundSettings(loadSoundSettings()); }, []);
+
+  /* Desbloquear AudioContext al primer click en cualquier parte de la página */
+  useEffect(() => {
+    const handler = () => primeAudio();
+    document.addEventListener('click', handler, { once: true });
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
+  /* ── Detectar estado inicial ─────────────────────────────────────── */
   useEffect(() => {
     if (typeof Notification === 'undefined') return;
     const perm = Notification.permission;
-    if (perm === 'denied') { setState('blocked'); return; }
-    if (perm !== 'granted') { setState('off'); return; }
+    if (perm === 'denied')   { setState('blocked'); return; }
+    if (perm !== 'granted')  { setState('off');     return; }
 
-    // Tiene permiso → verificar si ya tiene push activo.
     if (!('serviceWorker' in navigator)) { setState('basic'); return; }
 
     navigator.serviceWorker.register('/sw.js').then(async (reg) => {
       swRegRef.current = reg;
-      const existing = await reg.pushManager.getSubscription();
+      const existing   = await reg.pushManager.getSubscription();
       setState(existing ? 'on' : 'basic');
-    }).catch(() => {
-      setState('basic');
-    });
+    }).catch(() => setState('basic'));
   }, []);
 
-  /* ── Realtime pedidos ────────────────────────────────────── */
+  /* ── Realtime: pedidos y llamadas al mesero ──────────────────────── */
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const supabase = createClient();
@@ -175,14 +171,19 @@ export default function AdminNotifications({
 
       channel = supabase
         .channel(`orders-notify-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
+
+        /* ── Pedido nuevo ── */
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
           const order = payload.new as Order;
           if (order.restaurant_id !== restaurantId) return;
 
-          if (!muteRef.current) {
-            chime();
+          // En modo cocina y en modo pedidos-en-vivo el sonido/toast lo
+          // maneja el componente específico (kitchen-display / orders-panel).
+          if (!muteRef.current && !kitchenRef.current) {
+            const s = settingsRef.current;
+            playOrderSound(s.orderVolume, s.orderRepeat);
             if (toastTimer.current) clearTimeout(toastTimer.current);
-            setToast(`Nuevo pedido ${order.order_number} — ${order.customer_name}`);
+            setToast(`🛎 Pedido ${order.order_number} — ${order.customer_name}`);
             toastTimer.current = setTimeout(() => setToast(null), 5000);
             router.refresh();
           }
@@ -190,15 +191,18 @@ export default function AdminNotifications({
           // Notificación in-app de refuerzo (el servidor ya disparó el push).
           try {
             if (Notification.permission === 'granted') {
-              const typeLabel = order.order_type === 'DELIVERY' ? 'A domicilio'
+              const typeLabel =
+                order.order_type === 'DELIVERY' ? 'A domicilio'
                 : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
               const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
-              const reg = swRegRef.current;
+              const reg  = swRegRef.current;
               if (reg) {
                 reg.showNotification('🛎 Nuevo pedido', {
                   body, icon: '/icon-192.png', badge: '/badge.svg',
                   tag: order.id, data: { url: '/admin/pedidos' },
-                });
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  vibrate: [200, 100, 200],
+                } as any);
               } else {
                 const n = new Notification('🛎 Nuevo pedido', { body, tag: order.id });
                 n.onclick = () => { window.focus(); router.push('/admin/pedidos'); };
@@ -206,28 +210,41 @@ export default function AdminNotifications({
             }
           } catch {}
         })
+
+        /* ── Llamada al mesero ── */
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls' }, (payload) => {
-          const call = payload.new as { id: string; restaurant_id: string; table_number: number | null; created_at: string; resolved_at: string | null };
+          const call = payload.new as {
+            id: string; restaurant_id: string; table_number: number | null;
+            created_at: string; resolved_at: string | null;
+          };
           if (call.restaurant_id !== restaurantId || call.resolved_at) return;
 
           // Avisa al WaiterCallsAlert en el mismo tick (sin esperar su propio canal).
           window.dispatchEvent(new CustomEvent('waiter-call-new', { detail: call }));
 
+          // En modo cocina NO llegan alertas de llamada al mesero.
+          if (kitchenRef.current) return;
+
           const tableLabel = call.table_number ? ` · Mesa ${call.table_number}` : '';
-          waiterAlarm();
+          const s = settingsRef.current;
+          playWaiterSound(s.waiterVolume, s.waiterRepeat);
+
           if (toastTimer.current) clearTimeout(toastTimer.current);
           setToast(`🔔 Llamada al mesero${tableLabel}`);
           toastTimer.current = setTimeout(() => setToast(null), 8000);
 
           try {
             if (Notification.permission === 'granted') {
-              const reg = swRegRef.current;
+              const reg  = swRegRef.current;
               const body = `Un cliente${tableLabel} necesita atención.`;
               if (reg) {
                 reg.showNotification('🔔 Llamada al mesero', {
                   body, icon: '/icon-192.png', badge: '/badge.svg',
                   data: { url: '/admin/mesas' },
-                });
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  vibrate: [300, 100, 300, 100, 300, 200, 600],
+                  requireInteraction: true,
+                } as any);
               } else {
                 new Notification('🔔 Llamada al mesero', { body });
               }
@@ -240,17 +257,16 @@ export default function AdminNotifications({
     return () => { cancelled = true; channel?.unsubscribe(); };
   }, [restaurantId, router]);
 
-  /* ── Clic en la campana ──────────────────────────────────── */
+  /* ── Clic en la campana ──────────────────────────────────────────── */
   async function handleBell() {
     if (state === 'busy') return;
+    primeAudio();
 
-    /* Bloqueado ── */
     if (state === 'blocked') {
       showPopup('Las notificaciones están bloqueadas. Toca el candado en la barra del navegador y cámbialas a "Permitir".', 'error');
       return;
     }
 
-    /* Desactivar push ── */
     if (state === 'on') {
       setState('busy');
       try {
@@ -263,10 +279,8 @@ export default function AdminNotifications({
       return;
     }
 
-    /* Activar (state === 'off' o 'basic') ── */
     setState('busy');
 
-    // 1. Pedir permiso de notificaciones.
     let perm: NotificationPermission;
     try {
       perm = await Notification.requestPermission();
@@ -280,13 +294,11 @@ export default function AdminNotifications({
       return;
     }
     if (perm !== 'granted') {
-      // El usuario cerró el diálogo sin elegir.
       setState('off');
       showPopup('Acepta el permiso de notificaciones para continuar.', 'info');
       return;
     }
 
-    // 2. Registrar SW y suscribir a push.
     if (!('serviceWorker' in navigator)) {
       setState('basic');
       showPopup('Tu navegador no soporta notificaciones en segundo plano. Recibirás avisos mientras la pestaña esté abierta.', 'info');
@@ -304,8 +316,8 @@ export default function AdminNotifications({
       const { sub, errorMsg } = await trySubscribePush(reg);
 
       if (sub) {
-        const saved = await saveSub(sub);
-        if (saved) {
+        const result = await saveSub(sub, restaurantId);
+        if (result.ok) {
           setState('on');
           showPopup('¡Listo! Recibirás notificaciones en este dispositivo aunque cierres el navegador.', 'info');
           reg.showNotification('Notificaciones push activadas', {
@@ -314,19 +326,17 @@ export default function AdminNotifications({
             badge: '/badge.svg',
           });
         } else {
-          // Push suscrito pero no se pudo guardar en el servidor.
           setState('basic');
-          showPopup('Error al guardar la suscripción en el servidor. Intenta de nuevo.', 'error');
+          showPopup(`Error al guardar la suscripción: ${result.error ?? 'intenta de nuevo'}.`, 'error');
         }
       } else {
-        // Reportar razón específica.
         setState('basic');
         if (errorMsg === 'VAPID_MISSING') {
-          showPopup('Falta la configuración VAPID en el servidor. Agrega NEXT_PUBLIC_VAPID_PUBLIC_KEY al entorno.', 'error');
+          showPopup('Falta NEXT_PUBLIC_VAPID_PUBLIC_KEY en el servidor.', 'error');
         } else if (errorMsg?.includes('registration failed') || errorMsg?.includes('not https')) {
-          showPopup('Las notificaciones push requieren HTTPS. Actívalo desde tu dominio principal.', 'error');
+          showPopup('Las notificaciones push requieren HTTPS en el dominio principal.', 'error');
         } else {
-          showPopup(`No se pudo activar push (${errorMsg ?? 'error desconocido'}). Recibirás avisos mientras la pestaña esté abierta.`, 'error');
+          showPopup(`No se pudo activar push: ${errorMsg ?? 'error desconocido'}. Recibirás avisos con la pestaña abierta.`, 'error');
         }
       }
     } catch (e) {
@@ -338,10 +348,18 @@ export default function AdminNotifications({
   function showPopup(msg: string, type: 'info' | 'error') {
     setPopup({ msg, type });
     if (popupTimer.current) clearTimeout(popupTimer.current);
-    popupTimer.current = setTimeout(() => setPopup(null), 6000);
+    popupTimer.current = setTimeout(() => setPopup(null), 8000);
   }
 
-  /* ── Estilos según estado ────────────────────────────────── */
+  function updateSound(partial: Partial<SoundSettings>) {
+    setSoundSettings(prev => {
+      const next = { ...prev, ...partial };
+      saveSoundSettings(next);
+      return next;
+    });
+  }
+
+  /* ── Estilos según estado ────────────────────────────────────────── */
   const dotColor =
     state === 'on'      ? '#4ade80' :
     state === 'basic'   ? '#facc15' :
@@ -356,6 +374,11 @@ export default function AdminNotifications({
     state === 'busy'    ? 'Configurando…' :
     'Activar notificaciones de pedidos nuevos';
 
+  const btnBase: React.CSSProperties = {
+    width: 42, height: 42, borderRadius: 12, border: 'none', background: 'none',
+    display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer',
+  };
+
   return (
     <>
       {/* ── Campana ── */}
@@ -366,10 +389,9 @@ export default function AdminNotifications({
         className="glass-quiet press"
         title={tooltip}
         style={{
-          position: 'relative', width: 42, height: 42, borderRadius: 12, border: 'none',
-          display: 'grid', placeItems: 'center', color: 'var(--u-text)',
-          cursor: state === 'busy' ? 'default' : 'pointer',
+          ...btnBase, position: 'relative',
           opacity: state === 'busy' ? 0.65 : 1,
+          cursor:  state === 'busy' ? 'default' : 'pointer',
         }}
       >
         <Icon name="bell" size={19} />
@@ -380,22 +402,111 @@ export default function AdminNotifications({
         }} />
       </button>
 
-      {/* ── Popup de estado ── */}
+      {/* ── Botón de configuración de sonido ── */}
+      <button
+        type="button"
+        onClick={() => { primeAudio(); setShowSoundPanel(v => !v); }}
+        className="glass-quiet press"
+        title="Configurar sonidos de notificación"
+        style={{
+          ...btnBase,
+          opacity: showSoundPanel ? 1 : 0.65,
+          color:   showSoundPanel ? 'var(--u-text)' : 'var(--u-text-3)',
+        }}
+      >
+        <Icon name="volume" size={17} />
+      </button>
+
+      {/* ── Panel de configuración de sonidos ── */}
+      {showSoundPanel && (
+        <div
+          className="glass-solid"
+          style={{
+            position: 'fixed', top: 70, right: 16, zIndex: 9999,
+            width: 290, borderRadius: 16, padding: 16,
+            border: '1px solid var(--glass-stroke)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}
+        >
+          {/* Cabecera */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
+              Sonidos de notificación
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowSoundPanel(false)}
+              className="press"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', padding: 2, borderRadius: 6 }}
+            >
+              <Icon name="x" size={15} />
+            </button>
+          </div>
+
+          {/* Fila: Pedidos nuevos */}
+          <SoundRow
+            label="🛎 Pedidos nuevos"
+            volume={soundSettings.orderVolume}
+            repeat={soundSettings.orderRepeat}
+            maxRepeat={3}
+            onVolume={v  => updateSound({ orderVolume:  v })}
+            onRepeat={r  => updateSound({ orderRepeat:  r })}
+            onTest={() => { primeAudio(); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat); }}
+          />
+
+          <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
+
+          {/* Fila: Llamar al mesero */}
+          <SoundRow
+            label="🔔 Llamar al mesero"
+            volume={soundSettings.waiterVolume}
+            repeat={soundSettings.waiterRepeat}
+            maxRepeat={3}
+            onVolume={v  => updateSound({ waiterVolume:  v })}
+            onRepeat={r  => updateSound({ waiterRepeat:  r })}
+            onTest={() => { primeAudio(); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat); }}
+          />
+
+          <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
+
+          {/* Fila: Cocina */}
+          <SoundRow
+            label="👨‍🍳 Cocina"
+            volume={soundSettings.kitchenVolume}
+            repeat={soundSettings.kitchenRepeat}
+            maxRepeat={2}
+            onVolume={v  => updateSound({ kitchenVolume:  v })}
+            onRepeat={r  => updateSound({ kitchenRepeat:  r })}
+            onTest={() => {
+              // Importar dinámicamente para no añadir el símbolo al bundle de cocina
+              import('@/lib/sounds').then(m => { primeAudio(); m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat); });
+            }}
+          />
+
+          <p style={{ fontSize: 10.5, color: 'var(--u-text-3)', marginTop: 10, lineHeight: 1.5 }}>
+            Los ajustes se guardan automáticamente en este dispositivo.
+          </p>
+        </div>
+      )}
+
+      {/* ── Popup de estado (errores / info) ── */}
       {popup && (
         <div
           className="glass-solid anim-pop"
           style={{
-            position: 'fixed', top: 70, right: 16, zIndex: 9999, maxWidth: 320,
+            position: 'fixed', top: 70, right: showSoundPanel ? 322 : 16,
+            zIndex: 9998, maxWidth: 320,
             padding: '12px 15px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.55,
             color: popup.type === 'error' ? '#fca5a5' : 'var(--u-text-2)',
             border: `1px solid ${popup.type === 'error' ? 'rgba(248,113,113,0.25)' : 'var(--glass-stroke)'}`,
+            transition: 'right 200ms',
           }}
         >
           {popup.msg}
         </div>
       )}
 
-      {/* ── Toast pedido nuevo ── */}
+      {/* ── Toast pedido/mesero ── */}
       {toast && (
         <div
           className="glass anim-slide-up"
@@ -404,12 +515,79 @@ export default function AdminNotifications({
             zIndex: 80, padding: '12px 20px', borderRadius: 'var(--radius-full)',
             fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap',
             pointerEvents: 'none', maxWidth: '92vw', overflow: 'hidden', textOverflow: 'ellipsis',
-            display: 'inline-flex', alignItems: 'center', gap: 8,
           }}
         >
-          <Icon name="bell" size={15} /> {toast}
+          {toast}
         </div>
       )}
     </>
+  );
+}
+
+/* ── Sub-componente: fila de ajuste de sonido ───────────────────────── */
+function SoundRow({
+  label, volume, repeat, maxRepeat, onVolume, onRepeat, onTest,
+}: {
+  label:    string;
+  volume:   number;
+  repeat:   number;
+  maxRepeat: number;
+  onVolume: (v: number) => void;
+  onRepeat: (r: number) => void;
+  onTest:   () => void;
+}) {
+  return (
+    <div style={{ marginBottom: 2 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-2)', marginBottom: 7 }}>
+        {label}
+      </div>
+
+      {/* Slider de volumen */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+        <Icon name="volume" size={12} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+        <input
+          type="range"
+          min={0} max={100}
+          value={Math.round(volume * 100)}
+          onChange={e => onVolume(Number(e.target.value) / 100)}
+          style={{ flex: 1, accentColor: 'var(--brand-accent, #6366f1)', cursor: 'pointer' }}
+        />
+        <span style={{ fontSize: 10.5, color: 'var(--u-text-3)', minWidth: 28, textAlign: 'right' }}>
+          {Math.round(volume * 100)}%
+        </span>
+      </div>
+
+      {/* Repetición + probar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>Repetir:</span>
+        {Array.from({ length: maxRepeat }, (_, i) => i + 1).map(n => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onRepeat(n)}
+            style={{
+              padding: '2px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+              background: repeat === n ? 'rgba(99,102,241,0.25)' : 'transparent',
+              color:      repeat === n ? 'var(--u-text)' : 'var(--u-text-3)',
+              border:     `1px solid ${repeat === n ? 'rgba(99,102,241,0.5)' : 'var(--glass-stroke)'}`,
+              fontWeight: repeat === n ? 700 : 400,
+            }}
+          >
+            {n}×
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={onTest}
+          style={{
+            marginLeft: 'auto', padding: '2px 10px', borderRadius: 6, fontSize: 10.5,
+            cursor: 'pointer', background: 'rgba(255,255,255,0.06)',
+            color: 'var(--u-text-2)', border: '1px solid var(--glass-stroke)',
+          }}
+        >
+          ▶ Probar
+        </button>
+      </div>
+    </div>
   );
 }

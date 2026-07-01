@@ -253,8 +253,9 @@ export default function AdminShell({
   };
   const helpSection = Object.entries(HELP_SECTIONS).find(([p]) => pathname.startsWith(p))?.[1] ?? null;
 
-  const isLive = pathname.startsWith('/admin/pedidos');
-  const isWaiter = pathname.startsWith('/admin/mesero');
+  const isLive    = pathname.startsWith('/admin/pedidos');
+  const isKitchen = pathname.startsWith('/admin/cocina');
+  const isWaiter  = pathname.startsWith('/admin/mesero');
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';
 
   if (isWaiter) {
@@ -387,7 +388,11 @@ export default function AdminShell({
             </button>
           )}
           {!preview && restaurantId && ordersEnabled ? (
-            <AdminNotifications restaurantId={restaurantId} muteChime={isLive} />
+            <AdminNotifications
+              restaurantId={restaurantId}
+              muteChime={isLive || isKitchen}
+              kitchenMode={isKitchen}
+            />
           ) : (
             <span className="glass-quiet" style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
               <Icon name="bell" size={19} />
