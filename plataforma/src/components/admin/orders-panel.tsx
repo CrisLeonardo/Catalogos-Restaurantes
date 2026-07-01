@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
 import { Icon } from '@/components/icons';
-import { exportOrdersStructured } from '@/lib/actions/orders';
+import { exportOrdersStructured, updateOrderStatus } from '@/lib/actions/orders';
 import { localDateKey } from '@/lib/hours';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
@@ -18,8 +18,10 @@ interface Props {
   currency:       PanelCurrency;
   timezone:       string;
   /** El restaurante usa el Agente Leogin para cocina / caja (evita doble impresión). */
-  agentKitchen?:  boolean;
-  agentReceipt?:  boolean;
+  agentKitchen?:      boolean;
+  agentReceipt?:      boolean;
+  autoConfirmEnabled?: boolean;
+  autoConfirmMinutes?: number;
 }
 
 function chime() {
@@ -53,10 +55,46 @@ export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-export default function OrdersPanel({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false }: Props) {
+export default function OrdersPanel({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1 }: Props) {
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Auto-confirm timers ────────────────────────────────────────
+  const autoTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const autoConfirmEnabledRef = useRef(autoConfirmEnabled);
+  const autoConfirmMinutesRef = useRef(autoConfirmMinutes);
+  useEffect(() => { autoConfirmEnabledRef.current = autoConfirmEnabled; }, [autoConfirmEnabled]);
+  useEffect(() => { autoConfirmMinutesRef.current = autoConfirmMinutes; }, [autoConfirmMinutes]);
+
+  function cancelAutoConfirm(orderId: string) {
+    const t = autoTimers.current.get(orderId);
+    if (t) { clearTimeout(t); autoTimers.current.delete(orderId); }
+  }
+
+  function scheduleAutoConfirm(orderId: string, createdAt: string) {
+    if (!autoConfirmEnabledRef.current) return;
+    cancelAutoConfirm(orderId);
+    const elapsed = Date.now() - new Date(createdAt).getTime();
+    const delay   = Math.max(0, autoConfirmMinutesRef.current * 60_000 - elapsed);
+    autoTimers.current.set(orderId, setTimeout(async () => {
+      autoTimers.current.delete(orderId);
+      await updateOrderStatus(orderId, 'PREP');
+      router.refresh();
+    }, delay));
+  }
+
+  // Programar para pedidos NEW que ya llegaron al montar el panel.
+  useEffect(() => {
+    if (autoConfirmEnabled) {
+      initialOrders.filter((o) => o.status === 'NEW').forEach((o) => {
+        scheduleAutoConfirm(o.id, o.created_at);
+      });
+    }
+    return () => { autoTimers.current.forEach(clearTimeout); autoTimers.current.clear(); };
+  // Solo al montar: initialOrders y autoConfirm* son props de servidor, estables.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isExportingXls, startExportXls] = useTransition();
   const [isExportingPdf, startExportPdf] = useTransition();
   const orders = initialOrders;
@@ -94,6 +132,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
             if (newOrder.restaurant_id !== restaurantId) return;
             chime();
             showToast(`Nuevo pedido ${newOrder.order_number} — ${newOrder.customer_name}`);
+            if (newOrder.status === 'NEW') scheduleAutoConfirm(newOrder.id, newOrder.created_at);
             router.refresh();
           },
         )
@@ -101,7 +140,10 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'orders' },
           (payload) => {
-            if ((payload.new as Order).restaurant_id !== restaurantId) return;
+            const updated = payload.new as Order;
+            if (updated.restaurant_id !== restaurantId) return;
+            // Si el pedido ya no está en NEW, cancelar su timer de auto-confirm.
+            if (updated.status !== 'NEW') cancelAutoConfirm(updated.id);
             router.refresh();
           },
         )

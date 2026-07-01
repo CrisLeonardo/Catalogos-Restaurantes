@@ -280,7 +280,9 @@ body {
    ============================================================ */
 .glass {
   position: relative;
-  background: linear-gradient(145deg, var(--glass-fill-2), var(--glass-fill));
+  background:
+    linear-gradient(145deg, var(--glass-fill-2), var(--glass-fill)),
+    var(--glass-bg, transparent);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   border: 1px solid var(--glass-stroke);

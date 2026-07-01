@@ -230,11 +230,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 Las tarjetas de producto, el carrito y los modales usan este estilo de cristal.
               </p>
               <Segmented
-                label="Transparencia"
+                label="Estilo"
                 value={config.glassIntensity}
-                options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Sólido']]}
+                options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Denso']]}
                 onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])}
               />
+              <Slider label="Cantidad de glass" value={config.glassAmount ?? 100} min={0} max={100} step={1} onChange={(v) => setC('glassAmount', v)} />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+                100 % = efecto completo · 0 % = sólido puro (sin blur ni transparencia)
+              </p>
               <Slider label="Redondeo de esquinas" value={config.cornerRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('cornerRadius', v)} />
               <Toggle label="Brillo que sigue al cursor" value={config.sheen} onChange={(v) => setC('sheen', v)} />
             </Section>

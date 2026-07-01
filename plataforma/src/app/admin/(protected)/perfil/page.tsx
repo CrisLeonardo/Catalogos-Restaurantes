@@ -131,6 +131,8 @@ export default async function AdminPerfilPage({
             kdsYellowMin: resolved.config.kdsYellowMin,
             kdsRedMin: resolved.config.kdsRedMin,
             kdsConfirmFirst: resolved.config.kdsConfirmFirst,
+            autoConfirmEnabled: resolved.config.autoConfirmEnabled,
+            autoConfirmMinutes: resolved.config.autoConfirmMinutes,
           }}
         />
       </CollapsibleCard>

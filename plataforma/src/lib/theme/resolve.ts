@@ -199,8 +199,18 @@ const GLASS_PRESETS: Record<GlassIntensity, { blur: number; sat: number; fill: n
 
 export function buildThemeVars(config: ThemeConfig): Record<string, string> {
   const text = config.colorText;
-  const g = GLASS_PRESETS[config.glassIntensity];
+  const preset = GLASS_PRESETS[config.glassIntensity];
+  const amt = Math.max(0, Math.min(100, config.glassAmount ?? 100)) / 100;
   const cr = config.cornerRadius;
+
+  // Interpola entre el preset seleccionado (amt=1) y sólido puro (amt=0).
+  const glassBlur  = preset.blur  * amt;
+  const glassSat   = 100 + (preset.sat  - 100) * amt;
+  const glassFill  = preset.fill  * amt;
+  const glassFill2 = preset.fill2 * amt;
+  const [bgR, bgG, bgB] = hexToRgb(config.colorBg);
+  // Fondo sólido que tapa el fondo cuando el glass se reduce (0 = transparente, 1 = color del fondo)
+  const glassBg = amt < 1 ? `rgba(${bgR},${bgG},${bgB},${(1 - amt).toFixed(3)})` : 'transparent';
 
   // Las variables de glass para modo claro las manejan reglas CSS puras en globals.css
   // usando html[data-scheme="light"] y html[data-scheme="light"][data-glass="..."].
@@ -229,10 +239,11 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     '--u-hair': rgba(text, 0.1),
     '--u-hair-2': rgba(text, 0.18),
 
-    '--glass-blur': `${g.blur}px`,
-    '--glass-sat': `${g.sat}%`,
-    '--glass-fill': `rgba(255,255,255,${g.fill})`,
-    '--glass-fill-2': `rgba(255,255,255,${g.fill2})`,
+    '--glass-blur': `${glassBlur.toFixed(1)}px`,
+    '--glass-sat': `${Math.round(glassSat)}%`,
+    '--glass-fill': `rgba(255,255,255,${glassFill.toFixed(4)})`,
+    '--glass-fill-2': `rgba(255,255,255,${glassFill2.toFixed(4)})`,
+    '--glass-bg': glassBg,
     // Modo claro: CSS sobreescribe stroke y hi a valores oscuros-sobre-blanco
     '--glass-stroke': 'rgba(255,255,255,0.14)',
     '--glass-hi': 'rgba(255,255,255,0.42)',

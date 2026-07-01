@@ -308,7 +308,7 @@ export async function saveOrdersAndCurrency(input: {
     'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
     'tipEnabled' | 'tipPercent' | 'acceptsCard' |
     'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
-  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst'>>;
+  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' | 'autoConfirmEnabled' | 'autoConfirmMinutes'>>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

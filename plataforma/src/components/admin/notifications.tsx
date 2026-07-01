@@ -207,8 +207,11 @@ export default function AdminNotifications({
           } catch {}
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls' }, (payload) => {
-          const call = payload.new as { restaurant_id: string; table_number: number | null };
-          if (call.restaurant_id !== restaurantId) return;
+          const call = payload.new as { id: string; restaurant_id: string; table_number: number | null; created_at: string; resolved_at: string | null };
+          if (call.restaurant_id !== restaurantId || call.resolved_at) return;
+
+          // Avisa al WaiterCallsAlert en el mismo tick (sin esperar su propio canal).
+          window.dispatchEvent(new CustomEvent('waiter-call-new', { detail: call }));
 
           const tableLabel = call.table_number ? ` · Mesa ${call.table_number}` : '';
           waiterAlarm();

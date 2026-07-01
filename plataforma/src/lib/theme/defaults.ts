@@ -133,6 +133,7 @@ export interface ThemeConfig {
 
   // ── Glass / forma ──
   glassIntensity: GlassIntensity;
+  glassAmount: number;          // 0–100: 100 = efecto completo del preset, 0 = sólido puro (sin blur)
   cornerRadius: number;         // 0.6–1.6 multiplicador de radios
   sheen: boolean;               // brillo especular que sigue al cursor
 
@@ -171,8 +172,12 @@ export interface ThemeConfig {
   dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
   dineInCourseOptions: string[];  // preferencias de servicio configurables
   acceptsCard: boolean;           // habilita la opción "pagar con tarjeta" en delivery y pickup
-  tipEnabled: boolean;            // propina sugerida en pedidos DINE_IN
+  tipEnabled: boolean;            // propina obligatoria en pedidos DINE_IN
   tipPercent: number;             // porcentaje a cobrar (ej. 10 = 10 %)
+
+  // ── Confirmación automática ──
+  autoConfirmEnabled: boolean;    // confirma pedidos NEW→PREP automáticamente
+  autoConfirmMinutes: number;     // minutos de espera antes de confirmar (1–60)
 
   // ── Cocina (KDS) ──
   kdsYellowMin: number;           // minutos de espera para que la tarjeta pase a ámbar
@@ -312,6 +317,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   fontScale: 1,
 
   glassIntensity: 'translucido',
+  glassAmount: 100,
   cornerRadius: 1,
   sheen: true,
 
@@ -347,6 +353,9 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   acceptsCard: false,
   tipEnabled: false,
   tipPercent: 10,
+
+  autoConfirmEnabled: false,
+  autoConfirmMinutes: 1,
 
   kdsYellowMin: 10,
   kdsRedMin: 20,

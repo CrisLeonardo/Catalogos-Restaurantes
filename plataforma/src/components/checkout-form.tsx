@@ -133,9 +133,8 @@ export default function CheckoutForm({
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
   const [cashAmount, setCashAmount] = useState('');
 
-  // Propina sugerida (solo "comer en local"). Preseleccionada pero visible y
-  // removible en 1 toque. El monto lo recalcula el servidor desde tipPercent.
-  const [tipOn, setTipOn] = useState(true);
+  // Propina obligatoria (solo "comer en local"). El admin decide si se cobra y
+  // el porcentaje; el comensal no puede quitarla. Monto calculado en el servidor.
 
   // DINE_IN: mesa y preferencia de servicio
   const [tableNumber, setTableNumber]         = useState<number | null>(null);
@@ -236,10 +235,9 @@ export default function CheckoutForm({
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
   const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
 
-  // Propina sugerida — solo en "comer en local" y si el restaurante la habilita.
-  // El servidor recalcula el monto desde tipPercent; el cliente solo lo acepta/quita.
+  // Propina obligatoria — solo en "comer en local" y si el restaurante la habilita.
   const tipAvailable = type === 'DINE_IN' && config.tipEnabled === true && (Number(config.tipPercent) || 0) > 0;
-  const showTip      = tipAvailable && tipOn;
+  const showTip      = tipAvailable;
   const tipAmount    = showTip ? Math.round(total * (Number(config.tipPercent) || 0)) / 100 : 0;
 
   // Lealtad: máximo de puntos canjeables = min(saldo, lo que cabe en el total).
@@ -744,35 +742,18 @@ export default function CheckoutForm({
             </div>
           )}
 
-          {/* Propina sugerida — solo "comer en local". Preseleccionada y removible. */}
+          {/* Propina — obligatoria cuando el restaurante la habilita. */}
           {tipAvailable && (
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
-                  Propina para el equipo ({config.tipPercent}%)
+                  Propina ({config.tipPercent}%)
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setTipOn((v) => !v)}
-                  className="press"
-                  aria-pressed={tipOn}
-                  style={{
-                    fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                    padding: '7px 13px', borderRadius: 'var(--radius-full)',
-                    border: tipOn ? 'none' : '1px solid var(--u-hair)',
-                    background: tipOn ? 'var(--brand-accent)' : 'transparent',
-                    color: tipOn ? 'var(--brand-on-accent)' : 'var(--u-text-2)',
-                  }}
-                >
-                  {tipOn ? `Incluida +${formatPrice(tipAmount, config)}` : 'Agregar'}
-                </button>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
+                  +{formatPrice(tipAmount, config)}
+                </span>
               </div>
-              {!tipOn && (
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
-                  Opcional. Un detalle para quien te atiende.
-                </p>
-              )}
             </div>
           )}
         </div>

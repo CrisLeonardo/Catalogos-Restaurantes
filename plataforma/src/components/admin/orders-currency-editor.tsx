@@ -9,7 +9,8 @@ type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
   'tipEnabled' | 'tipPercent' | 'acceptsCard' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
-  'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst'
+  'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
+  'autoConfirmEnabled' | 'autoConfirmMinutes'
 >;
 
 interface Props {
@@ -165,7 +166,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
             <>
               <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
               <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
-                Se sugiere al comensal al pedir desde la mesa (puede quitarla) y el mesero también la ve.
+                Se agrega automáticamente al total del comensal (no puede quitarla).
               </p>
             </>
           )}
@@ -177,6 +178,17 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         Domicilio y Para llevar solo se activan desde el panel Leogin.
       </p>
       <Toggle label="Aceptar pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
+
+      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Confirmación automática</div>
+      <Toggle label="Confirmar pedidos automáticamente" value={patch.autoConfirmEnabled} onChange={(v) => set('autoConfirmEnabled', v)} />
+      {patch.autoConfirmEnabled && (
+        <>
+          <NumberCtl label="Confirmar después de (min)" value={patch.autoConfirmMinutes} min={1} max={60} onChange={(v) => set('autoConfirmMinutes', v)} />
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+            Los pedidos nuevos pasan a &ldquo;En preparación&rdquo; automáticamente si nadie los confirma antes.
+          </p>
+        </>
+      )}
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cocina (KDS)</div>
       <Toggle

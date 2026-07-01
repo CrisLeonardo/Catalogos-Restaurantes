@@ -64,7 +64,22 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
     return () => clearInterval(id);
   }, []);
 
-  // Realtime: nuevas llamadas (INSERT) y resoluciones desde otro dispositivo (UPDATE).
+  // Evento DOM inmediato: notifications.tsx lo dispara en el mismo tick que recibe
+  // el INSERT de Realtime, así la tarjeta aparece sin esperar un canal propio.
+  useEffect(() => {
+    function onNew(e: Event) {
+      const c = (e as CustomEvent).detail as { id: string; restaurant_id: string; table_number: number | null; created_at: string };
+      if (c.restaurant_id !== restaurantId) return;
+      setCalls((prev) => (prev.some((x) => x.id === c.id)
+        ? prev
+        : [...prev, { id: c.id, table_number: c.table_number, created_at: c.created_at }]));
+    }
+    window.addEventListener('waiter-call-new', onNew);
+    return () => window.removeEventListener('waiter-call-new', onNew);
+  }, [restaurantId]);
+
+  // Canal propio solo para UPDATE (resoluciones desde otro dispositivo) y como
+  // respaldo de INSERT si notifications.tsx no está montado.
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const supabase = createClient();
@@ -79,6 +94,7 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
       channel = supabase
         .channel(`waiter-calls-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls' }, (payload) => {
+          // Respaldo: si el evento DOM ya llegó primero, setCalls lo deduplica.
           const c = payload.new as WaiterCall & { restaurant_id: string; resolved_at: string | null };
           if (c.restaurant_id !== restaurantId || c.resolved_at) return;
           setCalls((prev) => (prev.some((x) => x.id === c.id)
@@ -91,7 +107,6 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
           if (c.resolved_at) setCalls((prev) => prev.filter((x) => x.id !== c.id));
         })
         .subscribe((status) => {
-          // Si Realtime falla, el polling de 20 s actúa como respaldo automático.
           if (status === 'CHANNEL_ERROR') refresh();
         });
     })();

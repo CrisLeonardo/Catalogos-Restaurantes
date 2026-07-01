@@ -236,7 +236,11 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
       {/* ── Glass / forma ── */}
       <Section title="Glass y forma">
-        <Segmented label="Intensidad glass" value={config.glassIntensity} options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Sólido']]} onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])} />
+        <Segmented label="Estilo glass" value={config.glassIntensity} options={[['translucido', 'Translúcido'], ['esmerilado', 'Esmerilado'], ['solido', 'Denso']]} onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])} />
+        <Slider label="Cantidad de glass" value={config.glassAmount ?? 100} min={0} max={100} step={1} format={(v) => `${v}%`} onChange={(v) => setC('glassAmount', v)} />
+        <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+          100 % = efecto completo del estilo seleccionado · 0 % = sólido puro (sin blur ni transparencia)
+        </p>
         <Slider label="Redondeo" value={config.cornerRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('cornerRadius', v)} />
         <Toggle label="Brillo que sigue al cursor" value={config.sheen} onChange={(v) => setC('sheen', v)} />
       </Section>
@@ -604,9 +608,10 @@ function Segmented({ label, value, options, onChange }: { label: string; value: 
   );
 }
 
-function Slider({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+function Slider({ label, value, min, max, step, onChange, format }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; format?: (v: number) => string }) {
+  const display = format ? format(value) : value.toFixed(2);
   return (
-    <Field label={`${label} · ${value.toFixed(2)}`}>
+    <Field label={`${label} · ${display}`}>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--brand-accent)' }} />
     </Field>
   );

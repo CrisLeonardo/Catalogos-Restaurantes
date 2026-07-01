@@ -65,6 +65,8 @@ export default async function PedidosPage() {
       }}
       agentKitchen={agentKitchen}
       agentReceipt={agentReceipt}
+      autoConfirmEnabled={themeConfig.autoConfirmEnabled}
+      autoConfirmMinutes={themeConfig.autoConfirmMinutes}
     />
   );
 }
