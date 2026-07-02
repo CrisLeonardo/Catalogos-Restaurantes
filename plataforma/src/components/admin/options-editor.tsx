@@ -41,7 +41,7 @@ export function cleanOptions(groups: ProductOptionGroup[]): ProductOptionGroup[]
 }
 
 const fieldStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.05)',
+  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair)',
   borderRadius: 10,
   padding: '8px 10px',
@@ -106,7 +106,7 @@ export default function OptionsEditor({
                     style={{
                       padding: '7px 11px', borderRadius: 99, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                      background: on ? (t === 'combo' ? '#16a34a' : 'var(--u-text)') : 'rgba(255,255,255,0.04)',
+                      background: on ? (t === 'combo' ? '#16a34a' : 'var(--u-text)') : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                       color: on ? (t === 'combo' ? '#fff' : 'var(--brand-bg, #0b0b0c)') : 'var(--u-text-3)',
                     }}
                   >
@@ -190,7 +190,7 @@ export default function OptionsEditor({
                   aria-label="Quitar opción"
                   style={{
                     width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-4)',
+                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
                     display: 'grid', placeItems: 'center', flexShrink: 0,
                   }}
                 >
@@ -225,7 +225,7 @@ export default function OptionsEditor({
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)',
+            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >
@@ -237,7 +237,7 @@ export default function OptionsEditor({
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)',
+            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >

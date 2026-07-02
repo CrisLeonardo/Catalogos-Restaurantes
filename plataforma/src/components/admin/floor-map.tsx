@@ -36,7 +36,7 @@ export function TableToken({
       style={{
         borderRadius: 16, cursor: 'pointer',
         border: `1.5px solid ${occupied ? 'rgba(251,191,36,0.55)' : 'var(--u-hair-2)'}`,
-        background: occupied ? 'rgba(251,191,36,0.14)' : 'rgba(255,255,255,0.05)',
+        background: occupied ? 'rgba(251,191,36,0.14)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
         color: occupied ? '#fbbf24' : 'var(--u-text)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
         boxShadow: occupied ? '0 4px 14px rgba(251,191,36,0.18)' : '0 2px 10px rgba(0,0,0,0.18)',
@@ -237,9 +237,9 @@ export default function FloorMap({
           position: 'relative', width: '100%', overflow: 'hidden',
           borderRadius: 18, border: '1px solid var(--u-hair-2)',
           background:
-            'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px) 0 0 / 100% 9%,' +
-            'linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px) 0 0 / 6.25% 100%,' +
-            'rgba(255,255,255,0.02)',
+            'linear-gradient(color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px) 0 0 / 100% 9%,' +
+            'linear-gradient(90deg, color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px) 0 0 / 6.25% 100%,' +
+            'color-mix(in srgb, var(--u-text) 2%, transparent)',
           touchAction: 'none', cursor: zoomed ? 'grab' : 'default', userSelect: 'none',
         }}
       >

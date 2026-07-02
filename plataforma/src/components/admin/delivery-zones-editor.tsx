@@ -73,7 +73,7 @@ export default function DeliveryZonesEditor({ restaurant }: { restaurant: Restau
                   title={`Quitar ${z}`}
                   style={{
                     width: 22, height: 22, borderRadius: 99, border: 'none', cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.08)', color: 'var(--u-text-3)',
+                    background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)',
                     display: 'grid', placeItems: 'center',
                   }}
                 >
@@ -95,7 +95,7 @@ export default function DeliveryZonesEditor({ restaurant }: { restaurant: Restau
             }}
             placeholder="Ej. Zona 1, Centro, San Cristóbal…"
             style={{
-              flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+              flex: 1, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
               borderRadius: 'var(--radius-md)', padding: '10px 12px',
               color: 'var(--u-text)', fontSize: 14, outline: 'none',
             }}

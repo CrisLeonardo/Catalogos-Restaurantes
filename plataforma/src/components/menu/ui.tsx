@@ -8,6 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { usePrice, useThemeConfig, useText } from '@/lib/theme/context';
+import { roleSize } from '@/lib/theme/resolve';
 
 /* ── Precio (moneda configurable) ─────────────────────────── */
 
@@ -24,7 +25,7 @@ export function Price({
 }) {
   const { symbol, position, format } = usePrice();
   const config = useThemeConfig();
-  const sz = size * (config.typography?.price?.size ?? 1);
+  const sz = size * roleSize(config, 'price');
   const sym = (
     <span style={{ fontSize: sz * 0.66, opacity: 0.6, margin: position === 'prefix' ? '0 1px 0 0' : '0 0 0 1px' }}>
       {symbol}
@@ -54,7 +55,7 @@ const TAG_MAP: Record<string, { icon: string }> = {
 export function Tag({ label, small = false }: { label: string; small?: boolean }) {
   const meta = TAG_MAP[label.toLowerCase().trim()];
   const config = useThemeConfig();
-  const sz = (small ? 9.5 : 10.5) * (config.typography?.tag?.size ?? 1);
+  const sz = (small ? 9.5 : 10.5) * roleSize(config, 'tag');
   return (
     <span
       className="ct-tag"
@@ -165,7 +166,7 @@ export function Field({
   type?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const border = error ? 'rgba(248,113,113,0.75)' : focused ? 'var(--u-text-3)' : 'var(--u-hair)';
+  const border = error ? 'color-mix(in srgb, var(--c-danger, #f87171) 75%, transparent)' : focused ? 'var(--u-text-3)' : 'var(--u-hair)';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label className="t-kicker" style={{ fontSize: 10.5 }}>{label}</label>
@@ -193,7 +194,7 @@ export function Field({
         />
       </div>
       {error && (
-        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: '#f87171' }}>
+        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--c-danger, #f87171)' }}>
           <Icon name="alertCircle" size={12} />{error}
         </div>
       )}

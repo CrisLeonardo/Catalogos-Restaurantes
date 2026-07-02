@@ -58,7 +58,7 @@ export default function AdminError({
         style={{
           padding: '9px 20px',
           borderRadius: 'var(--radius-full)',
-          background: 'rgba(255,255,255,0.08)',
+          background: 'color-mix(in srgb, var(--u-text) 8%, transparent)',
           border: '1px solid var(--u-hair-2)',
           color: 'var(--u-text)',
           fontWeight: 600,

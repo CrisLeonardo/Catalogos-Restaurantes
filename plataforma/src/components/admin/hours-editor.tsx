@@ -101,7 +101,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
     }));
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)',
+    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
     border: '1px solid var(--u-hair-2)',
     borderRadius: 'var(--radius-md)',
     padding: '8px 10px',
@@ -154,7 +154,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
             aria-label="Pausar pedidos"
             style={{
               width: 46, height: 27, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
-              background: paused ? '#f59e0b' : 'rgba(255,255,255,0.12)',
+              background: paused ? '#f59e0b' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
               display: 'flex', justifyContent: paused ? 'flex-end' : 'flex-start',
               transition: 'background 180ms', flexShrink: 0,
             }}
@@ -202,7 +202,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                   style={{
                     width: 110, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                    background: d.on ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    background: d.on ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'transparent',
                     border: `1px solid ${d.on ? 'var(--u-hair-2)' : 'var(--u-hair)'}`,
                     color: d.on ? 'var(--u-text)' : 'var(--u-text-4)',
                     fontSize: 13, fontWeight: 600, transition: 'all 150ms', flexShrink: 0,

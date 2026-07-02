@@ -58,7 +58,7 @@ const BADGE_COLOR: Record<string, { bg: string; color: string }> = {
 };
 
 function Badge({ label }: { label: string }) {
-  const style = BADGE_COLOR[label] ?? { bg: 'rgba(255,255,255,0.08)', color: 'var(--u-text-3)' };
+  const style = BADGE_COLOR[label] ?? { bg: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)' };
   return (
     <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 99, background: style.bg, color: style.color }}>
       {label}
@@ -76,7 +76,7 @@ function Toggle({ on, busy, disabled, onClick, label }: { on: boolean; busy: boo
       className="press"
       style={{
         width: 46, height: 26, borderRadius: 999, flexShrink: 0,
-        background: on ? 'var(--brand-accent)' : 'rgba(255,255,255,0.1)',
+        background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
         boxShadow: 'inset 0 0 0 1.5px rgba(0,0,0,0.18)',
         border: 'none', cursor: (busy || disabled) ? 'not-allowed' : 'pointer',
         position: 'relative',
@@ -97,7 +97,7 @@ function StatusDot({ on, label, color }: { on: boolean; label: string; color?: s
   const c = on ? (color ?? '#4ade80') : 'var(--u-text-4)';
   return (
     <div style={{ fontSize: 11, color: c, fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ width: 6, height: 6, borderRadius: 99, background: on ? c : 'rgba(255,255,255,0.2)', display: 'inline-block' }} />
+      <span style={{ width: 6, height: 6, borderRadius: 99, background: on ? c : 'color-mix(in srgb, var(--u-text) 20%, transparent)', display: 'inline-block' }} />
       {label}
     </div>
   );
@@ -111,7 +111,7 @@ function CardShell({ m, active, children, footer }: { m: ModuleMeta; active: boo
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
           <span style={{
             width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-            background: active ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)' : 'rgba(255,255,255,0.06)',
+            background: active ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             display: 'grid', placeItems: 'center', color: iconColor,
             border: `1px solid ${active ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.2)' : 'transparent'}`,
           }}>
@@ -140,7 +140,7 @@ function SelfServiceCard({ m, on, busy, onToggle }: { m: ModuleMeta; on: boolean
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
           <span style={{
             width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-            background: on ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)' : 'rgba(255,255,255,0.06)',
+            background: on ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             display: 'grid', placeItems: 'center', color: on ? 'var(--brand-accent)' : 'var(--u-text-2)',
             border: `1px solid ${on ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.2)' : 'transparent'}`,
           }}>
@@ -181,7 +181,7 @@ function ManagedCard({ m, active, supportHref }: { m: ModuleMeta; active: boolea
         <span style={{
           fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
           padding: '4px 9px', borderRadius: 99,
-          background: active ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.06)',
+          background: active ? 'rgba(74,222,128,0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
           color: active ? '#4ade80' : 'var(--u-text-4)',
         }}>
           {active ? 'Activo' : 'Gestionado'}
@@ -334,7 +334,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     PREMIUM
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                    <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', color: 'var(--u-text-4)' }}>
+                    <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-4)' }}>
                       <Icon name={m.icon} size={20} />
                     </span>
                     <div>
@@ -356,7 +356,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
                     <span style={{
                       width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-                      background: on ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)' : 'rgba(255,255,255,0.06)',
+                      background: on ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                       display: 'grid', placeItems: 'center',
                       color: on ? 'var(--brand-accent)' : 'var(--u-text-3)',
                       border: `1px solid ${on ? 'rgba(var(--brand-accent-rgb, 99,102,241),0.2)' : 'transparent'}`,

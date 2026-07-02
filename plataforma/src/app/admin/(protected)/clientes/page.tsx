@@ -121,7 +121,7 @@ export default async function AdminClientesPage({
                   className="customers-row press"
                   style={{
                     padding: '13px 18px', textDecoration: 'none',
-                    background: isSel ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    background: isSel ? 'color-mix(in srgb, var(--u-text) 5%, transparent)' : 'transparent',
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
@@ -160,7 +160,7 @@ export default async function AdminClientesPage({
                           <span
                             style={{
                               fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                              background: o.status === 'CANCEL' ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.06)',
+                              background: o.status === 'CANCEL' ? 'rgba(239,68,68,0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                               color: o.status === 'CANCEL' ? '#f87171' : 'var(--u-text-3)',
                             }}
                           >
@@ -202,7 +202,7 @@ export default async function AdminClientesPage({
 const pagBtn: React.CSSProperties = {
   padding: '8px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600,
   textDecoration: 'none', color: 'var(--u-text)',
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)',
+  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair-2)',
 };
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {

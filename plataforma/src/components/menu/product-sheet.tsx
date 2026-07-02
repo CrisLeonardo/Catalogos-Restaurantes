@@ -196,8 +196,8 @@ export default function ProductSheet({
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                             borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'rgba(34,197,94,0.10)' : 'var(--surface-1)',
-                            border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair-2)'}`,
+                            background: included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 10%, transparent)' : 'var(--surface-1)',
+                            border: `1px solid ${included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 35%, transparent)' : 'var(--u-hair-2)'}`,
                             transition: 'all 140ms',
                           }}
                         >
@@ -205,8 +205,8 @@ export default function ProductSheet({
                           <span style={{
                             width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                             display: 'grid', placeItems: 'center',
-                            background: included ? '#22c55e' : 'var(--surface-3)',
-                            border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair-2)'}`,
+                            background: included ? 'var(--c-ok-solid, #22c55e)' : 'var(--surface-3)',
+                            border: `1.5px solid ${included ? 'var(--c-ok-solid, #22c55e)' : 'var(--u-hair-2)'}`,
                             transition: 'all 140ms',
                           }}>
                             {included && <Icon name="check" size={12} strokeWidth={3} style={{ color: '#fff' }} />}
@@ -221,7 +221,7 @@ export default function ProductSheet({
                           {delta > 0 && (
                             <span className="t-mono" style={{
                               fontSize: 12, flexShrink: 0,
-                              color: included ? 'var(--u-text-2)' : '#f87171',
+                              color: included ? 'var(--u-text-2)' : 'var(--c-danger, #f87171)',
                               opacity: included ? 0.7 : 1,
                             }}>
                               {included ? `+${formatPrice(delta, config)}` : `−${formatPrice(delta, config)}`}

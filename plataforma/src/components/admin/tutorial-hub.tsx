@@ -106,7 +106,7 @@ export default function TutorialHub({ plan, modules }: Props) {
           style={{
             width: '100%', padding: '11px 14px 11px 40px',
             borderRadius: 12, border: '1.5px solid var(--u-hair)',
-            background: 'var(--surface-3, rgba(255,255,255,0.04))',
+            background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
             color: 'var(--u-text)', fontSize: 14, outline: 'none',
             boxSizing: 'border-box',
           }}
@@ -237,7 +237,7 @@ function TutorialSection({
           width: 38, height: 38, borderRadius: 10, flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: locked
-            ? 'rgba(255,255,255,0.04)'
+            ? 'color-mix(in srgb, var(--u-text) 4%, transparent)'
             : 'rgba(var(--brand-accent-rgb,99,102,241),0.12)',
           color: locked ? 'var(--u-text-4)' : 'var(--brand-accent)',
         }}>
@@ -300,7 +300,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
   return (
     <div style={{
       borderRadius: 12, padding: '20px 18px', textAlign: 'center',
-      background: 'var(--surface-3, rgba(255,255,255,0.03))',
+      background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
       border: '1.5px dashed var(--u-hair)',
     }}>
       <Icon name="lock" size={22} style={{ color: 'var(--u-text-4)', marginBottom: 10 }} />
@@ -403,7 +403,7 @@ function StepItem({ step, number, sectionId }: { step: TutorialStep; number: num
           <div style={{
             display: 'flex', alignItems: 'flex-start', gap: 7,
             marginLeft: 36, padding: '8px 12px', borderRadius: 9,
-            background: 'var(--surface-3, rgba(255,255,255,0.03))',
+            background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
             border: '1px solid var(--u-hair)',
           }}>
             <Icon name="chevronRight" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
@@ -463,7 +463,7 @@ function TutorialCaptura({
           borderRadius: 12,
           overflow: 'hidden',
           border: '1px solid var(--u-hair)',
-          background: 'var(--surface-3, rgba(255,255,255,0.02))',
+          background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 2%, transparent))',
           minHeight: 120,
           display: 'flex',
           alignItems: 'center',
@@ -487,7 +487,7 @@ function TutorialCaptura({
       style={{
         borderRadius: 12,
         border: '1.5px dashed var(--u-hair)',
-        background: 'var(--surface-3, rgba(255,255,255,0.02))',
+        background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 2%, transparent))',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -501,7 +501,7 @@ function TutorialCaptura({
     >
       <div style={{
         width: 40, height: 40, borderRadius: 10,
-        background: 'rgba(255,255,255,0.04)',
+        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         display: 'grid', placeItems: 'center',
       }}>
         <Icon name="image" size={20} />

@@ -51,7 +51,7 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
     const isMesero = m.permissions?.includes('mesero') ?? false;
     return (
       <div key={m.id} className="glass" style={{ borderRadius: 14, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.08)', display: 'grid', placeItems: 'center', color: isMesero ? '#fbbf24' : 'var(--u-text)', flexShrink: 0 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'rgba(251,191,36,0.12)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? '#fbbf24' : 'var(--u-text)', flexShrink: 0 }}>
           <Icon name={isMesero ? 'userPlus' : 'user'} size={18} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -137,7 +137,7 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
   }
 
   const label: React.CSSProperties = { fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' };
-  const input: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
+  const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
 
   const isMesero = perms.includes('mesero');
 
@@ -189,7 +189,7 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
                       style={{
                         padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                         border: `1px solid ${on ? 'transparent' : accent ? 'rgba(251,191,36,0.3)' : 'var(--u-hair)'}`,
-                        background: on ? (accent ? '#fbbf24' : 'var(--u-text)') : accent ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.04)',
+                        background: on ? (accent ? '#fbbf24' : 'var(--u-text)') : accent ? 'rgba(251,191,36,0.08)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                         color: on ? (accent ? '#1a1206' : 'var(--brand-bg)') : accent ? '#fbbf24' : 'var(--u-text-3)',
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                       }}

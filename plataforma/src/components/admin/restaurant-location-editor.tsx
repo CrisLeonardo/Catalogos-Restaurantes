@@ -23,7 +23,7 @@ const LocationMap = dynamic(
     loading: () => (
       <div style={{
         height: 300, borderRadius: 'var(--radius-lg)',
-        background: 'rgba(255,255,255,0.04)',
+        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: 'var(--u-text-4)', fontSize: 13,
       }}>
@@ -86,7 +86,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
               marginLeft: 16,
               width: 48, height: 28, borderRadius: 99,
               border: 'none', cursor: 'pointer',
-              background: geoEnabled ? 'var(--c-accent, #D97757)' : 'rgba(255,255,255,0.12)',
+              background: geoEnabled ? 'var(--c-accent, #D97757)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
               position: 'relative', transition: 'background 200ms',
             }}
           >
@@ -146,7 +146,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
                 <div style={{
                   minWidth: 68, padding: '6px 10px',
                   borderRadius: 'var(--radius-md)',
-                  background: 'rgba(255,255,255,0.06)',
+                  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                   textAlign: 'center', fontWeight: 700,
                   fontSize: 15, color: 'var(--u-text)',
                   fontVariantNumeric: 'tabular-nums',
@@ -168,7 +168,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
                   }}
                   style={{
                     width: 80,
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                     border: '1px solid var(--u-hair-2)',
                     borderRadius: 'var(--radius-md)',
                     padding: '7px 10px',
@@ -184,7 +184,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
         {!geoEnabled && (
           <div style={{
             padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'rgba(255,255,255,0.03)',
+            background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
             fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5,
           }}>
             <Icon name="mapPin" size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />

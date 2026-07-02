@@ -6,14 +6,16 @@
 import { useEffect } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { Price, QtyStepper, PrimaryButton } from '@/components/menu/ui';
+import { Price, QtyStepper, PrimaryButton, ctaClass } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
+import { roleSize } from '@/lib/theme/resolve';
 
 /* Barra inferior fija con el resumen del carrito. */
 export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIconHidden?: boolean }) {
   const { count, total } = useCart();
   const content = useThemeContent();
+  const config = useThemeConfig();
   if (count === 0 || cartIconHidden) return null;
 
   return (
@@ -28,7 +30,7 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
           <span className="t-kicker" style={{ fontSize: 10.5 }}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
           <Price amount={total} size={18} />
         </div>
-        <span className="btn-white" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 18px', borderRadius: 13, fontWeight: 600, fontSize: 14 }}>
+        <span className={ctaClass(config.ctaStyle)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 18px', borderRadius: 13, fontWeight: 600, fontSize: 14 }}>
           {content.cart.barCta} <Icon name="arrowRight" size={16} />
         </span>
       </Glass>
@@ -82,7 +84,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
               {items.map((item) => (
                 <Glass key={item.lineId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="ct-product-name" style={{ fontSize: 14 * config.typography.productName.size, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <div className="ct-product-name" style={{ fontSize: 14 * roleSize(config, 'productName'), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {item.rewardId && <Icon name="gift" size={14} style={{ color: 'var(--brand-accent)' }} />}
                       {item.name}
                     </div>

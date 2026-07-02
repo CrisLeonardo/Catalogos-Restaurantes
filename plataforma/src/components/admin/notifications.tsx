@@ -366,7 +366,7 @@ export default function AdminNotifications({
     state === 'basic'   ? '#facc15' :
     state === 'blocked' ? '#f87171' :
     state === 'busy'    ? '#60a5fa' :
-    'rgba(255,255,255,0.25)';
+    'color-mix(in srgb, var(--u-text) 25%, transparent)';
 
   const tooltip =
     state === 'on'      ? 'Push activo — toca para desactivar' :
@@ -582,7 +582,7 @@ function SoundRow({
           onClick={onTest}
           style={{
             marginLeft: 'auto', padding: '2px 10px', borderRadius: 6, fontSize: 10.5,
-            cursor: 'pointer', background: 'rgba(255,255,255,0.06)',
+            cursor: 'pointer', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             color: 'var(--u-text-2)', border: '1px solid var(--glass-stroke)',
           }}
         >

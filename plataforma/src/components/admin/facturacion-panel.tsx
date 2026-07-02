@@ -18,7 +18,7 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const labelStyle: React.CSSProperties = {
@@ -226,7 +226,7 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
       <div style={{ display: 'flex', gap: 8 }}>
         {([['pedido', 'Desde un pedido'], ['libre', 'Factura libre']] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setMode(k)} className="press"
-            style={{ padding: '7px 14px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${mode === k ? 'transparent' : 'var(--u-hair)'}`, background: mode === k ? 'var(--u-text)' : 'rgba(255,255,255,0.04)', color: mode === k ? 'var(--brand-bg)' : 'var(--u-text-3)' }}>
+            style={{ padding: '7px 14px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${mode === k ? 'transparent' : 'var(--u-hair)'}`, background: mode === k ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: mode === k ? 'var(--brand-bg)' : 'var(--u-text-3)' }}>
             {label}
           </button>
         ))}

@@ -20,7 +20,7 @@ const UNITS = [
 ];
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
+  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)',
   padding: '9px 11px',
@@ -203,7 +203,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
             <tbody>
               {initialIngredients.map((ing, i) => (
                 editState?.id === ing.id ? (
-                  <tr key={ing.id} style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--u-hair)' }}>
+                  <tr key={ing.id} style={{ background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', borderBottom: '1px solid var(--u-hair)' }}>
                     <td colSpan={5} style={{ padding: '12px 14px' }}>
                       <form onSubmit={handleEdit} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: 120 }}>
@@ -238,7 +238,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                     <td style={{ padding: '12px 14px', fontFamily: 'monospace' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</td>
                     <td style={{ padding: '12px 14px', color: 'var(--u-text-3)' }}>
                       {usageCounts[ing.id] ? (
-                        <span style={{ fontSize: 12, background: 'rgba(255,255,255,0.07)', padding: '2px 8px', borderRadius: 99 }}>
+                        <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 99 }}>
                           {usageCounts[ing.id]} platillo{usageCounts[ing.id] !== 1 ? 's' : ''}
                         </span>
                       ) : '—'}

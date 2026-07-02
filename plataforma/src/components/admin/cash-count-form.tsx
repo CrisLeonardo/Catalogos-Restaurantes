@@ -27,7 +27,7 @@ function DenomRow({
         placeholder="0"
         onChange={e => onChange(field, e.target.value)}
         style={{
-          background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)',
+          background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
           borderRadius: 7, padding: '5px 8px', color: 'var(--u-text)', fontSize: 13,
           outline: 'none', fontFamily: 'var(--ui-font-mono)', textAlign: 'right', width: '100%',
         }}
@@ -86,7 +86,7 @@ export default function CashCountForm({
     borderTop: '1px solid var(--u-hair)', marginTop: 5,
   };
   const baseInput: React.CSSProperties = {
-    width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+    width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
     borderRadius: 11, padding: '11px 13px', color: 'var(--u-text)', fontSize: 14,
     outline: 'none',
   };

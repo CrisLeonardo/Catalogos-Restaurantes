@@ -131,7 +131,7 @@ export default async function AdminAnaliticaPage({
                         title={`${wd} ${String(h).padStart(2, '0')}:00 — ${c} pedido${c === 1 ? '' : 's'}`}
                         style={{
                           width: 16, height: 16, borderRadius: 3,
-                          background: c === 0 ? 'rgba(255,255,255,0.04)' : `color-mix(in srgb, var(--brand-accent) ${Math.round(intensity * 100)}%, transparent)`,
+                          background: c === 0 ? 'color-mix(in srgb, var(--u-text) 4%, transparent)' : `color-mix(in srgb, var(--brand-accent) ${Math.round(intensity * 100)}%, transparent)`,
                         }}
                       />
                     );
@@ -182,8 +182,8 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
             <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '75%' }}>{r.name}</span>
             <span style={{ color: r.qty === 0 ? '#f87171' : 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.qty}</span>
           </div>
-          <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-            <div style={{ width: `${(r.qty / max) * 100}%`, height: '100%', background: accent ? 'var(--brand-accent)' : 'rgba(255,255,255,0.25)', borderRadius: 99 }} />
+          <div style={{ height: 5, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
+            <div style={{ width: `${(r.qty / max) * 100}%`, height: '100%', background: accent ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 25%, transparent)', borderRadius: 99 }} />
           </div>
         </div>
       ))}
@@ -205,7 +205,7 @@ function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; 
               <span style={{ color: 'var(--u-text-2)' }}>{r.label}</span>
               <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.count} · {pct.toFixed(0)}%</span>
             </div>
-            <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+            <div style={{ height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />
             </div>
           </div>

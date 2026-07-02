@@ -142,7 +142,7 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
               fontWeight: 600,
               background: copied
                 ? 'rgba(34,197,94,0.12)'
-                : 'rgba(255,255,255,0.07)',
+                : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
               color: copied ? '#22c55e' : 'var(--u-text)',
               border: `1px solid ${copied ? 'rgba(34,197,94,0.28)' : 'var(--u-hair-2)'}`,
               cursor: 'pointer',
@@ -171,7 +171,7 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
           fontWeight: 600,
           cursor: downloading ? 'wait' : 'pointer',
           color: 'var(--u-text)',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           fontFamily: 'var(--font-sans)',
           opacity: downloading ? 0.7 : 1,
         }}

@@ -115,7 +115,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                 onClick={() => setActiveCat(c.id)}
                 style={{
                   flexShrink: 0, padding: '8px 14px', borderRadius: 99, cursor: 'pointer',
-                  background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
+                  background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                   color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
                   border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                   fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
@@ -190,7 +190,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                   <div
                     style={{
                       width: 44, height: 44, borderRadius: 11, overflow: 'hidden',
-                      background: 'rgba(255,255,255,0.04)', flexShrink: 0,
+                      background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', flexShrink: 0,
                     }}
                   >
                     {p.image_url ? (
@@ -226,9 +226,9 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                     {hasBadges && (
                       <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
                         {hasCombo  && <RowBadge label="Combo"   color="#16a34a" bg="rgba(22,163,74,0.12)" />}
-                        {hasSizes  && <RowBadge label="Tamaños" color="var(--u-text-3)" bg="rgba(255,255,255,0.06)" />}
-                        {hasExtras && <RowBadge label="Extras"  color="var(--u-text-3)" bg="rgba(255,255,255,0.06)" />}
-                        {tags.map((t) => <RowBadge key={t} label={t} color="var(--u-text-3)" bg="rgba(255,255,255,0.06)" />)}
+                        {hasSizes  && <RowBadge label="Tamaños" color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />}
+                        {hasExtras && <RowBadge label="Extras"  color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />}
+                        {tags.map((t) => <RowBadge key={t} label={t} color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />)}
                       </div>
                     )}
                   </div>
@@ -273,12 +273,12 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                           style={{
                             width: 42, height: 25, borderRadius: 99, border: 'none',
                             cursor: 'pointer', padding: 3,
-                            background: p.is_available ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+                            background: p.is_available ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
                             display: 'flex', justifyContent: p.is_available ? 'flex-end' : 'flex-start',
                             transition: 'background 180ms',
                           }}
                         >
-                          <span style={{ width: 19, height: 19, borderRadius: 99, background: p.is_available ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)', transition: 'all 180ms' }} />
+                          <span style={{ width: 19, height: 19, borderRadius: 99, background: p.is_available ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)', transition: 'all 180ms' }} />
                         </button>
                       </form>
                       <span style={{ fontSize: 12, color: p.is_available ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
@@ -623,7 +623,7 @@ function ProductModal({
                   style={{
                     width: '100%', padding: '9px 12px', borderRadius: 10, outline: 'none',
                     fontSize: 13, color: 'var(--u-text)',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
                     fontFamily: 'var(--font-sans)',
                   }}
                 />
@@ -646,7 +646,7 @@ function ProductModal({
                         flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                         padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 56,
                         border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--u-hair)'}`,
-                        background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.03)',
+                        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
                         color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
                         transition: 'all 140ms',
                       }}
@@ -678,7 +678,7 @@ function ProductModal({
                     style={{
                       width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
                       fontSize: 14, color: 'var(--u-text)',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                      background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
                       fontFamily: 'var(--ui-font-mono)',
                     }}
                   />
@@ -705,7 +705,7 @@ function ProductModal({
                     style={{
                       width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
                       fontSize: 14, color: 'var(--u-text)',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                      background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
                       fontFamily: 'var(--ui-font-mono)',
                       opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text',
                     }}
@@ -727,7 +727,7 @@ function ProductModal({
                   style={{
                     width: '100%', maxWidth: 240, padding: '12px 14px', borderRadius: 13, outline: 'none',
                     fontSize: 14, color: 'var(--u-text)',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
                     fontFamily: 'var(--ui-font-mono)',
                   }}
                 />
@@ -777,7 +777,7 @@ function ProductModal({
 
             {/* Receta / costeo por ingrediente (solo platillos existentes, módulo activo) */}
             {showRecipe && (
-              <div style={{ borderRadius: 13, padding: '14px 15px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--u-hair)' }}>
+              <div style={{ borderRadius: 13, padding: '14px 15px', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)' }}>
                 <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 4 }}>
                   Receta
                   <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--u-text-4)' }}>
@@ -800,7 +800,7 @@ function ProductModal({
 
             {/* Nota de receta para platillos nuevos */}
             {recetasActive && isNew && (
-              <div style={{ borderRadius: 13, padding: '11px 14px', display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--u-hair)' }}>
+              <div style={{ borderRadius: 13, padding: '11px 14px', display: 'flex', gap: 10, alignItems: 'center', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)' }}>
                 <Icon name="flask" size={15} />
                 <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
                   Guarda el platillo y vuelve a abrirlo para asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes.
@@ -821,7 +821,7 @@ function ProductModal({
                 style={{
                   width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
                   resize: 'none', fontSize: 14, color: 'var(--u-text)',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
                   fontFamily: 'var(--font-sans)',
                 }}
               />
@@ -845,7 +845,7 @@ function ProductModal({
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         padding: '7px 12px', borderRadius: 99, cursor: 'pointer',
                         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                        background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+                        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                         color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
                         fontWeight: 600, fontSize: 12,
                       }}
@@ -886,7 +886,7 @@ function ProductModal({
                   style={{
                     flex: 1, padding: '8px 11px', borderRadius: 10, outline: 'none',
                     fontSize: 12.5, color: 'var(--u-text)',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
                     fontFamily: 'var(--font-sans)',
                   }}
                 />
@@ -896,7 +896,7 @@ function ProductModal({
                   className="press"
                   style={{
                     padding: '8px 12px', borderRadius: 10, border: 'none',
-                    background: 'rgba(255,255,255,0.08)', color: 'var(--u-text-2)',
+                    background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)',
                     cursor: 'pointer', fontSize: 13, fontWeight: 600,
                   }}
                 >
@@ -936,12 +936,12 @@ function ProductModal({
                 style={{
                   width: 42, height: 25, borderRadius: 99, border: 'none',
                   cursor: 'pointer', padding: 3,
-                  background: isAvailable ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+                  background: isAvailable ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
                   display: 'flex', justifyContent: isAvailable ? 'flex-end' : 'flex-start',
                   transition: 'background 180ms',
                 }}
               >
-                <span style={{ width: 19, height: 19, borderRadius: 99, background: isAvailable ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)', transition: 'all 180ms' }} />
+                <span style={{ width: 19, height: 19, borderRadius: 99, background: isAvailable ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)', transition: 'all 180ms' }} />
               </button>
             </div>
 
@@ -1049,7 +1049,7 @@ function ModalField({
         style={{
           width: '100%', padding: '12px 14px', borderRadius: 13, outline: 'none',
           fontSize: 14, color: 'var(--u-text)',
-          background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+          background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
           fontFamily: mono ? 'var(--ui-font-mono)' : 'var(--font-sans)',
         }}
       />
@@ -1078,7 +1078,7 @@ function CatChip({ on, label, onClick }: { on: boolean; label: string; onClick: 
       style={{
         padding: '8px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-        background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
       }}
     >

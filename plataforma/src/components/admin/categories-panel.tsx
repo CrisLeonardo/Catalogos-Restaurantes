@@ -65,7 +65,7 @@ function CatIconPicker({ value, suggested, onChange }: {
         onClick={() => setOpen((o) => !o)}
         aria-label="Elegir ícono"
         className="press"
-        style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
+        style={{ width: 44, height: 44, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}
       >
         <Icon name={effective} size={22} />
       </button>
@@ -198,7 +198,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
             <div
               style={{
                 width: 44, height: 44, borderRadius: 12,
-                background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)',
+                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
                 display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0,
               }}
             >
@@ -242,7 +242,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                   style={{
                     width: 42, height: 25, borderRadius: 99, border: 'none',
                     cursor: 'pointer', padding: 3,
-                    background: c.is_active ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+                    background: c.is_active ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
                     display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start',
                     transition: 'background 180ms',
                   }}
@@ -250,7 +250,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                   <span
                     style={{
                       width: 19, height: 19, borderRadius: 99,
-                      background: c.is_active ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)',
+                      background: c.is_active ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)',
                     }}
                   />
                 </button>
@@ -464,7 +464,7 @@ const reorderBtn: React.CSSProperties = {
 };
 
 const inlineInput: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.06)',
+  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
   border: '1px solid var(--u-hair-2)',
   borderRadius: 10,
   padding: '9px 12px',

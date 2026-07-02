@@ -8,8 +8,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
-import { Price, Tag } from '@/components/menu/ui';
+import { Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
+import { roleSize } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
@@ -240,7 +241,7 @@ export default function Catalog({
                     background: 'var(--surface-2)', color: 'var(--u-text)', cursor: 'pointer',
                   }}
                 >
-                  <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)', color: 'var(--u-text-2)' }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', color: 'var(--u-text-2)' }}>
                     <Icon name={config.showCategoryIcons ? (catIcon.get(c.id) ?? 'utensils') : 'clock'} size={17} />
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
@@ -299,6 +300,7 @@ function ProductArt({ p, icon, scale = 1 }: { p: ProdItem; icon: string; scale?:
 }
 
 function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: ProdItem, el: HTMLElement) => void }) {
+  const config = useThemeConfig();
   if (qty > 0) {
     return (
       <span className="t-mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 12 }}>
@@ -308,9 +310,11 @@ function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: Pr
   }
   return (
     <button
-      className="press btn-white"
+      // Sigue el estilo de CTA elegido por el restaurante (antes btn-white fijo,
+      // que se lavaba con paletas claras e ignoraba la opción del editor).
+      className={`press ${ctaClass(config.ctaStyle)}`}
       onClick={(e) => { e.stopPropagation(); onAdd(p, e.currentTarget); }}
-      style={{ width: 32, height: 32, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+      style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center' }}
       aria-label={`Agregar ${p.name}`}
     >
       <Icon name="plus" size={17} strokeWidth={2.4} />
@@ -343,7 +347,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
         )}
       </div>
       <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div className="ct-product-name" style={{ fontSize: 14.5 * config.typography.productName.size, flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
+        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Price amount={displayPrice(p)} size={15} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
@@ -363,12 +367,12 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="ct-product-name" style={{ fontSize: 15.5 * config.typography.productName.size, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
+          <div className="ct-product-name" style={{ fontSize: 15.5 * roleSize(config, 'productName'), textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
           {unavail && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>No disponible</span>}
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
         </div>
         {p.description && (
-          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * config.typography.productDesc.size }}>{p.description}</div>
+          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{p.description}</div>
         )}
         <Price amount={displayPrice(p)} size={15} muted={unavail} />
       </div>

@@ -326,7 +326,7 @@ export default async function SuscripcionPage() {
                 padding: '11px 16px', borderRadius: 'var(--radius-full)',
                 fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
                 color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'rgba(255,255,255,0.06)',
+                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
               }}
             >
               Ver todos los planes <Icon name="chevronRight" size={14} />
@@ -379,7 +379,7 @@ export default async function SuscripcionPage() {
                 padding: '10px 16px', borderRadius: 'var(--radius-full)',
                 fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
                 color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'rgba(255,255,255,0.06)',
+                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
               }}
             >
               Ver todos los planes <Icon name="chevronRight" size={14} />

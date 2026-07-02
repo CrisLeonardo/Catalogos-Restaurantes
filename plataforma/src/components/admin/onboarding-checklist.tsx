@@ -79,7 +79,7 @@ export default function OnboardingChecklist({
 
       {/* Progreso */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+        <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', overflow: 'hidden' }}>
           <div style={{ width: `${(doneCount / total) * 100}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99, transition: 'width 300ms' }} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', flexShrink: 0 }}>{doneCount}/{total}</span>
@@ -95,7 +95,7 @@ export default function OnboardingChecklist({
             style={{
               display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px',
               borderRadius: 13, textDecoration: 'none',
-              background: s.done ? 'rgba(74,222,128,0.08)' : 'var(--surface-3, rgba(255,255,255,0.04))',
+              background: s.done ? 'rgba(74,222,128,0.08)' : 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
               border: `1px solid ${s.done ? 'rgba(74,222,128,0.25)' : 'var(--u-hair)'}`,
             }}
           >

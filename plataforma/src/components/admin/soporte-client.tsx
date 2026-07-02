@@ -99,7 +99,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
       <div
         style={{
           borderRadius: 'var(--radius-lg)',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: '1px solid var(--u-hair)',
           padding: '20px 22px',
         }}
@@ -123,7 +123,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
       <div
         style={{
           borderRadius: 'var(--radius-lg)',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: '1px solid var(--u-hair)',
           padding: '20px 22px',
         }}
@@ -142,7 +142,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
       <div
         style={{
           borderRadius: 'var(--radius-lg)',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: '1px solid var(--u-hair)',
           padding: '20px 22px',
         }}
@@ -183,7 +183,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
                 display: 'inline-flex', alignItems: 'center', gap: 10,
                 padding: '13px 18px', borderRadius: 'var(--radius-lg)',
                 fontSize: 14, opacity: 0.4,
-                background: 'rgba(255,255,255,0.04)',
+                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                 border: '1px solid var(--u-hair)',
                 color: 'var(--u-text-3)',
               }}
@@ -220,7 +220,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
                 display: 'inline-flex', alignItems: 'center', gap: 10,
                 padding: '13px 18px', borderRadius: 'var(--radius-lg)',
                 fontSize: 14, opacity: 0.4,
-                background: 'rgba(255,255,255,0.04)',
+                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                 border: '1px solid var(--u-hair)',
                 color: 'var(--u-text-3)',
               }}

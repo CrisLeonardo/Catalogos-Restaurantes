@@ -27,7 +27,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255,255,255,0.04)',
+    background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
     border: '1px solid var(--u-hair-2)',
     borderRadius: 'var(--radius-md)',
     padding: '10px 12px',

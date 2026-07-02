@@ -324,10 +324,13 @@ export function elementStyleVars(config: ThemeConfig, elementKey: string): Recor
   return textStyleVars(target.role, style);
 }
 
-/** Multiplicador de tamaño efectivo de un rol (para componentes que fijan px). */
+/** Multiplicador de tamaño efectivo de un rol (para componentes que fijan px).
+    Incluye la escala global (config.fontScale): sin esto, el slider "Escala de
+    texto global" solo afectaba a las páginas de plataforma (que usan --fs-*)
+    y no al menú del comensal, que fija píxeles inline × este multiplicador. */
 export function roleSize(config: ThemeConfig, role: TypographyRole, elementKey?: string): number {
   const el = elementKey ? config.elementStyles?.[elementKey] : undefined;
-  return el?.size ?? config.typography?.[role]?.size ?? 1;
+  return (el?.size ?? config.typography?.[role]?.size ?? 1) * (config.fontScale ?? 1);
 }
 
 function buildSurfaceVars(config: ThemeConfig): Record<string, string> {
@@ -369,7 +372,9 @@ function buildAdminPanelVars(config: ThemeConfig): Record<string, string> {
     : 'var(--ui-font-sans)';
 
   const scale  = useClient ? 1 : (config.adminPanelTextScale ?? 1);
-  const radius = useClient ? 1 : (config.adminPanelRadius ?? 1);
+  // Al heredar el tema del cliente, la redondez del panel sigue al cornerRadius
+  // del menú (así las tarjetas del admin se sienten parte del mismo tema).
+  const radius = useClient ? (config.cornerRadius ?? 1) : (config.adminPanelRadius ?? 1);
 
   // Color de los botones del panel (CTA del dashboard). Por defecto el acento.
   const btnBg = useClient
@@ -386,7 +391,30 @@ function buildAdminPanelVars(config: ThemeConfig): Record<string, string> {
     ? 'transparent'
     : (config.adminPanelContentBg || 'transparent');
 
+  // ── Tinta del CONTENIDO del panel ──────────────────────────
+  // El área central puede tener un fondo propio (contentBg) distinto al de los
+  // laterales; su texto debe contrastar con ESE fondo, no con el del sidebar.
+  // Si el fondo es transparente, lo que se ve detrás es el fondo del cliente
+  // (--brand-bg) → se hereda la tinta del cliente. Sin esto: "Fondo del
+  // contenido" oscuro + tema del cliente claro = texto ilegible.
+  const hasCustomContentBg = contentBg !== 'transparent';
+  const contentBgSolid = hasCustomContentBg ? contentBg : config.colorBg;
+  const contentLight = isLight(contentBgSolid);
+  const contentText = hasCustomContentBg
+    ? (contentLight ? '#15130f' : '#F5F3EF')
+    : config.colorText;
+
   return {
+    // Tinta y fondo efectivos del área de contenido (los consume .admin-main;
+    // --admin-content-bg-solid también tapa la barra "Guardar" del editor).
+    '--admin-content-text':      contentText,
+    '--admin-content-text-2':    rgba(contentText, 0.74),
+    '--admin-content-text-3':    rgba(contentText, 0.50),
+    '--admin-content-text-4':    rgba(contentText, 0.48),
+    '--admin-content-hair':      contentLight ? rgba('#000000', 0.10) : rgba(contentText, 0.10),
+    '--admin-content-hair-2':    contentLight ? rgba('#000000', 0.16) : rgba(contentText, 0.18),
+    '--admin-content-bg-solid':  contentBgSolid,
+    '--admin-content-scheme':    contentLight ? 'light' : 'dark',
     '--admin-panel-bg':         bg,
     '--admin-panel-accent':     accent,
     '--admin-panel-text':       adminText,

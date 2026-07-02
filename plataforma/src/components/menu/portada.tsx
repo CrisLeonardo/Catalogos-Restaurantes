@@ -49,7 +49,7 @@ function OpenBadge({ isOpen }: { isOpen: boolean }) {
   const content = useThemeContent();
   const label = isOpen ? content.portada.badgeOpen : content.portada.badgeClosed;
   const text = [label, config.zone].filter(Boolean).join(' · ');
-  const dotColor = isOpen ? 'var(--u-text)' : '#f87171';
+  const dotColor = isOpen ? 'var(--u-text)' : 'var(--c-danger, #f87171)';
   return (
     <span
       style={{

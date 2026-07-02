@@ -23,7 +23,7 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
   // El panel admin siempre es oscuro; sin esto el popup nativo de <select>
   // se renderiza en blanco (tema claro del SO), ilegible sobre el resto de la UI.

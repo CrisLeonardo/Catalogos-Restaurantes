@@ -338,7 +338,7 @@ export default function OrderCard({
     <div
       style={{
         borderRadius: 'var(--radius-lg)',
-        background: 'rgba(255,255,255,0.04)',
+        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         border: '1px solid var(--u-hair)',
         padding: '16px 18px',
         display: 'flex', flexDirection: 'column', gap: 12,
@@ -552,7 +552,7 @@ export default function OrderCard({
                 style={{
                   padding: '10px 14px', borderRadius: 'var(--radius-lg)',
                   fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.06)',
+                  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                   border: '1px solid var(--u-hair)',
                   color: 'var(--u-text-2)',
                 }}
@@ -627,7 +627,7 @@ export default function OrderCard({
           borderRadius: 'var(--radius-lg)',
           fontWeight: 600, fontSize: 12,
           cursor: 'pointer',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: '1px solid var(--u-hair)',
           color: 'var(--u-text-3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,

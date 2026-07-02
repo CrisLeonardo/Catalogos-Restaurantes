@@ -40,7 +40,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
             {logoUrl ? (
               <Image src={logoUrl} alt={orgName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
             ) : (
@@ -71,7 +71,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
         <div className="admin-spacer" style={{ flex: 1 }} />
 
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'rgba(255,255,255,0.1)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
+          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="user" size={17} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>

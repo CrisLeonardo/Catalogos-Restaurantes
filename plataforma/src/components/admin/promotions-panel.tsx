@@ -42,7 +42,7 @@ export default function PromotionsPanel({ restaurantId, promotions }: { restaura
                   <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>{p.name}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-accent)', padding: '2px 8px', borderRadius: 99, background: 'rgba(217,119,87,0.12)' }}>{valueLabel(p)}</span>
                   {p.code ? (
-                    <span className="t-mono" style={{ fontSize: 11, color: 'var(--u-text-2)', padding: '2px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair)' }}>{p.code}</span>
+                    <span className="t-mono" style={{ fontSize: 11, color: 'var(--u-text-2)', padding: '2px 8px', borderRadius: 6, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)' }}>{p.code}</span>
                   ) : (
                     <span style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>automática</span>
                   )}
@@ -57,8 +57,8 @@ export default function PromotionsPanel({ restaurantId, promotions }: { restaura
                 <input type="hidden" name="restaurantId" value={restaurantId} />
                 <input type="hidden" name="id" value={p.id} />
                 <input type="hidden" name="active" value={String(!p.active)} />
-                <button type="submit" className="press" title={p.active ? 'Pausar' : 'Activar'} style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: p.active ? 'var(--u-text)' : 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: p.active ? 'flex-end' : 'flex-start' }}>
-                  <span style={{ width: 19, height: 19, borderRadius: 99, background: p.active ? 'var(--brand-bg)' : 'rgba(255,255,255,0.9)' }} />
+                <button type="submit" className="press" title={p.active ? 'Pausar' : 'Activar'} style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: p.active ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: p.active ? 'flex-end' : 'flex-start' }}>
+                  <span style={{ width: 19, height: 19, borderRadius: 99, background: p.active ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)' }} />
                 </button>
               </form>
 
@@ -98,7 +98,7 @@ function PromoModal({ restaurantId, promo, onClose, onSaved }: { restaurantId: s
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
 
   const label: React.CSSProperties = { fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' };
-  const input: React.CSSProperties = { width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
+  const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'grid', placeItems: 'center', background: 'rgba(7,7,8,0.65)', backdropFilter: 'blur(8px)' }}>

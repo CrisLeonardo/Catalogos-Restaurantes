@@ -47,7 +47,7 @@ export default async function NewProductPage({
           href="/admin/menu"
           className="press"
           style={{
-            background: 'rgba(255,255,255,0.06)',
+            background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             border: '1px solid var(--u-hair)',
             borderRadius: 'var(--radius-full)',
             padding: '6px 14px',

@@ -42,7 +42,7 @@ const NEXT_STATUS: Partial<Record<ReservationStatus, ReservationStatus>> = {
 };
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const labelStyle: React.CSSProperties = {
@@ -235,7 +235,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                         </span>
                         {nextStatus && (
                           <button type="button" onClick={() => handleStatus(r.id, nextStatus)} disabled={busy} className="press"
-                            style={{ padding: '5px 12px', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 99, color: 'var(--u-text)', fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+                            style={{ padding: '5px 12px', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: 'none', borderRadius: 99, color: 'var(--u-text)', fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.5 : 1 }}>
                             {STATUS_LABEL[nextStatus]} →
                           </button>
                         )}

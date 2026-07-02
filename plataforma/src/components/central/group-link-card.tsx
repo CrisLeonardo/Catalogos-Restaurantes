@@ -39,7 +39,7 @@ export default function GroupLinkCard({ url, groupName }: { url: string; groupNa
           style={{
             flexShrink: 0, padding: '7px 14px', borderRadius: 'var(--radius-full)',
             fontSize: 12, fontWeight: 600,
-            background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.07)',
+            background: copied ? 'rgba(34,197,94,0.12)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
             color: copied ? '#22c55e' : 'var(--u-text)',
             border: `1px solid ${copied ? 'rgba(34,197,94,0.28)' : 'var(--u-hair-2)'}`,
             cursor: 'pointer', whiteSpace: 'nowrap',
@@ -80,5 +80,5 @@ export default function GroupLinkCard({ url, groupName }: { url: string; groupNa
 const pill: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px',
   borderRadius: 10, fontSize: 12, color: 'var(--u-text-2)', textDecoration: 'none',
-  border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer',
+  border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer',
 };

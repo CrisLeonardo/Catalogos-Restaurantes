@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   PLATAFORMA â€” Sistema de diseÃ±o (liquid glass)
+/* ============================================================
+   PLATAFORMA — Sistema de diseño (liquid glass)
    Portado del prototipo (tokens.css + urban.css).
    Variables themeable por restaurante: --brand-*, --glass-*.
    ============================================================ */
@@ -20,14 +20,14 @@
 }
 
 :root {
-  /* â”€â”€ TipografÃ­a: familias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Tipografía: familias ─────────────────────────────────── */
   --font-display: 'Unbounded', system-ui, sans-serif;
   --font-poster:  'Anton', 'Arial Narrow', sans-serif;
   --font-serif:   'Instrument Serif', 'Times New Roman', serif;
   --ui-font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --ui-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* â”€â”€ TEMA POR RESTAURANTE (defaults = urbano oscuro) â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── TEMA POR RESTAURANTE (defaults = urbano oscuro) ─────── */
   /* Estas 3 variables son las que cambia el Super Admin por tenant. */
   --brand-bg:     #0b0b0c;
   --brand-bg-2:   #141416;
@@ -38,12 +38,12 @@
   --u-text:    var(--brand-text);
   --u-text-2:  rgba(245, 243, 239, 0.74);
   --u-text-3:  rgba(245, 243, 239, 0.50);
-  /* 0.32 daba 2.65:1 sobre el fondo oscuro â†’ reprobaba WCAG AA. 0.48 â‰ˆ 4.6:1. */
+  /* 0.32 daba 2.65:1 sobre el fondo oscuro → reprobaba WCAG AA. 0.48 ≈ 4.6:1. */
   --u-text-4:  rgba(245, 243, 239, 0.48);
   --u-hair:    rgba(245, 243, 239, 0.10);
   --u-hair-2:  rgba(245, 243, 239, 0.18);
 
-  /* â”€â”€ LIQUID GLASS (default = translÃºcido) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── LIQUID GLASS (default = translúcido) ────────────────── */
   /* El Super Admin elige translucido | esmerilado | solido por tenant. */
   --glass-blur:   13px;
   --glass-sat:    150%;
@@ -52,7 +52,7 @@
   --glass-stroke: rgba(255, 255, 255, 0.14);
   --glass-hi:     rgba(255, 255, 255, 0.42);
 
-  /* â”€â”€ Escala tipogrÃ¡fica (mÃ³vil) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Escala tipográfica (móvil) ───────────────────────────── */
   /* --font-scale lo inyecta el tema del tenant (config.fontScale). */
   --font-scale: 1;
   --fs-display-xl: calc(40px * var(--font-scale));  --lh-display-xl: calc(44px * var(--font-scale));
@@ -62,13 +62,13 @@
   --fs-body:       calc(15px * var(--font-scale));  --lh-body:       calc(22px * var(--font-scale));
   --fs-caption:    calc(12px * var(--font-scale));  --lh-caption:    calc(16px * var(--font-scale));
 
-  /* â”€â”€ Espaciado / radios / sombras / motion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Espaciado / radios / sombras / motion ───────────────── */
   --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;  --space-8: 32px;
   --radius-md: 10px;  --radius-lg: 14px;  --radius-xl: 20px;  --radius-2xl: 28px;  --radius-full: 9999px;
   --ease-out:   cubic-bezier(0.4, 0, 0.2, 1);
   --ease-entry: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* â”€â”€ Panel admin (sobreescritos por buildThemeVars) â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Panel admin (sobreescritos por buildThemeVars) ──────── */
   --admin-panel-bg:      #0c0c0e;
   --admin-panel-accent:  #D97757;
   --admin-panel-text:    #F5F3EF;
@@ -81,7 +81,7 @@
   --admin-panel-btn-text:    #ffffff;
   --admin-panel-content-bg:  transparent;
 
-  /* â”€â”€ Fondo avanzado (sobreescritos por buildThemeVars) â”€â”€â”€â”€â”€ */
+  /* ── Fondo avanzado (sobreescritos por buildThemeVars) ───── */
   --bg-overlay-opacity: 1;
   --watermark-opacity:  0.04;
   --watermark-size:     78vmin;
@@ -102,6 +102,19 @@
   --badge-bg:       rgba(0, 0, 0, 0.62);
   --badge-text:     rgba(255, 255, 255, 0.86);
 
+  /* ── Estados semánticos (ok / peligro / aviso) ─────────────
+     Tonos -400 legibles sobre fondo oscuro; el modo claro los
+     sobreescribe con tonos -600/-700 legibles sobre blanco.
+     Úsalos en vez de #4ade80/#f87171/#fbbf24 hardcodeados. */
+  --c-ok:       #4ade80;
+  --c-ok-solid: #22c55e;   /* rellenos sólidos (checkbox de combo, etc.) */
+  --c-danger:   #f87171;
+  --c-warn:     #fbbf24;
+
+  /* Tinta del halo del pulso (pulse-ring): blanca en oscuro, se
+     invierte a tinta oscura en modo claro. */
+  --pulse-ink:  255, 255, 255;
+
   /* Tinta de la sombra de texto (legibilidad). En oscuro la sombra es negra;
      en claro se invierte a blanco (halo) para texto oscuro sobre fondo claro. */
   --shadow-ink:     0, 0, 0;
@@ -115,26 +128,32 @@
   --glass-solid-hi:     rgba(255, 255, 255, 0.08);
 }
 
-/* En modo claro el tinte de las superficies se invierte a negro suave. */
+/* En modo claro el tinte de las superficies se invierte a negro suave,
+   y los colores de estado bajan a tonos con contraste AA sobre claro. */
 html[data-scheme="light"] {
   --surface-base:   17, 17, 19;
   --badge-bg:       rgba(20, 20, 22, 0.72);
   --badge-text:     rgba(255, 255, 255, 0.92);
   --shadow-ink:     255, 255, 255;
+  --c-ok:       #15803d;
+  --c-ok-solid: #16a34a;
+  --c-danger:   #dc2626;
+  --c-warn:     #b45309;
+  --pulse-ink:  17, 17, 19;
 }
 
-/* Presets de glass por intensidad â€” modo oscuro (se aplican con data-glass en <html>) */
+/* Presets de glass por intensidad — modo oscuro (se aplican con data-glass en <html>) */
 :root[data-glass="translucido"] { --glass-blur: 13px; --glass-sat: 150%; --glass-fill: rgba(255,255,255,0.045); --glass-fill-2: rgba(255,255,255,0.085); }
 :root[data-glass="esmerilado"]  { --glass-blur: 22px; --glass-sat: 135%; --glass-fill: rgba(255,255,255,0.065); --glass-fill-2: rgba(255,255,255,0.11);  }
 :root[data-glass="solido"]      { --glass-blur: 30px; --glass-sat: 120%; --glass-fill: rgba(255,255,255,0.10);  --glass-fill-2: rgba(255,255,255,0.17);  }
 
-/* â”€â”€ Tema claro â€” implementaciÃ³n CSS pura â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   html[data-scheme="light"] tiene especificidad (1,1,0) = 11 â†’ supera
+/* ── Tema claro — implementación CSS pura ─────────────────────────────────
+   html[data-scheme="light"] tiene especificidad (1,1,0) = 11 → supera
    al :root{} inyectado por JS (0,1,0) = 10.
-   html[s="light"][data-glass="..."] tiene (1,2,0) = 21 â†’ supera a
-   :root[data-glass="..."] (0,2,0) = 20, que sobreescribirÃ­a los valores
+   html[s="light"][data-glass="..."] tiene (1,2,0) = 21 → supera a
+   :root[data-glass="..."] (0,2,0) = 20, que sobreescribiría los valores
    calculados en JS para modo claro.
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   ────────────────────────────────────────────────────────────────────────── */
 html[data-scheme="light"] {
   --glass-stroke: rgba(0, 0, 0, 0.08);
   --glass-hi:     rgba(255, 255, 255, 0.90);
@@ -189,13 +208,13 @@ html[data-scheme="light"] .glass-solid {
   }
 }
 
-/* â”€â”€ Reset / base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Reset / base ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
 
 /* Solo html recibe el background: el body queda transparente para que los
    elementos con z-index:-1 (asphalt, bg-layer) no queden tapados por el body.
-   El canvas de la pÃ¡gina (viewport completo) viene del background de html. */
+   El canvas de la página (viewport completo) viene del background de html. */
 html {
   background: var(--brand-bg);
   color: var(--u-text);
@@ -211,10 +230,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
-::selection { background: rgba(245, 243, 239, 0.85); color: #0b0b0c; }
+/* Selección de texto: invierte la tinta de la paleta (antes era fija del tema
+   Carbón y desaparecía en paletas claras). */
+::selection {
+  background: color-mix(in srgb, var(--u-text) 85%, transparent);
+  color: var(--brand-bg);
+}
 
 /* ============================================================
-   ASPHALT AMBIENCE â€” lo que el glass refracta
+   ASPHALT AMBIENCE — lo que el glass refracta
    ============================================================ */
 .asphalt {
   position: fixed; inset: 0; overflow: hidden; z-index: -1;
@@ -243,10 +267,10 @@ body {
 /* Apagar los pools de luz (config.ambientGlow = false) */
 .asphalt[data-glow="0"]::before, .asphalt[data-glow="0"]::after { display: none; }
 
-/* Fondos alternativos (config.backgroundType) â€” todos capa fija detrÃ¡s del contenido */
+/* Fondos alternativos (config.backgroundType) — todos capa fija detrás del contenido */
 .bg-layer { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 .bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
-/* velo degradado para legibilidad sobre fotos â€” opacidad controlada por --bg-overlay-opacity */
+/* velo degradado para legibilidad sobre fotos — opacidad controlada por --bg-overlay-opacity */
 .bg-image::after {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(180deg,
@@ -263,7 +287,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Watermark gigante girando (config.watermark) â€” opacidad y tamaÃ±o controlados por vars CSS */
+/* Watermark gigante girando (config.watermark) — opacidad y tamaño controlados por vars CSS */
 .asphalt-mark {
   position: fixed;
   width: var(--watermark-size, 78svmin); height: var(--watermark-size, 78svmin);
@@ -292,7 +316,7 @@ body {
     0 10px 34px rgba(0,0,0,calc(0.45 * var(--card-shadow, 1)));
   border-radius: var(--radius-xl);
 }
-/* sheen especular â€” el "tell" del liquid glass (sigue al puntero via --mx/--my) */
+/* sheen especular — el "tell" del liquid glass (sigue al puntero via --mx/--my) */
 .glass::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   background: radial-gradient(120% 80% at var(--mx, 30%) var(--my, 0%), rgba(255,255,255,0.18), transparent 45%);
@@ -317,11 +341,19 @@ body {
   border-radius: var(--radius-lg);
 }
 
-/* CTA "chip de luz" */
+/* CTA "chip de luz" — en modo oscuro es el chip blanco clásico. */
 .btn-white {
   background: linear-gradient(180deg, #ffffff, #e9e6df);
   color: #0b0b0c; border: none;
   box-shadow: 0 6px 20px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+/* En modo claro el "chip de luz" se invierte a "chip de tinta": fondo con el
+   color de texto de la paleta y texto con el color de fondo. Sin esto, el CTA
+   por defecto quedaba blanco-sobre-blanco con paletas claras. */
+html[data-scheme="light"] .btn-white {
+  background: linear-gradient(180deg, var(--u-text), color-mix(in srgb, var(--u-text) 86%, #000000));
+  color: var(--brand-bg);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--u-text) 25%, transparent), inset 0 1px 0 rgba(255,255,255,0.16);
 }
 .btn-accent {
   background: var(--brand-accent); color: var(--brand-on-accent, #fff); border: none;
@@ -456,31 +488,42 @@ body {
 }
 
 /* ============================================================
-   ANIMACIONES (entrada solo con transform â€” nunca opacity:0 en reposo)
+   ANIMACIONES (entrada solo con transform — nunca opacity:0 en reposo)
    ============================================================ */
 @keyframes fade-up  { from { transform: translateY(12px); }  to { transform: translateY(0); } }
 @keyframes fade-in  { from { transform: translateY(7px); }  to { transform: translateY(0); } }
 @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes pop-in  { 0% { transform: scale(0.93); } 60% { transform: scale(1.01); } 100% { transform: scale(1); } }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+/* El halo usa --pulse-ink (blanco en oscuro, tinta en claro): antes era blanco
+   fijo y el pulso desaparecía sobre fondos claros. */
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.5); }
-  70%  { box-shadow: 0 0 0 14px rgba(255,255,255,0); }
-  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(var(--pulse-ink, 255,255,255), 0.5); }
+  70%  { box-shadow: 0 0 0 14px rgba(var(--pulse-ink, 255,255,255), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--pulse-ink, 255,255,255), 0); }
 }
 .anim-fade-up  { animation: fade-up  560ms var(--ease-entry) both; }
 .anim-fade-in  { animation: fade-in  500ms ease both; }
 .anim-slide-up { animation: slide-up 320ms var(--ease-entry) both; }
 .anim-pop      { animation: pop-in   360ms var(--ease-entry) both; }
 
-/* Scroll horizontal sin barra (carrusel de categorÃ­as) */
+/* Scroll horizontal sin barra (carrusel de categorías) */
 .u-noscroll::-webkit-scrollbar { display: none; }
 .u-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
 
 /* ============================================================
-   PANEL ADMIN â€” layout con sidebar (como el prototipo)
+   PANEL ADMIN — layout con sidebar (como el prototipo)
    ============================================================ */
-.admin-shell { display: flex; min-height: 100svh; }
+.admin-shell {
+  display: flex; min-height: 100svh;
+  /* Redondez del panel: escala TODAS las tarjetas del admin (config
+     adminPanelRadius). El menú del cliente no se ve afectado (la vista
+     previa vive en un iframe con su propio documento). */
+  --radius-md:  calc(10px * var(--admin-panel-radius, 1));
+  --radius-lg:  calc(14px * var(--admin-panel-radius, 1));
+  --radius-xl:  calc(20px * var(--admin-panel-radius, 1));
+  --radius-2xl: calc(28px * var(--admin-panel-radius, 1));
+}
 
 /* Cuando el admin oculta el fondo del restaurante */
 html[data-admin-bg="off"] .asphalt,
@@ -494,7 +537,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   background: var(--admin-panel-bg);
   border-right: 1px solid var(--admin-panel-hair);
   font-family: var(--admin-panel-font, var(--ui-font-sans));
-  /* Redirigir la escala de texto al tema del panel (dinÃ¡mico: cliente o personalizado) */
+  /* Redirigir la escala de texto al tema del panel (dinámico: cliente o personalizado) */
   --u-text:   var(--admin-panel-text);
   --u-text-2: var(--admin-panel-text-2);
   --u-text-3: var(--admin-panel-text-3);
@@ -506,6 +549,18 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   flex: 1; min-width: 0; display: flex; flex-direction: column;
   /* Fondo del área de contenido (puede diferir del de los laterales). */
   background: var(--admin-panel-content-bg, transparent);
+  /* La tipografía del panel también aplica al contenido (antes solo
+     sidebar/topbar la recibían y la opción parecía no funcionar). */
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  /* Tinta del contenido: auto por luminancia del fondo de contenido, o la
+     del tema del cliente si el fondo es transparente (buildAdminPanelVars).
+     Evita texto claro sobre fondo claro cuando el dueño personaliza el panel. */
+  --u-text:   var(--admin-content-text,   var(--brand-text));
+  --u-text-2: var(--admin-content-text-2, rgba(245,243,239,0.74));
+  --u-text-3: var(--admin-content-text-3, rgba(245,243,239,0.50));
+  --u-text-4: var(--admin-content-text-4, rgba(245,243,239,0.48));
+  --u-hair:   var(--admin-content-hair,   rgba(245,243,239,0.10));
+  --u-hair-2: var(--admin-content-hair-2, rgba(245,243,239,0.18));
 }
 /* Botones primarios del dashboard: color personalizable (no afecta al mesero,
    que vive fuera de .admin-main y conserva el acento de la marca). */
@@ -526,16 +581,21 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   --u-hair:   var(--admin-panel-hair);
   --u-hair-2: var(--admin-panel-hair-2);
 }
-.admin-content { padding: 24px; flex: 1; min-width: 0; }
+.admin-content {
+  padding: 24px; flex: 1; min-width: 0;
+  /* Tamaño de texto del panel: escala todo el contenido (config
+     adminPanelTextScale). Antes solo escalaba los navlinks. */
+  zoom: var(--admin-panel-scale, 1);
+}
 .admin-nav {
   display: flex; flex-direction: column; gap: 4px;
   flex: 1; min-height: 0; overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.12) transparent;
+  scrollbar-color: color-mix(in srgb, var(--admin-panel-text) 15%, transparent) transparent;
 }
 .admin-nav::-webkit-scrollbar { width: 3px; }
 .admin-nav::-webkit-scrollbar-track { background: transparent; }
-.admin-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+.admin-nav::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--admin-panel-text) 15%, transparent); border-radius: 3px; }
 .admin-navgroup { display: flex; flex-direction: column; gap: 4px; }
 .admin-navgroup-toggle {
   display: flex; align-items: center; gap: 8px; width: 100%;
@@ -543,7 +603,8 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   padding: 4px 10px; margin-top: 12px; border-radius: 8px;
   transition: background 140ms;
 }
-.admin-navgroup-toggle:hover { background: rgba(255,255,255,0.05); }
+/* Hover con la tinta del panel (antes blanco fijo → invisible en panel claro) */
+.admin-navgroup-toggle:hover { background: color-mix(in srgb, var(--admin-panel-text) 6%, transparent); }
 .admin-navgroup:first-child .admin-navgroup-toggle { margin-top: 0; }
 .admin-navgroup-title { color: var(--u-text-4); flex: 1; }
 .admin-navgroup-chevron { color: var(--u-text-4); transition: transform 180ms var(--ease-out); }
@@ -564,14 +625,14 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 /* Tarjeta de usuario del panel: fondo personalizable. */
 .admin-usercard { background: var(--admin-panel-card, rgba(255,255,255,0.04)) !important; }
 .admin-navlink .nav-label { flex: 1; }
-.admin-navlink:hover { background: rgba(255,255,255,0.06); color: var(--u-text-2); }
+.admin-navlink:hover { background: color-mix(in srgb, var(--admin-panel-text) 7%, transparent); color: var(--u-text-2); }
 .admin-navlink[data-active="1"] {
   background: color-mix(in srgb, var(--admin-panel-accent) 14%, transparent);
   color: var(--admin-panel-accent);
   font-weight: 600;
 }
 
-/* Tabla de catÃ¡logo: grid en escritorio, tarjeta de 2 filas en mÃ³vil */
+/* Tabla de catálogo: grid en escritorio, tarjeta de 2 filas en móvil */
 .catalog-head, .catalog-row {
   display: grid; grid-template-columns: 1fr 110px 150px 90px;
   column-gap: 14px; align-items: center;
@@ -590,10 +651,10 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 }
 
 @media (max-width: 820px) {
-  /* â”€â”€ Admin mÃ³vil: cabecera compacta + barra de navegaciÃ³n inferior â”€â”€ */
+  /* ── Admin móvil: cabecera compacta + barra de navegación inferior ── */
   .admin-shell { flex-direction: column; }
-  /* OJO: sin backdrop-filter aquÃ­ â€” crearÃ­a un containing block y el
-     position:fixed de .admin-nav quedarÃ­a atrapado dentro de la cabecera. */
+  /* OJO: sin backdrop-filter aquí — crearía un containing block y el
+     position:fixed de .admin-nav quedaría atrapado dentro de la cabecera. */
   .admin-sidebar {
     width: 100%; height: auto; position: sticky; top: 0; z-index: 40;
     flex-direction: row; align-items: center; gap: 10px;
@@ -603,12 +664,12 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   .admin-brand { flex: 1; min-width: 0; }
   .admin-section { display: none; }
 
-  /* Nav â†’ tab bar inferior fija y scrollable en horizontal (caben todas las secciones) */
+  /* Nav → tab bar inferior fija y scrollable en horizontal (caben todas las secciones) */
   .admin-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
     flex-direction: row; gap: 0; align-items: stretch;
     padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid rgba(245,243,239,0.08);
+    border-top: 1px solid var(--admin-panel-hair);
     background: color-mix(in srgb, var(--admin-panel-bg) 88%, transparent);
     -webkit-backdrop-filter: blur(18px) saturate(130%); backdrop-filter: blur(18px) saturate(130%);
     overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; scrollbar-width: none;
@@ -640,7 +701,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
     color: var(--admin-panel-accent);
   }
 
-  /* Tarjeta de usuario â†’ chip compacto a la derecha de la cabecera */
+  /* Tarjeta de usuario → chip compacto a la derecha de la cabecera */
   .admin-usercard { padding: 5px 6px 5px 5px !important; border-radius: 99px !important; gap: 7px !important; }
   .admin-usericon { width: 28px !important; height: 28px !important; }
   .admin-usermeta { display: none; }
@@ -650,7 +711,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   /* Aire para que la tab bar no tape el final del contenido */
   .admin-content { padding: 16px 14px calc(92px + env(safe-area-inset-bottom, 0px)); }
 
-  /* CatÃ¡logo: cada fila se vuelve tarjeta de 2 lÃ­neas */
+  /* Catálogo: cada fila se vuelve tarjeta de 2 líneas */
   .catalog-head { display: none; }
   .catalog-row {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -665,7 +726,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   .catalog-cell-actions { grid-area: actions; }
 }
 
-/* Pedidos: board (flex: 1) + sidebar de grÃ¡fica (300 px fijo) */
+/* Pedidos: board (flex: 1) + sidebar de gráfica (300 px fijo) */
 .orders-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
 /* ── Ergonomía móvil/tablet (lanzamiento 2026-06) ─────────────── */
 .super-nav-scroll::-webkit-scrollbar { display: none; }
@@ -688,7 +749,7 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 
 @media (max-width: 1100px) { .orders-grid { grid-template-columns: 1fr; } }
 
-/* Truncado a N lÃ­neas (para descripciones de productos en tarjetas) */
+/* Truncado a N líneas (para descripciones de productos en tarjetas) */
 .line-clamp-2 {
   overflow: hidden;
   display: -webkit-box;
@@ -697,13 +758,13 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 }
 
 /* ============================================================
-   VISTA PREVIA EN VIVO (Super Admin) â€” editor + telÃ©fono
+   VISTA PREVIA EN VIVO (Super Admin) — editor + teléfono
    ============================================================ */
-/* `clip` evita el scroll horizontal que provocarÃ­a el full-bleed de 100vw
+/* `clip` evita el scroll horizontal que provocaría el full-bleed de 100vw
    (no crea contenedor de scroll, solo recorta). */
 html { overflow-x: clip; }
 
-/* SecciÃ³n que rompe el max-width del layout (centrado de 800px) */
+/* Sección que rompe el max-width del layout (centrado de 800px) */
 .bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
 .bleed-inner { max-width: 1240px; margin: 0 auto; }
 
@@ -719,7 +780,7 @@ html { overflow-x: clip; }
   }
 }
 
-/* Marco de telÃ©fono */
+/* Marco de teléfono */
 .preview-frame {
   width: 100%; max-width: 400px; margin: 0 auto;
   aspect-ratio: 9 / 18.5; max-height: calc(100vh - 150px);
@@ -769,7 +830,9 @@ html { overflow-x: clip; }
 .press:active { transform: scale(0.97); }
 
 button:focus { outline: none; }
-button:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 2px; }
+/* Anillo de foco con la tinta del contexto (antes blanco fijo → invisible
+   sobre fondos claros). */
+button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffffff) 70%, transparent); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }

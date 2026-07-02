@@ -178,7 +178,7 @@ export default function ImageUpload({
           border: '1.5px dashed var(--u-hair-2)',
           background: preview
             ? `url(${preview}) center/cover no-repeat`
-            : 'rgba(255,255,255,0.03)',
+            : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',

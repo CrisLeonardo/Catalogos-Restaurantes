@@ -298,7 +298,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
             )}
           </div>
 
-          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: '#f87171', lineHeight: 1.4 }}>{msg}</p>}
+          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: 'var(--c-danger, #f87171)', lineHeight: 1.4 }}>{msg}</p>}
 
           <button
             onClick={handleSave}

@@ -89,7 +89,7 @@ function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: s
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9,
       padding: '14px 10px 12px',
-      background: 'rgba(255,255,255,0.03)',
+      background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
       borderRadius: 14,
       border: '1px solid var(--u-hair)',
     }}>
@@ -205,7 +205,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             className="press"
             style={{
               width: 44, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
-              background: dineInEnabled ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+              background: dineInEnabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
               display: 'flex', justifyContent: dineInEnabled ? 'flex-end' : 'flex-start',
               transition: 'background 180ms', flexShrink: 0,
             }}
@@ -230,7 +230,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
                 onClick={() => set('dineInTableCount', Math.max(1, patch.dineInTableCount - 1))}
                 style={{
                   width: 34, height: 34, borderRadius: 9, border: '1px solid var(--u-hair-2)',
-                  background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-2)', cursor: 'pointer',
+                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer',
                   fontSize: 18, display: 'grid', placeItems: 'center',
                 }}
               >
@@ -245,7 +245,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
                 onClick={() => set('dineInTableCount', Math.min(50, patch.dineInTableCount + 1))}
                 style={{
                   width: 34, height: 34, borderRadius: 9, border: '1px solid var(--u-hair-2)',
-                  background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-2)', cursor: 'pointer',
+                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer',
                   fontSize: 18, display: 'grid', placeItems: 'center',
                 }}
               >

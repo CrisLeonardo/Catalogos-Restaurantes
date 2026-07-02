@@ -14,7 +14,7 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
+  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)',
   padding: '9px 11px',
@@ -142,7 +142,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             gridTemplateColumns: '1fr 128px 76px 36px',
             gap: 8,
             padding: '7px 12px',
-            background: 'rgba(255,255,255,0.03)',
+            background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
             borderBottom: '1px solid var(--u-hair)',
           }}>
             {['Insumo', 'Cantidad', 'Costo', ''].map((h) => (
@@ -216,7 +216,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             alignItems: 'center',
             gap: 10,
             padding: '10px 12px',
-            background: 'rgba(255,255,255,0.025)',
+            background: 'color-mix(in srgb, var(--u-text) 2.5%, transparent)',
             borderTop: '1px solid var(--u-hair)',
           }}>
             {hasZeroCost && (
@@ -278,7 +278,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             {selectedIng && selQty && parseFloat(selQty) > 0 && (
               <div style={{
                 padding: '9px 12px',
-                background: 'rgba(255,255,255,0.05)',
+                background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                 borderRadius: 'var(--radius-md)',
                 fontSize: 12,
                 color: 'var(--u-text-3)',

@@ -42,7 +42,7 @@ function notifyPrintPrefs(): void {
 
 const cardStyle: React.CSSProperties = {
   borderRadius: 'var(--radius-lg)',
-  background: 'rgba(255,255,255,0.04)',
+  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   border: '1px solid var(--u-hair)',
   padding: '18px 20px',
   display: 'flex',
@@ -165,7 +165,7 @@ export default function KitchenPrintSettings() {
           style={{
             width: 46, height: 27, borderRadius: 99, border: 'none',
             cursor: 'pointer', padding: 4, flexShrink: 0,
-            background: enabled ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+            background: enabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
             display: 'flex',
             justifyContent: enabled ? 'flex-end' : 'flex-start',
             transition: 'background 180ms',
@@ -193,7 +193,7 @@ export default function KitchenPrintSettings() {
         {!usbSupported ? (
           <div style={{
             fontSize: 12, color: 'var(--u-text-4)',
-            background: 'rgba(255,255,255,0.04)',
+            background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
             border: '1px solid var(--u-hair)',
             borderRadius: 8, padding: '8px 12px',
           }}>

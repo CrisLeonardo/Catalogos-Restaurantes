@@ -73,7 +73,7 @@ function matchedPreset(days: Record<DayKey, DayState>): string | null {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.05)',
+  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair-2)',
   borderRadius: 10,
   padding: '7px 9px',
@@ -124,7 +124,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
   });
 
   return (
-    <div style={{ border: '1px solid var(--u-hair)', borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.02)' }}>
+    <div style={{ border: '1px solid var(--u-hair)', borderRadius: 12, padding: 12, background: 'color-mix(in srgb, var(--u-text) 2%, transparent)' }}>
       <input type="hidden" name="availability" value={value} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -175,7 +175,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
                   style={{
                     width: 92, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7,
                     padding: '6px 9px', borderRadius: 9, cursor: 'pointer', flexShrink: 0,
-                    background: d.on ? 'rgba(255,255,255,0.07)' : 'transparent',
+                    background: d.on ? 'color-mix(in srgb, var(--u-text) 7%, transparent)' : 'transparent',
                     border: `1px solid ${d.on ? 'var(--u-hair-2)' : 'var(--u-hair)'}`,
                     color: d.on ? 'var(--u-text)' : 'var(--u-text-4)', fontSize: 12.5, fontWeight: 600,
                   }}

@@ -136,7 +136,7 @@ export default function FloorPlanEditor({
           className="press"
           style={{
             width: 44, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
-            background: enabled ? 'var(--u-text)' : 'rgba(255,255,255,0.12)',
+            background: enabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
             display: 'flex', justifyContent: enabled ? 'flex-end' : 'flex-start',
             transition: 'background 180ms', flexShrink: 0,
           }}
@@ -146,7 +146,7 @@ export default function FloorPlanEditor({
       </div>
 
       {!enabled ? (
-        <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--u-hair)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px solid var(--u-hair)', lineHeight: 1.5 }}>
           Desactivado: el mesero verá las mesas en una cuadrícula automática. Actívalo para diseñar tu salón por niveles.
         </div>
       ) : (
@@ -164,7 +164,7 @@ export default function FloorPlanEditor({
                       onChange={(e) => renameLevel(l.id, e.target.value)}
                       onBlur={() => setRenaming(null)}
                       onKeyDown={(e) => { if (e.key === 'Enter') setRenaming(null); }}
-                      style={{ width: 130, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)', borderRadius: 99, padding: '7px 12px', color: 'var(--u-text)', fontSize: 13, outline: 'none' }}
+                      style={{ width: 130, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair-2)', borderRadius: 99, padding: '7px 12px', color: 'var(--u-text)', fontSize: 13, outline: 'none' }}
                     />
                   ) : (
                     <button
@@ -175,7 +175,7 @@ export default function FloorPlanEditor({
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 99, cursor: 'pointer',
                         border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                        background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+                        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                         color: on ? 'var(--brand-bg)' : 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
                       }}
                     >
@@ -224,9 +224,9 @@ export default function FloorPlanEditor({
               borderRadius: 16, overflow: 'hidden',
               border: '1px solid var(--u-hair-2)',
               background:
-                'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px) 0 0 / 100% 9%,' +
-                'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0 / 6.25% 100%,' +
-                'rgba(255,255,255,0.02)',
+                'linear-gradient(color-mix(in srgb, var(--u-text) 4%, transparent) 1px, transparent 1px) 0 0 / 100% 9%,' +
+                'linear-gradient(90deg, color-mix(in srgb, var(--u-text) 4%, transparent) 1px, transparent 1px) 0 0 / 6.25% 100%,' +
+                'color-mix(in srgb, var(--u-text) 2%, transparent)',
               touchAction: 'none',
             }}
           >
@@ -250,7 +250,7 @@ export default function FloorPlanEditor({
                     transition: dragging ? 'none' : 'transform 120ms',
                     borderRadius: t.shape === 'square' ? 14 : 99,
                     border: `2px solid ${dragging ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
-                    background: dragging ? 'color-mix(in srgb, var(--brand-accent) 18%, var(--brand-bg))' : 'rgba(255,255,255,0.07)',
+                    background: dragging ? 'color-mix(in srgb, var(--brand-accent) 18%, var(--brand-bg))' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
                     color: 'var(--u-text)',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0,
                     cursor: 'grab', userSelect: 'none', touchAction: 'none',
@@ -292,7 +292,7 @@ export default function FloorPlanEditor({
                     onClick={() => placeTable(n)}
                     className="press"
                     title={`Colocar mesa ${n} en ${levels.find((l) => l.id === active)?.name ?? 'este nivel'}`}
-                    style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', fontWeight: 700, fontSize: 15 }}
+                    style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', fontWeight: 700, fontSize: 15 }}
                   >
                     {n}
                   </button>

@@ -12,6 +12,26 @@ import ImageUpload from '@/components/admin/image-upload';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
 import { saveAdminRestaurantTheme } from '@/lib/actions/restaurant';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import { isLight } from '@/lib/theme/resolve';
+
+/* ── Contraste WCAG (asistente de legibilidad) ─────────────
+   El dueño no sabe de ratios: si elige colores que no se leen,
+   se lo decimos en su idioma y le damos un botón para arreglarlo. */
+function relLum(hex: string): number {
+  let h = hex.trim().replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const n = parseInt(h.slice(0, 6), 16);
+  if (Number.isNaN(n)) return 1;
+  const chan = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255);
+}
+function contrast(a: string, b: string): number {
+  const la = relLum(a), lb = relLum(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
 
 /* ── Paletas de color prediseñadas ───────────────────────── */
 const PALETTES: { name: string; colorBg: string; colorBg2: string; colorText: string; colorAccent: string; onAccent: string; scheme: ThemeConfig['scheme'] }[] = [
@@ -88,7 +108,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         {/* ── Tabs ── */}
         <div style={{
           display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 16,
-          padding: '6px', background: 'rgba(255,255,255,0.04)', borderRadius: 14,
+          padding: '6px', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', borderRadius: 14,
           border: '1px solid var(--u-hair)',
         }}>
           {TABS.map(({ key, label, icon }) => {
@@ -104,7 +124,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                   padding: '8px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
                   border: 'none',
                   background: on ? 'var(--u-text)' : 'transparent',
-                  color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
+                  color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)',
                   transition: 'all 150ms',
                 }}
               >
@@ -158,11 +178,11 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                       border: '1.5px solid var(--u-hair-2)', borderRadius: 10, padding: '8px 10px',
-                      background: 'rgba(255,255,255,0.03)', cursor: 'pointer', minWidth: 68,
+                      background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', minWidth: 68,
                     }}
                   >
                     <div style={{ display: 'flex', gap: 3 }}>
-                      <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorBg, border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorBg, border: '1px solid color-mix(in srgb, var(--u-text) 10%, transparent)' }} />
                       <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorAccent }} />
                       <span style={{ width: 16, height: 16, borderRadius: 4, background: p.colorText, border: '1px solid rgba(0,0,0,0.1)' }} />
                     </div>
@@ -184,6 +204,32 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 options={[['dark', 'Oscuro'], ['light', 'Claro']]}
                 onChange={(v) => setC('scheme', v as ThemeConfig['scheme'])}
               />
+
+              {/* Asistente de legibilidad: avisa combinaciones ilegibles y las
+                  arregla con un toque, sin cambiar nada por sorpresa. */}
+              {contrast(config.colorText, config.colorBg) < 4.5 && (
+                <ContrastHint
+                  text="El color de texto casi no se distingue del fondo — el menú costará leerse."
+                  actionLabel="Corregir texto"
+                  onFix={() => setC('colorText', isLight(config.colorBg) ? '#15130f' : '#F5F3EF')}
+                />
+              )}
+              {contrast(config.onAccent, config.colorAccent) < 3 && (
+                <ContrastHint
+                  text="El texto sobre el acento no es legible (botones y badges de marca)."
+                  actionLabel="Corregir contraste"
+                  onFix={() => setC('onAccent', isLight(config.colorAccent) ? '#15130f' : '#ffffff')}
+                />
+              )}
+              {isLight(config.colorBg) !== (config.scheme === 'light') && (
+                <ContrastHint
+                  text={isLight(config.colorBg)
+                    ? 'Tu fondo es claro pero el modo de color está en "Oscuro": las tarjetas y sombras se verán lavadas.'
+                    : 'Tu fondo es oscuro pero el modo de color está en "Claro": las tarjetas y sombras se verán sucias.'}
+                  actionLabel={`Cambiar a ${isLight(config.colorBg) ? 'Claro' : 'Oscuro'}`}
+                  onFix={() => setC('scheme', isLight(config.colorBg) ? 'light' : 'dark')}
+                />
+              )}
             </Section>
           </div>
         )}
@@ -530,7 +576,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
           position: 'sticky', bottom: 0,
           display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
           flexWrap: 'wrap',
-          background: 'linear-gradient(to top, var(--u-bg) 70%, transparent)',
+          /* Velo que tapa el contenido al hacer scroll. OJO: --u-bg no existe
+             (bug histórico: la barra quedaba transparente); el fondo sólido
+             efectivo del contenido lo emite buildAdminPanelVars. */
+          background: 'linear-gradient(to top, var(--admin-content-bg-solid, var(--brand-bg)) 70%, transparent)',
           marginTop: 14,
         }}>
           <button
@@ -551,7 +600,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             Ver sitio ↗
           </a>
           {msg && (
-            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>
+            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger, #f87171)' : 'var(--c-ok, #4ade80)' }}>{msg}</span>
           )}
         </div>
       </div>
@@ -606,6 +655,38 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
   );
 }
 
+/** Aviso de legibilidad con arreglo de un toque (asistente de contraste). */
+function ContrastHint({ text, actionLabel, onFix }: { text: string; actionLabel: string; onFix: () => void }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+        borderRadius: 'var(--radius-md)',
+        background: 'color-mix(in srgb, var(--c-warn, #fbbf24) 10%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 35%, transparent)',
+      }}
+    >
+      <span style={{ color: 'var(--c-warn, #fbbf24)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        <Icon name="alertCircle" size={16} />
+      </span>
+      <span style={{ flex: 1, fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.45 }}>{text}</span>
+      <button
+        type="button"
+        onClick={onFix}
+        className="press"
+        style={{
+          flexShrink: 0, padding: '7px 12px', borderRadius: 99, border: 'none', cursor: 'pointer',
+          background: 'var(--u-text)', color: 'var(--admin-content-bg-solid, var(--brand-bg))',
+          fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
+        }}
+      >
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -616,15 +697,23 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 
+/* El select nativo sigue el esquema efectivo del contenido del panel
+   (--admin-content-scheme): así el popup del sistema no sale blanco en un
+   panel oscuro ni negro en un panel claro. */
 const selectStyle: React.CSSProperties = {
-  ...inputStyle, background: '#1a1a1a', colorScheme: 'dark',
+  ...inputStyle,
+  background: 'var(--admin-content-bg-solid, #1a1a1a)',
+  colorScheme: 'var(--admin-content-scheme, dark)' as React.CSSProperties['colorScheme'],
 };
 
-const optionStyle: React.CSSProperties = { background: '#1a1a1a', color: '#e5e5e5' };
+const optionStyle: React.CSSProperties = {
+  background: 'var(--admin-content-bg-solid, #1a1a1a)',
+  color: 'var(--u-text, #e5e5e5)',
+};
 
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
@@ -658,9 +747,9 @@ function OptColorCtl({ label, hint, value, fallback, onChange }: { label: string
           type="button"
           onClick={() => onChange(custom ? '' : fallback)}
           className="press"
-          style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: custom ? 'var(--u-text)' : 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: custom ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}
+          style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: custom ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)', display: 'flex', justifyContent: custom ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}
         >
-          <span style={{ width: 19, height: 19, borderRadius: 99, background: custom ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+          <span style={{ width: 19, height: 19, borderRadius: 99, background: custom ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text)' }} />
         </button>
       </div>
       {custom && (
@@ -690,8 +779,8 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
+      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
+        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text)' }} />
       </button>
     </div>
   );
@@ -704,7 +793,7 @@ function Segmented({ label, value, options, onChange }: { label: string; value: 
         {options.map(([val, lbl]) => {
           const on = value === val;
           return (
-            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)', transition: 'all 150ms' }}>
               {lbl}
             </button>
           );

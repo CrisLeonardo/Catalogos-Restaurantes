@@ -1,11 +1,14 @@
 "use client";
 
 import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useThemeConfig } from "@/lib/theme/context";
 
 type GlassVariant = "default" | "quiet" | "solid";
 
 interface GlassProps {
   variant?: GlassVariant;
+  /** Fuerza el sheen on/off. Sin prop, obedece config.sheen del tema
+      (en superficies de plataforma sin tema queda activo por defecto). */
   sheen?: boolean;
   interactive?: boolean;
   className?: string;
@@ -20,7 +23,7 @@ interface GlassProps {
  */
 export function Glass({
   variant = "default",
-  sheen = true,
+  sheen,
   interactive = false,
   className = "",
   style,
@@ -28,10 +31,14 @@ export function Glass({
   onClick,
 }: GlassProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const config = useThemeConfig();
+  // El toggle "Brillo que sigue al cursor" del editor vive en config.sheen;
+  // antes nadie lo leía y la opción no tenía efecto real.
+  const sheenOn = sheen ?? config.sheen ?? true;
   const cls = variant === "quiet" ? "glass-quiet" : variant === "solid" ? "glass-solid" : "glass";
 
   const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!sheen || variant !== "default" || !ref.current) return;
+    if (!sheenOn || variant !== "default" || !ref.current) return;
     const r = ref.current.getBoundingClientRect();
     ref.current.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
     ref.current.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
@@ -60,47 +67,5 @@ export function Glass({
     >
       {children}
     </div>
-  );
-}
-
-/** Precio con símbolo de moneda compacto (Q por defecto). */
-export function Price({
-  amount,
-  symbol = "Q",
-  size = 16,
-}: {
-  amount: number;
-  symbol?: string;
-  size?: number;
-}) {
-  return (
-    <span className="t-mono" style={{ fontSize: size, fontWeight: 600, whiteSpace: "nowrap" }}>
-      <span style={{ fontSize: size * 0.66, opacity: 0.6, marginRight: 2 }}>{symbol}</span>
-      {amount.toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    </span>
-  );
-}
-
-/** Pill / etiqueta sobre glass. */
-export function Tag({ label }: { label: string }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "3px 9px",
-        borderRadius: 999,
-        background: "rgba(255,255,255,0.10)",
-        border: "1px solid var(--u-hair-2)",
-        color: "var(--u-text)",
-        fontWeight: 600,
-        fontSize: 10.5,
-        letterSpacing: "0.02em",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-      }}
-    >
-      {label}
-    </span>
   );
 }

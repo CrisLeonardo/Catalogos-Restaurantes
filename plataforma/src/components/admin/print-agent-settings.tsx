@@ -15,7 +15,7 @@ import {
 
 const cardStyle: React.CSSProperties = {
   borderRadius: 'var(--radius-lg)',
-  background: 'rgba(255,255,255,0.04)',
+  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   border: '1px solid var(--u-hair)',
   padding: '18px 20px',
   display: 'flex',
@@ -459,7 +459,7 @@ export default function PrintAgentSettings() {
           type="button"
           onClick={load}
           className="press"
-          style={{ ...btnStyle, marginLeft: 10, padding: '4px 9px', color: 'var(--u-text-4)', background: 'rgba(255,255,255,0.05)' }}
+          style={{ ...btnStyle, marginLeft: 10, padding: '4px 9px', color: 'var(--u-text-4)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}
         >
           ↻ Actualizar
         </button>

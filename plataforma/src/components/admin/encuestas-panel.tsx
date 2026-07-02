@@ -26,7 +26,7 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.08)' }}>
+      <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}>
         <div style={{ height: '100%', borderRadius: 99, background: '#fbbf24', width: `${pct}%`, transition: 'width 400ms' }} />
       </div>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</span>
@@ -80,7 +80,7 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 400, overflowY: 'auto' }}>
               {ratings.map((r) => (
-                <div key={r.id} style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div key={r.id} style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <Stars value={r.rating} />

@@ -144,7 +144,7 @@ function IOSBanner({ brandName, onDismiss }: { brandName: string; onDismiss: () 
           style={{
             flexShrink: 0, display: 'grid', placeItems: 'center',
             width: 28, height: 28, borderRadius: 99, border: 'none', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.10)', color: 'var(--u-text-2)',
+            background: 'var(--surface-3)', color: 'var(--u-text-2)',
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -226,7 +226,7 @@ function AndroidBanner({
           style={{
             flexShrink: 0, display: 'grid', placeItems: 'center',
             width: 28, height: 28, borderRadius: 99, border: 'none', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.10)', color: 'var(--u-text-2)',
+            background: 'var(--surface-3)', color: 'var(--u-text-2)',
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

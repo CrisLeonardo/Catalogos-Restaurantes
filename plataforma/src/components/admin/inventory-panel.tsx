@@ -49,7 +49,7 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
               onClick={() => setActiveCat(c.id)}
               style={{
                 flexShrink: 0, padding: '8px 14px', borderRadius: 99, cursor: 'pointer',
-                background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)',
+                background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                 color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
                 border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
                 fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
@@ -183,7 +183,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
 }
 
 const inputStyle: React.CSSProperties = {
-  width: 110, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+  width: 110, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
   borderRadius: 10, padding: '9px 11px', color: 'var(--u-text)', fontSize: 14,
   outline: 'none', fontFamily: 'var(--ui-font-mono)',
 };
@@ -210,7 +210,7 @@ function Tag({ text, tone }: { text: string; tone?: 'bad' | 'warn' | 'ok' }) {
     bad: { c: '#f87171', b: 'rgba(248,113,113,0.12)', br: 'rgba(248,113,113,0.25)' },
     warn: { c: '#fbbf24', b: 'rgba(251,191,36,0.12)', br: 'rgba(251,191,36,0.25)' },
     ok: { c: '#4ade80', b: 'rgba(74,222,128,0.1)', br: 'rgba(74,222,128,0.22)' },
-    none: { c: 'var(--u-text-4)', b: 'rgba(255,255,255,0.05)', br: 'var(--u-hair)' },
+    none: { c: 'var(--u-text-4)', b: 'color-mix(in srgb, var(--u-text) 5%, transparent)', br: 'var(--u-hair)' },
   };
   const s = map[tone ?? 'none'];
   return (

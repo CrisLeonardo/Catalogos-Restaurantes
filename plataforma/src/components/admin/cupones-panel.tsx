@@ -13,7 +13,7 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const labelStyle: React.CSSProperties = {
@@ -184,7 +184,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             const busy = busyId === c.id && isPending;
             return (
               <Glass key={c.id} variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', opacity: busy ? 0.6 : 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', flexShrink: 0 }}>
                   <Icon name="ticket" size={18} style={{ color: statusLabel === 'Activo' ? 'var(--brand-accent)' : 'var(--u-text-4)' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 140 }}>
@@ -204,7 +204,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   {/* Toggle activo/inactivo */}
                   <button type="button" onClick={() => handleToggle(c.id, c.is_active)} disabled={busy} className="press"
-                    style={{ width: 38, height: 22, borderRadius: 999, flexShrink: 0, padding: 3, background: c.is_active ? 'var(--admin-panel-btn)' : 'rgba(255,255,255,0.18)', border: 'none', cursor: busy ? 'wait' : 'pointer', display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start', transition: 'background 180ms' }}>
+                    style={{ width: 38, height: 22, borderRadius: 999, flexShrink: 0, padding: 3, background: c.is_active ? 'var(--admin-panel-btn)' : 'color-mix(in srgb, var(--u-text) 18%, transparent)', border: 'none', cursor: busy ? 'wait' : 'pointer', display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start', transition: 'background 180ms' }}>
                     <span style={{ width: 16, height: 16, borderRadius: 999, background: c.is_active ? 'var(--admin-panel-btn-text)' : '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
                   </button>
                   <button type="button" onClick={() => handleDelete(c.id)} disabled={busy} className="press"

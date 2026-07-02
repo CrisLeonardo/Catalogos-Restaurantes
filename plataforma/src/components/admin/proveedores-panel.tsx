@@ -15,7 +15,7 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const selectStyle: React.CSSProperties = {
@@ -224,7 +224,7 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
                 <button type="button" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="x" size={12} /></button>
               </div>
             ))}
-            <button type="button" onClick={() => setLines((ls) => [...ls, { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }])} className="press" style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-2)' }}>+ Renglón</button>
+            <button type="button" onClick={() => setLines((ls) => [...ls, { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }])} className="press" style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-2)' }}>+ Renglón</button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--u-hair)', paddingTop: 10 }}>
@@ -279,7 +279,7 @@ function ActionBtn({ label, onClick, disabled, accent, danger }: { label: string
     <button onClick={onClick} disabled={disabled} className="press" style={{
       padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: disabled ? 'wait' : 'pointer',
       border: `1px solid ${danger ? 'rgba(239,68,68,0.3)' : accent ? 'transparent' : 'var(--u-hair-2)'}`,
-      background: accent ? 'var(--brand-accent)' : danger ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)',
+      background: accent ? 'var(--brand-accent)' : danger ? 'rgba(239,68,68,0.1)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
       color: accent ? '#fff' : danger ? '#f87171' : 'var(--u-text-2)',
     }}>{label}</button>
   );

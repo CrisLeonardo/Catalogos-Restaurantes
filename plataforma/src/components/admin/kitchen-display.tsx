@@ -30,7 +30,7 @@ const C = {
   panelHi: '#1c2026',
   text: '#f5f7fa',
   dim: '#9aa3ad',
-  hair: 'rgba(255,255,255,0.09)',
+  hair: 'color-mix(in srgb, var(--u-text) 9%, transparent)',
   green: '#22c55e',
   amber: '#f59e0b',
   red: '#ef4444',

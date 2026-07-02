@@ -30,7 +30,7 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
   const monedas  = entries.filter(d => d.kind === 'M');
 
   return (
-    <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, fontSize: 11.5 }}>
+    <div style={{ marginTop: 8, padding: '10px 12px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 10, fontSize: 11.5 }}>
       {billetes.length > 0 && (
         <div style={{ marginBottom: monedas.length > 0 ? 6 : 0 }}>
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
@@ -100,7 +100,7 @@ function CashCountCard({
             {entry.shift_label && (
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
-                background: 'rgba(255,255,255,0.07)', color: 'var(--u-text-3)',
+                background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', color: 'var(--u-text-3)',
                 letterSpacing: '0.04em',
               }}>
                 {entry.shift_label}

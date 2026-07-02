@@ -283,7 +283,7 @@ export default function OrderTracker({
                         background: active ? 'var(--u-text)' : done ? 'var(--surface-strong)' : 'var(--surface-1)',
                         color: active ? 'var(--brand-bg)' : color,
                         border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
-                        boxShadow: active && config.animations ? '0 0 0 0 rgba(255,255,255,0.4)' : undefined,
+                        boxShadow: active && config.animations ? '0 0 0 0 rgba(var(--pulse-ink, 255,255,255), 0.4)' : undefined,
                         animation: active && config.animations ? 'pulse-ring 2.2s infinite' : undefined,
                         transition: 'all 300ms var(--ease-entry)',
                       }}

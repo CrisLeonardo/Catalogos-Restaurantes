@@ -63,11 +63,12 @@ export default function MenuShell({ config, content, categories, products, resta
                 role="status"
                 style={{
                   display: 'flex', gap: 12, alignItems: 'flex-start',
-                  background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.30)',
+                  background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)',
                   borderRadius: 'var(--radius-lg)', padding: '13px 15px', marginBottom: 14,
                 }}
               >
-                <span style={{ color: '#f87171', flexShrink: 0, marginTop: 1 }}>
+                <span style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0, marginTop: 1 }}>
                   <Icon name="clock" size={18} />
                 </span>
                 <div>

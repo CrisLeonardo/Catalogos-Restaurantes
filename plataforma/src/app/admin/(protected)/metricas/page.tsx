@@ -90,7 +90,7 @@ export default async function AdminMetricasPage() {
                     height: `${Math.max(h, day.visits > 0 ? 6 : 2)}%`,
                     minHeight: 2,
                     borderRadius: '4px 4px 0 0',
-                    background: day.isToday ? 'var(--u-text)' : 'rgba(255,255,255,0.14)',
+                    background: day.isToday ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
                     transition: 'height 400ms var(--ease-entry)',
                   }}
                   title={`${day.label}: ${day.visits} visitas`}

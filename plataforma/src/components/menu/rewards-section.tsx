@@ -13,6 +13,7 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
+import { roleSize } from '@/lib/theme/resolve';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { Tag } from '@/components/menu/ui';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
@@ -170,7 +171,7 @@ function RewardTile({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuRe
         )}
       </div>
       <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div className="ct-product-name" style={{ fontSize: 14.5 * config.typography.productName.size, flex: 1 }}>{r.title}</div>
+        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1 }}>{r.title}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <PointsPrice cost={r.points_cost} dim={!affordable && !inCart} />
           {ordersEnabled && <RedeemControl inCart={inCart} affordable={affordable} soldOut={soldOut} />}
@@ -192,10 +193,10 @@ function RewardRow({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuRew
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="ct-product-name" style={{ fontSize: 15.5 * config.typography.productName.size }}>{r.title}</div>
+          <div className="ct-product-name" style={{ fontSize: 15.5 * roleSize(config, 'productName') }}>{r.title}</div>
           {config.showTags && r.tags?.[0] && <Tag label={r.tags[0]} small />}
         </div>
-        {r.description && <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * config.typography.productDesc.size }}>{r.description}</div>}
+        {r.description && <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{r.description}</div>}
         <PointsPrice cost={r.points_cost} dim={!affordable && !inCart} />
       </div>
       {ordersEnabled && <RedeemControl inCart={inCart} affordable={affordable} soldOut={soldOut} />}
@@ -292,7 +293,7 @@ function RewardsMenu({
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
+                  style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
                 <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '0 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
                   {busy ? '…' : 'Enlazar'}
                 </button>
@@ -310,7 +311,7 @@ function RewardsMenu({
               {googleAuthEnabled && <GoogleSignInButton full />}
             </div>
           )}
-          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') ? '#4ade80' : '#f87171' }}>{msg}</p>}
+          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{msg}</p>}
         </Glass>
 
         {/* Catálogo de canje (mismas tarjetas del menú, precio en puntos) */}

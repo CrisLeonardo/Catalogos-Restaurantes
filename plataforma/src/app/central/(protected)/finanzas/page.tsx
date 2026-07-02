@@ -54,7 +54,7 @@ export default async function CentralFinanzasPage({
           {report.combinedSeries.map((d, i) => {
             const h = (d.revenue / maxRev) * 100;
             return (
-              <div key={i} title={`${d.label}: ${money(d.revenue)}`} style={{ flex: 1, minWidth: 0, height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2, borderRadius: '3px 3px 0 0', background: d.revenue > 0 ? 'var(--brand-accent)' : 'rgba(255,255,255,0.08)' }} />
+              <div key={i} title={`${d.label}: ${money(d.revenue)}`} style={{ flex: 1, minWidth: 0, height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2, borderRadius: '3px 3px 0 0', background: d.revenue > 0 ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)' }} />
             );
           })}
         </div>

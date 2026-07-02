@@ -203,10 +203,10 @@ function ProductOptionsModal({
                       return (
                         <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'rgba(34,197,94,0.10)' : 'rgba(255,255,255,0.03)',
+                            background: included ? 'rgba(34,197,94,0.10)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
                             border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}` }}>
                           <span style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'grid', placeItems: 'center',
-                            background: included ? '#22c55e' : 'rgba(255,255,255,0.08)', border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair)'}` }}>
+                            background: included ? '#22c55e' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair)'}` }}>
                             {included && <Icon name="check" size={12} style={{ color: '#fff' }} />}
                           </span>
                           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: included ? 'var(--u-text)' : 'var(--u-text-3)', textDecoration: included ? 'none' : 'line-through' }}>
@@ -230,7 +230,7 @@ function ProductOptionsModal({
                       return (
                         <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
-                            background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.05)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                            background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
                             border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 13 }}>
                           {on && <Icon name="check" size={13} />}
                           {choice.name}
@@ -279,7 +279,7 @@ function WaiterHeader({
 }) {
   return (
     <header style={{
-      background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid var(--u-hair)',
+      background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderBottom: '1px solid var(--u-hair)',
       position: 'sticky', top: 0, zIndex: 200,
     }}>
       <div className="waiter-wrap" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
@@ -500,7 +500,7 @@ export default function WaiterPanel({
 
   /* ── UI compartida ───────────────────────────────────── */
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
     borderRadius: 12, padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%',
   };
 
@@ -622,7 +622,7 @@ export default function WaiterPanel({
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)', marginBottom: 4 }}>Elige la mesa</div>
             <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(255,255,255,0.1)', border: '1px solid var(--u-hair)' }} /> Libre
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', border: '1px solid var(--u-hair)' }} /> Libre
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(251,191,36,0.25)', border: '1px solid rgba(251,191,36,0.5)' }} /> Con pedido activo
@@ -642,7 +642,7 @@ export default function WaiterPanel({
                           type="button"
                           onClick={() => setActiveLevel(l.id)}
                           className="press"
-                          style={{ padding: '9px 16px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--brand-accent)' : 'rgba(255,255,255,0.06)', color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600 }}
+                          style={{ padding: '9px 16px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600 }}
                         >
                           {l.name}
                         </button>
@@ -748,9 +748,9 @@ export default function WaiterPanel({
                         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>{money(line.price, currency)} c/u</div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        <button type="button" onClick={() => decLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <button type="button" onClick={() => decLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
                         <span style={{ minWidth: 22, textAlign: 'center', fontWeight: 700, fontSize: 15 }}>{line.quantity}</span>
-                        <button type="button" onClick={() => incLine(line)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                        <button type="button" onClick={() => incLine(line)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
                       </div>
                     </div>
                   ))}
@@ -828,7 +828,7 @@ export default function WaiterPanel({
             style={{ ...inputStyle, paddingLeft: 40, paddingRight: search ? 40 : 14 }}
           />
           {search && (
-            <button type="button" onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text-3)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+            <button type="button" onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 8, border: 'none', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
               <Icon name="x" size={15} />
             </button>
           )}
@@ -844,7 +844,7 @@ export default function WaiterPanel({
             className="press"
             style={{
               whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
-              background: activeCat === null ? 'var(--brand-accent)' : 'rgba(255,255,255,0.07)',
+              background: activeCat === null ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
               color: activeCat === null ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
               flexShrink: 0,
             }}
@@ -859,7 +859,7 @@ export default function WaiterPanel({
               className="press"
               style={{
                 whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
-                background: activeCat === cat.id ? 'var(--brand-accent)' : 'rgba(255,255,255,0.07)',
+                background: activeCat === cat.id ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
                 color: activeCat === cat.id ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
                 flexShrink: 0,
               }}
@@ -918,13 +918,13 @@ export default function WaiterPanel({
 
                     {/* Controles rápidos: +/- para productos sin opciones; "+ Agregar" para los que tienen */}
                     {hasOptions ? (
-                      <button type="button" onClick={() => setProductModal(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
+                      <button type="button" onClick={() => setProductModal(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
                         {qty > 0 ? 'Agregar otro' : '+ Elegir opciones'}
                       </button>
                     ) : qty > 0 ? (
                       <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button type="button" onClick={() => decProduct(p.id)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
-                        <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                        <button type="button" onClick={() => decProduct(p.id)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
                       </div>
                     ) : (
                       <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 }}>

@@ -564,8 +564,8 @@ export default function CheckoutForm({
                       aria-label={`${s} estrella${s !== 1 ? 's' : ''}`}
                     >
                       <svg width={28} height={28} viewBox="0 0 24 24"
-                        fill={filled ? '#fbbf24' : 'none'}
-                        stroke={filled ? '#fbbf24' : 'var(--u-text-3)'}
+                        fill={filled ? 'var(--c-warn, #fbbf24)' : 'none'}
+                        stroke={filled ? 'var(--c-warn, #fbbf24)' : 'var(--u-text-3)'}
                         strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
                         style={{ transition: 'all 120ms' }}
                       >
@@ -620,7 +620,7 @@ export default function CheckoutForm({
             </Glass>
           )}
           {encuestasActive && ratingSent && (
-            <p style={{ fontSize: 14, color: '#4ade80', fontWeight: 600, textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: 'var(--c-ok, #4ade80)', fontWeight: 600, textAlign: 'center' }}>
               ¡Gracias por tu calificación! ⭐
             </p>
           )}
@@ -684,14 +684,14 @@ export default function CheckoutForm({
             )}
             {discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: '#4ade80' }}>Descuento{appliedPromo ? ` · ${appliedPromo.name}` : ''}</span>
-                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
+                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>Descuento{appliedPromo ? ` · ${appliedPromo.name}` : ''}</span>
+                <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
             {loyaltyDiscount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="star" size={13} /> {redeemPoints} puntos canjeados</span>
-                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(loyaltyDiscount, config)}</span>
+                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="star" size={13} /> {redeemPoints} puntos canjeados</span>
+                <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(loyaltyDiscount, config)}</span>
               </div>
             )}
             {tipAmount > 0 && (
@@ -716,7 +716,7 @@ export default function CheckoutForm({
           {hasPromos && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
             {appliedPromo ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12.5, color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="checkCircle" size={15} /> Cupón {appliedPromo.code} aplicado
                 </span>
                 <button type="button" onClick={() => { setAppliedPromo(null); setPromoCode(''); setPromoMsg(''); }} className="press t-mute" style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
@@ -736,7 +736,7 @@ export default function CheckoutForm({
                 </button>
               </div>
             )}
-            {promoMsg && <p style={{ fontSize: 12, color: '#f87171', marginTop: 7 }}>{promoMsg}</p>}
+            {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
 
           {/* Lealtad — sin sesión no hay forma de saber ni usar el saldo */}
@@ -832,7 +832,7 @@ export default function CheckoutForm({
         <Field label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
         <Field label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={(tried || phone.trim().length > 0) && errs.phone} />
         {phone.trim().length > 0 && !errs.phone && (
-          <p style={{ fontSize: 11.5, color: '#4ade80', marginTop: -12 }}>
+          <p style={{ fontSize: 11.5, color: 'var(--c-ok, #4ade80)', marginTop: -12 }}>
             Número válido ✓
           </p>
         )}
@@ -871,7 +871,7 @@ export default function CheckoutForm({
               </div>
             )}
             {tried && errs.table && (
-              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 7 }}>{errs.table}</p>
+              <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 7 }}>{errs.table}</p>
             )}
           </div>
         )}
@@ -935,7 +935,7 @@ export default function CheckoutForm({
               })}
             </div>
             {tried && errs.zone && !outOfZone && (
-              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{errs.zone}</p>
+              <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.zone}</p>
             )}
             {outOfZone && (
               <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
@@ -983,7 +983,7 @@ export default function CheckoutForm({
               <div style={{
                 marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,
                 fontSize: 12.5,
-                color: geoOutOfRange ? '#f87171' : '#4ade80',
+                color: geoOutOfRange ? 'var(--c-danger, #f87171)' : 'var(--c-ok, #4ade80)',
               }}>
                 <Icon
                   name={geoOutOfRange ? 'x' : 'check'}
@@ -997,7 +997,7 @@ export default function CheckoutForm({
               </div>
             )}
             {tried && errs.geo && (
-              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{errs.geo}</p>
+              <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.geo}</p>
             )}
           </div>
         )}
@@ -1069,7 +1069,7 @@ export default function CheckoutForm({
                   style={{
                     width: '100%',
                     background: 'var(--surface-2)',
-                    border: `1px solid ${tried && !cashAmountValid ? '#ff6b6b' : 'var(--u-hair)'}`,
+                    border: `1px solid ${tried && !cashAmountValid ? 'var(--c-danger, #ff6b6b)' : 'var(--u-hair)'}`,
                     borderRadius: 'var(--radius-lg)',
                     padding: '12px 14px',
                     color: 'var(--u-text)',
@@ -1079,15 +1079,15 @@ export default function CheckoutForm({
                   }}
                 />
                 {tried && !cashAmountValid && (
-                  <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>
+                  <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>
                     {cashAmount.trim() ? `El monto mínimo es ${formatPrice(finalTotal, config)}` : 'Ingresa el monto con el que pagarás'}
                   </p>
                 )}
                 {cashAmountErr && !tried && (
-                  <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 6 }}>{cashAmountErr}</p>
+                  <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{cashAmountErr}</p>
                 )}
                 {cashAmount.trim() !== '' && cashAmountNum >= finalTotal && (
-                  <p style={{ fontSize: 12.5, color: '#4ade80', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <p style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Icon name="check" size={13} strokeWidth={3} />
                     Cambio que recibirás: <strong>{formatPrice(cashAmountNum - finalTotal, config)}</strong>
                   </p>
@@ -1098,7 +1098,7 @@ export default function CheckoutForm({
         )}
 
         {error && (
-          <p style={{ fontSize: 13, color: '#ff6b6b', background: 'rgba(255,107,107,0.10)', border: '1px solid rgba(255,107,107,0.20)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
+          <p style={{ fontSize: 13, color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
         <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
