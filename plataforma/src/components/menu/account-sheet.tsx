@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
-import { getMyLoyalty, getMyCheckoutProfile } from '@/lib/actions/loyalty';
+import { getMyLoyalty, getMyCheckoutProfile, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
@@ -45,33 +45,40 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
   const [user, setUser] = useState<User | null>(null);
   const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  // ¿La cuenta de Google ya está enlazada a un cliente con historial? (con o
+  // sin el módulo de lealtad activo — el enlace también sirve para "Mis
+  // pedidos" y el autocompletado del checkout). null = aún no se sabe.
+  const [identified, setIdentified] = useState<boolean | null>(null);
+  const [linkPhone, setLinkPhone] = useState('');
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkMsg, setLinkMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const local = getLocalProfile(restaurantId);
-      // El tipo de entrega es preferencia de este dispositivo; no se guarda
-      // en la cuenta, así que siempre se toma de aquí si existe.
-      if (local?.deliveryType) setDeliveryType(local.deliveryType);
+  const loadProfile = useCallback(async () => {
+    const local = getLocalProfile(restaurantId);
+    // El tipo de entrega es preferencia de este dispositivo; no se guarda
+    // en la cuenta, así que siempre se toma de aquí si existe.
+    if (local?.deliveryType) setDeliveryType(local.deliveryType);
 
-      // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
-      // dispositivo) sobre el perfil local de este dispositivo únicamente.
-      const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
-      if (cancelled) return;
-      if (remote) {
-        setName(remote.name);
-        setPhone(remote.phone);
-        setAddress(remote.address ?? '');
-        return;
-      }
-      if (local) {
-        setName(local.name);
-        setPhone(local.phone);
-        setAddress(local.address ?? '');
-      }
-    })();
-    return () => { cancelled = true; };
+    // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
+    // dispositivo) sobre el perfil local de este dispositivo únicamente.
+    const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
+    if (remote) {
+      setIdentified(true);
+      setName(remote.name);
+      setPhone(remote.phone);
+      setAddress(remote.address ?? '');
+      return;
+    }
+    setIdentified(false);
+    if (local) {
+      setName(local.name);
+      setPhone(local.phone);
+      setAddress(local.address ?? '');
+      setLinkPhone(local.phone);
+    }
   }, [restaurantId]);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -83,6 +90,24 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
       }
     })();
   }, [restaurantId, loyaltyOn]);
+
+  async function handleLink() {
+    const cleanPhone = linkPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 8) { setLinkMsg('Ingresa tu número de 8 dígitos.'); return; }
+    setLinkBusy(true);
+    setLinkMsg(null);
+    const res = await linkMyAccountByPhone(restaurantId, cleanPhone);
+    if (res.error) {
+      setLinkMsg(res.error);
+    } else {
+      setLinkMsg('¡Listo! Tu cuenta quedó enlazada.');
+      await loadProfile();
+      if (loyaltyOn) {
+        try { setLoyalty(await getMyLoyalty(restaurantId)); } catch { /* ignore */ }
+      }
+    }
+    setLinkBusy(false);
+  }
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -108,6 +133,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     try { await createClient().auth.signOut({ scope: 'local' }); } catch {}
     setUser(null);
     setLoyalty(null);
+    setIdentified(false);
     setSigningOut(false);
   }
 
@@ -191,7 +217,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
         {/* Sesión con Google */}
         {googleAuthEnabled && (
           <Glass variant="quiet" style={{ borderRadius: 16, padding: '14px 16px' }}>
-            {user ? (
+            {user && identified ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {user.user_metadata?.avatar_url && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -212,6 +238,52 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
                   <Icon name="logOut" size={13} /> Salir
                 </button>
               </div>
+            ) : user && !identified ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  {user.user_metadata?.avatar_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.user_metadata.avatar_url as string} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {(user.user_metadata?.full_name as string) ?? user.email}
+                    </div>
+                    <div className="t-mute" style={{ fontSize: 12 }}>Cuenta de Google</div>
+                  </div>
+                </div>
+                <p className="t-mute" style={{ fontSize: 12.5, marginBottom: 10, lineHeight: 1.5 }}>
+                  ¿Ya habías pedido antes? Ingresa el número con el que pediste para enlazar tu historial y tus datos a esta cuenta.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    inputMode="numeric"
+                    value={linkPhone}
+                    onChange={(e) => setLinkPhone(e.target.value)}
+                    placeholder="Tu número (8 dígitos)"
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <button
+                    onClick={handleLink}
+                    disabled={linkBusy}
+                    className="press btn-accent"
+                    style={{ padding: '0 18px', borderRadius: 12, fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    {linkBusy ? '…' : 'Enlazar'}
+                  </button>
+                </div>
+                {linkMsg && (
+                  <p style={{ fontSize: 12.5, marginTop: 8, color: linkMsg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{linkMsg}</p>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="press"
+                  style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >
+                  Cerrar sesión
+                </button>
+              </>
             ) : (
               <>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Accede con Google</div>
@@ -312,7 +384,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
           </button>
 
           <p className="t-mute" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5, marginTop: 8 }}>
-            {user
+            {user && identified
               ? 'Estos datos vienen de tu cuenta y se actualizan solos con tu próximo pedido. Lo que cambies aquí es solo para este dispositivo.'
               : 'Tus datos se guardan en este dispositivo y se usan para agilizar tus pedidos.'}
           </p>

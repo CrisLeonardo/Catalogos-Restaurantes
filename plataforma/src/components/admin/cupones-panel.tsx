@@ -130,7 +130,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
               </div>
               <div>
                 <label style={labelStyle}>Tipo *</label>
-                <select style={{ ...inputStyle, background: '#1a1a1c', colorScheme: 'dark' }} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
+                <select style={{ ...inputStyle, background: '#1a1a1c' }} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
                   <option value="PERCENT" style={{ background: '#1a1a1c', color: '#f0f0f0' }}>Porcentaje (%)</option>
                   <option value="FIXED" style={{ background: '#1a1a1c', color: '#f0f0f0' }}>Monto fijo (Q)</option>
                 </select>

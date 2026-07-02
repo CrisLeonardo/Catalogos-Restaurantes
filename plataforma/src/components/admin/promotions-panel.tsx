@@ -149,7 +149,7 @@ function PromoModal({ restaurantId, promo, onClose, onSaved }: { restaurantId: s
             </div>
             <div>
               <label style={label}>Vence (opcional)</label>
-              <input name="ends_at" type="date" defaultValue={promo?.ends_at ? promo.ends_at.slice(0, 10) : ''} style={{ ...input, colorScheme: 'dark' }} />
+              <input name="ends_at" type="date" defaultValue={promo?.ends_at ? promo.ends_at.slice(0, 10) : ''} style={input} />
             </div>
           </div>
 

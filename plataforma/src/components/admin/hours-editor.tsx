@@ -109,7 +109,6 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
     fontSize: 14,
     outline: 'none',
     fontFamily: 'var(--ui-font-mono)',
-    colorScheme: 'dark',
   };
 
   const labelStyle: React.CSSProperties = {

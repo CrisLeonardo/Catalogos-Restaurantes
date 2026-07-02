@@ -18,10 +18,6 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  colorScheme: 'dark',
-};
 const labelStyle: React.CSSProperties = {
   fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
   textTransform: 'uppercase', marginBottom: 4, display: 'block',
@@ -205,7 +201,7 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={labelStyle}>Proveedor</label>
-              <select style={selectStyle} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+              <select style={inputStyle} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
                 <option value="">Sin asignar</option>
                 {suppliers.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>

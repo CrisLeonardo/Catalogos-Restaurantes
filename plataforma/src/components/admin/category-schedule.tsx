@@ -81,7 +81,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13.5,
   outline: 'none',
   fontFamily: 'var(--ui-font-mono)',
-  colorScheme: 'dark',
 };
 
 export default function CategorySchedule({ defaultValue }: { defaultValue: WeeklyHours | null }) {

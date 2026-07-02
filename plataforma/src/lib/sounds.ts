@@ -43,6 +43,19 @@ export function primeAudio(): void {
   } catch {}
 }
 
+/**
+ * ¿El AudioContext está desbloqueado (puede sonar de verdad)?
+ * Crear el contexto no requiere gesto del usuario, pero Chrome/Firefox/Safari
+ * lo dejan en 'suspended' hasta el primer click/tap/tecla — sin eso, cualquier
+ * sonido programado se pierde en silencio (RS visual sigue funcionando: el
+ * toast y la tarjeta no dependen del audio). Usar esto para avisarle al
+ * usuario que falta un toque cuando el panel se acaba de cargar/recargar.
+ */
+export function isAudioUnlocked(): boolean {
+  const ctx = getCtx();
+  return ctx?.state === 'running';
+}
+
 /* ── Sonidos distintivos por tipo de evento ──────────────────────────── */
 
 /**

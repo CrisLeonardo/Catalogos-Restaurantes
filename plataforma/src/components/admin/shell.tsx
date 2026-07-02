@@ -124,6 +124,19 @@ export default function AdminShell({
     document.documentElement.setAttribute('data-admin-bg', bgVisible ? 'on' : 'off');
   }, [bgVisible]);
 
+  // El popup nativo de <select> (listado de opciones) resuelve su esquema de
+  // color desde el <html> raíz del documento, no por herencia normal desde
+  // el elemento — poner colorScheme en cada <select> pinta bien la caja
+  // cerrada pero el popup abierto sigue saliendo blanco. Se fija una sola vez
+  // acá sobre --admin-content-scheme (ya calculado por el tema del panel) y
+  // todo el contenido admin lo hereda; ningún componente nuevo necesita
+  // repetirlo.
+  useEffect(() => {
+    const scheme = getComputedStyle(document.documentElement).getPropertyValue('--admin-content-scheme').trim() || 'dark';
+    document.documentElement.style.colorScheme = scheme;
+    return () => { document.documentElement.style.colorScheme = ''; };
+  }, []);
+
   // En móvil, centra el ítem activo de la barra inferior al navegar (la barra
   // scrollea en horizontal y así el usuario siempre ve dónde está).
   useEffect(() => {

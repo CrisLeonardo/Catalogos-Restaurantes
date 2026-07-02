@@ -35,6 +35,7 @@ import {
   playWaiterSound,
   loadSoundSettings,
   saveSoundSettings,
+  isAudioUnlocked,
   DEFAULT_SOUND_SETTINGS,
   type SoundSettings,
 } from '@/lib/sounds';
@@ -120,6 +121,7 @@ export default function AdminNotifications({
   const [popup,          setPopup]          = useState<{ msg: string; type: 'info' | 'error' } | null>(null);
   const [showSoundPanel, setShowSoundPanel] = useState(false);
   const [soundSettings,  setSoundSettings]  = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
+  const [audioBlocked,   setAudioBlocked]   = useState(false);
 
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popupTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -135,11 +137,22 @@ export default function AdminNotifications({
   /* Cargar ajustes de sonido desde localStorage */
   useEffect(() => { setSoundSettings(loadSoundSettings()); }, []);
 
-  /* Desbloquear AudioContext al primer click en cualquier parte de la página */
+  /* Desbloquear AudioContext con el primer gesto del usuario (click, tecla o
+     toque) en cualquier parte de la página. Sin un gesto previo, el navegador
+     deja el AudioContext "suspended": los eventos Realtime que lleguen antes
+     (típico justo tras cargar/recargar el panel) muestran el toast/tarjeta
+     con normalidad pero suenan en silencio. Mientras siga bloqueado, se
+     muestra un indicador junto al botón de sonido (ver JSX más abajo). */
   useEffect(() => {
-    const handler = () => primeAudio();
-    document.addEventListener('click', handler, { once: true });
-    return () => document.removeEventListener('click', handler);
+    setAudioBlocked(!isAudioUnlocked());
+    const events: (keyof DocumentEventMap)[] = ['click', 'pointerdown', 'keydown', 'touchstart'];
+    const handler = () => {
+      primeAudio();
+      setAudioBlocked(!isAudioUnlocked());
+      events.forEach((ev) => document.removeEventListener(ev, handler));
+    };
+    events.forEach((ev) => document.addEventListener(ev, handler, { once: true }));
+    return () => events.forEach((ev) => document.removeEventListener(ev, handler));
   }, []);
 
   /* ── Detectar estado inicial ─────────────────────────────────────── */
@@ -406,16 +419,22 @@ export default function AdminNotifications({
       {/* ── Botón de configuración de sonido ── */}
       <button
         type="button"
-        onClick={() => { primeAudio(); setShowSoundPanel(v => !v); }}
+        onClick={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); setShowSoundPanel(v => !v); }}
         className="glass-quiet press"
-        title="Configurar sonidos de notificación"
+        title={audioBlocked ? 'El sonido está bloqueado por el navegador — toca aquí para activarlo' : 'Configurar sonidos de notificación'}
         style={{
-          ...btnBase,
+          ...btnBase, position: 'relative',
           opacity: showSoundPanel ? 1 : 0.65,
           color:   showSoundPanel ? 'var(--u-text)' : 'var(--u-text-3)',
         }}
       >
         <Icon name="volume" size={17} />
+        {audioBlocked && (
+          <span style={{
+            position: 'absolute', top: 9, right: 9, width: 8, height: 8,
+            borderRadius: 99, background: '#f87171', border: '2px solid var(--brand-bg)',
+          }} />
+        )}
       </button>
 
       {/* ── Panel de configuración de sonidos ── */}
@@ -452,7 +471,7 @@ export default function AdminNotifications({
             maxRepeat={3}
             onVolume={v  => updateSound({ orderVolume:  v })}
             onRepeat={r  => updateSound({ orderRepeat:  r })}
-            onTest={() => { primeAudio(); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat); }}
+            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat); }}
           />
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
@@ -465,7 +484,7 @@ export default function AdminNotifications({
             maxRepeat={3}
             onVolume={v  => updateSound({ waiterVolume:  v })}
             onRepeat={r  => updateSound({ waiterRepeat:  r })}
-            onTest={() => { primeAudio(); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat); }}
+            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat); }}
           />
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
@@ -480,10 +499,19 @@ export default function AdminNotifications({
             onRepeat={r  => updateSound({ kitchenRepeat:  r })}
             onTest={() => {
               // Importar dinámicamente para no añadir el símbolo al bundle de cocina
-              import('@/lib/sounds').then(m => { primeAudio(); m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat); });
+              import('@/lib/sounds').then(m => {
+                primeAudio();
+                setAudioBlocked(!m.isAudioUnlocked());
+                m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat);
+              });
             }}
           />
 
+          {audioBlocked && (
+            <p style={{ fontSize: 11, color: '#fca5a5', marginTop: 10, marginBottom: 4, lineHeight: 1.5, fontWeight: 600 }}>
+              🔇 El sonido está bloqueado por el navegador en esta pestaña. Toca cualquier botón (por ejemplo &quot;Probar&quot;) para activarlo.
+            </p>
+          )}
           <p style={{ fontSize: 10.5, color: 'var(--u-text-3)', marginTop: 10, lineHeight: 1.5 }}>
             Los ajustes se guardan automáticamente en este dispositivo.
           </p>

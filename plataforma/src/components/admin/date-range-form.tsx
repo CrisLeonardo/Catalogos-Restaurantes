@@ -30,7 +30,7 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
   const inputStyle: React.CSSProperties = {
     background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
     borderRadius: 10, padding: '8px 11px', color: 'var(--u-text)', fontSize: 13,
-    outline: 'none', fontFamily: 'var(--ui-font-mono)', colorScheme: 'dark',
+    outline: 'none', fontFamily: 'var(--ui-font-mono)',
   };
 
   return (
