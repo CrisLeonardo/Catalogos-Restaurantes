@@ -28,7 +28,17 @@ self.addEventListener('push', (event) => {
     data:               { url: data.url || '/admin/pedidos' },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Reenvía a las pestañas del admin ya abiertas: el push llega rápido y
+  // sin depender del socket de Realtime, así que estas pestañas pueden
+  // reaccionar (refrescar/sonar) al instante en vez de esperar su propio
+  // canal o el polling de respaldo.
+  const notifyClients = self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((list) => {
+      list.forEach((client) => client.postMessage({ type: 'push-notify', pushType: data.type || null }));
+    });
+
+  event.waitUntil(Promise.all([self.registration.showNotification(title, options), notifyClients]));
 });
 
 /* ── Clic en la notificación ───────────────────────────────── */

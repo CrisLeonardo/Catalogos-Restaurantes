@@ -48,6 +48,7 @@ export async function callWaiter(
     url: '/admin/mesas',
     requireInteraction: true,
     vibrate: [300, 100, 300, 100, 300, 200, 600],
+    type: 'waiter_call',
   }).catch(() => {});
 
   return { ok: true };

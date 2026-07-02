@@ -5,15 +5,22 @@
    ------------------------------------------------------------
    Se monta en el AdminShell (lo ven dueño, staff y meseros) cuando
    el módulo "Llamar al mesero" está activo. Muestra una lista fija
-   de llamadas pendientes con botón "Atendido". Realtime + polling
-   de respaldo cada 20 s; el chime/toast lo dispara notifications.tsx
-   en paralelo.
+   de llamadas pendientes con botón "Atendido". Se entera de llamadas
+   nuevas por TRES vías (evento DOM de notifications.tsx, su propio
+   canal Realtime de respaldo, y polling cada 6 s) — y este componente
+   es la ÚNICA fuente de verdad del SONIDO: lo dispara una sola vez
+   por llamada (dedup vía `seenIds`) sin importar cuál de las tres vías
+   la detectó primero. Así el chime suena incluso si el canal Realtime
+   de notifications.tsx no llega a tiempo (o nunca llega) — antes el
+   sonido dependía únicamente de esa vía y quedaba en silencio cuando
+   fallaba, aunque la tarjeta sí apareciera vía el polling.
    ============================================================ */
 
-import { useEffect, useState, useTransition, useCallback } from 'react';
+import { useEffect, useRef, useState, useTransition, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
+import { primeAudio, playWaiterSound, loadSoundSettings } from '@/lib/sounds';
 import {
   getPendingWaiterCalls,
   resolveWaiterCall,
@@ -29,14 +36,46 @@ function timeAgo(iso: string): string {
   return `hace ${h} h`;
 }
 
-export default function WaiterCallsAlert({ restaurantId }: { restaurantId: string }) {
+export default function WaiterCallsAlert({
+  restaurantId,
+  muteChime = false,
+}: {
+  restaurantId: string;
+  /** true en /admin/pedidos (vivo) y /admin/cocina — la tarjeta se sigue viendo, solo se silencia el chime. */
+  muteChime?: boolean;
+}) {
   const [calls, setCalls] = useState<WaiterCall[]>([]);
   const [, setTick] = useState(0);
   const [resolving, startResolve] = useTransition();
 
+  const muteRef = useRef(muteChime);
+  useEffect(() => { muteRef.current = muteChime; }, [muteChime]);
+
+  // IDs ya vistos, para no volver a sonar por la misma llamada si tres vías
+  // distintas la reportan (DOM, canal propio, polling). `null` = todavía no
+  // se cargó el snapshot inicial: las llamadas que YA estaban pendientes al
+  // montar no deben sonar (evita un "beep" retroactivo al recargar la página
+  // con una llamada de hace rato aún sin atender).
+  const seenIds = useRef<Set<string> | null>(null);
+
+  const noteNew = useCallback((id: string) => {
+    if (seenIds.current === null || seenIds.current.has(id)) return;
+    seenIds.current.add(id);
+    if (muteRef.current) return;
+    primeAudio();
+    const s = loadSoundSettings();
+    playWaiterSound(s.waiterVolume, s.waiterRepeat);
+  }, []);
+
   // Carga (o recarga) de llamadas pendientes del servidor.
   const refresh = useCallback(async () => {
     const list = await getPendingWaiterCalls(restaurantId);
+    if (seenIds.current === null) {
+      // Snapshot inicial: se marcan como "vistas" sin sonar.
+      seenIds.current = new Set(list.map((c) => c.id));
+    } else {
+      list.forEach((c) => noteNew(c.id));
+    }
     // Merge: añadir nuevas, conservar las ya conocidas, quitar las resueltas.
     setCalls((prev) => {
       const serverIds = new Set(list.map((c) => c.id));
@@ -46,17 +85,32 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
       const newOnes = list.filter((c) => !prev.some((p) => p.id === c.id));
       return [...still, ...newOnes];
     });
-  }, [restaurantId]);
+  }, [restaurantId, noteNew]);
 
   // Carga inicial.
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  // Polling de respaldo cada 20 s — garantiza actualización aunque Realtime falle.
+  // Polling de respaldo cada 6 s — garantiza que la tarjeta Y el sonido
+  // lleguen en un tiempo razonable aunque Realtime falle o se demore.
   useEffect(() => {
-    const id = setInterval(() => refresh(), 20_000);
+    const id = setInterval(() => refresh(), 6_000);
     return () => clearInterval(id);
+  }, [refresh]);
+
+  // Push → instantáneo: el service worker reenvía aquí el push apenas llega
+  // (misma vía que ya usan las notificaciones del sistema, rápida y ajena al
+  // socket de Realtime). Si este dispositivo no tiene el push activado, este
+  // mensaje simplemente nunca llega y todo sigue funcionando por Realtime +
+  // el polling de arriba — sin esto no hay regresión, solo se pierde el atajo.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'push-notify' && e.data.pushType === 'waiter_call') refresh();
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, [refresh]);
 
   // Refresca el "hace X min" cada 30 s.
@@ -66,21 +120,23 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
   }, []);
 
   // Evento DOM inmediato: notifications.tsx lo dispara en el mismo tick que recibe
-  // el INSERT de Realtime, así la tarjeta aparece sin esperar un canal propio.
+  // el INSERT de Realtime, así la tarjeta (y el sonido, vía noteNew) llegan sin
+  // esperar un canal propio.
   useEffect(() => {
     function onNew(e: Event) {
       const c = (e as CustomEvent).detail as { id: string; restaurant_id: string; table_number: number | null; created_at: string };
       if (c.restaurant_id !== restaurantId) return;
+      noteNew(c.id);
       setCalls((prev) => (prev.some((x) => x.id === c.id)
         ? prev
         : [...prev, { id: c.id, table_number: c.table_number, created_at: c.created_at }]));
     }
     window.addEventListener('waiter-call-new', onNew);
     return () => window.removeEventListener('waiter-call-new', onNew);
-  }, [restaurantId]);
+  }, [restaurantId, noteNew]);
 
-  // Canal propio solo para UPDATE (resoluciones desde otro dispositivo) y como
-  // respaldo de INSERT si notifications.tsx no está montado.
+  // Canal propio: respaldo de INSERT (por si notifications.tsx no está montado
+  // o su canal no llega) y UPDATE para resoluciones desde otro dispositivo.
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
     const supabase = createClient();
@@ -95,9 +151,10 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
       channel = supabase
         .channel(`waiter-calls-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls' }, (payload) => {
-          // Respaldo: si el evento DOM ya llegó primero, setCalls lo deduplica.
+          // Respaldo: si el evento DOM ya llegó primero, noteNew/setCalls lo deduplican.
           const c = payload.new as WaiterCall & { restaurant_id: string; resolved_at: string | null };
           if (c.restaurant_id !== restaurantId || c.resolved_at) return;
+          noteNew(c.id);
           setCalls((prev) => (prev.some((x) => x.id === c.id)
             ? prev
             : [...prev, { id: c.id, table_number: c.table_number, created_at: c.created_at }]));
@@ -113,7 +170,7 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
     })();
 
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
-  }, [restaurantId, refresh]);
+  }, [restaurantId, refresh, noteNew]);
 
   function resolve(id: string) {
     setCalls((prev) => prev.filter((x) => x.id !== id)); // optimista

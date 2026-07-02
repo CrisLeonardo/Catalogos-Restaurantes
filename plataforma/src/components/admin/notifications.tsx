@@ -234,14 +234,15 @@ export default function AdminNotifications({
           if (call.restaurant_id !== restaurantId || call.resolved_at) return;
 
           // Avisa al WaiterCallsAlert en el mismo tick (sin esperar su propio canal).
+          // WaiterCallsAlert es la única fuente de verdad para el SONIDO de mesero:
+          // combina este evento con su propio canal de respaldo y el polling de 20s,
+          // así que dispara el audio una sola vez sin importar por cuál vía se enteró.
           window.dispatchEvent(new CustomEvent('waiter-call-new', { detail: call }));
 
           // En modo cocina NO llegan alertas de llamada al mesero.
           if (kitchenRef.current) return;
 
           const tableLabel = call.table_number ? ` · Mesa ${call.table_number}` : '';
-          const s = settingsRef.current;
-          playWaiterSound(s.waiterVolume, s.waiterRepeat);
 
           if (toastTimer.current) clearTimeout(toastTimer.current);
           setToast(`🔔 Llamada al mesero${tableLabel}`);

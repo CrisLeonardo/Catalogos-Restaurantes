@@ -415,7 +415,7 @@ export default function AdminShell({
         <div className="admin-content">{children}</div>
       </div>
       {!preview && restaurantId && llamadaMeseroActive && (
-        <WaiterCallsAlert restaurantId={restaurantId} />
+        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isLive || isKitchen} />
       )}
       <WelcomeTour restaurantName={restaurantName} preview={preview} />
     </div>

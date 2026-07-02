@@ -27,6 +27,13 @@ export interface PushPayload {
   url?: string;
   requireInteraction?: boolean;
   vibrate?: number[];
+  /**
+   * Categoría del push (p.ej. 'waiter_call'). El service worker la reenvía
+   * por postMessage a las pestañas abiertas del panel admin, para que
+   * reaccionen al instante (refrescar/sonar) sin depender del socket de
+   * Realtime — el push ya llega rápido y confiable independientemente de él.
+   */
+  type?: string;
 }
 
 /**
