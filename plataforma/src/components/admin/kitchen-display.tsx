@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
 import { updateOrderStatus } from '@/lib/actions/orders';
 import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
@@ -90,10 +91,10 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.realtime.setAuth(session?.access_token ?? null);
+      await ready;
       if (cancelled) return;
 
       channel = supabase
@@ -119,7 +120,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
         .subscribe();
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); };
+    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
   }, [restaurantId, router]);
 
   function toggleFullscreen() {

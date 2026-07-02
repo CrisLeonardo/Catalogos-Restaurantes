@@ -14,6 +14,12 @@ function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   try {
     if (!_ctx || _ctx.state === 'closed') _ctx = new AudioContext();
+    // Chrome (sobre todo en móvil) auto-suspende el AudioContext tras un
+    // rato sin actividad para ahorrar batería. Si un evento Realtime llega
+    // después de esa siesta, el contexto sigue "desbloqueado" pero
+    // suspendido y no se oye nada. Reintentar resume() en cada acceso —
+    // no solo en primeAudio() — evita ese silencio intermitente.
+    if (_ctx.state === 'suspended') _ctx.resume().catch(() => {});
     return _ctx;
   } catch { return null; }
 }

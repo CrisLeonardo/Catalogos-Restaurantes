@@ -5,9 +5,9 @@
       "name": "plataforma",
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": [
-        "C:\\Users\\minec\\Documents\\Catalogos Restaurantes\\plataforma\\node_modules\\next\\dist\\bin\\next",
+        "C:\\Users\\minec\\Documents\\Catalogos-Restaurantes\\plataforma\\node_modules\\next\\dist\\bin\\next",
         "dev",
-        "C:\\Users\\minec\\Documents\\Catalogos Restaurantes\\plataforma"
+        "C:\\Users\\minec\\Documents\\Catalogos-Restaurantes\\plataforma"
       ],
       "port": 3000
     }

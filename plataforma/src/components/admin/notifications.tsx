@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
 import {
   primeAudio,
@@ -163,10 +164,10 @@ export default function AdminNotifications({
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.realtime.setAuth(session?.access_token ?? null);
+      await ready;
       if (cancelled) return;
 
       channel = supabase
@@ -254,7 +255,7 @@ export default function AdminNotifications({
         .subscribe();
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); };
+    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
   }, [restaurantId, router]);
 
   /* ── Clic en la campana ──────────────────────────────────────────── */

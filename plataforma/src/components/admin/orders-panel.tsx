@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
 import { Icon } from '@/components/icons';
 import { exportOrdersStructured, updateOrderStatus } from '@/lib/actions/orders';
@@ -111,12 +112,13 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    // RLS filtra los eventos por usuario: sin el JWT de la sesión en el
+    // canal realtime no llega NADA, y ese JWT debe refrescarse o caduca
+    // a la hora (ver lib/supabase/realtime-auth.ts).
+    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     (async () => {
-      // RLS filtra los eventos por usuario: sin el JWT de la sesión en el
-      // canal realtime no llega NADA. setAuth ANTES de suscribirse.
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.realtime.setAuth(session?.access_token ?? null);
+      await ready;
       if (cancelled) return;
 
       // Topic único por montaje (ver admin/notifications.tsx).
@@ -150,7 +152,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
         .subscribe();
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); };
+    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
   }, [restaurantId, router]);
 
   function buildExportHtml(

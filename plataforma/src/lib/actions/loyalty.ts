@@ -5,22 +5,32 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { getRedeemContextByPhone, getDinerLoyalty, resolveDinerAuthUserId, type RedeemContext, type DinerLoyalty } from '@/lib/db/loyalty';
+import {
+  getDinerLoyalty, resolveDinerAuthUserId, getCustomerIdByAuthUser, getRedeemContextByCustomer,
+  type RedeemContext, type DinerLoyalty,
+} from '@/lib/db/loyalty';
+
+const NO_REDEEM: RedeemContext = { active: false, balance: 0, minRedeem: 0, redeemValue: 0 };
 
 /**
- * Consulta pública (checkout): cuántos puntos puede canjear el cliente con su
- * teléfono. Devuelve saldo + reglas solo si el módulo está activo y tiene cuenta.
+ * Consulta para el checkout: cuántos puntos puede canjear el comensal con
+ * SESIÓN DE GOOGLE iniciada. Sin sesión (o sin cuenta enlazada) no hay nada
+ * que canjear — la lealtad ya no se resuelve por teléfono.
  */
-export async function getLoyaltyRedeemInfo(restaurantId: string, phone: string): Promise<RedeemContext> {
-  if (!restaurantId) return { active: false, balance: 0, minRedeem: 0, redeemValue: 0 };
-  return getRedeemContextByPhone(restaurantId, phone);
+export async function getLoyaltyRedeemInfo(restaurantId: string): Promise<RedeemContext> {
+  if (!restaurantId) return NO_REDEEM;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
+  if (!customerId) return NO_REDEEM;
+  return getRedeemContextByCustomer(restaurantId, customerId);
 }
 
 export type LoyaltyActionResult = { error?: string; ok?: boolean; balance?: number };
 
 export interface LoyaltySettingsPatch {
   earn_rate: number;
-  redeem_value: number;
   min_redeem: number;
   signup_bonus: number;
   rewards_enabled: boolean;
@@ -31,15 +41,12 @@ export async function saveLoyaltySettings(restaurantId: string, patch: LoyaltySe
   if ('error' in auth) return auth;
 
   const earn = Number(patch.earn_rate);
-  const redeem = Number(patch.redeem_value);
   if (isNaN(earn) || earn < 0) return { error: 'Tasa de acumulación inválida.' };
-  if (isNaN(redeem) || redeem < 0) return { error: 'Valor de canje inválido.' };
 
   const db = createServiceClient();
   const { error } = await db.from('loyalty_settings').upsert({
     restaurant_id: restaurantId,
     earn_rate: earn,
-    redeem_value: redeem,
     min_redeem: Math.max(0, Math.floor(Number(patch.min_redeem) || 0)),
     signup_bonus: Math.max(0, Math.floor(Number(patch.signup_bonus) || 0)),
     rewards_enabled: patch.rewards_enabled !== false,
@@ -122,13 +129,14 @@ export async function toggleReward(restaurantId: string, rewardId: string, activ
 
 /**
  * Saldo del comensal para la sección de recompensas del menú. Lee la sesión
- * (Google) de las cookies; si no, usa el teléfono. Público (lo llama el menú).
+ * de Google de las cookies — sin sesión no hay saldo que mostrar. Público
+ * (lo llama el menú), pero solo revela datos de la cuenta autenticada.
  */
-export async function getMyLoyalty(restaurantId: string, phone?: string): Promise<DinerLoyalty> {
+export async function getMyLoyalty(restaurantId: string): Promise<DinerLoyalty> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
-  return getDinerLoyalty(restaurantId, { authUserId, phone: phone ?? null });
+  return getDinerLoyalty(restaurantId, authUserId);
 }
 
 export interface MyCheckoutProfile {
@@ -265,8 +273,8 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
     if ((count ?? 0) > 0) return;
 
     // Puntos por línea: si el producto define sus propios puntos, esos × cantidad;
-    // si no, la regla general earn_rate × subtotal de la línea. Los canjes (Q0)
-    // no otorgan puntos.
+    // si no, la regla general earn_rate (pts por cada Q10) × subtotal de la línea / 10.
+    // Los canjes (Q0) no otorgan puntos.
     const { data: items } = await db
       .from('order_items')
       .select('product_id, quantity, subtotal, is_reward')
@@ -290,7 +298,7 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       if (per !== null && per !== undefined) {
         points += Math.max(0, Math.floor(Number(per))) * Number(it.quantity);
       } else {
-        points += Math.floor(Number(it.subtotal) * earnRate);
+        points += Math.floor(Number(it.subtotal) * earnRate / 10);
       }
     }
     points = Math.floor(points);

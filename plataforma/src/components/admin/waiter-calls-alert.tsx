@@ -12,6 +12,7 @@
 
 import { useEffect, useState, useTransition, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
 import {
   getPendingWaiterCalls,
@@ -85,10 +86,10 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.realtime.setAuth(session?.access_token ?? null);
+      await ready;
       if (cancelled) return;
 
       channel = supabase
@@ -111,7 +112,7 @@ export default function WaiterCallsAlert({ restaurantId }: { restaurantId: strin
         });
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); };
+    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
   }, [restaurantId, refresh]);
 
   function resolve(id: string) {

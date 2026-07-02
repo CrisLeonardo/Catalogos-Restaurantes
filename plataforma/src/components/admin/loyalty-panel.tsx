@@ -25,6 +25,9 @@ interface Props {
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
+  // El panel admin siempre es oscuro; sin esto el popup nativo de <select>
+  // se renderiza en blanco (tema claro del SO), ilegible sobre el resto de la UI.
+  colorScheme: 'dark',
 };
 const labelStyle: React.CSSProperties = {
   fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
@@ -80,7 +83,6 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
   const router = useRouter();
   const [p, setP] = useState<LoyaltySettingsPatch>({
     earn_rate: settings.earn_rate,
-    redeem_value: settings.redeem_value,
     min_redeem: settings.min_redeem,
     signup_bonus: settings.signup_bonus,
     rewards_enabled: settings.rewards_enabled,
@@ -102,8 +104,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <div><label style={labelStyle}>Puntos por cada Q1 gastado</label><input style={inputStyle} type="number" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Valor de 1 punto (Q)</label><input style={inputStyle} type="number" min="0" step="0.01" value={p.redeem_value} onChange={(e) => set('redeem_value', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos por cada Q10 gastados</label><input style={inputStyle} type="number" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
         <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input style={inputStyle} type="number" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
         <div><label style={labelStyle}>Puntos de bienvenida</label><input style={inputStyle} type="number" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
       </div>
@@ -114,7 +115,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
       </label>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-        La regla general (<strong>{p.earn_rate} pts/Q1</strong>) aplica a los productos sin puntos propios. Puedes fijar
+        La regla general (<strong>{p.earn_rate} pts/Q10</strong>) aplica a los productos sin puntos propios. Puedes fijar
         los puntos exactos de cada producto en su ficha (Menú → editar producto → <em>Puntos de lealtad</em>).
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>
@@ -182,8 +183,6 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
     start(async () => { await toggleReward(restaurantId, id, active); router.refresh(); });
   }
 
-  const pickedProduct = products.find((p) => p.id === form.product_id);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -201,7 +200,6 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
         </div>
         <div><label style={labelStyle}>Descripción (opcional)</label><input style={inputStyle} value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div><label style={labelStyle}>Imagen URL (opcional)</label><input style={inputStyle} value={form.image_url ?? ''} onChange={(e) => set('image_url', e.target.value)} placeholder={pickedProduct?.image_url ? 'Usa la del producto' : 'https://…'} /></div>
           <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input style={inputStyle} type="number" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
           <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input style={inputStyle} type="number" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
         </div>
@@ -275,7 +273,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div className="t-kicker" style={{ fontSize: 10.5 }}>Asignar / canjear puntos manualmente</div>
+        <div className="t-kicker" style={{ fontSize: 10.5 }}>Asignar / restar puntos manualmente</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 110px', gap: 10 }}>
           <div>
             <label style={labelStyle}>Cliente</label>
@@ -289,14 +287,14 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
             <label style={labelStyle}>Tipo</label>
             <select style={inputStyle} value={tipo} onChange={(e) => setTipo(e.target.value as 'ADJUST' | 'REDEEM')}>
               <option value="ADJUST">Sumar</option>
-              <option value="REDEEM">Canjear</option>
+              <option value="REDEEM">Restar</option>
             </select>
           </div>
         </div>
         <div><label style={labelStyle}>Nota (opcional)</label><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={apply} disabled={isPending || !customerId} className="press btn-accent" style={{ padding: '9px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', opacity: (isPending || !customerId) ? 0.6 : 1 }}>
-            {isPending ? '…' : tipo === 'REDEEM' ? 'Canjear puntos' : 'Sumar puntos'}
+            {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}
           </button>
           {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ Q{((parseInt(points, 10) || 0) * settings.redeem_value).toFixed(2)} de descuento</span>}
           {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}

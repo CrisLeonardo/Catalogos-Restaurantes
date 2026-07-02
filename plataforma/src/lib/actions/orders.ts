@@ -15,7 +15,7 @@ import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder } from '@/lib/actions/loyalty';
-import { getRedeemContextByPhone, resolveDinerAuthUserId } from '@/lib/db/loyalty';
+import { getRedeemContextByCustomer, getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -108,6 +108,12 @@ export async function createOrder(
   const authClient = await createClient();
   const { data: { user: authUser } } = await authClient.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(authUser?.id ?? null);
+
+  // Cliente de lealtad autenticado: canjear recompensas o puntos exige sesión
+  // de Google (nunca se resuelve por el teléfono escrito en el checkout, que
+  // cualquiera puede teclear). null si no hay sesión o la cuenta no tiene
+  // historial enlazado todavía.
+  const loyaltyCustomerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
 
   const { data: restaurant } = await db
     .from('restaurants')
@@ -234,35 +240,22 @@ export async function createOrder(
   }
 
   // ── Recompensas de lealtad canjeadas (migración 058) ──────────
-  // El cliente solo manda ids; aquí resolvemos el producto, validamos la cuenta
-  // (por teléfono) y verificamos que el saldo alcance. Si algo falla, NO se crea
-  // el pedido (validamos ANTES de tocar la BD de pedidos). El descuento real de
-  // puntos lo hace el RPC atómico tras crear el pedido.
+  // El cliente solo manda ids; aquí verificamos que el saldo alcance. Si algo
+  // falla, NO se crea el pedido (validamos ANTES de tocar la BD de pedidos).
+  // El descuento real de puntos lo hace el RPC atómico tras crear el pedido.
   const rewardLines = parsed.data.rewardLines ?? [];
-  let rewardCustomerId: string | null = null;
   let rewardPointsTotal = 0;
   const rewardRedeemIds: string[] = [];
   if (rewardLines.length > 0) {
-    const phoneKeyR = customer.phone.replace(/\D/g, '');
-    if (phoneKeyR.length < 7) {
-      return { error: 'Necesitas tu número de teléfono para canjear recompensas.' };
+    if (!loyaltyCustomerId) {
+      return { error: 'Inicia sesión con Google para canjear recompensas.' };
     }
-    const { data: rc } = await db
-      .from('customers')
-      .select('id')
-      .eq('restaurant_id', restaurantId)
-      .eq('phone', phoneKeyR)
-      .maybeSingle();
-    if (!rc) {
-      return { error: 'No encontramos puntos con ese número. Haz al menos un pedido para empezar a acumular.' };
-    }
-    rewardCustomerId = rc.id as string;
 
     const { data: acctR } = await db
       .from('loyalty_accounts')
       .select('points_balance')
       .eq('restaurant_id', restaurantId)
-      .eq('customer_id', rewardCustomerId)
+      .eq('customer_id', loyaltyCustomerId)
       .maybeSingle();
     const balanceR = Number(acctR?.points_balance) || 0;
 
@@ -332,12 +325,14 @@ export async function createOrder(
   const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
 
   // Canje de puntos de lealtad. Autoritativo en el servidor: el saldo y el valor
-  // del punto se leen de la BD; el cliente solo pide cuántos puntos canjear.
+  // del punto se leen de la BD contra la cuenta de Google del comensal (nunca
+  // el teléfono del formulario); el cliente solo pide cuántos puntos canjear.
+  // Sin sesión enlazada, requestedPoints simplemente se ignora (no rompe el pedido).
   let loyaltyPoints = 0;
   let loyaltyDiscount = 0;
   const requestedPoints = parsed.data.redeemPoints ?? 0;
-  if (requestedPoints > 0) {
-    const ctx = await getRedeemContextByPhone(restaurantId, customer.phone);
+  if (requestedPoints > 0 && loyaltyCustomerId) {
+    const ctx = await getRedeemContextByCustomer(restaurantId, loyaltyCustomerId);
     // Saldo disponible para descuento = saldo − lo ya comprometido en recompensas.
     const availableBalance = Math.max(0, ctx.balance - rewardPointsTotal);
     if (ctx.active && ctx.redeemValue > 0 && availableBalance >= ctx.minRedeem) {
@@ -428,10 +423,12 @@ export async function createOrder(
     await db.rpc('increment_promo_usage', { p_id: applied.promo.id });
   }
 
-  // Canje de puntos: registra en el pedido y descuenta del saldo del cliente.
-  // El RPC re-valida el saldo (no deja negativo); best-effort para no romper el
-  // pedido ya creado si hubiera una carrera.
-  if (loyaltyPoints > 0 && loyaltyDiscount > 0 && customerId) {
+  // Canje de puntos: registra en el pedido y descuenta del saldo del cliente
+  // de lealtad (cuenta de Google — puede ser distinto del customerId del
+  // pedido si el comensal pidió con un teléfono de contacto diferente al de
+  // su cuenta enlazada). El RPC re-valida el saldo (no deja negativo);
+  // best-effort para no romper el pedido ya creado si hubiera una carrera.
+  if (loyaltyPoints > 0 && loyaltyDiscount > 0 && loyaltyCustomerId) {
     await db.from('orders').update({
       loyalty_points_redeemed: loyaltyPoints,
       loyalty_discount: loyaltyDiscount,
@@ -439,7 +436,7 @@ export async function createOrder(
     try {
       await db.rpc('leogin_loyalty_apply', {
         p_restaurant_id: restaurantId,
-        p_customer_id:   customerId,
+        p_customer_id:   loyaltyCustomerId,
         p_order_id:      order.id,
         p_tipo:          'REDEEM',
         p_points:        -loyaltyPoints,
@@ -452,11 +449,11 @@ export async function createOrder(
 
   // Canje de recompensas (productos): descuenta los puntos de cada una de forma
   // atómica. Ya validamos saldo arriba; el RPC re-valida y nunca deja negativo.
-  if (rewardRedeemIds.length > 0 && customerId) {
+  if (rewardRedeemIds.length > 0 && loyaltyCustomerId) {
     for (const rid of rewardRedeemIds) {
       await db.rpc('leogin_loyalty_redeem_reward', {
         p_restaurant_id: restaurantId,
-        p_customer_id:   customerId,
+        p_customer_id:   loyaltyCustomerId,
         p_reward_id:     rid,
         p_order_id:      order.id,
       });
@@ -1101,22 +1098,15 @@ export async function getMyOrderRefs(restaurantId: string): Promise<MyOrderRef[]
   const authClient = await createClient();
   const { data: { user } } = await authClient.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
-  if (!authUserId) return [];
+  const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
+  if (!customerId) return [];
 
   const db = createServiceClient();
-  const { data: customer } = await db
-    .from('customers')
-    .select('id')
-    .eq('restaurant_id', restaurantId)
-    .eq('auth_user_id', authUserId)
-    .maybeSingle();
-  if (!customer) return [];
-
   const { data } = await db
     .from('orders')
     .select('public_token, order_number, total, created_at')
     .eq('restaurant_id', restaurantId)
-    .eq('customer_id', customer.id as string)
+    .eq('customer_id', customerId)
     .order('created_at', { ascending: false })
     .limit(25);
 

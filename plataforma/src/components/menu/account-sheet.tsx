@@ -79,11 +79,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
       const { data: { user: u } } = await supabase.auth.getUser();
       setUser(u ?? null);
       if (loyaltyOn) {
-        try {
-          const p = getLocalProfile(restaurantId);
-          const l = await getMyLoyalty(restaurantId, p?.phone || undefined);
-          setLoyalty(l);
-        } catch { /* ignore */ }
+        try { setLoyalty(await getMyLoyalty(restaurantId)); } catch { /* ignore */ }
       }
     })();
   }, [restaurantId, loyaltyOn]);
@@ -220,7 +216,9 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
               <>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Accede con Google</div>
                 <p className="t-mute" style={{ fontSize: 12.5, marginBottom: 12, lineHeight: 1.5 }}>
-                  Mantén tus puntos de fidelidad sincronizados aunque cambies de dispositivo.
+                  {loyaltyOn
+                    ? 'Inicia sesión para ver y usar tus puntos de fidelidad en cualquier dispositivo.'
+                    : 'Guarda tus datos y encuentra tus pedidos en cualquier dispositivo.'}
                 </p>
                 <GoogleSignInButton full />
               </>

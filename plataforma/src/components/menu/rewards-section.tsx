@@ -55,19 +55,17 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
   const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
   const [savedPhone, setSavedPhone] = useState('');
 
-  const refresh = useCallback(async (phone?: string) => {
+  const refresh = useCallback(async () => {
     try {
-      setLoyalty(await getMyLoyalty(restaurantId, phone));
+      setLoyalty(await getMyLoyalty(restaurantId));
     } catch {
       setLoyalty(null);
     }
   }, [restaurantId]);
 
   useEffect(() => {
-    const p = getLocalProfile(restaurantId);
-    const phone = p?.phone ?? '';
-    setSavedPhone(phone);
-    refresh(phone || undefined);
+    setSavedPhone(getLocalProfile(restaurantId)?.phone ?? '');
+    refresh();
   }, [restaurantId, refresh]);
 
   const balance = loyalty?.identified ? loyalty.balance : null;
@@ -218,7 +216,7 @@ function RewardsMenu({
   ordersEnabled: boolean;
   rewardLineIds: Set<string | undefined>;
   onToggle: (r: MenuReward) => void;
-  onRefresh: (phone?: string) => void;
+  onRefresh: () => void;
   restaurantId: string;
   initialPhone: string;
 }) {
@@ -236,26 +234,19 @@ function RewardsMenu({
   const cleanPhone = phone.replace(/\D/g, '');
   const identified = !!loyalty?.identified;
   const loggedIn = !!loyalty?.loggedIn;
-  const linked = !!loyalty?.linkedAccount;
 
-  async function lookup() {
-    if (cleanPhone.length < 8) { setMsg('Ingresa tu número de 8 dígitos.'); return; }
-    setBusy(true); setMsg(null);
-    await onRefresh(cleanPhone);
-    setBusy(false);
-  }
   async function link() {
     if (cleanPhone.length < 8) { setMsg('Ingresa tu número de 8 dígitos.'); return; }
     setBusy(true); setMsg(null);
     const res = await linkMyAccountByPhone(restaurantId, cleanPhone);
     if (res.error) setMsg(res.error);
-    else { setMsg('¡Listo! Tu cuenta quedó enlazada.'); await onRefresh(cleanPhone); }
+    else { setMsg('¡Listo! Tu cuenta quedó enlazada.'); await onRefresh(); }
     setBusy(false);
   }
   async function signOut() {
     setBusy(true);
     try { await createClient().auth.signOut({ scope: 'local' }); } catch {}
-    await onRefresh(cleanPhone || undefined);
+    await onRefresh();
     setBusy(false);
   }
 
@@ -293,26 +284,31 @@ function RewardsMenu({
                 {loggedIn && <button onClick={signOut} disabled={busy} className="press" style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>}
               </div>
             </div>
+          ) : loggedIn ? (
+            <div>
+              <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Recupera tu historial</div>
+              <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
+                ¿Ya habías pedido antes? Ingresa el número con el que pediste para enlazar tus puntos a esta cuenta.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
+                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '0 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+                  {busy ? '…' : 'Enlazar'}
+                </button>
+              </div>
+              <button onClick={signOut} disabled={busy} className="press" style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>
+            </div>
           ) : (
             <div>
               <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Mira y canjea tus puntos</div>
               <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
-                Inicia sesión o ingresa el número con el que pides para ver tu saldo.
+                {googleAuthEnabled
+                  ? 'Inicia sesión con Google para ver tu saldo y canjear tus puntos.'
+                  : 'El programa de lealtad estará disponible muy pronto.'}
               </p>
-              {googleAuthEnabled && <div style={{ marginBottom: 11 }}><GoogleSignInButton full /></div>}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
-                <button onClick={loggedIn ? link : lookup} disabled={busy} className="press btn-accent" style={{ padding: '0 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
-                  {busy ? '…' : loggedIn ? 'Enlazar' : 'Ver'}
-                </button>
-              </div>
+              {googleAuthEnabled && <GoogleSignInButton full />}
             </div>
-          )}
-          {googleAuthEnabled && loggedIn && identified && !linked && (
-            <button onClick={link} disabled={busy} className="press" style={{ marginTop: 12, background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 999, padding: '8px 14px', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-              Enlazar este número a mi cuenta de Google
-            </button>
           )}
           {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') ? '#4ade80' : '#f87171' }}>{msg}</p>}
         </Glass>

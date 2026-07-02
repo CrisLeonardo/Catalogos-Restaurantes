@@ -39,24 +39,6 @@ export async function getRedeemContextByCustomer(restaurantId: string, customerI
   };
 }
 
-/** Contexto de canje a partir del teléfono (lo usa el checkout para mostrar la opción). */
-export async function getRedeemContextByPhone(restaurantId: string, phone: string): Promise<RedeemContext> {
-  const phoneKey = (phone || '').replace(/\D/g, '');
-  if (phoneKey.length < 7) return NO_REDEEM;
-  if (!(await loyaltyActive(restaurantId))) return NO_REDEEM;
-
-  const db = createServiceClient();
-  const { data: customer } = await db
-    .from('customers')
-    .select('id')
-    .eq('restaurant_id', restaurantId)
-    .eq('phone', phoneKey)
-    .maybeSingle();
-  if (!customer) return NO_REDEEM;
-
-  return getRedeemContextByCustomer(restaurantId, customer.id as string);
-}
-
 export interface LoyaltySettings {
   restaurant_id: string;
   earn_rate: number;
@@ -264,12 +246,10 @@ export async function getPublicRewards(restaurantId: string): Promise<PublicRewa
 export interface DinerLoyalty {
   /** ¿El módulo de lealtad está activo para este restaurante? */
   active: boolean;
-  /** ¿Reconocimos al comensal (por cuenta o por teléfono)? */
-  identified: boolean;
-  /** ¿Hay una sesión iniciada (Google)? */
+  /** ¿Hay una sesión de Google iniciada? */
   loggedIn: boolean;
-  /** ¿La sesión iniciada ya está enlazada a un cliente con historial? */
-  linkedAccount: boolean;
+  /** ¿La cuenta de Google ya está enlazada a un cliente con historial? */
+  identified: boolean;
   name: string | null;
   balance: number;
   lifetimePoints: number;
@@ -278,7 +258,7 @@ export interface DinerLoyalty {
 }
 
 const NO_DINER: DinerLoyalty = {
-  active: false, identified: false, loggedIn: false, linkedAccount: false,
+  active: false, loggedIn: false, identified: false,
   name: null, balance: 0, lifetimePoints: 0, redeemValue: 0, minRedeem: 0,
 };
 
@@ -297,15 +277,27 @@ export async function resolveDinerAuthUserId(rawUserId: string | null | undefine
   return data ? null : rawUserId;
 }
 
+/** Customer_id enlazado a una cuenta de Google, o null si no hay enlace (o no hay sesión). */
+export async function getCustomerIdByAuthUser(restaurantId: string, authUserId: string | null): Promise<string | null> {
+  if (!authUserId) return null;
+  const db = createServiceClient();
+  const { data } = await db
+    .from('customers')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .eq('auth_user_id', authUserId)
+    .maybeSingle();
+  return (data?.id as string | null) ?? null;
+}
+
 /**
- * Saldo y reglas para un comensal concreto. Resuelve la identidad por cuenta
- * (auth_user_id) primero, y si no, por teléfono. Lo usa la sección de
- * recompensas del menú. `authUserId` lo provee el server action (cookie).
+ * Saldo y reglas para un comensal concreto. La lealtad SOLO se resuelve por
+ * cuenta de Google enlazada (auth_user_id) — nunca por teléfono, para que
+ * nadie pueda ver o gastar los puntos de otro con solo escribir su número.
+ * Lo usa la sección de recompensas del menú. `authUserId` lo provee el
+ * server action (cookie de sesión).
  */
-export async function getDinerLoyalty(
-  restaurantId: string,
-  opts: { authUserId?: string | null; phone?: string | null },
-): Promise<DinerLoyalty> {
+export async function getDinerLoyalty(restaurantId: string, authUserId: string | null): Promise<DinerLoyalty> {
   if (!(await loyaltyActive(restaurantId))) return NO_DINER;
   const db = createServiceClient();
 
@@ -317,52 +309,23 @@ export async function getDinerLoyalty(
 
   const redeemValue = Number(settings?.redeem_value) || 0;
   const minRedeem = Number(settings?.min_redeem) || 0;
-  const loggedIn = !!opts.authUserId;
+  const loggedIn = !!authUserId;
 
-  // 1) Por cuenta enlazada.
-  let customer: { id: string; name: string } | null = null;
-  if (opts.authUserId) {
-    const { data } = await db
-      .from('customers')
-      .select('id, name')
-      .eq('restaurant_id', restaurantId)
-      .eq('auth_user_id', opts.authUserId)
-      .maybeSingle();
-    if (data) customer = data as { id: string; name: string };
-  }
-  const linkedAccount = !!customer;
-
-  // 2) Por teléfono (si no hay cuenta enlazada todavía).
-  if (!customer && opts.phone) {
-    const phoneKey = opts.phone.replace(/\D/g, '');
-    if (phoneKey.length >= 7) {
-      const { data } = await db
-        .from('customers')
-        .select('id, name')
-        .eq('restaurant_id', restaurantId)
-        .eq('phone', phoneKey)
-        .maybeSingle();
-      if (data) customer = data as { id: string; name: string };
-    }
-  }
-
-  if (!customer) {
+  const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
+  if (!customerId) {
     return { ...NO_DINER, active: true, loggedIn, redeemValue, minRedeem };
   }
 
-  const { data: acct } = await db
-    .from('loyalty_accounts')
-    .select('points_balance, lifetime_points')
-    .eq('restaurant_id', restaurantId)
-    .eq('customer_id', customer.id)
-    .maybeSingle();
+  const [{ data: customer }, { data: acct }] = await Promise.all([
+    db.from('customers').select('name').eq('id', customerId).maybeSingle(),
+    db.from('loyalty_accounts').select('points_balance, lifetime_points').eq('restaurant_id', restaurantId).eq('customer_id', customerId).maybeSingle(),
+  ]);
 
   return {
     active: true,
-    identified: true,
     loggedIn,
-    linkedAccount,
-    name: customer.name ?? null,
+    identified: true,
+    name: (customer?.name as string | null) ?? null,
     balance: Number(acct?.points_balance) || 0,
     lifetimePoints: Number(acct?.lifetime_points) || 0,
     redeemValue,

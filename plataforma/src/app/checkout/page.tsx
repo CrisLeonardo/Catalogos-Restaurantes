@@ -7,6 +7,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isOpenNow } from '@/lib/hours';
 import { hasActiveCodePromos } from '@/lib/db/promos';
 import { isModuleActive } from '@/lib/modules';
+import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
 
@@ -66,6 +67,7 @@ export default async function CheckoutPage() {
           hasPromos={hasPromos}
           loyaltyActive={loyaltyActive}
           encuestasActive={encuestasActive}
+          googleAuthEnabled={isGoogleAuthEnabled()}
         />
       </CartProvider>
     </ThemeProvider>

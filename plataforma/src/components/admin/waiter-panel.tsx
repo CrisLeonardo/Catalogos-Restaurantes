@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken } from '@/components/admin/floor-map';
@@ -346,10 +347,10 @@ export default function WaiterPanel({
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.realtime.setAuth(session?.access_token ?? null);
+      await ready;
       if (cancelled) return;
 
       channel = supabase
@@ -366,6 +367,7 @@ export default function WaiterPanel({
     return () => {
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
+      stopAuthSync();
     };
   }, [waiterId, router]);
 

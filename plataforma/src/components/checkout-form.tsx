@@ -16,6 +16,9 @@ import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
+import { createClient } from '@/lib/supabase/client';
+import GoogleSignInButton from '@/components/menu/google-signin';
+import type { User } from '@supabase/supabase-js';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -54,6 +57,7 @@ interface Props {
   hasPromos?: boolean;
   loyaltyActive?: boolean;
   encuestasActive?: boolean;
+  googleAuthEnabled?: boolean;
 }
 
 type Step = 'form' | 'success';
@@ -73,6 +77,7 @@ export default function CheckoutForm({
   hasPromos = false,
   loyaltyActive = false,
   encuestasActive = false,
+  googleAuthEnabled = false,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -150,9 +155,19 @@ export default function CheckoutForm({
   const [promoMsg, setPromoMsg] = useState('');
   const [promoChecking, setPromoChecking] = useState(false);
 
-  // Lealtad / canje de puntos
+  // Lealtad / canje de puntos — requiere sesión de Google (nunca por teléfono).
   const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
   const [redeemOn, setRedeemOn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user: u } } = await createClient().auth.getUser();
+      if (!cancelled) setUser(u ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,21 +231,21 @@ export default function CheckoutForm({
     setCashAmount('');
   }, [type, paymentMethod]);
 
-  // Lealtad: al escribir un teléfono válido, consulta el saldo de puntos del
-  // cliente (si el módulo está activo). Deferido (setTimeout) para no llamar
-  // setState de forma síncrona dentro del efecto.
+  // Lealtad: con sesión de Google iniciada, consulta el saldo de puntos del
+  // comensal (si el módulo está activo). Nunca se resuelve por el teléfono
+  // escrito en el formulario — ver getLoyaltyRedeemInfo.
   useEffect(() => {
     let cancelled = false;
-    const id = setTimeout(async () => {
-      if (!loyaltyActive || !isValidGuatemalaPhone(phone)) {
+    (async () => {
+      if (!loyaltyActive || !user) {
         if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); }
         return;
       }
-      const info = await getLoyaltyRedeemInfo(restaurantId, phone);
+      const info = await getLoyaltyRedeemInfo(restaurantId);
       if (!cancelled) setRedeemInfo(info.active ? info : null);
-    }, 400);
-    return () => { cancelled = true; clearTimeout(id); };
-  }, [phone, loyaltyActive, restaurantId]);
+    })();
+    return () => { cancelled = true; };
+  }, [user, loyaltyActive, restaurantId]);
 
   const errs = {
     name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
@@ -723,6 +738,17 @@ export default function CheckoutForm({
             )}
             {promoMsg && <p style={{ fontSize: 12, color: '#f87171', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
+
+          {/* Lealtad — sin sesión no hay forma de saber ni usar el saldo */}
+          {loyaltyActive && googleAuthEnabled && !user && (
+            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
+                Inicia sesión para usar tus puntos de fidelidad
+              </span>
+              <GoogleSignInButton label="Continuar con Google" />
+            </div>
+          )}
 
           {/* Lealtad — canje de puntos (si el cliente tiene cuenta con saldo) */}
           {redeemInfo?.active && redeemInfo.balance > 0 && (
