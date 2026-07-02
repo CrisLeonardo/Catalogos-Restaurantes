@@ -31,6 +31,7 @@ export type LoyaltyActionResult = { error?: string; ok?: boolean; balance?: numb
 
 export interface LoyaltySettingsPatch {
   earn_rate: number;
+  earn_amount: number;
   min_redeem: number;
   signup_bonus: number;
   rewards_enabled: boolean;
@@ -42,11 +43,14 @@ export async function saveLoyaltySettings(restaurantId: string, patch: LoyaltySe
 
   const earn = Number(patch.earn_rate);
   if (isNaN(earn) || earn < 0) return { error: 'Tasa de acumulación inválida.' };
+  const amount = Number(patch.earn_amount);
+  if (isNaN(amount) || amount <= 0) return { error: 'El monto de gasto debe ser mayor a 0.' };
 
   const db = createServiceClient();
   const { error } = await db.from('loyalty_settings').upsert({
     restaurant_id: restaurantId,
     earn_rate: earn,
+    earn_amount: amount,
     min_redeem: Math.max(0, Math.floor(Number(patch.min_redeem) || 0)),
     signup_bonus: Math.max(0, Math.floor(Number(patch.signup_bonus) || 0)),
     rewards_enabled: patch.rewards_enabled !== false,
@@ -253,7 +257,7 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       .single();
     if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'loyalty')) return;
 
-    const { data: settings } = await db.from('loyalty_settings').select('earn_rate').eq('restaurant_id', restaurantId).maybeSingle();
+    const { data: settings } = await db.from('loyalty_settings').select('earn_rate, earn_amount').eq('restaurant_id', restaurantId).maybeSingle();
     if (!settings) return;
 
     const { data: order } = await db
@@ -273,8 +277,8 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
     if ((count ?? 0) > 0) return;
 
     // Puntos por línea: si el producto define sus propios puntos, esos × cantidad;
-    // si no, la regla general earn_rate (pts por cada Q10) × subtotal de la línea / 10.
-    // Los canjes (Q0) no otorgan puntos.
+    // si no, la regla general earn_rate (pts por cada earn_amount gastados) × subtotal
+    // de la línea / earn_amount. Los canjes (Q0) no otorgan puntos.
     const { data: items } = await db
       .from('order_items')
       .select('product_id, quantity, subtotal, is_reward')
@@ -291,6 +295,7 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
     );
 
     const earnRate = Number(settings.earn_rate) || 0;
+    const earnAmount = Number(settings.earn_amount) || 10;
     let points = 0;
     for (const it of items ?? []) {
       if (it.is_reward) continue;
@@ -298,7 +303,7 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       if (per !== null && per !== undefined) {
         points += Math.max(0, Math.floor(Number(per))) * Number(it.quantity);
       } else {
-        points += Math.floor(Number(it.subtotal) * earnRate / 10);
+        points += Math.floor(Number(it.subtotal) * earnRate / earnAmount);
       }
     }
     points = Math.floor(points);

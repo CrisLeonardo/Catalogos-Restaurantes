@@ -80,6 +80,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
   const router = useRouter();
   const [p, setP] = useState<LoyaltySettingsPatch>({
     earn_rate: settings.earn_rate,
+    earn_amount: settings.earn_amount,
     min_redeem: settings.min_redeem,
     signup_bonus: settings.signup_bonus,
     rewards_enabled: settings.rewards_enabled,
@@ -101,7 +102,8 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <div><label style={labelStyle}>Puntos por cada Q10 gastados</label><input style={inputStyle} type="number" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Por cada Q gastados</label><input style={inputStyle} type="number" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
         <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input style={inputStyle} type="number" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
         <div><label style={labelStyle}>Puntos de bienvenida</label><input style={inputStyle} type="number" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
       </div>
@@ -112,7 +114,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
       </label>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-        La regla general (<strong>{p.earn_rate} pts/Q10</strong>) aplica a los productos sin puntos propios. Puedes fijar
+        La regla general (<strong>{p.earn_rate} pts por cada Q{p.earn_amount}</strong>) aplica a los productos sin puntos propios. Puedes fijar
         los puntos exactos de cada producto en su ficha (Menú → editar producto → <em>Puntos de lealtad</em>).
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>

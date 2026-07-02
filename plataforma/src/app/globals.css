@@ -562,6 +562,20 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
   --u-hair:   var(--admin-content-hair,   rgba(245,243,239,0.10));
   --u-hair-2: var(--admin-content-hair-2, rgba(245,243,239,0.18));
 }
+/* El <select> en sí puede llevar fondo translúcido (se ve bien: hereda el
+   fondo del panel detrás). Pero el listado de <option> que abre el navegador
+   es un popup aparte que en Windows/Chrome IGNORA `color-scheme` y solo
+   respeta el color explícito de cada <option> — sin esto sale blanco con
+   texto negro sin importar el tema del panel. */
+.admin-main select option {
+  background-color: var(--admin-content-bg-solid, #15130f);
+  color: var(--u-text);
+}
+.admin-sidebar select option,
+.admin-topbar select option {
+  background-color: var(--admin-panel-bg);
+  color: var(--u-text);
+}
 /* Botones primarios del dashboard: color personalizable (no afecta al mesero,
    que vive fuera de .admin-main y conserva el acento de la marca). */
 .admin-main .btn-accent {

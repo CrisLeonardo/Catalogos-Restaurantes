@@ -42,6 +42,8 @@ export async function getRedeemContextByCustomer(restaurantId: string, customerI
 export interface LoyaltySettings {
   restaurant_id: string;
   earn_rate: number;
+  /** Monto (Q) sobre el que se aplica earn_rate. Ej. 1 pt por cada earn_amount=10. */
+  earn_amount: number;
   redeem_value: number;
   min_redeem: number;
   signup_bonus: number;
@@ -78,6 +80,7 @@ export async function getLoyaltySettings(restaurantId: string): Promise<LoyaltyS
   return {
     restaurant_id: restaurantId,
     earn_rate: 1,
+    earn_amount: 10,
     redeem_value: 0.1,
     min_redeem: 100,
     signup_bonus: 0,
