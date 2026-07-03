@@ -177,12 +177,11 @@ export default function AdminNotifications({
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = 2000;
     const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
-    (async () => {
-      await ready;
-      if (cancelled) return;
-
+    function connect() {
       channel = supabase
         .channel(`orders-notify-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
 
@@ -266,10 +265,33 @@ export default function AdminNotifications({
             }
           } catch {}
         })
-        .subscribe();
+        .subscribe((status) => {
+          if (cancelled) return;
+          if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
+          // El socket puede caerse en silencio (red inestable, laptop en
+          // suspensión, JWT que tarda en refrescar) y el canal no se
+          // reconecta solo — sin esto, el toast/sonido deja de llegar hasta
+          // recargar la página. Reintentar con backoff exponencial (máx 30s).
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            channel?.unsubscribe();
+            retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 30_000);
+          }
+        });
+    }
+
+    (async () => {
+      await ready;
+      if (cancelled) return;
+      connect();
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      channel?.unsubscribe();
+      stopAuthSync();
+    };
   }, [restaurantId, router]);
 
   /* ── Clic en la campana ──────────────────────────────────────────── */

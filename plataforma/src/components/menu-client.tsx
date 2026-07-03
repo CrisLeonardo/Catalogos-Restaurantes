@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 import Catalog from '@/components/menu/catalog';
 import ProductSheet from '@/components/menu/product-sheet';
 import { CartBar, CartPanel } from '@/components/menu/cart';
@@ -9,10 +11,12 @@ import WaiterCallButton from '@/components/menu/waiter-call-button';
 import RewardsSection from '@/components/menu/rewards-section';
 import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
 import AccountSheet from '@/components/menu/account-sheet';
+import GoogleLoyaltyIntro from '@/components/menu/google-loyalty-intro';
 import MyOrders from '@/components/my-orders';
 import OverlayBackground from '@/components/menu/overlay-background';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable } from '@/lib/table-session';
+import { getMyAccount } from '@/lib/actions/loyalty';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
@@ -57,6 +61,8 @@ export default function MenuClient({
   const [accountOpen, setAccountOpen] = useState(false);
   const [pedidosOpen, setPedidosOpen] = useState(false);
   const [tableScanned, setTableScanned] = useState(false);
+  const [authError, setAuthError] = useState(false);
+  const [googleIntroOpen, setGoogleIntroOpen] = useState(false);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -66,16 +72,45 @@ export default function MenuClient({
   // El login con Google es una redirección de página completa (/auth/callback),
   // así que cualquier sheet abierto se pierde en la vuelta. GoogleSignInButton
   // marca a dónde volver con ?openTab=; lo reabrimos aquí y limpiamos la URL.
+  // `auth_error=1` llega si el intercambio del código OAuth falló (link
+  // vencido, doble intento, etc.) — antes se perdía en silencio y el
+  // comensal volvía al menú sin sesión y sin ningún aviso de qué pasó.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('openTab');
+    const hadAuthError = params.get('auth_error') === '1';
     if (tab === 'cuenta') setAccountOpen(true);
     else if (tab === 'fidelidad') setRewardsOpen(true);
-    else return;
+    if (hadAuthError) setAuthError(true);
+    if (!tab && !hadAuthError) return;
     params.delete('openTab');
+    params.delete('auth_error');
     const qs = params.toString();
     window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
   }, []);
+
+  useEffect(() => {
+    if (!authError) return;
+    const t = setTimeout(() => setAuthError(false), 6000);
+    return () => clearTimeout(t);
+  }, [authError]);
+
+  // Aviso de una sola vez (primera visita a este restaurante) explicando que
+  // los puntos de fidelidad requieren sesión de Google. Se omite si ya hay
+  // sesión iniciada (getMyAccount) para no molestar a quien ya la usa.
+  useEffect(() => {
+    if (!restaurantId || !loyaltyOn || !googleAuthEnabled) return;
+    const key = `google-loyalty-intro-${restaurantId}`;
+    if (localStorage.getItem(key)) return;
+    let cancelled = false;
+    (async () => {
+      const acc = await getMyAccount(restaurantId).catch(() => null);
+      if (cancelled) return;
+      localStorage.setItem(key, '1');
+      if (!acc?.loggedIn) setGoogleIntroOpen(true);
+    })();
+    return () => { cancelled = true; };
+  }, [restaurantId, loyaltyOn, googleAuthEnabled]);
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
   const catIcon = useMemo(() => {
@@ -181,6 +216,39 @@ export default function MenuClient({
           whatsappNumber={whatsappNumber}
           onClose={() => setAccountOpen(false)}
         />
+      )}
+
+      {/* Aviso: el inicio de sesión con Google no se completó */}
+      {authError && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed', zIndex: 90,
+            top: 'calc(12px + env(safe-area-inset-top, 0px))', left: 16, right: 16,
+            display: 'flex', justifyContent: 'center',
+          }}
+        >
+          <Glass style={{ width: '100%', maxWidth: 420, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="alertCircle" size={18} style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0 }} />
+            <span style={{ fontSize: 12.5, flex: 1, lineHeight: 1.4 }}>
+              No pudimos completar el inicio de sesión con Google. Intenta de nuevo.
+            </span>
+            <button
+              type="button"
+              onClick={() => setAuthError(false)}
+              aria-label="Cerrar aviso"
+              className="press"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', flexShrink: 0, display: 'grid', placeItems: 'center' }}
+            >
+              <Icon name="x" size={16} />
+            </button>
+          </Glass>
+        </div>
+      )}
+
+      {/* Aviso de primera visita: fidelidad requiere sesión de Google */}
+      {googleIntroOpen && (
+        <GoogleLoyaltyIntro onClose={() => setGoogleIntroOpen(false)} />
       )}
     </>
   );

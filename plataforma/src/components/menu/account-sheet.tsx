@@ -47,6 +47,11 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
   // navegador; si esa llamada fallaba (red, bloqueadores) la sesión se veía
   // como "no iniciada" aunque sí lo estuviera, y ocultaba los datos/puntos.
   const [account, setAccount] = useState<MyAccount | null>(null);
+  // Mientras esto es true no se sabe aún si hay sesión — sin esta bandera la
+  // tarjeta de Google mostraba "Accede con Google" un instante en cada
+  // apertura (incluso con sesión válida), dando la impresión de que el
+  // inicio de sesión "no se detectó".
+  const [accountLoading, setAccountLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [linkPhone, setLinkPhone] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
@@ -77,7 +82,14 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     }
   }, [restaurantId]);
 
-  useEffect(() => { loadAccount(); }, [loadAccount]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await loadAccount();
+      if (!cancelled) setAccountLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [loadAccount]);
 
   async function handleLink() {
     const cleanPhone = linkPhone.replace(/\D/g, '');
@@ -204,7 +216,15 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
         {/* Sesión con Google */}
         {googleAuthEnabled && (
           <Glass variant="quiet" style={{ borderRadius: 16, padding: '14px 16px' }}>
-            {loggedIn && identified ? (
+            {accountLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0.6 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 99, background: 'var(--surface-2)', flexShrink: 0 }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ width: '55%', height: 12, borderRadius: 6, background: 'var(--surface-2)' }} />
+                  <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'var(--surface-2)' }} />
+                </div>
+              </div>
+            ) : loggedIn && identified ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {account?.avatarUrl && (
                   // eslint-disable-next-line @next/next/no-img-element

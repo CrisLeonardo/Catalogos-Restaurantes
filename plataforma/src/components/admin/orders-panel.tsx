@@ -112,15 +112,14 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = 2000;
     // RLS filtra los eventos por usuario: sin el JWT de la sesión en el
     // canal realtime no llega NADA, y ese JWT debe refrescarse o caduca
     // a la hora (ver lib/supabase/realtime-auth.ts).
     const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
-    (async () => {
-      await ready;
-      if (cancelled) return;
-
+    function connect() {
       // Topic único por montaje (ver admin/notifications.tsx).
       channel = supabase
         .channel(`orders-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
@@ -149,10 +148,32 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
             router.refresh();
           },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (cancelled) return;
+          if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
+          // Sin reintento el canal puede quedar muerto en silencio (red
+          // inestable, laptop en suspensión) hasta recargar la página
+          // (ver admin/notifications.tsx). Backoff exponencial, máx 30s.
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            channel?.unsubscribe();
+            retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 30_000);
+          }
+        });
+    }
+
+    (async () => {
+      await ready;
+      if (cancelled) return;
+      connect();
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      channel?.unsubscribe();
+      stopAuthSync();
+    };
   }, [restaurantId, router]);
 
   function buildExportHtml(

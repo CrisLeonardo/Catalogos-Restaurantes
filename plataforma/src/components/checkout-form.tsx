@@ -156,6 +156,9 @@ export default function CheckoutForm({
   // Lealtad / canje de puntos — requiere sesión de Google (nunca por teléfono).
   const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; loggedIn: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
   const [redeemOn, setRedeemOn] = useState(false);
+  // Evita mostrar "Inicia sesión" un instante a un comensal que sí tiene
+  // sesión, mientras getLoyaltyRedeemInfo todavía está resolviendo.
+  const [redeemInfoLoaded, setRedeemInfoLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,11 +233,11 @@ export default function CheckoutForm({
     let cancelled = false;
     (async () => {
       if (!loyaltyActive) {
-        if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); }
+        if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); setRedeemInfoLoaded(true); }
         return;
       }
       const info = await getLoyaltyRedeemInfo(restaurantId).catch(() => null);
-      if (!cancelled) setRedeemInfo(info);
+      if (!cancelled) { setRedeemInfo(info); setRedeemInfoLoaded(true); }
     })();
     return () => { cancelled = true; };
   }, [loyaltyActive, restaurantId]);
@@ -732,7 +735,7 @@ export default function CheckoutForm({
           </div>}
 
           {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido */}
-          {loyaltyActive && googleAuthEnabled && !redeemInfo?.loggedIn && (
+          {loyaltyActive && googleAuthEnabled && redeemInfoLoaded && !redeemInfo?.loggedIn && (
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />

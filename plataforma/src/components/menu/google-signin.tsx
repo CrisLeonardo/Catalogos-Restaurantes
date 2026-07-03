@@ -37,7 +37,15 @@ export default function GoogleSignInButton({ label = 'Continuar con Google', ful
       if (returnTab) url.searchParams.set('openTab', returnTab);
       const next = url.pathname + url.search;
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+      // `prompt: 'select_account'` fuerza el selector de cuenta de Google en
+      // CADA inicio de sesión, incluso si el navegador ya tiene una sesión de
+      // Google activa. Sin esto, Google reautentica en silencio con la última
+      // cuenta usada — así que cerrar sesión en Leogin y volver a entrar
+      // siempre "elegía sola" la cuenta anterior, sin dejar cambiarla.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, queryParams: { prompt: 'select_account' } },
+      });
       if (error) setLoading(false);
       // En éxito, el navegador redirige a Google: no hace falta limpiar el estado.
     } catch {

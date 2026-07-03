@@ -54,6 +54,9 @@ const pickIcon = (icon: string | null | undefined): string => (icon && ICON_PATH
 export default function RewardsSection({ restaurantId, rewards, redeemValue, googleAuthEnabled, ordersEnabled, open, onClose }: Props) {
   const { items, addItem, removeItem } = useCart();
   const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
+  // Evita el parpadeo de "Mira y canjea tus puntos" (estado no-logueado)
+  // mientras getMyAccount todavía está resolviendo la sesión.
+  const [loyaltyLoading, setLoyaltyLoading] = useState(true);
   const [savedPhone, setSavedPhone] = useState('');
 
   const refresh = useCallback(async () => {
@@ -65,7 +68,12 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
 
   useEffect(() => {
     setSavedPhone(getLocalProfile(restaurantId)?.phone ?? '');
-    refresh();
+    let cancelled = false;
+    (async () => {
+      await refresh();
+      if (!cancelled) setLoyaltyLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, [restaurantId, refresh]);
 
   const balance = loyalty?.identified ? loyalty.balance : null;
@@ -90,6 +98,7 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
           onClose={onClose}
           rewards={rewards}
           loyalty={loyalty}
+          loyaltyLoading={loyaltyLoading}
           balance={balance}
           redeemValue={redeemValue}
           googleAuthEnabled={googleAuthEnabled}
@@ -204,12 +213,13 @@ function RewardRow({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuRew
 }
 
 function RewardsMenu({
-  onClose, rewards, loyalty, balance, redeemValue, googleAuthEnabled, ordersEnabled,
+  onClose, rewards, loyalty, loyaltyLoading, balance, redeemValue, googleAuthEnabled, ordersEnabled,
   rewardLineIds, onToggle, onRefresh, restaurantId, initialPhone,
 }: {
   onClose: () => void;
   rewards: MenuReward[];
   loyalty: DinerLoyalty | null;
+  loyaltyLoading: boolean;
   balance: number | null;
   redeemValue: number;
   googleAuthEnabled: boolean;
@@ -269,7 +279,12 @@ function RewardsMenu({
 
         {/* Tarjeta de saldo / identidad (estilo "tarjeta de puntos") */}
         <Glass style={{ borderRadius: 20, padding: '18px 20px', marginBottom: 18, background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 75%)' }}>
-          {identified ? (
+          {loyaltyLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, opacity: 0.6 }}>
+              <div style={{ width: '40%', height: 10, borderRadius: 6, background: 'var(--surface-2)' }} />
+              <div style={{ width: '55%', height: 30, borderRadius: 8, background: 'var(--surface-2)' }} />
+            </div>
+          ) : identified ? (
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
               <div>
                 <div className="t-kicker" style={{ fontSize: 10 }}>Tus puntos{loyalty?.name ? ` · ${loyalty.name.split(' ')[0]}` : ''}</div>
