@@ -11,8 +11,8 @@
           iframe → no consume CPU/GPU. Botones para activarla,
           abrirla en pestaña nueva o en una ventana aparte.
        2) Vista previa ENCENDIDA: marco de teléfono con el iframe
-          de /preview/[id] (sitio del cliente) o /preview/admin/[id]
-          (panel del restaurante).
+          de /preview/[id] (sitio del cliente). El panel admin ya no
+          se previsualiza: usa 2 temas fijos, no depende del tenant.
      El iframe del sitio es lo que más pesa (fondos animados,
      watermark girando, sheen…), por eso se monta solo bajo demanda.
    ============================================================ */
@@ -51,7 +51,6 @@ export function useThemePreviewChannel(previewId: string, state: ThemePreviewSta
   }, [state]);
 }
 
-type Target = 'site' | 'admin';
 const STORAGE_KEY = 'leogin-preview-enabled';
 const PREF_EVENT = 'leogin-preview-pref';
 
@@ -83,14 +82,10 @@ function useEnabledPref(): [boolean, (v: boolean) => void] {
 }
 
 export default function PreviewPane({ previewId }: { previewId: string }) {
-  const isNew = previewId === 'new';
   const [enabled, setEnabledPersist] = useEnabledPref();
   const [wide, setWide] = useState(false);
-  const [target, setTarget] = useState<Target>('site');
 
-  // En creación aún no existe el panel admin del restaurante.
-  const effectiveTarget: Target = isNew ? 'site' : target;
-  const src = effectiveTarget === 'admin' ? `/preview/admin/${previewId}` : `/preview/${previewId}`;
+  const src = `/preview/${previewId}`;
 
   function openTab() {
     window.open(src, '_blank', 'noopener,noreferrer');
@@ -98,7 +93,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
   function openWindow() {
     window.open(
       src,
-      `leogin-preview-${previewId}-${effectiveTarget}`,
+      `leogin-preview-${previewId}`,
       'width=430,height=900,menubar=no,toolbar=no,location=no,status=no',
     );
   }
@@ -129,14 +124,6 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
         )}
       </div>
 
-      {/* Selector de objetivo: sitio del cliente / panel admin del restaurante */}
-      {!isNew && (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <TargetBtn label="Sitio del cliente" active={effectiveTarget === 'site'} onClick={() => setTarget('site')} icon="phone" />
-          <TargetBtn label="Panel del restaurante" active={effectiveTarget === 'admin'} onClick={() => setTarget('admin')} icon="dashboard" />
-        </div>
-      )}
-
       {enabled ? (
         <>
           {/* Marco de teléfono con el iframe (montado solo al activar) */}
@@ -144,9 +131,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
             <iframe key={src} src={src} title="Vista previa del restaurante" loading="lazy" />
           </div>
           <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', textAlign: 'center', lineHeight: 1.5 }}>
-            {effectiveTarget === 'admin'
-              ? 'Así ve el dueño su panel: el tema se actualiza en vivo (datos guardados, solo lectura).'
-              : 'Los cambios del editor se reflejan al instante, sin guardar.'}
+            Los cambios del editor se reflejan al instante, sin guardar.
             <br />
             «Abrir en ventana» sirve para mostrarla al cliente en otra pantalla.
           </p>
@@ -218,30 +203,3 @@ function PaneBtn({
   );
 }
 
-function TargetBtn({
-  label, icon, active, onClick,
-}: {
-  label: string;
-  icon: string;
-  active?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      className="press"
-      style={{
-        flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        padding: '8px 10px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-        border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
-        background: active ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
-        color: active ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms',
-      }}
-    >
-      <Icon name={icon} size={14} />
-      <span>{label}</span>
-    </button>
-  );
-}

@@ -21,7 +21,7 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { getLocalProfile } from '@/lib/customer-local';
-import { createClient } from '@/lib/supabase/client';
+import { createDinerClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { DinerLoyalty } from '@/lib/db/loyalty';
@@ -255,7 +255,7 @@ function RewardsMenu({
   }
   async function signOut() {
     setBusy(true);
-    try { await createClient().auth.signOut({ scope: 'local' }); } catch {}
+    try { await createDinerClient().auth.signOut({ scope: 'local' }); } catch {}
     await onRefresh();
     setBusy(false);
   }

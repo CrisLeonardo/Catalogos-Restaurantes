@@ -23,7 +23,6 @@ export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
 export type CatalogView = 'grid' | 'list';
 export type ProductArt = 'auto' | 'pattern' | 'photo';
 export type OrderType = 'delivery' | 'pickup' | 'dine_in';
-export type AdminScheme = 'auto' | 'dark' | 'light';
 
 /* ── Tipografía granular ──────────────────────────────────────
    TextStyle describe TODO de un texto: tamaño (multiplicador),
@@ -197,19 +196,8 @@ export interface ThemeConfig {
   watermarkOpacity: number;    // opacidad del watermark (0.01–0.15)
   watermarkSize: number;       // tamaño del watermark en vmin (40–120)
 
-  // ── Panel admin ──
-  adminUseClientTheme: boolean; // true = hereda colores del tema del cliente
-  adminPanelBg: string;         // color de fondo del sidebar/topbar (cuando no usa tema del cliente)
-  adminPanelAccent: string;     // color de acento (navlinks activos)
-  adminPanelScheme: AdminScheme;// 'auto' = por luminancia del fondo; o forzar dark/light
-  adminPanelText: string;       // '' = auto por luminancia; o color explícito
-  adminPanelCardBg: string;     // '' = auto; fondo de tarjetas/usercard del panel
-  adminPanelFont: string;       // familia del panel (nombre de FONT_OPTIONS) o '' = Geist
-  adminPanelTextScale: number;  // 0.85–1.2 escala de texto del panel
-  adminPanelRadius: number;     // 0.4–1.8 multiplicador de redondeo del panel
-  adminPanelButtonBg: string;   // '' = usa el acento; color de los botones del panel
-  adminPanelButtonText: string; // '' = auto por luminancia; texto sobre los botones
-  adminPanelContentBg: string;  // '' = transparente (deja ver el fondo); fondo del área de contenido
+  // (El panel admin ya NO se personaliza por restaurante: usa 2 temas fijos
+  //  claro/oscuro — ver globals.css `html[data-admin-area]` y AdminShell.)
 
   // ── Plano del salón (mesas) ──
   floorPlan: FloorPlan;
@@ -370,19 +358,6 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   bgOverlayOpacity: 1,
   watermarkOpacity: 0.04,
   watermarkSize: 78,
-
-  adminUseClientTheme: false,
-  adminPanelBg: '#0c0c0e',
-  adminPanelAccent: '#D97757',
-  adminPanelScheme: 'auto',
-  adminPanelText: '',
-  adminPanelCardBg: '',
-  adminPanelFont: '',
-  adminPanelTextScale: 1,
-  adminPanelRadius: 1,
-  adminPanelButtonBg: '',
-  adminPanelButtonText: '',
-  adminPanelContentBg: '',
 
   floorPlan: {
     enabled: false,

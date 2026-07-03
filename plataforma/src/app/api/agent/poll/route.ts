@@ -25,6 +25,12 @@ export async function POST(req: Request) {
   if (typeof body.version === 'string') patch.agent_version = body.version;
   await db.from('print_agents').update(patch).eq('id', agent.agentId);
 
+  // URL del hub de emergencia (mig. 062). Update APARTE y best-effort: si la
+  // migración no está aplicada, el fallo no debe romper el heartbeat.
+  if (typeof body.hubUrl === 'string' && body.hubUrl.length <= 120) {
+    await db.from('print_agents').update({ hub_url: body.hubUrl }).eq('id', agent.agentId);
+  }
+
   // Reclamo atómico de trabajos pendientes para este restaurante.
   const { data, error } = await db.rpc('claim_print_jobs', {
     p_restaurant_id: agent.restaurantId,

@@ -7,6 +7,7 @@
 
 import http from 'node:http';
 import { parseTarget, printRaw } from './printer/index.ts';
+import { getHubInfo } from './hub.ts';
 import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
 
@@ -44,7 +45,12 @@ export function startLocalServer(): Promise<boolean> {
     const server = http.createServer((req, res) => {
       if (req.method === 'GET' && req.url === '/health') {
         res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({ ok: true, agent: 'leogin', version: AGENT_VERSION }));
+        // hubUrl: punto de emergencia en la LAN (el panel lo muestra al dueño).
+        const hub = getHubInfo();
+        res.end(JSON.stringify({
+          ok: true, agent: 'leogin', version: AGENT_VERSION,
+          hubUrl: hub.url, hubQueued: hub.queued,
+        }));
         return;
       }
       if (req.method === 'POST' && req.url === '/print') {

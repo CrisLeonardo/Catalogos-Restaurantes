@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
@@ -17,6 +17,11 @@ import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
 import GoogleSignInButton from '@/components/menu/google-signin';
+import { reportConnectivityProblem } from '@/lib/offline/use-online';
+import {
+  savePendingOrder, loadPendingOrder, clearPendingOrder,
+  PENDING_ORDER_TTL_MS, type PendingOrderBundle,
+} from '@/lib/offline/pending-order';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -106,6 +111,15 @@ export default function CheckoutForm({
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
+
+  // ── Pedido pendiente por falta de señal (Fase 1 offline) ──
+  // Si createOrder falla por RED, el pedido queda "listo para enviar" con
+  // reintento automático durante 10 min; después pide confirmación (nadie
+  // quiere que un almuerzo viejo entre solo a la hora de la cena).
+  const [pendingOffline, setPendingOffline] = useState<PendingOrderBundle | null>(null);
+  const [pendingExpired, setPendingExpired] = useState(false);
+  const retryBusyRef = useRef(false);
+  const pendingRetryNowRef = useRef<(() => void) | null>(null);
 
   // Encuesta de satisfacción
   const [ratingValue, setRatingValue] = useState(0);
@@ -310,11 +324,70 @@ export default function CheckoutForm({
     }
   }
 
+  /**
+   * Aplica la respuesta de createOrder usando los datos congelados en el
+   * bundle (sirve igual para el envío directo que para un reintento offline,
+   * donde el carrito/estado ya pudo cambiar).
+   */
+  function applyOrderResult(
+    result: Awaited<ReturnType<typeof createOrder>>,
+    b: PendingOrderBundle,
+  ) {
+    if (result.error) { setError(result.error); return; }
+
+    saveLocalProfile(restaurantId, {
+      name: b.name, phone: b.phone,
+      ...(b.address.trim() ? { address: b.address } : {}),
+      ...(b.zone && b.zone !== NO_ZONE ? { zone: b.zone } : {}),
+    });
+    if (result.publicToken) {
+      addLocalOrder(restaurantId, {
+        token: result.publicToken,
+        orderNumber: result.orderNumber ?? '',
+        createdAt: new Date().toISOString(),
+        total: b.totalSnapshot,
+      });
+    }
+
+    setSnapshot(b.itemsSnapshot);
+    setSnapshotFee(b.feeSnapshot);
+    setSnapshotDiscount(b.discount);
+    setSnapshotLoyalty(b.loyaltyDiscount);
+    setSnapshotTip(b.tipSnapshot);
+    setSnapshotTotal(b.totalSnapshot);
+    setSnapshotPayment(b.payment as 'CASH' | 'CARD');
+    setSnapshotCashAmount(b.cashAmount);
+    setSnapshotOrderType(b.orderType as OrderType);
+    setOrderNumber(result.orderNumber ?? '');
+    setTrackToken(result.publicToken ?? '');
+    setOrderId(result.orderId ?? '');
+    clearCart();
+    setStep('success');
+
+    const waUrl = buildWhatsAppUrl({
+      orderNumber: result.orderNumber ?? '',
+      snapshot: b.itemsSnapshot,
+      fee: b.feeSnapshot,
+      tip: b.tipSnapshot,
+      total: b.totalSnapshot,
+      discount: b.discount,
+      loyalty: b.loyaltyDiscount,
+      payment: b.payment as 'CASH' | 'CARD',
+      cashAmt: b.cashAmount,
+      orderType: b.orderType as OrderType,
+    });
+    if (waUrl) {
+      // En un reintento en segundo plano el navegador puede bloquear la
+      // ventana (no hay gesto del usuario) — por eso el try.
+      try { window.open(waUrl, '_blank', 'noopener'); } catch {}
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Anti doble-submit: si ya se está enviando, ignora clics repetidos
-    // (evita pedidos duplicados aunque el botón quede visible).
-    if (isPending) return;
+    // Anti doble-submit: si ya se está enviando (o hay uno en cola offline),
+    // ignora clics repetidos — evita pedidos duplicados.
+    if (isPending || pendingOffline) return;
     setError('');
     if (!valid) { setTried(true); return; }
 
@@ -328,81 +401,127 @@ export default function CheckoutForm({
     const tipSnapshot   = tipAmount;
     const totalSnapshot = finalTotal;
 
+    // Idempotencia (mig. 061): reintentar este mismo payload jamás duplica.
+    const clientId = crypto.randomUUID();
+    const payload = {
+      restaurantId,
+      clientId,
+      items: items.filter((i) => !i.rewardId).map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+        options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
+      })),
+      rewardLines: items.filter((i) => i.rewardId).map((i) => ({ rewardId: i.rewardId! })),
+      customer: {
+        name, phone, type,
+        ...(type === 'DELIVERY' ? { address, notes } : { notes }),
+        ...(type === 'DINE_IN' && tableNumber  ? { tableNumber }      : {}),
+        ...(type === 'DINE_IN' && coursePreference ? { coursePreference } : {}),
+        ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
+        ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
+          ? { deliveryLat, deliveryLng }
+          : {}),
+      },
+      deliveryFee: feeSnapshot,
+      ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
+      paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
+      ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
+      tipAccepted: showTip,
+      ...(redeemPoints > 0 ? { redeemPoints } : {}),
+    };
+
+    const bundle: PendingOrderBundle = {
+      clientId,
+      payload,
+      createdAt: Date.now(),
+      itemsSnapshot,
+      feeSnapshot,
+      tipSnapshot,
+      totalSnapshot,
+      discount,
+      loyaltyDiscount,
+      payment: type === 'DINE_IN' ? 'CASH' : paymentMethod,
+      cashAmount: needsCashAmount ? cashAmountNum : 0,
+      orderType: type,
+      name, phone, address,
+      zone: zone ?? '',
+    };
+
     start(async () => {
-      const result = await createOrder({
-        restaurantId,
-        items: items.filter((i) => !i.rewardId).map((i) => ({
-          productId: i.productId,
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-          options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
-        })),
-        rewardLines: items.filter((i) => i.rewardId).map((i) => ({ rewardId: i.rewardId! })),
-        customer: {
-          name, phone, type,
-          ...(type === 'DELIVERY' ? { address, notes } : { notes }),
-          ...(type === 'DINE_IN' && tableNumber  ? { tableNumber }      : {}),
-          ...(type === 'DINE_IN' && coursePreference ? { coursePreference } : {}),
-          ...(type === 'DELIVERY' && zonesActive ? { zone } : {}),
-          ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
-            ? { deliveryLat, deliveryLng }
-            : {}),
-        },
-        deliveryFee: feeSnapshot,
-        ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
-        paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
-        ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
-        tipAccepted: showTip,
-        ...(redeemPoints > 0 ? { redeemPoints } : {}),
-      });
-      if (result.error) { setError(result.error); return; }
-
-      saveLocalProfile(restaurantId, {
-        name, phone,
-        ...(address.trim() ? { address } : {}),
-        ...(zone && zone !== NO_ZONE ? { zone } : {}),
-      });
-      if (result.publicToken) {
-        addLocalOrder(restaurantId, {
-          token: result.publicToken,
-          orderNumber: result.orderNumber ?? '',
-          createdAt: new Date().toISOString(),
-          total: totalSnapshot,
-        });
+      let result: Awaited<ReturnType<typeof createOrder>>;
+      try {
+        result = await createOrder(payload);
+      } catch {
+        // Fallo de RED: el pedido queda listo y se reenviará solo.
+        reportConnectivityProblem();
+        savePendingOrder(restaurantId, bundle);
+        setPendingExpired(false);
+        setPendingOffline(bundle);
+        return;
       }
-
-      setSnapshot(itemsSnapshot);
-      setSnapshotFee(feeSnapshot);
-      setSnapshotDiscount(discount);
-      setSnapshotLoyalty(loyaltyDiscount);
-      setSnapshotTip(tipSnapshot);
-      setSnapshotTotal(totalSnapshot);
-      setSnapshotPayment(type === 'DINE_IN' ? 'CASH' : paymentMethod);
-      setSnapshotCashAmount(needsCashAmount ? cashAmountNum : 0);
-      setSnapshotOrderType(type);
-      setOrderNumber(result.orderNumber ?? '');
-      setTrackToken(result.publicToken ?? '');
-      setOrderId(result.orderId ?? '');
-      clearCart();
-      setStep('success');
-
-      const waUrl = buildWhatsAppUrl({
-        orderNumber: result.orderNumber ?? '',
-        snapshot: itemsSnapshot,
-        fee: feeSnapshot,
-        tip: tipSnapshot,
-        total: totalSnapshot,
-        discount,
-        loyalty: loyaltyDiscount,
-        payment: type === 'DINE_IN' ? 'CASH' : paymentMethod,
-        cashAmt: needsCashAmount ? cashAmountNum : 0,
-        orderType: type,
-      });
-      if (waUrl) {
-        try { window.open(waUrl, '_blank', 'noopener'); } catch {}
-      }
+      applyOrderResult(result, bundle);
     });
+  }
+
+  // Reanudar un pedido pendiente tras un reload (si no es demasiado viejo).
+  useEffect(() => {
+    const saved = loadPendingOrder(restaurantId);
+    if (saved) {
+      setPendingExpired(Date.now() - saved.createdAt > PENDING_ORDER_TTL_MS);
+      setPendingOffline(saved);
+    }
+  }, [restaurantId]);
+
+  // Reintento automático del pedido pendiente: evento online + cada 15 s,
+  // solo dentro de la ventana de 10 min (después, confirmación manual).
+  useEffect(() => {
+    if (!pendingOffline) return;
+    let stopped = false;
+
+    async function attempt(force = false) {
+      if (stopped || retryBusyRef.current || !pendingOffline) return;
+      if (!force && Date.now() - pendingOffline.createdAt > PENDING_ORDER_TTL_MS) {
+        setPendingExpired(true);
+        return;
+      }
+      retryBusyRef.current = true;
+      try {
+        const result = await createOrder(pendingOffline.payload);
+        if (stopped) return;
+        clearPendingOrder(restaurantId);
+        setPendingOffline(null);
+        applyOrderResult(result, pendingOffline);
+      } catch {
+        /* sigue sin señal: siguiente ciclo */
+      } finally {
+        retryBusyRef.current = false;
+      }
+    }
+
+    const onOnline = () => { attempt(); };
+    window.addEventListener('online', onOnline);
+    const timer = setInterval(() => attempt(), 15_000);
+    attempt();
+
+    // Botones "Enviar ahora" / "Descartar" (fuera del efecto vía window para
+    // no duplicar la lógica): se exponen como funciones del componente abajo.
+    pendingRetryNowRef.current = () => attempt(true);
+
+    return () => {
+      stopped = true;
+      window.removeEventListener('online', onOnline);
+      clearInterval(timer);
+      pendingRetryNowRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingOffline, restaurantId]);
+
+  function discardPendingOrder() {
+    clearPendingOrder(restaurantId);
+    setPendingOffline(null);
+    setPendingExpired(false);
   }
 
   function buildWhatsAppUrl(data?: {
@@ -1096,8 +1215,42 @@ export default function CheckoutForm({
           <p style={{ fontSize: 13, color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
-        <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
-          {isPending ? 'Enviando…' : content.checkout.confirm}
+        {/* ── Pedido en cola por falta de señal (Fase 1 offline) ── */}
+        {pendingOffline && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 10,
+            background: 'color-mix(in srgb, var(--c-warn, #fbbf24) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 35%, transparent)',
+            borderRadius: 'var(--radius-lg)', padding: '13px 15px',
+          }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--c-warn, #fbbf24)', flexShrink: 0, marginTop: 1 }}><Icon name="clock" size={17} /></span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--u-text)' }}>
+                  {pendingExpired ? '¿Tu pedido sigue en pie?' : 'Sin conexión — tu pedido está listo'}
+                </div>
+                <p style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginTop: 3, lineHeight: 1.5 }}>
+                  {pendingExpired
+                    ? 'Pasaron más de 10 minutos sin señal, así que no lo enviamos solo. Confirma si aún lo quieres.'
+                    : `Se enviará automáticamente en cuanto vuelva la señal (total ${formatPrice(pendingOffline.totalSnapshot, config)}). Puedes dejar esta pantalla abierta.`}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {pendingExpired && (
+                <button type="button" onClick={() => pendingRetryNowRef.current?.()} className="press btn-accent" style={{ flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  Sí, enviar ahora
+                </button>
+              )}
+              <button type="button" onClick={discardPendingOrder} className="press" style={{ flex: pendingExpired ? 1 : undefined, padding: '10px 14px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                {pendingExpired ? 'Descartar pedido' : 'Cancelar envío'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending || !!pendingOffline} style={{ opacity: isPending || pendingOffline ? 0.7 : 1, marginTop: 4 }}>
+          {isPending ? 'Enviando…' : pendingOffline ? 'Pedido en cola…' : content.checkout.confirm}
         </PrimaryButton>
       </form>
     </main>

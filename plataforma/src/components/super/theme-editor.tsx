@@ -294,35 +294,8 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Segmented label="Estilo del botón" value={config.ctaStyle} options={[['white', 'Blanco'], ['accent', 'Acento'], ['outline', 'Contorno']]} onChange={(v) => setC('ctaStyle', v as ThemeConfig['ctaStyle'])} />
       </Section>
 
-      {/* ── Panel admin ── */}
-      <Section title="Panel de admin">
-        <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
-          Personaliza el sidebar y topbar del panel. No afecta el sitio del cliente.
-        </p>
-        <Toggle
-          label="Usar mismo tema que el cliente"
-          value={config.adminUseClientTheme}
-          onChange={(v) => setC('adminUseClientTheme', v)}
-        />
-        {!config.adminUseClientTheme && (
-          <>
-            <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
-            <ColorCtl label="Fondo del panel" value={config.adminPanelBg} onChange={(v) => setC('adminPanelBg', v)} />
-            <ColorCtl label="Acento (ítem activo)" value={config.adminPanelAccent} onChange={(v) => setC('adminPanelAccent', v)} />
-            <Segmented
-              label="Esquema del panel"
-              value={config.adminPanelScheme}
-              options={[['auto', 'Auto'], ['dark', 'Oscuro'], ['light', 'Claro']]}
-              onChange={(v) => setC('adminPanelScheme', v as ThemeConfig['adminPanelScheme'])}
-            />
-            <ColorOrAuto label="Color de texto" value={config.adminPanelText} fallback="#F5F3EF" onChange={(v) => setC('adminPanelText', v)} />
-            <ColorOrAuto label="Fondo de tarjetas" value={config.adminPanelCardBg} fallback="#1a1a1d" onChange={(v) => setC('adminPanelCardBg', v)} />
-            <FontCtl label="Fuente del panel" role="body" value={config.adminPanelFont || 'Geist'} onChange={(v) => setC('adminPanelFont', v === 'Geist' ? '' : v)} />
-            <Slider label="Escala de texto del panel" value={config.adminPanelTextScale} min={0.85} max={1.2} step={0.05} onChange={(v) => setC('adminPanelTextScale', v)} />
-            <Slider label="Redondeo del panel" value={config.adminPanelRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('adminPanelRadius', v)} />
-          </>
-        )}
-      </Section>
+      {/* (El panel admin ya no se personaliza por restaurante: usa 2 temas
+          fijos claro/oscuro que el staff alterna desde su barra superior.) */}
 
       {/* ── Catálogo ── */}
       <Section title="Catálogo">

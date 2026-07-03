@@ -5,7 +5,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
-import { createClient } from '@/lib/supabase/client';
+import { createDinerClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { MyAccount } from '@/lib/actions/loyalty';
@@ -129,7 +129,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     setSigningOut(true);
     // scope 'local' no hace petición de red (solo borra la sesión de este
     // navegador) — no depende de que el navegador alcance el servidor de Auth.
-    try { await createClient().auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
+    try { await createDinerClient().auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
     await loadAccount();
     setSigningOut(false);
   }

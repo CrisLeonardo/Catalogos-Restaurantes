@@ -465,6 +465,27 @@ export default function PrintAgentSettings() {
         </button>
       </div>
 
+      {/* Punto de emergencia (hub LAN): tomar pedidos sin internet */}
+      {config?.hubUrl && (
+        <div style={{
+          borderRadius: 'var(--radius-md)', padding: '12px 14px',
+          background: 'color-mix(in srgb, var(--c-warn, #fbbf24) 8%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 30%, transparent)',
+        }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="alertCircle" size={14} /> Modo emergencia (sin internet)
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '5px 0 0' }}>
+            Si el local se queda sin internet, el personal puede seguir tomando pedidos desde el WiFi
+            del local en{' '}
+            <strong style={{ color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)' }}>{config.hubUrl}</strong>
+            {' '}(cocina en <strong style={{ color: 'var(--u-text-2)', fontFamily: 'var(--ui-font-mono)' }}>{config.hubUrl}/cocina</strong>).
+            Las comandas se imprimen al momento y todo se sincroniza solo al volver la conexión.
+            Guarda esa dirección en los teléfonos del personal.
+          </p>
+        </div>
+      )}
+
       {/* Generar / rotar token */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button

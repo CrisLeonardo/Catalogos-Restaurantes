@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createDinerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
@@ -16,6 +16,7 @@ import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
 import { getRedeemContextByCustomer, getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
+import { resolveItemOptions } from '@/lib/order-pricing';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -31,56 +32,29 @@ export interface CreateOrderResult {
   error?: string;
 }
 
+// resolveItemOptions vive en lib/order-pricing.ts (módulo puro compartido
+// con las rutas del agente; un módulo 'use server' no puede exportarlo).
+
 /**
- * Resuelve las opciones elegidas contra los grupos REALES del producto (BD):
- * valida ids, exige los grupos requeridos, respeta `max` y devuelve el
- * delta total + el snapshot con nombres/precios congelados.
+ * Llama al RPC place_order con degradación: si la migración 061 (idempotencia
+ * offline) aún no está aplicada, la firma con p_client_id no existe → se
+ * reintenta sin ese parámetro (el pedido entra igual, solo sin dedupe).
  */
-function resolveItemOptions(
-  groups: ProductOptionGroup[] | null,
-  picked: { groupId: string; choiceId: string }[] | undefined,
-  productName: string,
-): { delta: number; snapshot: OrderItemOption[] } | { error: string } {
-  const safeGroups = Array.isArray(groups) ? groups : [];
-  const picks = picked ?? [];
-
-  const snapshot: OrderItemOption[] = [];
-  let delta = 0;
-
-  for (const group of safeGroups) {
-    const inGroup = picks.filter((p) => p.groupId === group.id);
-
-    if (group.type === 'single') {
-      if (inGroup.length > 1)
-        return { error: `Opciones inválidas en "${productName}".` };
-      if (group.required && inGroup.length === 0)
-        return { error: `Elige "${group.name}" para "${productName}".` };
-    } else if (group.max && group.max > 0 && inGroup.length > group.max) {
-      return { error: `Máximo ${group.max} en "${group.name}" de "${productName}".` };
-    }
-
-    const seen = new Set<string>();
-    for (const pick of inGroup) {
-      if (seen.has(pick.choiceId))
-        return { error: `Opciones duplicadas en "${productName}".` };
-      seen.add(pick.choiceId);
-
-      const choice = group.choices.find((c) => c.id === pick.choiceId);
-      if (!choice)
-        return { error: `"${productName}" cambió sus opciones. Actualiza tu carrito.` };
-
-      const d = Number(choice.priceDelta) || 0;
-      delta += d;
-      snapshot.push({ group: group.name, choice: choice.name, priceDelta: d });
-    }
+async function placeOrderRpc(
+  db: ReturnType<typeof createServiceClient>,
+  params: Record<string, unknown>,
+): Promise<{ data: unknown; error: { message: string } | null }> {
+  let { data, error } = await db.rpc('place_order', params);
+  if (
+    error &&
+    params.p_client_id != null &&
+    (error.code === 'PGRST202' || error.code === '42883')
+  ) {
+    const rest = { ...params };
+    delete rest.p_client_id;
+    ({ data, error } = await db.rpc('place_order', rest));
   }
-
-  // Elecciones que apuntan a grupos inexistentes → carrito viejo.
-  const knownGroupIds = new Set(safeGroups.map((g) => g.id));
-  if (picks.some((p) => !knownGroupIds.has(p.groupId)))
-    return { error: `"${productName}" cambió sus opciones. Actualiza tu carrito.` };
-
-  return { delta, snapshot };
+  return { data, error };
 }
 
 export async function createOrder(
@@ -105,7 +79,8 @@ export async function createOrder(
 
   // Sesión del comensal (Google), si la hay: enlaza la cuenta al cliente
   // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
-  const authClient = await createClient();
+  // Cookie propia del comensal — la sesión del personal no interviene aquí.
+  const authClient = await createDinerClient();
   const { data: { user: authUser } } = await authClient.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(authUser?.id ?? null);
 
@@ -386,7 +361,7 @@ export async function createOrder(
   // Numeración atómica + pedido + ítems en UNA transacción (RPC place_order):
   // evita el número duplicado por carrera (count(*)+1) y los pedidos huérfanos
   // si la inserción de ítems fallara a mitad. Ver migración 016.
-  const { data: placed, error: orderError } = await db.rpc('place_order', {
+  const { data: placed, error: orderError } = await placeOrderRpc(db, {
     p_restaurant_id:  restaurantId,
     p_customer_name:  customer.name,
     p_customer_phone: customer.phone,
@@ -403,6 +378,8 @@ export async function createOrder(
     p_payment_method: customer.type === 'DINE_IN' ? 'CASH' : (paymentMethod ?? 'CASH'),
     p_cash_amount:    customer.type === 'DELIVERY' && (paymentMethod ?? 'CASH') === 'CASH' && cashAmount != null ? cashAmount : null,
     p_tip:            tip,
+    // Idempotencia (mig. 061): reintentos offline con el mismo clientId no duplican.
+    p_client_id:      parsed.data.clientId ?? null,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,
@@ -609,7 +586,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
     : (customer.notes ?? null);
 
-  const { data: placed, error: orderError } = await db.rpc('place_order', {
+  const { data: placed, error: orderError } = await placeOrderRpc(db, {
     p_restaurant_id:  restaurantId,
     p_customer_name:  customer.name,
     p_customer_phone: customer.phone || '00000000',
@@ -627,6 +604,8 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     p_cash_amount:    null,
     p_tip:            tip,
     p_waiter_id:      user.id,
+    // Idempotencia (mig. 061): la cola offline del mesero reintenta sin duplicar.
+    p_client_id:      parsed.data.clientId ?? null,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,
@@ -1102,7 +1081,7 @@ export interface MyOrderRef {
  * lanza: el historial local sigue funcionando igual para invitados).
  */
 export async function getMyOrderRefs(restaurantId: string): Promise<MyOrderRef[]> {
-  const authClient = await createClient();
+  const authClient = await createDinerClient();
   const { data: { user } } = await authClient.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
   const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);

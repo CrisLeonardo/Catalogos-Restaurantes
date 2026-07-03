@@ -19,6 +19,9 @@ import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
+import { outboxAdd } from '@/lib/offline/outbox';
+import { useOutbox } from '@/lib/offline/use-outbox';
+import { reportConnectivityProblem } from '@/lib/offline/use-online';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { OrderWithItems } from '@/lib/db/orders';
@@ -336,6 +339,16 @@ export default function WaiterPanel({
   const [orders, setOrders] = useState<OrderWithItems[]>(initialOrders);
   const [, startStatus] = useTransition();
 
+  // Cola offline (Fase 1): pedidos tomados sin señal. Se reenvían solos
+  // (evento online + cada 20 s); al lograrlo, refresca la lista de pedidos.
+  const outbox = useOutbox(
+    'waiter',
+    restaurantId,
+    (payload) => createWaiterOrder(payload),
+    () => router.refresh(),
+  );
+  const queuedCount = outbox.pending.length + outbox.failed.length;
+
   // Nivel activo del plano del salón (si está habilitado).
   const planEnabled = !!floorPlan?.enabled && (floorPlan?.levels.length ?? 0) > 0;
   const levels = floorPlan?.levels ?? [];
@@ -459,6 +472,9 @@ export default function WaiterPanel({
 
     const input = {
       restaurantId,
+      // Idempotencia (mig. 061): si el envío se corta a media red y se
+      // reintenta desde la cola, la BD deduplica por este UUID.
+      clientId: crypto.randomUUID(),
       items: cart.map((l) => ({
         productId: l.productId,
         name: l.name,
@@ -476,8 +492,37 @@ export default function WaiterPanel({
       tipAccepted: tipEnabled && subtotal > 0,
     };
 
+    const queueLabel = `Mesa ${tableNumber} · ${cartCount} producto${cartCount === 1 ? '' : 's'} · ${currency}${total.toFixed(2)}`;
+
     startSubmit(async () => {
-      const result = await createWaiterOrder(input);
+      let result: Awaited<ReturnType<typeof createWaiterOrder>>;
+      try {
+        result = await createWaiterOrder(input);
+      } catch {
+        // Fallo de RED (el server action ni llegó): a la cola offline. El
+        // hook la reenvía solo al volver la señal; la BD deduplica por
+        // clientId si en realidad sí alcanzó a entrar.
+        reportConnectivityProblem();
+        try {
+          await outboxAdd({
+            clientId: input.clientId,
+            kind: 'waiter',
+            restaurantId,
+            payload: input,
+            label: queueLabel,
+            createdAt: Date.now(),
+            tries: 0,
+            status: 'pending',
+            lastError: null,
+          });
+          setSubmitOk('Sin señal — pedido guardado en cola. Se enviará a cocina en cuanto vuelva la conexión.');
+          resetOrder();
+          setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2400);
+        } catch {
+          setSubmitError('Sin señal y no se pudo guardar la cola en este dispositivo. Anota el pedido y reintenta.');
+        }
+        return;
+      }
       if (result.error) {
         setSubmitError(result.error);
       } else {
@@ -508,7 +553,8 @@ export default function WaiterPanel({
     waiterName,
     onAdminBack: () => router.push('/admin'),
     showOrders: view !== 'orders',
-    ordersCount: orders.length,
+    // Incluye la cola offline para que el mesero vea que hay pendientes.
+    ordersCount: orders.length + queuedCount,
     onShowOrders: () => setView('orders'),
   };
 
@@ -522,7 +568,38 @@ export default function WaiterPanel({
             <button type="button" onClick={() => { setView('tables'); }} className="press btn-accent" style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
               ＋ Nuevo pedido
             </button>
-            {orders.length === 0 ? (
+
+            {/* ── Cola offline: pedidos por sincronizar ── */}
+            {outbox.pending.map((e) => (
+              <div key={e.clientId} className="glass-quiet" style={{ borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 40%, transparent)' }}>
+                <span style={{ color: 'var(--c-warn, #fbbf24)', flexShrink: 0 }}><Icon name="clock" size={17} /></span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{e.label}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--c-warn, #fbbf24)', marginTop: 1 }}>
+                    En cola — se enviará a cocina al volver la señal
+                  </div>
+                </div>
+                <button type="button" onClick={() => outbox.flush()} className="press" title="Reintentar ahora" style={{ flexShrink: 0, background: 'none', border: '1px solid var(--u-hair)', borderRadius: 99, padding: '6px 12px', color: 'var(--u-text-2)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Reintentar
+                </button>
+              </div>
+            ))}
+            {outbox.failed.map((e) => (
+              <div key={e.clientId} className="glass-quiet" style={{ borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 45%, transparent)' }}>
+                <span style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0 }}><Icon name="alertCircle" size={17} /></span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{e.label}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--c-danger, #f87171)', marginTop: 1 }}>
+                    Rechazado al sincronizar: {e.lastError ?? 'error desconocido'}
+                  </div>
+                </div>
+                <button type="button" onClick={() => outbox.discard(e.clientId)} className="press" style={{ flexShrink: 0, background: 'none', border: '1px solid var(--u-hair)', borderRadius: 99, padding: '6px 12px', color: 'var(--u-text-3)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Descartar
+                </button>
+              </div>
+            ))}
+
+            {orders.length === 0 && queuedCount === 0 ? (
               <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--u-text-4)', fontSize: 15 }}>
                 Sin pedidos activos. Tus pedidos en curso aparecerán aquí.
               </div>

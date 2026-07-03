@@ -14,6 +14,7 @@ import { runAgent } from './agent.ts';
 import { runCli } from './cli.ts';
 import { runSetup, isInstalledLocation } from './setup.ts';
 import { startLocalServer } from './local-server.ts';
+import { startHub } from './hub.ts';
 import { logger } from './logger.ts';
 
 const CLI_COMMANDS = new Set(['list', 'test', 'send', 'help', '--help', '-h']);
@@ -26,6 +27,9 @@ async function runService(): Promise<void> {
     logger.info('Ya hay un agente de impresión corriendo en esta PC. Saliendo.');
     process.exit(0);
   }
+  // Hub de emergencia (Fase 2 offline): toma pedidos en la LAN sin internet.
+  // Best-effort: si su puerto está ocupado, el agente sigue imprimiendo normal.
+  try { await startHub(); } catch (e) { logger.warn('Hub:', (e as Error).message); }
   try {
     await runAgent({ once: !!process.env.LEOGIN_ONCE });
   } catch (err) {

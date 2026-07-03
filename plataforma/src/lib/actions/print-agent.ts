@@ -46,6 +46,8 @@ export interface PrintAgentConfig {
   kitchenTarget: string | null;
   receiptTarget: string | null;
   version: string | null;
+  /** URL LAN del hub de emergencia (mig. 062) — null si el agente no la reporta. */
+  hubUrl: string | null;
 }
 
 const EMPTY: PrintAgentConfig = {
@@ -56,6 +58,7 @@ const EMPTY: PrintAgentConfig = {
   kitchenTarget: null,
   receiptTarget: null,
   version: null,
+  hubUrl: null,
 };
 
 /** Lee la configuración del agente del restaurante en sesión. */
@@ -66,11 +69,20 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
   if (!restaurantId) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
-  const { data } = await db
+  // hub_url es de la migración 062: si aún no está aplicada, el select con esa
+  // columna falla → se reintenta sin ella (degradación, hubUrl queda null).
+  let { data } = await db
     .from('print_agents')
-    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version')
+    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version, hub_url')
     .eq('restaurant_id', restaurantId)
     .single();
+  if (!data) {
+    ({ data } = await db
+      .from('print_agents')
+      .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version')
+      .eq('restaurant_id', restaurantId)
+      .single());
+  }
 
   if (!data) return EMPTY;
   return {
@@ -83,6 +95,7 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
     kitchenTarget: (data.kitchen_target as string) ?? null,
     receiptTarget: (data.receipt_target as string) ?? null,
     version: (data.agent_version as string) ?? null,
+    hubUrl: ((data as Record<string, unknown>).hub_url as string | undefined) ?? null,
   };
 }
 

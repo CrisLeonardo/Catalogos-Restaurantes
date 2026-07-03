@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createDinerClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
   const origin = `${proto}://${host}`;
 
   if (code) {
-    const supabase = await createClient();
+    // Cliente del COMENSAL: la sesión de Google se guarda en su propia cookie
+    // (DINER_COOKIE_NAME) y nunca pisa la sesión del personal del restaurante.
+    const supabase = await createDinerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       return NextResponse.redirect(`${origin}${safeNext}`);

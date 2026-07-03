@@ -79,6 +79,13 @@ export const createOrderSchema = z
     tipAccepted: z.boolean().default(false),
     /** Puntos de lealtad que el cliente quiere canjear como descuento (validado en servidor). */
     redeemPoints: z.number().int().min(0).max(10_000_000).default(0),
+    /**
+     * Idempotencia offline (migración 061): UUID generado por el dispositivo.
+     * Reintentar el envío con el mismo clientId NUNCA duplica el pedido —
+     * place_order devuelve el ya creado. Opcional: los envíos normales en
+     * línea también lo mandan (gratis y protege contra doble-tap + red lenta).
+     */
+    clientId: z.string().uuid().optional(),
   })
   .refine((data) => data.items.length + data.rewardLines.length >= 1, {
     message: 'El carrito está vacío',

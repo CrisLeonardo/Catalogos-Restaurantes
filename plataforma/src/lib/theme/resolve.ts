@@ -271,10 +271,8 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     // ── Superficies / tarjetas (se adaptan a la paleta) ─────
     ...buildSurfaceVars(config),
 
-    // ── Panel admin — colores del sidebar/topbar ────────────
-    // Cuando adminUseClientTheme=true se heredan los colores del restaurante;
-    // cuando es false se usan los colores del panel configurados independientemente.
-    ...buildAdminPanelVars(config),
+    // (El panel admin ya no emite variables por tenant: usa 2 temas fijos —
+    //  ver globals.css `html[data-admin-area]`.)
   };
 }
 
@@ -343,96 +341,6 @@ function buildSurfaceVars(config: ThemeConfig): Record<string, string> {
   };
 }
 
-/** Genera las variables CSS del panel admin (personalización total). */
-function buildAdminPanelVars(config: ThemeConfig): Record<string, string> {
-  const useClient = config.adminUseClientTheme ?? false;
-
-  const bg     = useClient ? config.colorBg      : (config.adminPanelBg     ?? '#0c0c0e');
-  const accent = useClient ? config.colorAccent   : (config.adminPanelAccent ?? config.colorAccent);
-
-  // Esquema del panel: 'auto' decide por luminancia del fondo; o se fuerza.
-  const schemePref = config.adminPanelScheme ?? 'auto';
-  const adminLight = useClient
-    ? isLight(bg)
-    : schemePref === 'light' ? true : schemePref === 'dark' ? false : isLight(bg);
-
-  // Texto: heredado, explícito, o auto por esquema.
-  const adminText = useClient
-    ? config.colorText
-    : (config.adminPanelText || (adminLight ? '#15130f' : '#F5F3EF'));
-
-  // Fondo de tarjetas del panel (usercard, etc.).
-  const cardBg = useClient
-    ? rgba(config.colorText, 0.06)
-    : (config.adminPanelCardBg || (adminLight ? rgba('#000000', 0.04) : rgba('#ffffff', 0.06)));
-
-  // Familia del panel: una de FONT_OPTIONS, o Geist por defecto.
-  const adminFont = !useClient && config.adminPanelFont
-    ? `'${config.adminPanelFont}', var(--ui-font-sans)`
-    : 'var(--ui-font-sans)';
-
-  const scale  = useClient ? 1 : (config.adminPanelTextScale ?? 1);
-  // Al heredar el tema del cliente, la redondez del panel sigue al cornerRadius
-  // del menú (así las tarjetas del admin se sienten parte del mismo tema).
-  const radius = useClient ? (config.cornerRadius ?? 1) : (config.adminPanelRadius ?? 1);
-
-  // Color de los botones del panel (CTA del dashboard). Por defecto el acento.
-  const btnBg = useClient
-    ? config.colorAccent
-    : (config.adminPanelButtonBg || accent);
-  // Texto del botón: explícito o auto-contraste por luminancia del fondo del botón.
-  const btnText = useClient
-    ? config.onAccent
-    : (config.adminPanelButtonText || (isLight(btnBg) ? '#15130f' : '#ffffff'));
-
-  // Fondo del área de contenido (distinto al de los laterales). Vacío = transparente
-  // (deja ver el fondo de la página, comportamiento clásico).
-  const contentBg = useClient
-    ? 'transparent'
-    : (config.adminPanelContentBg || 'transparent');
-
-  // ── Tinta del CONTENIDO del panel ──────────────────────────
-  // El área central puede tener un fondo propio (contentBg) distinto al de los
-  // laterales; su texto debe contrastar con ESE fondo, no con el del sidebar.
-  // Si el fondo es transparente, lo que se ve detrás es el fondo del cliente
-  // (--brand-bg) → se hereda la tinta del cliente. Sin esto: "Fondo del
-  // contenido" oscuro + tema del cliente claro = texto ilegible.
-  const hasCustomContentBg = contentBg !== 'transparent';
-  const contentBgSolid = hasCustomContentBg ? contentBg : config.colorBg;
-  const contentLight = isLight(contentBgSolid);
-  const contentText = hasCustomContentBg
-    ? (contentLight ? '#15130f' : '#F5F3EF')
-    : config.colorText;
-
-  return {
-    // Tinta y fondo efectivos del área de contenido (los consume .admin-main;
-    // --admin-content-bg-solid también tapa la barra "Guardar" del editor).
-    '--admin-content-text':      contentText,
-    '--admin-content-text-2':    rgba(contentText, 0.74),
-    '--admin-content-text-3':    rgba(contentText, 0.50),
-    '--admin-content-text-4':    rgba(contentText, 0.48),
-    '--admin-content-hair':      contentLight ? rgba('#000000', 0.10) : rgba(contentText, 0.10),
-    '--admin-content-hair-2':    contentLight ? rgba('#000000', 0.16) : rgba(contentText, 0.18),
-    '--admin-content-bg-solid':  contentBgSolid,
-    '--admin-content-scheme':    contentLight ? 'light' : 'dark',
-    '--admin-panel-bg':         bg,
-    '--admin-panel-accent':     accent,
-    '--admin-panel-text':       adminText,
-    '--admin-panel-text-2':     rgba(adminText, 0.74),
-    '--admin-panel-text-3':     rgba(adminText, 0.50),
-    '--admin-panel-text-4':     rgba(adminText, 0.48),
-    '--admin-panel-hair':       adminLight ? rgba('#000000', 0.10) : rgba(adminText, 0.10),
-    '--admin-panel-hair-2':     adminLight ? rgba('#000000', 0.16) : rgba(adminText, 0.18),
-    '--admin-panel-card':       cardBg,
-    '--admin-panel-font':       adminFont,
-    '--admin-panel-scale':      String(scale),
-    '--admin-panel-radius':     String(radius),
-    '--admin-panel-btn':        btnBg,
-    '--admin-panel-btn-text':   btnText,
-    '--admin-panel-content-bg': contentBg,
-  };
-}
-
 /* ── Google Fonts href ────────────────────────────────────── */
 
 export function buildFontsHref(config: ThemeConfig): string | null {
@@ -442,7 +350,6 @@ export function buildFontsHref(config: ThemeConfig): string | null {
     config.fontBody,
     config.fontSerif,
     config.fontMono,
-    config.adminPanelFont,
   ];
   const axes = new Set<string>();
   for (const family of families) {

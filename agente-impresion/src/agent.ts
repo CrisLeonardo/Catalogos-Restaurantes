@@ -7,6 +7,7 @@
 import { loadConfig, type AgentConfig } from './config.ts';
 import { discoverPrinters, parseTarget, printRaw } from './printer/index.ts';
 import type { DiscoveredPrinter } from './printer/types.ts';
+import { getHubInfo } from './hub.ts';
 import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
 
@@ -32,7 +33,8 @@ async function poll(cfg: AgentConfig, printers: DiscoveredPrinter[]): Promise<Jo
   const res = await fetch(`${cfg.apiUrl}/api/agent/poll`, {
     method: 'POST',
     headers: { authorization: `Bearer ${cfg.token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ printers, version: AGENT_VERSION }),
+    // hubUrl: el panel muestra el punto de emergencia LAN al dueño (mig. 062).
+    body: JSON.stringify({ printers, version: AGENT_VERSION, hubUrl: getHubInfo().url }),
   });
   if (!res.ok) throw new Error(`poll respondió HTTP ${res.status}`);
   const data = (await res.json()) as { jobs?: Job[] };

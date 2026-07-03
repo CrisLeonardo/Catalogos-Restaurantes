@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
-import { createClient } from '@/lib/supabase/server';
+// Cliente del COMENSAL: todas las resoluciones de sesión de este módulo son
+// del comensal (Google). La cookie es independiente de la del personal.
+import { createDinerClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import {
@@ -25,7 +27,7 @@ const NO_REDEEM: RedeemContext = { active: false, loggedIn: false, balance: 0, m
  */
 export async function getLoyaltyRedeemInfo(restaurantId: string): Promise<RedeemContext> {
   if (!restaurantId) return NO_REDEEM;
-  const supabase = await createClient();
+  const supabase = await createDinerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
   const loggedIn = !!authUserId;
@@ -176,7 +178,7 @@ async function fetchCheckoutProfile(restaurantId: string, authUserId: string | n
  * checkout sigue funcionando con el perfil local en ese caso).
  */
 export async function getMyCheckoutProfile(restaurantId: string): Promise<MyCheckoutProfile | null> {
-  const supabase = await createClient();
+  const supabase = await createDinerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
   return fetchCheckoutProfile(restaurantId, authUserId);
@@ -210,7 +212,7 @@ export interface MyAccount {
 export async function getMyAccount(restaurantId: string): Promise<MyAccount> {
   const GUEST: MyAccount = { loggedIn: false, identified: false, email: null, name: null, avatarUrl: null, checkout: null, loyalty: null };
   try {
-    const supabase = await createClient();
+    const supabase = await createDinerClient();
     const { data: { user } } = await supabase.auth.getUser();
     const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
     const loggedIn = !!authUserId;
@@ -240,7 +242,7 @@ export async function getMyAccount(restaurantId: string): Promise<MyAccount> {
  * a otra cuenta.
  */
 export async function linkMyAccountByPhone(restaurantId: string, phone: string): Promise<LoyaltyActionResult> {
-  const supabase = await createClient();
+  const supabase = await createDinerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
   if (!authUserId) return { error: 'Inicia sesión para enlazar tu número.' };

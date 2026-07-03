@@ -1,8 +1,15 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { DINER_COOKIE_NAME } from "@/lib/supabase/cookies";
 
 /**
- * Cliente Supabase para el NAVEGADOR (Client Components, Realtime).
- * Usa solo la clave pública `anon` — protegida por RLS.
+ * Clientes Supabase para el NAVEGADOR (Client Components, Realtime).
+ * Usan solo la clave pública `anon` — protegida por RLS.
+ *
+ * HAY DOS SESIONES INDEPENDIENTES por navegador (ver lib/supabase/server.ts):
+ *  · `createClient()`      → sesión del PERSONAL (cookie por defecto de Supabase).
+ *  · `createDinerClient()` → sesión del COMENSAL (cookie propia DINER_COOKIE_NAME).
+ * Separadas, el login con Google del comensal ya no pisa la sesión del panel
+ * admin abierta en el mismo navegador (ni al revés).
  *
  * IMPORTANTE — dominio de cookie:
  * En producción la sesión se comparte entre subdominios (admin.*, slug.*,
@@ -18,12 +25,28 @@ const isLocalEnv = !rootDomainRaw || rootDomainRaw.includes("localhost");
 /** `.leogin.online` en prod, undefined en local (no forzar dominio en localhost). */
 const COOKIE_DOMAIN = isLocalEnv ? undefined : `.${rootDomainRaw.split(":")[0]}`;
 
-export function createClient() {
+function createWithCookieName(cookieName?: string) {
+  const baseOptions = COOKIE_DOMAIN
+    ? { domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" as const }
+    : {};
+  const cookieOptions = {
+    ...baseOptions,
+    ...(cookieName ? { name: cookieName } : {}),
+  };
+
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    COOKIE_DOMAIN
-      ? { cookieOptions: { domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" } }
-      : undefined,
+    Object.keys(cookieOptions).length > 0 ? { cookieOptions } : undefined,
   );
+}
+
+/** Sesión del PERSONAL (panel admin, mesero, cocina, realtime del panel). */
+export function createClient() {
+  return createWithCookieName();
+}
+
+/** Sesión del COMENSAL (menú público: login Google, lealtad, cerrar sesión). */
+export function createDinerClient() {
+  return createWithCookieName(DINER_COOKIE_NAME);
 }

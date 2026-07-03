@@ -48,6 +48,27 @@ interface FileConfig {
   apiUrl?: string;
   token?: string;
   pollMs?: number;
+  /** Hub de emergencia (Fase 2 offline). Activo por defecto en el puerto 9123. */
+  hubEnabled?: boolean;
+  hubPort?: number;
+  /** Destino de la comanda de cocina en modo emergencia ("winspool:NOMBRE" | "tcp:IP:9100"). */
+  hubKitchenTarget?: string;
+}
+
+export interface HubConfig {
+  enabled: boolean;
+  port: number;
+  kitchenTarget: string | null;
+}
+
+/** Configuración del hub de emergencia (no exige apiUrl/token para leerse). */
+export function loadHubConfig(): HubConfig {
+  const file = readFileConfig();
+  const enabledRaw = process.env.LEOGIN_HUB_ENABLED ?? (file.hubEnabled != null ? String(file.hubEnabled) : '');
+  const enabled = enabledRaw === '' ? true : !(enabledRaw === 'false' || enabledRaw === '0');
+  const port = Number(process.env.LEOGIN_HUB_PORT ?? file.hubPort) || 9123;
+  const kitchenTarget = (process.env.LEOGIN_HUB_KITCHEN ?? file.hubKitchenTarget ?? '').trim() || null;
+  return { enabled, port, kitchenTarget };
 }
 
 function readFileConfig(): FileConfig {

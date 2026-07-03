@@ -10,13 +10,14 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
+import AdminThemeToggle from '@/components/admin/theme-toggle';
+import OfflineSupport from '@/components/offline-support';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
 import WelcomeTour from '@/components/admin/welcome-tour';
 import HelpButton from '@/components/admin/help-button';
 import { can } from '@/lib/permissions';
 
-const BG_KEY = 'admin-bg-visible';
 const NAV_KEY = 'admin-nav-collapsed';
 
 interface NavItem { href: string; label: string; icon: string; key: string }
@@ -64,7 +65,6 @@ const PLAN_NAMES: Record<string, string> = {
 };
 
 const NAV_DEFAULT: Record<string, boolean> = { Cuenta: true };
-const readBg = (raw: string | null): boolean => raw !== 'false';
 const readNav = (raw: string | null): Record<string, boolean> => {
   if (!raw) return NAV_DEFAULT;
   try { return JSON.parse(raw) as Record<string, boolean>; } catch { return NAV_DEFAULT; }
@@ -113,29 +113,9 @@ export default function AdminShell({
   logoUrl, zone, role, permissions, canManageStaff, planActual, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
-  // Fondo del panel y secciones del nav plegadas: se leen de localStorage de
-  // forma SSR-safe (sin setState en efecto). 'Cuenta' arranca plegada.
-  const bgVisible = usePersisted(BG_KEY, readBg, true);
+  // Secciones del nav plegadas: se leen de localStorage de forma SSR-safe
+  // (sin setState en efecto). 'Cuenta' arranca plegada.
   const collapsed = usePersisted(NAV_KEY, readNav, NAV_DEFAULT);
-
-  // Sincroniza el atributo del <html> con el estado del fondo (efecto = OK,
-  // solo toca el DOM externo, no llama setState).
-  useEffect(() => {
-    document.documentElement.setAttribute('data-admin-bg', bgVisible ? 'on' : 'off');
-  }, [bgVisible]);
-
-  // El popup nativo de <select> (listado de opciones) resuelve su esquema de
-  // color desde el <html> raíz del documento, no por herencia normal desde
-  // el elemento — poner colorScheme en cada <select> pinta bien la caja
-  // cerrada pero el popup abierto sigue saliendo blanco. Se fija una sola vez
-  // acá sobre --admin-content-scheme (ya calculado por el tema del panel) y
-  // todo el contenido admin lo hereda; ningún componente nuevo necesita
-  // repetirlo.
-  useEffect(() => {
-    const scheme = getComputedStyle(document.documentElement).getPropertyValue('--admin-content-scheme').trim() || 'dark';
-    document.documentElement.style.colorScheme = scheme;
-    return () => { document.documentElement.style.colorScheme = ''; };
-  }, []);
 
   // En móvil, centra el ítem activo de la barra inferior al navegar (la barra
   // scrollea en horizontal y así el usuario siempre ve dónde está).
@@ -147,10 +127,6 @@ export default function AdminShell({
 
   function toggleSection(title: string) {
     writePersisted(NAV_KEY, JSON.stringify({ ...collapsed, [title]: !collapsed[title] }));
-  }
-
-  function toggleBg() {
-    writePersisted(BG_KEY, String(!bgVisible));
   }
 
   const pathname = preview ? '/admin/menu' : realPathname;
@@ -274,6 +250,7 @@ export default function AdminShell({
   if (isWaiter) {
     return (
       <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
+        <OfflineSupport label="Sin conexión — los pedidos que tomes quedan en cola y se envían al volver la señal." />
         {children}
       </div>
     );
@@ -299,6 +276,7 @@ export default function AdminShell({
 
   return (
     <div className="admin-shell">
+      <OfflineSupport />
       <aside className="admin-sidebar">
         {(() => {
           const brandInner = (
@@ -390,16 +368,7 @@ export default function AdminShell({
               <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--u-text)', boxShadow: '0 0 8px var(--u-text)', animation: 'pulse-ring 2s infinite' }} /> En vivo
             </span>
           )}
-          {!preview && (
-            <button
-              onClick={toggleBg}
-              title={bgVisible ? 'Ocultar fondo' : 'Mostrar fondo'}
-              className="press glass-quiet"
-              style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', color: bgVisible ? 'var(--u-text)' : 'var(--u-text-3)', border: 'none', cursor: 'pointer', background: 'none', flexShrink: 0 }}
-            >
-              <Icon name={bgVisible ? 'eye' : 'eyeOff'} size={18} />
-            </button>
-          )}
+          {!preview && <AdminThemeToggle />}
           {!preview && restaurantId && ordersEnabled ? (
             <AdminNotifications
               restaurantId={restaurantId}
