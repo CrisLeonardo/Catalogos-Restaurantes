@@ -4,12 +4,15 @@ import type { LoyaltyReward } from '@/types';
 
 export interface RedeemContext {
   active: boolean;       // módulo activo + cuenta con saldo canjeable
+  /** ¿Hay una sesión de Google iniciada? (independiente de `active`: puede estar
+   *  logueado sin cuenta enlazada, o sin saldo suficiente). */
+  loggedIn: boolean;
   balance: number;       // saldo de puntos del cliente
   minRedeem: number;     // mínimo de puntos para canjear
   redeemValue: number;   // valor en moneda de cada punto
 }
 
-const NO_REDEEM: RedeemContext = { active: false, balance: 0, minRedeem: 0, redeemValue: 0 };
+const NO_REDEEM: RedeemContext = { active: false, loggedIn: false, balance: 0, minRedeem: 0, redeemValue: 0 };
 
 /** ¿Está activo el módulo de lealtad para este restaurante? (entitlement + on) */
 async function loyaltyActive(restaurantId: string): Promise<boolean> {
@@ -33,6 +36,7 @@ export async function getRedeemContextByCustomer(restaurantId: string, customerI
 
   return {
     active: true,
+    loggedIn: true, // solo se llega aquí con un customerId ya resuelto por auth_user_id
     balance: Number(acct.points_balance) || 0,
     minRedeem: Number(settings.min_redeem) || 0,
     redeemValue: Number(settings.redeem_value) || 0,

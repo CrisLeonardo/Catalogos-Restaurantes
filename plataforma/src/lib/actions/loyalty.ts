@@ -10,21 +10,29 @@ import {
   type RedeemContext, type DinerLoyalty,
 } from '@/lib/db/loyalty';
 
-const NO_REDEEM: RedeemContext = { active: false, balance: 0, minRedeem: 0, redeemValue: 0 };
+const NO_REDEEM: RedeemContext = { active: false, loggedIn: false, balance: 0, minRedeem: 0, redeemValue: 0 };
 
 /**
  * Consulta para el checkout: cuántos puntos puede canjear el comensal con
  * SESIÓN DE GOOGLE iniciada. Sin sesión (o sin cuenta enlazada) no hay nada
  * que canjear — la lealtad ya no se resuelve por teléfono.
+ *
+ * Resuelve la sesión SIEMPRE server-side (cookies) — el llamador NO debe
+ * gatear esta consulta detrás de un `supabase.auth.getUser()` hecho en el
+ * navegador: ese fetch cliente-servidor es redundante y puede fallar de
+ * forma independiente a que la sesión sea válida (red lenta, bloqueadores),
+ * dejando la UI mostrando "inicia sesión" a alguien que sí tiene sesión.
  */
 export async function getLoyaltyRedeemInfo(restaurantId: string): Promise<RedeemContext> {
   if (!restaurantId) return NO_REDEEM;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  const loggedIn = !!authUserId;
   const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
-  if (!customerId) return NO_REDEEM;
-  return getRedeemContextByCustomer(restaurantId, customerId);
+  if (!customerId) return { ...NO_REDEEM, loggedIn };
+  const ctx = await getRedeemContextByCustomer(restaurantId, customerId);
+  return { ...ctx, loggedIn };
 }
 
 export type LoyaltyActionResult = { error?: string; ok?: boolean; balance?: number };
@@ -130,18 +138,9 @@ export async function toggleReward(restaurantId: string, rewardId: string, activ
 }
 
 /* ── Comensal: ver y enlazar su saldo de puntos ───────────── */
-
-/**
- * Saldo del comensal para la sección de recompensas del menú. Lee la sesión
- * de Google de las cookies — sin sesión no hay saldo que mostrar. Público
- * (lo llama el menú), pero solo revela datos de la cuenta autenticada.
- */
-export async function getMyLoyalty(restaurantId: string): Promise<DinerLoyalty> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
-  return getDinerLoyalty(restaurantId, authUserId);
-}
+/* Ver saldo/identidad es getMyAccount() (abajo) — fuente única para "Mi
+   cuenta" y "Fidelidad", evita que ambos paneles resuelvan la sesión por
+   caminos distintos. */
 
 export interface MyCheckoutProfile {
   name: string;
@@ -150,19 +149,8 @@ export interface MyCheckoutProfile {
   zone: string | null;
 }
 
-/**
- * Perfil guardado en la cuenta (Google) del comensal — nombre/teléfono/
- * dirección del último pedido enlazado a esta cuenta. Permite autocompletar
- * el checkout en CUALQUIER dispositivo, no solo el que guardó el localStorage.
- * Null si no hay sesión o la cuenta todavía no tiene un pedido enlazado (el
- * checkout sigue funcionando con el perfil local en ese caso).
- */
-export async function getMyCheckoutProfile(restaurantId: string): Promise<MyCheckoutProfile | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+async function fetchCheckoutProfile(restaurantId: string, authUserId: string | null): Promise<MyCheckoutProfile | null> {
   if (!authUserId) return null;
-
   const db = createServiceClient();
   const { data } = await db
     .from('customers')
@@ -178,6 +166,72 @@ export async function getMyCheckoutProfile(restaurantId: string): Promise<MyChec
     address: (data.default_address as string | null) ?? null,
     zone: (data.default_zone as string | null) ?? null,
   };
+}
+
+/**
+ * Perfil guardado en la cuenta (Google) del comensal — nombre/teléfono/
+ * dirección del último pedido enlazado a esta cuenta. Permite autocompletar
+ * el checkout en CUALQUIER dispositivo, no solo el que guardó el localStorage.
+ * Null si no hay sesión o la cuenta todavía no tiene un pedido enlazado (el
+ * checkout sigue funcionando con el perfil local en ese caso).
+ */
+export async function getMyCheckoutProfile(restaurantId: string): Promise<MyCheckoutProfile | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+  return fetchCheckoutProfile(restaurantId, authUserId);
+}
+
+export interface MyAccount {
+  /** ¿Hay una sesión de Google iniciada? */
+  loggedIn: boolean;
+  /** ¿Esa cuenta ya está enlazada a un cliente con historial en ESTE restaurante? */
+  identified: boolean;
+  email: string | null;
+  /** Nombre de la cuenta de Google (perfil de Google, no el del pedido). */
+  name: string | null;
+  avatarUrl: string | null;
+  checkout: MyCheckoutProfile | null;
+  /** null = módulo de lealtad inactivo para este restaurante. */
+  loyalty: DinerLoyalty | null;
+}
+
+/**
+ * Fuente ÚNICA de verdad para "¿quién es este comensal?" — la usan tanto
+ * "Mi cuenta" como "Fidelidad". Resuelve la sesión UNA sola vez, siempre
+ * server-side (cookies), y trae en la misma llamada el perfil de Google
+ * (nombre/avatar), el enlace con el cliente del restaurante y el saldo de
+ * puntos. Antes cada panel hacía su propia resolución (una de ellas con un
+ * `supabase.auth.getUser()` desde el navegador) y podían desincronizarse:
+ * si esa llamada cliente fallaba (red, bloqueadores) la UI mostraba "inicia
+ * sesión" a alguien con sesión válida y ocultaba sus datos/puntos ya
+ * guardados. Nunca lanza: en el peor caso devuelve el estado "invitado".
+ */
+export async function getMyAccount(restaurantId: string): Promise<MyAccount> {
+  const GUEST: MyAccount = { loggedIn: false, identified: false, email: null, name: null, avatarUrl: null, checkout: null, loyalty: null };
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
+    const loggedIn = !!authUserId;
+
+    const [checkout, loyalty] = await Promise.all([
+      fetchCheckoutProfile(restaurantId, authUserId),
+      getDinerLoyalty(restaurantId, authUserId),
+    ]);
+
+    return {
+      loggedIn,
+      identified: !!checkout,
+      email: user?.email ?? null,
+      name: (user?.user_metadata?.full_name as string | undefined) ?? null,
+      avatarUrl: (user?.user_metadata?.avatar_url as string | undefined) ?? null,
+      checkout,
+      loyalty: loyalty.active ? loyalty : null,
+    };
+  } catch {
+    return GUEST;
+  }
 }
 
 /**
@@ -208,7 +262,47 @@ export async function linkMyAccountByPhone(restaurantId: string, phone: string):
   await db.from('customers').update({ auth_user_id: null }).eq('restaurant_id', restaurantId).eq('auth_user_id', authUserId);
   const { error } = await db.from('customers').update({ auth_user_id: authUserId }).eq('id', c.id as string);
   if (error) return { error: error.message };
+
+  await maybeAwardSignupBonus(restaurantId, c.id as string);
   return { ok: true };
+}
+
+/**
+ * Puntos de bienvenida (`loyalty_settings.signup_bonus`) al vincular POR
+ * PRIMERA VEZ una cuenta de Google a un cliente de este restaurante — ya sea
+ * al enlazar manualmente (arriba) o automáticamente al pedir con sesión
+ * iniciada (ver `createOrder`). Idempotente: revisa que no exista ya un
+ * movimiento 'SIGNUP' para este cliente antes de aplicarlo. Best-effort.
+ */
+export async function maybeAwardSignupBonus(restaurantId: string, customerId: string): Promise<void> {
+  try {
+    const db = createServiceClient();
+    const { data: rest } = await db.from('restaurants').select('modules, module_settings').eq('id', restaurantId).single();
+    if (!rest || !isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'loyalty')) return;
+
+    const { data: settings } = await db.from('loyalty_settings').select('signup_bonus').eq('restaurant_id', restaurantId).maybeSingle();
+    const bonus = Math.floor(Number(settings?.signup_bonus) || 0);
+    if (bonus <= 0) return;
+
+    const { count } = await db
+      .from('loyalty_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId)
+      .eq('customer_id', customerId)
+      .eq('tipo', 'SIGNUP');
+    if ((count ?? 0) > 0) return;
+
+    await db.rpc('leogin_loyalty_apply', {
+      p_restaurant_id: restaurantId,
+      p_customer_id: customerId,
+      p_order_id: null,
+      p_tipo: 'SIGNUP',
+      p_points: bonus,
+      p_note: 'Puntos de bienvenida',
+    });
+  } catch {
+    /* best-effort */
+  }
 }
 
 /** Ajuste manual de puntos: sumar (EARN/ADJUST) o restar (REDEEM). */
@@ -245,7 +339,11 @@ export async function adjustPoints(
 /**
  * Acumula puntos por un pedido entregado. Best-effort: lo llama el flujo de
  * pedidos al pasar a DELIVERED. No-op si el módulo no está activo, no hay
- * cliente o no hay configuración. Nunca lanza (no debe romper el pedido).
+ * cliente, no hay configuración, O el cliente del pedido no tiene una cuenta
+ * de Google enlazada (`customers.auth_user_id`) — los pedidos de invitados
+ * (sin sesión iniciada) NUNCA acumulan puntos automáticamente; la identidad
+ * de lealtad es exclusivamente la cuenta de Google. Nunca lanza (no debe
+ * romper el pedido).
  */
 export async function awardLoyaltyForOrder(restaurantId: string, orderId: string): Promise<void> {
   try {
@@ -267,6 +365,10 @@ export async function awardLoyaltyForOrder(restaurantId: string, orderId: string
       .eq('restaurant_id', restaurantId)
       .single();
     if (!order || !order.customer_id) return;
+
+    // Invitado (sin cuenta de Google enlazada al momento de entregar) → sin puntos.
+    const { data: customer } = await db.from('customers').select('auth_user_id').eq('id', order.customer_id).maybeSingle();
+    if (!customer?.auth_user_id) return;
 
     // Evitar doble acumulación por el mismo pedido.
     const { count } = await db

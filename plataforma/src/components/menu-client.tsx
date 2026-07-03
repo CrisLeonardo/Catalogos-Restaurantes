@@ -63,6 +63,20 @@ export default function MenuClient({
     setTableScanned((initialMesa != null && initialMesa > 0) || getScannedTable(restaurantId) !== null);
   }, [initialMesa, restaurantId]);
 
+  // El login con Google es una redirección de página completa (/auth/callback),
+  // así que cualquier sheet abierto se pierde en la vuelta. GoogleSignInButton
+  // marca a dónde volver con ?openTab=; lo reabrimos aquí y limpiamos la URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('openTab');
+    if (tab === 'cuenta') setAccountOpen(true);
+    else if (tab === 'fidelidad') setRewardsOpen(true);
+    else return;
+    params.delete('openTab');
+    const qs = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+  }, []);
+
   const count = items.reduce((s, i) => s + i.quantity, 0);
   const catIcon = useMemo(() => {
     const m = new Map<string, string>();

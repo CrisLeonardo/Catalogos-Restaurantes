@@ -19,7 +19,7 @@ import { Tag } from '@/components/menu/ui';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
-import { getMyLoyalty, linkMyAccountByPhone } from '@/lib/actions/loyalty';
+import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { getLocalProfile } from '@/lib/customer-local';
 import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
@@ -57,11 +57,10 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
   const [savedPhone, setSavedPhone] = useState('');
 
   const refresh = useCallback(async () => {
-    try {
-      setLoyalty(await getMyLoyalty(restaurantId));
-    } catch {
-      setLoyalty(null);
-    }
+    // Misma fuente única que "Mi cuenta" (getMyAccount) — evita que las dos
+    // pantallas resuelvan la sesión por caminos distintos y se desincronicen.
+    const acc = await getMyAccount(restaurantId).catch(() => null);
+    setLoyalty(acc?.loyalty ?? null);
   }, [restaurantId]);
 
   useEffect(() => {
@@ -289,7 +288,7 @@ function RewardsMenu({
             <div>
               <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Recupera tu historial</div>
               <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
-                ¿Ya habías pedido antes? Ingresa el número con el que pediste para enlazar tus puntos a esta cuenta.
+                ¿Ya habías pedido antes? Ingresa el número con el que pediste para enlazar tu historial a esta cuenta.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
@@ -308,7 +307,7 @@ function RewardsMenu({
                   ? 'Inicia sesión con Google para ver tu saldo y canjear tus puntos.'
                   : 'El programa de lealtad estará disponible muy pronto.'}
               </p>
-              {googleAuthEnabled && <GoogleSignInButton full />}
+              {googleAuthEnabled && <GoogleSignInButton full returnTab="fidelidad" />}
             </div>
           )}
           {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{msg}</p>}

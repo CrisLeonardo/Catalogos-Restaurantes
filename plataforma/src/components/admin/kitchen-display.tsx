@@ -104,8 +104,13 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           { event: 'INSERT', schema: 'public', table: 'orders' },
           (payload) => {
             if ((payload.new as Order).restaurant_id !== restaurantId) return;
-            const s = soundSettingsRef.current;
-            playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
+            // Con confirmFirst este pedido todavía no entra a la lista del KDS
+            // (sigue NEW, solo se muestra PREP) — sonar aquí sería un aviso
+            // prematuro y falso. Ese caso lo cubre el handler de UPDATE abajo.
+            if (!confirmFirst) {
+              const s = soundSettingsRef.current;
+              playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
+            }
             router.refresh();
           },
         )
@@ -113,7 +118,16 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'orders' },
           (payload) => {
-            if ((payload.new as Order).restaurant_id !== restaurantId) return;
+            const updated = payload.new as Order;
+            if (updated.restaurant_id !== restaurantId) return;
+            // Con "Confirmar antes de enviar a cocina" (confirmFirst) un pedido
+            // llega a esta pantalla recién cuando pasa de NEW a PREP, es decir
+            // por un UPDATE, no un INSERT. Sin esto, el KDS quedaba mudo para
+            // TODO restaurante con ese modo activado.
+            if (confirmFirst && updated.status === 'PREP') {
+              const s = soundSettingsRef.current;
+              playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
+            }
             router.refresh();
           },
         )
@@ -121,7 +135,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     })();
 
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
-  }, [restaurantId, router]);
+  }, [restaurantId, router, confirmFirst]);
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {

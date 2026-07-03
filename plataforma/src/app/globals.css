@@ -565,16 +565,14 @@ html[data-admin-bg="off"] .asphalt-mark { display: none; }
 /* El <select> en sí puede llevar fondo translúcido (se ve bien: hereda el
    fondo del panel detrás). Pero el listado de <option> que abre el navegador
    es un popup aparte que en Windows/Chrome IGNORA `color-scheme` y solo
-   respeta el color explícito de cada <option> — sin esto sale blanco con
-   texto negro sin importar el tema del panel. */
-.admin-main select option {
-  background-color: var(--admin-content-bg-solid, #15130f);
-  color: var(--u-text);
-}
+   respeta el color explícito de cada <option> — sin esto sale con colores
+   inconsistentes según el navegador. Se fija blanco/negro explícito (no las
+   variables del tema) para que la lista sea siempre legible. */
+.admin-main select option,
 .admin-sidebar select option,
 .admin-topbar select option {
-  background-color: var(--admin-panel-bg);
-  color: var(--u-text);
+  background-color: #ffffff;
+  color: #15130f;
 }
 /* Botones primarios del dashboard: color personalizable (no afecta al mesero,
    que vive fuera de .admin-main y conserva el acento de la marca). */

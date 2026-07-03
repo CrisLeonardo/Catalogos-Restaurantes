@@ -415,7 +415,13 @@ export default function AdminShell({
         <div className="admin-content">{children}</div>
       </div>
       {!preview && restaurantId && llamadaMeseroActive && (
-        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isLive || isKitchen} />
+        // OJO: a diferencia de AdminNotifications, ninguna pantalla (orders-panel,
+        // kitchen-display) reproduce sonido de llamada al mesero por su cuenta —
+        // WaiterCallsAlert es la ÚNICA fuente del chime (ver su comentario de
+        // cabecera). Silenciarlo también en isLive dejaba la alerta muda
+        // justamente en /admin/pedidos, la pantalla donde el staff pasa más
+        // tiempo. Solo se mutea en modo cocina (por diseño: ver notifications.tsx).
+        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
       )}
       <WelcomeTour restaurantName={restaurantName} preview={preview} />
     </div>

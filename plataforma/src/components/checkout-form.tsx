@@ -16,9 +16,7 @@ import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
-import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
-import type { User } from '@supabase/supabase-js';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -156,18 +154,8 @@ export default function CheckoutForm({
   const [promoChecking, setPromoChecking] = useState(false);
 
   // Lealtad / canje de puntos — requiere sesión de Google (nunca por teléfono).
-  const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
+  const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; loggedIn: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
   const [redeemOn, setRedeemOn] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: { user: u } } = await createClient().auth.getUser();
-      if (!cancelled) setUser(u ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,21 +219,25 @@ export default function CheckoutForm({
     setCashAmount('');
   }, [type, paymentMethod]);
 
-  // Lealtad: con sesión de Google iniciada, consulta el saldo de puntos del
-  // comensal (si el módulo está activo). Nunca se resuelve por el teléfono
-  // escrito en el formulario — ver getLoyaltyRedeemInfo.
+  // Lealtad: consulta el saldo de puntos del comensal (si el módulo está
+  // activo) SIEMPRE server-side — getLoyaltyRedeemInfo resuelve la sesión por
+  // cookies, nunca por el teléfono escrito en el formulario. No se gatea
+  // detrás de un `supabase.auth.getUser()` hecho en el navegador: ese fetch
+  // cliente-servidor puede fallar (red, bloqueadores) sin que la sesión sea
+  // inválida, y antes eso dejaba el widget de puntos oculto para alguien con
+  // sesión real.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!loyaltyActive || !user) {
+      if (!loyaltyActive) {
         if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); }
         return;
       }
-      const info = await getLoyaltyRedeemInfo(restaurantId);
-      if (!cancelled) setRedeemInfo(info.active ? info : null);
+      const info = await getLoyaltyRedeemInfo(restaurantId).catch(() => null);
+      if (!cancelled) setRedeemInfo(info);
     })();
     return () => { cancelled = true; };
-  }, [user, loyaltyActive, restaurantId]);
+  }, [loyaltyActive, restaurantId]);
 
   const errs = {
     name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
@@ -739,12 +731,12 @@ export default function CheckoutForm({
             {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
 
-          {/* Lealtad — sin sesión no hay forma de saber ni usar el saldo */}
-          {loyaltyActive && googleAuthEnabled && !user && (
+          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido */}
+          {loyaltyActive && googleAuthEnabled && !redeemInfo?.loggedIn && (
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
-                Inicia sesión para usar tus puntos de fidelidad
+                Inicia sesión para ganar y usar tus puntos de fidelidad
               </span>
               <GoogleSignInButton label="Continuar con Google" />
             </div>

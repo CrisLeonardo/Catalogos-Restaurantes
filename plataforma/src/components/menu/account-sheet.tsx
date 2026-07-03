@@ -4,12 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
-import { getMyLoyalty, getMyCheckoutProfile, linkMyAccountByPhone } from '@/lib/actions/loyalty';
+import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { createClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
-import type { DinerLoyalty } from '@/lib/db/loyalty';
-import type { User } from '@supabase/supabase-js';
+import type { MyAccount } from '@/lib/actions/loyalty';
 
 interface Props {
   restaurantId: string;
@@ -42,34 +41,34 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
   const [saved, setSaved] = useState(false);
   const [locating, setLocating] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
+  // Fuente única de verdad: sesión + enlace + puntos, resueltos SIEMPRE
+  // server-side (cookies) en una sola llamada — ver getMyAccount. Antes esta
+  // pantalla también hacía su propia `supabase.auth.getUser()` en el
+  // navegador; si esa llamada fallaba (red, bloqueadores) la sesión se veía
+  // como "no iniciada" aunque sí lo estuviera, y ocultaba los datos/puntos.
+  const [account, setAccount] = useState<MyAccount | null>(null);
   const [signingOut, setSigningOut] = useState(false);
-  // ¿La cuenta de Google ya está enlazada a un cliente con historial? (con o
-  // sin el módulo de lealtad activo — el enlace también sirve para "Mis
-  // pedidos" y el autocompletado del checkout). null = aún no se sabe.
-  const [identified, setIdentified] = useState<boolean | null>(null);
   const [linkPhone, setLinkPhone] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMsg, setLinkMsg] = useState<string | null>(null);
 
-  const loadProfile = useCallback(async () => {
+  const loadAccount = useCallback(async () => {
     const local = getLocalProfile(restaurantId);
     // El tipo de entrega es preferencia de este dispositivo; no se guarda
     // en la cuenta, así que siempre se toma de aquí si existe.
     if (local?.deliveryType) setDeliveryType(local.deliveryType);
 
+    const acc = await getMyAccount(restaurantId).catch(() => null);
+    setAccount(acc);
+
     // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
     // dispositivo) sobre el perfil local de este dispositivo únicamente.
-    const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
-    if (remote) {
-      setIdentified(true);
-      setName(remote.name);
-      setPhone(remote.phone);
-      setAddress(remote.address ?? '');
+    if (acc?.checkout) {
+      setName(acc.checkout.name);
+      setPhone(acc.checkout.phone);
+      setAddress(acc.checkout.address ?? '');
       return;
     }
-    setIdentified(false);
     if (local) {
       setName(local.name);
       setPhone(local.phone);
@@ -78,18 +77,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     }
   }, [restaurantId]);
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
-
-  useEffect(() => {
-    const supabase = createClient();
-    (async () => {
-      const { data: { user: u } } = await supabase.auth.getUser();
-      setUser(u ?? null);
-      if (loyaltyOn) {
-        try { setLoyalty(await getMyLoyalty(restaurantId)); } catch { /* ignore */ }
-      }
-    })();
-  }, [restaurantId, loyaltyOn]);
+  useEffect(() => { loadAccount(); }, [loadAccount]);
 
   async function handleLink() {
     const cleanPhone = linkPhone.replace(/\D/g, '');
@@ -101,10 +89,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
       setLinkMsg(res.error);
     } else {
       setLinkMsg('¡Listo! Tu cuenta quedó enlazada.');
-      await loadProfile();
-      if (loyaltyOn) {
-        try { setLoyalty(await getMyLoyalty(restaurantId)); } catch { /* ignore */ }
-      }
+      await loadAccount();
     }
     setLinkBusy(false);
   }
@@ -130,10 +115,10 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
 
   async function handleSignOut() {
     setSigningOut(true);
-    try { await createClient().auth.signOut({ scope: 'local' }); } catch {}
-    setUser(null);
-    setLoyalty(null);
-    setIdentified(false);
+    // scope 'local' no hace petición de red (solo borra la sesión de este
+    // navegador) — no depende de que el navegador alcance el servidor de Auth.
+    try { await createClient().auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
+    await loadAccount();
     setSigningOut(false);
   }
 
@@ -162,7 +147,9 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     );
   }
 
-  const balance = loyalty?.identified ? loyalty.balance : null;
+  const loggedIn = !!account?.loggedIn;
+  const identified = !!account?.identified;
+  const balance = loyaltyOn && account?.loyalty?.identified ? account.loyalty.balance : null;
 
   return (
     <div
@@ -217,15 +204,15 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
         {/* Sesión con Google */}
         {googleAuthEnabled && (
           <Glass variant="quiet" style={{ borderRadius: 16, padding: '14px 16px' }}>
-            {user && identified ? (
+            {loggedIn && identified ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {user.user_metadata?.avatar_url && (
+                {account?.avatarUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.user_metadata.avatar_url as string} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
+                  <img src={account.avatarUrl} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {(user.user_metadata?.full_name as string) ?? user.email}
+                    {account?.name ?? account?.email}
                   </div>
                   <div className="t-mute" style={{ fontSize: 12 }}>Cuenta de Google</div>
                 </div>
@@ -238,16 +225,16 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
                   <Icon name="logOut" size={13} /> Salir
                 </button>
               </div>
-            ) : user && !identified ? (
+            ) : loggedIn && !identified ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  {user.user_metadata?.avatar_url && (
+                  {account?.avatarUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.user_metadata.avatar_url as string} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
+                    <img src={account.avatarUrl} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(user.user_metadata?.full_name as string) ?? user.email}
+                      {account?.name ?? account?.email}
                     </div>
                     <div className="t-mute" style={{ fontSize: 12 }}>Cuenta de Google</div>
                   </div>
@@ -292,7 +279,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
                     ? 'Inicia sesión para ver y usar tus puntos de fidelidad en cualquier dispositivo.'
                     : 'Guarda tus datos y encuentra tus pedidos en cualquier dispositivo.'}
                 </p>
-                <GoogleSignInButton full />
+                <GoogleSignInButton full returnTab="cuenta" />
               </>
             )}
           </Glass>
@@ -384,7 +371,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
           </button>
 
           <p className="t-mute" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5, marginTop: 8 }}>
-            {user && identified
+            {loggedIn && identified
               ? 'Estos datos vienen de tu cuenta y se actualizan solos con tu próximo pedido. Lo que cambies aquí es solo para este dispositivo.'
               : 'Tus datos se guardan en este dispositivo y se usan para agilizar tus pedidos.'}
           </p>

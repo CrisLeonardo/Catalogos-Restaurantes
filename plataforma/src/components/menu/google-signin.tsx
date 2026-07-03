@@ -19,15 +19,23 @@ function GoogleG({ size = 18 }: { size?: number }) {
  * "Continuar con Google" para comensales. Inicia el flujo OAuth y vuelve a la
  * misma página (`/auth/callback?next=...`). El que renderiza decide si mostrarlo
  * (solo si el proveedor está configurado — ver isGoogleAuthEnabled).
+ *
+ * `returnTab` ('cuenta' | 'fidelidad'): qué panel reabrir automáticamente al
+ * volver de Google. El login es una redirección de página completa (no una
+ * llamada en el sitio), así que cualquier sheet abierto (useState) se pierde
+ * en la vuelta; sin esto el comensal vuelve al menú y tiene que volver a
+ * tocar la pestaña para ver que ya quedó identificado.
  */
-export default function GoogleSignInButton({ label = 'Continuar con Google', full = false }: { label?: string; full?: boolean }) {
+export default function GoogleSignInButton({ label = 'Continuar con Google', full = false, returnTab }: { label?: string; full?: boolean; returnTab?: 'cuenta' | 'fidelidad' }) {
   const [loading, setLoading] = useState(false);
 
   async function go() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const next = window.location.pathname + window.location.search;
+      const url = new URL(window.location.pathname + window.location.search, window.location.origin);
+      if (returnTab) url.searchParams.set('openTab', returnTab);
+      const next = url.pathname + url.search;
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
       const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
       if (error) setLoading(false);

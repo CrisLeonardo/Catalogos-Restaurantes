@@ -14,7 +14,7 @@ import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
-import { awardLoyaltyForOrder } from '@/lib/actions/loyalty';
+import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
 import { getRedeemContextByCustomer, getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import type {
   OrderItemOption,
@@ -365,6 +365,13 @@ export async function createOrder(
       p_auth_user_id:  authUserId,
     });
     customerId = (cid as string | null) ?? null;
+
+    // Puntos de bienvenida (una sola vez) si este pedido se hizo con sesión de
+    // Google — `upsert_customer` ya enlazó `auth_user_id` a este cliente arriba.
+    // Best-effort: no debe retrasar ni romper la creación del pedido.
+    if (authUserId && customerId) {
+      maybeAwardSignupBonus(restaurantId, customerId).catch(() => {});
+    }
   }
 
   const address =

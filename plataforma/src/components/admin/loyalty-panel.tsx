@@ -118,6 +118,9 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
         los puntos exactos de cada producto en su ficha (Menú → editar producto → <em>Puntos de lealtad</em>).
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>
+      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+        La identidad de lealtad es siempre la <strong>cuenta de Google</strong> del comensal: los pedidos hechos <strong>sin sesión iniciada</strong> (invitados) no acumulan puntos automáticamente ni reciben los puntos de bienvenida, aunque sí quedan registrados como pedido normal. Si un invitado inicia sesión más tarde, sus pedidos anteriores no ganan puntos retroactivamente.
+      </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={save} disabled={isPending} className="press btn-accent" style={{ padding: '10px 22px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
           {isPending ? 'Guardando…' : 'Guardar configuración'}
