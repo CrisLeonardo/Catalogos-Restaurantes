@@ -19,15 +19,27 @@ function clamp(v: number, min: number, max: number): number {
   return v < min ? min : v > max ? max : v;
 }
 
+/** Tiempo ocupada, formato corto: "12m", "1h05". */
+export function fmtOccupied(ms: number): string {
+  const totalMin = Math.max(0, Math.floor(ms / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}m`;
+}
+
 /* Token de mesa (también lo usa la cuadrícula y "Otras mesas"). */
 export function TableToken({
-  n, occupied, onTap, style,
+  n, occupied, since, now, onTap, style,
 }: {
   n: number;
   occupied: boolean;
+  /** ISO timestamp de cuándo se ocupó (para el temporizador). */
+  since?: string;
+  now?: number | null;
   onTap: () => void;
   style?: React.CSSProperties;
 }) {
+  const elapsed = occupied && since && now != null ? fmtOccupied(now - new Date(since).getTime()) : null;
   return (
     <button
       type="button"
@@ -45,7 +57,7 @@ export function TableToken({
     >
       <span style={{ fontSize: 10, color: occupied ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600 }}>Mesa</span>
       <span style={{ fontSize: 23, fontWeight: 800, lineHeight: 1 }}>{n}</span>
-      {occupied && <span style={{ fontSize: 9, fontWeight: 700, marginTop: 1 }}>● activa</span>}
+      {occupied && <span style={{ fontSize: 9, fontWeight: 700, marginTop: 1 }}>● {elapsed ?? 'activa'}</span>}
     </button>
   );
 }
@@ -55,10 +67,15 @@ interface Transform { s: number; x: number; y: number; base: number }
 export default function FloorMap({
   tables,
   occupied,
+  occupiedSince,
+  now,
   onSelect,
 }: {
   tables: FloorTable[];
   occupied: Set<number>;
+  /** Mesa → ISO timestamp de cuándo se ocupó (para el temporizador). */
+  occupiedSince?: Record<number, string>;
+  now?: number | null;
   onSelect: (n: number) => void;
 }) {
   const vpRef = useRef<HTMLDivElement | null>(null);
@@ -262,6 +279,8 @@ export default function FloorMap({
             calcula aplicando el mismo transform (pan + zoom) al centro de la mesa. */}
         {tables.map((tb) => {
           const isOcc = occupied.has(tb.n);
+          const since = occupiedSince?.[tb.n];
+          const elapsed = isOcc && since && now != null ? fmtOccupied(now - new Date(since).getTime()) : null;
           const sx = tb.x * VIRT_W * t.s + t.x;
           const sy = tb.y * VIRT_H * t.s + t.y;
           return (
@@ -284,7 +303,7 @@ export default function FloorMap({
             >
               <span style={{ fontSize: 8.5, color: isOcc ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
               <span style={{ fontSize: 19, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
-              {isOcc && <span style={{ fontSize: 8, fontWeight: 700, pointerEvents: 'none' }}>● activa</span>}
+              {isOcc && <span style={{ fontSize: 8, fontWeight: 700, pointerEvents: 'none' }}>● {elapsed ?? 'activa'}</span>}
             </div>
           );
         })}

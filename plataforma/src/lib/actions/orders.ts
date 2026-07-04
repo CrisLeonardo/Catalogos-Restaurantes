@@ -363,6 +363,8 @@ export async function createOrder(
       p_zone:          customer.zone ?? '',
       p_total:         total,
       p_auth_user_id:  authUserId,
+      p_lat:           customer.type === 'DELIVERY' ? (customer.deliveryLat ?? null) : null,
+      p_lng:           customer.type === 'DELIVERY' ? (customer.deliveryLng ?? null) : null,
     });
     customerId = (cid as string | null) ?? null;
 

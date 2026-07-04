@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
@@ -10,12 +11,30 @@ import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { MyAccount } from '@/lib/actions/loyalty';
 
+const DeliveryMap = dynamic(() => import('@/components/delivery-map'), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      height: 220, borderRadius: 'var(--radius-lg)',
+      background: 'var(--surface-1)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: 'var(--u-text-4)', fontSize: 13,
+    }}>
+      Cargando mapa…
+    </div>
+  ),
+});
+
 interface Props {
   restaurantId: string;
   loyaltyOn: boolean;
-  redeemValue: number;
   googleAuthEnabled: boolean;
   whatsappNumber: string | null;
+  /** Ubicación del restaurante + radio de cobertura — si están configurados,
+     se muestra el mapa interactivo (igual que en el checkout de domicilio). */
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+  deliveryRadiusKm?: number | null;
   onClose: () => void;
 }
 
@@ -33,11 +52,16 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, googleAuthEnabled, whatsappNumber, onClose }: Props) {
+export default function AccountSheet({
+  restaurantId, loyaltyOn, googleAuthEnabled, whatsappNumber,
+  restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
+  onClose,
+}: Props) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
+  const [lat, setLat] = useState<number | undefined>(undefined);
+  const [lng, setLng] = useState<number | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const [locating, setLocating] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -59,9 +83,6 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
 
   const loadAccount = useCallback(async () => {
     const local = getLocalProfile(restaurantId);
-    // El tipo de entrega es preferencia de este dispositivo; no se guarda
-    // en la cuenta, así que siempre se toma de aquí si existe.
-    if (local?.deliveryType) setDeliveryType(local.deliveryType);
 
     const acc = await getMyAccount(restaurantId).catch(() => null);
     setAccount(acc);
@@ -72,12 +93,20 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
       setName(acc.checkout.name);
       setPhone(acc.checkout.phone);
       setAddress(acc.checkout.address ?? '');
+      if (acc.checkout.lat != null && acc.checkout.lng != null) {
+        setLat(acc.checkout.lat);
+        setLng(acc.checkout.lng);
+      }
       return;
     }
     if (local) {
       setName(local.name);
       setPhone(local.phone);
       setAddress(local.address ?? '');
+      if (local.lat != null && local.lng != null) {
+        setLat(local.lat);
+        setLng(local.lng);
+      }
       setLinkPhone(local.phone);
     }
   }, [restaurantId]);
@@ -116,8 +145,8 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
     const profile: LocalCustomerProfile = {
       name: name.trim(),
       phone: phone.trim(),
-      address: deliveryType === 'delivery' ? (address.trim() || undefined) : undefined,
-      deliveryType,
+      address: address.trim() || undefined,
+      lat, lng,
     };
     saveLocalProfile(restaurantId, profile);
     setSaved(true);
@@ -162,6 +191,7 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
   const loggedIn = !!account?.loggedIn;
   const identified = !!account?.identified;
   const balance = loyaltyOn && account?.loyalty?.identified ? account.loyalty.balance : null;
+  const geoActive = restaurantLat != null && restaurantLng != null && deliveryRadiusKm != null;
 
   return (
     <div
@@ -205,11 +235,6 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
               <span style={{ fontSize: 36, fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 0.95 }}>{fmtPts(balance)}</span>
               <span className="t-mute" style={{ fontSize: 14 }}>{balance === 1 ? 'punto' : 'puntos'}</span>
             </div>
-            {redeemValue > 0 && (
-              <div className="t-mute" style={{ fontSize: 11.5, marginTop: 5 }}>
-                ≈ Q{(balance * redeemValue).toFixed(2)} en valor
-              </div>
-            )}
           </Glass>
         )}
 
@@ -320,35 +345,40 @@ export default function AccountSheet({ restaurantId, loyaltyOn, redeemValue, goo
               <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)" style={inputStyle} />
             </div>
 
-            {/* Tipo de entrega */}
-            <div>
-              <div className="t-mute" style={{ fontSize: 12, marginBottom: 8 }}>Tipo de entrega preferido</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(['delivery', 'pickup'] as const).map((type) => {
-                  const active = deliveryType === type;
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setDeliveryType(type)}
-                      style={{
-                        flex: 1, padding: '10px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                        background: active ? 'var(--u-text)' : 'var(--surface-2)',
-                        color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                        fontWeight: 600, fontSize: 13, transition: 'background 160ms, color 160ms',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      }}
-                    >
-                      <Icon name={type === 'delivery' ? 'home' : 'bag'} size={15} />
-                      {type === 'delivery' ? 'A domicilio' : 'Para recoger'}
-                    </button>
-                  );
-                })}
+            {/* Dirección de entrega — se usa para autocompletar tus pedidos a domicilio */}
+            {geoActive ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label className="t-mute" style={{ fontSize: 12 }}>Tu ubicación de entrega</label>
+                {/* Se espera a que cargue el perfil (local/cuenta) antes de montar el
+                   mapa: el pin inicial solo se lee UNA vez al montar Leaflet, así que
+                   montarlo antes de saber lat/lng guardados lo dejaría siempre en el
+                   centro del restaurante en vez de la última ubicación del cliente. */}
+                {accountLoading ? (
+                  <div style={{
+                    height: 220, borderRadius: 'var(--radius-lg)', background: 'var(--surface-1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--u-text-4)', fontSize: 13,
+                  }}>
+                    Cargando mapa…
+                  </div>
+                ) : (
+                  <DeliveryMap
+                    initialLat={lat}
+                    initialLng={lng}
+                    restaurantLat={restaurantLat}
+                    restaurantLng={restaurantLng}
+                    radiusKm={deliveryRadiusKm}
+                    onLocationChange={(newLat, newLng) => { setLat(newLat); setLng(newLng); }}
+                  />
+                )}
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Ej. Portón azul, frente al parque…"
+                  style={inputStyle}
+                />
               </div>
-            </div>
-
-            {/* Dirección — solo cuando es a domicilio */}
-            {deliveryType === 'delivery' && (
+            ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label className="t-mute" style={{ fontSize: 12 }}>Dirección de entrega</label>
                 <div style={{ display: 'flex', gap: 8 }}>

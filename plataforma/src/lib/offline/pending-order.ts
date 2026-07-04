@@ -32,6 +32,8 @@ export interface PendingOrderBundle {
   phone: string;
   address: string;
   zone: string;
+  lat?: number;
+  lng?: number;
 }
 
 /** Ventana de reenvío automático. Después, confirmación manual. */

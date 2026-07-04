@@ -187,7 +187,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <TextCtl label="Tagline / lema" value={config.tagline} onChange={(v) => setC('tagline', v)} />
         <TextCtl label="Zona" value={config.zone} onChange={(v) => setC('zone', v)} placeholder="Zona 1, Centro…" />
         <Field label="Logo (portada)">
-          <ImageUpload restaurantId={restaurantId} currentUrl={config.logoUrl} folder="logo" onUpload={(u) => setC('logoUrl', u)} />
+          <ImageUpload restaurantId={restaurantId} currentUrl={config.logoUrl} folder="logo" bgColor={config.colorBg} onUpload={(u) => setC('logoUrl', u)} />
         </Field>
         <Field label="Ícono de app instalada (PWA)">
           <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" mode="icon" bgColor={config.colorBg} onUpload={(u) => setC('pwaIconUrl', u)} />

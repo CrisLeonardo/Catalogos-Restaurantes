@@ -149,6 +149,9 @@ export interface MyCheckoutProfile {
   phone: string;
   address: string | null;
   zone: string | null;
+  /** Último pin de entrega guardado (mig. 065) — null si nunca se colocó uno. */
+  lat: number | null;
+  lng: number | null;
 }
 
 async function fetchCheckoutProfile(restaurantId: string, authUserId: string | null): Promise<MyCheckoutProfile | null> {
@@ -156,7 +159,7 @@ async function fetchCheckoutProfile(restaurantId: string, authUserId: string | n
   const db = createServiceClient();
   const { data } = await db
     .from('customers')
-    .select('name, phone, default_address, default_zone')
+    .select('name, phone, default_address, default_zone, default_lat, default_lng')
     .eq('restaurant_id', restaurantId)
     .eq('auth_user_id', authUserId)
     .maybeSingle();
@@ -167,6 +170,8 @@ async function fetchCheckoutProfile(restaurantId: string, authUserId: string | n
     phone: data.phone as string,
     address: (data.default_address as string | null) ?? null,
     zone: (data.default_zone as string | null) ?? null,
+    lat: (data.default_lat as number | null) ?? null,
+    lng: (data.default_lng as number | null) ?? null,
   };
 }
 

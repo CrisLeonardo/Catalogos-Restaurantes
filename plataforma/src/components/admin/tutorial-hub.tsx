@@ -46,9 +46,16 @@ export default function TutorialHub({ plan, modules }: Props) {
     'primeros-pasos': true,
   });
 
+  // Las secciones de un módulo activable (moduleKey) no se muestran en
+  // absoluto si el restaurante no tiene ese módulo habilitado — a diferencia
+  // de las secciones limitadas por plan (que sí quedan visibles "bloqueadas"
+  // como incentivo de upgrade), un módulo apagado no es un ítem a promocionar
+  // y solo saturaría la lista de ayuda.
   const filteredSections = useMemo(
-    () => searchSections(TUTORIAL_SECTIONS, query),
-    [query],
+    () => searchSections(TUTORIAL_SECTIONS, query).filter(
+      (s) => !s.moduleKey || modules[s.moduleKey] === true,
+    ),
+    [query, modules],
   );
 
   function toggleSection(id: string) {

@@ -139,7 +139,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Logos e imágenes">
               <Field label="Logo principal (portada y encabezado)">
-                <ImageUpload restaurantId={restaurantId} currentUrl={config.logoUrl} folder="logo" onUpload={(u) => setC('logoUrl', u)} />
+                <ImageUpload restaurantId={restaurantId} currentUrl={config.logoUrl} folder="logo" bgColor={config.colorBg} onUpload={(u) => setC('logoUrl', u)} />
               </Field>
               <Field label="Ícono de app instalada (PWA)">
                 <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" mode="icon" bgColor={config.colorBg} onUpload={(u) => setC('pwaIconUrl', u)} />
@@ -148,7 +148,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 </p>
               </Field>
               <Field label="Marca de agua (watermark de fondo)">
-                <ImageUpload restaurantId={restaurantId} currentUrl={config.markUrl} folder="mark" onUpload={(u) => setC('markUrl', u)} />
+                <ImageUpload restaurantId={restaurantId} currentUrl={config.markUrl} folder="mark" bgColor={config.colorBg} onUpload={(u) => setC('markUrl', u)} />
                 <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.5 }}>
                   Ícono pequeño que rota en el fondo cuando activas el watermark. Si no se sube, usa el logo.
                 </p>

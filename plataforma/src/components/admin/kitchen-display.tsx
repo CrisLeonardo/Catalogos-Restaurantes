@@ -20,11 +20,14 @@ interface Props {
   redMin: number;
   /** true = solo muestra pedidos ya confirmados (PREP); false = también muestra los recién llegados (NEW). */
   confirmFirst?: boolean;
+  /** Esquema claro/oscuro del panel admin (cookie `admin-theme`), NO el tema del restaurante. */
+  scheme?: 'light' | 'dark';
 }
 
-/* Paleta fija de alto contraste — una cocina necesita legibilidad constante,
-   independiente del tema del restaurante. */
-const C = {
+/* Paletas de alto contraste — independientes del tema del restaurante, pero
+   sí siguen el switch claro/oscuro del panel admin (igual que el resto del
+   admin, que usa 2 paletas fijas en vez de heredar el tema del tenant). */
+const C_DARK = {
   bg: '#0b0d10',
   panel: '#15181d',
   panelHi: '#1c2026',
@@ -36,6 +39,21 @@ const C = {
   red: '#ef4444',
   blue: '#3b82f6',
 };
+
+const C_LIGHT = {
+  bg: '#eef0f3',
+  panel: '#ffffff',
+  panelHi: '#f4f5f7',
+  text: '#14181f',
+  dim: '#5b6472',
+  hair: 'color-mix(in srgb, var(--u-text) 12%, transparent)',
+  green: '#16a34a',
+  amber: '#d97706',
+  red: '#dc2626',
+  blue: '#2563eb',
+};
+
+type Palette = typeof C_DARK;
 
 
 function orderLabel(o: OrderWithItems): { icon: string; text: string } {
@@ -57,18 +75,19 @@ function fmtElapsed(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
-function semaforo(elapsedMin: number, yellowMin: number, redMin: number): string {
+function semaforo(elapsedMin: number, yellowMin: number, redMin: number, C: Palette): string {
   if (elapsedMin >= redMin) return C.red;
   if (elapsedMin >= yellowMin) return C.amber;
   return C.green;
 }
 
-export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false }: Props) {
+export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark' }: Props) {
   const router = useRouter();
   const orders = initialOrders;
   const [now, setNow] = useState<number | null>(null);
   const [isFull, setIsFull] = useState(false);
   const soundSettingsRef = useRef(loadSoundSettings());
+  const C = scheme === 'light' ? C_LIGHT : C_DARK;
 
   // Reloj/temporizadores
   useEffect(() => {
@@ -171,10 +190,10 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
             )}
           </span>
           <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 16, fontWeight: 700, color: C.dim, minWidth: 54, textAlign: 'right' }}>{clock}</span>
-          <button onClick={toggleFullscreen} title="Pantalla completa" style={iconBtn}>
+          <button onClick={toggleFullscreen} title="Pantalla completa" style={iconBtnStyle(C)}>
             <Icon name={isFull ? 'x' : 'grid'} size={17} />
           </button>
-          <a href="/admin/pedidos" title="Salir de cocina" style={{ ...iconBtn, textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
+          <a href="/admin/pedidos" title="Salir de cocina" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
             <Icon name="logOut" size={17} />
           </a>
         </div>
@@ -191,7 +210,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14, alignItems: 'start' }}>
             {orders.map((order) => (
-              <KitchenCard key={order.id} order={order} now={now} yellowMin={yellowMin} redMin={redMin} onRefresh={() => router.refresh()} />
+              <KitchenCard key={order.id} order={order} now={now} yellowMin={yellowMin} redMin={redMin} C={C} onRefresh={() => router.refresh()} />
             ))}
           </div>
         )}
@@ -200,20 +219,22 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
   );
 }
 
-const iconBtn: React.CSSProperties = {
-  width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.hair}`,
-  background: C.panelHi, color: C.dim, cursor: 'pointer', display: 'grid', placeItems: 'center',
-};
+function iconBtnStyle(C: Palette): React.CSSProperties {
+  return {
+    width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.hair}`,
+    background: C.panelHi, color: C.dim, cursor: 'pointer', display: 'grid', placeItems: 'center',
+  };
+}
 
 /* ── Tarjeta de pedido ──────────────────────────────────────── */
 
-function KitchenCard({ order, now, yellowMin, redMin, onRefresh }: { order: OrderWithItems; now: number | null; yellowMin: number; redMin: number; onRefresh: () => void }) {
+function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: OrderWithItems; now: number | null; yellowMin: number; redMin: number; C: Palette; onRefresh: () => void }) {
   const [isPending, start] = useTransition();
   const createdMs = new Date(order.created_at).getTime();
   const elapsedMs = now == null ? 0 : now - createdMs;
   const elapsedMin = elapsedMs / 60000;
   const mounted = now != null;
-  const color = mounted ? semaforo(elapsedMin, yellowMin, redMin) : C.green;
+  const color = mounted ? semaforo(elapsedMin, yellowMin, redMin, C) : C.green;
   const isNew = order.status === 'NEW';
   const label = orderLabel(order);
 

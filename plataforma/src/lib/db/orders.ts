@@ -78,24 +78,28 @@ export async function getKitchenOrders(
   });
 }
 
-/** Números de mesa con un pedido DINE_IN activo (no entregado/cancelado).
-   Se usa para marcar mesas ocupadas en el panel del mesero. */
-export async function getActiveTableNumbers(restaurantId: string): Promise<number[]> {
+/** Mesas con un pedido DINE_IN activo (no entregado/cancelado) → desde cuándo
+   está ocupada (created_at del pedido más antiguo, si hay varios acumulados).
+   Se usa para marcar mesas ocupadas + su temporizador en el panel del mesero. */
+export async function getActiveTableNumbers(restaurantId: string): Promise<Record<number, string>> {
   const db = createServiceClient();
   const { data } = await db
     .from('orders')
-    .select('address')
+    .select('address, created_at')
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
     .not('status', 'in', '("DELIVERED","CANCEL")')
+    .order('created_at', { ascending: true })
     .limit(200);
 
-  const nums = new Set<number>();
-  for (const row of (data ?? []) as { address: string | null }[]) {
+  const since: Record<number, string> = {};
+  for (const row of (data ?? []) as { address: string | null; created_at: string }[]) {
     const m = row.address?.match(/Mesa\s+(\d+)/i);
-    if (m) nums.add(Number(m[1]));
+    if (!m) continue;
+    const n = Number(m[1]);
+    if (!(n in since)) since[n] = row.created_at; // orden ascendente → el primero es el más antiguo
   }
-  return [...nums];
+  return since;
 }
 
 export type DaySale    = { label: string; total: number; isToday: boolean };

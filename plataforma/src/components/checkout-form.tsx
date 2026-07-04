@@ -175,6 +175,10 @@ export default function CheckoutForm({
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
   const [deliveryLng, setDeliveryLng] = useState<number | undefined>(undefined);
+  // El mapa solo lee su posición inicial UNA vez al montar Leaflet — hay que
+  // esperar a que termine de revisarse el perfil guardado (local o de cuenta)
+  // antes de montarlo, o el pin guardado nunca se restauraría.
+  const [profileChecked, setProfileChecked] = useState(false);
 
   // Cupón / promoción
   const [promoCode, setPromoCode] = useState('');
@@ -191,29 +195,35 @@ export default function CheckoutForm({
 
   useEffect(() => {
     // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
-    if (isKioskMode()) return;
+    if (isKioskMode()) { setProfileChecked(true); return; }
     let cancelled = false;
     (async () => {
-      // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
-      // dispositivo) sobre el perfil local de este dispositivo únicamente.
-      const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
-      if (cancelled) return;
-      if (remote) {
-        setName(remote.name);
-        setPhone(remote.phone);
-        if (remote.address) setAddress(remote.address);
-        if (remote.zone && deliveryZones.includes(remote.zone)) setZone(remote.zone);
-        setWelcomeBack(true);
-        return;
-      }
+      try {
+        // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
+        // dispositivo) sobre el perfil local de este dispositivo únicamente.
+        const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
+        if (cancelled) return;
+        if (remote) {
+          setName(remote.name);
+          setPhone(remote.phone);
+          if (remote.address) setAddress(remote.address);
+          if (remote.zone && deliveryZones.includes(remote.zone)) setZone(remote.zone);
+          if (remote.lat != null && remote.lng != null) { setDeliveryLat(remote.lat); setDeliveryLng(remote.lng); }
+          setWelcomeBack(true);
+          return;
+        }
 
-      const p = getLocalProfile(restaurantId);
-      if (!p) return;
-      setName(p.name);
-      setPhone(p.phone);
-      if (p.address) setAddress(p.address);
-      if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
-      setWelcomeBack(true);
+        const p = getLocalProfile(restaurantId);
+        if (!p) return;
+        setName(p.name);
+        setPhone(p.phone);
+        if (p.address) setAddress(p.address);
+        if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
+        if (p.lat != null && p.lng != null) { setDeliveryLat(p.lat); setDeliveryLng(p.lng); }
+        setWelcomeBack(true);
+      } finally {
+        if (!cancelled) setProfileChecked(true);
+      }
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -371,6 +381,7 @@ export default function CheckoutForm({
         name: b.name, phone: b.phone,
         ...(b.address.trim() ? { address: b.address } : {}),
         ...(b.zone && b.zone !== NO_ZONE ? { zone: b.zone } : {}),
+        ...(b.lat !== undefined && b.lng !== undefined ? { lat: b.lat, lng: b.lng } : {}),
       });
       if (result.publicToken) {
         addLocalOrder(restaurantId, {
@@ -484,6 +495,9 @@ export default function CheckoutForm({
       orderType: type,
       name, phone, address,
       zone: zone ?? '',
+      ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
+        ? { lat: deliveryLat, lng: deliveryLng }
+        : {}),
     };
 
     start(async () => {
@@ -1141,15 +1155,27 @@ export default function CheckoutForm({
               Arrastra el pin azul hasta tu puerta exacta. Si cae fuera del área
               naranja, el restaurante no puede llegar ahí.
             </p>
-            <DeliveryMap
-              restaurantLat={restaurantLat}
-              restaurantLng={restaurantLng}
-              radiusKm={deliveryRadiusKm}
-              onLocationChange={(lat, lng) => {
-                setDeliveryLat(lat);
-                setDeliveryLng(lng);
-              }}
-            />
+            {profileChecked ? (
+              <DeliveryMap
+                initialLat={deliveryLat}
+                initialLng={deliveryLng}
+                restaurantLat={restaurantLat}
+                restaurantLng={restaurantLng}
+                radiusKm={deliveryRadiusKm}
+                onLocationChange={(lat, lng) => {
+                  setDeliveryLat(lat);
+                  setDeliveryLng(lng);
+                }}
+              />
+            ) : (
+              <div style={{
+                height: 280, borderRadius: 'var(--radius-lg)', background: 'var(--surface-1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--u-text-4)', fontSize: 13,
+              }}>
+                Cargando mapa…
+              </div>
+            )}
             {geoDistanceKm !== null && (
               <div style={{
                 marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,

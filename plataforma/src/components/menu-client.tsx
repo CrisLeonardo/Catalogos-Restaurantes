@@ -40,10 +40,13 @@ interface Props {
   loyaltyOn?: boolean;
   /** Catálogo de recompensas canjeables (null = canje deshabilitado). */
   rewardsCatalog?: MenuReward[] | null;
-  redeemValue?: number;
   googleAuthEnabled?: boolean;
   /** Número de WhatsApp del restaurante para el botón de contacto en "Mi cuenta". */
   whatsappNumber?: string | null;
+  /** Ubicación del restaurante + radio de cobertura, para el mapa en "Mi cuenta". */
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+  deliveryRadiusKm?: number | null;
 }
 
 function hasOptions(p: ProdItem): boolean {
@@ -53,7 +56,8 @@ function hasOptions(p: ProdItem): boolean {
 export default function MenuClient({
   categories, products, ordersEnabled = false, restaurantId, timezone = 'America/Guatemala',
   llamadaMeseroEnabled = false, initialMesa, loyaltyOn = false, rewardsCatalog = null,
-  redeemValue = 0, googleAuthEnabled = false, whatsappNumber = null,
+  googleAuthEnabled = false, whatsappNumber = null,
+  restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null,
 }: Props) {
   const { items, addItem, qtyOfProduct } = useCart();
   const [selected, setSelected] = useState<ProdItem | null>(null);
@@ -149,7 +153,6 @@ export default function MenuClient({
         <RewardsSection
           restaurantId={restaurantId}
           rewards={rewardsCatalog ?? []}
-          redeemValue={redeemValue}
           googleAuthEnabled={googleAuthEnabled}
           ordersEnabled={ordersEnabled}
           open={rewardsOpen}
@@ -240,9 +243,11 @@ export default function MenuClient({
         <AccountSheet
           restaurantId={restaurantId}
           loyaltyOn={loyaltyOn}
-          redeemValue={redeemValue}
           googleAuthEnabled={googleAuthEnabled}
           whatsappNumber={whatsappNumber}
+          restaurantLat={restaurantLat}
+          restaurantLng={restaurantLng}
+          deliveryRadiusKm={deliveryRadiusKm}
           onClose={() => setAccountOpen(false)}
         />
       )}

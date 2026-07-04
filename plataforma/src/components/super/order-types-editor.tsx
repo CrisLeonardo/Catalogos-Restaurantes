@@ -5,10 +5,12 @@ import { Glass } from '@/components/glass';
 import { updateOrderTypes } from '@/lib/actions/super-admin';
 import type { OrderType } from '@/lib/theme/defaults';
 
-const OPTIONS: { id: OrderType; label: string; desc: string }[] = [
-  { id: 'dine_in',  label: 'Comer aquí',      desc: 'Pedidos en mesa con número de mesa' },
-  { id: 'delivery', label: 'A domicilio',      desc: 'Entrega en la dirección del cliente' },
-  { id: 'pickup',   label: 'Retiro en local',  desc: 'El cliente recoge su pedido' },
+/* "Comer aquí" y "Retiro en local" cuentan como un solo canal ("Local") para
+   el descuento de "Plan a tu medida" (ver mig. 064) — se activan/desactivan
+   juntos, aunque orderTypes siga guardando ambas llaves por separado. */
+const OPTIONS: { id: string; label: string; desc: string; types: OrderType[] }[] = [
+  { id: 'local',    label: 'Local (mesa + retiro)', desc: 'Pedidos en mesa con QR y retiro en el mostrador', types: ['dine_in', 'pickup'] },
+  { id: 'delivery', label: 'A domicilio',            desc: 'Entrega en la dirección del cliente',            types: ['delivery'] },
 ];
 
 export default function OrderTypesEditor({
@@ -22,10 +24,11 @@ export default function OrderTypesEditor({
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
-  function toggle(type: OrderType) {
-    setSelected((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
+  function toggle(types: OrderType[]) {
+    setSelected((prev) => {
+      const isOn = types.some((t) => prev.includes(t));
+      return isOn ? prev.filter((t) => !types.includes(t)) : [...new Set([...prev, ...types])];
+    });
     setMsg(null);
   }
 
@@ -48,13 +51,13 @@ export default function OrderTypesEditor({
         o Para llevar + Comer en local. Mínimo un canal activo.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {OPTIONS.map(({ id, label, desc }) => {
-          const enabled = selected.includes(id);
+        {OPTIONS.map(({ id, label, desc, types }) => {
+          const enabled = types.some((t) => selected.includes(t));
           return (
             <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <button
                 type="button"
-                onClick={() => toggle(id)}
+                onClick={() => toggle(types)}
                 className="press"
                 aria-label={label}
                 style={{
