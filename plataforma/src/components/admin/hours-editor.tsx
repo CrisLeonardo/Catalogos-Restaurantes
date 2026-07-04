@@ -130,6 +130,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       {/* ── Pausa de pedidos ── */}
       <Glass
         variant="quiet"
+        data-tour-step="perfil-pausa"
         style={{
           padding: 16,
           border: paused ? '1px solid rgba(245,158,11,0.4)' : undefined,

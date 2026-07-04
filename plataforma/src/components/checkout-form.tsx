@@ -16,6 +16,7 @@ import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
+import { isKioskMode } from '@/lib/kiosk';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import { reportConnectivityProblem } from '@/lib/offline/use-online';
 import {
@@ -91,11 +92,25 @@ export default function CheckoutForm({
   // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
   const [hasScannedTable, setHasScannedTable] = useState(false);
 
-  const typeOptions = [
-    config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
-    config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
-    config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
-  ].filter(Boolean) as { id: OrderType; label: string; icon: string }[];
+  // MODO KIOSKO (autoservicio, dispositivo compartido del mostrador): el
+  // pedido es siempre "para recoger", sin autocompletar ni guardar el perfil
+  // del cliente anterior, sin lealtad (la sesión sería de otra persona) y con
+  // regreso automático al menú tras confirmar. Ver src/lib/kiosk.ts.
+  const [kiosk, setKiosk] = useState(false);
+  useEffect(() => {
+    if (isKioskMode()) {
+      setKiosk(true);
+      setType('PICKUP');
+    }
+  }, []);
+
+  const typeOptions = kiosk
+    ? [{ id: 'PICKUP' as const, label: content.checkout.pickup, icon: 'bag' }]
+    : ([
+        config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
+        config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
+        config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
+      ].filter(Boolean) as { id: OrderType; label: string; icon: string }[]);
 
   const activeBg   = config.checkoutActiveColor === 'accent' ? 'var(--brand-accent)' : 'var(--u-text)';
   const activeText = config.checkoutActiveColor === 'accent' ? 'var(--brand-on-accent)' : 'var(--brand-bg)';
@@ -175,6 +190,8 @@ export default function CheckoutForm({
   const [redeemInfoLoaded, setRedeemInfoLoaded] = useState(false);
 
   useEffect(() => {
+    // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
+    if (isKioskMode()) return;
     let cancelled = false;
     (async () => {
       // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
@@ -204,6 +221,7 @@ export default function CheckoutForm({
 
   useEffect(() => {
     if (!config.orderTypes.includes('dine_in')) return;
+    if (isKioskMode()) return; // kiosko: siempre "para recoger", sin mesa
     // No se borra la mesa al leerla: el botón "Llamar al mesero" también la usa.
     // Se mantiene mientras el comensal está sentado (la sobrescribe el próximo escaneo).
     const n = getScannedTable(restaurantId);
@@ -236,6 +254,15 @@ export default function CheckoutForm({
     setCashAmount('');
   }, [type, paymentMethod]);
 
+  // Kiosko: tras confirmar, la pantalla vuelve sola al menú para el siguiente
+  // cliente (recarga completa = estado limpio garantizado). El margen da
+  // tiempo a leer el número de pedido y dejar una calificación.
+  useEffect(() => {
+    if (!kiosk || step !== 'success') return;
+    const t = setTimeout(() => { window.location.href = '/'; }, 45_000);
+    return () => clearTimeout(t);
+  }, [kiosk, step]);
+
   // Lealtad: consulta el saldo de puntos del comensal (si el módulo está
   // activo) SIEMPRE server-side — getLoyaltyRedeemInfo resuelve la sesión por
   // cookies, nunca por el teléfono escrito en el formulario. No se gatea
@@ -246,7 +273,9 @@ export default function CheckoutForm({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!loyaltyActive) {
+      // Kiosko: sin lealtad — cualquier sesión en el aparato compartido sería
+      // de otra persona (o del dueño), y sus puntos no deben poder gastarse.
+      if (!loyaltyActive || isKioskMode()) {
         if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); setRedeemInfoLoaded(true); }
         return;
       }
@@ -335,18 +364,22 @@ export default function CheckoutForm({
   ) {
     if (result.error) { setError(result.error); return; }
 
-    saveLocalProfile(restaurantId, {
-      name: b.name, phone: b.phone,
-      ...(b.address.trim() ? { address: b.address } : {}),
-      ...(b.zone && b.zone !== NO_ZONE ? { zone: b.zone } : {}),
-    });
-    if (result.publicToken) {
-      addLocalOrder(restaurantId, {
-        token: result.publicToken,
-        orderNumber: result.orderNumber ?? '',
-        createdAt: new Date().toISOString(),
-        total: b.totalSnapshot,
+    // Kiosko: no dejar rastro del cliente en el aparato compartido (ni perfil
+    // para autocompletar, ni su pedido en el historial local del dispositivo).
+    if (!isKioskMode()) {
+      saveLocalProfile(restaurantId, {
+        name: b.name, phone: b.phone,
+        ...(b.address.trim() ? { address: b.address } : {}),
+        ...(b.zone && b.zone !== NO_ZONE ? { zone: b.zone } : {}),
       });
+      if (result.publicToken) {
+        addLocalOrder(restaurantId, {
+          token: result.publicToken,
+          orderNumber: result.orderNumber ?? '',
+          createdAt: new Date().toISOString(),
+          total: b.totalSnapshot,
+        });
+      }
     }
 
     setSnapshot(b.itemsSnapshot);
@@ -363,6 +396,10 @@ export default function CheckoutForm({
     setOrderId(result.orderId ?? '');
     clearCart();
     setStep('success');
+
+    // Kiosko: el aparato del mostrador no tiene WhatsApp del cliente; el
+    // pedido ya entró por el sistema y la pantalla vuelve sola al menú.
+    if (isKioskMode()) return;
 
     const waUrl = buildWhatsAppUrl({
       orderNumber: result.orderNumber ?? '',
@@ -608,7 +645,9 @@ export default function CheckoutForm({
 
   /* ── Confirmación ── */
   if (step === 'success') {
-    const waUrl = buildWhatsAppUrl();
+    // Kiosko: sin WhatsApp ni seguimiento en el aparato compartido — solo el
+    // número de pedido grande y el regreso al menú para el siguiente cliente.
+    const waUrl = kiosk ? '' : buildWhatsAppUrl();
     const subtitle = content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
     const typeLabel = type === 'DINE_IN'
       ? `Mesa ${tableNumber ?? '?'}`
@@ -650,10 +689,16 @@ export default function CheckoutForm({
               </p>
             </div>
           )}
-          {trackToken && (
+          {trackToken && !kiosk && (
             <PrimaryButton href={`/pedido/${trackToken}`} full iconRight="arrowRight">
               {content.confirmation.track}
             </PrimaryButton>
+          )}
+          {kiosk && (
+            <p style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.6, margin: 0 }}>
+              Guarda tu número de pedido{orderNumber ? ` (${orderNumber})` : ''} — te llamaremos
+              al mostrador cuando esté listo.
+            </p>
           )}
 
           {/* Encuesta de satisfacción */}
@@ -739,14 +784,25 @@ export default function CheckoutForm({
             </p>
           )}
 
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
-              Mis pedidos
-            </Link>
-            <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
-              {content.confirmation.again}
-            </Link>
-          </div>
+          {kiosk ? (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+              <PrimaryButton href="/" full iconRight="arrowRight">
+                Hacer otro pedido
+              </PrimaryButton>
+              <p className="t-mute" style={{ fontSize: 11.5, margin: 0 }}>
+                La pantalla volverá al menú automáticamente.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+                Mis pedidos
+              </Link>
+              <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+                {content.confirmation.again}
+              </Link>
+            </div>
+          )}
         </div>
       </main>
     );
@@ -853,8 +909,9 @@ export default function CheckoutForm({
             {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
 
-          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido */}
-          {loyaltyActive && googleAuthEnabled && redeemInfoLoaded && !redeemInfo?.loggedIn && (
+          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido.
+              En kiosko no se invita a iniciar sesión (aparato compartido). */}
+          {loyaltyActive && googleAuthEnabled && !kiosk && redeemInfoLoaded && !redeemInfo?.loggedIn && (
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />

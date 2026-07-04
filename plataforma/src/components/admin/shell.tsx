@@ -15,6 +15,7 @@ import OfflineSupport from '@/components/offline-support';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
 import WelcomeTour from '@/components/admin/welcome-tour';
+import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
 import { can } from '@/lib/permissions';
 
@@ -42,6 +43,13 @@ interface Props {
   /** Módulo "Llamar al mesero" activo → muestra la alerta de llamadas pendientes. */
   llamadaMeseroActive?: boolean;
   logoUrl?: string | null;
+  /**
+   * Color de fondo del MENÚ del restaurante (`ThemeConfig.colorBg`). El logo
+   * se diseñó para verse sobre ese fondo: pintarlo aquí evita que un logo
+   * claro (típico de menús oscuros) se "desaparezca" con el panel en modo
+   * claro, y viceversa. Sin valor → fondo sutil neutro de siempre.
+   */
+  logoBg?: string | null;
   zone?: string;
   /** Rol y permisos del usuario (para filtrar el nav). */
   role?: string | null;
@@ -110,7 +118,7 @@ export default function AdminShell({
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
-  logoUrl, zone, role, permissions, canManageStaff, planActual, preview = false, children,
+  logoUrl, logoBg, zone, role, permissions, canManageStaff, planActual, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
   // Secciones del nav plegadas: se leen de localStorage de forma SSR-safe
@@ -281,7 +289,7 @@ export default function AdminShell({
         {(() => {
           const brandInner = (
             <>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: logoUrl && logoBg ? logoBg : 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
                 {logoUrl ? (
                   <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
                 ) : (
@@ -393,6 +401,9 @@ export default function AdminShell({
         <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
       )}
       <WelcomeTour restaurantName={restaurantName} preview={preview} />
+      {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive
+          aquí para sobrevivir a las navegaciones entre páginas del panel. */}
+      {!preview && <GuidedTourHost />}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import MyOrders from '@/components/my-orders';
 import OverlayBackground from '@/components/menu/overlay-background';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable } from '@/lib/table-session';
+import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
@@ -63,6 +64,14 @@ export default function MenuClient({
   const [tableScanned, setTableScanned] = useState(false);
   const [authError, setAuthError] = useState(false);
   const [googleIntroOpen, setGoogleIntroOpen] = useState(false);
+  // MODO KIOSKO (autoservicio): dispositivo compartido del local. Se ocultan
+  // cuenta/fidelidad/mis pedidos (datos personales de otros clientes) y los
+  // avisos de Google; el pedido va directo al checkout de mostrador.
+  const [kiosk, setKiosk] = useState(false);
+
+  useEffect(() => {
+    setKiosk(isKioskMode());
+  }, []);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -100,6 +109,7 @@ export default function MenuClient({
   // sesión iniciada (getMyAccount) para no molestar a quien ya la usa.
   useEffect(() => {
     if (!restaurantId || !loyaltyOn || !googleAuthEnabled) return;
+    if (isKioskMode()) return; // kiosko: sin invitaciones a iniciar sesión
     const key = `google-loyalty-intro-${restaurantId}`;
     if (localStorage.getItem(key)) return;
     let cancelled = false;
@@ -170,16 +180,18 @@ export default function MenuClient({
 
       {ordersEnabled && <CartBar onOpen={() => setCartOpen(true)} />}
       {ordersEnabled && cartOpen && <CartPanel onClose={() => setCartOpen(false)} />}
-      {ordersEnabled && restaurantId && !selected && !cartOpen && (
+      {ordersEnabled && restaurantId && !selected && !cartOpen && !kiosk && (
         <ActiveOrderChip restaurantId={restaurantId} />
       )}
 
-      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && (
+      {llamadaMeseroEnabled && restaurantId && tableScanned && !selected && !cartOpen && !kiosk && (
         <WaiterCallButton restaurantId={restaurantId} raised={ordersEnabled && count > 0} />
       )}
 
-      {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto o carrito abierto */}
-      {ordersEnabled && !selected && !cartOpen && (
+      {/* Barra de navegación inferior — se oculta cuando hay un sheet de producto
+          o carrito abierto, y en KIOSKO (cuenta/fidelidad/pedidos son datos
+          personales que no deben quedar a la vista en un aparato compartido). */}
+      {ordersEnabled && !selected && !cartOpen && !kiosk && (
         <BottomNav
           active={activeTab}
           ordersEnabled={ordersEnabled}
@@ -189,6 +201,23 @@ export default function MenuClient({
           onSelectFidelidad={openRewards}
           onSelectCuenta={openAccount}
         />
+      )}
+
+      {/* Distintivo discreto del modo kiosko (confirma al staff que quedó activo) */}
+      {kiosk && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed', top: 'calc(8px + env(safe-area-inset-top, 0px))', left: '50%',
+            transform: 'translateX(-50%)', zIndex: 60, pointerEvents: 'none',
+            padding: '4px 12px', borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            background: 'color-mix(in srgb, var(--u-text) 10%, transparent)',
+            color: 'var(--u-text-3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          Autoservicio
+        </div>
       )}
 
       {/* Panel "Mis pedidos" */}

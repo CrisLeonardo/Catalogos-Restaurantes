@@ -174,7 +174,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             placeholder="Nombre para el tema actual…"
             style={{ ...inputStyle, flex: 1, minWidth: 160 }}
           />
-          <button type="button" onClick={saveAsTemplate} disabled={!tplName.trim() || tplPending} className="press" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text)', cursor: 'pointer', opacity: !tplName.trim() || tplPending ? 0.55 : 1 }}>
+          <button type="button" onClick={saveAsTemplate} disabled={!tplName.trim() || tplPending} className="press" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)', cursor: 'pointer', opacity: !tplName.trim() || tplPending ? 0.55 : 1 }}>
             {tplPending ? 'Guardando…' : 'Guardar como plantilla'}
           </button>
         </div>
@@ -407,7 +407,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
               const block = `:root {\n${lines}\n}`;
               setCss((prev) => prev.trim() ? `${block}\n\n${prev}` : block);
             }}
-            style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text-2)' }}
+            style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)' }}
           >
             Insertar variables del tema actual
           </button>
@@ -428,7 +428,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           rows={10}
           spellCheck={false}
           placeholder={'.glass { border-radius: 4px; }\n.t-display { letter-spacing: 0; }'}
-          style={{ width: '100%', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)', color: 'var(--u-text)', fontSize: 13, fontFamily: 'var(--ui-font-mono)', outline: 'none', resize: 'vertical' }}
+          style={{ width: '100%', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)', color: 'var(--u-text)', fontSize: 13, fontFamily: 'var(--ui-font-mono)', outline: 'none', resize: 'vertical' }}
         />
       </Section>}
 
@@ -519,20 +519,21 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 
-// Selects need a solid dark background so native OS dropdown options are readable
+// Select con fondo adaptativo al tema del panel (antes #1a1a1a fijo →
+// caja oscura flotando cuando el panel está en modo claro). Las <option>
+// van claras fijas: el desplegable nativo se dibuja aparte del tema.
 const selectStyle: React.CSSProperties = {
   ...inputStyle,
-  background: '#1a1a1a',
-  colorScheme: 'dark',
+  colorScheme: 'var(--admin-content-scheme, dark)' as React.CSSProperties['colorScheme'],
 };
 
 const optionStyle: React.CSSProperties = {
-  background: '#1a1a1a',
-  color: '#e5e5e5',
+  background: '#fff',
+  color: '#111',
 };
 
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
@@ -557,7 +558,7 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
+      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
         <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
       </button>
     </div>
@@ -571,7 +572,7 @@ function Segmented({ label, value, options, onChange }: { label: string; value: 
         {options.map(([val, lbl]) => {
           const on = value === val;
           return (
-            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'rgba(255,255,255,0.04)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
               {lbl}
             </button>
           );
@@ -622,7 +623,7 @@ function StringListCtl({ label, items, onChange }: { label: string; items: strin
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map((item, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)', padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)' }}>
+            <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)', padding: '7px 10px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)' }}>
               {item}
             </span>
             <button
@@ -648,7 +649,7 @@ function StringListCtl({ label, items, onChange }: { label: string; items: strin
             type="button"
             onClick={add}
             className="press"
-            style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text-2)', flexShrink: 0 }}
+            style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-2)', flexShrink: 0 }}
           >
             Agregar
           </button>

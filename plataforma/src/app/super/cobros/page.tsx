@@ -243,7 +243,7 @@ function MonthBadge({ hasOverdue, status, hasMonthly, configured }: {
   else if (status === 'PAID') { label = 'PAGADO'; color = '#4ade80'; bg = 'rgba(74,222,128,0.12)'; }
   else if (status === 'PENDING') { label = 'PENDIENTE'; color = '#fbbf24'; bg = 'rgba(251,191,36,0.12)'; }
   else if (!configured) { label = '—'; color = 'var(--u-text-4)'; bg = 'transparent'; }
-  else if (!hasMonthly) { label = 'SIN GENERAR'; color = 'var(--u-text-3)'; bg = 'rgba(255,255,255,0.05)'; }
+  else if (!hasMonthly) { label = 'SIN GENERAR'; color = 'var(--u-text-3)'; bg = 'color-mix(in srgb, var(--u-text) 5%, transparent)'; }
   else { label = '—'; color = 'var(--u-text-4)'; bg = 'transparent'; }
   return (
     <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: bg, color, letterSpacing: '0.05em' }}>

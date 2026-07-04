@@ -105,7 +105,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
 
         {/* ── Tabs ── */}
-        <div style={{
+        <div data-tour-step="personalizar-tabs" style={{
           display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 16,
           padding: '6px', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', borderRadius: 14,
           border: '1px solid var(--u-hair)',
@@ -521,6 +521,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             onClick={save}
             disabled={isPending}
             className="press btn-accent"
+            data-tour-step="personalizar-guardar"
             style={{ padding: '13px 28px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
           >
             {isPending ? 'Guardando…' : 'Guardar cambios'}

@@ -27,7 +27,7 @@ export default function GenerateMonthlyButton() {
         <form action={recAction}>
           <button type="submit" disabled={recPending} className="press" style={{
             padding: '10px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13.5,
-            border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text)',
+            border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)',
             cursor: recPending ? 'not-allowed' : 'pointer', opacity: recPending ? 0.6 : 1,
           }}>
             {recPending ? 'Recalculando…' : 'Recalcular precios'}

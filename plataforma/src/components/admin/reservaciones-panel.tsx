@@ -177,7 +177,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
               </div>
               <div>
                 <label style={labelStyle}>Personas *</label>
-                <input style={inputStyle} type="number" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
+                <input style={inputStyle} type="number" inputMode="decimal" min={1} max={100} value={form.party_size} onChange={(e) => setField('party_size', parseInt(e.target.value) || 1)} required />
               </div>
               <div>
                 <label style={labelStyle}>Fecha *</label>

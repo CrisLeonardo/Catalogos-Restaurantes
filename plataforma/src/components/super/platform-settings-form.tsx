@@ -16,8 +16,8 @@ export default function PlatformSettingsForm({ settings }: Props) {
     <div
       style={{
         borderRadius: 16,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.10)',
+        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--u-text) 10%, transparent)',
         padding: '24px 26px',
         maxWidth: 480,
       }}
@@ -40,8 +40,8 @@ export default function PlatformSettingsForm({ settings }: Props) {
             placeholder="+502 1234 5678"
             style={{
               padding: '11px 14px', borderRadius: 10, fontSize: 14,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
               color: 'var(--u-text)',
               outline: 'none',
               width: '100%',
@@ -64,8 +64,8 @@ export default function PlatformSettingsForm({ settings }: Props) {
             placeholder="soporte@ejemplo.com"
             style={{
               padding: '11px 14px', borderRadius: 10, fontSize: 14,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
               color: 'var(--u-text)',
               outline: 'none',
               width: '100%',
@@ -94,7 +94,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
           style={{
             padding: '12px 24px', borderRadius: 10, fontWeight: 700, fontSize: 14,
             cursor: pending ? 'not-allowed' : 'pointer',
-            background: pending ? 'rgba(255,255,255,0.08)' : 'var(--u-text)',
+            background: pending ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'var(--u-text)',
             color: pending ? 'var(--u-text-3)' : 'var(--brand-bg)',
             border: 'none',
             transition: 'all 150ms',

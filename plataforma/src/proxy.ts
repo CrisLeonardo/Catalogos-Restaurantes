@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTenantSlug, isAdminSubdomain, isGroupSubdomain, getGroupSlug } from "@/lib/tenant";
-import { DINER_COOKIE_NAME } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, LEGACY_DINER_COOKIE_PATTERN } from "@/lib/supabase/cookies";
 
 /**
  * Proxy (Next.js 16 — antes llamado "middleware"):
@@ -98,6 +98,9 @@ export async function proxy(request: NextRequest) {
     const cookieDomain = isLocal ? undefined : `.${rootDomain.split(":")[0]}`;
 
     const refreshSession = async (cookieName?: string) => {
+      // Solo la sesión del PERSONAL comparte dominio entre subdominios; la del
+      // COMENSAL es host-only (vale solo para el restaurante donde se inició).
+      const domain = cookieName ? undefined : cookieDomain;
       const supabase = createServerClient(supabaseUrl, anonKey, {
         ...(cookieName ? { cookieOptions: { name: cookieName } } : {}),
         cookies: {
@@ -112,7 +115,7 @@ export async function proxy(request: NextRequest) {
                 value,
                 options: {
                   ...options,
-                  ...(cookieDomain ? { domain: cookieDomain } : {}),
+                  ...(domain ? { domain } : {}),
                 },
               });
             });
@@ -126,6 +129,21 @@ export async function proxy(request: NextRequest) {
     await refreshSession(); // personal
     if (!isAdminArea) {
       await refreshSession(DINER_COOKIE_NAME); // comensal (menú público)
+    }
+
+    // Limpieza one-shot: expira las cookies del comensal v1 (`sb-leogin-diner`
+    // y sus piezas `.N`), que eran de dominio ancho (.leogin.online) y dejaban
+    // la sesión iniciada en TODOS los restaurantes. Con las mismas options de
+    // dominio con que se crearon (host-only en local), o el navegador no las
+    // borraría. Deja de dispararse sola cuando ya no llegan cookies viejas.
+    for (const { name } of request.cookies.getAll()) {
+      if (LEGACY_DINER_COOKIE_PATTERN.test(name)) {
+        pendingCookies.push({
+          name,
+          value: "",
+          options: { path: "/", maxAge: 0, ...(cookieDomain ? { domain: cookieDomain } : {}) },
+        });
+      }
     }
   }
 

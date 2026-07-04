@@ -15,6 +15,8 @@ interface GlassProps {
   style?: CSSProperties;
   children?: ReactNode;
   onClick?: () => void;
+  /** Ancla para los tours guiados del centro de ayuda (spotlight). */
+  "data-tour-step"?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export function Glass({
   style,
   children,
   onClick,
+  "data-tour-step": tourStep,
 }: GlassProps) {
   const ref = useRef<HTMLDivElement>(null);
   const config = useThemeConfig();
@@ -63,6 +66,7 @@ export function Glass({
       onKeyDown={clickable ? handleKey : undefined}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
+      data-tour-step={tourStep}
       style={style}
     >
       {children}

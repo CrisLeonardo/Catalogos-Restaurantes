@@ -22,7 +22,7 @@ function DenomRow({
         {label}
       </span>
       <input
-        type="number" min="0" step="1"
+        type="number" inputMode="decimal" min="0" step="1"
         name={field} value={qty || ''}
         placeholder="0"
         onChange={e => onChange(field, e.target.value)}
@@ -172,7 +172,7 @@ export default function CashCountForm({
       <div>
         <label style={labelSt}>Fondo inicial de caja</label>
         <input
-          name="opening_float" type="number" min="0" step="0.01"
+          name="opening_float" type="number" inputMode="decimal" min="0" step="0.01"
           value={opening} onChange={e => setOpening(e.target.value)}
           style={{ ...baseInput, fontFamily: 'var(--ui-font-mono)' }}
         />

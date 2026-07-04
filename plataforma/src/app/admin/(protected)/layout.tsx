@@ -44,6 +44,10 @@ export default async function AdminProtectedLayout({
   let restaurantName = 'Panel admin';
   let currentRestaurant: Restaurant | null = ctx.restaurant;
   let logoUrl: string | null = null;
+  // Fondo del MENÚ del restaurante: el logo se pinta sobre él en el sidebar
+  // para que se vea igual que en el menú (un logo claro sobre panel claro
+  // desaparecía).
+  let logoBg: string | null = null;
   let zone = '';
   // URL del panel del grupo para volver (solo dueño de grupo "entrando" a una sucursal).
   let groupReturnUrl: string | null = null;
@@ -54,6 +58,7 @@ export default async function AdminProtectedLayout({
       restaurantName = tenantData?.restaurant.name ?? 'Panel admin';
       currentRestaurant = tenantData?.restaurant ?? null;
       logoUrl = tenantData?.resolved.config.logoUrl ?? null;
+      logoBg = tenantData?.resolved.config.colorBg ?? null;
       zone = tenantData?.resolved.config.zone ?? '';
     }
   } else if (profile.role === 'GROUP_OWNER') {
@@ -66,6 +71,7 @@ export default async function AdminProtectedLayout({
     restaurantName    = tenantData.restaurant.name;
     currentRestaurant = tenantData.restaurant;
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
+    logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
 
     // Slug del grupo para el enlace "volver al grupo" (organizations no tiene
@@ -90,6 +96,7 @@ export default async function AdminProtectedLayout({
       restaurantName    = tenantData.restaurant.name;
       currentRestaurant = tenantData.restaurant;
       logoUrl = tenantData.resolved.config.logoUrl ?? null;
+      logoBg = tenantData.resolved.config.colorBg ?? null;
       zone = tenantData.resolved.config.zone ?? '';
     } else {
       restaurantName = ctx.restaurant?.name ?? 'Panel admin';
@@ -133,6 +140,7 @@ export default async function AdminProtectedLayout({
       cuponesActive={cuponesActive}
       llamadaMeseroActive={llamadaMeseroActive}
       logoUrl={logoUrl}
+      logoBg={logoBg}
       zone={zone}
       role={profile.role}
       permissions={profile.permissions}

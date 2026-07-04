@@ -122,20 +122,22 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
         <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>Aún no tienes proveedores registrados.</Glass>
       ) : (
         <Glass variant="quiet" style={{ overflow: 'hidden' }}>
+          {/* En móvil se oculta "Contacto" para que nombre/teléfono/acciones
+              quepan sin desbordar; los botones crecen a target táctil cómodo. */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-              {['Proveedor', 'Contacto', 'Teléfono', ''].map((h) => <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>)}
+              {['Proveedor', 'Contacto', 'Teléfono', ''].map((h) => <th key={h} className={h === 'Contacto' ? 'hide-mobile' : undefined} style={{ padding: '10px 12px', textAlign: 'left', color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>)}
             </tr></thead>
             <tbody>
               {suppliers.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid var(--u-hair)', opacity: s.active ? 1 : 0.5 }}>
                   <td style={{ padding: '10px 12px', fontWeight: 500 }}>{s.name}{!s.active && <span style={{ fontSize: 10, color: 'var(--u-text-4)', marginLeft: 6 }}>inactivo</span>}</td>
-                  <td style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.contact_name || '—'}</td>
+                  <td className="hide-mobile" style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.contact_name || '—'}</td>
                   <td style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.phone || '—'}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button onClick={() => setEdit({ id: s.id, name: s.name, contact_name: s.contact_name, phone: s.phone, email: s.email, notes: s.notes })} className="press" style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', color: 'var(--u-text-2)' }}><Icon name="edit" size={13} /></button>
-                      <button onClick={() => remove(s)} disabled={isPending} className="press" style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="trash" size={13} /></button>
+                      <button onClick={() => setEdit({ id: s.id, name: s.name, contact_name: s.contact_name, phone: s.phone, email: s.email, notes: s.notes })} className="press" title="Editar" aria-label={`Editar ${s.name}`} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', color: 'var(--u-text-2)' }}><Icon name="edit" size={14} /></button>
+                      <button onClick={() => remove(s)} disabled={isPending} className="press" title="Eliminar" aria-label={`Eliminar ${s.name}`} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="trash" size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -211,13 +213,16 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <label style={labelStyle}>Renglones</label>
+            {/* .po-line: 5 columnas en escritorio; en móvil la descripción toma
+                la fila completa y cant/unidad/costo/✕ pasan debajo (antes las
+                columnas fijas dejaban la descripción en ~30px, inusable). */}
             {lines.map((l, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px 100px 32px', gap: 8, alignItems: 'center' }}>
+              <div key={i} className="po-line">
                 <input style={inputStyle} placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
-                <input style={{ ...inputStyle, textAlign: 'right' }} type="number" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
+                <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
                 <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
-                <input style={{ ...inputStyle, textAlign: 'right' }} type="number" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
-                <button type="button" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="x" size={12} /></button>
+                <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
+                <button type="button" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="x" size={13} /></button>
               </div>
             ))}
             <button type="button" onClick={() => setLines((ls) => [...ls, { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }])} className="press" style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-2)' }}>+ Renglón</button>

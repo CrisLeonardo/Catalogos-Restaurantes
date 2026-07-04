@@ -159,10 +159,10 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
       {open && (
         <div className="glass-quiet" style={{ borderRadius: 12, padding: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
           <Field label="Stock exacto">
-            <input type="number" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} style={inputStyle} />
+            <input type="number" inputMode="decimal" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} style={inputStyle} />
           </Field>
           <Field label="Alertar cuando ≤">
-            <input type="number" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} style={inputStyle} />
+            <input type="number" inputMode="decimal" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} style={inputStyle} />
           </Field>
           <button onClick={() => save(true)} disabled={pending} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             {pending ? '…' : tracked ? 'Guardar' : 'Activar'}

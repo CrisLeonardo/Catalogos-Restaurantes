@@ -16,7 +16,7 @@ const empty: SuperState = null;
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: 'rgba(255,255,255,0.04)',
+  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)',
   padding: '10px 12px',
@@ -81,7 +81,7 @@ function RoleBadge({ role }: { role: RestaurantUser['role'] }) {
         padding: '2px 8px',
         borderRadius: 'var(--radius-full)',
         color: isOwner ? '#fbbf24' : 'var(--u-text-3)',
-        background: isOwner ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)',
+        background: isOwner ? 'rgba(251,191,36,0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
         border: `1px solid ${isOwner ? 'rgba(251,191,36,0.25)' : 'var(--u-hair)'}`,
         whiteSpace: 'nowrap',
       }}
@@ -133,7 +133,7 @@ function UserRow({
           onClick={() => setShowReset((v) => !v)}
           className="press"
           style={{
-            background: 'rgba(255,255,255,0.06)',
+            background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             border: '1px solid var(--u-hair)',
             color: 'var(--u-text-3)',
             padding: '5px 12px',
@@ -201,7 +201,7 @@ function ResetPasswordForm({
           onClick={() => setPassword(genPassword())}
           className="press"
           style={{
-            background: 'rgba(255,255,255,0.06)',
+            background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
             border: '1px solid var(--u-hair)',
             color: 'var(--u-text-3)',
             padding: '10px 12px',
@@ -353,7 +353,7 @@ function AddUserForm({
               onClick={() => setPassword(genPassword())}
               className="press"
               style={{
-                background: 'rgba(255,255,255,0.06)',
+                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                 border: '1px solid var(--u-hair)',
                 color: 'var(--u-text-3)',
                 padding: '0 16px',

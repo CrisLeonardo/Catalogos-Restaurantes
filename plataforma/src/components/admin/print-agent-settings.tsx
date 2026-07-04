@@ -28,7 +28,7 @@ const selectStyle: React.CSSProperties = {
   width: '100%',
   padding: '9px 11px',
   borderRadius: 'var(--radius-md)',
-  background: 'rgba(0,0,0,0.25)',
+  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair)',
   color: 'var(--u-text)',
   fontSize: 13,
@@ -276,9 +276,12 @@ function InstallSteps({
           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Equivalente por línea de comandos (PowerShell como Administrador, desde la carpeta <code>dist</code>):
           </span>
+          {/* Bloque "terminal": oscuro SÓLIDO a propósito (el cian necesita fondo
+              oscuro); antes era rgba(0,0,0,0.4) y en el panel claro quedaba un
+              gris sucio con poco contraste. */}
           <pre style={{
             margin: 0, padding: '9px 11px', borderRadius: 8,
-            background: 'rgba(0,0,0,0.4)', border: '1px solid var(--u-hair)',
+            background: '#15171c', border: '1px solid var(--u-hair)',
             fontSize: 11, color: '#a5f3fc', fontFamily: 'monospace',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6,
           }}>{psCommand}</pre>
@@ -295,9 +298,11 @@ function InstallSteps({
           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 4 }}>
             O descarga el config y colócalo junto al exe:
           </span>
+          {/* Adaptativo: antes rgba(0,0,0,0.35) fijo — en panel claro era una caja
+              oscura con texto oscuro (var --u-text-2), ilegible. */}
           <pre style={{
             margin: 0, padding: '9px 11px', borderRadius: 8,
-            background: 'rgba(0,0,0,0.35)', border: '1px solid var(--u-hair)',
+            background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
             fontSize: 11, color: 'var(--u-text-2)', fontFamily: 'monospace',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all',
           }}>{configJson}</pre>

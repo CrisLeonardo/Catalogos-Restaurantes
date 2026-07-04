@@ -267,7 +267,7 @@ function ModuleRow({
         aria-label={label}
         style={{
           width: 40, height: 24, borderRadius: 12, flexShrink: 0,
-          background: enabled ? 'var(--brand-accent)' : 'rgba(255,255,255,0.1)',
+          background: enabled ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
           border: 'none', cursor: locked ? 'default' : 'pointer',
           position: 'relative', transition: 'background 200ms',
         }}

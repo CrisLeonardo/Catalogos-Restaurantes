@@ -11,7 +11,7 @@ import { createApiKeyAction, revokeApiKeyAction, type ApiKeyCreateResult } from 
 import type { ApiKeyRow } from '@/lib/api-keys';
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
   borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const labelStyle: React.CSSProperties = {
@@ -25,8 +25,8 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
 
   return (
     <div style={{
-      borderRadius: 16, background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.10)', padding: '24px 26px', maxWidth: 680,
+      borderRadius: 16, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--u-text) 10%, transparent)', padding: '24px 26px', maxWidth: 680,
     }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginBottom: 6 }}>
         API keys
@@ -70,7 +70,7 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
         <button type="submit" disabled={pending} style={{
           padding: '11px 22px', borderRadius: 10, fontWeight: 700, fontSize: 14,
           cursor: pending ? 'not-allowed' : 'pointer', alignSelf: 'flex-start',
-          background: pending ? 'rgba(255,255,255,0.08)' : 'var(--u-text)',
+          background: pending ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'var(--u-text)',
           color: pending ? 'var(--u-text-3)' : 'var(--brand-bg)', border: 'none',
         }}>
           {pending ? 'Generando…' : 'Generar llave'}
@@ -100,7 +100,7 @@ function CopyRow({ token }: { token: string }) {
         type="button"
         onClick={async () => { try { await navigator.clipboard.writeText(token); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {} }}
         className="press"
-        style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+        style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
       >
         {copied ? 'Copiado ✓' : 'Copiar'}
       </button>

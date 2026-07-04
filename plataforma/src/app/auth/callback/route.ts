@@ -7,8 +7,8 @@ export const runtime = 'nodejs';
  * Callback de OAuth (login con Google de los comensales).
  *
  * Supabase redirige aquí con `?code=...` tras autenticar. Intercambiamos el
- * código por una sesión (cookies, dominio compartido `.leogin.online`) y
- * volvemos a la página donde el comensal estaba (`next`).
+ * código por una sesión (cookie host-only: vale SOLO para el subdominio del
+ * restaurante donde se inició) y volvemos a donde el comensal estaba (`next`).
  *
  * `next` se sanea: solo se permiten rutas relativas del mismo origen para
  * evitar redirecciones abiertas.

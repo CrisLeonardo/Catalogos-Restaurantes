@@ -21,9 +21,12 @@ export { DINER_COOKIE_NAME };
  *    revés), causando cierres de sesión fantasma. Con cookies separadas las
  *    dos conviven en el mismo navegador sin tocarse.
  *
- * Ambas cookies viven en `.leogin.online` (todos los subdominios): el personal
- * la necesita para admin.slug.* y el dueño de grupo; el comensal para que su
- * identidad lo siga en cualquier restaurante de la plataforma.
+ * ALCANCE de cada cookie:
+ *  · PERSONAL → `.leogin.online` (todos los subdominios): la necesita para
+ *    admin.slug.* y el dueño de grupo (slug-central.*).
+ *  · COMENSAL → host-only: la sesión pertenece SOLO al subdominio del
+ *    restaurante donde se inició. Antes era de dominio ancho y entrar en un
+ *    restaurante te dejaba "logueado" en todos los demás de la plataforma.
  */
 const rootDomainRaw = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(",")[0].trim() ?? "";
 const isLocalEnv = !rootDomainRaw || rootDomainRaw.includes("localhost");
@@ -32,6 +35,8 @@ const COOKIE_DOMAIN = isLocalEnv ? undefined : `.${rootDomainRaw.split(":")[0]}`
 
 async function createWithCookieName(cookieName?: string) {
   const cookieStore = await cookies();
+  // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
+  const domain = cookieName ? undefined : COOKIE_DOMAIN;
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,7 +52,7 @@ async function createWithCookieName(cookieName?: string) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, {
                 ...options,
-                ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+                ...(domain ? { domain } : {}),
               }),
             );
           } catch {

@@ -104,7 +104,7 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
       </Glass>
 
       {/* URL */}
-      <Glass style={{ padding: '14px 18px' }}>
+      <Glass data-tour-step="qr-enlace" style={{ padding: '14px 18px' }}>
         <p
           style={{
             fontSize: 10,
@@ -160,6 +160,7 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
         onClick={downloadPng}
         disabled={downloading}
         className="press"
+        data-tour-step="qr-descargar"
         style={{
           display: 'block',
           width: '100%',

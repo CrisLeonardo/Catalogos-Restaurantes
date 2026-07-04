@@ -163,7 +163,7 @@ function PlanBadge({ plan }: { plan: string }) {
         borderRadius: 'var(--radius-full)',
         background: isPremium
           ? 'rgba(217,119,87,0.15)'
-          : 'rgba(255,255,255,0.06)',
+          : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
         color: isPremium ? '#f08060' : 'var(--u-text-3)',
         border: `1px solid ${isPremium ? 'rgba(217,119,87,0.3)' : 'var(--u-hair)'}`,
         letterSpacing: '0.06em',

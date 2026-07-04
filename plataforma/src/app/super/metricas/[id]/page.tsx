@@ -119,7 +119,7 @@ function PricingHint({ orders, visits, revenue, fee, growth }: {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: `1px solid ${tone}33` }}>
+    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: `1px solid ${tone}33` }}>
       <span style={{ width: 8, height: 8, borderRadius: 99, background: tone, marginTop: 6, flexShrink: 0 }} />
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.55 }}>{text}</span>
     </div>
@@ -132,14 +132,14 @@ function TrendChart({ series, currency }: { series: { date: string; visits: numb
   return (
     <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', gap: 16, fontSize: 11.5, color: 'var(--u-text-3)' }}>
-        <Legend color="rgba(255,255,255,0.18)" label="Visitas" />
+        <Legend color="color-mix(in srgb, var(--u-text) 18%, transparent)" label="Visitas" />
         <Legend color="var(--brand-accent)" label="Pedidos" />
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 130 }}>
         {series.map((d, i) => (
           <div key={i} title={`${d.date}: ${d.visits} visitas · ${d.orders} pedidos · ${fmtMoney(d.revenue, currency)}`}
             style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 1, minWidth: 0, height: '100%' }}>
-            <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'rgba(255,255,255,0.18)', borderRadius: '2px 2px 0 0' }} />
+            <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'color-mix(in srgb, var(--u-text) 18%, transparent)', borderRadius: '2px 2px 0 0' }} />
             <div style={{ width: '42%', height: `${(d.orders / maxOrders) * 100}%`, minHeight: d.orders > 0 ? 3 : 1, background: 'var(--brand-accent)', borderRadius: '2px 2px 0 0' }} />
           </div>
         ))}

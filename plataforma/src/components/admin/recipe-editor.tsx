@@ -136,11 +136,8 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
       {/* Lista de líneas */}
       {lines.length > 0 && (
         <div style={{ border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          {/* Encabezados */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 128px 76px 36px',
-            gap: 8,
+          {/* Encabezados — .recipe-line: columnas más angostas en móvil */}
+          <div className="recipe-line" style={{
             padding: '7px 12px',
             background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
             borderBottom: '1px solid var(--u-hair)',
@@ -154,11 +151,8 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
           {lines.map((l, i) => (
             <div
               key={l.id}
+              className="recipe-line"
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 128px 76px 36px',
-                gap: 8,
-                alignItems: 'center',
                 padding: '10px 12px',
                 borderBottom: i < lines.length - 1 ? '1px solid var(--u-hair)' : 'none',
               }}
@@ -173,6 +167,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               </div>
               <input
                 type="number"
+                inputMode="decimal"
                 min="0.0001"
                 step="0.0001"
                 defaultValue={l.quantity}
@@ -267,6 +262,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 min="0.0001"
                 step="0.0001"
                 placeholder="0.00"

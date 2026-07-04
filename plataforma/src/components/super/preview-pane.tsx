@@ -144,7 +144,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center',
           }}
         >
-          <div style={{ width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,0.05)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
+          <div style={{ width: 46, height: 46, borderRadius: 13, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)' }}>
             <Icon name="eye" size={22} />
           </div>
           <div>
@@ -162,7 +162,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
               <Icon name="eye" size={15} /> Activar vista previa en vivo
             </button>
             <button type="button" onClick={openTab} className="press"
-              style={{ padding: '11px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.04)', color: 'var(--u-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{ padding: '11px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Icon name="arrowUpRight" size={15} /> Abrir en pestaña nueva
             </button>
             <button type="button" onClick={openWindow} className="press"
@@ -193,7 +193,7 @@ function PaneBtn({
       className="press"
       style={{
         width: 30, height: 30, borderRadius: 9, border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
-        background: active ? 'var(--u-text)' : 'rgba(255,255,255,0.04)',
+        background: active ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
         color: active ? 'var(--brand-bg)' : 'var(--u-text-3)',
         display: 'grid', placeItems: 'center', cursor: 'pointer', transition: 'all 150ms',
       }}

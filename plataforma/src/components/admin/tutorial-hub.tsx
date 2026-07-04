@@ -3,16 +3,21 @@
 /* ============================================================
    TutorialHub — /admin/ayuda
    Centro de ayuda del panel admin, adaptado al plan activo.
-   Fases implementadas:
-   · Fase 1 ✅ — Búsqueda, acordeón, plan-gating, placeholders de captura
-   · Fase 2 ✅ — Tour de bienvenida (overlay spotlight + burbuja, localStorage key)
-   · Fase 3 ✅ — Botones ? contextuales (HelpButton en topbar del shell)
-   · Fase 4 ✅ — Screenshots reales en /public/tutorial/screenshots/
+   · Búsqueda, acordeón por sección, plan-gating.
+   · Tour de bienvenida (overlay spotlight, localStorage key).
+   · Botones ? contextuales (HelpButton en topbar del shell).
+   · TOURS GUIADOS "Ver en mi panel": la ayuda señala la interfaz
+     REAL con un spotlight y navega sola entre páginas (motor en
+     guided-tour.tsx, pasos en lib/tutorial/tours.ts). Sustituyen
+     a las capturas de pantalla: no hay imágenes que mantener ni
+     que caduquen con cada cambio de UI.
    ============================================================ */
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { startGuidedTour } from '@/components/admin/guided-tour';
+import { getGuidedTour } from '@/lib/tutorial/tours';
 import {
   TUTORIAL_SECTIONS,
   getPlanLevelNum,
@@ -63,6 +68,8 @@ export default function TutorialHub({ plan, modules }: Props) {
           </h2>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
             Guía completa de tu sistema, adaptada a tu plan{plan ? ` ${getPlanDisplayName(plan)}` : ''}.
+            Las secciones con <strong style={{ color: 'var(--u-text-2)' }}>guía interactiva</strong> te
+            muestran cada paso señalándolo en tu propio panel.
           </p>
         </div>
 
@@ -284,7 +291,28 @@ function TutorialSection({
           {locked ? (
             <LockedContent planLabel={planLabel} moduleKey={section.moduleKey} />
           ) : (
-            <StepsList steps={section.steps} sectionId={section.id} />
+            <>
+              {/* Tour guiado sobre el panel real (si esta sección tiene uno) */}
+              {getGuidedTour(section.id) && (
+                <button
+                  type="button"
+                  onClick={() => startGuidedTour(section.id)}
+                  className="press"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '10px 16px', borderRadius: 11, border: 'none',
+                    cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                    background: 'var(--brand-accent, #6366f1)',
+                    color: 'var(--brand-on-accent, #fff)',
+                    marginBottom: 18,
+                  }}
+                >
+                  <Icon name="sparkle" size={15} />
+                  Ver en mi panel (guía interactiva)
+                </button>
+              )}
+              <StepsList steps={section.steps} />
+            </>
           )}
         </div>
       )}
@@ -351,12 +379,17 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
 }
 
 /* ── Lista de pasos ──────────────────────────────────────── */
+/* Texto a ancho completo. Antes cada paso llevaba al lado una
+   captura de pantalla (/public/tutorial/screenshots/): mantener
+   una imagen por paso era insostenible — cada cambio de UI las
+   dejaba viejas. El "mira dónde está" lo resuelve ahora el tour
+   guiado sobre el panel real. */
 
-function StepsList({ steps, sectionId }: { steps: TutorialStep[]; sectionId: string }) {
+function StepsList({ steps }: { steps: TutorialStep[] }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       {steps.map((step, i) => (
-        <StepItem key={step.id} step={step} number={i + 1} sectionId={sectionId} />
+        <StepItem key={step.id} step={step} number={i + 1} />
       ))}
     </div>
   );
@@ -364,157 +397,68 @@ function StepsList({ steps, sectionId }: { steps: TutorialStep[]; sectionId: str
 
 /* ── Paso individual ─────────────────────────────────────── */
 
-function StepItem({ step, number, sectionId }: { step: TutorialStep; number: number; sectionId: string }) {
+function StepItem({ step, number }: { step: TutorialStep; number: number }) {
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 20,
-        paddingTop: number > 1 ? 24 : 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        maxWidth: 640,
+        paddingTop: number > 1 ? 22 : 0,
         borderTop: number > 1 ? '1px solid var(--u-hair)' : 'none',
       }}
     >
-      {/* Lado izquierdo: texto */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Número + título */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{
-            width: 26, height: 26, borderRadius: 99, flexShrink: 0,
-            display: 'grid', placeItems: 'center',
-            background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)',
-            color: 'var(--brand-accent)',
-            fontSize: 12, fontWeight: 800, marginTop: 1,
-          }}>
-            {number}
-          </span>
-          <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.3 }}>
-            {step.title}
-          </h4>
-        </div>
-
-        {/* Descripción */}
-        <p style={{ fontSize: 13, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.65, paddingLeft: 36 }}>
-          {step.description}
-        </p>
-
-        {/* Ruta de navegación */}
-        {step.route && (
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 7,
-            marginLeft: 36, padding: '8px 12px', borderRadius: 9,
-            background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
-            border: '1px solid var(--u-hair)',
-          }}>
-            <Icon name="chevronRight" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
-            <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, fontFamily: 'var(--font-mono, monospace)' }}>
-              {step.route}
-            </span>
-          </div>
-        )}
-
-        {/* Tip */}
-        {step.tip && (
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 8,
-            marginLeft: 36, padding: '9px 12px', borderRadius: 9,
-            background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)',
-            border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.2)',
-          }}>
-            <Icon name="sparkle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
-            <span style={{ fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.55 }}>
-              <strong>Tip:</strong> {step.tip}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Lado derecho: placeholder de captura */}
-      <TutorialCaptura
-        sectionId={sectionId}
-        stepNumber={number}
-        desc={step.screenshotDesc ?? step.title}
-      />
-    </div>
-  );
-}
-
-/* ── Captura de pantalla ─────────────────────────────────── */
-/* Carga la imagen real desde /public/tutorial/screenshots/.
-   Si el archivo no existe (404), muestra el placeholder de espera. */
-
-function TutorialCaptura({
-  sectionId,
-  stepNumber,
-  desc,
-}: {
-  sectionId: string;
-  stepNumber: number;
-  desc: string;
-}) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const filename = `${sectionId}-paso${stepNumber}.png`;
-  const src = `/tutorial/screenshots/${filename}`;
-
-  if (!imgFailed) {
-    return (
-      <div
-        style={{
-          borderRadius: 12,
-          overflow: 'hidden',
-          border: '1px solid var(--u-hair)',
-          background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 2%, transparent))',
-          minHeight: 120,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={desc}
-          onError={() => setImgFailed(true)}
-          style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 12 }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      title={`Captura pendiente: ${filename}`}
-      style={{
-        borderRadius: 12,
-        border: '1.5px dashed var(--u-hair)',
-        background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 2%, transparent))',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        padding: '28px 20px',
-        textAlign: 'center',
-        minHeight: 120,
-        color: 'var(--u-text-4)',
-      }}
-    >
-      <div style={{
-        width: 40, height: 40, borderRadius: 10,
-        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-        display: 'grid', placeItems: 'center',
-      }}>
-        <Icon name="image" size={20} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={{ fontSize: 11.5, lineHeight: 1.4 }}>{desc}</span>
+      {/* Número + título */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <span style={{
-          fontSize: 10, color: 'var(--u-text-5, var(--u-text-4))',
-          fontFamily: 'monospace', opacity: 0.6,
+          width: 26, height: 26, borderRadius: 99, flexShrink: 0,
+          display: 'grid', placeItems: 'center',
+          background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)',
+          color: 'var(--brand-accent)',
+          fontSize: 12, fontWeight: 800, marginTop: 1,
         }}>
-          {filename}
+          {number}
         </span>
+        <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.3 }}>
+          {step.title}
+        </h4>
       </div>
+
+      {/* Descripción */}
+      <p style={{ fontSize: 13, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.65, paddingLeft: 36 }}>
+        {step.description}
+      </p>
+
+      {/* Ruta de navegación */}
+      {step.route && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 7,
+          marginLeft: 36, padding: '8px 12px', borderRadius: 9,
+          background: 'var(--surface-3, color-mix(in srgb, var(--u-text) 3%, transparent))',
+          border: '1px solid var(--u-hair)',
+        }}>
+          <Icon name="chevronRight" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, fontFamily: 'var(--font-mono, monospace)' }}>
+            {step.route}
+          </span>
+        </div>
+      )}
+
+      {/* Tip */}
+      {step.tip && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 8,
+          marginLeft: 36, padding: '9px 12px', borderRadius: 9,
+          background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)',
+          border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.2)',
+        }}>
+          <Icon name="sparkle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.55 }}>
+            <strong>Tip:</strong> {step.tip}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

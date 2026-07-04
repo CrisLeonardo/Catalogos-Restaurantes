@@ -724,6 +724,49 @@ html[data-scheme="light"] .btn-white {
   .customers-row > div:nth-child(5) { display: none; }
 }
 
+/* Tabla de insumos (admin/ingredientes): grid en escritorio, tarjeta en móvil.
+   En móvil las columnas Unidad/Costo/Platillos se ocultan y esa info se
+   muestra como línea "meta" bajo el nombre (.ing-meta-mobile). */
+.ing-head, .ing-row {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 90px 130px 110px 88px;
+  column-gap: 14px; align-items: center;
+}
+.ing-meta-mobile { display: none; }
+/* Formularios de 3 campos (nombre ancho + 2 cortos): 3 columnas en
+   escritorio, apilados en móvil. .admin-form-3 es la versión genérica
+   (el hijo .fg-full ocupa la fila completa). */
+.ing-form-grid, .admin-form-3 { display: grid; grid-template-columns: 1fr 140px 150px; gap: 10px; }
+
+/* ── Utilidades responsivas del admin ── */
+/* Envoltura de tablas anchas: scroll horizontal en vez de romper el layout. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Renglón de orden de compra (proveedores): desc + cant + unidad + costo + ✕ */
+.po-line { display: grid; grid-template-columns: 1fr 80px 90px 100px 32px; gap: 8px; align-items: center; }
+/* Línea de receta (editor de producto): insumo + cantidad + costo + ✕ */
+.recipe-line { display: grid; grid-template-columns: 1fr 128px 76px 36px; gap: 8px; align-items: center; }
+/* Encuestas: distribución + reseñas lado a lado; apilado en móvil */
+.enc-cols { display: grid; grid-template-columns: 1fr 2fr; gap: 14px; align-items: start; }
+
+@media (max-width: 820px) {
+  .ing-head { display: none; }
+  .ing-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .ing-col-desk { display: none; }
+  .ing-meta-mobile {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 4px 12px; margin-top: 5px;
+  }
+  .ing-form-grid, .admin-form-3 { grid-template-columns: 1fr 1fr; }
+  .ing-form-grid > .ing-form-name, .admin-form-3 > .fg-full { grid-column: 1 / -1; }
+
+  .hide-mobile { display: none !important; }
+  .enc-cols { grid-template-columns: 1fr; }
+  /* Orden de compra: descripción a fila completa; cant/unidad/costo/✕ debajo */
+  .po-line { grid-template-columns: 1fr 1fr 1.2fr 36px; }
+  .po-line > *:first-child { grid-column: 1 / -1; }
+  /* Receta: columnas más angostas para que el nombre respire */
+  .recipe-line { grid-template-columns: 1fr 86px 68px 32px; }
+}
+
 @media (max-width: 820px) {
   /* ── Admin móvil: cabecera compacta + barra de navegación inferior ── */
   .admin-shell { flex-direction: column; }
