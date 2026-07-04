@@ -14,11 +14,12 @@
 > | Pedido del comensal en cola con TTL 10 min + confirmación | ✅ | `lib/offline/pending-order.ts`, `checkout-form.tsx` |
 > | Hub de emergencia LAN en el Agente (puerto 9123): mini toma-pedidos, KDS-lite `/cocina`, comanda impresa local, cola persistente, sync idempotente | ✅ | `agente-impresion/src/hub.ts`, `escpos.ts` (comanda), endpoints `/api/agent/menu` y `/api/agent/offline-orders` |
 > | Panel muestra el punto de emergencia (URL LAN del hub) | ✅ | migración **062** + heartbeat del agente + `print-agent-settings.tsx` |
+> | Auto-pausa OPCIONAL de pedidos en línea si el agente pierde conexión >5 min (toggle por restaurante, default apagado; se reanuda sola) | ✅ | migración **063** + candado en `createOrder` + toggle en `print-agent-settings.tsx` |
 >
 > Verificado: hub probado E2E en LAN (menú snapshot → pedido con opciones →
 > folio E-0001 → cola persistente → KDS-lite → validaciones); typecheck/build
 > de plataforma verdes; endpoints del agente exigen token (401 sin él).
-> **Para producción faltan:** aplicar migraciones 061-062 en la nube,
+> **Para producción faltan:** aplicar migraciones 061-063 en la nube,
 > configurar `hubKitchenTarget` en el agente del local y reempaquetar el .exe.
 > Fase 3 (comensal contra el hub) sigue siendo futura/opcional.
 

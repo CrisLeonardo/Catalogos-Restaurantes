@@ -113,6 +113,31 @@ export async function createOrder(
         'Los pedidos están pausados por el momento. Intenta más tarde.',
     };
   }
+
+  // Auto-pausa sin agente (mig. 063, OPCIONAL por restaurante): si el local
+  // activó el toggle y su Agente Leogin lleva >5 min sin reportarse, el local
+  // probablemente está SIN INTERNET y no vería este pedido — se rechaza con
+  // un mensaje amable en vez de dejarlo en el limbo. Al volver el agente
+  // (heartbeat de /api/agent/poll) los pedidos se reanudan solos.
+  // Degrada: si la migración no está aplicada, el select falla → sin pausa.
+  {
+    const AUTO_PAUSE_STALE_MS = 5 * 60_000;
+    const { data: agentRow } = await db
+      .from('print_agents')
+      .select('auto_pause_enabled, last_seen_at')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    if (
+      agentRow?.auto_pause_enabled === true &&
+      agentRow.last_seen_at &&
+      Date.now() - new Date(agentRow.last_seen_at as string).getTime() > AUTO_PAUSE_STALE_MS
+    ) {
+      return {
+        error:
+          'Por un problema de conexión, el restaurante está atendiendo solo en el local por el momento. Intenta de nuevo en unos minutos.',
+      };
+    }
+  }
   if (
     !isOpenNow(
       restaurant.hours as WeeklyHours | null,

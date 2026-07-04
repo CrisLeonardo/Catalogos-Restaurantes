@@ -7,6 +7,7 @@ import {
   regenerateAgentToken,
   setPrintTargets,
   sendTestPrint,
+  setAutoPauseOffline,
   type PrintAgentConfig,
   type ReportedPrinter,
 } from '@/lib/actions/print-agent';
@@ -336,6 +337,16 @@ export default function PrintAgentSettings() {
   const [saving, setSaving] = useState(false);
   const [origin, setOrigin] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [pauseToggling, setPauseToggling] = useState(false);
+
+  async function handleAutoPauseToggle() {
+    if (!config || pauseToggling) return;
+    setPauseToggling(true);
+    const res = await setAutoPauseOffline(!config.autoPauseEnabled);
+    if (res.error) setMsg(res.error);
+    else { setMsg(''); await load(); }
+    setPauseToggling(false);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -483,6 +494,48 @@ export default function PrintAgentSettings() {
             Las comandas se imprimen al momento y todo se sincroniza solo al volver la conexión.
             Guarda esa dirección en los teléfonos del personal.
           </p>
+        </div>
+      )}
+
+      {/* Auto-pausa de pedidos en línea sin agente (opcional, mig. 063) */}
+      {config?.exists && (
+        <div style={{
+          borderRadius: 'var(--radius-md)', padding: '12px 14px',
+          background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+          border: '1px solid var(--u-hair)',
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              Pausar pedidos en línea si el local pierde internet
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '5px 0 0' }}>
+              Si el agente lleva más de 5 minutos sin conexión, los pedidos del menú en línea se
+              pausan con un aviso amable (nadie pide a un local que no puede ver su pedido) y se
+              reanudan solos al reconectar. Los pedidos del mesero y del modo emergencia no se
+              afectan. <strong style={{ color: 'var(--u-text-2)' }}>Requiere que la PC del agente esté
+              encendida durante todo tu horario de atención</strong> — si la apagan, los pedidos en
+              línea se pausarían aunque sí haya internet.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAutoPauseToggle}
+            disabled={pauseToggling}
+            role="switch"
+            aria-checked={config.autoPauseEnabled}
+            aria-label="Pausar pedidos en línea si el local pierde internet"
+            className="press"
+            style={{
+              flexShrink: 0, width: 44, height: 26, borderRadius: 99, border: 'none',
+              cursor: pauseToggling ? 'wait' : 'pointer', padding: 3,
+              background: config.autoPauseEnabled ? 'var(--c-ok-solid, #22c55e)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
+              display: 'flex', justifyContent: config.autoPauseEnabled ? 'flex-end' : 'flex-start',
+              transition: 'background 180ms', opacity: pauseToggling ? 0.6 : 1,
+            }}
+          >
+            <span style={{ width: 20, height: 20, borderRadius: 99, background: '#fff' }} />
+          </button>
         </div>
       )}
 
