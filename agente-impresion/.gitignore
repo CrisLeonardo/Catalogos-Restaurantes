@@ -4,3 +4,4 @@ dist/
 .env
 .env.local
 config.local.json
+.node-base/

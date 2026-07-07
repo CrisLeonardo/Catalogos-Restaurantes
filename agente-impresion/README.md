@@ -206,5 +206,17 @@ agente-impresion/
       (sección Impresión) muestra el enlace listo. Los pedidos sincronizados
       se conservan (estado `synced`) hasta que cocina los marca. _Verificado
       E2E en navegador real._
+- [x] **HTTPS del hub (v0.4.0):** certificado wildcard entregado por la nube
+      (`/api/agent/hub-cert`, patrón Plex — ver
+      `plataforma/docs/ARQUITECTURA_OFFLINE.md` §8.1); servidor HTTPS en
+      `:47443` con rotación en caliente; firewall con ambos puertos.
+- [x] **Auto-update (v0.5.0):** chequeo cada 1h contra `/api/agent/latest`
+      (canal stable/beta por restaurante, migración 065), descarga + sha256 +
+      intercambio del exe en caliente + relanzamiento por el watchdog; el
+      `.old` queda para rollback manual y se borra al arrancar la versión
+      nueva. Publicar release: `npm run build:exe && npm run release`
+      (sube a Supabase Storage e inserta en `agent_releases`; kill switch con
+      `enabled=false`). El build usa **runtime pineado** (Node 22 LTS oficial,
+      cacheado en `.node-base/`). _Verificado E2E: v0.5.0 → v0.5.1 real._
 - [ ] **Retiro de QZ** (cuando el agente esté validado en térmica real): eliminar
       `qz-tray`, `qz-cert.ts`, `/api/print/sign` y las secciones QZ de la UI.

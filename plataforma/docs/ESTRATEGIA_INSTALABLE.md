@@ -57,7 +57,19 @@ Recomendación: **Trusted Signing si la entidad califica; si no, OV** y aceptar
 existe). Con esto muere el párrafo "si Windows muestra una pantalla azul…" del
 panel — que hoy es la parte menos profesional de todo el flujo.
 
-### 3.2 Auto-update silencioso (la mejora #1 de todo este documento)
+### 3.2 Auto-update silencioso (la mejora #1 de todo este documento) — ✅ implementado 2026-07-07
+
+> Estado: agente v0.5.0 + migración 065. `GET /api/agent/latest` (autenticado,
+> canal stable/beta por restaurante en `print_agents.update_channel`), tabla
+> `agent_releases` con kill switch (`enabled=false`), agente chequea cada 1h y
+> al arrancar: descarga → verifica sha256 → intercambia el exe en caliente →
+> exit → el watchdog relanza la versión nueva (que borra el `.old` al
+> arrancar). Publicación: `npm run release` en agente-impresion/ (sube el exe
+> a Supabase Storage `agent-releases` e inserta la fila). El build quedó
+> además con **runtime pineado** (Node 22 LTS descargado oficial, cacheado en
+> `.node-base/`) — reproducible y compatible con postject (el node.exe de
+> Node 24 lo hacía morir con OOM). El diseño original de esta sección se
+> conserva abajo como referencia.
 
 Para un SaaS, un agente sin auto-update es deuda que crece con cada cliente:
 cada mejora del hub (¡como el HTTPS de la Fase 2!) exigiría reinstalación

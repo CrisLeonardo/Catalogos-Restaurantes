@@ -14,6 +14,7 @@ import { runAgent } from './agent.ts';
 import { runCli } from './cli.ts';
 import { runSetup, isInstalledLocation } from './setup.ts';
 import { startLocalServer, startTlsServer } from './local-server.ts';
+import { cleanupOldExe } from './updater.ts';
 import { logger } from './logger.ts';
 
 const CLI_COMMANDS = new Set(['list', 'test', 'send', 'help', '--help', '-h']);
@@ -29,6 +30,8 @@ async function runService(): Promise<void> {
   // HTTPS del hub: si ya hay certificado guardado de una corrida anterior,
   // arranca de una vez (si no, arrancará cuando el poll lo entregue).
   startTlsServer();
+  // Si esta corrida es el resultado de un auto-update, borra el exe viejo.
+  cleanupOldExe();
   try {
     await runAgent({ once: !!process.env.LEOGIN_ONCE });
   } catch (err) {

@@ -10,6 +10,7 @@ import { discoverPrinters, parseTarget, printRaw } from './printer/index.ts';
 import type { DiscoveredPrinter } from './printer/types.ts';
 import { LOCAL_PORT, startTlsServer } from './local-server.ts';
 import { saveMenuSnapshot, getPendingOrders, markPendingOrderSynced, markPendingOrderFailed, getHubOrderToken, getHubTls, saveHubTls, type MenuSnapshot, type HubTls } from './store.ts';
+import { checkForUpdate } from './updater.ts';
 import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
 
@@ -194,6 +195,7 @@ export async function runAgent(opts: { once?: boolean } = {}): Promise<void> {
   logger.info(`${printers.length} impresora(s) detectada(s) y reportada(s).`);
   let lastDiscover = Date.now();
   let lastHubSync = 0; // fuerza una sincronización de menú/pedidos en el primer ciclo
+  let lastUpdateCheck = 0; // fuerza un chequeo de actualización al arrancar
 
   do {
     try {
@@ -220,6 +222,14 @@ export async function runAgent(opts: { once?: boolean } = {}): Promise<void> {
       await syncMenu(cfg);
       await syncPendingOrders(cfg);
       lastHubSync = Date.now();
+    }
+
+    // Auto-update: cada hora (y al arrancar). Va DESPUÉS de sincronizar los
+    // pedidos pendientes — si hay versión nueva, este proceso TERMINA aquí y
+    // el watchdog relanza el exe nuevo.
+    if (Date.now() - lastUpdateCheck > 3_600_000) {
+      lastUpdateCheck = Date.now();
+      await checkForUpdate(cfg);
     }
 
     await sleep(cfg.pollMs);
