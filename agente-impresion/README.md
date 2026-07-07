@@ -193,9 +193,18 @@ agente-impresion/
       `POST /print` (impresión directa sin nube — base para LAN); **auto-reinicio**
       (la Tarea Programada reintenta cada 3 min, sin duplicar gracias al candado);
       el agente **reporta su versión** (visible en el panel); `installer/sign.ps1`
-      listo para firmar. Pendiente solo lo que requiere recursos externos:
-      comprar el **certificado** de firma; exponer `/print` a la LAN (bind 0.0.0.0
-      + auth) para imprimir sin internet desde otros dispositivos; auto-update
-      binario (necesita hosting de releases).
+      listo para firmar. `/print` y `/orders` expuestos a la LAN (bind 0.0.0.0)
+      con auth por `x-hub-token`, y el instalador crea la regla de firewall del
+      puerto 47100 (v0.2.0 — un aviso de UAC; si se cancela, el respaldo LAN
+      queda limitado a esta PC). Pendiente solo lo que requiere recursos
+      externos: comprar el **certificado** de firma y auto-update binario
+      (necesita hosting de releases) — plan completo en
+      `plataforma/docs/ESTRATEGIA_INSTALABLE.md`.
+- [x] **KDS local de respaldo (v0.3.0):** el hub sirve `/kds?t=<token>` en la
+      LAN — pantalla de cocina autocontenida con los pedidos capturados sin
+      nube (badge de sincronización, botón LISTO local, poda a 48h). El panel
+      (sección Impresión) muestra el enlace listo. Los pedidos sincronizados
+      se conservan (estado `synced`) hasta que cocina los marca. _Verificado
+      E2E en navegador real._
 - [ ] **Retiro de QZ** (cuando el agente esté validado en térmica real): eliminar
       `qz-tray`, `qz-cert.ts`, `/api/print/sign` y las secciones QZ de la UI.

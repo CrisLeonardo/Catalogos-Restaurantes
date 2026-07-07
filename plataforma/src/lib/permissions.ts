@@ -29,6 +29,7 @@ export const ADMIN_SECTIONS = [
   { key: 'personalizar', label: 'Personalizar' },
   { key: 'perfil',       label: 'Perfil' },
   { key: 'mesas',        label: 'Mesas' },
+  { key: 'impresion',    label: 'Impresión y Offline' },
   { key: 'qr',           label: 'QR' },
   { key: 'ayuda',        label: 'Centro de ayuda' },
   { key: 'soporte',      label: 'Soporte' },

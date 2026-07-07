@@ -1,6 +1,6 @@
 {
   "name": "leogin-agente-impresion",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Agente local de impresión de Leogin. Recibe trabajos desde la nube y los envía a impresoras térmicas (USB / red / Bluetooth) en Windows, sin diálogos del navegador.",

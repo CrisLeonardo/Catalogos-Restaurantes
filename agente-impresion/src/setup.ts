@@ -6,10 +6,13 @@
 //   2. Se copia a %LOCALAPPDATA%\Leogin\Agente\LeoginAgent.exe.
 //   3. Escribe config.local.json.
 //   4. Se registra para arrancar solo (carpeta Inicio + Tarea Programada).
-//   5. Se lanza en silencio y muestra una confirmación.
+//   5. Abre el puerto del hub (47100) en el Firewall de Windows — único paso
+//      que pide una confirmación de UAC; si se cancela, todo lo demás queda
+//      instalado igual (ver ensureFirewallRule).
+//   6. Se lanza en silencio y muestra una confirmación.
 //
-// Todo corre en el contexto del usuario: NO requiere permisos de administrador
-// ni PowerShell por parte del cliente.
+// Todo corre en el contexto del usuario: no requiere PowerShell por parte del
+// cliente, y solo la regla de firewall (paso 5, opcional) pide elevación.
 
 import { execFileSync, spawn } from 'node:child_process';
 import {
@@ -27,6 +30,10 @@ import { logger } from './logger.ts';
 
 const TASK_NAME = 'LeoginAgenteImpresion';
 const INSTALLED_EXE = 'LeoginAgent.exe';
+const FIREWALL_RULE = 'Leogin Hub (LAN)';
+/** Nombre viejo (v0.2.x, solo puerto 47100) — se elimina al crear el nuevo. */
+const FIREWALL_RULE_LEGACY = 'Leogin Hub (LAN 47100)';
+const FIREWALL_PORTS = '47100,47443';
 
 /** Carpeta estable de instalación, por usuario (no requiere admin). */
 export function installDir(): string {
@@ -169,6 +176,58 @@ function registerScheduledTask(vbsPath: string): void {
   }
 }
 
+/** Abre los puertos del hub (47100 HTTP + 47443 HTTPS) en el Firewall de
+    Windows. Sin esta regla,
+    Windows bloquea las conexiones ENTRANTES desde otros dispositivos de la LAN
+    (tablets del personal, celulares de comensales) y el respaldo offline solo
+    funciona en esta misma PC — la prueba local con localhost no pasa por el
+    firewall, por eso el hueco no se nota en desarrollo. Crear reglas de entrada
+    exige elevación: Windows muestra UN aviso de UAC durante la instalación. Si
+    el usuario lo cancela, la instalación continúa; la impresión por nube no se
+    afecta. La regla se crea sin restringir el perfil de red a propósito: muchos
+    Windows clasifican el WiFi del local como "red pública", y tanto /orders
+    como /print del hub exigen el token de todos modos. */
+function ensureFirewallRule(): void {
+  try {
+    execFileSync('netsh', ['advfirewall', 'firewall', 'show', 'rule', `name=${FIREWALL_RULE}`], {
+      stdio: 'ignore',
+      windowsHide: true,
+      timeout: 15_000,
+    });
+    return; // la regla ya existe (reinstalación / actualización)
+  } catch {
+    /* no existe → crearla */
+  }
+
+  // Un solo aviso de UAC para todo: borra la regla vieja (si existe) y crea
+  // la nueva con ambos puertos (HTTP 47100 + HTTPS 47443).
+  const innerCmd =
+    `netsh advfirewall firewall delete rule name="${FIREWALL_RULE_LEGACY}" | Out-Null; ` +
+    `netsh advfirewall firewall add rule name="${FIREWALL_RULE}" dir=in action=allow protocol=TCP localport=${FIREWALL_PORTS}`;
+  const innerB64 = Buffer.from(innerCmd, 'utf16le').toString('base64');
+  const psCmd =
+    `Start-Process -FilePath powershell -ArgumentList '-NoProfile','-NonInteractive',` +
+    `'-WindowStyle','Hidden','-EncodedCommand','${innerB64}' -Verb RunAs -Wait`;
+  try {
+    execFileSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-WindowStyle',
+        'Hidden',
+        // EncodedCommand evita el infierno de comillas anidadas cmd/PowerShell.
+        '-EncodedCommand',
+        Buffer.from(psCmd, 'utf16le').toString('base64'),
+      ],
+      { stdio: 'ignore', windowsHide: true, timeout: 120_000 },
+    );
+    logger.info(`Regla de firewall "${FIREWALL_RULE}" creada (puertos ${FIREWALL_PORTS}).`);
+  } catch (err) {
+    logger.warn('No se pudo abrir el puerto del hub en el firewall:', (err as Error).message);
+  }
+}
+
 /** Copia el lanzador oculto a la carpeta Inicio del usuario (arranque sin admin). */
 function installStartupEntry(vbsContent: string): void {
   const appData = process.env.APPDATA;
@@ -241,7 +300,10 @@ export async function runSetup(): Promise<void> {
   installStartupEntry(vbs);
   registerScheduledTask(vbsPath);
 
-  // 5. Lanzar el agente ya instalado, en silencio.
+  // 5. Abrir el puerto del hub en el firewall (respaldo LAN sin internet).
+  ensureFirewallRule();
+
+  // 6. Lanzar el agente ya instalado, en silencio.
   try {
     const child = spawn('wscript.exe', [vbsPath], { detached: true, stdio: 'ignore', windowsHide: true });
     child.unref();
@@ -249,7 +311,7 @@ export async function runSetup(): Promise<void> {
     logger.warn('No se pudo lanzar el agente automaticamente:', (err as Error).message);
   }
 
-  // 6. Confirmar al usuario.
+  // 7. Confirmar al usuario.
   messageBox(
     'El Agente de impresion Leogin se instalo correctamente.\n\n' +
       'Ya quedo funcionando y se iniciara solo cada vez que enciendas esta PC.\n' +

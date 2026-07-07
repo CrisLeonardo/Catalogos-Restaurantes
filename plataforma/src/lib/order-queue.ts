@@ -20,11 +20,18 @@ export interface QueuedOrder {
   total?: number;
 }
 
-const queueKey = (restaurantId: string) => `order-queue-${restaurantId}`;
+/** 'waiter' usa una clave de localStorage separada de 'customer' — el panel
+    de mesero vive en el mismo origen que el catálogo (mismo subdominio), así
+    que sin esto su cola podría chocar con la del comensal en un dispositivo
+    que usara ambos. */
+type QueueScope = 'customer' | 'waiter';
 
-export function getQueuedOrders(restaurantId: string): QueuedOrder[] {
+const queueKey = (restaurantId: string, scope: QueueScope) =>
+  scope === 'waiter' ? `waiter-order-queue-${restaurantId}` : `order-queue-${restaurantId}`;
+
+export function getQueuedOrders(restaurantId: string, scope: QueueScope = 'customer'): QueuedOrder[] {
   try {
-    const raw = localStorage.getItem(queueKey(restaurantId));
+    const raw = localStorage.getItem(queueKey(restaurantId, scope));
     if (!raw) return [];
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return [];
@@ -36,23 +43,23 @@ export function getQueuedOrders(restaurantId: string): QueuedOrder[] {
   }
 }
 
-export function saveQueuedOrder(restaurantId: string, order: QueuedOrder): void {
+export function saveQueuedOrder(restaurantId: string, order: QueuedOrder, scope: QueueScope = 'customer'): void {
   try {
     const list = [
       order,
-      ...getQueuedOrders(restaurantId).filter((o) => o.clientId !== order.clientId),
+      ...getQueuedOrders(restaurantId, scope).filter((o) => o.clientId !== order.clientId),
     ];
-    localStorage.setItem(queueKey(restaurantId), JSON.stringify(list));
+    localStorage.setItem(queueKey(restaurantId, scope), JSON.stringify(list));
   } catch {}
 }
 
-export function removeQueuedOrder(restaurantId: string, clientId: string): void {
+export function removeQueuedOrder(restaurantId: string, clientId: string, scope: QueueScope = 'customer'): void {
   try {
-    const list = getQueuedOrders(restaurantId).filter((o) => o.clientId !== clientId);
+    const list = getQueuedOrders(restaurantId, scope).filter((o) => o.clientId !== clientId);
     if (list.length > 0) {
-      localStorage.setItem(queueKey(restaurantId), JSON.stringify(list));
+      localStorage.setItem(queueKey(restaurantId, scope), JSON.stringify(list));
     } else {
-      localStorage.removeItem(queueKey(restaurantId));
+      localStorage.removeItem(queueKey(restaurantId, scope));
     }
   } catch {}
 }

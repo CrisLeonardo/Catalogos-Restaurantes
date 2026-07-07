@@ -11,8 +11,7 @@ import { Icon } from '@/components/icons';
 import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import OrdersCurrencyEditor from '@/components/admin/orders-currency-editor';
-import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
-import PrintAgentSettings from '@/components/admin/print-agent-settings';
+import Link from 'next/link';
 import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Perfil – Panel admin' };
@@ -137,17 +136,30 @@ export default async function AdminPerfilPage({
         />
       </CollapsibleCard>
 
-      <CollapsibleCard
-        title="Impresión (cocina y recibos)"
-        icon="print"
-        storageKey="perfil-impresion"
-        defaultOpen={false}
-        subtitle="Configura la impresión de comandas y recibos. El Agente Leogin (recomendado) imprime desde cualquier dispositivo y se configura una sola vez; abajo queda la impresión por USB o navegador como alternativa."
-      >
-        <PrintAgentSettings />
-        <div style={{ height: 16 }} />
-        <KitchenPrintSettings />
-      </CollapsibleCard>
+      {/* La impresión y el modo offline se movieron a su propia sección
+          (/admin/impresion) — aquí queda solo el puntero para quien la
+          buscaba en Perfil por costumbre. */}
+      <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 24, paddingTop: 20 }}>
+        <Link
+          href="/admin/impresion"
+          className="glass press"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: 14,
+            borderRadius: 16, textDecoration: 'none', color: 'inherit',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
+            <Icon name="print" size={19} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Impresión y modo offline</div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+              El Agente Leogin (impresión automática + respaldo sin internet) ahora tiene su propia sección.
+            </div>
+          </div>
+          <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', marginLeft: 'auto', flexShrink: 0 }} />
+        </Link>
+      </div>
     </div>
   );
 }

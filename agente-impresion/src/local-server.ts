@@ -4,20 +4,35 @@
 //      corre en esta PC → la nueva instancia se cierra (evita doble impresión).
 //   2) Endpoint de salud para que el panel detecte "agente activo en esta PC".
 //   3) POST /print: imprime directo sin pasar por la nube (latencia mínima en la
-//      misma PC; base para impresión LAN sin internet).
+//      misma PC; base para impresión LAN sin internet). Exige x-hub-token igual
+//      que /orders — al estar el puerto abierto a la LAN, sin token cualquiera
+//      en el WiFi podría mandar bytes a las impresoras (spam de papel, tickets
+//      falsos).
 //   4) POST /orders: acepta pedidos tomados sin conexión (Fase 2 offline) —
-//      el navegador del comensal le habla directo cuando la nube no responde.
-//      Sin token: la LAN del restaurante es la única barrera para esta primera
-//      versión (todo pedido se re-valida contra el snapshot local de precios,
-//      nunca se confía en el monto que manda el cliente — ver order-intake.ts).
+//      el navegador del comensal o del mesero le habla directo cuando la nube
+//      no responde. Exige el header x-hub-token (migración 063) con el mismo
+//      token que este hub generó y reporta al cloud en su heartbeat — así se
+//      cierra el riesgo aceptado en la v1 (cualquiera en el WiFi podía crear
+//      pedidos falsos a ciegas). Todo pedido se re-valida además contra el
+//      snapshot local de precios, nunca se confía en el monto que manda el
+//      cliente — ver order-intake.ts.
+
+//   5) KDS local de respaldo (/kds): pantalla de cocina servida por el propio
+//      hub — cocina la abre en la LAN y ve los pedidos capturados sin nube,
+//      incluso durante el corte. Ver kds.ts.
 
 import http from 'node:http';
+import https from 'node:https';
 import { parseTarget, printRaw } from './printer/index.ts';
 import { acceptOfflineOrder } from './order-intake.ts';
+import { getHubOrderToken, getHubTls } from './store.ts';
+import { kdsOrdersPayload, kdsMarkDone, sendKdsPage } from './kds.ts';
 import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
 
 export const LOCAL_PORT = 47100;
+/** Puerto HTTPS (migración 064) — debe coincidir con HUB_TLS_PORT de la nube. */
+export const TLS_PORT = 47443;
 
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -28,6 +43,15 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 }
 
 async function handlePrint(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  res.setHeader('content-type', 'application/json');
+
+  const provided = req.headers['x-hub-token'];
+  if (provided !== getHubOrderToken()) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: 'Token del hub inválido o faltante.' }));
+    return;
+  }
+
   try {
     const { target, payloadB64 } = JSON.parse((await readBody(req)) || '{}');
     if (!target || !payloadB64) {
@@ -50,6 +74,14 @@ async function handlePrint(req: http.IncomingMessage, res: http.ServerResponse):
     checkout-form.tsx lo consuma sin casos especiales. */
 async function handleOrder(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   res.setHeader('content-type', 'application/json');
+
+  const provided = req.headers['x-hub-token'];
+  if (provided !== getHubOrderToken()) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: 'Token del hub inválido o faltante.' }));
+    return;
+  }
+
   let body: unknown;
   try {
     body = JSON.parse((await readBody(req)) || '{}');
@@ -73,38 +105,110 @@ async function handleOrder(req: http.IncomingMessage, res: http.ServerResponse):
   }));
 }
 
+/** Handler compartido por el servidor HTTP (:47100) y el HTTPS (:47443) —
+    mismas rutas, misma seguridad; solo cambia el transporte. */
+function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+  // CORS: /orders lo llama el navegador del comensal desde el origen del
+  // catálogo (otro puerto/dominio), no desde este servidor — sin esto el
+  // navegador bloquea la respuesta aunque el pedido ya se haya procesado.
+  res.setHeader('access-control-allow-origin', '*');
+  res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+  res.setHeader('access-control-allow-headers', 'content-type, x-hub-token');
+  // Local Network Access (Chrome): respuesta al preflight de red privada.
+  res.setHeader('access-control-allow-private-network', 'true');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+  if (req.method === 'GET' && req.url === '/health') {
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ ok: true, agent: 'leogin', version: AGENT_VERSION }));
+    return;
+  }
+
+  // ── KDS local (/kds, /kds/orders, /kds/done) ──────────────────────
+  // El token viaja como query (?t=) porque /kds es una NAVEGACIÓN (no un
+  // fetch con headers): el panel genera el enlace completo.
+  const url = new URL(req.url ?? '/', 'http://hub.local');
+  if (url.pathname === '/kds' || url.pathname.startsWith('/kds/')) {
+    if (url.searchParams.get('t') !== getHubOrderToken()) {
+      res.statusCode = 401;
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      res.end('Enlace inválido. Abre la pantalla de respaldo desde el panel (sección Impresión).');
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/kds') {
+      sendKdsPage(res);
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/kds/orders') {
+      res.setHeader('content-type', 'application/json');
+      res.end(kdsOrdersPayload());
+      return;
+    }
+    if (req.method === 'POST' && url.pathname === '/kds/done') {
+      void (async () => {
+        try {
+          const { clientId } = JSON.parse((await readBody(req)) || '{}') as { clientId?: unknown };
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify({ ok: kdsMarkDone(clientId) }));
+        } catch {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'JSON inválido.' }));
+        }
+      })();
+      return;
+    }
+  }
+  if (req.method === 'POST' && req.url === '/print') {
+    void handlePrint(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/orders') {
+    void handleOrder(req, res);
+    return;
+  }
+  res.statusCode = 404;
+  res.end();
+}
+
+// ── Servidor HTTPS del hub (migración 064) ──────────────────────────────────
+// Usa el certificado wildcard que la nube entrega por /api/agent/hub-cert.
+// Se puede (re)iniciar en caliente cuando el certificado rota.
+let tlsServer: https.Server | null = null;
+
+export function startTlsServer(): void {
+  const tls = getHubTls();
+  if (!tls) return;
+  stopTlsServer();
+  try {
+    const server = https.createServer({ cert: tls.certPem, key: tls.keyPem }, handleRequest);
+    server.once('error', (e: NodeJS.ErrnoException) => {
+      logger.warn('Hub HTTPS:', e.message);
+      tlsServer = null;
+    });
+    server.listen(tls.port || TLS_PORT, '0.0.0.0', () => {
+      logger.info(`Hub HTTPS escuchando en ${tls.port || TLS_PORT} (${tls.hostname}).`);
+    });
+    tlsServer = server;
+  } catch (e) {
+    logger.warn('No se pudo iniciar el hub HTTPS:', (e as Error).message);
+  }
+}
+
+export function stopTlsServer(): void {
+  if (tlsServer) {
+    tlsServer.close();
+    tlsServer = null;
+  }
+}
+
 /** Intenta tomar el puerto. true = somos la única instancia; false = ya hay otra. */
 export function startLocalServer(): Promise<boolean> {
   return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      // CORS: /orders lo llama el navegador del comensal desde el origen del
-      // catálogo (otro puerto/dominio), no desde este servidor — sin esto el
-      // navegador bloquea la respuesta aunque el pedido ya se haya procesado.
-      res.setHeader('access-control-allow-origin', '*');
-      res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
-      res.setHeader('access-control-allow-headers', 'content-type');
-
-      if (req.method === 'OPTIONS') {
-        res.statusCode = 204;
-        res.end();
-        return;
-      }
-      if (req.method === 'GET' && req.url === '/health') {
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({ ok: true, agent: 'leogin', version: AGENT_VERSION }));
-        return;
-      }
-      if (req.method === 'POST' && req.url === '/print') {
-        void handlePrint(req, res);
-        return;
-      }
-      if (req.method === 'POST' && req.url === '/orders') {
-        void handleOrder(req, res);
-        return;
-      }
-      res.statusCode = 404;
-      res.end();
-    });
+    const server = http.createServer(handleRequest);
 
     server.once('error', (e: NodeJS.ErrnoException) => {
       if (e.code === 'EADDRINUSE') {

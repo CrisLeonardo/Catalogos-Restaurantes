@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
+import { getAgentHubInfo } from '@/lib/print-agent';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
@@ -47,11 +48,12 @@ export default async function MeseroPage() {
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedTables] = await Promise.all([
+  const [categoriesRes, productsRes, activeOrders, occupiedTables, hubInfo] = await Promise.all([
     db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     getWaiterActiveOrders(restaurantId, user.id),
     getActiveTableNumbers(restaurantId),
+    getAgentHubInfo(restaurantId),
   ]);
 
   const categories = (categoriesRes.data ?? []) as Category[];
@@ -76,6 +78,8 @@ export default async function MeseroPage() {
         position: resolvedConfig?.currencyPosition ?? 'prefix',
         locale: resolvedConfig?.locale ?? 'es-GT',
       }}
+      hubUrl={hubInfo.hubUrl}
+      hubToken={hubInfo.hubToken}
     />
   );
 }

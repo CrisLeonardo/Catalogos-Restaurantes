@@ -481,7 +481,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer, tipAccepted } = parsed.data;
+  const { restaurantId, items, customer, tipAccepted, clientId } = parsed.data;
 
   // Autenticación obligatoria (es mesero, no cliente anónimo).
   const supabase = await createClient();
@@ -502,6 +502,22 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     !can(waiterProfile.role as string, waiterProfile.permissions as string[] | null, 'mesero')
   ) {
     return { error: 'No autorizado.' };
+  }
+
+  // Reintento idempotente (fallback offline del mesero — hub local o cola del
+  // dispositivo, ver waiter-panel.tsx): si este client_id ya generó un
+  // pedido, devuélvelo tal cual sin repetir push ni impresión (mismo patrón
+  // que createOrder, migración 061).
+  if (clientId) {
+    const { data: existing } = await db
+      .from('orders')
+      .select('id, order_number')
+      .eq('restaurant_id', restaurantId)
+      .eq('client_id', clientId)
+      .maybeSingle();
+    if (existing) {
+      return { success: true, orderId: existing.id as string, orderNumber: existing.order_number as string };
+    }
   }
 
   const { data: restaurant } = await db
@@ -599,6 +615,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     p_cash_amount:    null,
     p_tip:            tip,
     p_waiter_id:      user.id,
+    p_client_id:      clientId ?? null,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,
@@ -1055,6 +1072,37 @@ export async function getPublicOrder(
       subtotal: Number(it.subtotal),
       options: (it.options_snapshot as OrderItemOption[] | null) ?? null,
     })),
+  };
+}
+
+/**
+ * Resuelve el token público de un pedido por su clientId — el UUID que el
+ * propio dispositivo generó al crearlo (ver migración 061). Lo usa
+ * "Mis pedidos" para los pedidos aceptados por el hub local sin conexión
+ * (llegan sin publicToken porque aún no existían en Supabase — ver
+ * hub-fallback.ts): una vez que el agente los sincroniza, este lookup les
+ * da el token real para poder rastrearlos. No es sensible: el clientId es
+ * un UUID que solo conoce el dispositivo que lo generó.
+ */
+export async function getOrderRefByClientId(
+  restaurantId: string,
+  clientId: string,
+): Promise<{ token: string; orderNumber: string; total: number } | null> {
+  if (!restaurantId || !clientId || !/^[0-9a-f-]{36}$/i.test(clientId)) return null;
+
+  const db = createServiceClient();
+  const { data } = await db
+    .from('orders')
+    .select('public_token, order_number, total')
+    .eq('restaurant_id', restaurantId)
+    .eq('client_id', clientId)
+    .maybeSingle();
+  if (!data) return null;
+
+  return {
+    token: data.public_token as string,
+    orderNumber: data.order_number as string,
+    total: Number(data.total),
   };
 }
 

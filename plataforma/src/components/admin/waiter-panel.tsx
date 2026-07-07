@@ -11,7 +11,7 @@
    salón (config.floorPlan), las mesas se muestran colocadas como en el local
    y con pestañas por nivel; si no, se usa la cuadrícula automática. */
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
@@ -19,6 +19,8 @@ import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
+import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
+import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { OrderWithItems } from '@/lib/db/orders';
@@ -48,6 +50,10 @@ interface Props {
   tipPercent: number;
   currency: PanelCurrency;
   floorPlan: FloorPlan | null;
+  /** Hub local del restaurante (Fase 2 offline) — fallback cuando la nube no
+      responde, antes de encolar el pedido en este dispositivo. */
+  hubUrl: string | null;
+  hubToken: string | null;
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
@@ -318,6 +324,7 @@ export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedTables,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
+  hubUrl, hubToken,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -335,11 +342,65 @@ export default function WaiterPanel({
   const [submitOk, setSubmitOk] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderWithItems[]>(initialOrders);
   const [, startStatus] = useTransition();
+  // Pedidos sin sincronizar con la nube (fallback offline, ver handleSubmit).
+  const [queuedCount, setQueuedCount] = useState(0);
+  const retryingQueueRef = useRef(false);
+
+  // Precalienta el hub HTTPS (DNS + permiso de red local) mientras hay señal,
+  // para que el fallback funcione si el internet se cae a mitad del turno.
+  useEffect(() => {
+    warmUpHub(hubUrl);
+  }, [hubUrl]);
 
   // Nivel activo del plano del salón (si está habilitado).
   const planEnabled = !!floorPlan?.enabled && (floorPlan?.levels.length ?? 0) > 0;
   const levels = floorPlan?.levels ?? [];
   const [activeLevel, setActiveLevel] = useState<string>(levels[0]?.id ?? '');
+
+  /** Reintenta los pedidos que quedaron en la cola local del mesero (offline
+      total: ni la nube ni el hub respondieron). Éxito o rechazo definitivo
+      del servidor → se quitan de la cola (mismo patrón silencioso que la
+      reconciliación en segundo plano de checkout-form.tsx); fallo de red →
+      se quedan para el siguiente intento. */
+  async function retryWaiterQueue() {
+    if (retryingQueueRef.current) return;
+    retryingQueueRef.current = true;
+    try {
+      for (const q of getQueuedOrders(restaurantId, 'waiter')) {
+        try {
+          const result = await createWaiterOrder(q.payload);
+          if (result.success || result.error) {
+            removeQueuedOrder(restaurantId, q.clientId, 'waiter');
+          }
+        } catch { /* sigue sin conexión: se reintenta en el próximo ciclo */ }
+      }
+    } finally {
+      setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
+      retryingQueueRef.current = false;
+    }
+  }
+
+  // Al montar: cuenta lo que ya estaba en cola (pestaña cerrada a mitad de un
+  // corte) y lo reintenta en segundo plano.
+  useEffect(() => {
+    setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
+    retryWaiterQueue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
+  // Reintento automático mientras haya algo en cola: al volver la señal y,
+  // de respaldo, cada 15s (mismo ritmo que checkout-form.tsx).
+  useEffect(() => {
+    if (queuedCount === 0) return;
+    const onOnline = () => retryWaiterQueue();
+    window.addEventListener('online', onOnline);
+    const timer = setInterval(() => retryWaiterQueue(), 15_000);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queuedCount]);
 
   // Realtime: actualiza mis pedidos cuando hay cambios.
   useEffect(() => {
@@ -456,9 +517,11 @@ export default function WaiterPanel({
     setSubmitError(null);
 
     const finalName = guestName.trim() || `Mesa ${tableNumber}`;
+    const clientId = crypto.randomUUID();
 
     const input = {
       restaurantId,
+      clientId,
       items: cart.map((l) => ({
         productId: l.productId,
         name: l.name,
@@ -477,14 +540,35 @@ export default function WaiterPanel({
     };
 
     startSubmit(async () => {
-      const result = await createWaiterOrder(input);
-      if (result.error) {
-        setSubmitError(result.error);
-      } else {
+      try {
+        const result = await createWaiterOrder(input);
+        if (result.error) {
+          setSubmitError(result.error);
+          return;
+        }
         setSubmitOk(`Pedido ${result.orderNumber} enviado a cocina.`);
         resetOrder();
         setTimeout(() => { setSubmitOk(null); setView('orders'); }, 1600);
         router.refresh();
+      } catch {
+        // La nube no respondió (sin conexión o WiFi inestable): intenta el
+        // hub local del restaurante antes de encolar en este dispositivo
+        // (mismo patrón que checkout-form.tsx, clientId idempotente por
+        // migración 061 — reintentar nunca duplica la comanda).
+        if (hubUrl) {
+          const hubResult = await tryHubOrder(hubUrl, hubToken, input);
+          if (hubResult?.success) {
+            setSubmitOk(`Pedido ${hubResult.orderNumber} impreso — se sincronizará solo en cuanto vuelva la señal.`);
+            resetOrder();
+            setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2200);
+            return;
+          }
+        }
+        saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
+        setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
+        setSubmitOk('Sin conexión: el pedido quedó guardado en este dispositivo y se enviará solo en cuanto vuelva la señal.');
+        resetOrder();
+        setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2600);
       }
     });
   }
@@ -522,6 +606,12 @@ export default function WaiterPanel({
             <button type="button" onClick={() => { setView('tables'); }} className="press btn-accent" style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
               ＋ Nuevo pedido
             </button>
+            {queuedCount > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 30%, transparent)', color: '#f59e0b', fontSize: 13, fontWeight: 600 }}>
+                <Icon name="clock" size={15} />
+                {queuedCount === 1 ? '1 pedido sin sincronizar — se enviará solo al volver la señal.' : `${queuedCount} pedidos sin sincronizar — se enviarán solos al volver la señal.`}
+              </div>
+            )}
             {orders.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--u-text-4)', fontSize: 15 }}>
                 Sin pedidos activos. Tus pedidos en curso aparecerán aquí.

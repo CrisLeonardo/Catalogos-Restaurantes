@@ -13,7 +13,7 @@ import { basename } from 'node:path';
 import { runAgent } from './agent.ts';
 import { runCli } from './cli.ts';
 import { runSetup, isInstalledLocation } from './setup.ts';
-import { startLocalServer } from './local-server.ts';
+import { startLocalServer, startTlsServer } from './local-server.ts';
 import { logger } from './logger.ts';
 
 const CLI_COMMANDS = new Set(['list', 'test', 'send', 'help', '--help', '-h']);
@@ -26,6 +26,9 @@ async function runService(): Promise<void> {
     logger.info('Ya hay un agente de impresión corriendo en esta PC. Saliendo.');
     process.exit(0);
   }
+  // HTTPS del hub: si ya hay certificado guardado de una corrida anterior,
+  // arranca de una vez (si no, arrancará cuando el poll lo entregue).
+  startTlsServer();
   try {
     await runAgent({ once: !!process.env.LEOGIN_ONCE });
   } catch (err) {

@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { authenticateAgent } from '@/lib/print-agent';
+import { ensureHubTls } from '@/lib/hub-tls';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +27,27 @@ export async function POST(req: Request) {
   // URL LAN del hub local (Fase 2 offline) — el navegador del comensal la usa
   // como fallback cuando la nube no responde. Ver migración 062.
   if (typeof body.hubUrl === 'string') patch.hub_url = body.hubUrl;
-  await db.from('print_agents').update(patch).eq('id', agent.agentId);
+  // Token que ese hub exige en POST /orders (migración 063) — cierra el
+  // riesgo aceptado de que cualquiera en el WiFi cree pedidos falsos a ciegas.
+  if (typeof body.hubOrderToken === 'string') patch.hub_order_token = body.hubOrderToken;
+  // IP LAN pelada (migración 064) — mantiene el registro A del hostname HTTPS
+  // del hub (<id>.hub.<dominio> → esta IP). Agentes v0.4.0+.
+  if (typeof body.lanIp === 'string') patch.hub_lan_ip = body.lanIp;
+  const { data: agentRow } = await db
+    .from('print_agents')
+    .update(patch)
+    .eq('id', agent.agentId)
+    .select('hub_hostname, hub_lan_ip, hub_dns_synced_ip')
+    .single();
+
+  // HTTPS del hub (migración 064): asigna hostname, mantiene DNS y anuncia el
+  // certificado vigente. Best-effort — jamás debe romper la impresión.
+  let hubTls = null;
+  try {
+    hubTls = await ensureHubTls(db, agent.agentId, agentRow ?? null);
+  } catch (e) {
+    console.error('[hub-tls] ensureHubTls falló:', (e as Error).message);
+  }
 
   // Reclamo atómico de trabajos pendientes para este restaurante.
   const { data, error } = await db.rpc('claim_print_jobs', {
@@ -42,5 +63,5 @@ export async function POST(req: Request) {
     payload_b64: j.payload_b64,
   }));
 
-  return NextResponse.json({ jobs });
+  return NextResponse.json({ jobs, hubTls });
 }

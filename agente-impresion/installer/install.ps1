@@ -72,6 +72,21 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Se
 
 Start-ScheduledTask -TaskName $taskName
 
+# ── Firewall: puertos del hub local (47100 HTTP + 47443 HTTPS) ─────────────
+# Sin esta regla, Windows bloquea las conexiones entrantes desde la LAN y el
+# respaldo offline (POST /orders del hub) solo funciona en esta misma PC.
+$ruleName = 'Leogin Hub (LAN)'
+$null = netsh advfirewall firewall delete rule name="Leogin Hub (LAN 47100)"  # nombre viejo (v0.2.x)
+$null = netsh advfirewall firewall delete rule name="$ruleName"
+$null = netsh advfirewall firewall add rule name="$ruleName" dir=in action=allow protocol=TCP localport=47100,47443
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Regla de firewall creada (puertos 47100 y 47443 abiertos a la LAN)."
+}
+else {
+    Write-Warning "No se pudo crear la regla de firewall (¿PowerShell sin permisos de Administrador?)."
+    Write-Warning "El respaldo LAN sin internet no funcionara desde otros dispositivos hasta crearla."
+}
+
 Write-Host ""
 Write-Host "OK. El agente quedo instalado y en ejecucion." -ForegroundColor Green
 Write-Host "Se iniciara solo cada vez que enciendas esta PC."

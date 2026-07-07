@@ -82,6 +82,25 @@ export default async function AdminHomePage() {
   }
 
   const allow = (key: string) => can(profile.role, profile.permissions, key);
+
+  // ── Agente Leogin (recomendación / salud) ───────────────────
+  // 'install': aún no hay agente funcionando → invitar a instalarlo.
+  // 'offline': existía y dejó de reportar >10 min → avisar (sin agente no hay
+  // impresión automática ni respaldo offline).
+  let agentBanner: 'install' | 'offline' | null = null;
+  if (ordersEnabled && restaurantId && allow('impresion')) {
+    const db = createServiceClient();
+    const { data: agent } = await db
+      .from('print_agents')
+      .select('last_seen_at')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    const lastSeen = (agent?.last_seen_at as string | null) ?? null;
+    if (!lastSeen) agentBanner = 'install';
+    // Frescura evaluada al momento del request a propósito (server component).
+    // eslint-disable-next-line react-hooks/purity
+    else if (Date.now() - new Date(lastSeen).getTime() > 10 * 60_000) agentBanner = 'offline';
+  }
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
   const firstName = (profile.full_name || '').trim().split(' ')[0];
   const brandName = restaurant?.name ?? 'tu restaurante';
@@ -142,6 +161,44 @@ export default async function AdminHomePage() {
               {trialLeft <= 3
                 ? 'Contáctanos para continuar sin interrupciones.'
                 : 'Tu menú ya está en vivo. Aprovéchalo al máximo.'}
+            </div>
+          </div>
+          <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        </Link>
+      )}
+
+      {/* Agente Leogin: invitar a instalarlo / avisar si se desconectó */}
+      {agentBanner && (
+        <Link
+          href="/admin/impresion"
+          className="glass press"
+          style={{
+            borderRadius: 14, padding: '12px 16px', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 11,
+            border: agentBanner === 'offline'
+              ? '1px solid rgba(251,146,60,0.45)'
+              : '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
+          }}
+        >
+          <span style={{
+            width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
+            background: agentBanner === 'offline'
+              ? 'rgba(251,146,60,0.14)'
+              : 'rgba(var(--brand-accent-rgb, 99,102,241),0.14)',
+            color: agentBanner === 'offline' ? '#fb923c' : 'var(--brand-accent)',
+          }}>
+            <Icon name={agentBanner === 'offline' ? 'alertCircle' : 'print'} size={17} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              {agentBanner === 'offline'
+                ? 'Tu Agente Leogin está desconectado'
+                : 'Recomendado: activa la impresión automática y el modo offline'}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+              {agentBanner === 'offline'
+                ? 'Revisa que la PC del local esté encendida — sin el agente no hay impresión automática ni respaldo sin internet.'
+                : 'Instala el Agente Leogin en la PC del local (5 minutos): comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />

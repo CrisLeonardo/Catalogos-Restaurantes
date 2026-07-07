@@ -16,6 +16,7 @@ interface RawOptionPick { groupId?: unknown; choiceId?: unknown }
 interface RawItem {
   productId?: unknown;
   name?: unknown;
+  price?: unknown;
   quantity?: unknown;
   options?: unknown;
 }
@@ -98,7 +99,16 @@ export async function acceptOfflineOrder(rawBody: unknown): Promise<OrderIntakeR
   const verified: { name: string; quantity: number; price: number; options: string[] }[] = [];
 
   for (const raw of items as RawItem[]) {
-    if (typeof raw.productId !== 'string' || typeof raw.quantity !== 'number' || raw.quantity <= 0) {
+    // Misma forma mínima que exige createOrderSchema en la nube (name y price
+    // incluidos, aunque el precio real se resuelve del snapshot): si el hub
+    // aceptara un ítem que la nube va a rechazar, el pedido quedaría marcado
+    // como fallido al sincronizar en vez de rechazarse aquí, de frente.
+    if (
+      typeof raw.productId !== 'string' ||
+      typeof raw.quantity !== 'number' || raw.quantity <= 0 ||
+      typeof raw.name !== 'string' || !raw.name.trim() ||
+      typeof raw.price !== 'number' || raw.price <= 0
+    ) {
       return { ok: false, status: 400, error: 'Ítem inválido en el carrito.' };
     }
     const product = productById.get(raw.productId);
@@ -127,6 +137,16 @@ export async function acceptOfflineOrder(rawBody: unknown): Promise<OrderIntakeR
     orderNumber,
     status: 'pending',
     createdAt: new Date().toISOString(),
+    // Snapshot legible para el KDS local (nombres/opciones ya resueltos
+    // contra el menú con el que se validó este pedido).
+    display: {
+      customerName: customer.name.trim(),
+      orderType,
+      address,
+      notes: typeof customer.notes === 'string' && customer.notes.trim() ? customer.notes.trim() : null,
+      total,
+      items: verified.map((i) => ({ name: i.name, quantity: i.quantity, options: i.options })),
+    },
   };
   enqueuePendingOrder(pending);
 

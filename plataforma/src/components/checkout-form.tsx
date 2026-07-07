@@ -14,7 +14,7 @@ import { validatePromo } from '@/lib/actions/promos';
 import { getLoyaltyRedeemInfo, getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order-queue';
-import { tryHubOrder } from '@/lib/hub-fallback';
+import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
@@ -61,6 +61,8 @@ interface Props {
   /** URL LAN del hub local del restaurante (Fase 2 offline), si tiene uno
       vinculado. Se intenta ANTES de encolar el pedido en el dispositivo. */
   hubUrl?: string | null;
+  /** Token que ese hub exige en POST /orders (migración 063). */
+  hubToken?: string | null;
 }
 
 type Step = 'form' | 'success' | 'queued';
@@ -97,6 +99,7 @@ export default function CheckoutForm({
   encuestasActive = false,
   googleAuthEnabled = false,
   hubUrl = null,
+  hubToken = null,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -119,6 +122,12 @@ export default function CheckoutForm({
   // Legibilidad: sombra por defecto del checkout (item #2) + glass en pago (item #3).
   const labelShadow = shadowCss(config.checkoutTextShadow);
   const payGlass    = config.checkoutPayGlass !== false;
+
+  // Precalienta el hub HTTPS (DNS + permiso de red local) mientras hay señal,
+  // para que el fallback funcione si el internet se cae a mitad del pedido.
+  useEffect(() => {
+    warmUpHub(hubUrl);
+  }, [hubUrl]);
 
   const [step, setStep] = useState<Step>('form');
   const [orderNumber, setOrderNumber] = useState('');
@@ -345,6 +354,7 @@ export default function CheckoutForm({
   function finishSuccess(result: CreateOrderResult) {
     const snap = pendingSnapshotRef.current;
     if (!snap) return;
+    const clientIdForRef = clientIdRef.current;
 
     saveLocalProfile(restaurantId, {
       name, phone,
@@ -354,6 +364,18 @@ export default function CheckoutForm({
     if (result.publicToken) {
       addLocalOrder(restaurantId, {
         token: result.publicToken,
+        orderNumber: result.orderNumber ?? '',
+        createdAt: new Date().toISOString(),
+        total: snap.totalSnapshot,
+      });
+    } else if (clientIdForRef) {
+      // Pedido aceptado por el hub local sin conexión a la nube: todavía no
+      // hay token público (se genera cuando sincronice con Supabase). Se
+      // guarda con el clientId para que "Mis pedidos" lo resuelva en cuanto
+      // sincronice (ver my-orders.tsx / getOrderRefByClientId).
+      addLocalOrder(restaurantId, {
+        token: '',
+        clientId: clientIdForRef,
         orderNumber: result.orderNumber ?? '',
         createdAt: new Date().toISOString(),
         total: snap.totalSnapshot,
@@ -412,7 +434,7 @@ export default function CheckoutForm({
     if (!clientId || !payload) return;
 
     if (hubUrl) {
-      const hubResult = await tryHubOrder(hubUrl, payload);
+      const hubResult = await tryHubOrder(hubUrl, hubToken, payload);
       if (hubResult) { finishSuccess(hubResult); return; }
     }
 

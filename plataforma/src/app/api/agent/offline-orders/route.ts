@@ -45,7 +45,15 @@ interface SyncResult {
 async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise<SyncResult> {
   const parsed = createOrderSchema.safeParse(rawOrder);
   if (!parsed.success) {
-    return { clientId: null, ok: false, error: parsed.error.errors[0]?.message ?? 'Datos inválidos.' };
+    // Aún inválido, devolver el clientId crudo si viene: sin él, el agente no
+    // puede marcar el pedido como fallido y lo reintentaría cada 60s para
+    // siempre (mensaje envenenado en la cola del hub).
+    const rawClientId = (rawOrder as { clientId?: unknown } | null)?.clientId;
+    return {
+      clientId: typeof rawClientId === 'string' ? rawClientId : null,
+      ok: false,
+      error: parsed.error.errors[0]?.message ?? 'Datos inválidos.',
+    };
   }
   const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId } = parsed.data;
 
