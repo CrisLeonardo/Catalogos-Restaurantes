@@ -8,6 +8,7 @@ import Portada from '@/components/menu/portada';
 import MenuClient from '@/components/menu-client';
 import VisitTracker from '@/components/visit-tracker';
 import InstallBanner from '@/components/install-banner';
+import OfflineSupport from '@/components/offline-support';
 import { Icon } from '@/components/icons';
 import type { MenuReward } from '@/components/menu/rewards-section';
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
@@ -54,6 +55,7 @@ export default function MenuShell({ config, content, categories, products, resta
   return (
     <ThemeProvider config={config} content={content}>
       <CartProvider restaurantId={restaurantId}>
+        <OfflineSupport />
         <VisitTracker restaurantId={restaurantId} />
         <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: `0 16px calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}>
           <Portada isOpen={isOpen} />

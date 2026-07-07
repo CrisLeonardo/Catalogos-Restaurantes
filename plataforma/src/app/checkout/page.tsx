@@ -8,6 +8,7 @@ import { isOpenNow } from '@/lib/hours';
 import { hasActiveCodePromos } from '@/lib/db/promos';
 import { isModuleActive } from '@/lib/modules';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
+import { getAgentHubUrl } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
 
@@ -37,6 +38,7 @@ export default async function CheckoutPage() {
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala');
   const hasPromos = await hasActiveCodePromos(restaurant.id);
+  const hubUrl = await getAgentHubUrl(restaurant.id);
   const mod = restaurant.modules as Record<string, boolean> | null;
   const modSettings = restaurant.module_settings ?? null;
   const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
@@ -68,6 +70,7 @@ export default async function CheckoutPage() {
           loyaltyActive={loyaltyActive}
           encuestasActive={encuestasActive}
           googleAuthEnabled={isGoogleAuthEnabled()}
+          hubUrl={hubUrl}
         />
       </CartProvider>
     </ThemeProvider>

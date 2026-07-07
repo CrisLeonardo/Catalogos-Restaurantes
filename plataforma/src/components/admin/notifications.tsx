@@ -182,7 +182,13 @@ export default function AdminNotifications({
     const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     function connect() {
-      channel = supabase
+      // Guarda contra re-entradas: unsubscribe()/removeChannel() puede disparar
+      // el mismo callback de status de forma síncrona (p. ej. pasa a 'CLOSED'
+      // en la misma pila que lo originó) — sin este freno, `closing` seguiría
+      // siendo false y se llamaría a sí mismo indefinidamente hasta reventar
+      // el stack ("Maximum call stack size exceeded").
+      let closing = false;
+      const ch = supabase
         .channel(`orders-notify-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
 
         /* ── Pedido nuevo ── */
@@ -266,18 +272,20 @@ export default function AdminNotifications({
           } catch {}
         })
         .subscribe((status) => {
-          if (cancelled) return;
+          if (cancelled || closing) return;
           if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
           // El socket puede caerse en silencio (red inestable, laptop en
           // suspensión, JWT que tarda en refrescar) y el canal no se
           // reconecta solo — sin esto, el toast/sonido deja de llegar hasta
           // recargar la página. Reintentar con backoff exponencial (máx 30s).
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            channel?.unsubscribe();
+            closing = true;
+            supabase.removeChannel(ch);
             retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
             retryDelay = Math.min(retryDelay * 2, 30_000);
           }
         });
+      channel = ch;
     }
 
     (async () => {
@@ -289,7 +297,7 @@ export default function AdminNotifications({
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      channel?.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
   }, [restaurantId, router]);

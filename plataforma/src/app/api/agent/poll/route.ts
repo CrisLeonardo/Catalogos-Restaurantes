@@ -23,6 +23,9 @@ export async function POST(req: Request) {
   const patch: Record<string, unknown> = { last_seen_at: new Date().toISOString() };
   if (Array.isArray(body.printers)) patch.reported_printers = body.printers;
   if (typeof body.version === 'string') patch.agent_version = body.version;
+  // URL LAN del hub local (Fase 2 offline) — el navegador del comensal la usa
+  // como fallback cuando la nube no responde. Ver migración 062.
+  if (typeof body.hubUrl === 'string') patch.hub_url = body.hubUrl;
   await db.from('print_agents').update(patch).eq('id', agent.agentId);
 
   // Reclamo atómico de trabajos pendientes para este restaurante.

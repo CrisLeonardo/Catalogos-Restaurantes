@@ -12,6 +12,7 @@ import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
+import OfflineSupport from '@/components/offline-support';
 import WelcomeTour from '@/components/admin/welcome-tour';
 import HelpButton from '@/components/admin/help-button';
 import { can } from '@/lib/permissions';
@@ -299,6 +300,7 @@ export default function AdminShell({
 
   return (
     <div className="admin-shell">
+      <OfflineSupport />
       <aside className="admin-sidebar">
         {(() => {
           const brandInner = (

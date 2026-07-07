@@ -120,8 +120,14 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     function connect() {
+      // Guarda contra re-entradas: unsubscribe()/removeChannel() puede disparar
+      // el mismo callback de status de forma síncrona (p. ej. pasa a 'CLOSED'
+      // en la misma pila que lo originó) — sin este freno, se llamaría a sí
+      // mismo indefinidamente hasta reventar el stack ("Maximum call stack
+      // size exceeded"). Ver admin/notifications.tsx.
+      let closing = false;
       // Topic único por montaje (ver admin/notifications.tsx).
-      channel = supabase
+      const ch = supabase
         .channel(`orders-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
         .on(
           'postgres_changes',
@@ -149,17 +155,19 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
           },
         )
         .subscribe((status) => {
-          if (cancelled) return;
+          if (cancelled || closing) return;
           if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
           // Sin reintento el canal puede quedar muerto en silencio (red
           // inestable, laptop en suspensión) hasta recargar la página
           // (ver admin/notifications.tsx). Backoff exponencial, máx 30s.
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            channel?.unsubscribe();
+            closing = true;
+            supabase.removeChannel(ch);
             retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
             retryDelay = Math.min(retryDelay * 2, 30_000);
           }
         });
+      channel = ch;
     }
 
     (async () => {
@@ -171,7 +179,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      channel?.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
   }, [restaurantId, router]);

@@ -44,6 +44,22 @@ export async function authenticateAgent(req: Request): Promise<AgentIdentity | n
   return { agentId: data.id as string, restaurantId: data.restaurant_id as string };
 }
 
+/**
+ * URL LAN del hub local del restaurante (Fase 2 offline), si tiene un agente
+ * vinculado y ya reportó su IP en el heartbeat. El checkout la usa como
+ * fallback cuando la nube no responde (ver lib/hub-fallback.ts). No es
+ * información sensible (una IP de red local), no requiere autenticación.
+ */
+export async function getAgentHubUrl(restaurantId: string): Promise<string | null> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('print_agents')
+    .select('hub_url')
+    .eq('restaurant_id', restaurantId)
+    .single();
+  return (data?.hub_url as string | null) ?? null;
+}
+
 export type EnqueueResult = { id: string } | { error: string };
 
 /**

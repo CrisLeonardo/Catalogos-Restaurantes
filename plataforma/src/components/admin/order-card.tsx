@@ -381,6 +381,18 @@ export default function OrderCard({
               <Icon name="userPlus" size={12} style={{ display: 'inline' }} /> Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong>
             </p>
           )}
+          {order.synced_from_hub && (
+            <p
+              title="Este pedido se tomó sin conexión (hub local) y se sincronizó al volver la señal."
+              style={{
+                fontSize: 11, fontWeight: 700, marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5,
+                color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+                borderRadius: 'var(--radius-full)', padding: '3px 9px', width: 'fit-content',
+              }}
+            >
+              📶 Sin conexión
+            </p>
+          )}
         </div>
 
         {/* Badge de estado */}

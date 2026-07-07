@@ -250,6 +250,8 @@ export interface Order {
   cancelled_at: string | null;
   /** Mesero que tomó el pedido (migración 030); null = pedido online del cliente. */
   waiter_id: string | null;
+  /** Se tomó sin conexión (hub local) y se sincronizó después (migración 062). */
+  synced_from_hub: boolean;
 }
 
 /** Opción elegida congelada en el pedido. */

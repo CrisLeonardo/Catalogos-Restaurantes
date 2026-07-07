@@ -16,6 +16,7 @@ import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
 import { getRedeemContextByCustomer, getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
+import { resolveItemOptions } from '@/lib/order-options';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -31,58 +32,6 @@ export interface CreateOrderResult {
   error?: string;
 }
 
-/**
- * Resuelve las opciones elegidas contra los grupos REALES del producto (BD):
- * valida ids, exige los grupos requeridos, respeta `max` y devuelve el
- * delta total + el snapshot con nombres/precios congelados.
- */
-function resolveItemOptions(
-  groups: ProductOptionGroup[] | null,
-  picked: { groupId: string; choiceId: string }[] | undefined,
-  productName: string,
-): { delta: number; snapshot: OrderItemOption[] } | { error: string } {
-  const safeGroups = Array.isArray(groups) ? groups : [];
-  const picks = picked ?? [];
-
-  const snapshot: OrderItemOption[] = [];
-  let delta = 0;
-
-  for (const group of safeGroups) {
-    const inGroup = picks.filter((p) => p.groupId === group.id);
-
-    if (group.type === 'single') {
-      if (inGroup.length > 1)
-        return { error: `Opciones inválidas en "${productName}".` };
-      if (group.required && inGroup.length === 0)
-        return { error: `Elige "${group.name}" para "${productName}".` };
-    } else if (group.max && group.max > 0 && inGroup.length > group.max) {
-      return { error: `Máximo ${group.max} en "${group.name}" de "${productName}".` };
-    }
-
-    const seen = new Set<string>();
-    for (const pick of inGroup) {
-      if (seen.has(pick.choiceId))
-        return { error: `Opciones duplicadas en "${productName}".` };
-      seen.add(pick.choiceId);
-
-      const choice = group.choices.find((c) => c.id === pick.choiceId);
-      if (!choice)
-        return { error: `"${productName}" cambió sus opciones. Actualiza tu carrito.` };
-
-      const d = Number(choice.priceDelta) || 0;
-      delta += d;
-      snapshot.push({ group: group.name, choice: choice.name, priceDelta: d });
-    }
-  }
-
-  // Elecciones que apuntan a grupos inexistentes → carrito viejo.
-  const knownGroupIds = new Set(safeGroups.map((g) => g.id));
-  if (picks.some((p) => !knownGroupIds.has(p.groupId)))
-    return { error: `"${productName}" cambió sus opciones. Actualiza tu carrito.` };
-
-  return { delta, snapshot };
-}
-
 export async function createOrder(
   rawInput: unknown,
 ): Promise<CreateOrderResult> {
@@ -92,7 +41,31 @@ export async function createOrder(
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted } = parsed.data;
+  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId } = parsed.data;
+
+  const db = createServiceClient();
+
+  // Reintento idempotente (cola offline del catálogo, ver migración 061):
+  // si este client_id ya generó un pedido, devuélvelo tal cual SIN
+  // repetir rate-limit, upsert_customer, promo, lealtad ni push — esos
+  // efectos secundarios no son idempotentes y duplicarlos sería peor que
+  // el problema que la cola intenta resolver.
+  if (clientId) {
+    const { data: existing } = await db
+      .from('orders')
+      .select('id, order_number, public_token')
+      .eq('restaurant_id', restaurantId)
+      .eq('client_id', clientId)
+      .maybeSingle();
+    if (existing) {
+      return {
+        success: true,
+        orderId: existing.id as string,
+        orderNumber: existing.order_number as string,
+        publicToken: existing.public_token as string,
+      };
+    }
+  }
 
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
   // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
@@ -100,8 +73,6 @@ export async function createOrder(
   if (!rateLimit(`order:${ip}:${restaurantId}`, 6, 60_000)) {
     return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
   }
-
-  const db = createServiceClient();
 
   // Sesión del comensal (Google), si la hay: enlaza la cuenta al cliente
   // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
@@ -403,6 +374,7 @@ export async function createOrder(
     p_payment_method: customer.type === 'DINE_IN' ? 'CASH' : (paymentMethod ?? 'CASH'),
     p_cash_amount:    customer.type === 'DELIVERY' && (paymentMethod ?? 'CASH') === 'CASH' && cashAmount != null ? cashAmount : null,
     p_tip:            tip,
+    p_client_id: clientId ?? null,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,

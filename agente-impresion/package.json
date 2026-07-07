@@ -13,8 +13,10 @@
     "build:exe": "node build-exe.mjs"
   },
   "devDependencies": {
+    "@types/node": "^26.1.0",
     "esbuild": "^0.24.0",
-    "postject": "^1.0.0-alpha.6"
+    "postject": "^1.0.0-alpha.6",
+    "typescript": "^6.0.3"
   },
   "author": "Leogin",
   "license": "UNLICENSED"

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
+import OfflineSupport from '@/components/offline-support';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Cocina (KDS)' };
@@ -31,5 +32,10 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     redirect('/admin/login');
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <OfflineSupport />
+      {children}
+    </>
+  );
 }
