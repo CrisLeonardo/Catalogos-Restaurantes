@@ -5,6 +5,8 @@
 //   LeoginAgent.exe list           → lista impresoras
 //   LeoginAgent.exe test "preview:" → imprime un ticket de prueba
 //   LeoginAgent.exe setup           → fuerza la instalación
+//   LeoginAgent.exe uninstall       → desinstala (es el UninstallString de
+//                                     "Aplicaciones instaladas" de Windows)
 //   LeoginAgent.exe service         → fuerza el modo servicio
 //
 // En desarrollo es lo mismo con: node src/index.ts [comando]
@@ -12,7 +14,7 @@
 import { basename } from 'node:path';
 import { runAgent } from './agent.ts';
 import { runCli } from './cli.ts';
-import { runSetup, isInstalledLocation } from './setup.ts';
+import { runSetup, runUninstall, isInstalledLocation, registerUninstallEntry } from './setup.ts';
 import { startLocalServer, startTlsServer } from './local-server.ts';
 import { cleanupOldExe } from './updater.ts';
 import { logger } from './logger.ts';
@@ -30,8 +32,10 @@ async function runService(): Promise<void> {
   // HTTPS del hub: si ya hay certificado guardado de una corrida anterior,
   // arranca de una vez (si no, arrancará cuando el poll lo entregue).
   startTlsServer();
-  // Si esta corrida es el resultado de un auto-update, borra el exe viejo.
+  // Si esta corrida es el resultado de un auto-update, borra el exe viejo y
+  // refresca la versión mostrada en "Aplicaciones instaladas".
   cleanupOldExe();
+  if (isInstalledLocation()) registerUninstallEntry(process.execPath);
   try {
     await runAgent({ once: !!process.env.LEOGIN_ONCE });
   } catch (err) {
@@ -51,6 +55,8 @@ if (first && CLI_COMMANDS.has(first)) {
   runCli().catch(fail);
 } else if (first === 'setup' || first === 'install') {
   runSetup().catch(fail);
+} else if (first === 'uninstall') {
+  runUninstall().catch(fail);
 } else if (first === 'service' || first === 'run') {
   void runService();
 } else {

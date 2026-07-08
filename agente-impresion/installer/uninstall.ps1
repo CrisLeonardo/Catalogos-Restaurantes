@@ -16,6 +16,10 @@ Remove-Item -Force $startupVbs
 $dest = Join-Path $env:LOCALAPPDATA 'Leogin\Agente'
 Remove-Item -Recurse -Force $dest
 
+# Entrada de "Aplicaciones instaladas" y acceso del menú Inicio.
+$null = reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\LeoginAgente" /f
+Remove-Item -Force (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Agente Leogin.url')
+
 # Reglas de firewall del hub local (requiere admin; si no, quedan huérfanas pero inocuas).
 $null = netsh advfirewall firewall delete rule name="Leogin Hub (LAN 47100)"
 $null = netsh advfirewall firewall delete rule name="Leogin Hub (LAN)"

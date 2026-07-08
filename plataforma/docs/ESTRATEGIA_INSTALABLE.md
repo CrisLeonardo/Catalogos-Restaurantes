@@ -91,15 +91,18 @@ manual en cada restaurante. Diseño concreto, sin frameworks nuevos:
 Esto es, a escala pequeña, exactamente el modelo Chrome/Squirrel. Son ~200
 líneas en el agente + un endpoint + subir releases firmados al CDN.
 
-### 3.3 Pulido de instalación (días)
+### 3.3 Pulido de instalación — ✅ implementado 2026-07-08 (agente v0.6.0)
 
-- Acceso directo "Agente Leogin" en el menú Inicio (hoy el software es
-  invisible tras instalarse) apuntando a una página de estado local.
-- Al terminar la instalación, abrir el panel en el paso "verificar conexión"
-  en lugar de solo un MessageBox.
-- Registrar la instalación en "Aplicaciones instaladas" de Windows (clave
-  `HKCU\...\Uninstall`) con el uninstaller — hoy no aparece, y "no se puede
-  desinstalar desde Configuración" resta seriedad.
+- ✅ Acceso "Agente Leogin" en el menú Inicio → página de estado local
+  (`GET /` del hub: versión, estado, enlaces al panel y al KDS de respaldo).
+- ✅ Registrado en "Aplicaciones instaladas" de Windows (clave
+  `HKCU\...\Uninstall\LeoginAgente` con nombre, versión — que el auto-update
+  refresca al arrancar —, editor, tamaño y `UninstallString`).
+- ✅ Desinstalador real: `LeoginAgent.exe uninstall` (lo invoca Windows desde
+  Configuración → Aplicaciones) — detiene todo, quita autoarranque, accesos,
+  registro, regla de firewall (un UAC) y se autoelimina.
+- Pendiente menor: abrir el panel al terminar la instalación en lugar del
+  MessageBox.
 
 ## 4. Horizonte 2 (1–2 meses) — identidad visible: de daemon a producto
 

@@ -21,12 +21,14 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  statSync,
   writeFileSync,
   rmSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { resolveInstallParams, type InstallParams } from './config.ts';
+import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
 
 const TASK_NAME = 'LeoginAgenteImpresion';
@@ -242,6 +244,145 @@ function installStartupEntry(vbsContent: string): void {
   }
 }
 
+// ── Identidad en Windows: "Aplicaciones instaladas" + menú Inicio ────────────
+// Sin esto el agente es un fantasma: no aparece en Configuración → Aplicaciones
+// ni tiene forma visible de abrirse/desinstalarse — resta seriedad al producto
+// (ESTRATEGIA_INSTALABLE.md §3.3). Todo es HKCU/%APPDATA%: sin admin.
+
+const UNINSTALL_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\LeoginAgente';
+const START_MENU_SHORTCUT = 'Agente Leogin.url';
+
+function regAdd(name: string, type: 'REG_SZ' | 'REG_DWORD', value: string): void {
+  execFileSync('reg', ['add', UNINSTALL_KEY, '/v', name, '/t', type, '/d', value, '/f'], {
+    stdio: 'ignore',
+    windowsHide: true,
+    timeout: 15_000,
+  });
+}
+
+/** Registra (o refresca — p.ej. la versión tras un auto-update) la entrada en
+    "Aplicaciones instaladas". Best-effort: no debe romper la instalación. */
+export function registerUninstallEntry(exePath: string): void {
+  try {
+    const sizeKb = Math.round(statSync(exePath).size / 1024);
+    regAdd('DisplayName', 'REG_SZ', 'Agente de impresión Leogin');
+    regAdd('DisplayVersion', 'REG_SZ', AGENT_VERSION);
+    regAdd('Publisher', 'REG_SZ', 'Leogin');
+    regAdd('InstallLocation', 'REG_SZ', dirname(exePath));
+    regAdd('DisplayIcon', 'REG_SZ', exePath);
+    regAdd('UninstallString', 'REG_SZ', `"${exePath}" uninstall`);
+    regAdd('NoModify', 'REG_DWORD', '1');
+    regAdd('NoRepair', 'REG_DWORD', '1');
+    regAdd('EstimatedSize', 'REG_DWORD', String(sizeKb));
+  } catch (err) {
+    logger.warn('No se pudo registrar en "Aplicaciones instaladas":', (err as Error).message);
+  }
+}
+
+export function removeUninstallEntry(): void {
+  try {
+    execFileSync('reg', ['delete', UNINSTALL_KEY, '/f'], { stdio: 'ignore', windowsHide: true, timeout: 15_000 });
+  } catch {
+    /* puede no existir */
+  }
+}
+
+/** Acceso "Agente Leogin" en el menú Inicio → la página de estado local. */
+export function writeStartMenuShortcut(exePath: string): void {
+  const appData = process.env.APPDATA;
+  if (!appData) return;
+  const programs = join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+  try {
+    mkdirSync(programs, { recursive: true });
+    writeFileSync(
+      join(programs, START_MENU_SHORTCUT),
+      `[InternetShortcut]\r\nURL=http://127.0.0.1:47100/\r\nIconFile=${exePath}\r\nIconIndex=0\r\n`,
+      'ascii',
+    );
+  } catch (err) {
+    logger.warn('No se pudo crear el acceso del menú Inicio:', (err as Error).message);
+  }
+}
+
+function removeStartMenuShortcut(): void {
+  const appData = process.env.APPDATA;
+  if (!appData) return;
+  try {
+    rmSync(join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', START_MENU_SHORTCUT), { force: true });
+  } catch {
+    /* ignora */
+  }
+}
+
+/**
+ * Desinstalación completa (`LeoginAgent.exe uninstall` — es el UninstallString
+ * de "Aplicaciones instaladas"). Detiene todo, quita autoarranque, accesos,
+ * registro y regla de firewall, y se autoelimina al salir.
+ */
+export async function runUninstall(): Promise<void> {
+  const dir = installDir();
+
+  // 1. Detener la tarea programada y cualquier otra instancia (no esta).
+  for (const cmd of [
+    ['schtasks', ['/end', '/tn', TASK_NAME]],
+    ['schtasks', ['/delete', '/tn', TASK_NAME, '/f']],
+    ['taskkill', ['/f', '/im', INSTALLED_EXE, '/fi', `PID ne ${process.pid}`]],
+  ] as const) {
+    try {
+      execFileSync(cmd[0], cmd[1], { stdio: 'ignore', windowsHide: true, timeout: 15_000 });
+    } catch {
+      /* puede no existir */
+    }
+  }
+
+  // 2. Autoarranque, acceso del menú Inicio y entrada del registro.
+  const appData = process.env.APPDATA;
+  if (appData) {
+    try {
+      rmSync(join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'LeoginAgente.vbs'), { force: true });
+    } catch { /* ignora */ }
+  }
+  removeStartMenuShortcut();
+  removeUninstallEntry();
+
+  // 3. Regla de firewall (única parte que pide elevación — si se cancela,
+  //    queda una regla huérfana inocua).
+  const innerCmd =
+    `netsh advfirewall firewall delete rule name="${FIREWALL_RULE_LEGACY}" | Out-Null; ` +
+    `netsh advfirewall firewall delete rule name="${FIREWALL_RULE}"`;
+  const innerB64 = Buffer.from(innerCmd, 'utf16le').toString('base64');
+  const psCmd =
+    `Start-Process -FilePath powershell -ArgumentList '-NoProfile','-NonInteractive',` +
+    `'-WindowStyle','Hidden','-EncodedCommand','${innerB64}' -Verb RunAs -Wait`;
+  try {
+    execFileSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', Buffer.from(psCmd, 'utf16le').toString('base64')],
+      { stdio: 'ignore', windowsHide: true, timeout: 120_000 },
+    );
+  } catch {
+    /* sin elevación → regla huérfana, no es crítico */
+  }
+
+  messageBox('El Agente de impresion Leogin se desinstalo correctamente.');
+
+  // 4. Autoeliminación: un cmd desacoplado espera a que este proceso muera y
+  //    borra la carpeta de instalación completa.
+  if (isInstalledLocation()) {
+    try {
+      const child = spawn(
+        'cmd.exe',
+        ['/c', `ping -n 4 127.0.0.1 > nul & rmdir /s /q "${dir}"`],
+        { detached: true, stdio: 'ignore', windowsHide: true },
+      );
+      child.unref();
+    } catch {
+      /* si falla, la carpeta queda — inocuo */
+    }
+  }
+  process.exit(0);
+}
+
 /**
  * Ejecuta la instalación completa. Pensado para correr cuando el usuario hace
  * doble clic en el instalador descargado.
@@ -303,6 +444,10 @@ export async function runSetup(): Promise<void> {
 
   // 5. Abrir el puerto del hub en el firewall (respaldo LAN sin internet).
   ensureFirewallRule();
+
+  // 5b. Identidad en Windows: "Aplicaciones instaladas" + menú Inicio.
+  registerUninstallEntry(destExe);
+  writeStartMenuShortcut(destExe);
 
   // 6. Lanzar el agente ya instalado, en silencio.
   try {

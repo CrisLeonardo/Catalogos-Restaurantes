@@ -27,8 +27,53 @@ import { parseTarget, printRaw } from './printer/index.ts';
 import { acceptOfflineOrder } from './order-intake.ts';
 import { getHubOrderToken, getHubTls } from './store.ts';
 import { kdsOrdersPayload, kdsMarkDone, sendKdsPage } from './kds.ts';
+import { loadConfig } from './config.ts';
 import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
+
+/** Página de estado (GET /). El apiUrl se resuelve perezoso y tolerante: si
+    el agente corre sin configuración, la página igual abre (sin ese enlace). */
+function statusPageHtml(): string {
+  let panelUrl: string | null = null;
+  try {
+    panelUrl = `${loadConfig().apiUrl}/admin/impresion`;
+  } catch {
+    /* sin config → sin enlace al panel */
+  }
+  const kdsUrl = `/kds?t=${encodeURIComponent(getHubOrderToken())}`;
+  return `<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agente Leogin</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #0d1017; color: #e7eaf0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  main { max-width: 430px; width: 100%; background: #151a26; border: 1px solid #262d40; border-radius: 16px; padding: 26px; }
+  h1 { font-size: 19px; display: flex; align-items: center; gap: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 99px; background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+  .ver { font-size: 12px; color: #8b93a7; margin-top: 4px; }
+  p { font-size: 13px; color: #aab2c5; margin-top: 14px; }
+  .links { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+  a { display: block; text-align: center; padding: 11px; border-radius: 10px; background: #233049;
+      color: #e7eaf0; text-decoration: none; font-weight: 700; font-size: 13.5px; }
+  a.sec { background: transparent; border: 1px solid #262d40; color: #aab2c5; font-weight: 600; }
+</style>
+<main>
+  <h1><span class="dot"></span> Agente Leogin</h1>
+  <div class="ver">v${AGENT_VERSION} · funcionando en esta PC</div>
+  <p>Este programa imprime las comandas y recibos de tu restaurante y lo mantiene
+  operando aunque se corte el internet. No necesitas hacer nada aquí — si ves
+  esta página, todo está bien.</p>
+  <div class="links">
+    ${panelUrl ? `<a href="${panelUrl}" target="_blank" rel="noopener">Abrir mi panel (Impresión)</a>` : ''}
+    <a class="sec" href="${kdsUrl}">Pantalla de cocina de respaldo</a>
+  </div>
+</main>
+</html>`;
+}
 
 export const LOCAL_PORT = 47100;
 /** Puerto HTTPS (migración 064) — debe coincidir con HUB_TLS_PORT de la nube. */
@@ -125,6 +170,13 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
   if (req.method === 'GET' && req.url === '/health') {
     res.setHeader('content-type', 'application/json');
     res.end(JSON.stringify({ ok: true, agent: 'leogin', version: AGENT_VERSION }));
+    return;
+  }
+  // Página de estado amigable — destino del acceso directo del menú Inicio
+  // ("Agente Leogin"): si esta página abre, el agente está vivo.
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.end(statusPageHtml());
     return;
   }
 

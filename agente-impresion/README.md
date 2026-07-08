@@ -226,5 +226,10 @@ agente-impresion/
       `/api/agent/resolve-install`), con el nombre del restaurante como
       prefijo cosmético. El esquema viejo (`~LG1~`) se sigue reconociendo por
       compatibilidad con instaladores ya descargados.
+- [x] **Identidad en Windows (v0.6.0):** entrada en "Aplicaciones instaladas"
+      (HKCU, con `UninstallString` → `LeoginAgent.exe uninstall`, versión
+      refrescada por el auto-update), acceso "Agente Leogin" en el menú Inicio
+      → página de estado local (`GET /` del hub: versión + enlaces al panel y
+      al KDS), y desinstalación completa con autoeliminación. _Verificado._
 - [ ] **Retiro de QZ** (cuando el agente esté validado en térmica real): eliminar
       `qz-tray`, `qz-cert.ts`, `/api/print/sign` y las secciones QZ de la UI.
