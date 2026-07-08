@@ -1,8 +1,9 @@
 // Autoinstalación del agente — el corazón del "un solo botón".
 //
 // Cuando el restaurante hace DOBLE CLIC en el instalador descargado del panel
-// (LeoginAgent~LG1~<token>~.exe), este módulo:
-//   1. Lee la URL + token del propio nombre del archivo (sin copiar/pegar nada).
+// (LeoginAgent-<restaurante>~LG2~<dominio>~<código>~.exe), este módulo:
+//   1. Resuelve la URL (del propio nombre) + token (vía resolve-install con
+//      el código corto) — sin copiar/pegar nada.
 //   2. Se copia a %LOCALAPPDATA%\Leogin\Agente\LeoginAgent.exe.
 //   3. Escribe config.local.json.
 //   4. Se registra para arrancar solo (carpeta Inicio + Tarea Programada).
@@ -25,7 +26,7 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { extractInstallParams, type InstallParams } from './config.ts';
+import { resolveInstallParams, type InstallParams } from './config.ts';
 import { logger } from './logger.ts';
 
 const TASK_NAME = 'LeoginAgenteImpresion';
@@ -72,8 +73,8 @@ function messageBox(text: string, title = 'Agente Leogin'): void {
 }
 
 /** Resuelve apiUrl+token: del nombre del archivo, o de un config.local.json al lado. */
-function resolveParams(): InstallParams | null {
-  const fromName = extractInstallParams();
+async function resolveParams(): Promise<InstallParams | null> {
+  const fromName = await resolveInstallParams();
   if (fromName) return fromName;
 
   // Plan B: config.local.json junto al instalador descargado (instalación manual).
@@ -246,7 +247,7 @@ function installStartupEntry(vbsContent: string): void {
  * doble clic en el instalador descargado.
  */
 export async function runSetup(): Promise<void> {
-  const params = resolveParams();
+  const params = await resolveParams();
   if (!params) {
     messageBox(
       'No se encontro el codigo de vinculacion del restaurante.\n\n' +

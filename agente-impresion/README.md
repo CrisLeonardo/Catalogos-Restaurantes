@@ -114,8 +114,10 @@ y **se autoinstala**. El cliente NO necesita PowerShell, ni permisos de
 administrador, ni copiar/pegar nada:
 
 1. En el panel (Perfil → Agente Leogin) pulsa **Descargar instalador**. El panel
-   sirve el exe con el token embebido en el nombre
-   (`LeoginAgent~LG1~<token>~.exe`).
+   sirve el exe con el dominio + un código corto de un solo uso embebidos en el
+   nombre (`LeoginAgent-<restaurante>~LG2~<dominio>~<código>~.exe`, migración
+   066) — el token real se resuelve al instalar, sin viajar en claro en el
+   nombre del archivo.
 2. En la PC del local: **doble clic** en el archivo descargado.
 3. El exe se copia a `%LOCALAPPDATA%\Leogin\Agente`, escribe su config, se
    registra para arrancar solo (carpeta Inicio + Tarea Programada) y se lanza.
@@ -218,5 +220,11 @@ agente-impresion/
       (sube a Supabase Storage e inserta en `agent_releases`; kill switch con
       `enabled=false`). El build usa **runtime pineado** (Node 22 LTS oficial,
       cacheado en `.node-base/`). _Verificado E2E: v0.5.0 → v0.5.1 real._
+- [x] **Instalador con código corto (v0.6.0):** el nombre del instalador ya no
+      lleva el token en claro (era un base64 larguísimo) — ahora solo el
+      dominio del panel + un código corto de un solo uso (migración 066,
+      `/api/agent/resolve-install`), con el nombre del restaurante como
+      prefijo cosmético. El esquema viejo (`~LG1~`) se sigue reconociendo por
+      compatibilidad con instaladores ya descargados.
 - [ ] **Retiro de QZ** (cuando el agente esté validado en térmica real): eliminar
       `qz-tray`, `qz-cert.ts`, `/api/print/sign` y las secciones QZ de la UI.

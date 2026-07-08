@@ -17,19 +17,19 @@ export interface InstallParams {
   token: string;
 }
 
-// El panel sirve el instalador con el token embebido en el NOMBRE del archivo:
-//   LeoginAgent~LG1~<base64url({"u":apiUrl,"t":token})>~.exe
-// Así el restaurante solo hace doble clic — sin copiar/pegar nada. El marcador
-// "~LG1~...~" sobrevive a sufijos del navegador como " (1)".
-const FILENAME_MARKER = /~LG1~([A-Za-z0-9_-]+)~/;
+// Esquema NUEVO (v0.6+, migración 066): el nombre solo lleva el dominio del
+// panel + un código corto de un solo uso — el token real se resuelve con una
+// llamada a /api/agent/resolve-install en el momento de instalar:
+//   LeoginAgent-<restaurante>~LG2~<dominio>~<código>~.exe
+const FILENAME_MARKER_V2 = /~LG2~([a-zA-Z0-9.-]+)~([A-Za-z0-9]+)~/;
 
-/**
- * Lee los parámetros de instalación (apiUrl + token) embebidos en el nombre del
- * propio ejecutable. Devuelve null si el nombre no los trae (ej. ya instalado o
- * corriendo en desarrollo).
- */
-export function extractInstallParams(execPath = process.execPath): InstallParams | null {
-  const match = basename(execPath).match(FILENAME_MARKER);
+// Esquema VIEJO (hasta v0.5.x): URL + token embebidos en base64 directo en el
+// nombre — se mantiene por compatibilidad con instaladores ya descargados:
+//   LeoginAgent~LG1~<base64url({"u":apiUrl,"t":token})>~.exe
+const FILENAME_MARKER_V1 = /~LG1~([A-Za-z0-9_-]+)~/;
+
+function extractInstallParamsV1(execPath: string): InstallParams | null {
+  const match = basename(execPath).match(FILENAME_MARKER_V1);
   if (!match) return null;
   try {
     const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -42,6 +42,30 @@ export function extractInstallParams(execPath = process.execPath): InstallParams
     /* nombre malformado → se ignora */
   }
   return null;
+}
+
+/**
+ * Lee los parámetros de instalación (apiUrl + token) a partir del nombre del
+ * propio ejecutable: intenta el esquema nuevo (código corto → resuelto contra
+ * el panel) y cae al viejo (base64 directo) por compatibilidad. Devuelve null
+ * si el nombre no trae ninguno (ej. ya instalado o corriendo en desarrollo).
+ */
+export async function resolveInstallParams(execPath = process.execPath): Promise<InstallParams | null> {
+  const matchV2 = basename(execPath).match(FILENAME_MARKER_V2);
+  if (matchV2) {
+    const apiUrl = `https://${matchV2[1]}`;
+    const code = matchV2[2];
+    try {
+      const res = await fetch(`${apiUrl}/api/agent/resolve-install?code=${encodeURIComponent(code)}`);
+      if (res.ok) {
+        const data = (await res.json()) as { token?: string };
+        if (data.token) return { apiUrl, token: data.token };
+      }
+    } catch {
+      /* sin red al momento de instalar → cae al esquema viejo / otros planes */
+    }
+  }
+  return extractInstallParamsV1(execPath);
 }
 
 interface FileConfig {

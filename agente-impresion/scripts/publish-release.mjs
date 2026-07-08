@@ -2,22 +2,26 @@
 //
 //   1. Toma dist/LeoginAgent.exe (corre `npm run build:exe` antes).
 //   2. Calcula su sha256.
-//   3. Lo sube a Supabase Storage (bucket público `agent-releases`).
-//   4. Inserta la fila en agent_releases → los agentes del canal lo ven en
-//      su próximo chequeo (~1h) y se actualizan solos.
+//   3. Lo sube como asset de un GitHub Release (tag `agent-v<version>`) del
+//      repo del proyecto — gratis y sin límite de 50MB (a diferencia de
+//      Supabase Storage en el plan free).
+//   4. Inserta la fila en agent_releases con la URL del asset → los agentes
+//      del canal lo ven en su próximo chequeo (~1h) y se actualizan solos.
 //
 // Uso:
 //   node scripts/publish-release.mjs [--channel stable|beta] [--notes "..."]
 //
-// Credenciales: NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY del
-// entorno, o de ../plataforma/.env.local (dev). Para publicar a PRODUCCIÓN,
-// exporta las de producción antes de correr:
-//   $env:NEXT_PUBLIC_SUPABASE_URL = "https://xxxx.supabase.co"
-//   $env:SUPABASE_SERVICE_ROLE_KEY = "..."
-//   npm run release
+// Requiere: `gh` (GitHub CLI) autenticado con permiso de escritura sobre el
+// repo (`gh auth status`).
+//
+// Credenciales de Supabase: NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+// del entorno, o de ../plataforma/.env.local (dev). Para publicar a PRODUCCIÓN,
+// carga las de producción en un .env.local propio (gitignored) y corre:
+//   node --env-file=.env.local scripts/publish-release.mjs
 
 import { createHash } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -79,52 +83,62 @@ const objectPath = `LeoginAgent-${version}.exe`;
 
 console.log(`Publicando v${version} (${(bytes.length / 1024 / 1024).toFixed(1)} MB, canal ${channel})`);
 console.log(`  sha256: ${sha256}`);
-console.log(`  destino: ${SUPABASE_URL} → agent-releases/${objectPath}`);
 
 const headers = {
   authorization: `Bearer ${SERVICE_KEY}`,
   apikey: SERVICE_KEY,
 };
 
-// ── 1. Bucket público (idempotente) ──────────────────────────────────
+// ── 1. Publicar el exe como asset de un GitHub Release ────────────────
+// Repo PÚBLICO dedicado solo a binarios (no el monorepo, que es privado —
+// los assets de releases privados no se pueden descargar sin token, y el
+// agente hace un fetch() simple sin auth).
+const RELEASES_REPO = process.env.GITHUB_RELEASES_REPO ?? 'CrisLeonardo/leogin-agente-releases';
+const tag = `agent-v${version}`;
+console.log(`  destino: GitHub Release ${RELEASES_REPO}@${tag}`);
 {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
-    method: 'POST',
-    headers: { ...headers, 'content-type': 'application/json' },
-    body: JSON.stringify({ id: 'agent-releases', name: 'agent-releases', public: true }),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    if (!/already exists|Duplicate/i.test(body)) {
-      console.error('✗ No se pudo crear el bucket:', body);
-      process.exit(1);
+  const exists = (() => {
+    try {
+      execFileSync('gh', ['release', 'view', tag, '--repo', RELEASES_REPO], { stdio: 'pipe' });
+      return true;
+    } catch {
+      return false;
     }
+  })();
+
+  if (exists) {
+    // --clobber: sobrescribe el asset si se re-publica la misma versión.
+    execFileSync(
+      'gh',
+      ['release', 'upload', tag, `${exePath}#LeoginAgent-${version}.exe`, '--repo', RELEASES_REPO, '--clobber'],
+      { stdio: 'inherit' },
+    );
   } else {
-    console.log('  bucket agent-releases creado.');
+    execFileSync(
+      'gh',
+      [
+        'release', 'create', tag,
+        `${exePath}#LeoginAgent-${version}.exe`,
+        '--repo', RELEASES_REPO,
+        '--title', `Agente de impresión v${version}`,
+        '--notes', notes ?? `Release automático del agente de impresión v${version}.`,
+      ],
+      { stdio: 'inherit' },
+    );
   }
+  console.log('  ✓ exe subido a GitHub Releases.');
 }
 
-// ── 2. Subir el exe (upsert por si se re-publica la misma versión) ────
-{
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/agent-releases/${objectPath}`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      'content-type': 'application/octet-stream',
-      'x-upsert': 'true',
-    },
-    body: bytes,
-  });
-  if (!res.ok) {
-    console.error('✗ Fallo la subida:', await res.text());
-    process.exit(1);
-  }
-  console.log('  ✓ exe subido.');
+const url = execFileSync(
+  'gh',
+  ['release', 'view', tag, '--repo', RELEASES_REPO, '--json', 'assets', '--jq', '.assets[0].url'],
+).toString().trim();
+if (!url) {
+  console.error('✗ No se pudo obtener la URL de descarga del asset publicado.');
+  process.exit(1);
 }
 
-const url = `${SUPABASE_URL}/storage/v1/object/public/agent-releases/${objectPath}`;
-
-// ── 3. Registrar el release ───────────────────────────────────────────
+// ── 2. Registrar el release ───────────────────────────────────────────
 {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/agent_releases`, {
     method: 'POST',

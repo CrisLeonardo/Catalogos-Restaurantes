@@ -173,8 +173,9 @@ function InstallSteps({
     gap: 7,
   };
 
-  // El token viaja embebido en el nombre del archivo → el exe se autoinstala con
-  // doble clic, sin copiar/pegar nada.
+  // El backend genera un código corto de un solo uso y lo embebe en el nombre
+  // del archivo → el exe lo resuelve al instalar y se autoinstala con doble
+  // clic, sin copiar/pegar nada.
   const downloadHref = `/api/agent/download-exe?token=${encodeURIComponent(token)}`;
 
   return (
