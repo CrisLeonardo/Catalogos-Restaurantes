@@ -119,6 +119,109 @@ Si el panel no responde, la ventana cae a `offline.html`, que:
   puede tener el admin cacheado);
 - reintenta la nube cada 6 s y **regresa sola al panel** cuando vuelve.
 
+### 4.5 Vinculación por sesión ("esta PC será el servidor")
+
+Roadmap §8.1, ejecutado 2026-07-08. Dentro del panel (sección Impresión), si
+`window.__TAURI__` existe (o sea, se está viendo la página DENTRO de Leogin
+Desktop) aparece un botón que hace en un clic lo que antes eran 3 pasos
+manuales de `agente-impresion/`:
+
+1. El panel genera un token de instalación con la sesión ya autenticada
+   (`regenerateAgentToken`, la misma server action del flujo manual).
+2. Invoca `install_agent_as_server(apiUrl, token)` — comando expuesto al
+   panel remoto vía ACL (ver §6). El comando revalida que la llamada venga
+   REALMENTE del origen configurado como `panel_url` (no de cualquier
+   http(s) que la ventana pudiera llegar a mostrar) antes de continuar.
+3. Rust busca el último release público del AGENTE (`agent-v*`,
+   `CrisLeonardo/leogin-agente-releases`, API pública de GitHub — incluso
+   sin firma Authenticode), lo descarga a una carpeta TEMPORAL (no la de
+   instalación) junto a un `config.local.json` con `{apiUrl, token}` — el
+   "Plan B" que `agente-impresion/src/config.ts` ya sabía leer — y lo lanza
+   con el nombre `LeoginAgent-installer.exe` (**no** `LeoginAgent.exe` —
+   ver bug abajo).
+4. El propio agente, al arrancar fuera de su carpeta instalada, se
+   autoinstala solo (`runSetup()`: copia a `%LOCALAPPDATA%`, tarea
+   programada, firewall, "Aplicaciones instaladas") — el MISMO camino ya
+   probado del instalador manual, cero código nuevo de instalación.
+
+No reemplaza el instalador manual (`~LG2~<dominio>~<código>~.exe` desde el
+navegador, migración 066) — sigue siendo necesario para quien instala desde
+un navegador normal, no desde la app. Los dos conviven en
+`print-agent-settings.tsx`.
+
+**Bug encontrado y corregido en verificación (2026-07-08): auto-eliminación
+del instalador.** `setup.ts::stopExisting()` cierra la instancia YA instalada
+con `taskkill /im LeoginAgent.exe /f /t` — coincide por NOMBRE DE IMAGEN, no
+por PID. Si el instalador temporal se llama exactamente igual
+(`LeoginAgent.exe`), taskkill lo mata a **sí mismo** a mitad de la
+instalación: salida silenciosa con código 1, sin excepción de JS que
+capturar (es `TerminateProcess`, no un error de Node) — costó una ronda de
+diagnóstico porque ni `uncaughtException` ni `unhandledRejection` lo
+detectan. El instalador manual nunca pisó este caso porque el panel siempre
+le pone al descargable un nombre distinto (slug + código, migración 066).
+Fix: el archivo temporal se llama `LeoginAgent-installer.exe` (sigue
+cumpliendo `looksPackaged` en `index.ts` porque empieza con "leogin"). De
+paso se agregaron manejadores globales `uncaughtException`/
+`unhandledRejection` en `agente-impresion/src/index.ts` — un SEA empaquetado
+no debe poder morir en silencio.
+
+**Verificación real (2026-07-08, contra Supabase local + `azucar-negra`
+demo):** con el fix, el ciclo completo (botón → token → descarga real desde
+GitHub → instalador lanzado → `stopExisting` ya no se autoelimina) se
+confirmó por log, sin el error de ACL ni el crash silencioso. La última
+milla — que el agente reinstalado reporte `● Conectado` — no se pudo cerrar
+en esta sesión: la verificación local usó `http://localhost:3000` como
+`panel_url` (Rust/reqwest no resuelve subdominios `*.localhost` en esta
+PC — confirmado con `nslookup`, es una limitación del resolver de Windows,
+no de la app), pero tras iniciar sesión el panel redirige a
+`azucar-negra.localhost:3000`; la verificación de origen del comando
+(`caller_origin != configured`, ver arriba) correctamente lo rechazó
+("Origen no autorizado") por ser un origen distinto al configurado — el
+chequeo hizo exactamente lo que debía. En producción no aplica: el
+`panel_url` que un restaurante configura YA es su dominio real, sin ese
+salto demo→subdominio. Pendiente si se quiere cerrar el 100 %: repetir la
+prueba con `panel_url` apuntando directo al subdominio del tenant (requiere
+resolver ese dominio también desde Rust, p. ej. una entrada en el hosts de
+Windows — cambio de sistema que no se hizo sin pedirlo explícitamente).
+
+### 4.6 Modo kiosco (`--kds`)
+
+Roadmap §8.2, ejecutado 2026-07-08. Un acceso directo con el argumento
+`--kds` arranca una ÚNICA ventana fullscreen sin bandeja ni toast de
+actualización, pensada para la pantalla dedicada de cocina:
+
+1. `kds.html` (local) pregunta a Rust `get_kds_url` cada 2.5 s hasta obtener
+   respuesta.
+2. Rust pide `GET 127.0.0.1:47100/` (la página de estado del hub, ya
+   pública en la LAN) y extrae la ruta `/kds?t=…` de su HTML — sin depender
+   de ningún endpoint nuevo del agente ni de un crate de regex.
+3. En cuanto responde, `kds.html` navega de lleno a
+   `http://127.0.0.1:47100/kds?t=…` — a partir de ahí es la propia pantalla
+   de cocina del hub (`agente-impresion/src/kds.ts`), con su propio
+   polling/reconexión ya probados en la Fase 2 offline.
+
+No necesita `panel_url` configurado: el modo kiosco es puramente sobre el
+hub de ESTA PC, no sobre la nube.
+
+### 4.7 Telemetría mínima del shell
+
+Roadmap §8.5, ejecutado 2026-07-08 (migración 067). Antes solo el AGENTE
+reportaba su versión (`print_agents.agent_version`, vía su propio
+heartbeat). El shell reporta la SUYA por separado
+(`print_agents.shell_version` + `shell_last_seen_at`), visible en
+`print-agent-settings.tsx` junto al estado de conexión.
+
+El mecanismo es deliberadamente simple: al construir la ventana `main`,
+Rust inyecta la versión como literal dentro de un script de inicialización
+(`SHELL_TELEMETRY_JS_TEMPLATE`) que — solo cuando la página cargada es
+`/admin/…` — hace `fetch('/api/agent/shell-heartbeat', {credentials:
+'include'})` cada 30 min. Es un fetch normal de la propia página del panel,
+autenticado por su cookie de sesión: sin IPC, sin ACL nueva (ver §6). La
+ruta hace `UPDATE` (nunca `INSERT`): si el restaurante nunca vinculó el
+agente de impresión no hay fila `print_agents` (su `token_hash` es
+`NOT NULL`) y no hay dónde reportar todavía — comportamiento esperado, no
+un error.
+
 ## 5. Distribución e instalación
 
 - `Leogin_<v>_x64-setup.exe` — NSIS `perUser` (`%LOCALAPPDATA%`, sin UAC,
@@ -136,18 +239,34 @@ Si el panel no responde, la ventana cae a `offline.html`, que:
 
 ## 6. Seguridad del shell
 
-- **ACL de Tauri**: las páginas locales (`main` en páginas propias,
-  `update-toast`) tienen `core:default` + `opener:default`. El **panel
-  remoto** solo puede invocar UNA cosa por IPC (`capabilities/remote-panel.json`):
-  `opener` — abrir enlaces externos en el navegador del sistema. Ni archivos,
-  ni shell, ni updater quedan expuestos a contenido remoto.
+- **ACL de Tauri, por comando** (no solo por plugin): `src-tauri/build.rs`
+  declara un `AppManifest` con la lista explícita de comandos propios del
+  shell — esto genera un permiso `allow-<comando>` por cada uno y activa la
+  verificación de ACL de Tauri también para comandos NO-plugin (sin esto,
+  Tauri v2 solo audita plugins como `dialog`/`updater`/`opener`; los
+  comandos que uno mismo escribe en `main.rs` quedan alcanzables desde
+  CUALQUIER contenido, local o remoto — confirmado leyendo el propio código
+  fuente de `tauri` en `~/.cargo/registry`, no por documentación).
+  - `capabilities/default.json` (páginas locales: `main` + `update-toast`)
+    tiene `core:default` + `opener:default` + `allow-*` de los 10 comandos
+    que esas páginas realmente usan (`boot`, `save_panel_url`,
+    `apply_update`, `get_kds_url`, …).
+  - `capabilities/remote-panel.json` (el panel alojado y el hub local, ambos
+    `http(s)://*` en la ventana `main`) solo tiene `opener:default` +
+    `allow-install-agent-as-server` — es decir, sigue siendo cierto que el
+    contenido remoto no puede tocar `apply_update`, `save_panel_url`, etc.
+    La ÚNICA función nueva expuesta a remoto además revalida en Rust que la
+    llamada venga del origen configurado como `panel_url` (ver §4.5) —
+    defensa en profundidad por si algún día la capability se vuelve más
+    laxa por error.
 - Un script de inicialización intercepta `target=_blank` / `window.open` y
   manda esos enlaces (WhatsApp, comprobantes…) al navegador del sistema — la
   ventana nunca "se escapa" del panel.
-- Los comandos propios (`save_panel_url`, `apply_update`, …) los usan solo las
-  páginas locales empaquetadas.
 - El shell no guarda credenciales: la sesión es la cookie del panel dentro del
   perfil WebView2 del usuario de Windows.
+- La telemetría del shell (§4.7) NO usa IPC ni un comando nuevo: es un
+  `fetch` normal hecho DESDE la propia página del panel (mismo origen, misma
+  cookie de sesión) — cero superficie nueva de ACL.
 
 ## 7. Decisiones y alternativas descartadas
 
@@ -162,19 +281,18 @@ Si el panel no responde, la ventana cae a `offline.html`, que:
 
 ## 8. Hoja de ruta
 
-1. **Vinculación por sesión** (sustituye al código en el nombre del archivo
-   para el AGENTE): con el admin ya logueado dentro de la app, un botón
-   "Esta PC será el servidor del local" que descargue e instale el agente con
-   token provisionado por la sesión — un instalador genérico para todo.
-2. **Modo kiosco KDS**: `leogin.exe --kds` para la pantalla de cocina
-   (fullscreen, sin bandeja, apuntando al KDS local del hub).
-3. **Retiro de la marca "Agente"** en el panel: la sección Impresión hablará
-   de "el servicio de Leogin" y ofrecerá "Descargar Leogin para PC" como
-   camino principal.
+1. ~~**Vinculación por sesión**~~ — ✅ 2026-07-08, ver §4.5.
+2. ~~**Modo kiosco KDS**~~ — ✅ 2026-07-08, ver §4.6.
+3. ~~**Retiro de la marca "Agente"**~~ — ✅ 2026-07-08: el panel habla de
+   "Leogin en tu PC" / "el servicio de Leogin"; la sección Impresión
+   promueve "Descargar Leogin para tu PC" como CTA principal. El daemon
+   (`agente-impresion/`) mantiene su nombre técnico internamente — sus
+   propios diálogos nativos (`«Agente instalado correctamente»`) no se
+   tocaron en este pase (requeriría republicar el agente; queda para
+   cuando se retoque ese componente por otra razón).
 4. **Firma Authenticode** al primer cliente (§3.1 de la estrategia) — firma
-   el NSIS y el exe del agente con el mismo certificado.
-5. **Telemetría mínima**: versión del shell en el heartbeat del panel (hoy
-   solo el agente reporta versión).
+   el NSIS y el exe del agente con el mismo certificado. Único pendiente.
+5. ~~**Telemetría mínima**~~ — ✅ 2026-07-08, ver §4.7 (migración 067).
 
 ## 9. Cómo probar en local
 
@@ -185,3 +303,15 @@ npm run dev
 # Dirección del panel en el setup: http://<tenant>.localhost:3000
 # (el hub real instalado en esta PC responde en 127.0.0.1:47100 → punto 🟢/🟡)
 ```
+
+Modo kiosco (requiere el instalador NSIS — `--kds` no tiene sentido con
+`tauri dev`, que ya abre su propia ventana de desarrollo):
+
+```powershell
+& "$env:LOCALAPPDATA\Leogin\leogin-desktop.exe" --kds
+```
+
+Vinculación por sesión: abre `/admin/impresion` dentro de la app (`tauri
+dev` sirve, el ACL se compila igual) con un restaurante de prueba — el
+botón "Hacer de esta PC el servidor del local" solo aparece cuando
+`window.__TAURI__` existe.

@@ -26,6 +26,11 @@ la ventana.
 - **Respaldo sin nube.** Si el panel no responde, la ventana cae a una página
   local que muestra el estado del hub (LeoginAgent) y regresa sola al panel
   cuando vuelve el internet.
+- **"Esta PC será el servidor del local", un clic.** Desde el panel (sección
+  Impresión), con la sesión ya iniciada dentro de la app, instala el servicio
+  de impresión/offline sin descargar nada a mano.
+- **Modo kiosco para cocina.** `leogin-desktop.exe --kds` abre fullscreen
+  directo al KDS de respaldo del hub local — sin bandeja, sin setup.
 
 ## Qué NO hace (a propósito)
 
@@ -109,8 +114,9 @@ venir firmados con la llave minisign).
    NSIS `perUser`, mismo modelo Spotify/Slack).
 2. Abrir Leogin → escribir la dirección del panel (la misma del navegador) →
    iniciar sesión como siempre.
-3. Si esa PC va a imprimir / operar sin internet: instalar el servicio desde
-   el panel (**Impresión → Agente Leogin**) — solo una PC por local.
+3. Si esa PC va a imprimir / operar sin internet: en el panel, sección
+   **Impresión**, botón **"Hacer de esta PC el servidor del local"** — solo
+   una PC por local.
 
 SmartScreen avisará la primera vez ("Más información → Ejecutar de todos
 modos") mientras no haya certificado de firma de código.

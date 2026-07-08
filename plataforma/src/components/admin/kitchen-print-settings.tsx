@@ -141,7 +141,7 @@ export default function KitchenPrintSettings() {
     <div style={cardStyle}>
 
       <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.55 }}>
-        Alternativa al Agente Leogin para equipos que prefieren impresión directa. Si no configuras
+        Alternativa a Leogin en tu PC para equipos que prefieren impresión directa. Si no configuras
         ninguna impresora aquí, los recibos y comandas salen por el <strong style={{ color: 'var(--u-text-3)' }}>diálogo
         del navegador</strong> (sirve también desde el celular hacia una impresora térmica conectada al dispositivo).
       </div>

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-kds-url"
+description = "Enables the get_kds_url command without any pre-configured scope."
+commands.allow = ["get_kds_url"]
+
+[[permission]]
+identifier = "deny-get-kds-url"
+description = "Denies the get_kds_url command without any pre-configured scope."
+commands.deny = ["get_kds_url"]

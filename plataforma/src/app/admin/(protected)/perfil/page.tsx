@@ -154,7 +154,7 @@ export default async function AdminPerfilPage({
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Impresión y modo offline</div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-              El Agente Leogin (impresión automática + respaldo sin internet) ahora tiene su propia sección.
+              Leogin en tu PC (impresión automática + respaldo sin internet) ahora tiene su propia sección.
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', marginLeft: 'auto', flexShrink: 0 }} />

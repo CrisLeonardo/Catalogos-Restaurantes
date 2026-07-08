@@ -192,13 +192,13 @@ export default async function AdminHomePage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
               {agentBanner === 'offline'
-                ? 'Tu Agente Leogin está desconectado'
+                ? 'Leogin en tu PC está desconectado'
                 : 'Recomendado: activa la impresión automática y el modo offline'}
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
               {agentBanner === 'offline'
-                ? 'Revisa que la PC del local esté encendida — sin el agente no hay impresión automática ni respaldo sin internet.'
-                : 'Instala el Agente Leogin en la PC del local (5 minutos): comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
+                ? 'Revisa que la PC del local esté encendida — sin el servicio de Leogin no hay impresión automática ni respaldo sin internet.'
+                : 'Descarga Leogin para tu PC (5 minutos): comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />

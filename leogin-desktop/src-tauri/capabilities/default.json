@@ -1,9 +1,20 @@
 {
   "identifier": "default",
-  "description": "Páginas locales de Leogin (arranque, offline, toast): IPC básico + abrir enlaces en el navegador del sistema.",
+  "description": "Páginas locales de Leogin (arranque, offline, toast, kiosco): IPC básico + abrir enlaces en el navegador del sistema + los comandos propios que usan esas páginas.",
   "windows": ["main", "update-toast"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "allow-get-setup-info",
+    "allow-boot",
+    "allow-save-panel-url",
+    "allow-open-panel",
+    "allow-check-cloud",
+    "allow-hub-status",
+    "allow-open-hub-page",
+    "allow-get-pending-update",
+    "allow-apply-update",
+    "allow-dismiss-update",
+    "allow-get-kds-url"
   ]
 }

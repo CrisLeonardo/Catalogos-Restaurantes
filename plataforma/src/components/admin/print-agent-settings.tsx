@@ -261,7 +261,7 @@ function InstallSteps({
           </span>
           <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
             En unos segundos el estado cambiará a{' '}
-            <span style={{ color: '#4ade80', fontWeight: 600 }}>● Agente conectado</span>
+            <span style={{ color: '#4ade80', fontWeight: 600 }}>● Conectado</span>
             {' '}y verás las impresoras detectadas.
           </span>
         </div>
@@ -337,6 +337,8 @@ export default function PrintAgentSettings() {
   const [saving, setSaving] = useState(false);
   const [origin, setOrigin] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [inDesktopApp, setInDesktopApp] = useState(false);
+  const [installingAsServer, setInstallingAsServer] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -358,8 +360,40 @@ export default function PrintAgentSettings() {
 
   useEffect(() => {
     setOrigin(window.location.origin);
+    // window.__TAURI__ solo existe dentro de la app instalable Leogin
+    // Desktop (ver leogin-desktop/) — desde el navegador normal es undefined.
+    setInDesktopApp(typeof window !== 'undefined' && Boolean((window as unknown as { __TAURI__?: unknown }).__TAURI__));
     void load();
   }, [load]);
+
+  /** "Esta PC será el servidor del local" (solo dentro de Leogin Desktop):
+      genera el token con la sesión ya iniciada y le pide al shell que
+      descargue e instale el servicio — sin descargar nada a mano. */
+  async function handleInstallAsServer() {
+    setInstallingAsServer(true);
+    setMsg('Generando token…');
+    try {
+      const res = await regenerateAgentToken();
+      if (res.error || !res.token) {
+        setMsg(`Error: ${res.error ?? 'No se pudo generar el token.'}`);
+        return;
+      }
+      setMsg('Instalando el servicio de Leogin en esta PC…');
+      const tauri = (window as unknown as { __TAURI__?: { core: { invoke: (cmd: string, args?: object) => Promise<void> } } }).__TAURI__;
+      await tauri?.core.invoke('install_agent_as_server', { apiUrl: origin, token: res.token });
+      setMsg('✓ Instalando… en unos segundos verás "Conectado" aquí abajo.');
+      let tries = 0;
+      const poll = setInterval(() => {
+        tries += 1;
+        void load();
+        if (tries >= 15) clearInterval(poll);
+      }, 4000);
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setInstallingAsServer(false);
+    }
+  }
 
   async function handleGenerate() {
     setGenerating(true);
@@ -410,13 +444,13 @@ export default function PrintAgentSettings() {
   }
 
   function connectionLabel(): { text: string; color: string } {
-    if (!config?.exists) return { text: 'Sin agente vinculado', color: 'var(--u-text-4)' };
+    if (!config?.exists) return { text: 'Sin vincular', color: 'var(--u-text-4)' };
     if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: '#f59e0b' };
     // Etiqueta de "última conexión": el tiempo relativo se calcula al render a
     // propósito (es texto informativo del panel admin, no estado persistente).
     // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
-    if (ageMs < 90_000) return { text: '● Agente conectado', color: '#4ade80' };
+    if (ageMs < 90_000) return { text: '● Conectado', color: '#4ade80' };
     const mins = Math.round(ageMs / 60_000);
     const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
     return { text: `Última conexión ${ago}`, color: '#f59e0b' };
@@ -431,7 +465,7 @@ export default function PrintAgentSettings() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
-            Agente Leogin
+            Leogin en tu PC
           </span>
           <span style={{
             fontSize: 10.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
@@ -442,8 +476,8 @@ export default function PrintAgentSettings() {
         </div>
         <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
           Imprime cocina y caja en silencio desde <strong style={{ color: 'var(--u-text-2)' }}>cualquier
-          dispositivo</strong> (celular, tablet o PC), sin abrir diálogos. Instala el agente una sola
-          vez en una PC del local; la configuración se guarda en la nube.
+          dispositivo</strong> (celular, tablet o PC), sin abrir diálogos. Instala el servicio de Leogin
+          una sola vez en la PC del local; la configuración se guarda en la nube.
         </p>
       </div>
 
@@ -454,6 +488,7 @@ export default function PrintAgentSettings() {
           <span style={{ color: 'var(--u-text-4)', fontWeight: 500 }}>
             {' · '}{printers.length} impresora{printers.length === 1 ? '' : 's'} detectada{printers.length === 1 ? '' : 's'}
             {config.version ? ` · v${config.version}` : ''}
+            {config.shellVersion ? ` · Leogin Desktop v${config.shellVersion}` : ''}
           </span>
         )}
         <button
@@ -466,8 +501,45 @@ export default function PrintAgentSettings() {
         </button>
       </div>
 
-      {/* Generar / rotar token */}
+      {/* Un clic desde dentro de Leogin Desktop: sin descargar nada a mano */}
+      {inDesktopApp && (
+        <div style={{
+          background: 'rgba(99,102,241,0.08)',
+          border: '1px solid rgba(99,102,241,0.25)',
+          borderRadius: 10,
+          padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
+            Estás en Leogin para escritorio en esta PC
+          </div>
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>
+            ¿Esta es la PC del local? Con un clic la conviertes en el servidor: imprime sola y
+            mantiene el restaurante funcionando aunque se corte el internet.
+          </p>
+          <button
+            type="button"
+            onClick={handleInstallAsServer}
+            disabled={installingAsServer}
+            className="press"
+            style={{
+              alignSelf: 'flex-start', padding: '10px 16px', borderRadius: 'var(--radius-md)', border: 'none',
+              background: 'var(--brand-accent, rgba(99,102,241,0.85))', color: '#fff', fontWeight: 700, fontSize: 13,
+              cursor: installingAsServer ? 'default' : 'pointer', opacity: installingAsServer ? 0.7 : 1,
+            }}
+          >
+            {installingAsServer ? 'Instalando…' : 'Hacer de esta PC el servidor del local'}
+          </button>
+        </div>
+      )}
+
+      {/* Generar / rotar token (instalación manual — también sirve como respaldo dentro de la app) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {inDesktopApp && (
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
+            Instalación manual (alternativa al botón de arriba):
+          </span>
+        )}
         <button
           type="button"
           onClick={handleGenerate}

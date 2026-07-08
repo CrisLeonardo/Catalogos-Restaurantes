@@ -46,6 +46,8 @@ export interface PrintAgentConfig {
   kitchenTarget: string | null;
   receiptTarget: string | null;
   version: string | null;
+  /** Versión de Leogin Desktop (el shell), si el admin lo usó en esta PC — ver /api/agent/shell-heartbeat. */
+  shellVersion: string | null;
 }
 
 const EMPTY: PrintAgentConfig = {
@@ -56,6 +58,7 @@ const EMPTY: PrintAgentConfig = {
   kitchenTarget: null,
   receiptTarget: null,
   version: null,
+  shellVersion: null,
 };
 
 /** Lee la configuración del agente del restaurante en sesión. */
@@ -68,7 +71,7 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
   const db = createServiceClient();
   const { data } = await db
     .from('print_agents')
-    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version')
+    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version, shell_version')
     .eq('restaurant_id', restaurantId)
     .single();
 
@@ -83,6 +86,7 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
     kitchenTarget: (data.kitchen_target as string) ?? null,
     receiptTarget: (data.receipt_target as string) ?? null,
     version: (data.agent_version as string) ?? null,
+    shellVersion: (data.shell_version as string) ?? null,
   };
 }
 

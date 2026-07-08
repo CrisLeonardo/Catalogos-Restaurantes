@@ -13,10 +13,11 @@ export const metadata = { title: 'Impresión y modo offline – Panel admin' };
 /* ============================================================
    /admin/impresion — Impresión y modo offline
    ------------------------------------------------------------
-   Sección propia del Agente Leogin (antes vivía plegado dentro de
-   Perfil). Presenta el agente como lo que es — la pieza que imprime
-   solo y mantiene el restaurante operando sin internet — con estado
-   en vivo de la cadena de respaldo e instalación guiada. La
+   Sección propia del servicio de Leogin en la PC del local (antes
+   vivía plegado dentro de Perfil). Lo presenta como lo que es para
+   el restaurante — la pieza que imprime sola y mantiene el negocio
+   operando sin internet — con estado en vivo de la cadena de
+   respaldo e instalación guiada (o Leogin Desktop, un clic). La
    impresión por navegador (QZ/USB) queda como alternativa plegada.
    ============================================================ */
 
@@ -74,18 +75,18 @@ export default async function AdminImpresionPage() {
   const hubReady = !!agent?.hub_url && !!agent?.hub_order_token;
 
   const agentNode: ChainNode = !agent
-    ? { label: 'Agente en el local', state: 'off', detail: 'Sin instalar' }
+    ? { label: 'Leogin en el local', state: 'off', detail: 'Sin instalar' }
     : !lastSeen
-      ? { label: 'Agente en el local', state: 'warn', detail: 'Esperando primera conexión' }
+      ? { label: 'Leogin en el local', state: 'warn', detail: 'Esperando primera conexión' }
       : connected
-        ? { label: 'Agente en el local', state: 'ok', detail: `Conectado${version ? ` · v${version}` : ''}` }
-        : { label: 'Agente en el local', state: 'warn', detail: `Última conexión ${timeAgo(lastSeen)}` };
+        ? { label: 'Leogin en el local', state: 'ok', detail: `Conectado${version ? ` · v${version}` : ''}` }
+        : { label: 'Leogin en el local', state: 'warn', detail: `Última conexión ${timeAgo(lastSeen)}` };
 
   const hubNode: ChainNode = connected && hubReady
     ? { label: 'Respaldo sin internet', state: 'ok', detail: 'Listo · toma pedidos e imprime en el local' }
     : connected
-      ? { label: 'Respaldo sin internet', state: 'warn', detail: 'El agente necesita actualizarse' }
-      : { label: 'Respaldo sin internet', state: 'off', detail: 'Se activa al instalar el agente' };
+      ? { label: 'Respaldo sin internet', state: 'warn', detail: 'El servicio necesita actualizarse' }
+      : { label: 'Respaldo sin internet', state: 'off', detail: 'Se activa al instalar Leogin en tu PC' };
 
   const chain: ChainNode[] = [
     { label: 'Nube Leogin', state: 'ok', detail: 'En línea' },
@@ -133,7 +134,7 @@ export default async function AdminImpresionPage() {
           </div>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1 }}>Agente Leogin</h2>
+              <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1 }}>Leogin en tu PC</h2>
               <span style={{
                 fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
                 color: connected ? '#4ade80' : 'var(--u-text-3)',
@@ -183,7 +184,7 @@ export default async function AdminImpresionPage() {
                 background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
               }}
             >
-              <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi agente' : 'Instalarlo ahora · 5 minutos'}
+              <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi instalación' : 'Descargar Leogin para tu PC · 5 minutos'}
             </a>
             <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
               Sin conocimientos técnicos: descargar, doble clic, listo.
@@ -274,7 +275,7 @@ export default async function AdminImpresionPage() {
         icon="print"
         storageKey="impresion-navegador"
         defaultOpen={false}
-        subtitle="Impresión por USB/QZ Tray directamente desde esta pantalla. Funciona, pero depende del dispositivo y del navegador — el Agente Leogin es la opción recomendada."
+        subtitle="Impresión por USB/QZ Tray directamente desde esta pantalla. Funciona, pero depende del dispositivo y del navegador — Leogin en tu PC es la opción recomendada."
       >
         <KitchenPrintSettings />
       </CollapsibleCard>

@@ -31,6 +31,10 @@ const HUB_HOME: &str = "http://127.0.0.1:47100/";
 const TRAY_ID: &str = "leogin-tray";
 const TOAST_W: f64 = 396.0;
 const TOAST_H: f64 = 150.0;
+/// Repo público de binarios (mismo del propio Leogin Desktop, ver README) —
+/// de aquí se descarga el agente genérico para la vinculación por sesión.
+const AGENT_RELEASES_API: &str =
+    "https://api.github.com/repos/CrisLeonardo/leogin-agente-releases/releases";
 
 // Los enlaces target=_blank del panel (WhatsApp, comprobantes…) deben abrir
 // en el navegador del sistema, no dentro del shell. Se inyecta en toda
@@ -52,6 +56,29 @@ const EXTERNAL_LINKS_JS: &str = r#"
     var a = e.target && e.target.closest ? e.target.closest('a[target="_blank"]') : null;
     if (a && a.href) { e.preventDefault(); e.stopPropagation(); ext(a.href); }
   }, true);
+})();
+"#;
+
+/// Telemetría mínima (roadmap §8): reporta la versión del shell al panel
+/// cuando la página cargada es el admin (no el hub local ni páginas propias).
+/// Va como fetch normal DESDE la página del panel — usa su misma sesión
+/// (cookie), sin pasar por IPC ni exponer un comando nuevo al contenido
+/// remoto. `{VERSION}` se sustituye al construir la ventana.
+const SHELL_TELEMETRY_JS_TEMPLATE: &str = r#"
+(function () {
+  if (!/\/admin(\/|$)/.test(location.pathname)) return;
+  function send() {
+    try {
+      fetch('/api/agent/shell-heartbeat', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ version: '{VERSION}' }),
+      }).catch(function () {});
+    } catch (e) { /* best-effort */ }
+  }
+  send();
+  setInterval(send, 30 * 60 * 1000);
 })();
 "#;
 
@@ -206,6 +233,44 @@ async fn cloud_reachable(http: &reqwest::Client, origin: &str) -> bool {
         .send()
         .await
         .is_ok()
+}
+
+/// Extrae la ruta "/kds?t=…" de la página de estado del hub (ver
+/// agente-impresion/src/local-server.ts statusPageHtml) sin depender de un
+/// crate de regex — el formato del enlace es estable y propio. Respaldo
+/// para agentes viejos que aún no traen `kdsPath` en /health (ver abajo).
+fn extract_kds_path(html: &str) -> Option<String> {
+    let needle = "href=\"/kds?t=";
+    let start = html.find(needle)? + "href=\"".len();
+    let rest = &html[start..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_string())
+}
+
+/// Resuelve la URL completa del KDS de respaldo — usado por el modo kiosco.
+/// Camino principal: `kdsPath` en /health (agente ≥0.6.1, JSON, confiable).
+/// Respaldo: scrapear la página de estado (GET /) — algunas versiones del
+/// agente instaladas en el campo no la sirven (probado contra una real:
+/// devuelve 404 mientras /health sí responde), por eso /health es la fuente
+/// primaria y no al revés.
+async fn fetch_kds_url(http: &reqwest::Client) -> Option<String> {
+    if let Ok(res) = http.get(HUB_HEALTH).timeout(Duration::from_secs(3)).send().await {
+        if let Ok(v) = res.json::<serde_json::Value>().await {
+            if let Some(path) = v["kdsPath"].as_str() {
+                return Some(format!("http://127.0.0.1:47100{path}"));
+            }
+        }
+    }
+    let html = http
+        .get(HUB_HOME)
+        .timeout(Duration::from_secs(3))
+        .send()
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+    extract_kds_path(&html).map(|path| format!("http://127.0.0.1:47100{path}"))
 }
 
 // ── Ícono de bandeja con punto de estado ───────────────────────────────────
@@ -406,6 +471,51 @@ async fn check_for_update(app: AppHandle, interactive: bool) {
     }
 }
 
+// ── Vinculación por sesión: instala el agente sin salir de Leogin ─────────
+// Roadmap §8.1: "esta PC será el servidor del local" — el panel (ya logueado
+// dentro de la app) le pasa apiUrl+token a este comando, que descarga el
+// instalador GENÉRICO del agente (sin código en el nombre) y lo lanza con un
+// config.local.json al lado (Plan B de agente-impresion/src/config.ts) — el
+// propio agente hace el resto (runSetup(): copia a %LOCALAPPDATA%, tarea
+// programada, firewall, registro de "Aplicaciones instaladas"), exactamente
+// el mismo camino ya probado del instalador manual.
+
+#[derive(Deserialize)]
+struct GhAsset {
+    name: String,
+    browser_download_url: String,
+}
+
+#[derive(Deserialize)]
+struct GhRelease {
+    tag_name: String,
+    #[serde(default)]
+    draft: bool,
+    assets: Vec<GhAsset>,
+}
+
+/// Último release publicado del AGENTE (tag `agent-v*`, no `desktop-v*` —
+/// mismo repo público de binarios). GitHub ya los devuelve más nuevo primero.
+async fn latest_agent_asset_url(http: &reqwest::Client) -> Result<String, String> {
+    let releases: Vec<GhRelease> = http
+        .get(AGENT_RELEASES_API)
+        .header("accept", "application/vnd.github+json")
+        .timeout(Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| format!("No se pudo consultar los releases del agente: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("Respuesta inesperada de GitHub: {e}"))?;
+
+    releases
+        .into_iter()
+        .find(|r| !r.draft && r.tag_name.starts_with("agent-v"))
+        .and_then(|r| r.assets.into_iter().find(|a| a.name.to_lowercase().ends_with(".exe")))
+        .map(|a| a.browser_download_url)
+        .ok_or_else(|| "No se encontró un release publicado del agente.".to_string())
+}
+
 // ── Comandos (los llaman las páginas locales de ui/) ───────────────────────
 
 #[derive(Serialize)]
@@ -520,6 +630,100 @@ fn dismiss_update(app: AppHandle) {
     hide_toast(&app);
 }
 
+/// "Esta PC será el servidor del local" (panel remoto, botón de Impresión).
+/// Solo el panel configurado como `panel_url` puede invocarlo: la ACL ya lo
+/// restringe a contenido remoto (capabilities/remote-panel.json), y aquí se
+/// exige además que la llamada venga REALMENTE de ese origen — no de
+/// cualquier http(s) que la ventana "main" pudiera llegar a mostrar.
+#[tauri::command]
+async fn install_agent_as_server(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    webview: tauri::WebviewWindow<Wry>,
+    api_url: String,
+    token: String,
+) -> Result<(), String> {
+    let configured = state
+        .config
+        .lock()
+        .unwrap()
+        .panel_url
+        .clone()
+        .ok_or_else(|| "Configura primero la dirección del panel.".to_string())?;
+
+    let caller_origin = webview
+        .url()
+        .map_err(|e| e.to_string())?
+        .origin()
+        .ascii_serialization();
+    if caller_origin != configured {
+        return Err("Origen no autorizado.".into());
+    }
+    if normalize_panel_url(&api_url)? != configured {
+        return Err("La dirección no coincide con el panel configurado.".into());
+    }
+    if token.trim().is_empty() {
+        return Err("Falta el token.".into());
+    }
+
+    log_line(&app, "vinculación por sesión: buscando el último release del agente…");
+    let download_url = latest_agent_asset_url(&state.http).await?;
+
+    log_line(&app, "vinculación por sesión: descargando el agente…");
+    let bytes = state
+        .http
+        .get(&download_url)
+        .timeout(Duration::from_secs(120))
+        .send()
+        .await
+        .map_err(|e| format!("No se pudo descargar el agente: {e}"))?
+        .bytes()
+        .await
+        .map_err(|e| format!("Descarga incompleta: {e}"))?;
+
+    // Carpeta TEMPORAL a propósito (no la de instalación): el agente, al
+    // arrancar fuera de su carpeta instalada con este nombre, se autoinstala
+    // solo — ver agente-impresion/src/index.ts (looksPackaged && !isInstalledLocation)
+    // y src/config.ts (Plan B: config.local.json junto al exe).
+    //
+    // El nombre NO puede ser exactamente "LeoginAgent.exe": setup.ts::stopExisting()
+    // hace `taskkill /im LeoginAgent.exe /f /t` para cerrar la instancia YA
+    // instalada antes de sobrescribirla — si el propio instalador temporal se
+    // llama igual, taskkill lo mata a SÍ MISMO a mitad de la instalación (visto
+    // en pruebas: exit code 1, sin log, sin excepción — es TerminateProcess, no
+    // un error de JS). El instalador manual nunca pisó este caso porque el
+    // panel siempre le pone un nombre distinto (slug del restaurante + código).
+    let dir = std::env::temp_dir().join(format!("leogin-agent-install-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let exe_path = dir.join("LeoginAgent-installer.exe");
+    std::fs::write(&exe_path, &bytes).map_err(|e| e.to_string())?;
+    std::fs::write(
+        dir.join("config.local.json"),
+        serde_json::to_string_pretty(&serde_json::json!({ "apiUrl": configured, "token": token }))
+            .map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+
+    log_line(&app, "vinculación por sesión: lanzando el instalador del agente…");
+    let mut cmd = std::process::Command::new(&exe_path);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.spawn()
+        .map_err(|e| format!("No se pudo iniciar el instalador: {e}"))?;
+
+    Ok(())
+}
+
+/// Modo kiosco (--kds): resuelve la URL del KDS de respaldo del hub local.
+#[tauri::command]
+async fn get_kds_url(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(fetch_kds_url(&state.http).await)
+}
+
 // ── Bandeja del sistema ─────────────────────────────────────────────────────
 
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
@@ -605,13 +809,22 @@ fn main() {
             open_hub_page,
             get_pending_update,
             apply_update,
-            dismiss_update
+            dismiss_update,
+            install_agent_as_server,
+            get_kds_url
         ])
         .setup(|app| {
-            let hidden = std::env::args().any(|a| a == "--hidden");
+            let args: Vec<String> = std::env::args().collect();
+            let hidden = args.iter().any(|a| a == "--hidden");
+            let kiosk = args.iter().any(|a| a == "--kds");
             log_line(
                 app.handle(),
-                &format!("arranque v{}{}", app.package_info().version, if hidden { " (oculto)" } else { "" }),
+                &format!(
+                    "arranque v{}{}{}",
+                    app.package_info().version,
+                    if hidden { " (oculto)" } else { "" },
+                    if kiosk { " (kiosco --kds)" } else { "" },
+                ),
             );
 
             app.manage(AppState {
@@ -624,6 +837,26 @@ fn main() {
                     .expect("cliente http"),
             });
 
+            if kiosk {
+                // Modo kiosco (roadmap §8.2): una sola ventana fullscreen apuntando
+                // al KDS de respaldo del hub local de esta PC — sin bandeja, sin
+                // toast de actualización, sin pantalla de setup. Pensado para la
+                // pantalla dedicada de cocina (acceso directo con --kds).
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("kds.html".into()))
+                    .title("Leogin — Cocina")
+                    .fullscreen(true)
+                    .decorations(false)
+                    .initialization_script(EXTERNAL_LINKS_JS)
+                    .build()?;
+                return Ok(());
+            }
+
+            let version = app.package_info().version.to_string();
+            let main_init = format!(
+                "{EXTERNAL_LINKS_JS}\n{}",
+                SHELL_TELEMETRY_JS_TEMPLATE.replace("{VERSION}", &version)
+            );
+
             // Ventana principal: SIEMPRE arranca en la página local de arranque
             // (decide setup / panel / offline sin mostrar errores del WebView).
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
@@ -631,7 +864,7 @@ fn main() {
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(960.0, 620.0)
                 .visible(false)
-                .initialization_script(EXTERNAL_LINKS_JS)
+                .initialization_script(main_init)
                 .build()?;
             if !hidden {
                 let _ = main.maximize();

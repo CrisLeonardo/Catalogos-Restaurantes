@@ -22,6 +22,18 @@ import { logger } from './logger.ts';
 const CLI_COMMANDS = new Set(['list', 'test', 'send', 'help', '--help', '-h']);
 const [first] = process.argv.slice(2);
 
+// Sin esto, un binario SEA empaquetado puede morir en silencio (exit code 1,
+// cero output) ante un error o rechazo no capturado — visto durante la
+// vinculación por sesión de Leogin Desktop (instalador lanzado sin consola).
+process.on('uncaughtException', (err) => {
+  logger.error('excepción no capturada:', err?.stack ?? err);
+  process.exitCode = 1;
+});
+process.on('unhandledRejection', (reason) => {
+  logger.error('rechazo de promesa no capturado:', reason);
+  process.exitCode = 1;
+});
+
 /** Arranca el daemon: candado de instancia única + loop de impresión. */
 async function runService(): Promise<void> {
   const acquired = await startLocalServer();

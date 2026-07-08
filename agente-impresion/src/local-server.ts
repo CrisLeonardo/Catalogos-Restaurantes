@@ -169,7 +169,16 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
   }
   if (req.method === 'GET' && req.url === '/health') {
     res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ ok: true, agent: 'leogin', version: AGENT_VERSION }));
+    // kdsPath (migración desktop 0.2.0): forma programática y estable de
+    // resolver el KDS de respaldo — el modo kiosco de Leogin Desktop lo lee
+    // de aquí en vez de scrapear la página de estado (GET /), que no todas
+    // las versiones del agente sirven.
+    res.end(JSON.stringify({
+      ok: true,
+      agent: 'leogin',
+      version: AGENT_VERSION,
+      kdsPath: `/kds?t=${encodeURIComponent(getHubOrderToken())}`,
+    }));
     return;
   }
   // Página de estado amigable — destino del acceso directo del menú Inicio
