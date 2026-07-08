@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Leogin",
+  "version": "0.1.1",
+  "identifier": "com.leogin.desktop",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "publisher": "Leogin",
+    "shortDescription": "Leogin — el panel de tu restaurante",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Spanish"],
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/CrisLeonardo/leogin-agente-releases/releases/download/desktop-latest/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg5REMwNDYzMjA2QjI2OUQKUldTZEptc2dZd1RjaVlKdWtoVWlnYzVoYmFwaG1QdE9TUzFRbXltbXNHTHNiQUd5YTJOTXFWWVYK",
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

@@ -5,6 +5,12 @@ trabajos de impresión desde la nube y los envía a impresoras térmicas (USB, r
 o Bluetooth) **sin diálogos del navegador** y funcionando igual desde celular,
 tablet o PC.
 
+> **Rol dentro del producto:** este agente es el **servicio** (sin ventana,
+> siempre encendido, update silencioso). La cara visible instalable es
+> **Leogin Desktop** ([`leogin-desktop/`](../leogin-desktop/)), que solo lo
+> observa por `/health` — ver
+> [plataforma/docs/LEOGIN_DESKTOP.md](../plataforma/docs/LEOGIN_DESKTOP.md) §2.
+
 > El navegador (mesero/cajero) solo manda un JSON a la API. El backend genera los
 > bytes ESC/POS y los publica; este agente, corriendo en **una** PC del local,
 > los imprime. Por eso funciona idéntico en iOS, Android y Windows.

@@ -106,6 +106,16 @@ líneas en el agente + un endpoint + subir releases firmados al CDN.
 
 ## 4. Horizonte 2 (1–2 meses) — identidad visible: de daemon a producto
 
+> ✅ **Ejecutado (2026-07-08) — y un nivel más allá de lo aquí planeado:**
+> en lugar de darle bandeja al agente, se construyó **Leogin Desktop**
+> (`leogin-desktop/`, Tauri v2): la app instalable de marca que carga el panel
+> alojado en una ventana, con bandeja del sistema (estado 🟢/🟡/🔴 de nube y
+> hub), cerrar-a-bandeja, autoarranque y auto-update con toast estilo Claude
+> ("Reiniciar ahora / Después") contra GitHub Releases. El agente queda como
+> servicio interno sin marca visible. Detalle completo en
+> [LEOGIN_DESKTOP.md](./LEOGIN_DESKTOP.md). Lo de abajo se conserva como
+> referencia del diseño original.
+
 El agente hoy es un proceso fantasma. Los productos que se sienten "de alto
 nivel" tienen presencia mínima pero permanente:
 
@@ -192,6 +202,6 @@ construye con piezas que ya están en la base de datos.
 | 2 | Auto-update + canales (§3.2) | Sin esto, todo lo demás no se puede desplegar a la flota |
 | 3 | ✅ HTTPS del hub, patrón Plex *(hecho 2026-07-07)* | Desbloquea la Fase 2 offline en producción |
 | 4 | Pulido instalación + registro en "Apps instaladas" (§3.3) | Días de trabajo, sube mucho la percepción |
-| 5 | Bandeja del sistema / Tauri (§4) | Identidad visible |
+| 5 | ✅ Bandeja del sistema / Tauri (§4) *(hecho 2026-07-08: Leogin Desktop — ver [LEOGIN_DESKTOP.md](./LEOGIN_DESKTOP.md))* | Identidad visible |
 | 6 | Modo Resguardo (§7) | El diferenciador comercial |
 | 7 | KDS local + pairing code + telemetría (§5) | El hub como producto completo |

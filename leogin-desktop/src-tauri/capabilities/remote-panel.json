@@ -1,0 +1,11 @@
+{
+  "identifier": "remote-panel",
+  "description": "El panel alojado (dominio del restaurante) y el hub local solo pueden pedir UNA cosa por IPC: abrir enlaces externos (WhatsApp, comprobantes) en el navegador del sistema — lo usa el script de intercepción de target=_blank.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://*", "http://*"]
+  },
+  "permissions": [
+    "opener:default"
+  ]
+}

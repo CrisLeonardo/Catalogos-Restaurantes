@@ -1,0 +1,9 @@
+{
+  "identifier": "default",
+  "description": "Páginas locales de Leogin (arranque, offline, toast): IPC básico + abrir enlaces en el navegador del sistema.",
+  "windows": ["main", "update-toast"],
+  "permissions": [
+    "core:default",
+    "opener:default"
+  ]
+}

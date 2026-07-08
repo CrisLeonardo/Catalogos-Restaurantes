@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- Pantalla de arranque de Leogin Desktop.
+     - Primera vez: pide la dirección del panel (la misma que se usa en el
+       navegador) y la guarda; Rust navega la ventana al panel alojado.
+     - Arranques siguientes: muestra "Conectando…" mientras Rust comprueba la
+       nube; si no hay internet salta a offline.html (respaldo local). -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leogin</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #0d1017; color: #e7eaf0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  main { max-width: 460px; width: 100%; background: #151a26; border: 1px solid #262d40; border-radius: 18px; padding: 30px; }
+  .logo { width: 52px; height: 52px; border-radius: 13px; background: #1c1c1e; display: grid; place-items: center; margin-bottom: 16px; }
+  .logo svg { width: 34px; height: 34px; }
+  h1 { font-size: 21px; letter-spacing: -0.3px; }
+  .sub { font-size: 13.5px; color: #8b93a7; margin-top: 6px; }
+  form { margin-top: 22px; display: none; }
+  label { display: block; font-size: 12.5px; font-weight: 700; color: #aab2c5; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.4px; }
+  input { width: 100%; padding: 12px 14px; border-radius: 11px; border: 1px solid #2c3550; background: #0f1420; color: #e7eaf0;
+          font: inherit; outline: none; }
+  input:focus { border-color: #f5a030; }
+  .hint { font-size: 12.5px; color: #8b93a7; margin-top: 9px; }
+  button { width: 100%; margin-top: 16px; padding: 13px; border: 0; border-radius: 11px; cursor: pointer;
+           background: linear-gradient(135deg, #e8534a, #f5a030); color: #fff; font: inherit; font-weight: 800; font-size: 15px; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .err { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #3b1a1e; border: 1px solid #6b2a30;
+         color: #ffb4b4; font-size: 13px; }
+  .note { margin-top: 18px; padding-top: 16px; border-top: 1px solid #262d40; font-size: 12.5px; color: #8b93a7; display: none; }
+  .boot { display: none; margin-top: 24px; align-items: center; gap: 12px; }
+  .spin { width: 20px; height: 20px; border: 3px solid #2c3550; border-top-color: #f5a030; border-radius: 99px;
+          animation: r 0.8s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  .ver { margin-top: 20px; font-size: 11.5px; color: #5b6378; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lg)"/></svg>
+  </div>
+  <h1 id="title">Leogin</h1>
+  <div class="sub" id="sub">Preparando…</div>
+
+  <div class="boot" id="boot"><div class="spin"></div><div id="bootmsg">Conectando con tu panel…</div></div>
+
+  <form id="setup">
+    <label for="url">Dirección de tu panel</label>
+    <input id="url" type="text" placeholder="https://turestaurante.ejemplo.com" autocomplete="off" spellcheck="false">
+    <div class="hint">Es la misma dirección con la que abres tu panel en el navegador. Leogin la recordará en esta PC.</div>
+    <button id="go" type="submit">Continuar</button>
+    <div class="err" id="err"></div>
+  </form>
+
+  <div class="note" id="note">
+    ¿Esta PC va a <b>imprimir</b> y a mantener el restaurante <b>funcionando sin internet</b>?
+    Después de entrar, instala el servicio Leogin desde tu panel en <b>Impresión → Agente Leogin</b>
+    (solo se necesita en una PC del local).
+  </div>
+
+  <div class="ver" id="ver"></div>
+</main>
+
+<script>
+  const invoke = window.__TAURI__.core.invoke;
+  const $ = (id) => document.getElementById(id);
+
+  async function start() {
+    const info = await invoke('get_setup_info');
+    $('ver').textContent = 'Leogin para escritorio v' + info.appVersion;
+
+    // ?setup=1 (menú de bandeja → "Cambiar dirección del panel"): muestra el
+    // formulario aunque ya haya una dirección guardada.
+    const forceSetup = new URLSearchParams(location.search).has('setup');
+    if (forceSetup) {
+      $('sub').textContent = 'Cambia la dirección del panel de esta PC.';
+      $('setup').style.display = 'block';
+      $('note').style.display = 'block';
+      if (info.panelUrl) $('url').value = info.panelUrl;
+      $('url').focus();
+      return;
+    }
+
+    if (info.panelUrl) {
+      $('sub').textContent = info.panelUrl.replace(/^https?:\/\//, '');
+      $('boot').style.display = 'flex';
+      const dest = await invoke('boot');          // navega al panel si hay nube
+      if (dest === 'offline') location.replace('offline.html');
+      return;
+    }
+
+    $('sub').textContent = 'Conecta esta PC con el panel de tu restaurante.';
+    $('setup').style.display = 'block';
+    $('note').style.display = 'block';
+    $('url').focus();
+  }
+
+  $('setup').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('err').style.display = 'none';
+    $('go').disabled = true;
+    $('go').textContent = 'Conectando…';
+    try {
+      await invoke('save_panel_url', { url: $('url').value });
+      // Rust navega la ventana al panel; si no hay internet, cae a offline.
+    } catch (err) {
+      $('err').textContent = String(err);
+      $('err').style.display = 'block';
+      $('go').disabled = false;
+      $('go').textContent = 'Continuar';
+    }
+  });
+
+  start();
+</script>
+</body>
+</html>

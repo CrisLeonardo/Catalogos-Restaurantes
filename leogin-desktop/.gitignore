@@ -1,0 +1,7 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+dist/
+*.local.json
+# Llave privada del updater (NUNCA se comitea; vive en %USERPROFILE%\.tauri\)
+*.key
