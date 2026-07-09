@@ -78,6 +78,7 @@ export default async function AdminHomePage() {
       { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: '/admin/categorias', done: (catCount ?? 0) > 0 },
       { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: '/admin/menu/productos/new', done: (prodCount ?? 0) > 0 },
       { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: '/admin/qr', done: false },
+      { key: 'escritorio', label: 'Instala Leogin en tu PC', desc: 'Impresión automática y modo offline', icon: 'monitor', href: '/admin/escritorio', done: false },
     ];
   }
 
@@ -170,7 +171,7 @@ export default async function AdminHomePage() {
       {/* Agente Leogin: invitar a instalarlo / avisar si se desconectó */}
       {agentBanner && (
         <Link
-          href="/admin/impresion"
+          href={agentBanner === 'offline' ? '/admin/impresion' : '/admin/escritorio'}
           className="glass press"
           style={{
             borderRadius: 14, padding: '12px 16px', textDecoration: 'none',
@@ -187,18 +188,18 @@ export default async function AdminHomePage() {
               : 'rgba(var(--brand-accent-rgb, 99,102,241),0.14)',
             color: agentBanner === 'offline' ? '#fb923c' : 'var(--brand-accent)',
           }}>
-            <Icon name={agentBanner === 'offline' ? 'alertCircle' : 'print'} size={17} />
+            <Icon name={agentBanner === 'offline' ? 'alertCircle' : 'monitor'} size={17} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
               {agentBanner === 'offline'
                 ? 'Leogin en tu PC está desconectado'
-                : 'Recomendado: activa la impresión automática y el modo offline'}
+                : 'Recomendado: instala Leogin Desktop'}
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
               {agentBanner === 'offline'
                 ? 'Revisa que la PC del local esté encendida — sin el servicio de Leogin no hay impresión automática ni respaldo sin internet.'
-                : 'Descarga Leogin para tu PC (5 minutos): comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
+                : 'La app de escritorio de Leogin: comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />

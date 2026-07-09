@@ -28,7 +28,7 @@ export default function OnboardingChecklist({
   const [isPending, startTransition] = useTransition();
   const [hidden, setHidden] = useState(false);
 
-  const required = steps.filter((s) => s.key !== 'qr');
+  const required = steps.filter((s) => s.key !== 'qr' && s.key !== 'escritorio');
   const doneCount = required.filter((s) => s.done).length;
   const total = required.length;
   const allDone = doneCount >= total;

@@ -134,7 +134,7 @@ export default async function AdminImpresionPage() {
           </div>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1 }}>Leogin en tu PC</h2>
+              <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1 }}>Impresión y modo offline</h2>
               <span style={{
                 fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
                 color: connected ? '#4ade80' : 'var(--u-text-3)',
@@ -145,10 +145,14 @@ export default async function AdminImpresionPage() {
               </span>
             </div>
             <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
-              Se instala <strong style={{ color: 'var(--u-text-2)' }}>una sola vez</strong> en la PC del local
-              y convierte tu restaurante en una operación que no se detiene: impresión automática y
-              respaldo completo cuando falla el internet.
+              El servicio de Leogin que corre en la PC del local: se instala{' '}
+              <strong style={{ color: 'var(--u-text-2)' }}>una sola vez</strong> y convierte tu restaurante en
+              una operación que no se detiene — impresión automática y respaldo completo cuando falla el
+              internet.
             </p>
+            <a href="/admin/escritorio" style={{ fontSize: 11.5, color: 'var(--brand-accent)', marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none', fontWeight: 600 }}>
+              <Icon name="monitor" size={12} /> ¿Buscas la app completa para tu PC? Conoce Leogin Desktop →
+            </a>
           </div>
         </div>
 
@@ -184,7 +188,7 @@ export default async function AdminImpresionPage() {
                 background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
               }}
             >
-              <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi instalación' : 'Descargar Leogin para tu PC · 5 minutos'}
+              <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi instalación' : 'Vincular impresora y servicio local · 5 minutos'}
             </a>
             <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
               Sin conocimientos técnicos: descargar, doble clic, listo.
