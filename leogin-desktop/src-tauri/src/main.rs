@@ -36,6 +36,19 @@ const TOAST_H: f64 = 150.0;
 const AGENT_RELEASES_API: &str =
     "https://api.github.com/repos/CrisLeonardo/leogin-agente-releases/releases";
 
+/// Login central (roadmap "reconocer el restaurante al iniciar sesión"): el
+/// primer arranque, en vez de pedir la dirección del panel a mano, puede abrir
+/// este login sin tenant — la propia web (login() en
+/// plataforma/src/lib/actions/auth.ts) ya resuelve `profile.restaurant_id` y
+/// redirige sola al subdominio correcto tras autenticar. Mismo dominio raíz
+/// que NEXT_PUBLIC_ROOT_DOMAIN en producción.
+const CENTRAL_LOGIN_URL: &str = "https://leogin.online/admin/login";
+/// Sufijo de host que identifica un panel de restaurante YA resuelto por la
+/// web (ver `adminUrl()` en plataforma/src/lib/tenant.ts: `<slug>-admin.<root>`
+/// en producción). Sirve para detectar, desde Rust, a dónde nos mandó el login
+/// central — sin exponer ningún comando nuevo a contenido remoto.
+const CENTRAL_ADMIN_HOST_SUFFIX: &str = "-admin.leogin.online";
+
 // Los enlaces target=_blank del panel (WhatsApp, comprobantes…) deben abrir
 // en el navegador del sistema, no dentro del shell. Se inyecta en toda
 // página que cargue la ventana principal (local o remota).
@@ -523,6 +536,9 @@ async fn latest_agent_asset_url(http: &reqwest::Client) -> Result<String, String
 struct SetupInfo {
     panel_url: Option<String>,
     app_version: String,
+    /// Fuente única del login central (ver CENTRAL_LOGIN_URL): la página de
+    /// arranque lo lee de aquí en vez de tener su propia copia hardcodeada.
+    central_login_url: String,
 }
 
 #[tauri::command]
@@ -530,6 +546,7 @@ fn get_setup_info(app: AppHandle, state: State<AppState>) -> SetupInfo {
     SetupInfo {
         panel_url: state.config.lock().unwrap().panel_url.clone(),
         app_version: app.package_info().version.to_string(),
+        central_login_url: CENTRAL_LOGIN_URL.to_string(),
     }
 }
 
@@ -570,6 +587,34 @@ async fn save_panel_url(app: AppHandle, state: State<'_, AppState>, url: String)
     let dest = Url::parse(&admin_url(&origin)).map_err(|e| e.to_string())?;
     navigate_main(&app, dest);
     Ok(())
+}
+
+/// Detecta, desde Rust (hook `on_navigation`, no un comando invocable), si la
+/// ventana llegó a un panel de restaurante ya resuelto por el login central
+/// (ver CENTRAL_LOGIN_URL) y todavía no hay `panel_url` guardado. Si es así,
+/// lo adopta exactamente como `save_panel_url` — sin volver a verificar
+/// alcanzabilidad (ya estamos ahí) ni renavegar (la navegación ya está en
+/// curso). Fuera de ese primer arranque sin configurar, es un no-op: nunca
+/// reemplaza un panel_url que el usuario ya configuró (a mano o así).
+fn detect_resolved_panel(app: &AppHandle, url: &Url) {
+    let Some(host) = url.host_str() else { return };
+    if !host.ends_with(CENTRAL_ADMIN_HOST_SUFFIX) {
+        return;
+    }
+    let state = app.state::<AppState>();
+    let already_set = state.config.lock().unwrap().panel_url.is_some();
+    if already_set {
+        return;
+    }
+    let origin = url.origin().ascii_serialization();
+    let cfg = {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.panel_url = Some(origin.clone());
+        cfg.clone()
+    };
+    save_config(app, &cfg);
+    let _ = app.autolaunch().enable();
+    log_line(app, &format!("panel detectado tras iniciar sesión (login central): {origin}"));
 }
 
 #[tauri::command]
@@ -859,12 +904,17 @@ fn main() {
 
             // Ventana principal: SIEMPRE arranca en la página local de arranque
             // (decide setup / panel / offline sin mostrar errores del WebView).
+            let app_for_nav = app.handle().clone();
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Leogin")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(960.0, 620.0)
                 .visible(false)
                 .initialization_script(main_init)
+                .on_navigation(move |url| {
+                    detect_resolved_panel(&app_for_nav, url);
+                    true
+                })
                 .build()?;
             if !hidden {
                 let _ = main.maximize();

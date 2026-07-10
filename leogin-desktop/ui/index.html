@@ -1,7 +1,10 @@
 <!doctype html>
 <!-- Pantalla de arranque de Leogin Desktop.
-     - Primera vez: pide la dirección del panel (la misma que se usa en el
-       navegador) y la guarda; Rust navega la ventana al panel alojado.
+     - Primera vez: ofrece iniciar sesión con la cuenta de Leogin (login
+       central, sin escribir ninguna dirección) — la web resuelve sola el
+       restaurante y Rust detecta a dónde llegó (on_navigation en main.rs) y
+       lo recuerda. "Ingresar la dirección manualmente" queda como alternativa
+       para quien la conozca o para reconfigurar.
      - Arranques siguientes: muestra "Conectando…" mientras Rust comprueba la
        nube; si no hay internet salta a offline.html (respaldo local). -->
 <html lang="es">
@@ -36,6 +39,10 @@
           animation: r 0.8s linear infinite; }
   @keyframes r { to { transform: rotate(360deg); } }
   .ver { margin-top: 20px; font-size: 11.5px; color: #5b6378; text-align: center; }
+  .choice { display: none; margin-top: 22px; }
+  .choice .altlink { display: block; text-align: center; margin-top: 14px; font-size: 12.5px; color: #8b93a7; }
+  .choice .altlink a { color: #f5a030; text-decoration: none; }
+  .choice .altlink a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -47,6 +54,11 @@
   <div class="sub" id="sub">Preparando…</div>
 
   <div class="boot" id="boot"><div class="spin"></div><div id="bootmsg">Conectando con tu panel…</div></div>
+
+  <div class="choice" id="choice">
+    <button id="loginBtn" type="button">Iniciar sesión con tu cuenta de Leogin</button>
+    <div class="altlink"><a href="#" id="manualLink">¿Prefieres ingresar la dirección de tu panel manualmente?</a></div>
+  </div>
 
   <form id="setup">
     <label for="url">Dirección de tu panel</label>
@@ -68,10 +80,17 @@
 <script>
   const invoke = window.__TAURI__.core.invoke;
   const $ = (id) => document.getElementById(id);
+  // La URL del login central viene de Rust (CENTRAL_LOGIN_URL en main.rs) —
+  // única fuente de verdad, sin duplicarla aquí. La web ya sabe a qué
+  // restaurante mandarte tras iniciar sesión (login() en
+  // plataforma/src/lib/actions/auth.ts); Rust detecta a dónde llegaste
+  // (on_navigation) y lo recuerda solo, sin pedir ninguna dirección aquí.
+  let centralLoginUrl = '';
 
   async function start() {
     const info = await invoke('get_setup_info');
     $('ver').textContent = 'Leogin para escritorio v' + info.appVersion;
+    centralLoginUrl = info.centralLoginUrl;
 
     // ?setup=1 (menú de bandeja → "Cambiar dirección del panel"): muestra el
     // formulario aunque ya haya una dirección guardada.
@@ -93,11 +112,19 @@
       return;
     }
 
-    $('sub').textContent = 'Conecta esta PC con el panel de tu restaurante.';
+    $('sub').textContent = 'Conecta esta PC con tu restaurante.';
+    $('choice').style.display = 'block';
+  }
+
+  $('loginBtn').addEventListener('click', () => { location.href = centralLoginUrl; });
+
+  $('manualLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('choice').style.display = 'none';
     $('setup').style.display = 'block';
     $('note').style.display = 'block';
     $('url').focus();
-  }
+  });
 
   $('setup').addEventListener('submit', async (e) => {
     e.preventDefault();

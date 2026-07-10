@@ -66,10 +66,29 @@ leogin-desktop/
 1. La ventana `main` SIEMPRE abre `index.html` (local) — así nunca se ve el
    error feo del WebView si no hay internet.
 2. `index.html` pregunta a Rust (`get_setup_info`):
-   - **Sin configurar** → formulario: "Dirección de tu panel" (la misma URL
-     del navegador). `save_panel_url` la valida contra la red, la persiste en
-     `%APPDATA%\com.leogin.desktop\config.json`, activa el autoarranque con
-     Windows (oculto, `--hidden`) y navega al panel.
+   - **Sin configurar** → pantalla de elección: botón primario "Iniciar
+     sesión con tu cuenta de Leogin" (navega a `CENTRAL_LOGIN_URL`,
+     `https://leogin.online/admin/login` — sin tenant) + enlace secundario
+     "¿Prefieres ingresar la dirección manualmente?" que revela el formulario
+     de siempre.
+     - **Login central (por defecto, 2026-07-09):** la propia web ya resuelve
+       sola el restaurante — `login()` en `plataforma/src/lib/actions/auth.ts`
+       busca `profile.restaurant_id` y redirige a `<slug>-admin.<root>` tras
+       autenticar (misma cookie de sesión compartida en todo el dominio raíz,
+       ver `proxy.ts`). Rust nunca ve ni pide esa dirección: el hook
+       `on_navigation` de la ventana `main` (`detect_resolved_panel` en
+       `main.rs`) detecta cuando el host termina en
+       `CENTRAL_ADMIN_HOST_SUFFIX` (`-admin.leogin.online`) y, si todavía no
+       hay `panel_url` guardado, lo adopta con la misma lógica de
+       `save_panel_url` (persiste, autoarranque) pero sin volver a verificar
+       alcanzabilidad ni renavegar — ya estamos ahí. Es un no-op fuera de ese
+       primer arranque sin configurar: nunca pisa un `panel_url` ya elegido.
+     - **Manual (alternativa):** formulario "Dirección de tu panel" de
+       siempre. `save_panel_url` la valida contra la red, la persiste en
+       `%APPDATA%\com.leogin.desktop\config.json`, activa el autoarranque con
+       Windows (oculto, `--hidden`) y navega al panel. Sigue siendo el único
+       camino para dominios propios fuera de `leogin.online` y es lo que abre
+       directo la bandeja → "Cambiar dirección del panel" (`?setup=1`).
    - **Configurado** → `boot`: ¿responde la nube? → navega a `…/admin`; si no
      → `offline.html`.
 3. El login es el del panel web de siempre (correo/contraseña del staff). La
