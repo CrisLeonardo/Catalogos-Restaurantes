@@ -80,27 +80,30 @@
 <script>
   const invoke = window.__TAURI__.core.invoke;
   const $ = (id) => document.getElementById(id);
-  // La URL del login central viene de Rust (CENTRAL_LOGIN_URL en main.rs) —
-  // única fuente de verdad, sin duplicarla aquí. La web ya sabe a qué
-  // restaurante mandarte tras iniciar sesión (login() en
-  // plataforma/src/lib/actions/auth.ts); Rust detecta a dónde llegaste
-  // (on_navigation) y lo recuerda solo, sin pedir ninguna dirección aquí.
-  let centralLoginUrl = '';
+  // Dirección ya guardada (si la hay) — solo para prellenar el formulario
+  // manual si el usuario la pide explícitamente. La fuente de verdad del
+  // login central es siempre Rust (begin_relink/central_login_url en
+  // main.rs): nunca se cachea aquí para no arriesgar quedar apuntando a una
+  // producción vieja tras un update del shell.
+  let existingPanelUrl = '';
 
   async function start() {
     const info = await invoke('get_setup_info');
     $('ver').textContent = 'Leogin para escritorio v' + info.appVersion;
-    centralLoginUrl = info.centralLoginUrl;
+    existingPanelUrl = info.panelUrl ?? '';
 
-    // ?setup=1 (menú de bandeja → "Cambiar dirección del panel"): muestra el
-    // formulario aunque ya haya una dirección guardada.
+    // ?setup=1 (menú de bandeja → "Cambiar dirección del panel"): antes esto
+    // saltaba directo al formulario de URL, como si la ÚNICA forma de
+    // reconectar la PC fuera copiar una dirección a mano — la misma pantalla
+    // de elección del primer arranque (login por cuenta primero) aplica
+    // igual de bien aquí: es simplemente "conectar esta PC con un
+    // restaurante", sea la primera vez o para cambiarlo.
     const forceSetup = new URLSearchParams(location.search).has('setup');
     if (forceSetup) {
-      $('sub').textContent = 'Cambia la dirección del panel de esta PC.';
-      $('setup').style.display = 'block';
-      $('note').style.display = 'block';
-      if (info.panelUrl) $('url').value = info.panelUrl;
-      $('url').focus();
+      $('sub').textContent = info.panelUrl
+        ? 'Cambia de cuenta o conecta esta PC con otro restaurante.'
+        : 'Conecta esta PC con tu restaurante.';
+      $('choice').style.display = 'block';
       return;
     }
 
@@ -116,13 +119,22 @@
     $('choice').style.display = 'block';
   }
 
-  $('loginBtn').addEventListener('click', () => { location.href = centralLoginUrl; });
+  $('loginBtn').addEventListener('click', async () => {
+    // begin_relink olvida (solo en memoria) el panel_url anterior si lo
+    // había, para que al volver ya autenticado se adopte el restaurante
+    // nuevo en vez de quedarse pegado al de antes — ver comentario del
+    // comando en main.rs. Sin efecto en el primer arranque (no hay nada que
+    // olvidar).
+    $('loginBtn').disabled = true;
+    location.href = await invoke('begin_relink');
+  });
 
   $('manualLink').addEventListener('click', (e) => {
     e.preventDefault();
     $('choice').style.display = 'none';
     $('setup').style.display = 'block';
     $('note').style.display = 'block';
+    if (existingPanelUrl) $('url').value = existingPanelUrl;
     $('url').focus();
   });
 

@@ -355,6 +355,22 @@ un error.
    reflejar que "Iniciar sesión con tu cuenta de Leogin" ya es (y era desde
    2026-07-09) el flujo primario. La firma de código se evaluó de nuevo y se
    decidió mantenerla pendiente (ver §5).
+7. ~~**"Cambiar dirección del panel" ofrecía SOLO la URL manual**~~ — ✅
+   2026-07-10 (bug real, reportado por el usuario con el ejemplo de Netflix:
+   "yo solo quiero entrar con correo y contraseña, nunca pedirle una URL").
+   El menú de la bandeja (`?setup=1`) saltaba directo al formulario de
+   dirección, sin mostrar nunca el botón de login central — la ÚNICA forma
+   de reconectar una PC ya configurada era copiar una URL a mano, aunque el
+   primer arranque sí ofreciera la cuenta. Ahora `?setup=1` muestra la MISMA
+   pantalla de elección (login primero, manual como alternativa). Requirió
+   además un comando nuevo, `begin_relink` (olvida el `panel_url` viejo SOLO
+   EN MEMORIA antes de mandar al login central, para que
+   `detect_resolved_panel` no lo encuentre `already_set` y sí adopte el
+   restaurante nuevo) — sin esto, re-loguearse con otra cuenta habría
+   funcionado visualmente una vez pero la PC habría seguido arrancando al
+   restaurante viejo en el siguiente inicio. Verificado end-to-end: PC con
+   `panel_url` apuntando al restaurante equivocado → "Cambiar dirección del
+   panel" → login con cuenta → `panel_url` quedó correctamente sobrescrito.
 
 ## 9. Cómo probar en local
 

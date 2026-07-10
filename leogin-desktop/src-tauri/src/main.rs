@@ -544,9 +544,6 @@ async fn latest_agent_asset_url(http: &reqwest::Client) -> Result<String, String
 struct SetupInfo {
     panel_url: Option<String>,
     app_version: String,
-    /// Fuente única del login central (ver `central_login_url()`): la página
-    /// de arranque lo lee de aquí en vez de tener su propia copia hardcodeada.
-    central_login_url: String,
 }
 
 #[tauri::command]
@@ -554,7 +551,6 @@ fn get_setup_info(app: AppHandle, state: State<AppState>) -> SetupInfo {
     SetupInfo {
         panel_url: state.config.lock().unwrap().panel_url.clone(),
         app_version: app.package_info().version.to_string(),
-        central_login_url: central_login_url(),
     }
 }
 
@@ -573,6 +569,22 @@ async fn boot(app: AppHandle, state: State<'_, AppState>) -> Result<String, Stri
         log_line(&app, "boot → offline (nube no responde)");
         Ok("offline".into())
     }
+}
+
+/// Prepara un re-enlace por cuenta: si esta PC ya tenía un `panel_url`
+/// guardado (reconfigurar, no primer arranque), lo olvida SOLO EN MEMORIA
+/// antes de mandar al usuario al login central — así `detect_resolved_panel`
+/// deja de encontrar `already_set` y adopta el restaurante que resuelva el
+/// login que está por venir. Nada se borra en disco todavía: si el usuario
+/// cierra la ventana o abandona el login a medio camino, el `panel_url` que
+/// ya funcionaba sigue intacto en `config.json` — probar "iniciar sesión con
+/// otra cuenta" nunca puede dejar la PC peor de como estaba.
+/// Devuelve la URL del login central para que la página solo tenga que
+/// navegar ahí, sin duplicar `central_login_url()` en JS.
+#[tauri::command]
+fn begin_relink(state: State<AppState>) -> String {
+    state.config.lock().unwrap().panel_url = None;
+    central_login_url()
 }
 
 #[tauri::command]
@@ -870,6 +882,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_setup_info,
             boot,
+            begin_relink,
             save_panel_url,
             open_panel,
             check_cloud,

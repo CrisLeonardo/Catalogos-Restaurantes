@@ -9,6 +9,7 @@ fn main() {
         tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(&[
             "get_setup_info",
             "boot",
+            "begin_relink",
             "save_panel_url",
             "open_panel",
             "check_cloud",
