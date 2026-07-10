@@ -17,7 +17,8 @@ import AdminThemeToggle from '@/components/admin/theme-toggle';
 import WelcomeTour from '@/components/admin/welcome-tour';
 import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
-import { can } from '@/lib/permissions';
+import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
+import { can, isMeseroOnly } from '@/lib/permissions';
 
 const NAV_KEY = 'admin-nav-collapsed';
 
@@ -54,6 +55,8 @@ interface Props {
   /** Rol y permisos del usuario (para filtrar el nav). */
   role?: string | null;
   permissions?: string[] | null;
+  /** Nombre del usuario (profiles.full_name) — solo para el toast de bienvenida. */
+  userName?: string | null;
   /** El dueño/super admin puede ver la sección Personal. */
   canManageStaff?: boolean;
   /** Plan actual del restaurante — para mostrar badge en la barra lateral. */
@@ -118,7 +121,7 @@ export default function AdminShell({
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
-  logoUrl, logoBg, zone, role, permissions, canManageStaff, planActual, preview = false, children,
+  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, preview = false, children,
 }: Props) {
   const realPathname = usePathname();
   // Secciones del nav plegadas: se leen de localStorage de forma SSR-safe
@@ -143,6 +146,11 @@ export default function AdminShell({
   const effRole = role ?? 'RESTAURANT_OWNER';
   const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
   const allow = (key: string) => can(effRole, permissions ?? null, key);
+  const roleLabel = effRole === 'SUPER_ADMIN' ? 'Super Admin'
+    : effRole === 'GROUP_OWNER' ? 'Dueño de grupo'
+    : isMeseroOnly(effRole, permissions ?? null) ? 'Mesero'
+    : effRole === 'RESTAURANT_STAFF' ? 'Personal'
+    : 'Administrador';
 
   const on = (flag: boolean) => preview || flag;
 
@@ -263,6 +271,7 @@ export default function AdminShell({
     return (
       <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
         {children}
+        {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       </div>
     );
   }
@@ -362,7 +371,7 @@ export default function AdminShell({
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {effRole === 'RESTAURANT_STAFF' ? 'Personal' : effRole === 'RESTAURANT_WAITER' ? 'Mesero' : 'Administrador'}
+              {roleLabel}
             </div>
             <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>
@@ -404,6 +413,7 @@ export default function AdminShell({
         <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
       )}
       <WelcomeTour restaurantName={restaurantName} preview={preview} />
+      {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive
           aquí para sobrevivir a las navegaciones entre páginas del panel. */}
       {!preview && <GuidedTourHost />}

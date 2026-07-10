@@ -63,18 +63,18 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
 
     if (rest?.slug) {
       const destination = isMeseroOnly(profile?.role, profile?.permissions as string[] | null)
-        ? `${adminUrl(rest.slug)}/mesero`
-        : `${adminUrl(rest.slug)}/menu`;
+        ? `${adminUrl(rest.slug)}/mesero?welcome=1`
+        : `${adminUrl(rest.slug)}/menu?welcome=1`;
       redirect(destination);
     }
   }
 
   // El mesero puro entra directo a su panel de toma de pedidos.
   if (isMeseroOnly(profile?.role, profile?.permissions as string[] | null)) {
-    redirect('/admin/mesero');
+    redirect('/admin/mesero?welcome=1');
   }
 
-  redirect('/admin/menu');
+  redirect('/admin/menu?welcome=1');
 }
 
 export async function logout() {

@@ -84,6 +84,7 @@ export default async function WaiterLayout({ children }: { children: React.React
       zone={zone}
       role={profile.role}
       permissions={profile.permissions}
+      userName={profile.full_name}
       canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
     >
       {children}
