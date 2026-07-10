@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/admin/logout-button';
+import AdminThemeToggle from '@/components/admin/theme-toggle';
 import { LeoginMark } from '@/components/leogin-logo';
 
 export default function SuperNav() {
@@ -72,7 +73,7 @@ export default function SuperNav() {
                 textDecoration: 'none',
                 whiteSpace: 'nowrap',
                 flex: '0 0 auto',
-                background: active ? 'rgba(255,255,255,0.10)' : 'transparent',
+                background: active ? 'color-mix(in srgb, var(--u-text) 10%, transparent)' : 'transparent',
                 color: active ? 'var(--u-text)' : 'var(--u-text-3)',
                 border: active ? '1px solid var(--u-hair-2)' : '1px solid transparent',
                 transition: 'all 150ms',
@@ -84,6 +85,10 @@ export default function SuperNav() {
         })}
       </nav>
 
+      {/* El super admin comparte la cookie `admin-theme` con el panel de los
+          restaurantes (dominio ancho): sin este botón, si dejabas el panel en
+          claro, /super quedaba claro sin forma de volver a oscuro desde aquí. */}
+      <AdminThemeToggle />
       <LogoutButton />
     </header>
   );

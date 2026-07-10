@@ -247,14 +247,17 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 12 }}>
+        // auto-fit: lado a lado en escritorio, apilado en móvil (antes 160px fijos)
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
           <div><label style={labelStyle}>Descripción</label><input style={inputStyle} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Consumo en restaurante" /></div>
-          <div><label style={labelStyle}>Monto (Q, con IVA)</label><input style={inputStyle} type="number" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" /></div>
+          <div><label style={labelStyle}>Monto (Q, con IVA)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0.00" /></div>
         </div>
       )}
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Receptor</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 12 }}>
+      {/* auto-fit: 3 columnas en escritorio, apiladas en móvil (antes el NIT de
+          160px fijos dejaba nombre y dirección en ~90px cada uno). */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <div><label style={labelStyle}>NIT</label><input style={inputStyle} value={nit} onChange={(e) => setNit(e.target.value)} placeholder="CF" /></div>
         <div><label style={labelStyle}>Nombre</label><input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
         <div><label style={labelStyle}>Dirección</label><input style={inputStyle} value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
@@ -297,7 +300,10 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
 
   return (
     <Glass variant="quiet" style={{ overflow: 'hidden' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      {/* 6 columnas no caben en un teléfono: scroll horizontal en vez de
+          romper el layout (los montos y estados se leen deslizando). */}
+      <div className="table-scroll">
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
             {['Documento', 'Receptor', 'Monto', 'Estado', 'Fecha', ''].map((h) => (
@@ -337,6 +343,7 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
           ))}
         </tbody>
       </table>
+      </div>
     </Glass>
   );
 }

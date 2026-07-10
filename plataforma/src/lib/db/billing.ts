@@ -264,8 +264,8 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
   return {
     plan:            (d.plan as string) ?? null,
     base:            Number(d.base ?? 0),
-    channelsActive:  Number(d.channels_active ?? 3),
-    channelsTotal:   Number(d.channels_total ?? 3),
+    channelsActive:  Number(d.channels_active ?? 2),
+    channelsTotal:   Number(d.channels_total ?? 2),
     discountApplies: Boolean(d.discount_applies),
     discountPer:     Number(d.discount_per ?? 0),
     channelsOff:     Number(d.channels_off ?? 0),

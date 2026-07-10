@@ -53,7 +53,7 @@ function NumberCtl({ label, value, min, max, onChange }: { label: string; value:
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
       <input
-        type="number"
+        type="number" inputMode="decimal"
         value={value}
         min={min}
         max={max}

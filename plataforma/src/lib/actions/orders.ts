@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createDinerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
@@ -76,7 +76,8 @@ export async function createOrder(
 
   // Sesión del comensal (Google), si la hay: enlaza la cuenta al cliente
   // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
-  const authClient = await createClient();
+  // Cookie propia del comensal — la sesión del personal no interviene aquí.
+  const authClient = await createDinerClient();
   const { data: { user: authUser } } = await authClient.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(authUser?.id ?? null);
 
@@ -108,6 +109,30 @@ export async function createOrder(
         (restaurant.pause_message as string | null)?.trim() ||
         'Los pedidos están pausados por el momento. Intenta más tarde.',
     };
+  }
+
+  // Auto-pausa sin agente (mig. 069, OPCIONAL por restaurante): si el local
+  // activó el toggle y su Agente Leogin lleva >5 min sin reportarse, el local
+  // probablemente está SIN INTERNET y no vería este pedido — se rechaza con
+  // un mensaje amable en vez de dejarlo en el limbo. Al volver el agente
+  // (heartbeat de /api/agent/poll) los pedidos se reanudan solos.
+  {
+    const AUTO_PAUSE_STALE_MS = 5 * 60_000;
+    const { data: agentRow } = await db
+      .from('print_agents')
+      .select('auto_pause_enabled, last_seen_at')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    if (
+      agentRow?.auto_pause_enabled === true &&
+      agentRow.last_seen_at &&
+      Date.now() - new Date(agentRow.last_seen_at as string).getTime() > AUTO_PAUSE_STALE_MS
+    ) {
+      return {
+        error:
+          'Por un problema de conexión, el restaurante está atendiendo solo en el local por el momento. Intenta de nuevo en unos minutos.',
+      };
+    }
   }
   if (
     !isOpenNow(
@@ -334,6 +359,8 @@ export async function createOrder(
       p_zone:          customer.zone ?? '',
       p_total:         total,
       p_auth_user_id:  authUserId,
+      p_lat:           customer.type === 'DELIVERY' ? (customer.deliveryLat ?? null) : null,
+      p_lng:           customer.type === 'DELIVERY' ? (customer.deliveryLng ?? null) : null,
     });
     customerId = (cid as string | null) ?? null;
 
@@ -1122,7 +1149,7 @@ export interface MyOrderRef {
  * lanza: el historial local sigue funcionando igual para invitados).
  */
 export async function getMyOrderRefs(restaurantId: string): Promise<MyOrderRef[]> {
-  const authClient = await createClient();
+  const authClient = await createDinerClient();
   const { data: { user } } = await authClient.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
   const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);

@@ -7,6 +7,7 @@ import {
   regenerateAgentToken,
   setPrintTargets,
   sendTestPrint,
+  setAutoPauseOffline,
   type PrintAgentConfig,
   type ReportedPrinter,
 } from '@/lib/actions/print-agent';
@@ -27,7 +28,7 @@ const selectStyle: React.CSSProperties = {
   width: '100%',
   padding: '9px 11px',
   borderRadius: 'var(--radius-md)',
-  background: 'rgba(0,0,0,0.25)',
+  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
   border: '1px solid var(--u-hair)',
   color: 'var(--u-text)',
   fontSize: 13,
@@ -276,9 +277,12 @@ function InstallSteps({
           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Equivalente por línea de comandos (PowerShell como Administrador, desde la carpeta <code>dist</code>):
           </span>
+          {/* Bloque "terminal": oscuro SÓLIDO a propósito (el cian necesita fondo
+              oscuro); antes era rgba(0,0,0,0.4) y en el panel claro quedaba un
+              gris sucio con poco contraste. */}
           <pre style={{
             margin: 0, padding: '9px 11px', borderRadius: 8,
-            background: 'rgba(0,0,0,0.4)', border: '1px solid var(--u-hair)',
+            background: '#15171c', border: '1px solid var(--u-hair)',
             fontSize: 11, color: '#a5f3fc', fontFamily: 'monospace',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6,
           }}>{psCommand}</pre>
@@ -295,9 +299,11 @@ function InstallSteps({
           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 4 }}>
             O descarga el config y colócalo junto al exe:
           </span>
+          {/* Adaptativo: antes rgba(0,0,0,0.35) fijo — en panel claro era una caja
+              oscura con texto oscuro (var --u-text-2), ilegible. */}
           <pre style={{
             margin: 0, padding: '9px 11px', borderRadius: 8,
-            background: 'rgba(0,0,0,0.35)', border: '1px solid var(--u-hair)',
+            background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair)',
             fontSize: 11, color: 'var(--u-text-2)', fontFamily: 'monospace',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all',
           }}>{configJson}</pre>
@@ -339,6 +345,16 @@ export default function PrintAgentSettings() {
   const [generating, setGenerating] = useState(false);
   const [inDesktopApp, setInDesktopApp] = useState(false);
   const [installingAsServer, setInstallingAsServer] = useState(false);
+  const [pauseToggling, setPauseToggling] = useState(false);
+
+  async function handleAutoPauseToggle() {
+    if (!config || pauseToggling) return;
+    setPauseToggling(true);
+    const res = await setAutoPauseOffline(!config.autoPauseEnabled);
+    if (res.error) setMsg(res.error);
+    else { setMsg(''); await load(); }
+    setPauseToggling(false);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -529,6 +545,48 @@ export default function PrintAgentSettings() {
             }}
           >
             {installingAsServer ? 'Instalando…' : 'Hacer de esta PC el servidor del local'}
+          </button>
+        </div>
+      )}
+
+      {/* Auto-pausa de pedidos en línea sin agente (opcional, mig. 069) */}
+      {config?.exists && (
+        <div style={{
+          borderRadius: 'var(--radius-md)', padding: '12px 14px',
+          background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+          border: '1px solid var(--u-hair)',
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              Pausar pedidos en línea si el local pierde internet
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '5px 0 0' }}>
+              Si el agente lleva más de 5 minutos sin conexión, los pedidos del menú en línea se
+              pausan con un aviso amable (nadie pide a un local que no puede ver su pedido) y se
+              reanudan solos al reconectar. Los pedidos del mesero y del modo emergencia no se
+              afectan. <strong style={{ color: 'var(--u-text-2)' }}>Requiere que la PC del agente esté
+              encendida durante todo tu horario de atención</strong> — si la apagan, los pedidos en
+              línea se pausarían aunque sí haya internet.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAutoPauseToggle}
+            disabled={pauseToggling}
+            role="switch"
+            aria-checked={config.autoPauseEnabled}
+            aria-label="Pausar pedidos en línea si el local pierde internet"
+            className="press"
+            style={{
+              flexShrink: 0, width: 44, height: 26, borderRadius: 99, border: 'none',
+              cursor: pauseToggling ? 'wait' : 'pointer', padding: 3,
+              background: config.autoPauseEnabled ? 'var(--c-ok-solid, #22c55e)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
+              display: 'flex', justifyContent: config.autoPauseEnabled ? 'flex-end' : 'flex-start',
+              transition: 'background 180ms', opacity: pauseToggling ? 0.6 : 1,
+            }}
+          >
+            <span style={{ width: 20, height: 20, borderRadius: 99, background: '#fff' }} />
           </button>
         </div>
       )}

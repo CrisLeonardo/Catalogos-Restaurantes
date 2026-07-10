@@ -17,7 +17,9 @@ export interface LocalCustomerProfile {
   phone: string;
   address?: string;
   zone?: string;
-  deliveryType?: 'delivery' | 'pickup';
+  /** Último pin de entrega colocado en el mapa (checkout o "Mi cuenta"). */
+  lat?: number;
+  lng?: number;
 }
 
 export interface LocalOrderRef {
@@ -50,7 +52,8 @@ export function getLocalProfile(restaurantId: string): LocalCustomerProfile | nu
       phone: p.phone,
       address: typeof p.address === 'string' ? p.address : undefined,
       zone: typeof p.zone === 'string' ? p.zone : undefined,
-      deliveryType: p.deliveryType === 'delivery' || p.deliveryType === 'pickup' ? p.deliveryType : undefined,
+      lat: typeof p.lat === 'number' ? p.lat : undefined,
+      lng: typeof p.lng === 'number' ? p.lng : undefined,
     };
   } catch {
     return null;

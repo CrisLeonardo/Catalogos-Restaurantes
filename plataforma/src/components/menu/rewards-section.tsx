@@ -21,7 +21,7 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { getLocalProfile } from '@/lib/customer-local';
-import { createClient } from '@/lib/supabase/client';
+import { createDinerClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { DinerLoyalty } from '@/lib/db/loyalty';
@@ -41,7 +41,6 @@ export interface MenuReward {
 interface Props {
   restaurantId: string;
   rewards: MenuReward[];
-  redeemValue: number;
   googleAuthEnabled: boolean;
   ordersEnabled: boolean;
   open: boolean;
@@ -51,7 +50,7 @@ interface Props {
 const fmtPts = (n: number) => n.toLocaleString('es-GT');
 const pickIcon = (icon: string | null | undefined): string => (icon && ICON_PATHS[icon.trim()] ? icon.trim() : 'utensils');
 
-export default function RewardsSection({ restaurantId, rewards, redeemValue, googleAuthEnabled, ordersEnabled, open, onClose }: Props) {
+export default function RewardsSection({ restaurantId, rewards, googleAuthEnabled, ordersEnabled, open, onClose }: Props) {
   const { items, addItem, removeItem } = useCart();
   const [loyalty, setLoyalty] = useState<DinerLoyalty | null>(null);
   // Evita el parpadeo de "Mira y canjea tus puntos" (estado no-logueado)
@@ -100,7 +99,6 @@ export default function RewardsSection({ restaurantId, rewards, redeemValue, goo
           loyalty={loyalty}
           loyaltyLoading={loyaltyLoading}
           balance={balance}
-          redeemValue={redeemValue}
           googleAuthEnabled={googleAuthEnabled}
           ordersEnabled={ordersEnabled}
           rewardLineIds={rewardLineIds}
@@ -213,7 +211,7 @@ function RewardRow({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuRew
 }
 
 function RewardsMenu({
-  onClose, rewards, loyalty, loyaltyLoading, balance, redeemValue, googleAuthEnabled, ordersEnabled,
+  onClose, rewards, loyalty, loyaltyLoading, balance, googleAuthEnabled, ordersEnabled,
   rewardLineIds, onToggle, onRefresh, restaurantId, initialPhone,
 }: {
   onClose: () => void;
@@ -221,7 +219,6 @@ function RewardsMenu({
   loyalty: DinerLoyalty | null;
   loyaltyLoading: boolean;
   balance: number | null;
-  redeemValue: number;
   googleAuthEnabled: boolean;
   ordersEnabled: boolean;
   rewardLineIds: Set<string | undefined>;
@@ -255,7 +252,7 @@ function RewardsMenu({
   }
   async function signOut() {
     setBusy(true);
-    try { await createClient().auth.signOut({ scope: 'local' }); } catch {}
+    try { await createDinerClient().auth.signOut({ scope: 'local' }); } catch {}
     await onRefresh();
     setBusy(false);
   }
@@ -292,7 +289,6 @@ function RewardsMenu({
                   <span style={{ fontSize: 42, fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 0.9 }}>{fmtPts(balance ?? 0)}</span>
                   <span className="t-mute" style={{ fontSize: 15 }}>{(balance ?? 0) === 1 ? 'punto' : 'puntos'}</span>
                 </div>
-                {redeemValue > 0 && <div className="t-mute" style={{ fontSize: 12, marginTop: 5 }}>≈ Q{((balance ?? 0) * redeemValue).toFixed(2)} en valor</div>}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 <Icon name="gift" size={30} style={{ color: 'var(--brand-accent)' }} />

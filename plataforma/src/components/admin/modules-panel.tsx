@@ -18,13 +18,19 @@ import {
 } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
 
-const ORDER_TYPE_META: { id: OrderType; label: string; description: string; icon: string; configHref?: string }[] = [
+/** Canal de servicio para efectos de precio/UI. "local" agrupa comer en el
+   restaurante (mesa con QR) y para llevar en mostrador: son la misma idea de
+   "vienen a mi local", así que cuentan como un solo canal (ver mig. 064). */
+type Channel = 'local' | 'delivery';
+
+const CHANNEL_META: { id: Channel; label: string; description: string; icon: string; configHref?: string; types: OrderType[] }[] = [
   {
-    id: 'dine_in',
-    label: 'Comer en local',
-    description: 'Los clientes escanean el QR de su mesa y hacen el pedido desde ahí. Requiere configurar el número de mesas.',
+    id: 'local',
+    label: 'Comer en local y para llevar',
+    description: 'El cliente pide desde la mesa con QR o para retirar en el mostrador. Requiere configurar el número de mesas.',
     icon: 'utensils',
     configHref: '/admin/mesas',
+    types: ['dine_in', 'pickup'],
   },
   {
     id: 'delivery',
@@ -32,12 +38,7 @@ const ORDER_TYPE_META: { id: OrderType; label: string; description: string; icon
     description: 'El cliente ingresa su dirección y el pedido se entrega donde está. Puedes definir zonas y costo de envío.',
     icon: 'truck',
     configHref: '/admin/personalizacion',
-  },
-  {
-    id: 'pickup',
-    label: 'Para llevar',
-    description: 'El cliente hace su pedido en línea y lo retira en el local. Sin costo de envío ni dirección requerida.',
-    icon: 'bag',
+    types: ['delivery'],
   },
 ];
 
@@ -215,7 +216,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
 
   // Estado local para modos de pedido (optimistic).
   const [localOrderTypes, setLocalOrderTypes] = useState<OrderType[]>(orderTypes);
-  const [orderBusy, setOrderBusy] = useState<OrderType | null>(null);
+  const [orderBusy, setOrderBusy] = useState<Channel | null>(null);
 
   // Estándar: el paquete (canales) se fija en el registro y solo lo cambia
   // Leogin. El dueño ve sus canales como incluidos (no editables).
@@ -235,19 +236,19 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
     });
   }
 
-  function toggleOrderType(id: OrderType) {
-    const isOn = localOrderTypes.includes(id);
+  function toggleChannel(channel: typeof CHANNEL_META[number]) {
+    const isOn = channel.types.some((t) => localOrderTypes.includes(t));
     const next = isOn
-      ? localOrderTypes.filter((t) => t !== id)
-      : [...localOrderTypes, id];
+      ? localOrderTypes.filter((t) => !channel.types.includes(t))
+      : [...new Set([...localOrderTypes, ...channel.types])];
 
     if (next.length === 0) {
-      setError('Debe haber al menos un modo de pedido activo.');
+      setError('Debe haber al menos un canal de servicio activo.');
       return;
     }
     setError(null);
     setLocalOrderTypes(next);
-    setOrderBusy(id);
+    setOrderBusy(channel.id);
     startTransition(async () => {
       const res = await updateOwnOrderTypes(restaurantId, next);
       setOrderBusy(null);
@@ -312,15 +313,16 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-          {ORDER_TYPE_META.map((m) => {
-            const on = localOrderTypes.includes(m.id);
-            // BASICO: solo pickup. ESTANDAR: solo los canales de su paquete
-            // (los demás se ofrecen como mejora a Premium).
-            const lockedPremium = isBasico ? m.id !== 'pickup' : isEstandar ? !on : false;
+          {CHANNEL_META.map((m) => {
+            const on = m.types.some((t) => localOrderTypes.includes(t));
+            // BASICO: solo el canal local (para llevar, sin mesas). ESTANDAR:
+            // solo los canales de su paquete (los demás se ofrecen como mejora a Premium).
+            const lockedPremium = isBasico ? m.id !== 'local' : isEstandar ? !on : false;
             // ESTANDAR: los canales incluidos no son editables por el dueño.
             const readOnly = isEstandar && on;
             const busy = orderBusy === m.id && isPending;
-            const isLast = localOrderTypes.length === 1 && on;
+            const activeChannels = CHANNEL_META.filter((c) => c.types.some((t) => localOrderTypes.includes(t)));
+            const isLast = activeChannels.length === 1 && on;
 
             if (lockedPremium) {
               return (
@@ -372,7 +374,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     on={on}
                     busy={busy}
                     disabled={isLast || readOnly}
-                    onClick={() => { if (!readOnly) toggleOrderType(m.id); }}
+                    onClick={() => { if (!readOnly) toggleChannel(m); }}
                     label={`${on ? 'Desactivar' : 'Activar'} ${m.label}`}
                   />
                 </div>

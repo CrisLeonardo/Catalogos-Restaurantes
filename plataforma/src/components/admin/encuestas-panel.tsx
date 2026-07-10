@@ -55,7 +55,8 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, alignItems: 'start' }}>
+      {/* .enc-cols: lado a lado en escritorio, apilado en móvil */}
+      <div className="enc-cols">
         {/* Distribución */}
         <Glass variant="quiet" style={{ padding: '16px 18px' }}>
           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)', marginBottom: 12 }}>Distribución</div>

@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { createOrganization, createGroupOwner, type SuperState } from '@/lib/actions/super-admin';
 
 const input: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair-2)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none',
 };
 const label: React.CSSProperties = {

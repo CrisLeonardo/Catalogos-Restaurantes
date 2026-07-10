@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import './globals.css';
 import ThemeBackground from '@/components/theme-background';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
@@ -16,13 +16,32 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 /**
+ * Tema del ÁREA DE PERSONAL (admin, panel de grupo, super admin).
+ *
+ * El panel ya no hereda la personalización del restaurante: usa 2 paletas
+ * fijas (claro/oscuro) definidas en globals.css bajo `html[data-admin-area]`.
+ * La elección vive en la cookie `admin-theme` (la escribe el switch del
+ * AdminShell) y se lee aquí en el servidor → el HTML llega pintado con el
+ * tema correcto, sin flash. `data-scheme` reutiliza toda la maquinaria CSS
+ * de modo claro ya existente (superficies, glass, estados semánticos).
+ */
+const ADMIN_THEME_COOKIE = 'admin-theme';
+
+async function getAdminScheme(): Promise<'light' | 'dark'> {
+  const jar = await cookies();
+  return jar.get(ADMIN_THEME_COOKIE)?.value === 'light' ? 'light' : 'dark';
+}
+
+/**
  * Metadata dinámica: el ícono de "añadir a inicio" de iOS (apple-touch-icon)
  * se personaliza por restaurante. Apunta al proxy /api/icon/[slug], que sirve
  * el PNG cuadrado del restaurante. (Por eso se eliminó apple-icon.tsx: un
  * archivo de convención fijaría el ícono genérico para todos los tenants.)
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const slug = (await headers()).get('x-tenant-slug');
+  const headersList = await headers();
+  // Área de personal: ícono genérico, sin consultar el tema del tenant.
+  const slug = headersList.get('x-admin-area') ? null : headersList.get('x-tenant-slug');
 
   let appleIcon = '/icon-512.png'; // plataforma / demo → ícono genérico
   if (slug && slug !== DEMO_SLUG) {
@@ -45,9 +64,19 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // La barra del navegador toma el color de fondo del tenant (en plataforma
-// queda el oscuro por defecto).
+// queda el oscuro por defecto). En el área de personal, el color del tema fijo.
 export async function generateViewport(): Promise<Viewport> {
-  const slug = (await headers()).get('x-tenant-slug');
+  const headersList = await headers();
+  if (headersList.get('x-admin-area')) {
+    const scheme = await getAdminScheme();
+    return {
+      themeColor: scheme === 'light' ? '#f4f4f6' : '#0b0b0c',
+      width: 'device-width',
+      initialScale: 1,
+      maximumScale: 5,
+    };
+  }
+  const slug = headersList.get('x-tenant-slug');
   let themeColor = '#0b0b0c';
   if (slug === DEMO_SLUG) {
     themeColor = resolveTheme({ brand_name: 'Azúcar Negra' }, DEMO_SLUG).config.colorBg;
@@ -71,8 +100,28 @@ export default async function RootLayout({
   const headersList = await headers();
   const slug = headersList.get('x-tenant-slug');
 
+  // ÁREA DE PERSONAL (admin/central/super): tema fijo claro u oscuro, SIN
+  // tema del restaurante — ni variables, ni fuentes del tenant, ni fondo
+  // decorativo, ni custom CSS. Un panel uniforme y predecible para todos los
+  // restaurantes; la identidad de cada uno vive solo en su menú digital.
+  if (headersList.get('x-admin-area')) {
+    const adminScheme = await getAdminScheme();
+    return (
+      <html
+        lang="es"
+        data-admin-area=""
+        data-scheme={adminScheme}
+        data-glass="translucido"
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        style={{ colorScheme: adminScheme }}
+      >
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    );
+  }
+
   // Resolver el tema del tenant (o de la demo). Las superficies de plataforma
-  // (landing, login, super, admin) no tienen slug → usan los defaults de globals.css.
+  // (landing, login) no tienen slug → usan los defaults de globals.css.
   let resolved: ResolvedTheme | null = null;
   if (slug === DEMO_SLUG) {
     resolved = resolveTheme({ brand_name: 'Azúcar Negra' }, DEMO_SLUG);

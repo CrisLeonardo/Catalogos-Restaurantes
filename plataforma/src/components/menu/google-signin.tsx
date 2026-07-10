@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createDinerClient } from '@/lib/supabase/client';
 
 /** Logo "G" oficial de Google (multicolor). */
 function GoogleG({ size = 18 }: { size?: number }) {
@@ -32,7 +32,9 @@ export default function GoogleSignInButton({ label = 'Continuar con Google', ful
   async function go() {
     setLoading(true);
     try {
-      const supabase = createClient();
+      // Cliente del COMENSAL: el flujo OAuth guarda el code-verifier y la
+      // sesión bajo la cookie del comensal, sin tocar la del personal.
+      const supabase = createDinerClient();
       const url = new URL(window.location.pathname + window.location.search, window.location.origin);
       if (returnTab) url.searchParams.set('openTab', returnTab);
       const next = url.pathname + url.search;

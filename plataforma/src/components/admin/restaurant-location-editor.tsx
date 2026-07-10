@@ -159,7 +159,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
               <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>o escribe:</span>
                 <input
-                  type="number"
+                  type="number" inputMode="decimal"
                   min={0.5} max={500} step={0.1}
                   value={radius}
                   onChange={(e) => {

@@ -48,7 +48,7 @@ export default async function MeseroPage() {
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedTables, hubInfo] = await Promise.all([
+  const [categoriesRes, productsRes, activeOrders, occupiedSince, hubInfo] = await Promise.all([
     db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     getWaiterActiveOrders(restaurantId, user.id),
@@ -68,7 +68,7 @@ export default async function MeseroPage() {
       categories={categories}
       products={products}
       initialOrders={activeOrders}
-      occupiedTables={occupiedTables}
+      occupiedSince={occupiedSince}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
       tipEnabled={resolvedConfig?.tipEnabled ?? false}

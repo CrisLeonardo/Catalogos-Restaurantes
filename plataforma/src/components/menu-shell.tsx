@@ -39,13 +39,16 @@ interface Props {
   loyaltyOn?: boolean;
   /** Recompensas de lealtad (v2). null = canje deshabilitado. */
   rewardsCatalog?: MenuReward[] | null;
-  redeemValue?: number;
   googleAuthEnabled?: boolean;
   /** Número de WhatsApp para el botón de contacto en "Mi cuenta". */
   whatsappNumber?: string | null;
+  /** Ubicación del restaurante + radio de cobertura, para el mapa en "Mi cuenta". */
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+  deliveryRadiusKm?: number | null;
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, redeemValue = 0, googleAuthEnabled = false, whatsappNumber = null }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       setScannedTable(restaurantId, initialMesa);
@@ -85,7 +88,7 @@ export default function MenuShell({ config, content, categories, products, resta
                 </div>
               </div>
             )}
-            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} redeemValue={redeemValue} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} />
+            <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
         </main>
         <InstallBanner brandName={config.brandName} />

@@ -14,7 +14,13 @@ export interface TutorialStep {
   route?: string;
   /** Optional pro tip */
   tip?: string;
-  /** Description of what the screenshot shows (used as placeholder and alt text) */
+  /**
+   * @deprecated Las capturas de pantalla se retiraron del centro de ayuda
+   * (mantenerlas al día con cada cambio de UI era insostenible). El "mira
+   * dónde está" lo cubren los tours guiados (lib/tutorial/tours.ts), que
+   * señalan la interfaz real. El campo se conserva solo para no reescribir
+   * el contenido; ya no se renderiza.
+   */
   screenshotDesc?: string;
 }
 
@@ -877,6 +883,53 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
           'El mesero solo ve sus propios pedidos activos en la tab "Mis pedidos". Puede ver el estado de cada uno y avanzarlos. El dueño, en el panel principal, ve todos los pedidos con la nota del mesero asignado.',
         route: 'Panel mesero → Tab "Mis pedidos"',
         screenshotDesc: 'Tab de pedidos del mesero con sus pedidos activos del turno',
+      },
+    ],
+  },
+
+  {
+    id: 'kiosko',
+    title: 'Kiosko de autoservicio',
+    description: 'Convierte cualquier tablet del mostrador en un tótem donde tus clientes ordenan solos.',
+    icon: 'grid',
+    planLevel: 'popular',
+    moduleKey: 'orders',
+    steps: [
+      {
+        id: 'que-es-kiosko',
+        title: '¿Qué es el modo kiosko?',
+        description:
+          'Es tu menú digital en modo autoservicio, pensado para una tablet fija en el mostrador (estilo McDonald’s): el cliente arma su pedido solo, lo confirma "para recoger" y la pantalla vuelve automáticamente al menú para el siguiente cliente. No necesitas hardware especial ni licencias extra.',
+        route: 'Cualquier tablet o pantalla táctil con navegador',
+      },
+      {
+        id: 'activar-kiosko',
+        title: 'Activa el kiosko en la tablet',
+        description:
+          'En la tablet del mostrador, abre el navegador y entra a turestaurante.leogin.online/kiosko — el menú se abre en modo autoservicio (verás el distintivo "Autoservicio" arriba). Pon el navegador en pantalla completa o instala el menú como app para que no se salgan del modo.',
+        route: 'Navegador de la tablet → turestaurante.leogin.online/kiosko',
+        tip: 'Activa "No bloquear pantalla" en la tablet y déjala conectada a la corriente durante el servicio.',
+      },
+      {
+        id: 'flujo-kiosko',
+        title: 'Así ordena tu cliente',
+        description:
+          'El cliente navega el menú, agrega al carrito y confirma con su nombre y teléfono. El pedido entra como "para recoger" a tu panel de pedidos y a cocina, igual que cualquier otro. Al final ve su número de pedido en grande y la pantalla regresa sola al menú a los 45 segundos (o con el botón "Hacer otro pedido").',
+        route: 'Kiosko → Carrito → Confirmar → Número de pedido → Vuelve al menú',
+      },
+      {
+        id: 'privacidad-kiosko',
+        title: 'Privacidad en el aparato compartido',
+        description:
+          'En modo kiosko el menú oculta las pestañas de cuenta, fidelidad y mis pedidos, no autocompleta los datos del cliente anterior y no guarda los del actual. Así nadie ve la información de quien ordenó antes.',
+        tip: 'Los clientes que quieran acumular puntos pueden pedir desde SU teléfono escaneando el QR — el kiosko es para ordenar rápido en el mostrador.',
+      },
+      {
+        id: 'salir-kiosko',
+        title: 'Salir del modo kiosko',
+        description:
+          'Para desactivarlo (por ejemplo, para usar esa tablet en otra cosa), entra a turestaurante.leogin.online/kiosko?salir=1 en la misma tablet. El modo solo afecta al dispositivo donde se activó.',
+        route: 'Navegador de la tablet → turestaurante.leogin.online/kiosko?salir=1',
       },
     ],
   },

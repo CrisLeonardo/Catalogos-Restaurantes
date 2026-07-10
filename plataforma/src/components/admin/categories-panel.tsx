@@ -319,7 +319,7 @@ function NewCategoryForm({
   }, [state]);
 
   return (
-    <div className="glass" style={{ borderRadius: 15, padding: '16px 18px' }}>
+    <div className="glass" data-tour-step="categorias-nueva" style={{ borderRadius: 15, padding: '16px 18px' }}>
       <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Nueva categoría</div>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />

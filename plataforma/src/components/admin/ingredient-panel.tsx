@@ -126,7 +126,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
             Define los insumos y su costo por unidad. Asígnalos a platillos para calcular el food cost automáticamente.
@@ -155,8 +155,10 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
           <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Nuevo insumo</p>
           <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <input type="hidden" name="restaurantId" value={restaurantId} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px', gap: 10 }}>
-              <div>
+            {/* .ing-form-grid: 3 columnas en escritorio, apilado en móvil (antes
+                columnas fijas de 140px que aplastaban el nombre en pantallas chicas). */}
+            <div className="ing-form-grid">
+              <div className="ing-form-name">
                 <label style={labelStyle}>Nombre</label>
                 <input style={inputStyle} required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej: Tomate roma" />
               </div>
@@ -168,14 +170,14 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               </div>
               <div>
                 <label style={labelStyle}>Costo / unidad</label>
-                <input style={inputStyle} type="number" min="0" step="0.0001" required value={newCost} onChange={(e) => setNewCost(e.target.value)} placeholder="0.0000" />
+                <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.0001" required value={newCost} onChange={(e) => setNewCost(e.target.value)} placeholder="0.0000" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" disabled={isPending} className="press btn-accent" style={{ padding: '8px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+              <button type="submit" disabled={isPending} className="press btn-accent" style={{ padding: '10px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
                 {isPending ? 'Guardando…' : 'Guardar'}
               </button>
-              <button type="button" onClick={resetAdd} style={{ padding: '8px 16px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+              <button type="button" onClick={resetAdd} style={{ padding: '10px 16px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
@@ -191,86 +193,97 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
           <p style={{ color: 'var(--u-text-4)', fontSize: 12, marginTop: 4 }}>Crea tu primer insumo para poder asignarlo a las recetas de tus platillos.</p>
         </Glass>
       ) : (
-        <Glass variant="quiet" style={{ overflow: 'visible' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                {['Insumo', 'Unidad', 'Costo / unidad', 'Platillos', ''].map((h) => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {initialIngredients.map((ing, i) => (
-                editState?.id === ing.id ? (
-                  <tr key={ing.id} style={{ background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', borderBottom: '1px solid var(--u-hair)' }}>
-                    <td colSpan={5} style={{ padding: '12px 14px' }}>
-                      <form onSubmit={handleEdit} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1, minWidth: 120 }}>
-                          <label style={labelStyle}>Nombre</label>
-                          <input style={inputStyle} required value={editState.name} onChange={(e) => setEditState({ ...editState, name: e.target.value })} />
-                        </div>
-                        <div style={{ width: 120 }}>
-                          <label style={labelStyle}>Unidad</label>
-                          <select style={inputStyle} value={editState.unit} onChange={(e) => setEditState({ ...editState, unit: e.target.value })}>
-                            {UNITS.map((u) => <option key={u} style={optionStyle}>{u}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ width: 140 }}>
-                          <label style={labelStyle}>Costo / unidad</label>
-                          <input style={inputStyle} type="number" min="0" step="0.0001" required value={editState.cost_per_unit} onChange={(e) => setEditState({ ...editState, cost_per_unit: e.target.value })} />
-                        </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button type="submit" disabled={isPending} className="press btn-accent" style={{ padding: '8px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                            {isPending ? '…' : 'Guardar'}
-                          </button>
-                          <button type="button" onClick={() => setEditState(null)} style={{ padding: '8px 14px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </form>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr key={ing.id} style={{ borderBottom: i < initialIngredients.length - 1 ? '1px solid var(--u-hair)' : 'none' }}>
-                    <td style={{ padding: '12px 14px', fontWeight: 500 }}>{ing.name}</td>
-                    <td style={{ padding: '12px 14px', color: 'var(--u-text-3)' }}>{ing.unit}</td>
-                    <td style={{ padding: '12px 14px', fontFamily: 'monospace' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</td>
-                    <td style={{ padding: '12px 14px', color: 'var(--u-text-3)' }}>
-                      {usageCounts[ing.id] ? (
-                        <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 99 }}>
-                          {usageCounts[ing.id]} platillo{usageCounts[ing.id] !== 1 ? 's' : ''}
-                        </span>
-                      ) : '—'}
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          onClick={() => setEditState({ id: ing.id, name: ing.name, unit: ing.unit, cost_per_unit: String(ing.cost_per_unit) })}
-                          className="press"
-                          style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
-                          title="Editar"
-                        >
-                          <Icon name="edit" size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(ing)}
-                          disabled={isPending}
-                          className="press"
-                          style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#f87171' }}
-                          title="Eliminar"
-                        >
-                          <Icon name="trash" size={14} />
-                        </button>
+        /* Lista responsiva (patrón catalog/customers): grid de columnas en
+           escritorio; en móvil cada fila es una tarjeta de 2 líneas (antes era
+           un <table> de 5 columnas que se desbordaba y era inusable). */
+        <Glass variant="quiet" style={{ padding: '4px 14px', fontSize: 13 }}>
+          <div className="ing-head" style={{ padding: '10px 0', borderBottom: '1px solid var(--u-hair)' }}>
+            {['Insumo', 'Unidad', 'Costo / unidad', 'Platillos', ''].map((h) => (
+              <div key={h} style={{ color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</div>
+            ))}
+          </div>
+          {initialIngredients.map((ing, i) => {
+            const usage = usageCounts[ing.id] ?? 0;
+            const usageChip = usage > 0 ? (
+              <span style={{ fontSize: 12, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+                {usage} platillo{usage !== 1 ? 's' : ''}
+              </span>
+            ) : null;
+            const borderBottom = i < initialIngredients.length - 1 ? '1px solid var(--u-hair)' : 'none';
+
+            if (editState?.id === ing.id) {
+              return (
+                <div key={ing.id} style={{ padding: '14px 0', borderBottom, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', margin: '0 -14px', paddingLeft: 14, paddingRight: 14 }}>
+                  <form onSubmit={handleEdit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="ing-form-grid">
+                      <div className="ing-form-name">
+                        <label style={labelStyle}>Nombre</label>
+                        <input style={inputStyle} required value={editState.name} onChange={(e) => setEditState({ ...editState, name: e.target.value })} />
                       </div>
-                    </td>
-                  </tr>
-                )
-              ))}
-            </tbody>
-          </table>
+                      <div>
+                        <label style={labelStyle}>Unidad</label>
+                        <select style={inputStyle} value={editState.unit} onChange={(e) => setEditState({ ...editState, unit: e.target.value })}>
+                          {UNITS.map((u) => <option key={u} style={optionStyle}>{u}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Costo / unidad</label>
+                        <input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.0001" required value={editState.cost_per_unit} onChange={(e) => setEditState({ ...editState, cost_per_unit: e.target.value })} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="submit" disabled={isPending} className="press btn-accent" style={{ padding: '10px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+                        {isPending ? '…' : 'Guardar'}
+                      </button>
+                      <button type="button" onClick={() => setEditState(null)} style={{ padding: '10px 14px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              );
+            }
+
+            return (
+              <div key={ing.id} className="ing-row" style={{ padding: '12px 0', borderBottom }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ing.name}</div>
+                  {/* Línea meta — solo visible en móvil (las columnas se ocultan) */}
+                  <div className="ing-meta-mobile" style={{ color: 'var(--u-text-3)', fontSize: 12 }}>
+                    <span>{ing.unit}</span>
+                    <span style={{ fontFamily: 'monospace', color: 'var(--u-text-2)' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</span>
+                    {usageChip}
+                  </div>
+                </div>
+                <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{ing.unit}</div>
+                <div className="ing-col-desk" style={{ fontFamily: 'monospace' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</div>
+                <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{usageChip ?? '—'}</div>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignSelf: 'start' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditState({ id: ing.id, name: ing.name, unit: ing.unit, cost_per_unit: String(ing.cost_per_unit) })}
+                    className="press"
+                    style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
+                    title="Editar"
+                    aria-label={`Editar ${ing.name}`}
+                  >
+                    <Icon name="edit" size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(ing)}
+                    disabled={isPending}
+                    className="press"
+                    style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#f87171' }}
+                    title="Eliminar"
+                    aria-label={`Eliminar ${ing.name}`}
+                  >
+                    <Icon name="trash" size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </Glass>
       )}
     </div>

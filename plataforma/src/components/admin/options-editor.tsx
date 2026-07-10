@@ -149,7 +149,7 @@ export default function OptionsEditor({
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--u-text-3)' }}>
               Máximo de opciones
               <input
-                type="number"
+                type="number" inputMode="decimal"
                 min={0}
                 max={20}
                 value={group.max ?? 0}
@@ -173,7 +173,7 @@ export default function OptionsEditor({
                 />
                 <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{group.type === 'combo' ? 'Q' : '+'}</span>
                 <input
-                  type="number"
+                  type="number" inputMode="decimal"
                   step="0.01"
                   min={group.type === 'combo' ? 0 : undefined}
                   value={choice.priceDelta}

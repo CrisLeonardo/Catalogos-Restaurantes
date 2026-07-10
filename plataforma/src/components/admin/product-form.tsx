@@ -105,7 +105,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <input
               id="price"
               name="price"
-              type="number"
+              type="number" inputMode="decimal"
               required
               min="0"
               step="0.01"
@@ -122,7 +122,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <input
               id="cost"
               name="cost"
-              type="number"
+              type="number" inputMode="decimal"
               min="0"
               step="0.0001"
               value={hasRecipe ? displayCost : costVal}
@@ -172,7 +172,7 @@ export default function ProductForm({ restaurantId, categories, product, default
           <input
             id="loyalty_points"
             name="loyalty_points"
-            type="number"
+            type="number" inputMode="decimal"
             min="0"
             step="1"
             value={loyaltyPtsVal}

@@ -147,13 +147,11 @@ export default async function Home({
   // Lealtad v2: pestaña "Fidelidad" en la barra de navegación + panel de canje.
   const loyaltyOn = isModuleActive(mod, modSettings, 'loyalty');
   let rewardsCatalog: Awaited<ReturnType<typeof getPublicRewards>> | null = null;
-  let redeemValue = 0;
   if (loyaltyOn) {
     const [settings, rewards] = await Promise.all([
       getLoyaltySettings(data.restaurant.id),
       getPublicRewards(data.restaurant.id),
     ]);
-    redeemValue = Number(settings.redeem_value) || 0;
     if (settings.rewards_enabled) rewardsCatalog = rewards;
   }
 
@@ -175,9 +173,11 @@ export default async function Home({
       llamadaMeseroEnabled={isModuleActive(mod, modSettings, 'llamada_mesero')}
       loyaltyOn={loyaltyOn}
       rewardsCatalog={rewardsCatalog}
-      redeemValue={redeemValue}
       googleAuthEnabled={isGoogleAuthEnabled()}
       whatsappNumber={whatsappNumber}
+      restaurantLat={data.restaurant.location_lat}
+      restaurantLng={data.restaurant.location_lng}
+      deliveryRadiusKm={data.restaurant.delivery_radius_km}
     />
   );
 }

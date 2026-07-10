@@ -102,7 +102,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
             </p>
           </Glass>
 
-          <Glass variant="quiet" style={{ padding: 16 }}>
+          <Glass variant="quiet" data-tour-step="perfil-whatsapp" style={{ padding: 16 }}>
             <label htmlFor="whatsapp_number" style={labelStyle}>WhatsApp</label>
             <input
               id="whatsapp_number"

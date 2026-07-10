@@ -119,15 +119,18 @@ function PromoModal({ restaurantId, promo, onClose, onSaved }: { restaurantId: s
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={label}>Tipo</label>
-              <select name="kind" value={kind} onChange={(e) => setKind(e.target.value as Promotion['kind'])} style={{ ...input, background: '#1a1a1a' }}>
-                <option value="PERCENT" style={{ background: '#1a1a1a', color: '#f0f0f0' }}>% de descuento</option>
-                <option value="AMOUNT" style={{ background: '#1a1a1a', color: '#f0f0f0' }}>Monto fijo (Q)</option>
-                <option value="FREE_DELIVERY" style={{ background: '#1a1a1a', color: '#f0f0f0' }}>Envío gratis</option>
+              {/* Fondo adaptativo (antes #1a1a1a fijo: caja oscura flotando en el
+                  panel claro). Las <option> van claras fijas como en el resto de
+                  selects del admin (el desplegable nativo se dibuja aparte). */}
+              <select name="kind" value={kind} onChange={(e) => setKind(e.target.value as Promotion['kind'])} style={input}>
+                <option value="PERCENT" style={{ background: '#fff', color: '#111' }}>% de descuento</option>
+                <option value="AMOUNT" style={{ background: '#fff', color: '#111' }}>Monto fijo (Q)</option>
+                <option value="FREE_DELIVERY" style={{ background: '#fff', color: '#111' }}>Envío gratis</option>
               </select>
             </div>
             <div>
               <label style={label}>{kind === 'PERCENT' ? 'Porcentaje' : kind === 'AMOUNT' ? 'Monto (Q)' : 'Valor'}</label>
-              <input name="value" type="number" min="0" step="0.01" defaultValue={promo?.value ?? ''} disabled={kind === 'FREE_DELIVERY'} placeholder={kind === 'PERCENT' ? '10' : '0.00'} style={{ ...input, opacity: kind === 'FREE_DELIVERY' ? 0.5 : 1 }} />
+              <input name="value" type="number" inputMode="decimal" min="0" step="0.01" defaultValue={promo?.value ?? ''} disabled={kind === 'FREE_DELIVERY'} placeholder={kind === 'PERCENT' ? '10' : '0.00'} style={{ ...input, opacity: kind === 'FREE_DELIVERY' ? 0.5 : 1 }} />
             </div>
           </div>
 
@@ -138,14 +141,14 @@ function PromoModal({ restaurantId, promo, onClose, onSaved }: { restaurantId: s
             </div>
             <div>
               <label style={label}>Compra mínima (Q)</label>
-              <input name="min_order" type="number" min="0" step="0.01" defaultValue={promo?.min_order ?? 0} style={input} />
+              <input name="min_order" type="number" inputMode="decimal" min="0" step="0.01" defaultValue={promo?.min_order ?? 0} style={input} />
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={label}>Límite de usos</label>
-              <input name="usage_limit" type="number" min="1" defaultValue={promo?.usage_limit ?? ''} placeholder="Sin límite" style={input} />
+              <input name="usage_limit" type="number" inputMode="decimal" min="1" defaultValue={promo?.usage_limit ?? ''} placeholder="Sin límite" style={input} />
             </div>
             <div>
               <label style={label}>Vence (opcional)</label>

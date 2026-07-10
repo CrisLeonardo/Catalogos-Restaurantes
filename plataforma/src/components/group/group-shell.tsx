@@ -7,6 +7,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
+import AdminThemeToggle from '@/components/admin/theme-toggle';
+import OfflineSupport from '@/components/offline-support';
 import { logoutGroup } from '@/lib/actions/auth';
 
 interface Props {
@@ -38,6 +40,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
 
   return (
     <div className="admin-shell">
+      <OfflineSupport />
       <aside className="admin-sidebar">
         <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
@@ -89,6 +92,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
       <div className="admin-main">
         <div className="admin-topbar">
           <h1 className="t-display" style={{ fontSize: 22, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
+          <AdminThemeToggle />
         </div>
         <div className="admin-content">{children}</div>
       </div>

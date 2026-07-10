@@ -18,6 +18,7 @@ import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
+import { isKioskMode } from '@/lib/kiosk';
 import GoogleSignInButton from '@/components/menu/google-signin';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
@@ -110,11 +111,22 @@ export default function CheckoutForm({
   // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
   const [hasScannedTable, setHasScannedTable] = useState(false);
 
-  const typeOptions = [
-    config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
-    config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
-    config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
-  ].filter(Boolean) as { id: OrderType; label: string; icon: string }[];
+  // MODO KIOSKO (autoservicio, dispositivo compartido del mostrador): el
+  // pedido es siempre "para recoger", sin autocompletar ni guardar el perfil
+  // del cliente anterior, sin lealtad (la sesión sería de otra persona) y con
+  // regreso automático al menú tras confirmar. Ver src/lib/kiosk.ts.
+  const [kiosk, setKiosk] = useState(false);
+  useEffect(() => {
+    if (isKioskMode()) setKiosk(true);
+  }, []);
+
+  const typeOptions = kiosk
+    ? [{ id: 'PICKUP' as const, label: content.checkout.pickup, icon: 'bag' }]
+    : ([
+        config.orderTypes.includes('dine_in')  && hasScannedTable && { id: 'DINE_IN'   as const, label: content.checkout.dineIn, icon: 'utensils' },
+        config.orderTypes.includes('delivery') && { id: 'DELIVERY'  as const, label: content.checkout.delivery, icon: 'truck' },
+        config.orderTypes.includes('pickup')   && { id: 'PICKUP'    as const, label: content.checkout.pickup, icon: 'bag' },
+      ].filter(Boolean) as { id: OrderType; label: string; icon: string }[]);
 
   const activeBg   = config.checkoutActiveColor === 'accent' ? 'var(--brand-accent)' : 'var(--u-text)';
   const activeText = config.checkoutActiveColor === 'accent' ? 'var(--brand-on-accent)' : 'var(--brand-bg)';
@@ -170,6 +182,21 @@ export default function CheckoutForm({
   const [notes, setNotes]     = useState('');
   const [welcomeBack, setWelcomeBack] = useState(false);
 
+  // Kiosko: fuerza "para recoger" en cuanto se detecta el modo (typeOptions
+  // ya solo ofrece PICKUP, esto sincroniza el estado si arrancó en otro tipo).
+  useEffect(() => {
+    if (kiosk) setType('PICKUP');
+  }, [kiosk]);
+
+  // Kiosko: tras confirmar, la pantalla vuelve sola al menú para el siguiente
+  // cliente (recarga completa = estado limpio garantizado). El margen da
+  // tiempo a leer el número de pedido y dejar una calificación.
+  useEffect(() => {
+    if (!kiosk || step !== 'success') return;
+    const t = setTimeout(() => { window.location.href = '/'; }, 45_000);
+    return () => clearTimeout(t);
+  }, [kiosk, step]);
+
   // Método de pago
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
   const [cashAmount, setCashAmount] = useState('');
@@ -184,6 +211,10 @@ export default function CheckoutForm({
   // Geo: coordenadas del pin del cliente en el mapa
   const [deliveryLat, setDeliveryLat] = useState<number | undefined>(undefined);
   const [deliveryLng, setDeliveryLng] = useState<number | undefined>(undefined);
+  // El mapa solo lee su posición inicial UNA vez al montar Leaflet — hay que
+  // esperar a que termine de revisarse el perfil guardado (local o de cuenta)
+  // antes de montarlo, o el pin guardado nunca se restauraría.
+  const [profileChecked, setProfileChecked] = useState(false);
 
   // Cupón / promoción
   const [promoCode, setPromoCode] = useState('');
@@ -199,28 +230,36 @@ export default function CheckoutForm({
   const [redeemInfoLoaded, setRedeemInfoLoaded] = useState(false);
 
   useEffect(() => {
+    // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
+    if (isKioskMode()) { setProfileChecked(true); return; }
     let cancelled = false;
     (async () => {
-      // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
-      // dispositivo) sobre el perfil local de este dispositivo únicamente.
-      const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
-      if (cancelled) return;
-      if (remote) {
-        setName(remote.name);
-        setPhone(remote.phone);
-        if (remote.address) setAddress(remote.address);
-        if (remote.zone && deliveryZones.includes(remote.zone)) setZone(remote.zone);
-        setWelcomeBack(true);
-        return;
-      }
+      try {
+        // Prioridad: cuenta de Google enlazada (sigue al comensal a cualquier
+        // dispositivo) sobre el perfil local de este dispositivo únicamente.
+        const remote = await getMyCheckoutProfile(restaurantId).catch(() => null);
+        if (cancelled) return;
+        if (remote) {
+          setName(remote.name);
+          setPhone(remote.phone);
+          if (remote.address) setAddress(remote.address);
+          if (remote.zone && deliveryZones.includes(remote.zone)) setZone(remote.zone);
+          if (remote.lat != null && remote.lng != null) { setDeliveryLat(remote.lat); setDeliveryLng(remote.lng); }
+          setWelcomeBack(true);
+          return;
+        }
 
-      const p = getLocalProfile(restaurantId);
-      if (!p) return;
-      setName(p.name);
-      setPhone(p.phone);
-      if (p.address) setAddress(p.address);
-      if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
-      setWelcomeBack(true);
+        const p = getLocalProfile(restaurantId);
+        if (!p) return;
+        setName(p.name);
+        setPhone(p.phone);
+        if (p.address) setAddress(p.address);
+        if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
+        if (p.lat != null && p.lng != null) { setDeliveryLat(p.lat); setDeliveryLng(p.lng); }
+        setWelcomeBack(true);
+      } finally {
+        if (!cancelled) setProfileChecked(true);
+      }
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,6 +267,7 @@ export default function CheckoutForm({
 
   useEffect(() => {
     if (!config.orderTypes.includes('dine_in')) return;
+    if (isKioskMode()) return; // kiosko: siempre "para recoger", sin mesa
     // No se borra la mesa al leerla: el botón "Llamar al mesero" también la usa.
     // Se mantiene mientras el comensal está sentado (la sobrescribe el próximo escaneo).
     const n = getScannedTable(restaurantId);
@@ -270,7 +310,9 @@ export default function CheckoutForm({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!loyaltyActive) {
+      // Kiosko: sin lealtad — cualquier sesión en el aparato compartido sería
+      // de otra persona (o del dueño), y sus puntos no deben poder gastarse.
+      if (!loyaltyActive || isKioskMode()) {
         if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); setRedeemInfoLoaded(true); }
         return;
       }
@@ -356,30 +398,35 @@ export default function CheckoutForm({
     if (!snap) return;
     const clientIdForRef = clientIdRef.current;
 
-    saveLocalProfile(restaurantId, {
-      name, phone,
-      ...(address.trim() ? { address } : {}),
-      ...(zone && zone !== NO_ZONE ? { zone } : {}),
-    });
-    if (result.publicToken) {
-      addLocalOrder(restaurantId, {
-        token: result.publicToken,
-        orderNumber: result.orderNumber ?? '',
-        createdAt: new Date().toISOString(),
-        total: snap.totalSnapshot,
+    // Kiosko: no dejar rastro del cliente en el aparato compartido (ni perfil
+    // para autocompletar, ni su pedido en el historial local del dispositivo).
+    if (!isKioskMode()) {
+      saveLocalProfile(restaurantId, {
+        name, phone,
+        ...(address.trim() ? { address } : {}),
+        ...(zone && zone !== NO_ZONE ? { zone } : {}),
+        ...(deliveryLat !== undefined && deliveryLng !== undefined ? { lat: deliveryLat, lng: deliveryLng } : {}),
       });
-    } else if (clientIdForRef) {
-      // Pedido aceptado por el hub local sin conexión a la nube: todavía no
-      // hay token público (se genera cuando sincronice con Supabase). Se
-      // guarda con el clientId para que "Mis pedidos" lo resuelva en cuanto
-      // sincronice (ver my-orders.tsx / getOrderRefByClientId).
-      addLocalOrder(restaurantId, {
-        token: '',
-        clientId: clientIdForRef,
-        orderNumber: result.orderNumber ?? '',
-        createdAt: new Date().toISOString(),
-        total: snap.totalSnapshot,
-      });
+      if (result.publicToken) {
+        addLocalOrder(restaurantId, {
+          token: result.publicToken,
+          orderNumber: result.orderNumber ?? '',
+          createdAt: new Date().toISOString(),
+          total: snap.totalSnapshot,
+        });
+      } else if (clientIdForRef) {
+        // Pedido aceptado por el hub local sin conexión a la nube: todavía no
+        // hay token público (se genera cuando sincronice con Supabase). Se
+        // guarda con el clientId para que "Mis pedidos" lo resuelva en cuanto
+        // sincronice (ver my-orders.tsx / getOrderRefByClientId).
+        addLocalOrder(restaurantId, {
+          token: '',
+          clientId: clientIdForRef,
+          orderNumber: result.orderNumber ?? '',
+          createdAt: new Date().toISOString(),
+          total: snap.totalSnapshot,
+        });
+      }
     }
 
     setSnapshot(snap.itemsSnapshot);
@@ -402,6 +449,10 @@ export default function CheckoutForm({
 
     clearCart();
     setStep('success');
+
+    // Kiosko: el aparato del mostrador no tiene WhatsApp del cliente; el
+    // pedido ya entró por el sistema y la pantalla vuelve sola al menú.
+    if (isKioskMode()) return;
 
     const waUrl = buildWhatsAppUrl({
       orderNumber: result.orderNumber ?? '',
@@ -720,7 +771,9 @@ export default function CheckoutForm({
 
   /* ── Confirmación ── */
   if (step === 'success') {
-    const waUrl = buildWhatsAppUrl();
+    // Kiosko: sin WhatsApp ni seguimiento en el aparato compartido — solo el
+    // número de pedido grande y el regreso al menú para el siguiente cliente.
+    const waUrl = kiosk ? '' : buildWhatsAppUrl();
     const subtitle = content.confirmation.subtitle || `${config.brandName} ya recibió tu pedido y lo está preparando.`;
     const typeLabel = type === 'DINE_IN'
       ? `Mesa ${tableNumber ?? '?'}`
@@ -762,10 +815,16 @@ export default function CheckoutForm({
               </p>
             </div>
           )}
-          {trackToken && (
+          {trackToken && !kiosk && (
             <PrimaryButton href={`/pedido/${trackToken}`} full iconRight="arrowRight">
               {content.confirmation.track}
             </PrimaryButton>
+          )}
+          {kiosk && (
+            <p style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.6, margin: 0 }}>
+              Guarda tu número de pedido{orderNumber ? ` (${orderNumber})` : ''} — te llamaremos
+              al mostrador cuando esté listo.
+            </p>
           )}
 
           {/* Encuesta de satisfacción */}
@@ -851,14 +910,25 @@ export default function CheckoutForm({
             </p>
           )}
 
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
-              Mis pedidos
-            </Link>
-            <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
-              {content.confirmation.again}
-            </Link>
-          </div>
+          {kiosk ? (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+              <PrimaryButton href="/" full iconRight="arrowRight">
+                Hacer otro pedido
+              </PrimaryButton>
+              <p className="t-mute" style={{ fontSize: 11.5, margin: 0 }}>
+                La pantalla volverá al menú automáticamente.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+                Mis pedidos
+              </Link>
+              <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+                {content.confirmation.again}
+              </Link>
+            </div>
+          )}
         </div>
       </main>
     );
@@ -965,8 +1035,9 @@ export default function CheckoutForm({
             {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
 
-          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido */}
-          {loyaltyActive && googleAuthEnabled && redeemInfoLoaded && !redeemInfo?.loggedIn && (
+          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido.
+              En kiosko no se invita a iniciar sesión (aparato compartido). */}
+          {loyaltyActive && googleAuthEnabled && !kiosk && redeemInfoLoaded && !redeemInfo?.loggedIn && (
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
@@ -1196,15 +1267,27 @@ export default function CheckoutForm({
               Arrastra el pin azul hasta tu puerta exacta. Si cae fuera del área
               naranja, el restaurante no puede llegar ahí.
             </p>
-            <DeliveryMap
-              restaurantLat={restaurantLat}
-              restaurantLng={restaurantLng}
-              radiusKm={deliveryRadiusKm}
-              onLocationChange={(lat, lng) => {
-                setDeliveryLat(lat);
-                setDeliveryLng(lng);
-              }}
-            />
+            {profileChecked ? (
+              <DeliveryMap
+                initialLat={deliveryLat}
+                initialLng={deliveryLng}
+                restaurantLat={restaurantLat}
+                restaurantLng={restaurantLng}
+                radiusKm={deliveryRadiusKm}
+                onLocationChange={(lat, lng) => {
+                  setDeliveryLat(lat);
+                  setDeliveryLng(lng);
+                }}
+              />
+            ) : (
+              <div style={{
+                height: 280, borderRadius: 'var(--radius-lg)', background: 'var(--surface-1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--u-text-4)', fontSize: 13,
+              }}>
+                Cargando mapa…
+              </div>
+            )}
             {geoDistanceKm !== null && (
               <div style={{
                 marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,

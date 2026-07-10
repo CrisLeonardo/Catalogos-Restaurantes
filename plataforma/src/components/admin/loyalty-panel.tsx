@@ -102,10 +102,10 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Por cada Q gastados</label><input style={inputStyle} type="number" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
-        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input style={inputStyle} type="number" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
-        <div><label style={labelStyle}>Puntos de bienvenida</label><input style={inputStyle} type="number" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Por cada Q gastados</label><input style={inputStyle} type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
+        <div><label style={labelStyle}>Mínimo para canjear (puntos)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={p.min_redeem} onChange={(e) => set('min_redeem', parseInt(e.target.value, 10) || 0)} /></div>
+        <div><label style={labelStyle}>Puntos de bienvenida</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={p.signup_bonus} onChange={(e) => set('signup_bonus', parseInt(e.target.value, 10) || 0)} /></div>
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13.5, color: 'var(--u-text-2)' }}>
@@ -198,12 +198,12 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
             </select>
           </div>
           <div><label style={labelStyle}>Nombre visible</label><input style={inputStyle} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
-          <div><label style={labelStyle}>Costo en puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
+          <div><label style={labelStyle}>Costo en puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
         </div>
         <div><label style={labelStyle}>Descripción (opcional)</label><input style={inputStyle} value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Detalle breve de la recompensa" /></div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input style={inputStyle} type="number" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
-          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input style={inputStyle} type="number" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
+          <div><label style={labelStyle}>Stock límite (vacío = ilimitado)</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="1" value={form.stock ?? ''} onChange={(e) => set('stock', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
+          <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input style={inputStyle} type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
           <input type="checkbox" checked={form.active !== false} onChange={(e) => set('active', e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--brand-accent)' }} />
@@ -276,15 +276,17 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="t-kicker" style={{ fontSize: 10.5 }}>Asignar / restar puntos manualmente</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 110px', gap: 10 }}>
-          <div>
+        {/* .admin-form-3: 3 columnas en escritorio, apilado en móvil (antes
+            columnas fijas que aplastaban el selector de cliente). */}
+        <div className="admin-form-3">
+          <div className="fg-full">
             <label style={labelStyle}>Cliente</label>
             <select style={inputStyle} value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
               <option value="">Selecciona…</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>)}
             </select>
           </div>
-          <div><label style={labelStyle}>Puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
+          <div><label style={labelStyle}>Puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
           <div>
             <label style={labelStyle}>Tipo</label>
             <select style={inputStyle} value={tipo} onChange={(e) => setTipo(e.target.value as 'ADJUST' | 'REDEEM')}>
@@ -307,16 +309,18 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
         <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay miembros con puntos.</Glass>
       ) : (
         <Glass variant="quiet" style={{ overflow: 'hidden' }}>
+          {/* En móvil se oculta "Histórico" (columna menos útil) para que
+              Cliente/Saldo/Valor quepan sin desbordar la pantalla. */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-              {['Cliente', 'Saldo', 'Histórico', 'Valor'].map((h) => <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Cliente' ? 'left' : 'right', color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>)}
+              {['Cliente', 'Saldo', 'Histórico', 'Valor'].map((h) => <th key={h} className={h === 'Histórico' ? 'hide-mobile' : undefined} style={{ padding: '10px 12px', textAlign: h === 'Cliente' ? 'left' : 'right', color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>)}
             </tr></thead>
             <tbody>
               {accounts.map((a) => (
                 <tr key={a.id} style={{ borderBottom: '1px solid var(--u-hair)' }}>
                   <td style={{ padding: '10px 12px' }}><div style={{ fontWeight: 500 }}>{a.customer_name}</div><div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{a.customer_phone}</div></td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent)' }}>{a.points_balance.toLocaleString('es-GT')}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{a.lifetime_points.toLocaleString('es-GT')}</td>
+                  <td className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{a.lifetime_points.toLocaleString('es-GT')}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>Q{(a.points_balance * settings.redeem_value).toFixed(2)}</td>
                 </tr>
               ))}

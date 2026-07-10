@@ -129,6 +129,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
         <button
           className="press"
           onClick={() => setEditor({ open: true, product: null })}
+          data-tour-step="catalogo-nuevo"
           style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 99, cursor: 'pointer',
@@ -668,7 +669,7 @@ function ProductModal({
                   </label>
                   <input
                     name="price"
-                    type="number"
+                    type="number" inputMode="decimal"
                     min="0"
                     step="0.01"
                     required
@@ -694,7 +695,7 @@ function ProductModal({
                   </label>
                   <input
                     name="cost"
-                    type="number"
+                    type="number" inputMode="decimal"
                     min="0"
                     step="0.01"
                     value={hasRecipe ? displayCost : costVal}
@@ -718,7 +719,7 @@ function ProductModal({
                 </label>
                 <input
                   name="loyalty_points"
-                  type="number"
+                  type="number" inputMode="decimal"
                   min="0"
                   step="1"
                   value={loyaltyPtsVal}

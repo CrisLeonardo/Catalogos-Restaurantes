@@ -34,7 +34,7 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
 };
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
   borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const optionStyle: React.CSSProperties = { color: '#000', background: '#fff' };
@@ -177,7 +177,7 @@ function ConfigCard({
         {/* Toggle de precio automático */}
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 11,
-          background: auto ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)',
+          background: auto ? 'rgba(74,222,128,0.08)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           border: `1px solid ${auto ? 'rgba(74,222,128,0.25)' : 'var(--u-hair)'}`, cursor: 'pointer',
         }}>
           <input
@@ -282,7 +282,7 @@ function ActionButton({
       <button type="submit" disabled={pending} className="press" style={{
         padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
         border: '1px solid var(--u-hair-2)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.55 : 1,
-        background: danger ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.06)',
+        background: danger ? 'rgba(248,113,113,0.1)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
         color: danger ? '#f87171' : 'var(--u-text)', whiteSpace: 'nowrap',
       }}>
         {pending ? '…' : label}
@@ -342,7 +342,7 @@ function InvoiceRow({
 
   return (
     <div style={{
-      padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.03)',
+      padding: '10px 12px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
       border: `1px solid ${overdue ? 'rgba(248,113,113,0.3)' : 'var(--u-hair)'}`,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
@@ -352,7 +352,7 @@ function InvoiceRow({
         </span>
         <span style={{
           fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-          background: 'rgba(255,255,255,0.06)', color: 'var(--u-text-3)', letterSpacing: '0.05em',
+          background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', letterSpacing: '0.05em',
         }}>{CONCEPT_LABEL[inv.concept]}</span>
         <span style={{
           fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
@@ -457,6 +457,6 @@ function SuspensionBanner({
 function miniBtn(color: string): React.CSSProperties {
   return {
     padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
-    border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', color, cursor: 'pointer', whiteSpace: 'nowrap',
+    border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color, cursor: 'pointer', whiteSpace: 'nowrap',
   };
 }

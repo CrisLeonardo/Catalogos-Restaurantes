@@ -16,7 +16,7 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
 };
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+  width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
   borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const sectionStyle: React.CSSProperties = {
@@ -35,8 +35,8 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
 
   return (
     <div style={{
-      borderRadius: 16, background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.10)', padding: '24px 26px', maxWidth: 680,
+      borderRadius: 16, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--u-text) 10%, transparent)', padding: '24px 26px', maxWidth: 680,
     }}>
       <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginBottom: 6 }}>
         Precios de los planes
@@ -127,7 +127,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
         <button type="submit" disabled={pending} style={{
           padding: '12px 24px', borderRadius: 10, fontWeight: 700, fontSize: 14,
           cursor: pending ? 'not-allowed' : 'pointer',
-          background: pending ? 'rgba(255,255,255,0.08)' : 'var(--u-text)',
+          background: pending ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'var(--u-text)',
           color: pending ? 'var(--u-text-3)' : 'var(--brand-bg)', border: 'none', alignSelf: 'flex-start',
         }}>
           {pending ? 'Guardando…' : 'Guardar precios'}

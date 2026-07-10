@@ -176,9 +176,16 @@ export default function ImageUpload({
           height: 88,
           borderRadius: 'var(--radius-lg)',
           border: '1.5px dashed var(--u-hair-2)',
-          background: preview
-            ? `url(${preview}) center/cover no-repeat`
-            : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+          // Color de fondo SIEMPRE presente detrás de la imagen (no solo en
+          // modo icon): si el logo tiene transparencia, sin esto se ve el
+          // fondo del panel admin (cambia con el tema claro/oscuro) en vez
+          // del fondo real donde se mostrará el logo — se veía "lavado" en
+          // modo claro con logos claros/blancos.
+          backgroundColor: preview ? bgColor : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+          backgroundImage: preview ? `url(${preview})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',

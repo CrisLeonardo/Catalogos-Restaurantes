@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
-import type { Category, Organization, Product, Profile, Restaurant, RestaurantTheme } from '@/types';
+import type { Organization, Profile, Restaurant, RestaurantTheme } from '@/types';
 
 export type RestaurantRow = Restaurant & {
   restaurant_themes: RestaurantTheme[];
@@ -48,25 +48,6 @@ export const getRestaurantFullById = cache(
       .eq('id', id)
       .single();
     return data ? normalizeThemes(data as Record<string, unknown>) : null;
-  },
-);
-
-/**
- * Resumen del menú de un restaurante (TODAS las categorías y productos,
- * sin filtrar disponibilidad) vía service role. Para la vista previa del
- * panel admin que abre el Super Admin (/preview/admin/[id]).
- */
-export const getRestaurantMenuOverview = cache(
-  async (restaurantId: string): Promise<{ categories: Category[]; products: Product[] }> => {
-    const db = createServiceClient();
-    const [{ data: categories }, { data: products }] = await Promise.all([
-      db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
-      db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
-    ]);
-    return {
-      categories: (categories ?? []) as Category[],
-      products: (products ?? []) as Product[],
-    };
   },
 );
 

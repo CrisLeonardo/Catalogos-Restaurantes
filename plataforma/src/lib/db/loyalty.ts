@@ -270,18 +270,21 @@ const NO_DINER: DinerLoyalty = {
 };
 
 /**
- * Resuelve el auth_user_id de un COMENSAL a partir de la sesión de Supabase,
- * descartando cuentas de staff. La cookie de sesión se comparte entre todos
- * los subdominios (`.leogin.online`): si el dueño o un mesero prueba el menú
- * público en el mismo navegador donde tiene abierto el panel admin, `getUser()`
- * devuelve SU cuenta, no la de un cliente. Sin este filtro, esa cuenta de staff
- * quedaría enlazada (o mostraría puntos) como si fuera un cliente cualquiera.
+ * Resuelve el auth_user_id de un COMENSAL a partir de la sesión de Supabase.
+ *
+ * Antes descartaba cuentas de staff (si el id existía en `profiles`): como
+ * Supabase enlaza identidades por email verificado, un dueño/mesero que
+ * entraba con Google usando el correo de su cuenta de staff quedaba con
+ * loggedIn=false — la UI le pedía "inicia sesión" en un bucle infinito por
+ * más que la sesión de Google fuera válida, y el filtro era GLOBAL: cualquier
+ * comensal que fuera staff de CUALQUIER restaurante de la plataforma quedaba
+ * vetado de la lealtad en todos. Ese filtro se eliminó: la cuenta de Google
+ * de un miembro del personal es un comensal válido (sus consultas de lealtad
+ * van siempre por (restaurant_id, auth_user_id), sin privilegios de staff —
+ * el panel admin usa su PROPIA cookie de sesión, aquí no interviene).
  */
 export async function resolveDinerAuthUserId(rawUserId: string | null | undefined): Promise<string | null> {
-  if (!rawUserId) return null;
-  const db = createServiceClient();
-  const { data } = await db.from('profiles').select('id').eq('id', rawUserId).maybeSingle();
-  return data ? null : rawUserId;
+  return rawUserId ?? null;
 }
 
 /** Customer_id enlazado a una cuenta de Google, o null si no hay enlace (o no hay sesión). */

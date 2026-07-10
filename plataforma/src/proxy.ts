@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTenantSlug, isAdminSubdomain, isGroupSubdomain, getGroupSlug } from "@/lib/tenant";
+import { DINER_COOKIE_NAME, LEGACY_DINER_COOKIE_PATTERN } from "@/lib/supabase/cookies";
 
 /**
  * Proxy (Next.js 16 — antes llamado "middleware"):
@@ -17,11 +18,22 @@ export async function proxy(request: NextRequest) {
   const adminSub = isAdminSubdomain(host);
   const groupSub = isGroupSubdomain(host);
   const groupSlug = getGroupSlug(host);
+  const pathname = request.nextUrl.pathname;
+
+  // Área de PERSONAL (admin, panel de grupo, super admin): estas rutas usan
+  // los 2 temas fijos del panel (claro/oscuro) en vez del tema del restaurante,
+  // y solo les interesa la sesión del personal. El layout raíz lee este header.
+  const isAdminArea =
+    adminSub || groupSub ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/central") ||
+    pathname.startsWith("/super");
 
   const requestHeaders = new Headers(request.headers);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
   if (adminSub) requestHeaders.set("x-is-admin-subdomain", "1");
   if (groupSlug) requestHeaders.set("x-org-slug", groupSlug);
+  if (isAdminArea) requestHeaders.set("x-admin-area", "1");
 
   // 2) Rewrite para subdominio admin.*
   //    admin.azucar-negra.leogin.online/       → /admin/
@@ -29,7 +41,6 @@ export async function proxy(request: NextRequest) {
   //    Rutas /api/, /_next/ y archivos estáticos no se reescriben.
   let rewriteUrl: URL | null = null;
   if (adminSub) {
-    const pathname = request.nextUrl.pathname;
     const skip =
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next") ||
@@ -43,7 +54,6 @@ export async function proxy(request: NextRequest) {
     }
   } else if (groupSub) {
     // slug-central.dominio/  → /central   ·  /sucursales → /central/sucursales
-    const pathname = request.nextUrl.pathname;
     const skip =
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next") ||
@@ -63,11 +73,21 @@ export async function proxy(request: NextRequest) {
       ? NextResponse.rewrite(rewriteUrl!, { request: { headers: requestHeaders } })
       : NextResponse.next({ request: { headers: requestHeaders } });
 
-  let response = makeResponse();
-
-  // 3) Refresco de sesión Supabase (solo si hay credenciales configuradas)
+  // 3) Refresco de sesión Supabase (solo si hay credenciales configuradas).
+  //    Hay DOS sesiones independientes (ver lib/supabase/server.ts):
+  //    · PERSONAL (cookie por defecto) — se refresca siempre.
+  //    · COMENSAL (cookie DINER_COOKIE_NAME) — solo en rutas del menú público;
+  //      en el área de personal esa sesión no se usa.
+  //    getUser() sin cookie de sesión no llama a la red, así que refrescar
+  //    "de más" cuando no hay sesión iniciada es gratis.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Cookies pendientes de escribir en la respuesta: se acumulan de AMBOS
+  // clientes y se aplican una sola vez al final (si cada cliente recreara la
+  // respuesta por su cuenta, el segundo pisaría las cookies del primero).
+  type PendingCookie = { name: string; value: string; options: Record<string, unknown> };
+  const pendingCookies: PendingCookie[] = [];
 
   if (supabaseUrl && anonKey) {
     // En producción compartimos la sesión en todos los subdominios usando
@@ -77,28 +97,59 @@ export async function proxy(request: NextRequest) {
     const isLocal = !rootDomain || rootDomain.includes("localhost");
     const cookieDomain = isLocal ? undefined : `.${rootDomain.split(":")[0]}`;
 
-    const supabase = createServerClient(supabaseUrl, anonKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
+    const refreshSession = async (cookieName?: string) => {
+      // Solo la sesión del PERSONAL comparte dominio entre subdominios; la del
+      // COMENSAL es host-only (vale solo para el restaurante donde se inició).
+      const domain = cookieName ? undefined : cookieDomain;
+      const supabase = createServerClient(supabaseUrl, anonKey, {
+        ...(cookieName ? { cookieOptions: { name: cookieName } } : {}),
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value);
+              pendingCookies.push({
+                name,
+                value,
+                options: {
+                  ...options,
+                  ...(domain ? { domain } : {}),
+                },
+              });
+            });
+          },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          response = makeResponse();
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, {
-              ...options,
-              ...(cookieDomain ? { domain: cookieDomain } : {}),
-            }),
-          );
-        },
-      },
-    });
+      });
+      // IMPORTANTE: no metas lógica entre createServerClient y getUser().
+      await supabase.auth.getUser();
+    };
 
-    // IMPORTANTE: no metas lógica entre createServerClient y getUser().
-    await supabase.auth.getUser();
+    await refreshSession(); // personal
+    if (!isAdminArea) {
+      await refreshSession(DINER_COOKIE_NAME); // comensal (menú público)
+    }
+
+    // Limpieza one-shot: expira las cookies del comensal v1 (`sb-leogin-diner`
+    // y sus piezas `.N`), que eran de dominio ancho (.leogin.online) y dejaban
+    // la sesión iniciada en TODOS los restaurantes. Con las mismas options de
+    // dominio con que se crearon (host-only en local), o el navegador no las
+    // borraría. Deja de dispararse sola cuando ya no llegan cookies viejas.
+    for (const { name } of request.cookies.getAll()) {
+      if (LEGACY_DINER_COOKIE_PATTERN.test(name)) {
+        pendingCookies.push({
+          name,
+          value: "",
+          options: { path: "/", maxAge: 0, ...(cookieDomain ? { domain: cookieDomain } : {}) },
+        });
+      }
+    }
+  }
+
+  const response = makeResponse();
+  for (const c of pendingCookies) {
+    response.cookies.set(c.name, c.value, c.options);
   }
 
   applySecurityHeaders(response.headers);

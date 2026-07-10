@@ -17,7 +17,7 @@ import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
-import FloorMap, { TableToken } from '@/components/admin/floor-map';
+import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
@@ -44,7 +44,8 @@ interface Props {
   categories: Category[];
   products: Product[];
   initialOrders: OrderWithItems[];
-  occupiedTables: number[];
+  /** Mesa → ISO timestamp de cuándo se ocupó (created_at del pedido activo más antiguo). */
+  occupiedSince: Record<number, string>;
   tableCount: number;
   tipEnabled: boolean;
   tipPercent: number;
@@ -322,7 +323,7 @@ type View = 'tables' | 'menu' | 'review' | 'orders';
 
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
-  categories, products, initialOrders, occupiedTables,
+  categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
   hubUrl, hubToken,
 }: Props) {
@@ -436,7 +437,16 @@ export default function WaiterPanel({
     setOrders(initialOrders);
   }, [initialOrders]);
 
-  const occupiedSet = useMemo(() => new Set(occupiedTables), [occupiedTables]);
+  // Reloj para el temporizador de mesas ocupadas (arranca en null: servidor y
+  // primer render pintan sin tiempo transcurrido, evita mismatch de hidratación).
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const t0 = setTimeout(() => setNow(Date.now()), 0);
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => { clearTimeout(t0); clearInterval(id); };
+  }, []);
+
+  const occupiedSet = useMemo(() => new Set(Object.keys(occupiedSince).map(Number)), [occupiedSince]);
 
   /* ── Carrito ─────────────────────────────────────────── */
   function addToCart(line: CartLine) {
@@ -742,7 +752,7 @@ export default function WaiterPanel({
                 )}
 
                 {/* Mapa del salón (zoom + paneo) */}
-                <FloorMap tables={planTables} occupied={occupiedSet} onSelect={selectTable} />
+                <FloorMap tables={planTables} occupied={occupiedSet} occupiedSince={occupiedSince} now={now} onSelect={selectTable} />
 
                 {/* Otras mesas (sin ubicar en el plano) */}
                 {otherTables.length > 0 && (
@@ -750,7 +760,7 @@ export default function WaiterPanel({
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Otras mesas</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 10 }}>
                       {otherTables.map((n) => (
-                        <TableToken key={n} n={n} occupied={occupiedSet.has(n)} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
+                        <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                       ))}
                     </div>
                   </div>
@@ -759,7 +769,7 @@ export default function WaiterPanel({
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 12 }}>
                 {Array.from({ length: tableCount }, (_, i) => i + 1).map((n) => (
-                  <TableToken key={n} n={n} occupied={occupiedSet.has(n)} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
+                  <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                 ))}
               </div>
             )}
@@ -773,7 +783,9 @@ export default function WaiterPanel({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
                 <div>
                   <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
-                  <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>Tiene un pedido activo</div>
+                  <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
+                    Tiene un pedido activo{tableToFree != null && occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree]).getTime())}` : ''}
+                  </div>
                 </div>
                 <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
                   <Icon name="x" size={18} />

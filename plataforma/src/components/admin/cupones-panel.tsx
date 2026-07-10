@@ -130,22 +130,23 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
               </div>
               <div>
                 <label style={labelStyle}>Tipo *</label>
-                <select style={{ ...inputStyle, background: '#1a1a1c' }} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
-                  <option value="PERCENT" style={{ background: '#1a1a1c', color: '#f0f0f0' }}>Porcentaje (%)</option>
-                  <option value="FIXED" style={{ background: '#1a1a1c', color: '#f0f0f0' }}>Monto fijo (Q)</option>
+                {/* Fondo adaptativo (antes #1a1a1c fijo → caja oscura en panel claro). */}
+                <select style={inputStyle} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
+                  <option value="PERCENT" style={{ background: '#fff', color: '#111' }}>Porcentaje (%)</option>
+                  <option value="FIXED" style={{ background: '#fff', color: '#111' }}>Monto fijo (Q)</option>
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>Valor * ({form.discount_type === 'PERCENT' ? '%' : 'Q'})</label>
-                <input style={inputStyle} type="number" min={0.01} max={form.discount_type === 'PERCENT' ? 100 : undefined} step={0.01} value={form.discount_value} onChange={(e) => setField('discount_value', e.target.value)} required placeholder={form.discount_type === 'PERCENT' ? '10' : '25.00'} />
+                <input style={inputStyle} type="number" inputMode="decimal" min={0.01} max={form.discount_type === 'PERCENT' ? 100 : undefined} step={0.01} value={form.discount_value} onChange={(e) => setField('discount_value', e.target.value)} required placeholder={form.discount_type === 'PERCENT' ? '10' : '25.00'} />
               </div>
               <div>
                 <label style={labelStyle}>Orden mínima (Q)</label>
-                <input style={inputStyle} type="number" min={0} step={0.01} value={form.min_order} onChange={(e) => setField('min_order', e.target.value)} placeholder="Sin mínimo" />
+                <input style={inputStyle} type="number" inputMode="decimal" min={0} step={0.01} value={form.min_order} onChange={(e) => setField('min_order', e.target.value)} placeholder="Sin mínimo" />
               </div>
               <div>
                 <label style={labelStyle}>Máx. de usos</label>
-                <input style={inputStyle} type="number" min={1} value={form.max_uses} onChange={(e) => setField('max_uses', e.target.value)} placeholder="Ilimitado" />
+                <input style={inputStyle} type="number" inputMode="decimal" min={1} value={form.max_uses} onChange={(e) => setField('max_uses', e.target.value)} placeholder="Ilimitado" />
               </div>
               <div>
                 <label style={labelStyle}>Válido hasta</label>
