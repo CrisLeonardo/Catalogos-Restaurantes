@@ -43,11 +43,19 @@ const AGENT_RELEASES_API: &str =
 /// redirige sola al subdominio correcto tras autenticar. Mismo dominio raíz
 /// que NEXT_PUBLIC_ROOT_DOMAIN en producción.
 const CENTRAL_LOGIN_URL: &str = "https://leogin.online/admin/login";
-/// Sufijo de host que identifica un panel de restaurante YA resuelto por la
-/// web (ver `adminUrl()` en plataforma/src/lib/tenant.ts: `<slug>-admin.<root>`
-/// en producción). Sirve para detectar, desde Rust, a dónde nos mandó el login
-/// central — sin exponer ningún comando nuevo a contenido remoto.
-const CENTRAL_ADMIN_HOST_SUFFIX: &str = "-admin.leogin.online";
+
+/// `CENTRAL_LOGIN_URL`, salvo que `LEOGIN_CENTRAL_LOGIN_URL` la sobreescriba
+/// (mismo patrón que `LEOGIN_UPDATE_URL` para el updater) — SOLO para pruebas
+/// locales: sin esto, "Iniciar sesión con tu cuenta de Leogin" en `tauri dev`
+/// llevaba a la producción real y era imposible probar el login central
+/// contra Supabase local (bug real encontrado 2026-07-10: una PC de prueba
+/// quedó con `panelUrl: "http://localhost:3000"` — dominio raíz sin tenant,
+/// tecleado a mano en el formulario manual porque el botón de login central
+/// no servía en local). En producción no se define y aplica el valor de
+/// arriba.
+fn central_login_url() -> String {
+    std::env::var("LEOGIN_CENTRAL_LOGIN_URL").unwrap_or_else(|_| CENTRAL_LOGIN_URL.to_string())
+}
 
 // Los enlaces target=_blank del panel (WhatsApp, comprobantes…) deben abrir
 // en el navegador del sistema, no dentro del shell. Se inyecta en toda
@@ -536,8 +544,8 @@ async fn latest_agent_asset_url(http: &reqwest::Client) -> Result<String, String
 struct SetupInfo {
     panel_url: Option<String>,
     app_version: String,
-    /// Fuente única del login central (ver CENTRAL_LOGIN_URL): la página de
-    /// arranque lo lee de aquí en vez de tener su propia copia hardcodeada.
+    /// Fuente única del login central (ver `central_login_url()`): la página
+    /// de arranque lo lee de aquí en vez de tener su propia copia hardcodeada.
     central_login_url: String,
 }
 
@@ -546,7 +554,7 @@ fn get_setup_info(app: AppHandle, state: State<AppState>) -> SetupInfo {
     SetupInfo {
         panel_url: state.config.lock().unwrap().panel_url.clone(),
         app_version: app.package_info().version.to_string(),
-        central_login_url: CENTRAL_LOGIN_URL.to_string(),
+        central_login_url: central_login_url(),
     }
 }
 
@@ -591,15 +599,30 @@ async fn save_panel_url(app: AppHandle, state: State<'_, AppState>, url: String)
 
 /// Detecta, desde Rust (hook `on_navigation`, no un comando invocable), si la
 /// ventana llegó a un panel de restaurante ya resuelto por el login central
-/// (ver CENTRAL_LOGIN_URL) y todavía no hay `panel_url` guardado. Si es así,
-/// lo adopta exactamente como `save_panel_url` — sin volver a verificar
+/// (ver `central_login_url()`) y todavía no hay `panel_url` guardado. Si es
+/// así, lo adopta exactamente como `save_panel_url` — sin volver a verificar
 /// alcanzabilidad (ya estamos ahí) ni renavegar (la navegación ya está en
 /// curso). Fuera de ese primer arranque sin configurar, es un no-op: nunca
 /// reemplaza un panel_url que el usuario ya configuró (a mano o así).
+///
+/// Condición (2026-07-10, reemplaza un sufijo de host hardcodeado a
+/// producción `-admin.leogin.online`): la navegación aterrizó en un ORIGEN
+/// DISTINTO al del login central, en una ruta que empieza con `/admin`. Como
+/// el único lugar desde donde se llega ahí es el propio botón "Iniciar
+/// sesión con tu cuenta de Leogin" (login central, primer party) y quien
+/// decide el destino tras autenticar es el propio backend de Leogin
+/// (`login()` en auth.ts, nunca contenido arbitrario), esto es válido tanto
+/// en producción (`<slug>-admin.leogin.online`) como en local
+/// (`<slug>.localhost:3000/admin`) sin tener que conocer el patrón exacto de
+/// cada entorno — antes, al estar hardcodeado a producción, era imposible
+/// probar este flujo con `tauri dev` contra Supabase local.
 fn detect_resolved_panel(app: &AppHandle, url: &Url) {
-    let Some(host) = url.host_str() else { return };
-    if !host.ends_with(CENTRAL_ADMIN_HOST_SUFFIX) {
+    if !url.path().starts_with("/admin") {
         return;
+    }
+    let Ok(central) = Url::parse(&central_login_url()) else { return };
+    if url.origin() == central.origin() {
+        return; // seguimos en el propio login central, nada que adoptar todavía
     }
     let state = app.state::<AppState>();
     let already_set = state.config.lock().unwrap().panel_url.is_some();

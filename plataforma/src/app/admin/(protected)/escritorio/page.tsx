@@ -182,10 +182,10 @@ export default async function AdminEscritorioPage() {
               todos modos</strong>. Es normal en programas nuevos — la firma digital llega pronto.
             </div>
           </Step>
-          <Step n={2} title="Escribe la dirección de tu panel">
-            Al abrir por primera vez, Leogin Desktop pregunta la dirección de tu panel (la misma URL que
-            usas en el navegador, ej. <code style={{ fontSize: 11 }}>turestaurante.leogin.app</code>). Después
-            inicia sesión igual que siempre — la sesión queda guardada en la app.
+          <Step n={2} title="Inicia sesión con tu cuenta de Leogin">
+            Al abrir por primera vez, un solo botón: «Iniciar sesión con tu cuenta de Leogin». Escribe tu
+            correo y contraseña de siempre — la app reconoce sola a qué restaurante perteneces y te deja
+            directo en tu panel, sin escribir ninguna dirección. La sesión queda guardada en la app.
           </Step>
           <Step n={3} title="(Opcional) hazla el servidor de impresión del local">
             Dentro de la app, entra a <strong>Impresión</strong> y pulsa «Hacer de esta PC el servidor del

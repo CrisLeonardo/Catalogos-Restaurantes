@@ -52,6 +52,20 @@ npm install
 npm run dev      # ventana con hot reload de las páginas locales (ui/)
 ```
 
+Para probar el botón **"Iniciar sesión con tu cuenta de Leogin"** contra tu
+Supabase local (en vez de la producción real, a la que apunta por defecto):
+
+```powershell
+$env:LEOGIN_CENTRAL_LOGIN_URL = "http://localhost:3000/admin/login"
+npm run dev
+```
+
+Sin esto, `tauri dev` sigue apuntando a `https://leogin.online/admin/login`
+(bug real encontrado 2026-07-10: una PC de prueba quedó con
+`panelUrl: "http://localhost:3000"` — el botón de login central era
+inútil en local, así que se había tecleado a mano la URL raíz sin el
+subdominio del restaurante, y la app nunca reconocía ningún restaurante).
+
 Estructura:
 
 ```
@@ -110,13 +124,41 @@ venir firmados con la llave minisign).
 
 ## Instalación en un restaurante
 
-1. Descargar `Leogin_<v>_x64-setup.exe` e instalar (doble clic, sin admin —
-   NSIS `perUser`, mismo modelo Spotify/Slack).
-2. Abrir Leogin → escribir la dirección del panel (la misma del navegador) →
-   iniciar sesión como siempre.
+1. Descargar desde **leogin.online/descargas** (página pública, sin sesión —
+   o desde `Leogin_<v>_x64-setup.exe` directo) e instalar (doble clic, sin
+   admin — NSIS `perUser`, mismo modelo Spotify/Slack).
+2. Abrir Leogin → **"Iniciar sesión con tu cuenta de Leogin"** (correo y
+   contraseña de siempre) → la app reconoce sola a qué restaurante
+   perteneces y te deja en tu panel. Escribir la dirección a mano solo hace
+   falta para dominios propios fuera de `leogin.online` (enlace secundario).
 3. Si esa PC va a imprimir / operar sin internet: en el panel, sección
    **Impresión**, botón **"Hacer de esta PC el servidor del local"** — solo
    una PC por local.
 
 SmartScreen avisará la primera vez ("Más información → Ejecutar de todos
-modos") mientras no haya certificado de firma de código.
+modos") mientras no haya certificado de firma de código (pendiente a
+propósito, ver ESTRATEGIA_INSTALABLE.md §3.1 — decisión reafirmada
+2026-07-10: se prioriza la descarga pública primero).
+
+## Publicar desde GitHub Actions (recomendado — evita compilar en local)
+
+`.github/workflows/release-desktop.yml` (en la raíz del monorepo) hace lo
+mismo que "Compilar el instalador" + "Publicar una versión" de arriba, pero
+en un runner de GitHub (soluciona los crashes de `rustc` por RAM limitada en
+PCs de desarrollo con poca memoria):
+
+1. Sube `version` en `src-tauri/tauri.conf.json` y haz commit/push.
+2. Una sola vez: configura 3 secrets del repo (**Settings → Secrets and
+   variables → Actions**) — nunca pegues su valor en un chat, usa tu propia
+   terminal:
+   ```powershell
+   gh secret set TAURI_SIGNING_PRIVATE_KEY --body (Get-Content "$env:USERPROFILE\.tauri\leogin-desktop.key" -Raw)
+   gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --body (Get-Content "$env:USERPROFILE\.tauri\leogin-desktop.key.pass" -Raw)
+   gh secret set RELEASES_REPO_TOKEN --body "<personal access token con escritura sobre CrisLeonardo/leogin-agente-releases>"
+   ```
+3. **Actions → "Release Leogin Desktop" → Run workflow** (opcionalmente con
+   notas de la versión). Publica igual que `npm run release` local: sube
+   `desktop-v<version>` y actualiza el tag rodante `desktop-latest`.
+
+El build también queda como artefacto descargable del run (respaldo si la
+publicación falla y no quieres recompilar).

@@ -77,12 +77,25 @@ leogin-desktop/
        autenticar (misma cookie de sesión compartida en todo el dominio raíz,
        ver `proxy.ts`). Rust nunca ve ni pide esa dirección: el hook
        `on_navigation` de la ventana `main` (`detect_resolved_panel` en
-       `main.rs`) detecta cuando el host termina en
-       `CENTRAL_ADMIN_HOST_SUFFIX` (`-admin.leogin.online`) y, si todavía no
-       hay `panel_url` guardado, lo adopta con la misma lógica de
-       `save_panel_url` (persiste, autoarranque) pero sin volver a verificar
-       alcanzabilidad ni renavegar — ya estamos ahí. Es un no-op fuera de ese
-       primer arranque sin configurar: nunca pisa un `panel_url` ya elegido.
+       `main.rs`) detecta la adopción **comparando orígenes** (2026-07-10,
+       reemplaza un sufijo hardcodeado a producción): si la navegación
+       aterriza en una ruta que empieza con `/admin` en un origen DISTINTO al
+       de `central_login_url()` (que default a `CENTRAL_LOGIN_URL` salvo que
+       `LEOGIN_CENTRAL_LOGIN_URL` la sobreescriba — mismo patrón que
+       `LEOGIN_UPDATE_URL`), y todavía no hay `panel_url` guardado, lo adopta
+       con la misma lógica de `save_panel_url` (persiste, autoarranque) pero
+       sin volver a verificar alcanzabilidad ni renavegar — ya estamos ahí. Es
+       un no-op fuera de ese primer arranque sin configurar: nunca pisa un
+       `panel_url` ya elegido. Al ya no depender de un patrón de host fijo
+       (`-admin.leogin.online`), el mismo mecanismo funciona igual en
+       producción y en local — antes era imposible probar el login central
+       con `tauri dev` porque `CENTRAL_LOGIN_URL` solo apuntaba a producción
+       real. Para probarlo en local:
+       ```powershell
+       cd leogin-desktop
+       $env:LEOGIN_CENTRAL_LOGIN_URL = "http://localhost:3000/admin/login"
+       npm run dev
+       ```
      - **Manual (alternativa):** formulario "Dirección de tu panel" de
        siempre. `save_panel_url` la valida contra la red, la persiste en
        `%APPDATA%\com.leogin.desktop\config.json`, activa el autoarranque con
@@ -245,14 +258,35 @@ un error.
 
 - `Leogin_<v>_x64-setup.exe` — NSIS `perUser` (`%LOCALAPPDATA%`, sin UAC,
   modelo Spotify/Slack), acceso en menú Inicio, entrada en "Aplicaciones
-  instaladas", desinstalador real.
+  instaladas", desinstalador real. Instalador con marca propia: header/sidebar
+  del wizard NSIS generados con el mark de Leogin (`leogin-desktop/scripts/
+  generate-installer-art.mjs`, `npm run art` — sin dependencias, dibuja el
+  mismo gradiente y path que `leogin-logo.tsx` y escribe BMP 24-bit crudo,
+  el único formato que acepta `MUI_HEADERIMAGE_BITMAP`/
+  `MUI_WELCOMEFINISHPAGE_BITMAP`).
+- **Descarga pública (2026-07-10): `leogin.online/descargas`.** Antes el
+  único punto de entrada era el botón dentro de `/admin/escritorio`, detrás
+  de sesión — un problema de huevo y gallina para alguien que todavía no
+  tiene cuenta abierta en esa PC. `GET /api/desktop/download-exe` dejó de
+  exigir `getAdminContext()`: el release de GitHub del que sale el binario
+  YA es público, así que el gate no protegía nada, solo agregaba fricción.
+  Ambos puntos de entrada (`/admin/escritorio` con sesión, `/descargas` sin
+  sesión) pegan al mismo endpoint — una sola fuente de verdad de versión.
 - Releases: `npm run release` publica en `CrisLeonardo/leogin-agente-releases`
   (tags `desktop-v*` + rodante `desktop-latest`). Mismo flujo `gh` que el
-  agente.
+  agente. **Alternativa (2026-07-10): `.github/workflows/release-desktop.yml`**
+  corre exactamente ese mismo flujo (build + firma minisign + publish) en un
+  runner de GitHub Actions en vez de la PC local — evita los crashes de
+  `rustc` por RAM limitada al compilar Tauri localmente. Manual
+  (`workflow_dispatch`), requiere 3 secrets del repo (llave del updater +
+  contraseña + un PAT con escritura sobre el repo de releases). Detalle y
+  comandos exactos en `leogin-desktop/README.md`.
 - **Firma de código: pendiente a propósito** hasta el primer cliente de pago
-  (decisión 2026-07-08). Mientras tanto SmartScreen avisa la primera vez; el
-  camino sigue siendo ESTRATEGIA_INSTALABLE.md §3.1 (Azure Trusted Signing).
-  OJO: la llave del **updater** (minisign) es otra cosa, ya existe y vive en
+  (decisión 2026-07-08, reafirmada 2026-07-10 al replantear el instalador:
+  se priorizó la descarga pública + CI antes que el gasto recurrente).
+  Mientras tanto SmartScreen avisa la primera vez; el camino sigue siendo
+  ESTRATEGIA_INSTALABLE.md §3.1 (Azure Trusted Signing). OJO: la llave del
+  **updater** (minisign) es otra cosa, ya existe y vive en
   `%USERPROFILE%\.tauri\leogin-desktop.key` — si se pierde, las apps
   instaladas no aceptan más updates.
 
@@ -312,6 +346,15 @@ un error.
 4. **Firma Authenticode** al primer cliente (§3.1 de la estrategia) — firma
    el NSIS y el exe del agente con el mismo certificado. Único pendiente.
 5. ~~**Telemetría mínima**~~ — ✅ 2026-07-08, ver §4.7 (migración 067).
+6. ~~**Descarga pública + instalador con marca + CI**~~ — ✅ 2026-07-10:
+   `leogin.online/descargas` (sin sesión), endpoint de descarga público,
+   header/sidebar del NSIS con el mark de Leogin, pipeline en GitHub Actions
+   (`release-desktop.yml`) como alternativa al build local. Ver §5.
+   `/admin/escritorio` (Paso 2) y el README tenían copia desactualizada que
+   describía solo el flujo manual de dirección de panel — corregida para
+   reflejar que "Iniciar sesión con tu cuenta de Leogin" ya es (y era desde
+   2026-07-09) el flujo primario. La firma de código se evaluó de nuevo y se
+   decidió mantenerla pendiente (ver §5).
 
 ## 9. Cómo probar en local
 

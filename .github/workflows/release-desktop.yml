@@ -1,0 +1,93 @@
+name: Release Leogin Desktop
+
+# Manual a propósito (workflow_dispatch): publicar una versión sigue siendo un
+# gesto deliberado, no algo que dispare cada push — mismo espíritu que el
+# resto del ciclo de release de Leogin Desktop (nadie instala un update sin
+# hacer clic en "Reiniciar ahora").
+#
+# Reemplaza correr `npm run build` + `npm run release` a mano en la PC local
+# (con RAM limitada, ver notas de leogin-desktop/README.md) por un runner de
+# GitHub Actions dedicado. Antes de disparar esto:
+#   1. Sube `version` en leogin-desktop/src-tauri/tauri.conf.json (commit).
+#   2. Configura los 3 secrets de este repo (Settings → Secrets and variables
+#      → Actions), NUNCA pegando su valor en un chat — usa `gh secret set`
+#      desde tu propia terminal o el formulario web de GitHub:
+#        - TAURI_SIGNING_PRIVATE_KEY          (contenido de
+#          %USERPROFILE%\.tauri\leogin-desktop.key)
+#        - TAURI_SIGNING_PRIVATE_KEY_PASSWORD (contenido de
+#          %USERPROFILE%\.tauri\leogin-desktop.key.pass)
+#        - RELEASES_REPO_TOKEN                (personal access token con
+#          permiso de escritura sobre CrisLeonardo/leogin-agente-releases —
+#          el GITHUB_TOKEN por defecto no alcanza otro repo)
+#   3. Actions → "Release Leogin Desktop" → Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Notas de la versión (opcional — se usan en el Release de GitHub)"
+        required: false
+        default: ""
+
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: leogin-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: leogin-desktop/package-lock.json
+
+      - name: Rust estable (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache de cargo/target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: leogin-desktop/src-tauri -> target
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Compilar y firmar el instalador (llave del updater)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run build
+
+      - name: Subir artefactos del build (respaldo, por si falla la publicación)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: leogin-desktop-nsis
+          path: |
+            leogin-desktop/src-tauri/target/release/bundle/nsis/*.exe
+            leogin-desktop/src-tauri/target/release/bundle/nsis/*.sig
+          if-no-files-found: ignore
+
+      - name: Publicar en el repo público de releases
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: |
+          $notes = "${{ inputs.notes }}"
+          if ($notes -and $notes.Trim().Length -gt 0) {
+            node scripts/publish-release.mjs --notes "$notes"
+          } else {
+            node scripts/publish-release.mjs
+          }

@@ -115,6 +115,9 @@ export default function LeoginLanding() {
           <a href={demoUrl} className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
             Demo
           </a>
+          <Link href="/descargas" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
+            Escritorio
+          </Link>
           <Link
             href="/login"
             className="press"
@@ -486,6 +489,7 @@ export default function LeoginLanding() {
             <a href="#funciones" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Funciones</a>
             <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
             <a href={demoUrl} className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Demo</a>
+            <Link href="/descargas" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Escritorio</Link>
             <Link href="/terminos" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Términos</Link>
             <Link href="/privacidad" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Privacidad</Link>
             <a href={ctaHref} target="_blank" rel="noopener noreferrer" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Contacto</a>

@@ -205,3 +205,4 @@ construye con piezas que ya están en la base de datos.
 | 5 | ✅ Bandeja del sistema / Tauri (§4) *(hecho 2026-07-08: Leogin Desktop — ver [LEOGIN_DESKTOP.md](./LEOGIN_DESKTOP.md))* | Identidad visible |
 | 6 | Modo Resguardo (§7) | El diferenciador comercial |
 | 7 | KDS local + pairing code + telemetría (§5) | El hub como producto completo |
+| 8 | ✅ Descarga pública (`leogin.online/descargas`) + instalador con marca + CI en GitHub Actions *(hecho 2026-07-10, ver [LEOGIN_DESKTOP.md](./LEOGIN_DESKTOP.md) §5-8)* | Quitó el requisito de sesión previa para instalar y el cuello de botella de compilar en una PC con RAM limitada. Firma de código (ítem #1) sigue pendiente por decisión explícita — se prioriza esto primero. |

@@ -8,6 +8,14 @@
    la dirección del panel la primera vez que abre. Por eso no hace
    falta generar nada por restaurante — solo proxear el binario.
 
+   Público a propósito (sin getAdminContext()): el release de GitHub del
+   que sale el binario YA es público (repo público de binarios, ver
+   publish-release.mjs), así que exigir sesión aquí no protegía nada, solo
+   le ponía fricción a quien quiere instalar la app ANTES de tener sesión
+   (el caso de /descargas, la página pública en leogin.online). Lo usan
+   ambos puntos de entrada: /admin/escritorio (con sesión) y /descargas
+   (sin sesión) — mismo endpoint, misma versión siempre vigente.
+
    Origen del binario:
      - Se resuelve SIEMPRE la versión vigente desde el manifest rodante
        del auto-updater (`desktop-latest/latest.json`, mismo release
@@ -23,7 +31,6 @@
 import { NextResponse } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { getAdminContext } from '@/lib/db/admin';
 
 export const runtime = 'nodejs';
 
@@ -36,11 +43,6 @@ interface UpdaterManifest {
 }
 
 export async function GET() {
-  const ctx = await getAdminContext();
-  if (!ctx) {
-    return new NextResponse('No autorizado.', { status: 401 });
-  }
-
   // Desarrollo: exe local sin salir a internet.
   const localPath = process.env.LEOGIN_DESKTOP_EXE_PATH;
   if (localPath && existsSync(localPath)) {

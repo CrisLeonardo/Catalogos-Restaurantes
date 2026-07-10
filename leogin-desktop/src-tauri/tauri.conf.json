@@ -30,7 +30,10 @@
       "nsis": {
         "installMode": "currentUser",
         "languages": ["Spanish"],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp",
+        "uninstallerHeaderImage": "installer/header.bmp"
       }
     }
   },
