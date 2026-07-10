@@ -48,20 +48,26 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     redirect('/central');
   }
 
-  // Detectar si el login se hizo desde el dominio raíz (leogin.online) y no
-  // desde el subdominio del restaurante. Si es así, redirigir al subdominio
-  // correcto usando la URL absoluta para que la cookie de sesión quede en el host correcto.
+  // Redirigir al subdominio del restaurante SIEMPRE que no sea ya el actual —
+  // no solo cuando el login se hizo desde el dominio raíz. Antes esto solo
+  // comparaba "¿estamos en la raíz?" (isRootDomain), así que loguearse con la
+  // cuenta del restaurante B mientras se está en el subdominio del
+  // restaurante A caía al `redirect('/admin/menu')` relativo de más abajo —
+  // se quedaba en A y el candado de tenant de (protected)/layout.tsx
+  // terminaba mandando al menú PÚBLICO de A en vez de al panel de B (bug
+  // real: cuenta nueva de otro restaurante "no reconocida" solo en el
+  // desktop, porque ahí es común arrancar ya posicionado en el subdominio de
+  // un restaurante distinto al de la cuenta que se está probando).
   const tenantSlug = (await headers()).get('x-tenant-slug');
-  const isRootDomain = !tenantSlug;
 
-  if (isRootDomain && profile?.restaurant_id) {
+  if (profile?.restaurant_id) {
     const { data: rest } = await supabase
       .from('restaurants')
       .select('slug')
       .eq('id', profile.restaurant_id)
       .single();
 
-    if (rest?.slug) {
+    if (rest?.slug && rest.slug !== tenantSlug) {
       const destination = isMeseroOnly(profile?.role, profile?.permissions as string[] | null)
         ? `${adminUrl(rest.slug)}/mesero?welcome=1`
         : `${adminUrl(rest.slug)}/menu?welcome=1`;

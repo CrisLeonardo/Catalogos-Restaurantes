@@ -8,7 +8,6 @@
     "allow-get-setup-info",
     "allow-boot",
     "allow-begin-relink",
-    "allow-save-panel-url",
     "allow-open-panel",
     "allow-check-cloud",
     "allow-hub-status",

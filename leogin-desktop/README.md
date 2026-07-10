@@ -128,12 +128,16 @@ venir firmados con la llave minisign).
    o desde `Leogin_<v>_x64-setup.exe` directo) e instalar (doble clic, sin
    admin — NSIS `perUser`, mismo modelo Spotify/Slack).
 2. Abrir Leogin → **"Iniciar sesión con tu cuenta de Leogin"** (correo y
-   contraseña de siempre) → la app reconoce sola a qué restaurante
-   perteneces y te deja en tu panel. Escribir la dirección a mano solo hace
-   falta para dominios propios fuera de `leogin.online` (enlace secundario).
+   contraseña de siempre, el único botón) → la app reconoce sola a qué
+   restaurante perteneces y te deja en tu panel. No hay ninguna dirección que
+   escribir a mano — se quitó esa opción (2026-07-10): sin dominios propios
+   soportados hoy, no resolvía ningún caso real y solo confundía.
 3. Si esa PC va a imprimir / operar sin internet: en el panel, sección
    **Impresión**, botón **"Hacer de esta PC el servidor del local"** — solo
    una PC por local.
+4. ¿Necesitas conectar esta PC con otra cuenta o restaurante después? Menú
+   **Cuenta → Cambiar de cuenta o restaurante** en la barra de la ventana (o
+   el ícono de la bandeja del sistema si la ventana está minimizada).
 
 SmartScreen avisará la primera vez ("Más información → Ejecutar de todos
 modos") mientras no haya certificado de firma de código (pendiente a

@@ -66,16 +66,21 @@ leogin-desktop/
 1. La ventana `main` SIEMPRE abre `index.html` (local) — así nunca se ve el
    error feo del WebView si no hay internet.
 2. `index.html` pregunta a Rust (`get_setup_info`):
-   - **Sin configurar** → pantalla de elección: botón primario "Iniciar
-     sesión con tu cuenta de Leogin" (navega a `CENTRAL_LOGIN_URL`,
-     `https://leogin.online/admin/login` — sin tenant) + enlace secundario
-     "¿Prefieres ingresar la dirección manualmente?" que revela el formulario
-     de siempre.
+   - **Sin configurar** → pantalla con un solo botón: "Iniciar sesión con tu
+     cuenta de Leogin" (navega a `CENTRAL_LOGIN_URL`,
+     `https://leogin.online/admin/login` — sin tenant). No hay alternativa de
+     URL manual (se quitó 2026-07-10, ver §8 ítem 8 — sin dominios propios
+     soportados hoy, esa opción no resolvía ningún caso real y solo
+     confundía).
      - **Login central (por defecto, 2026-07-09):** la propia web ya resuelve
        sola el restaurante — `login()` en `plataforma/src/lib/actions/auth.ts`
        busca `profile.restaurant_id` y redirige a `<slug>-admin.<root>` tras
-       autenticar (misma cookie de sesión compartida en todo el dominio raíz,
-       ver `proxy.ts`). Rust nunca ve ni pide esa dirección: el hook
+       autenticar SIEMPRE que ese slug no sea ya el del subdominio actual
+       (fix 2026-07-10, ítem 10 — antes solo redirigía si el login se hacía en
+       la raíz, así que loguearse con la cuenta de un restaurante B mientras
+       la ventana estaba en el subdominio de un restaurante A se quedaba en A;
+       misma cookie de sesión compartida en todo el dominio raíz, ver
+       `proxy.ts`). Rust nunca ve ni pide esa dirección: el hook
        `on_navigation` de la ventana `main` (`detect_resolved_panel` en
        `main.rs`) detecta la adopción **comparando orígenes** (2026-07-10,
        reemplaza un sufijo hardcodeado a producción): si la navegación
@@ -83,10 +88,11 @@ leogin-desktop/
        de `central_login_url()` (que default a `CENTRAL_LOGIN_URL` salvo que
        `LEOGIN_CENTRAL_LOGIN_URL` la sobreescriba — mismo patrón que
        `LEOGIN_UPDATE_URL`), y todavía no hay `panel_url` guardado, lo adopta
-       con la misma lógica de `save_panel_url` (persiste, autoarranque) pero
-       sin volver a verificar alcanzabilidad ni renavegar — ya estamos ahí. Es
-       un no-op fuera de ese primer arranque sin configurar: nunca pisa un
-       `panel_url` ya elegido. Al ya no depender de un patrón de host fijo
+       (persiste, autoarranque) sin volver a verificar alcanzabilidad ni
+       renavegar — ya estamos ahí. Es un no-op fuera de ese primer arranque
+       sin configurar: nunca pisa un `panel_url` ya elegido — para eso está
+       `begin_relink` (menú "Cuenta" de la ventana o bandeja → "Cambiar
+       dirección del panel", ítem 7/9 de §8). Al ya no depender de un patrón de host fijo
        (`-admin.leogin.online`), el mismo mecanismo funciona igual en
        producción y en local — antes era imposible probar el login central
        con `tauri dev` porque `CENTRAL_LOGIN_URL` solo apuntaba a producción
@@ -361,16 +367,43 @@ un error.
    El menú de la bandeja (`?setup=1`) saltaba directo al formulario de
    dirección, sin mostrar nunca el botón de login central — la ÚNICA forma
    de reconectar una PC ya configurada era copiar una URL a mano, aunque el
-   primer arranque sí ofreciera la cuenta. Ahora `?setup=1` muestra la MISMA
-   pantalla de elección (login primero, manual como alternativa). Requirió
-   además un comando nuevo, `begin_relink` (olvida el `panel_url` viejo SOLO
-   EN MEMORIA antes de mandar al login central, para que
-   `detect_resolved_panel` no lo encuentre `already_set` y sí adopte el
-   restaurante nuevo) — sin esto, re-loguearse con otra cuenta habría
-   funcionado visualmente una vez pero la PC habría seguido arrancando al
-   restaurante viejo en el siguiente inicio. Verificado end-to-end: PC con
-   `panel_url` apuntando al restaurante equivocado → "Cambiar dirección del
-   panel" → login con cuenta → `panel_url` quedó correctamente sobrescrito.
+   primer arranque sí ofreciera la cuenta. Requirió un comando nuevo,
+   `begin_relink` (olvida el `panel_url` viejo SOLO EN MEMORIA antes de
+   mandar al login central, para que `detect_resolved_panel` no lo encuentre
+   `already_set` y sí adopte el restaurante nuevo) — sin esto, re-loguearse
+   con otra cuenta habría funcionado visualmente una vez pero la PC habría
+   seguido arrancando al restaurante viejo en el siguiente inicio. Verificado
+   end-to-end: PC con `panel_url` apuntando al restaurante equivocado →
+   "Cambiar dirección del panel" → login con cuenta → `panel_url` quedó
+   correctamente sobrescrito.
+8. ~~**La URL manual "confunde más de lo que ayuda"**~~ — ✅ 2026-07-10,
+   segunda vuelta a pedido explícito del usuario: sin ningún dominio propio
+   soportado hoy (`adminUrl()` en `tenant.ts` siempre arma
+   `<slug>-admin.leogin.online`, nunca un dominio arbitrario), la opción
+   "ingresar la dirección manualmente" no resolvía ningún caso real — solo
+   agregaba una segunda forma de hacer lo mismo que ya hacía el login,
+   invitando a confusión ("¿cuál uso?"). Se quitó por completo: comando
+   `save_panel_url`, su capability y el formulario/link en `ui/index.html`.
+   `normalize_panel_url()` se conserva porque también valida el origen del
+   caller en `install_agent_as_server` — no es exclusiva del formulario que
+   se quitó.
+9. ~~**Única forma de "cambiar de cuenta" era clic derecho en icono oculto de
+   la bandeja**~~ — ✅ 2026-07-10. Se agregó un menú nativo de ventana
+   ("Cuenta → Cambiar de cuenta o restaurante", `app.set_menu` +
+   `app.on_menu_event` en `main.rs`) que dispara el mismo flujo que la
+   bandeja — visible en la barra de la ventana, no escondido.
+10. ~~**Cuenta nueva de OTRO restaurante "no reconocida" en el desktop
+    (sí en la web)**~~ — ✅ 2026-07-10, bug real en `auth.ts::login()`: la
+    redirección al subdominio correcto solo se disparaba cuando
+    `isRootDomain` (login hecho en `leogin.online`, sin subdominio). Si el
+    login se hacía ya posicionado en el subdominio de OTRO restaurante —
+    justo el caso común en desktop, donde `boot()` deja la ventana en el
+    último `panel_url` guardado — el redirect quedaba relativo
+    (`/admin/menu` en el host equivocado), y el candado de tenant de
+    `(protected)/layout.tsx` mandaba al menú PÚBLICO del restaurante viejo en
+    vez de al panel del nuevo. Cambiado a comparar el slug real del perfil
+    contra el `tenantSlug` actual (sin importar si es la raíz o el
+    subdominio de un tercero) — mismo código sirve web y desktop por igual.
 
 ## 9. Cómo probar en local
 

@@ -18,7 +18,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::{
     image::Image,
-    menu::{MenuBuilder, MenuItem, MenuItemBuilder},
+    menu::{Menu, MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, State, Url, WebviewUrl, WebviewWindowBuilder, WindowEvent, Wry,
 };
@@ -587,35 +587,13 @@ fn begin_relink(state: State<AppState>) -> String {
     central_login_url()
 }
 
-#[tauri::command]
-async fn save_panel_url(app: AppHandle, state: State<'_, AppState>, url: String) -> Result<(), String> {
-    let origin = normalize_panel_url(&url)?;
-    if !cloud_reachable(&state.http, &origin).await {
-        return Err(
-            "No se pudo conectar con esa dirección. Revisa que sea la misma que usas en el navegador y que haya internet.".into(),
-        );
-    }
-    let cfg = {
-        let mut cfg = state.config.lock().unwrap();
-        cfg.panel_url = Some(origin.clone());
-        cfg.clone()
-    };
-    save_config(&app, &cfg);
-    log_line(&app, &format!("panel configurado: {origin}"));
-    // Desde ahora Leogin arranca con Windows, oculto en la bandeja (--hidden).
-    let _ = app.autolaunch().enable();
-    let dest = Url::parse(&admin_url(&origin)).map_err(|e| e.to_string())?;
-    navigate_main(&app, dest);
-    Ok(())
-}
-
 /// Detecta, desde Rust (hook `on_navigation`, no un comando invocable), si la
 /// ventana llegó a un panel de restaurante ya resuelto por el login central
 /// (ver `central_login_url()`) y todavía no hay `panel_url` guardado. Si es
-/// así, lo adopta exactamente como `save_panel_url` — sin volver a verificar
-/// alcanzabilidad (ya estamos ahí) ni renavegar (la navegación ya está en
-/// curso). Fuera de ese primer arranque sin configurar, es un no-op: nunca
-/// reemplaza un panel_url que el usuario ya configuró (a mano o así).
+/// así, lo adopta: persiste el origen, activa autoarranque — sin volver a
+/// verificar alcanzabilidad (ya estamos ahí) ni renavegar (la navegación ya
+/// está en curso). Fuera de ese primer arranque sin configurar, es un no-op:
+/// nunca reemplaza un panel_url ya elegido (para eso está `begin_relink`).
 ///
 /// Condición (2026-07-10, reemplaza un sufijo de host hardcodeado a
 /// producción `-admin.leogin.online`): la navegación aterrizó en un ORIGEN
@@ -883,7 +861,6 @@ fn main() {
             get_setup_info,
             boot,
             begin_relink,
-            save_panel_url,
             open_panel,
             check_cloud,
             hub_status,
@@ -971,6 +948,25 @@ fn main() {
                 .build()?;
 
             build_tray(app)?;
+
+            // Menú nativo de la ventana (barra superior): antes la ÚNICA forma
+            // de reconectar la PC con otra cuenta/restaurante era encontrar el
+            // ícono de Leogin entre los "iconos ocultos" de la bandeja y darle
+            // clic derecho — nada visible ni descubrible. "Cuenta" en la barra
+            // del menú dispara exactamente el mismo flujo (mismo destino que el
+            // "change" de la bandeja), solo que a la vista.
+            let account_menu = SubmenuBuilder::new(app, "Cuenta")
+                .text("change_account", "Cambiar de cuenta o restaurante")
+                .build()?;
+            let app_menu = Menu::new(app)?;
+            app_menu.append(&account_menu)?;
+            app.set_menu(app_menu)?;
+            app.on_menu_event(|app, event| {
+                if event.id().as_ref() == "change_account" {
+                    show_main(app);
+                    navigate_main(app, local_url("index.html?setup=1"));
+                }
+            });
 
             // Sonda de estado (bandeja) + chequeo de actualizaciones cada hora.
             let h = app.handle().clone();
