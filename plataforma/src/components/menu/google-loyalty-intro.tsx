@@ -16,7 +16,10 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
       aria-modal="true"
       aria-label="Gana puntos de fidelidad"
       style={{
-        position: 'fixed', inset: 0, zIndex: 80,
+        // Por encima de la barra de navegación (zIndex 90): es un modal con
+        // fondo oscurecido; antes (zIndex 80) la barra se dibujaba ENCIMA de
+        // la tarjeta y la tapaba.
+        position: 'fixed', inset: 0, zIndex: 100,
         background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         padding: 16,

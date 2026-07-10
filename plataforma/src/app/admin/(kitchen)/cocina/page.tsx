@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -44,6 +44,12 @@ export default async function CocinaPage() {
   const cfg = resolveTheme((themeRow as ThemeRow) ?? null).config;
   const orders = await getKitchenOrders(restaurantId, cfg.kdsConfirmFirst);
 
+  // Sigue el switch claro/oscuro del panel admin (cookie `admin-theme`), NO
+  // el tema del restaurante — la paleta de alto contraste del KDS es fija
+  // para legibilidad, pero antes ignoraba también este switch y se quedaba
+  // siempre oscura.
+  const scheme = (await cookies()).get('admin-theme')?.value === 'light' ? 'light' : 'dark';
+
   return (
     <KitchenDisplay
       restaurantId={restaurantId}
@@ -52,6 +58,7 @@ export default async function CocinaPage() {
       yellowMin={cfg.kdsYellowMin}
       redMin={cfg.kdsRedMin}
       confirmFirst={cfg.kdsConfirmFirst}
+      scheme={scheme}
     />
   );
 }

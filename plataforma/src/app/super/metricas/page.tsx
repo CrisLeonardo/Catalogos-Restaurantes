@@ -180,7 +180,7 @@ export default async function MetricasPage() {
                           background:
                             r.plan_actual === 'PREMIUM'
                               ? 'rgba(217,119,87,0.15)'
-                              : 'rgba(255,255,255,0.06)',
+                              : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                           color:
                             r.plan_actual === 'PREMIUM'
                               ? '#f08060'

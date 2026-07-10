@@ -44,21 +44,24 @@ Sin esta variable el botón no se muestra (el flujo por teléfono sigue intacto)
 
 ## Cómo funciona
 
-- La sesión se comparte entre subdominios con cookie de dominio `.leogin.online`
-  (igual que el panel admin), así que el saldo se ve en cualquier sucursal.
+- La sesión del comensal es **por restaurante**: cookie propia
+  (`sb-leogin-diner-v2`, host-only) en el subdominio donde inició sesión.
+  Entrar con Google en `azucar-negra.leogin.online` NO te deja logueado en
+  `garden-cup.leogin.online` — cada restaurante pide su propio "Continuar con
+  Google". (Antes la cookie era de dominio `.leogin.online` y la sesión se
+  compartía en toda la plataforma; el proxy expira esas cookies v1 solas.)
 - Los puntos se llevan **por teléfono**. Google solo **enlaza** la cuenta al
   cliente (1:1 por restaurante) cuando el comensal hace un pedido con su número,
   o cuando usa "Enlazar este número a mi cuenta" en la sección de Recompensas.
 - El callback `/auth/callback` intercambia el código por la sesión y regresa al
   menú. Si algo falla, vuelve con `?auth_error=1` sin romper la página.
-- **Cuentas de staff quedan excluidas.** Como la cookie de sesión es la MISMA
-  para el panel admin y el menú público, un dueño/mesero que prueba el menú de
-  su restaurante (o el de otro) en el mismo navegador donde tiene abierto el
-  panel aparecería, sin este filtro, como "cliente" enlazable. `getMyLoyalty`,
-  `linkMyAccountByPhone` y `createOrder` pasan el `auth_user_id` por
-  `resolveDinerAuthUserId` (`src/lib/db/loyalty.ts`), que lo descarta si existe
-  en `profiles`. Para probar el flujo de comensal de verdad, usa una ventana de
-  incógnito o cierra sesión del panel admin primero.
+- **Las cuentas de staff SÍ pueden ser comensales.** La sesión del comensal
+  vive en su propia cookie, separada de la del panel admin, así que un
+  dueño/mesero que entra con Google en el menú (aunque use el mismo correo de
+  su cuenta de staff) es simplemente un comensal más: ve sus puntos, enlaza su
+  teléfono y pide con normalidad, sin tocar su sesión del panel. (Antes
+  `resolveDinerAuthUserId` descartaba esos usuarios y la UI les pedía "inicia
+  sesión" en bucle por más que la sesión fuera válida.)
 
 ## Antes de poner `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` en producción
 
@@ -100,8 +103,8 @@ https://*.leogin.online/**
 ```
 
 Deja el **Site URL** en `https://leogin.online`. Con eso, al volver de Google
-aterriza en `slug.leogin.online/auth/callback`, se crea la sesión (cookie de
-dominio `.leogin.online`) y queda logueado en el menú del restaurante.
+aterriza en `slug.leogin.online/auth/callback`, se crea la sesión (cookie
+host-only de ese subdominio) y queda logueado en el menú del restaurante.
 
 ### "La pantalla de Google dice jsvlxfkw…supabase.co, no mi marca"
 
@@ -119,7 +122,8 @@ Funciona igual con o sin esto: es solo cosmético / de confianza visual.
 
 ## Nota sobre sesiones
 
-Un navegador mantiene **una** sesión de Supabase por dominio. Si el dueño del
-restaurante inicia sesión como comensal con Google y luego entra al panel admin
-(o viceversa) en el mismo navegador, la última sesión gana. No es un problema de
-seguridad (el comensal no tiene perfil de admin), solo a tener en cuenta al probar.
+La sesión del comensal (cookie `sb-leogin-diner-v2`, host-only por restaurante)
+y la del personal (cookie por defecto de Supabase, dominio `.leogin.online`)
+son **independientes**: conviven en el mismo navegador sin pisarse. El dueño
+puede tener abierto su panel admin y a la vez probar el menú como comensal con
+Google — ninguna de las dos sesiones afecta a la otra.

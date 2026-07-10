@@ -337,7 +337,7 @@ export default async function EditRestaurantePage({
                 fontWeight: 600,
                 fontSize: 13,
                 border: '1px solid var(--u-hair-2)',
-                background: 'rgba(255,255,255,0.06)',
+                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                 color: 'var(--u-text)',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',

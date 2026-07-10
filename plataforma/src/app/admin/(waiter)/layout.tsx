@@ -48,6 +48,8 @@ export default async function WaiterLayout({ children }: { children: React.React
   let restaurantName = 'Restaurante';
   let ordersEnabled = false;
   let logoUrl: string | null = null;
+  // Fondo del MENÚ del restaurante — el sidebar pinta el logo sobre él (ver AdminShell.logoBg).
+  let logoBg: string | null = null;
   let zone = '';
   let llamadaMeseroActive = false;
 
@@ -60,6 +62,7 @@ export default async function WaiterLayout({ children }: { children: React.React
     ordersEnabled = mod?.['orders'] === true;
     llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
+    logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
   } else {
     const { data: r } = await db.from('restaurants').select('name, modules, module_settings').eq('id', restaurantId).single();
@@ -77,6 +80,7 @@ export default async function WaiterLayout({ children }: { children: React.React
       ordersEnabled={ordersEnabled}
       llamadaMeseroActive={llamadaMeseroActive}
       logoUrl={logoUrl}
+      logoBg={logoBg}
       zone={zone}
       role={profile.role}
       permissions={profile.permissions}

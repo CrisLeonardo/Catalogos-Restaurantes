@@ -18,7 +18,7 @@ export default function LoginClient({ restaurantName, logoUrl, slug }: Props) {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255,255,255,0.05)',
+    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
     border: '1px solid var(--u-hair-2)',
     borderRadius: 'var(--radius-md)',
     padding: '12px 14px',

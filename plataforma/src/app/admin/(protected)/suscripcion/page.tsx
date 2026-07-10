@@ -72,6 +72,13 @@ export default async function SuscripcionPage() {
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
 
+  // La "Mensualidad" mostrada debe reflejar siempre el precio real vigente.
+  // `config.monthly_fee` es una foto guardada que solo se resincroniza en el
+  // próximo corte de cobro; si el restaurante está en auto_price, usamos el
+  // cálculo en vivo (mismo que "Plan a tu medida") para que nunca discrepen.
+  const displayedMonthlyFee =
+    config && config.auto_price !== false && feeBreakdown ? feeBreakdown.final : config?.monthly_fee ?? 0;
+
   // Get current plan
   const db = createServiceClient();
   const { data: restRow } = await db
@@ -477,7 +484,7 @@ export default async function SuscripcionPage() {
 
           {/* Detalles del plan */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-            <Kpi label="Mensualidad" value={fmtMoney(config.monthly_fee, currency)} />
+            <Kpi label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
             {config.setup_fee > 0 && <Kpi label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
             <Kpi label="Próximo cobro" value={nextChargeLabel(config.billing_day)} small />
             {config.started_at && <Kpi label="Cliente desde" value={config.started_at.slice(0, 10)} small />}
@@ -558,7 +565,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Tu mensualidad se ajusta a los canales de servicio que usas: cada canal que
-        desactivas baja tu pago {fmtMoney(b.discountPer, currency)} (hasta {fmtMoney(b.discountPer * 2, currency)}).
+        desactivas baja tu pago {fmtMoney(b.discountPer, currency)} (hasta {fmtMoney(b.discountPer * Math.max(b.channelsTotal - 1, 0), currency)}, siempre pagas al menos uno).
       </div>
 
       {/* Desglose */}
