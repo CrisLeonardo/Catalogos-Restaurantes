@@ -852,16 +852,16 @@ html[data-scheme="light"] .btn-white {
 @media (max-width: 600px) { .lp-nav-section { display: none !important; } }
 
 /* Pin del visor de mesas (mesero): tamaño fijo cómodo al tacto. */
-.floor-map-vp { --floor-pin: 52px; }
+.floor-map-vp { --floor-pin: 68px; }
 @media (max-width: 820px) {
   /* Targets táctiles más cómodos en la barra de navegación inferior */
   .admin-navlink { min-width: 62px; padding: 7px 9px; }
   /* Tokens del editor de mesas: cómodos para el dedo aun en pantallas chicas */
-  .floor-edit-canvas { --floor-token: 52px; }
+  .floor-edit-canvas { --floor-token: 64px; }
 }
 @media (max-width: 380px) {
-  .floor-edit-canvas { --floor-token: 46px; }
-  .floor-map-vp { --floor-pin: 48px; }
+  .floor-edit-canvas { --floor-token: 56px; }
+  .floor-map-vp { --floor-pin: 58px; }
 }
 
 @media (max-width: 1100px) { .orders-grid { grid-template-columns: 1fr; } }

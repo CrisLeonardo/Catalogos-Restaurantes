@@ -20,7 +20,10 @@ import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actio
 import type { OrderStatus } from '@/types';
 
 const POLL_MS = 8000;
-const TERMINAL: OrderStatus[] = ['DELIVERED', 'CANCEL'];
+// SERVED es terminal para el seguimiento del comensal: una vez servida la
+// comida en mesa no hay más que mostrarle (cerrar la mesa es cosa del
+// mesero, potencialmente horas después), así que dejamos de sondear ahí.
+const TERMINAL: OrderStatus[] = ['SERVED', 'DELIVERED', 'CANCEL'];
 
 interface Step {
   status: OrderStatus;
@@ -33,6 +36,7 @@ const STEPS: Step[] = [
   { status: 'PREP',      icon: 'flame',   label: (c) => c.tracking.statusPrep },
   { status: 'READY',     icon: 'bag',     label: (c, pickup) => (pickup ? c.tracking.statusReadyPickup : c.tracking.statusReady) },
   { status: 'TRANSIT',   icon: 'truck',   label: (c) => c.tracking.statusTransit },
+  { status: 'SERVED',    icon: 'check',   label: (c) => c.tracking.statusServed },
   { status: 'DELIVERED', icon: 'check',   label: (c) => c.tracking.statusDelivered },
 ];
 
@@ -94,6 +98,7 @@ export default function OrderTracker({
               PREP: content.tracking.statusPrep,
               READY: fresh.orderType === 'PICKUP' ? content.tracking.statusReadyPickup : content.tracking.statusReady,
               TRANSIT: content.tracking.statusTransit,
+              SERVED: content.tracking.statusServed,
               DELIVERED: content.tracking.statusDelivered,
               CANCEL: content.tracking.statusCancel,
             };
@@ -149,10 +154,17 @@ export default function OrderTracker({
   }
 
   const pickup = order.orderType === 'PICKUP';
+  const dineIn = order.orderType === 'DINE_IN';
   // DINE_IN y PICKUP no tienen reparto: el paso "En camino" no aplica
   // (al comensal sentado en su mesa no se le muestra TRANSIT).
-  const noTransit = pickup || order.orderType === 'DINE_IN';
-  const steps = STEPS.filter((s) => !(noTransit && s.status === 'TRANSIT'));
+  const noTransit = pickup || dineIn;
+  // DINE_IN termina en "servido" (SERVED), no en "entregado" (DELIVERED) —
+  // ese último paso es el cierre de mesa del mesero, no algo que le importe
+  // al comensal. Los demás tipos nunca alcanzan SERVED, así que se oculta.
+  const steps = STEPS.filter((s) =>
+    !(noTransit && s.status === 'TRANSIT') &&
+    !(dineIn && s.status === 'DELIVERED') &&
+    !(!dineIn && s.status === 'SERVED'));
   const cancelled = order.status === 'CANCEL';
   const activeIdx = cancelled ? -1 : steps.findIndex((s) => s.status === order.status);
   const subtitle = content.tracking.subtitle || 'El estado se actualiza solo, en vivo.';

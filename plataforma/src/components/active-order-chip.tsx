@@ -18,7 +18,7 @@ import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/act
 import { getLocalOrders, addLocalOrder } from '@/lib/customer-local';
 import type { OrderStatus } from '@/types';
 
-const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT'];
+const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'];
 const POLL_MS = 20000;
 /** Solo miramos pedidos de las últimas 12 h: lo demás ya no es "en curso". */
 const FRESH_MS = 12 * 60 * 60 * 1000;
@@ -107,6 +107,7 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
     active.status === 'NEW'     ? content.tracking.statusNew
     : active.status === 'PREP'  ? content.tracking.statusPrep
     : active.status === 'READY' ? content.tracking.statusReady
+    : active.status === 'SERVED' ? content.tracking.statusServed
     : content.tracking.statusTransit;
 
   return (

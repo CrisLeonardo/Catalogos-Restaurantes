@@ -211,7 +211,7 @@ export interface Promotion {
   created_at: string;
 }
 
-export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'DELIVERED' | 'CANCEL';
+export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'SERVED' | 'DELIVERED' | 'CANCEL';
 
 export interface Order {
   id: string;

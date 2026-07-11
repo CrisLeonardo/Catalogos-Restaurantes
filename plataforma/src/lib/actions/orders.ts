@@ -734,7 +734,7 @@ export async function updateOrderStatus(
   if (!orderId) return { error: 'ID de pedido requerido.' };
 
   const validStatuses: OrderStatus[] = [
-    'NEW', 'PREP', 'READY', 'TRANSIT', 'DELIVERED', 'CANCEL',
+    'NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED', 'DELIVERED', 'CANCEL',
   ];
   if (!validStatuses.includes(status)) return { error: 'Estado inválido.' };
 
@@ -768,6 +768,7 @@ export async function updateOrderStatus(
   const stamp: Record<string, string> =
     status === 'PREP'      ? { accepted_at: now }
     : status === 'READY'     ? { ready_at: now }
+    : status === 'SERVED'    ? { served_at: now }
     : status === 'DELIVERED' ? { delivered_at: now }
     : status === 'CANCEL'    ? { cancelled_at: now }
     : {};
@@ -801,7 +802,9 @@ export async function updateOrderStatus(
 
   // Acumula puntos de lealtad al entregar (best-effort; no-op si el módulo está
   // inactivo o el pedido no tiene cliente). No debe romper el cambio de estado.
-  if (status === 'DELIVERED') {
+  // SERVED cuenta aquí porque freeTable() (cierre manual de mesa DINE_IN) bypasea
+  // esta función y nunca llega a otorgar puntos vía DELIVERED.
+  if (status === 'DELIVERED' || status === 'SERVED') {
     let rid = profile.restaurant_id as string | null;
     if (!rid) {
       const { data: orderRow } = await createServiceClient()

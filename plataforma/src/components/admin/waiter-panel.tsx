@@ -73,22 +73,24 @@ function money(n: number, c: PanelCurrency): string {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
+  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', SERVED: 'Servido', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
 };
 const STATUS_COLOR: Record<string, string> = {
-  NEW: '#3b82f6', PREP: '#f59e0b', READY: '#8b5cf6', TRANSIT: '#f97316', DELIVERED: '#22c55e', CANCEL: '#6b7280',
+  NEW: '#3b82f6', PREP: '#f59e0b', READY: '#8b5cf6', TRANSIT: '#f97316', SERVED: '#06b6d4', DELIVERED: '#22c55e', CANCEL: '#6b7280',
 };
 
-function nextStatus(status: string, _type: string): string | null {
+/** Para DINE_IN, "servir" no cierra la mesa: READY→SERVED (intermedio) y ahí
+    se detiene el avance automático — solo "Marcar como libre" llega a DELIVERED. */
+function nextStatus(status: string, type: string): string | null {
   if (status === 'NEW') return 'PREP';
   if (status === 'PREP') return 'READY';
-  if (status === 'READY') return 'DELIVERED';
+  if (status === 'READY') return type === 'DINE_IN' ? 'SERVED' : 'DELIVERED';
   return null;
 }
-function nextLabel(status: string): string {
+function nextLabel(status: string, type: string): string {
   if (status === 'NEW') return 'Confirmar';
   if (status === 'PREP') return 'Marcar listo';
-  if (status === 'READY') return 'Servir en mesa';
+  if (status === 'READY') return type === 'DINE_IN' ? 'Marcar servido' : 'Servir en mesa';
   return '';
 }
 
@@ -272,6 +274,41 @@ function ProductOptionsModal({
   );
 }
 
+/* Menú ⋮ del encabezado: hoy solo trae "Salir", pero queda listo para más
+   opciones futuras del mesero sin competir por espacio con la navegación. */
+function HeaderMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDocClick);
+    return () => document.removeEventListener('pointerdown', onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="press glass-quiet"
+        aria-label="Más opciones"
+        style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}
+      >
+        <Icon name="more" size={19} />
+      </button>
+      {open && (
+        <div className="glass anim-pop" style={{ position: 'absolute', right: 0, top: 46, zIndex: 210, minWidth: 160, borderRadius: 14, padding: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+          <LogoutButton variant="menu-item" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
   title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders,
@@ -306,13 +343,12 @@ function WaiterHeader({
           </div>
           <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="userPlus" size={12} /> {waiterName}</div>
         </div>
-        {showOrders ? (
+        {showOrders && (
           <button type="button" onClick={onShowOrders} className="press glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
             <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
           </button>
-        ) : (
-          <LogoutButton />
         )}
+        <HeaderMenu />
       </div>
     </header>
   );
@@ -663,7 +699,11 @@ export default function WaiterPanel({
               </div>
             ) : orders.map((order) => {
               const next = nextStatus(order.status, order.order_type);
-              const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL';
+              // SERVED también es terminal aquí (ya no hay más botón de avance en la
+              // tarjeta del pedido — cerrar la mesa es solo vía "Marcar como libre" en
+              // el diálogo de la mesa), aunque para las queries de ocupación no cuenta
+              // como cerrado (la mesa sigue viéndose ocupada).
+              const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL' || order.status === 'SERVED';
               return (
                 <div key={order.id} className="glass" style={{ borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, opacity: isTerminal ? 0.6 : 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -708,7 +748,7 @@ export default function WaiterPanel({
                           className="press btn-accent"
                           style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
                         >
-                          {nextLabel(order.status)}
+                          {nextLabel(order.status, order.order_type)}
                         </button>
                       )}
                       <button
@@ -793,7 +833,7 @@ export default function WaiterPanel({
                 {otherTables.length > 0 && (
                   <div style={{ marginTop: 18 }}>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Otras mesas</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
                       {otherTables.map((n) => (
                         <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                       ))}
@@ -802,7 +842,7 @@ export default function WaiterPanel({
                 )}
               </>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))', gap: 12 }}>
                 {Array.from({ length: tableCount }, (_, i) => i + 1).map((n) => (
                   <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                 ))}

@@ -344,7 +344,6 @@ export default function PrintAgentSettings() {
   const [origin, setOrigin] = useState('');
   const [generating, setGenerating] = useState(false);
   const [inDesktopApp, setInDesktopApp] = useState(false);
-  const [installingAsServer, setInstallingAsServer] = useState(false);
   const [pauseToggling, setPauseToggling] = useState(false);
 
   async function handleAutoPauseToggle() {
@@ -381,35 +380,6 @@ export default function PrintAgentSettings() {
     setInDesktopApp(typeof window !== 'undefined' && Boolean((window as unknown as { __TAURI__?: unknown }).__TAURI__));
     void load();
   }, [load]);
-
-  /** "Esta PC será el servidor del local" (solo dentro de Leogin Desktop):
-      genera el token con la sesión ya iniciada y le pide al shell que
-      descargue e instale el servicio — sin descargar nada a mano. */
-  async function handleInstallAsServer() {
-    setInstallingAsServer(true);
-    setMsg('Generando token…');
-    try {
-      const res = await regenerateAgentToken();
-      if (res.error || !res.token) {
-        setMsg(`Error: ${res.error ?? 'No se pudo generar el token.'}`);
-        return;
-      }
-      setMsg('Instalando el servicio de Leogin en esta PC…');
-      const tauri = (window as unknown as { __TAURI__?: { core: { invoke: (cmd: string, args?: object) => Promise<void> } } }).__TAURI__;
-      await tauri?.core.invoke('install_agent_as_server', { apiUrl: origin, token: res.token });
-      setMsg('✓ Instalando… en unos segundos verás "Conectado" aquí abajo.');
-      let tries = 0;
-      const poll = setInterval(() => {
-        tries += 1;
-        void load();
-        if (tries >= 15) clearInterval(poll);
-      }, 4000);
-    } catch (e) {
-      setMsg(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setInstallingAsServer(false);
-    }
-  }
 
   async function handleGenerate() {
     setGenerating(true);
@@ -517,37 +487,9 @@ export default function PrintAgentSettings() {
         </button>
       </div>
 
-      {/* Un clic desde dentro de Leogin Desktop: sin descargar nada a mano */}
-      {inDesktopApp && (
-        <div style={{
-          background: 'rgba(99,102,241,0.08)',
-          border: '1px solid rgba(99,102,241,0.25)',
-          borderRadius: 10,
-          padding: '14px 16px',
-          display: 'flex', flexDirection: 'column', gap: 10,
-        }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
-            Estás en Leogin para escritorio en esta PC
-          </div>
-          <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>
-            ¿Esta es la PC del local? Con un clic la conviertes en el servidor: imprime sola y
-            mantiene el restaurante funcionando aunque se corte el internet.
-          </p>
-          <button
-            type="button"
-            onClick={handleInstallAsServer}
-            disabled={installingAsServer}
-            className="press"
-            style={{
-              alignSelf: 'flex-start', padding: '10px 16px', borderRadius: 'var(--radius-md)', border: 'none',
-              background: 'var(--brand-accent, rgba(99,102,241,0.85))', color: '#fff', fontWeight: 700, fontSize: 13,
-              cursor: installingAsServer ? 'default' : 'pointer', opacity: installingAsServer ? 0.7 : 1,
-            }}
-          >
-            {installingAsServer ? 'Instalando…' : 'Hacer de esta PC el servidor del local'}
-          </button>
-        </div>
-      )}
+      {/* El toggle "hacer de esta PC el servidor" vive en Ajustes → Este
+          dispositivo (components/admin/desktop-server-settings.tsx): es una
+          decisión sobre el dispositivo, no sobre impresoras. */}
 
       {/* Auto-pausa de pedidos en línea sin agente (opcional, mig. 069) */}
       {config?.exists && (
@@ -595,7 +537,7 @@ export default function PrintAgentSettings() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {inDesktopApp && (
           <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-            Instalación manual (alternativa al botón de arriba):
+            Instalación manual (alternativa a &quot;Hacer de esta PC el servidor del local&quot; en Ajustes):
           </span>
         )}
         <button

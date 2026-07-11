@@ -245,7 +245,7 @@ export default function FloorPlanEditor({
                     position: 'absolute',
                     left: `${t.x * 100}%`,
                     top: `${t.y * 100}%`,
-                    width: 'var(--floor-token, 56px)', height: 'var(--floor-token, 56px)',
+                    width: 'var(--floor-token, 68px)', height: 'var(--floor-token, 68px)',
                     transform: `translate(-50%, -50%) scale(${dragging ? 1.12 : 1})`,
                     transition: dragging ? 'none' : 'transform 120ms',
                     borderRadius: t.shape === 'square' ? 14 : 99,

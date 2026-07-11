@@ -33,6 +33,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   PREP:      'En preparación',
   READY:     'Listo',
   TRANSIT:   'En camino',
+  SERVED:    'Servido',
   DELIVERED: 'Entregado',
   CANCEL:    'Cancelado',
 };
@@ -42,15 +43,22 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   PREP:      '#f59e0b',
   READY:     '#8b5cf6',
   TRANSIT:   '#f97316',
+  SERVED:    '#06b6d4',
   DELIVERED: '#22c55e',
   CANCEL:    '#6b7280',
 };
 
+/** DINE_IN nunca llega a DELIVERED por esta vía: READY→SERVED se detiene ahí,
+    la mesa la cierra el mesero explícitamente ("Marcar como libre"). */
 function nextStatus(order: OrderWithItems): OrderStatus | null {
   const { status, order_type } = order;
   if (status === 'NEW')   return 'PREP';
   if (status === 'PREP')  return 'READY';
-  if (status === 'READY') return order_type === 'DELIVERY' ? 'TRANSIT' : 'DELIVERED';
+  if (status === 'READY') {
+    if (order_type === 'DELIVERY') return 'TRANSIT';
+    if (order_type === 'DINE_IN')  return 'SERVED';
+    return 'DELIVERED';
+  }
   if (status === 'TRANSIT') return 'DELIVERED';
   return null;
 }
@@ -61,7 +69,7 @@ function nextLabel(order: OrderWithItems): string {
   if (status === 'PREP')  return 'Marcar listo';
   if (status === 'READY') {
     if (order_type === 'DELIVERY') return 'En camino';
-    if (order_type === 'DINE_IN')  return 'Servir en mesa';
+    if (order_type === 'DINE_IN')  return 'Marcar servido';
     return 'Entregado';
   }
   if (status === 'TRANSIT') return 'Entregado';
@@ -332,7 +340,9 @@ export default function OrderCard({
     start(async () => { await updateOrderStatus(order.id, 'CANCEL'); });
   }
 
-  const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL';
+  // SERVED es terminal para esta tarjeta (sin más botón de avance): cerrar la
+  // mesa DINE_IN es solo vía "Marcar como libre" en el panel de mesero, no aquí.
+  const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL' || order.status === 'SERVED';
 
   return (
     <div

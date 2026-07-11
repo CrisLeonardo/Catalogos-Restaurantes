@@ -476,6 +476,7 @@ export interface ThemeContent {
     statusReady: string;
     statusReadyPickup: string;  // "Listo" cuando es para llevar
     statusTransit: string;
+    statusServed: string;       // comida entregada en mesa, cuenta aún pendiente
     statusDelivered: string;
     statusCancel: string;
     back: string;             // "Volver al menú"
@@ -583,6 +584,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     statusReady: 'Listo',
     statusReadyPickup: 'Listo para recoger',
     statusTransit: 'En camino',
+    statusServed: 'Comida servida',
     statusDelivered: 'Entregado',
     statusCancel: 'Cancelado',
     back: 'Volver al menú',

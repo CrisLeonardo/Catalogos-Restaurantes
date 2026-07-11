@@ -19,7 +19,7 @@ import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/act
 import { getLocalOrders, addLocalOrder, type LocalOrderRef } from '@/lib/customer-local';
 import type { OrderStatus } from '@/types';
 
-const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT'];
+const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'];
 /** Cuántos pedidos recientes consultan su estado real al servidor. */
 const STATUS_LOOKUPS = 8;
 /** Cada cuánto reintenta resolver el token real de un pedido de hub aún
@@ -118,6 +118,7 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
       case 'PREP':      return content.tracking.statusPrep;
       case 'READY':     return content.tracking.statusReady;
       case 'TRANSIT':   return content.tracking.statusTransit;
+      case 'SERVED':    return content.tracking.statusServed;
       case 'DELIVERED': return content.tracking.statusDelivered;
       case 'CANCEL':    return content.tracking.statusCancel;
       default:          return '';

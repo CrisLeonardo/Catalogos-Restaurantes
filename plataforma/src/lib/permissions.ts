@@ -28,6 +28,7 @@ export const ADMIN_SECTIONS = [
   { key: 'suscripcion',  label: 'Mi suscripción' },
   { key: 'personalizar', label: 'Personalizar' },
   { key: 'perfil',       label: 'Perfil' },
+  { key: 'ajustes',      label: 'Ajustes' },
   { key: 'mesas',        label: 'Mesas' },
   { key: 'impresion',    label: 'Impresión y Offline' },
   { key: 'escritorio',   label: 'Leogin Desktop' },
