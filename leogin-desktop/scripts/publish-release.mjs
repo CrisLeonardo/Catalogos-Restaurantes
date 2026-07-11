@@ -11,8 +11,12 @@
 //   "latest" solo para el escritorio.
 //
 // Uso:
-//   npm run build      (con TAURI_SIGNING_PRIVATE_KEY_PATH apuntando a la
-//                       llave de %USERPROFILE%\.tauri\leogin-desktop.key)
+//   npm run build      (con TAURI_SIGNING_PRIVATE_KEY apuntando a la llave
+//                       de %USERPROFILE%\.tauri\leogin-desktop.key y
+//                       TAURI_SIGNING_PRIVATE_KEY_PASSWORD con el contenido
+//                       de leogin-desktop.key.pass — OJO: el sufijo _PATH no
+//                       existe en Tauri v2; con él la CLI ignora la llave y
+//                       el bundle sale SIN .sig, comprobado 2026-07-11)
 //   npm run release -- [--notes "qué cambió"]
 //
 // Requiere: `gh` (GitHub CLI) autenticado con escritura sobre el repo.
@@ -58,7 +62,8 @@ if (!existsSync(exePath)) {
 if (!existsSync(sigPath)) {
   console.error(
     `✗ No existe ${sigPath} — el build corrió SIN la llave del updater.\n` +
-      '  Define TAURI_SIGNING_PRIVATE_KEY_PATH=%USERPROFILE%\\.tauri\\leogin-desktop.key y recompila.',
+      '  Define TAURI_SIGNING_PRIVATE_KEY=%USERPROFILE%\\.tauri\\leogin-desktop.key (y\n' +
+      '  TAURI_SIGNING_PRIVATE_KEY_PASSWORD con el contenido del .key.pass) y recompila.',
   );
   process.exit(1);
 }
