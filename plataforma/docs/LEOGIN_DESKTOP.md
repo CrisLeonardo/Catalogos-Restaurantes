@@ -82,34 +82,33 @@ leogin-desktop/
        misma cookie de sesión compartida en todo el dominio raíz, ver
        `proxy.ts`). Rust nunca ve ni pide esa dirección: el hook
        `on_navigation` de la ventana `main` (`detect_resolved_panel` en
-       `main.rs`) detecta la adopción **comparando orígenes** (2026-07-10,
-       reemplaza un sufijo hardcodeado a producción): si la navegación
-       aterriza en una ruta que empieza con `/admin` en un origen DISTINTO al
-       de `central_login_url()` (que default a `CENTRAL_LOGIN_URL` salvo que
-       `LEOGIN_CENTRAL_LOGIN_URL` la sobreescriba — mismo patrón que
-       `LEOGIN_UPDATE_URL`), y todavía no hay `panel_url` guardado, lo adopta
-       (persiste, autoarranque) sin volver a verificar alcanzabilidad ni
-       renavegar — ya estamos ahí. Es un no-op fuera de ese primer arranque
-       sin configurar: nunca pisa un `panel_url` ya elegido — para eso está
-       `begin_relink` (menú "Cuenta" de la ventana o bandeja → "Cambiar
-       dirección del panel", ítem 7/9 de §8). Al ya no depender de un patrón de host fijo
-       (`-admin.leogin.online`), el mismo mecanismo funciona igual en
-       producción y en local — antes era imposible probar el login central
-       con `tauri dev` porque `CENTRAL_LOGIN_URL` solo apuntaba a producción
-       real. Para probarlo en local:
+       `main.rs`) **sigue el panel que la ventana realmente usa** (regla
+       v0.3.0, ítem 11 de §8 — reemplaza la detección por ruta `/admin`,
+       que solo era cierta en local): si la navegación aterriza en una URL
+       de panel según `is_panel_location` — subdominio `<slug>-admin.<root
+       del login central>` con CUALQUIER ruta (producción: el proxy
+       reescribe `/menu` → `/admin/menu` POR DENTRO y el navegador nunca
+       muestra `/admin`), o ruta `/admin` (local / montaje por ruta) — y
+       no es una página de login, ese origen se adopta como `panel_url`
+       (persiste, autoarranque), TAMBIÉN cuando ya había otro guardado.
+       "Cambiar de cuenta" deja de ser un flujo especial: inicias sesión
+       con la otra cuenta desde donde sea, el backend redirige a su panel
+       (fix cross-tenant v0.2.3) y la PC lo sigue. El login central es
+       `CENTRAL_LOGIN_URL` salvo que `LEOGIN_CENTRAL_LOGIN_URL` lo
+       sobreescriba (mismo patrón que `LEOGIN_UPDATE_URL`). Además la web
+       ofrece **"Continuar como {nombre}"** en el login cuando ya hay
+       sesión de personal viva en el dominio (`getResumeSession()` en
+       `src/lib/auth/resume.ts`) — abrir el login central con la cookie
+       compartida ya iniciada no vuelve a pedir la contraseña.
+       Para probarlo en local:
        ```powershell
        cd leogin-desktop
        $env:LEOGIN_CENTRAL_LOGIN_URL = "http://localhost:3000/admin/login"
        npm run dev
        ```
-     - **Manual (alternativa):** formulario "Dirección de tu panel" de
-       siempre. `save_panel_url` la valida contra la red, la persiste en
-       `%APPDATA%\com.leogin.desktop\config.json`, activa el autoarranque con
-       Windows (oculto, `--hidden`) y navega al panel. Sigue siendo el único
-       camino para dominios propios fuera de `leogin.online` y es lo que abre
-       directo la bandeja → "Cambiar dirección del panel" (`?setup=1`).
-   - **Configurado** → `boot`: ¿responde la nube? → navega a `…/admin`; si no
-     → `offline.html`.
+   - **Configurado** → `boot`: ¿responde la nube? (DOS sondas de 5 s — una
+     sola daba falsos "sin conexión" en WiFi lentos recién encendida la PC)
+     → navega a `…/admin`; si no → `offline.html`.
 3. El login es el del panel web de siempre (correo/contraseña del staff). La
    sesión persiste en el perfil del WebView2 igual que en un navegador.
 
@@ -120,8 +119,10 @@ leogin-desktop/
   sin hub · sin punto = sin configurar.
 - Sonda cada 8 s: `GET <panel>/favicon.ico` (alcanzabilidad de nube, cualquier
   respuesta HTTP cuenta) + `GET 127.0.0.1:47100/health` (hub).
-- Menú: Abrir Leogin · [línea de estado en vivo] · Estado del hub local ·
-  Buscar actualizaciones · Cambiar dirección del panel · Salir de Leogin.
+- Menú: Abrir Leogin · [línea de estado en vivo] · Estado del modo local
+  (con guarda: sin hub instalado muestra un diálogo explicativo en vez de
+  navegar a una página de error) · Buscar actualizaciones · Cambiar de
+  cuenta o restaurante · Salir de Leogin.
 - **Cerrar la ventana la oculta** (`prevent_close + hide`); salir de verdad
   solo desde la bandeja. Instancia única: relanzar el exe enfoca la existente.
 
@@ -145,17 +146,36 @@ Contraste deliberado con el agente: el **servicio** se actualiza en silencio
 (su operador es nadie); la **app** pide permiso con el toast (su operador está
 enfrente y puede estar a media comanda).
 
+**El mismo ciclo horario también mantiene al día el SERVICIO local**
+(`maybe_update_agent`, 2026-07-10, pedido del usuario: "si se actualiza, se
+actualiza junto al desktop"): si el hub de esta PC responde y su versión es
+menor que el último release `agent-v*` de GitHub, el shell descarga el exe,
+le pone al lado el `config.local.json` de la instalación actual (misma
+config, ningún token nuevo) y lo lanza con el comando `update`
+(autoinstalación silenciosa, agente ≥0.7.0 — a versiones anteriores no se
+les dispara para no provocar sus MessageBox en medio del servicio). Es
+deliberadamente redundante con el auto-update de nube del propio agente
+(updater.ts): aquel depende de que la nube tenga el release cargado
+(migración 065); este solo necesita GitHub — el mismo origen del que la
+vinculación por sesión ya instala. Una tentativa por versión por corrida del
+shell.
+
 ### 4.4 Respaldo sin nube
 
 Si el panel no responde, la ventana cae a `offline.html`, que:
 
-- muestra si el **hub local** está activo (y su versión) — recordando que los
+- muestra si el **modo local** (hub) está activo — recordando que los
   pedidos y la impresión siguen andando solos;
-- da acceso a la página de estado del hub (`127.0.0.1:47100/`), que ya enlaza
-  al **KDS de respaldo** con su token;
+- con hub activo, el CTA principal es **"Continuar en modo local — pantalla
+  de cocina"**: navega DIRECTO al KDS de respaldo con su token
+  (`get_kds_url`), sin pasar por la página técnica de estado (que queda como
+  botón secundario);
 - permite "intentar abrir el panel de todos modos" (el service worker del PWA
   puede tener el admin cacheado);
-- reintenta la nube cada 6 s y **regresa sola al panel** cuando vuelve.
+- reintenta la nube cada 5 s y **regresa sola al panel** cuando vuelve; el
+  hub se resondea también cada 5 s;
+- enlaza "Cambiar de cuenta o restaurante" (`index.html?setup=1`) como
+  salida de rescate.
 
 ### 4.5 Vinculación por sesión ("esta PC será el servidor")
 
@@ -404,6 +424,60 @@ un error.
     vez de al panel del nuevo. Cambiado a comparar el slug real del perfil
     contra el `tenantSlug` actual (sin importar si es la raíz o el
     subdominio de un tercero) — mismo código sirve web y desktop por igual.
+11. ~~**La adopción del panel NUNCA disparaba en producción**~~ — ✅
+    2026-07-10 (v0.3.0), el otro pedazo del mismo reporte del usuario:
+    `detect_resolved_panel` exigía que la RUTA empezara con `/admin`, cierto
+    solo en local (`<slug>.localhost:3000/admin/…`). En producción el panel
+    vive en `<slug>-admin.leogin.online` y el proxy reescribe `/menu` →
+    `/admin/menu` POR DENTRO — el navegador nunca muestra `/admin`, así que
+    tras el login central la PC no guardaba nada y al siguiente arranque
+    volvía a pedir sesión ("no me reconoce"). La MISMA condición rota estaba
+    en `SHELL_TELEMETRY_JS_TEMPLATE` (la telemetría del shell jamás se envió
+    en producción). Fix: `is_panel_location()` reconoce el subdominio
+    `*-admin` del dominio raíz del login central (cualquier ruta) además de
+    la ruta `/admin`, y la adopción ahora SIGUE los cambios de panel (ver
+    §4.1) — `begin_relink` quedó solo como fuente de la URL del login
+    central.
+12. ~~**Barra de menú nativa "Cuenta"**~~ — ✅ retirada 2026-07-10, el mismo
+    día que se agregó (ítem 9): feedback directo del usuario — "se ve mal,
+    uno no sabe que es un botón ni por qué está ahí". Con la adopción que
+    sigue al login (ítem 11) ya no hace falta puerta dedicada; la bandeja
+    conserva "Cambiar de cuenta o restaurante" (antes "Cambiar dirección del
+    panel" — también renombrada) y `?setup=1` ganó un botón "Volver a mi
+    panel" para no ser un callejón sin salida.
+13. ~~**"Continuar como {nombre}" en el login**~~ — ✅ 2026-07-10: con la
+    cookie de personal compartida en el dominio raíz, abrir el login central
+    con sesión viva pedía la contraseña otra vez. `getResumeSession()`
+    (`src/lib/auth/resume.ts`) resuelve el mismo destino que `login()` sin
+    credenciales y ambas páginas de login lo ofrecen como botón primario.
+    Complemento web: el candado de tenant de `(protected)/layout.tsx` ahora
+    redirige al panel PROPIO del usuario (antes al menú público del
+    restaurante equivocado, que se leía como "tu cuenta no existe").
+14. ~~**Pulido del respaldo offline y la bandeja**~~ — ✅ 2026-07-10:
+    `offline.html` salta DIRECTO al KDS local en un clic (ver §4.4); "Estado
+    del modo local" en la bandeja comprueba el hub ANTES de navegar (sin hub
+    mostraba la página de error nativa del WebView); `boot()` sondea dos
+    veces antes de declarar sin nube; Ctrl +/− y Ctrl+rueda para zoom del
+    panel (`zoom_hotkeys_enabled`); versiones de Cargo.toml/package.json
+    sincronizadas con tauri.conf.json (el user-agent reportaba 0.2.0).
+15. ~~**Servicio local acoplado al desktop (instalación y updates)**~~ — ✅
+    2026-07-10, a pedido explícito del usuario ("se instala a la vez que el
+    desktop y se actualiza junto a él"). Dos piezas, respetando la regla de
+    oro de §2 (ventana ≠ servicio — fusionarlos haría que cerrar la ventana
+    matara la impresión, y el servicio necesita cuenta+token que no existen
+    durante el NSIS, además de que solo UNA PC por local debe correrlo o se
+    imprime doble):
+    · **Instalación**: tras iniciar sesión dentro de la app, si el
+      restaurante NO tiene servidor vinculado (lo decide la NUBE — la única
+      que ve todo el local, no solo esta PC), el dueño ve el banner "¿Esta
+      PC será el servidor del local?" (`desktop-server-nudge.tsx`, rendido
+      por `(protected)/layout.tsx`, visible solo con `window.__TAURI__`) →
+      un clic a `/admin/impresion` donde vive la vinculación por sesión de
+      §4.5. Una segunda PC del mismo restaurante nunca recibe la invitación.
+    · **Updates**: el ciclo horario del shell también actualiza el servicio
+      (ver §4.3, `maybe_update_agent`); requirió el comando `update` del
+      agente (autoinstalación silenciosa, `runSetup({silent})`, agente
+      v0.7.0).
 
 ## 9. Cómo probar en local
 

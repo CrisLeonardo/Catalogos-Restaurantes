@@ -15,8 +15,8 @@ la ventana.
   necesita actualizarse (modelo Claude Desktop / Slack).
 - **Bandeja del sistema.** Ícono con punto de estado en vivo:
   🟢 nube conectada · 🟡 sin nube pero hub local activo (modo local) ·
-  🔴 sin nube y sin hub. Menú: Abrir, Estado del hub, Buscar actualizaciones,
-  Cambiar dirección del panel, Salir.
+  🔴 sin nube y sin hub. Menú: Abrir, Estado del modo local, Buscar
+  actualizaciones, Cambiar de cuenta o restaurante, Salir.
 - **Cerrar ≠ salir.** Cerrar la ventana la oculta a la bandeja; Leogin sigue
   vivo (y arranca con Windows, oculto, tras la primera configuración).
 - **Auto-update con toast.** Chequea GitHub Releases cada hora, descarga en
@@ -28,7 +28,15 @@ la ventana.
   cuando vuelve el internet.
 - **"Esta PC será el servidor del local", un clic.** Desde el panel (sección
   Impresión), con la sesión ya iniciada dentro de la app, instala el servicio
-  de impresión/offline sin descargar nada a mano.
+  de impresión/offline sin descargar nada a mano. Y si el restaurante aún no
+  tiene servidor, el propio panel lo OFRECE tras iniciar sesión dentro de la
+  app (banner del dueño) — no hay que descubrir la sección Impresión.
+- **El servicio se actualiza junto con la app.** El mismo ciclo horario que
+  busca actualizaciones del shell compara la versión del servicio local de
+  esta PC con el último release `agent-v*` y, si está viejo, lo reinstala en
+  silencio conservando su configuración (agente ≥0.7.0). Respaldo del
+  auto-update de nube del propio servicio: aunque ese canal falle, la PC
+  queda al día con solo tener Leogin abierto.
 - **Modo kiosco para cocina.** `leogin-desktop.exe --kds` abre fullscreen
   directo al KDS de respaldo del hub local — sin bandeja, sin setup.
 
@@ -135,9 +143,12 @@ venir firmados con la llave minisign).
 3. Si esa PC va a imprimir / operar sin internet: en el panel, sección
    **Impresión**, botón **"Hacer de esta PC el servidor del local"** — solo
    una PC por local.
-4. ¿Necesitas conectar esta PC con otra cuenta o restaurante después? Menú
-   **Cuenta → Cambiar de cuenta o restaurante** en la barra de la ventana (o
-   el ícono de la bandeja del sistema si la ventana está minimizada).
+4. ¿Necesitas conectar esta PC con otra cuenta o restaurante después? Basta
+   **cerrar sesión en el panel y entrar con la otra cuenta** — la app sigue
+   sola al restaurante que resuelva el login (v0.3.0). También está el atajo
+   **"Cambiar de cuenta o restaurante"** en el menú del ícono de la bandeja.
+   (La barra de menú "Cuenta" que existió unas horas el 2026-07-10 se retiró:
+   se veía rota y no parecía un botón.)
 
 SmartScreen avisará la primera vez ("Más información → Ejecutar de todos
 modos") mientras no haya certificado de firma de código (pendiente a

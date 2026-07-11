@@ -18,7 +18,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::{
     image::Image,
-    menu::{Menu, MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBuilder},
+    menu::{MenuBuilder, MenuItem, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, State, Url, WebviewUrl, WebviewWindowBuilder, WindowEvent, Wry,
 };
@@ -85,9 +85,17 @@ const EXTERNAL_LINKS_JS: &str = r#"
 /// Va como fetch normal DESDE la página del panel — usa su misma sesión
 /// (cookie), sin pasar por IPC ni exponer un comando nuevo al contenido
 /// remoto. `{VERSION}` se sustituye al construir la ventana.
+///
+/// OJO con la condición de "estoy en el panel": en producción el panel vive
+/// en su PROPIO subdominio (`<slug>-admin.leogin.online`) y el proxy de la
+/// web reescribe las rutas por dentro — el navegador ve `/menu`, `/pedidos`…
+/// y NUNCA `/admin`. Chequear solo la ruta (la versión anterior) hacía que
+/// la telemetría jamás se enviara en producción; se reconoce también el
+/// hostname `*-admin.*`.
 const SHELL_TELEMETRY_JS_TEMPLATE: &str = r#"
 (function () {
-  if (!/\/admin(\/|$)/.test(location.pathname)) return;
+  var isPanel = /\/admin(\/|$)/.test(location.pathname) || /-admin\./.test(location.hostname);
+  if (!isPanel) return;
   function send() {
     try {
       fetch('/api/agent/shell-heartbeat', {
@@ -163,6 +171,10 @@ struct AppState {
     status_item: Mutex<Option<MenuItem<Wry>>>,
     /// Actualización descargada, esperando el "Reiniciar ahora" del toast.
     pending_update: Mutex<Option<(Update, Vec<u8>)>>,
+    /// Última versión del AGENTE que este shell intentó instalar (ver
+    /// `maybe_update_agent`) — evita relanzar el instalador cada hora si algo
+    /// impide que el hub quede al día.
+    agent_update_attempted: Mutex<Option<String>>,
     http: reqwest::Client,
 }
 
@@ -517,7 +529,8 @@ struct GhRelease {
 
 /// Último release publicado del AGENTE (tag `agent-v*`, no `desktop-v*` —
 /// mismo repo público de binarios). GitHub ya los devuelve más nuevo primero.
-async fn latest_agent_asset_url(http: &reqwest::Client) -> Result<String, String> {
+/// Devuelve `(versión, url del .exe)` — la versión sale del propio tag.
+async fn latest_agent_release(http: &reqwest::Client) -> Result<(String, String), String> {
     let releases: Vec<GhRelease> = http
         .get(AGENT_RELEASES_API)
         .header("accept", "application/vnd.github+json")
@@ -532,9 +545,130 @@ async fn latest_agent_asset_url(http: &reqwest::Client) -> Result<String, String
     releases
         .into_iter()
         .find(|r| !r.draft && r.tag_name.starts_with("agent-v"))
-        .and_then(|r| r.assets.into_iter().find(|a| a.name.to_lowercase().ends_with(".exe")))
-        .map(|a| a.browser_download_url)
+        .and_then(|r| {
+            let version = r.tag_name.trim_start_matches("agent-v").to_string();
+            r.assets
+                .into_iter()
+                .find(|a| a.name.to_lowercase().ends_with(".exe"))
+                .map(|a| (version, a.browser_download_url))
+        })
         .ok_or_else(|| "No se encontró un release publicado del agente.".to_string())
+}
+
+/// "x.y.z" → [x, y, z] para comparar versiones numéricamente (misma
+/// semántica que `isNewerVersion` en agente-impresion/src/updater.ts).
+fn parse_ver(v: &str) -> [u64; 3] {
+    let mut out = [0u64; 3];
+    for (i, part) in v.trim().trim_start_matches('v').split('.').take(3).enumerate() {
+        out[i] = part
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .parse()
+            .unwrap_or(0);
+    }
+    out
+}
+
+/// Carpeta de instalación del agente en esta PC — debe coincidir con
+/// `installDir()` de agente-impresion/src/setup.ts.
+fn agent_install_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("LOCALAPPDATA")
+        .map(|base| std::path::PathBuf::from(base).join("Leogin").join("Agente"))
+}
+
+/// Mantiene el SERVICIO local al día junto con el desktop (pedido del usuario
+/// 2026-07-10: "si se llegara a actualizar, se actualiza junto al desktop").
+/// En el mismo ciclo horario en que el shell busca su propia actualización,
+/// compara la versión del hub de ESTA PC contra el último release `agent-v*`
+/// y, si está viejo, descarga el exe y lo lanza en modo `update`
+/// (autoinstalación SILENCIOSA, agente ≥0.7.0 — a versiones anteriores no se
+/// les dispara para no provocar sus cuadros de diálogo de "instalado
+/// correctamente" en medio del servicio).
+///
+/// Es deliberadamente REDUNDANTE con el auto-update de nube del propio agente
+/// (updater.ts, modelo Chrome): aquel canal depende de que la nube tenga el
+/// release cargado (migración 065 + fila en BD); este solo necesita GitHub —
+/// exactamente el mismo origen del que la vinculación por sesión ya instala.
+/// La config actual (`config.local.json` de la carpeta instalada) viaja al
+/// lado del instalador temporal (Plan B de config.ts): la reinstalación
+/// conserva apiUrl+token, no se genera ningún token nuevo.
+async fn maybe_update_agent(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let hub = fetch_hub(&state.http).await;
+    if !hub.ok {
+        return; // sin hub en esta PC no hay nada que mantener al día
+    }
+    let Some(hub_ver) = hub.version else { return };
+    let Ok((latest, url)) = latest_agent_release(&state.http).await else { return };
+    if parse_ver(&latest) < parse_ver("0.7.0") {
+        return; // el release publicado aún no trae el modo silencioso
+    }
+    if parse_ver(&latest) <= parse_ver(&hub_ver) {
+        return; // ya está al día (o el propio auto-update del agente ganó)
+    }
+    // Una sola tentativa por versión por corrida del shell: si algo falla se
+    // reintenta al reiniciar Leogin, no en bucle cada hora.
+    {
+        let mut attempted = state.agent_update_attempted.lock().unwrap();
+        if attempted.as_deref() == Some(latest.as_str()) {
+            return;
+        }
+        *attempted = Some(latest.clone());
+    }
+    let Some(dir) = agent_install_dir() else { return };
+    let Ok(cfg_bytes) = std::fs::read(dir.join("config.local.json")) else {
+        log_line(app, "agente: hub activo pero sin config.local.json legible — el shell no puede actualizarlo");
+        return;
+    };
+
+    log_line(app, &format!("agente: v{hub_ver} → v{latest}, descargando actualización…"));
+    let bytes = match state
+        .http
+        .get(&url)
+        .timeout(Duration::from_secs(180))
+        .send()
+        .await
+        .and_then(|r| r.error_for_status())
+    {
+        Ok(res) => match res.bytes().await {
+            Ok(b) => b,
+            Err(e) => {
+                log_line(app, &format!("agente: descarga incompleta: {e}"));
+                return;
+            }
+        },
+        Err(e) => {
+            log_line(app, &format!("agente: no se pudo descargar: {e}"));
+            return;
+        }
+    };
+
+    // Temp propia. El nombre empieza con "Leogin" (looksPackaged en index.ts)
+    // pero NO es "LeoginAgent.exe": stopExisting() hace taskkill por nombre de
+    // imagen y se mataría a sí mismo (bug real 2026-07-08, ver LEOGIN_DESKTOP.md §4.5).
+    let tmp = std::env::temp_dir().join(format!("leogin-agent-update-{}", std::process::id()));
+    if std::fs::create_dir_all(&tmp).is_err() {
+        return;
+    }
+    let exe = tmp.join("LeoginAgent-update.exe");
+    if std::fs::write(&exe, &bytes).is_err() || std::fs::write(tmp.join("config.local.json"), &cfg_bytes).is_err() {
+        log_line(app, "agente: no se pudo preparar el instalador temporal");
+        return;
+    }
+
+    let mut cmd = std::process::Command::new(&exe);
+    cmd.arg("update");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    match cmd.spawn() {
+        Ok(_) => log_line(app, &format!("agente: instalador v{latest} lanzado en modo silencioso")),
+        Err(e) => log_line(app, &format!("agente: no se pudo lanzar el instalador: {e}")),
+    }
 }
 
 // ── Comandos (los llaman las páginas locales de ui/) ───────────────────────
@@ -555,12 +689,15 @@ fn get_setup_info(app: AppHandle, state: State<AppState>) -> SetupInfo {
 }
 
 /// Arranque con panel ya configurado: navega al panel si hay nube; si no,
-/// la página de arranque salta a offline.html.
+/// la página de arranque salta a offline.html. La sonda se intenta DOS veces:
+/// una sola de 5 s marcaba "sin conexión" en WiFi lentos reales justo al
+/// encender la PC (falso negativo — el router aún negociaba), y el usuario
+/// veía la pantalla offline teniendo internet.
 #[tauri::command]
 async fn boot(app: AppHandle, state: State<'_, AppState>) -> Result<String, String> {
     let origin = { state.config.lock().unwrap().panel_url.clone() };
     let Some(origin) = origin else { return Ok("setup".into()) };
-    if cloud_reachable(&state.http, &origin).await {
+    if cloud_reachable(&state.http, &origin).await || cloud_reachable(&state.http, &origin).await {
         let url = Url::parse(&admin_url(&origin)).map_err(|e| e.to_string())?;
         log_line(&app, "boot → panel");
         navigate_main(&app, url);
@@ -571,63 +708,90 @@ async fn boot(app: AppHandle, state: State<'_, AppState>) -> Result<String, Stri
     }
 }
 
-/// Prepara un re-enlace por cuenta: si esta PC ya tenía un `panel_url`
-/// guardado (reconfigurar, no primer arranque), lo olvida SOLO EN MEMORIA
-/// antes de mandar al usuario al login central — así `detect_resolved_panel`
-/// deja de encontrar `already_set` y adopta el restaurante que resuelva el
-/// login que está por venir. Nada se borra en disco todavía: si el usuario
-/// cierra la ventana o abandona el login a medio camino, el `panel_url` que
-/// ya funcionaba sigue intacto en `config.json` — probar "iniciar sesión con
-/// otra cuenta" nunca puede dejar la PC peor de como estaba.
-/// Devuelve la URL del login central para que la página solo tenga que
-/// navegar ahí, sin duplicar `central_login_url()` en JS.
+/// Prepara un re-enlace por cuenta y devuelve la URL del login central para
+/// que la página solo tenga que navegar ahí, sin duplicar
+/// `central_login_url()` en JS. Desde que `detect_resolved_panel` SIGUE los
+/// cambios de panel (adopta el origen al que redirija cada login, ver arriba)
+/// ya no hace falta olvidar nada: iniciar sesión con la cuenta nueva basta.
+/// Se conserva como el punto único que conoce esa URL.
 #[tauri::command]
-fn begin_relink(state: State<AppState>) -> String {
-    state.config.lock().unwrap().panel_url = None;
+fn begin_relink() -> String {
     central_login_url()
 }
 
-/// Detecta, desde Rust (hook `on_navigation`, no un comando invocable), si la
-/// ventana llegó a un panel de restaurante ya resuelto por el login central
-/// (ver `central_login_url()`) y todavía no hay `panel_url` guardado. Si es
-/// así, lo adopta: persiste el origen, activa autoarranque — sin volver a
-/// verificar alcanzabilidad (ya estamos ahí) ni renavegar (la navegación ya
-/// está en curso). Fuera de ese primer arranque sin configurar, es un no-op:
-/// nunca reemplaza un panel_url ya elegido (para eso está `begin_relink`).
+/// ¿Esta URL es el PANEL de un restaurante? Reconoce las DOS formas reales
+/// que arma la web (`adminUrl()` en plataforma/src/lib/tenant.ts):
+///   · producción: `https://<slug>-admin.<root>/…` — host dedicado. El proxy
+///     reescribe las rutas POR DENTRO (`/menu` → `/admin/menu`), así que el
+///     navegador nunca muestra `/admin` en la ruta.
+///   · local / montaje por ruta: `http://<slug>.localhost:3000/admin/…`.
+/// Nunca el propio login central, ni el hub local, ni las páginas
+/// empaquetadas de esta app.
+fn is_panel_location(url: &Url, central: &Url) -> bool {
+    if url.scheme() != "http" && url.scheme() != "https" {
+        return false;
+    }
+    if url.origin() == central.origin() {
+        return false;
+    }
+    let Some(host) = url.host_str() else { return false };
+    if host == "127.0.0.1" || host == "localhost" || host == "tauri.localhost" {
+        return false;
+    }
+    // Producción: subdominio dedicado <slug>-admin.<root del login central>.
+    if let Some(root) = central.host_str().map(|h| h.trim_start_matches("www.")) {
+        if let Some(sub) = host.strip_suffix(&format!(".{root}")) {
+            if !sub.is_empty() && sub.ends_with("-admin") {
+                return true;
+            }
+        }
+    }
+    // Genérico (local y cualquier montaje bajo ruta): el panel bajo /admin.
+    url.path() == "/admin" || url.path().starts_with("/admin/")
+}
+
+/// Mantiene `panel_url` sincronizado con el panel que la ventana REALMENTE
+/// usa (hook `on_navigation` de la ventana main, no un comando invocable).
 ///
-/// Condición (2026-07-10, reemplaza un sufijo de host hardcodeado a
-/// producción `-admin.leogin.online`): la navegación aterrizó en un ORIGEN
-/// DISTINTO al del login central, en una ruta que empieza con `/admin`. Como
-/// el único lugar desde donde se llega ahí es el propio botón "Iniciar
-/// sesión con tu cuenta de Leogin" (login central, primer party) y quien
-/// decide el destino tras autenticar es el propio backend de Leogin
-/// (`login()` en auth.ts, nunca contenido arbitrario), esto es válido tanto
-/// en producción (`<slug>-admin.leogin.online`) como en local
-/// (`<slug>.localhost:3000/admin`) sin tener que conocer el patrón exacto de
-/// cada entorno — antes, al estar hardcodeado a producción, era imposible
-/// probar este flujo con `tauri dev` contra Supabase local.
+/// Reemplaza (2026-07-10b) la detección anterior, que exigía que la RUTA
+/// empezara con `/admin`. Eso solo es cierto en local
+/// (`<slug>.localhost:3000/admin/…`): en producción el panel vive en su
+/// propio subdominio (`<slug>-admin.leogin.online`) y el navegador ve
+/// `/menu`, `/mesero`… nunca `/admin`. Resultado real del bug: el login
+/// central funcionaba perfecto en `tauri dev` y NO ADOPTABA NADA en
+/// producción — la PC "no reconocía" la cuenta al siguiente arranque y
+/// volvía a pedir iniciar sesión, y "cambiar de cuenta" jamás persistía.
+///
+/// Regla nueva: si la navegación aterriza en una URL de panel
+/// (`is_panel_location`) que NO es una página de login, ese origen SE ADOPTA
+/// como `panel_url` — también cuando ya había otro guardado. Así "cambiar de
+/// cuenta o restaurante" es simplemente iniciar sesión con la otra cuenta
+/// desde donde sea: el backend redirige al panel correcto (fix cross-tenant
+/// de auth.ts, v0.2.3) y esta PC lo sigue, en vez de quedarse clavada en el
+/// restaurante anterior. Llegar a una página de login NO adopta nada: estar
+/// frente a un formulario no prueba que la cuenta pertenezca a ese
+/// restaurante.
 fn detect_resolved_panel(app: &AppHandle, url: &Url) {
-    if !url.path().starts_with("/admin") {
+    let Ok(central) = Url::parse(&central_login_url()) else { return };
+    if !is_panel_location(url, &central) {
         return;
     }
-    let Ok(central) = Url::parse(&central_login_url()) else { return };
-    if url.origin() == central.origin() {
-        return; // seguimos en el propio login central, nada que adoptar todavía
+    if url.path().contains("/login") {
+        return;
     }
     let state = app.state::<AppState>();
-    let already_set = state.config.lock().unwrap().panel_url.is_some();
-    if already_set {
-        return;
-    }
     let origin = url.origin().ascii_serialization();
     let cfg = {
         let mut cfg = state.config.lock().unwrap();
+        if cfg.panel_url.as_deref() == Some(origin.as_str()) {
+            return; // sin cambio — el caso común en cada navegación del panel
+        }
         cfg.panel_url = Some(origin.clone());
         cfg.clone()
     };
     save_config(app, &cfg);
     let _ = app.autolaunch().enable();
-    log_line(app, &format!("panel detectado tras iniciar sesión (login central): {origin}"));
+    log_line(app, &format!("panel adoptado: {origin}"));
 }
 
 #[tauri::command]
@@ -725,7 +889,7 @@ async fn install_agent_as_server(
     }
 
     log_line(&app, "vinculación por sesión: buscando el último release del agente…");
-    let download_url = latest_agent_asset_url(&state.http).await?;
+    let (_, download_url) = latest_agent_release(&state.http).await?;
 
     log_line(&app, "vinculación por sesión: descargando el agente…");
     let bytes = state
@@ -789,9 +953,9 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     let status = MenuItemBuilder::with_id("status", "Comprobando estado…")
         .enabled(false)
         .build(app)?;
-    let hub = MenuItemBuilder::with_id("hub", "Estado del hub local").build(app)?;
+    let hub = MenuItemBuilder::with_id("hub", "Estado del modo local (impresión)").build(app)?;
     let update = MenuItemBuilder::with_id("update", "Buscar actualizaciones").build(app)?;
-    let change = MenuItemBuilder::with_id("change", "Cambiar dirección del panel").build(app)?;
+    let change = MenuItemBuilder::with_id("change", "Cambiar de cuenta o restaurante").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Salir de Leogin").build(app)?;
 
     let menu = MenuBuilder::new(app)
@@ -816,8 +980,22 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => show_main(app),
             "hub" => {
-                show_main(app);
-                navigate_main(app, Url::parse(HUB_HOME).expect("url hub"));
+                // Comprobar ANTES de navegar: mandar la ventana a 127.0.0.1
+                // sin hub instalado dejaba al usuario en la página de error
+                // nativa del WebView (fea, en inglés y sin salida).
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let hub = fetch_hub(&app.state::<AppState>().http).await;
+                    if hub.ok {
+                        show_main(&app);
+                        navigate_main(&app, Url::parse(HUB_HOME).expect("url hub"));
+                    } else {
+                        info_dialog(
+                            &app,
+                            "Esta PC no tiene el modo local instalado.\n\nEl modo local mantiene la impresión y los pedidos funcionando sin internet. Se activa desde tu panel: Impresión → \"Hacer de esta PC el servidor del local\" (solo se necesita en una PC del restaurante).",
+                        );
+                    }
+                });
             }
             "update" => {
                 let app = app.clone();
@@ -889,6 +1067,7 @@ fn main() {
                 config: Mutex::new(load_config(app.handle())),
                 status_item: Mutex::new(None),
                 pending_update: Mutex::new(None),
+                agent_update_attempted: Mutex::new(None),
                 http: reqwest::Client::builder()
                     .user_agent(format!("LeoginDesktop/{}", env!("CARGO_PKG_VERSION")))
                     .build()
@@ -923,6 +1102,10 @@ fn main() {
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(960.0, 620.0)
                 .visible(false)
+                // Ctrl +/− y Ctrl+rueda para acercar el panel — en las PCs de
+                // caja con pantallas chicas o gente mayor es lo primero que
+                // piden; cualquier navegador lo tiene y este shell no lo tenía.
+                .zoom_hotkeys_enabled(true)
                 .initialization_script(main_init)
                 .on_navigation(move |url| {
                     detect_resolved_panel(&app_for_nav, url);
@@ -949,26 +1132,20 @@ fn main() {
 
             build_tray(app)?;
 
-            // Menú nativo de la ventana (barra superior): antes la ÚNICA forma
-            // de reconectar la PC con otra cuenta/restaurante era encontrar el
-            // ícono de Leogin entre los "iconos ocultos" de la bandeja y darle
-            // clic derecho — nada visible ni descubrible. "Cuenta" en la barra
-            // del menú dispara exactamente el mismo flujo (mismo destino que el
-            // "change" de la bandeja), solo que a la vista.
-            let account_menu = SubmenuBuilder::new(app, "Cuenta")
-                .text("change_account", "Cambiar de cuenta o restaurante")
-                .build()?;
-            let app_menu = Menu::new(app)?;
-            app_menu.append(&account_menu)?;
-            app.set_menu(app_menu)?;
-            app.on_menu_event(|app, event| {
-                if event.id().as_ref() == "change_account" {
-                    show_main(app);
-                    navigate_main(app, local_url("index.html?setup=1"));
-                }
-            });
+            // SIN barra de menú nativa. Hubo una ("Cuenta → Cambiar de
+            // cuenta…", 2026-07-10) y se retiró el mismo día: una barra de
+            // menú de Windows con un único menú se veía rota, no parecía un
+            // botón y nadie entendía qué hacía ahí (feedback directo del
+            // usuario). Cambiar de cuenta ya no necesita puerta dedicada:
+            // basta cerrar sesión en el panel y entrar con la otra cuenta —
+            // `detect_resolved_panel` sigue el panel que resuelva el backend.
+            // La bandeja conserva "Cambiar de cuenta o restaurante" como
+            // atajo explícito.
 
-            // Sonda de estado (bandeja) + chequeo de actualizaciones cada hora.
+            // Sonda de estado (bandeja) + chequeo de actualizaciones cada
+            // hora — del SHELL y, en el mismo ciclo, del SERVICIO local de
+            // esta PC (maybe_update_agent): la app y su motor de
+            // impresión/offline se mantienen al día juntos.
             let h = app.handle().clone();
             tauri::async_runtime::spawn(async move { status_loop(h).await });
             let h2 = app.handle().clone();
@@ -976,6 +1153,7 @@ fn main() {
                 tokio::time::sleep(Duration::from_secs(20)).await;
                 loop {
                     check_for_update(h2.clone(), false).await;
+                    maybe_update_agent(&h2).await;
                     tokio::time::sleep(Duration::from_secs(3600)).await;
                 }
             });

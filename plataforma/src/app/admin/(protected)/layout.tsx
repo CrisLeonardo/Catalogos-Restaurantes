@@ -7,9 +7,10 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
 import PlanGmvAlert from '@/components/admin/plan-gmv-alert';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
+import DesktopServerNudge from '@/components/admin/desktop-server-nudge';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
-import { subdomainUrl } from '@/lib/tenant';
+import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import type { Restaurant } from '@/types';
 
 export default async function AdminProtectedLayout({
@@ -91,6 +92,14 @@ export default async function AdminProtectedLayout({
     if (tenantSlug) {
       const tenantData = await getRestaurantBySlug(tenantSlug);
       if (!tenantData || tenantData.restaurant.id !== profile.restaurant_id) {
+        // Sesión válida pero en el subdominio de OTRO restaurante (típico en
+        // Leogin Desktop tras cambiar de cuenta, o en una pestaña vieja):
+        // mandarlo a SU panel, no al menú público del restaurante equivocado
+        // — eso se leía como "tu cuenta no existe" cuando la cuenta estaba
+        // perfectamente bien.
+        if (ctx.restaurant?.slug) {
+          redirect(`${adminUrl(ctx.restaurant.slug)}/menu`);
+        }
         redirect('/');
       }
       restaurantName    = tenantData.restaurant.name;
@@ -105,6 +114,26 @@ export default async function AdminProtectedLayout({
 
   const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
   const showGmvAlert = !!currentRestaurant?.id && planActual !== null && !['BASICO', 'VARIABLE'].includes(planActual);
+
+  // ¿El restaurante ya tiene su PC servidor (agente/modo local vinculado)?
+  // Solo la nube lo sabe con certeza — ve TODO el local, no solo esta PC.
+  // Si NO lo tiene, el dueño verá (únicamente dentro de Leogin Desktop, el
+  // componente cliente comprueba window.__TAURI__) la invitación a activar
+  // esta PC como servidor del local. Dueños solamente: el personal no debe
+  // decidir la infraestructura del restaurante.
+  let offerLocalServer = false;
+  if (
+    currentRestaurant?.id &&
+    (profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN')
+  ) {
+    const svc = createServiceClient();
+    const { data: agentRow } = await svc
+      .from('print_agents')
+      .select('id')
+      .eq('restaurant_id', currentRestaurant.id)
+      .maybeSingle();
+    offerLocalServer = !agentRow;
+  }
 
   const mod = currentRestaurant?.modules as Record<string, boolean> | null;
   const m = (k: string) => mod?.[k] === true;
@@ -153,6 +182,7 @@ export default async function AdminProtectedLayout({
       {showGmvAlert && (
         <PlanGmvAlert restaurantId={currentRestaurant!.id} />
       )}
+      {offerLocalServer && <DesktopServerNudge />}
       {children}
     </AdminShell>
   );

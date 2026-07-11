@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { DEMO_SLUG } from '@/lib/tenant';
+import { getResumeSession } from '@/lib/auth/resume';
 import LoginClient from './login-client';
 
 export default async function LoginPage() {
@@ -21,7 +22,14 @@ export default async function LoginPage() {
     }
   }
 
+  let resume = null;
+  try {
+    resume = await getResumeSession();
+  } catch {
+    /* sin sesión utilizable → login normal */
+  }
+
   return (
-    <LoginClient restaurantName={restaurantName} logoUrl={logoUrl} slug={slug} />
+    <LoginClient restaurantName={restaurantName} logoUrl={logoUrl} slug={slug} resume={resume} />
   );
 }

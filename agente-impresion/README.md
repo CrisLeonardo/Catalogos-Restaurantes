@@ -140,6 +140,8 @@ Equivalente manual, desde la carpeta `dist/` (PowerShell como Administrador):
 
 ```powershell
 .\LeoginAgent.exe setup            # autoinstala usando el token del nombre / env / config.local.json
+.\LeoginAgent.exe update           # lo mismo pero SIN cuadros de diálogo (v0.7.0) —
+                                   # así lo relanza Leogin Desktop para mantenerlo al día
 # o el instalador clásico:
 .\installer\install.ps1 -ApiUrl "https://tudominio.com" -Token "EL_TOKEN_DEL_PANEL"
 .\installer\uninstall.ps1          # para quitarlo

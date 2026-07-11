@@ -7,7 +7,7 @@
 // así el cliente no necesita casos especiales para hablarle al hub o a la
 // nube.
 
-import { getMenuSnapshot, enqueuePendingOrder, type MenuProduct, type PendingOrder } from './store.ts';
+import { getMenuSnapshot, getPendingOrders, enqueuePendingOrder, type MenuProduct, type PendingOrder } from './store.ts';
 import { buildLocalKitchenTicket, type LocalKitchenItem } from './escpos.ts';
 import { parseTarget, printRaw } from './printer/index.ts';
 import { logger } from './logger.ts';
@@ -82,6 +82,19 @@ export async function acceptOfflineOrder(rawBody: unknown): Promise<OrderIntakeR
 
   if (typeof clientId !== 'string' || !clientId) {
     return { ok: false, status: 400, error: 'Falta clientId.' };
+  }
+  // Idempotencia TAMBIÉN para la impresión: la cola ya deduplicaba por
+  // clientId, pero la comanda se imprimía en CADA reintento (WiFi inestable
+  // → respuesta perdida → el navegador reenvía el mismo pedido → ticket
+  // duplicado en cocina). Si ya lo tenemos, se reconfirma sin imprimir.
+  const existing = getPendingOrders().find((o) => o.clientId === clientId);
+  if (existing) {
+    return {
+      ok: true,
+      orderId: clientId,
+      orderNumber: existing.orderNumber,
+      total: existing.display?.total ?? 0,
+    };
   }
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, status: 400, error: 'El carrito está vacío.' };

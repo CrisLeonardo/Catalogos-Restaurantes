@@ -58,12 +58,29 @@ export function isAudioUnlocked(): boolean {
 
 /* ── Sonidos distintivos por tipo de evento ──────────────────────────── */
 
+/* Freno de ráfagas: N eventos casi simultáneos (p. ej. 15 pedidos encolados
+   que sincronizan de golpe al volver la señal, o media sala llamando al
+   mesero a la vez) NO deben apilar N sonidos — encimados suenan como una
+   alarma continua e inentendible y saturan al personal. Un aviso por
+   ventana de unos segundos comunica lo mismo; el NÚMERO real lo muestran
+   las tarjetas/contadores en pantalla. */
+const MIN_GAP_MS = { order: 2500, waiter: 4000, kitchen: 2000 } as const;
+const lastPlayed = { order: 0, waiter: 0, kitchen: 0 };
+
+function burstThrottled(kind: keyof typeof MIN_GAP_MS): boolean {
+  const now = Date.now();
+  if (now - lastPlayed[kind] < MIN_GAP_MS[kind]) return true;
+  lastPlayed[kind] = now;
+  return false;
+}
+
 /**
  * 🛎 Pedido nuevo
  * 3 tonos ascendentes sine do-mi-sol (523→659→784 Hz).
  * Patrón agradable y reconocible como "llegó algo nuevo".
  */
 export function playOrderSound(volume = 0.5, repeat = 1): void {
+  if (burstThrottled('order')) return;
   const ctx = getCtx();
   if (!ctx) return;
   for (let r = 0; r < repeat; r++) {
@@ -90,6 +107,7 @@ export function playOrderSound(volume = 0.5, repeat = 1): void {
  * Deliberadamente más agresivo e insistente que el de pedidos.
  */
 export function playWaiterSound(volume = 0.75, repeat = 3): void {
+  if (burstThrottled('waiter')) return;
   const ctx = getCtx();
   if (!ctx) return;
   const pBurst = 3;
@@ -118,6 +136,7 @@ export function playWaiterSound(volume = 0.75, repeat = 3): void {
  * Onda sawtooth y patrón descendente lo distinguen claramente de pedidos.
  */
 export function playKitchenSound(volume = 0.5, repeat = 1): void {
+  if (burstThrottled('kitchen')) return;
   const ctx = getCtx();
   if (!ctx) return;
   for (let r = 0; r < repeat; r++) {

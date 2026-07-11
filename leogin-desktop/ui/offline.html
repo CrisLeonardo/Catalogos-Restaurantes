@@ -1,8 +1,9 @@
 <!doctype html>
 <!-- Respaldo sin nube. La ventana cae aquí cuando el panel alojado no
-     responde. Muestra el estado del hub local (LeoginAgent) y regresa sola
-     al panel en cuanto vuelve la conexión. El hub sigue capturando pedidos
-     e imprimiendo por su cuenta — esta página solo informa y da accesos. -->
+     responde al arrancar. El hub local (servicio de Leogin en esta PC o en
+     otra del local) sigue capturando pedidos e imprimiendo por su cuenta —
+     esta página informa, da el salto al modo local en un clic y REGRESA SOLA
+     al panel en cuanto vuelve la conexión. -->
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -11,44 +12,66 @@
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; margin: 0; }
-  body { background: #0d1017; color: #e7eaf0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-         min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-  main { max-width: 470px; width: 100%; background: #151a26; border: 1px solid #262d40; border-radius: 18px; padding: 30px; }
+  body {
+    background: #0b0e15;
+    background-image:
+      radial-gradient(520px 320px at 18% 0%, rgba(234, 179, 8, 0.10), transparent 65%),
+      radial-gradient(560px 360px at 85% 100%, rgba(232, 83, 74, 0.07), transparent 65%);
+    color: #e7eaf0;
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh; display: grid; place-items: center; padding: 24px;
+  }
+  main { max-width: 480px; width: 100%; background: rgba(21, 26, 38, 0.88);
+         border: 1px solid #262d40; border-radius: 20px; padding: 32px 30px 24px;
+         box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45); }
   h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; letter-spacing: -0.3px; }
-  .dot { width: 11px; height: 11px; border-radius: 99px; background: #eab308; box-shadow: 0 0 10px #eab308; flex: none; }
+  .dot { width: 11px; height: 11px; border-radius: 99px; background: #eab308;
+         box-shadow: 0 0 10px #eab308; flex: none; }
   p { font-size: 13.5px; color: #aab2c5; margin-top: 12px; }
-  .hub { margin-top: 18px; padding: 14px 16px; border-radius: 12px; border: 1px solid #262d40; background: #0f1420;
-         font-size: 13.5px; display: flex; align-items: center; gap: 10px; }
-  .hub .st { width: 9px; height: 9px; border-radius: 99px; flex: none; }
+  .hub { margin-top: 18px; padding: 13px 15px; border-radius: 12px; border: 1px solid #262d40;
+         background: #0f1420; font-size: 13.5px; display: flex; align-items: center; gap: 10px; }
+  .hub .st { width: 9px; height: 9px; border-radius: 99px; flex: none; background: #5b6378; }
+  .hub.ok { border-color: rgba(74, 222, 128, 0.25); background: rgba(74, 222, 128, 0.05); }
+  .hub.ok .st { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+  .hub.no .st { background: #ef4444; }
   .links { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
-  button { padding: 12px; border: 0; border-radius: 11px; cursor: pointer; font: inherit; font-weight: 800; font-size: 14px; }
+  button { padding: 12px; border: 0; border-radius: 12px; cursor: pointer; font: inherit;
+           font-weight: 800; font-size: 14px; }
   .pri { background: linear-gradient(135deg, #e8534a, #f5a030); color: #fff; }
+  .pri:hover { filter: brightness(1.08); }
   .sec { background: #233049; color: #e7eaf0; }
   .ghost { background: transparent; border: 1px solid #262d40; color: #aab2c5; font-weight: 600; }
-  .retry { margin-top: 16px; font-size: 12.5px; color: #5b6378; display: flex; align-items: center; gap: 8px; }
-  .spin { width: 13px; height: 13px; border: 2px solid #2c3550; border-top-color: #f5a030; border-radius: 99px;
-          animation: r 0.8s linear infinite; }
+  .retry { margin-top: 16px; font-size: 12.5px; color: #5b6378; display: flex;
+           align-items: center; gap: 8px; }
+  .spin { width: 13px; height: 13px; border: 2px solid #2c3550; border-top-color: #f5a030;
+          border-radius: 99px; animation: r 0.8s linear infinite; flex: none; }
   @keyframes r { to { transform: rotate(360deg); } }
+  .foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid #262d40; text-align: center; }
+  .foot a { color: #5b6378; font-size: 12px; text-decoration: none; }
+  .foot a:hover { color: #8b93a7; text-decoration: underline; }
 </style>
 </head>
 <body>
 <main>
   <h1><span class="dot"></span> Sin conexión con la nube</h1>
-  <p>No se pudo abrir tu panel. En cuanto vuelva el internet, Leogin regresa solo
+  <p id="lead">No se pudo abrir tu panel. En cuanto vuelva el internet, Leogin regresa solo
      a tu panel — deja esta ventana abierta.</p>
 
   <div class="hub" id="hub">
-    <span class="st" style="background:#5b6378"></span>
-    <span>Buscando el hub local de este restaurante…</span>
+    <span class="st"></span>
+    <span id="hubtxt">Buscando el modo local de este restaurante…</span>
   </div>
 
   <div class="links">
+    <button class="pri" id="kds" style="display:none">Continuar en modo local — pantalla de cocina</button>
     <button class="pri" id="retry">Reintentar ahora</button>
-    <button class="sec" id="hubpage" style="display:none">Abrir el modo local (hub de esta red)</button>
+    <button class="sec" id="hubpage" style="display:none">Ver estado del modo local</button>
     <button class="ghost" id="tryweb">Intentar abrir el panel de todos modos</button>
   </div>
 
   <div class="retry"><div class="spin"></div> Reintentando automáticamente…</div>
+
+  <div class="foot"><a href="index.html?setup=1">Cambiar de cuenta o restaurante</a></div>
 </main>
 
 <script>
@@ -58,17 +81,19 @@
   async function paintHub() {
     try {
       const hub = await invoke('hub_status');
-      const st = $('hub').querySelector('.st');
       if (hub && hub.ok) {
-        st.style.background = '#4ade80';
-        st.style.boxShadow = '0 0 8px #4ade80';
-        $('hub').lastElementChild.innerHTML =
-          `<b>Hub local activo</b> (v${hub.version}) — los pedidos y la impresión siguen funcionando en tu red.`;
+        $('hub').className = 'hub ok';
+        $('hubtxt').innerHTML =
+          '<b>Modo local activo</b> — los pedidos y la impresión siguen funcionando en tu red.';
+        $('kds').style.display = 'block';
         $('hubpage').style.display = 'block';
+        // Con modo local disponible, "reintentar" pasa a secundario: la
+        // operación del restaurante ya está cubierta.
+        $('retry').className = 'sec';
       } else {
-        st.style.background = '#ef4444';
-        $('hub').lastElementChild.textContent =
-          'No hay hub local en esta PC. Si otra PC del local lo tiene instalado, los pedidos siguen cubiertos desde allá.';
+        $('hub').className = 'hub no';
+        $('hubtxt').textContent =
+          'Esta PC no tiene el modo local. Si otra PC del local lo tiene instalado, los pedidos siguen cubiertos desde allá.';
       }
     } catch { /* se reintenta en el próximo ciclo */ }
   }
@@ -80,13 +105,21 @@
   }
 
   $('retry').addEventListener('click', tryCloud);
-  $('tryweb').addEventListener('click', () => invoke('open_panel'));
+  $('tryweb').addEventListener('click', () => invoke('open_panel').catch(() => {}));
   $('hubpage').addEventListener('click', () => invoke('open_hub_page'));
+  $('kds').addEventListener('click', async () => {
+    // Directo a la pantalla de cocina del hub (con su token), sin pasar por
+    // la página de estado — un clic, cero pasos técnicos.
+    try {
+      const url = await invoke('get_kds_url');
+      if (url) location.href = url;
+    } catch { /* el hub dejó de responder; el próximo paintHub lo refleja */ }
+  });
 
   paintHub();
   tryCloud();
-  setInterval(tryCloud, 6000);
-  setInterval(paintHub, 15000);
+  setInterval(tryCloud, 5000);
+  setInterval(paintHub, 5000);
 </script>
 </body>
 </html>

@@ -129,6 +129,24 @@ export default function AdminNotifications({
   const kitchenRef  = useRef(kitchenMode);
   const settingsRef = useRef<SoundSettings>(DEFAULT_SOUND_SETTINGS);
   const swRegRef    = useRef<ServiceWorkerRegistration | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+
+  /* Coalescer de router.refresh(): una ráfaga de INSERTs (p. ej. 15 pedidos
+     encolados offline que sincronizan de golpe al volver la señal) disparaba
+     un refresh POR PEDIDO — 15 re-renders completos del server component en
+     segundos, con el panel congelado justo cuando más se necesita. Máximo un
+     refresh cada 2.5 s; el último evento de la ráfaga siempre queda cubierto
+     (trailing). */
+  function refreshSoon() {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }
 
   useEffect(() => { muteRef.current    = muteChime;    }, [muteChime]);
   useEffect(() => { kitchenRef.current = kitchenMode;  }, [kitchenMode]);
@@ -200,11 +218,12 @@ export default function AdminNotifications({
           // maneja el componente específico (kitchen-display / orders-panel).
           if (!muteRef.current && !kitchenRef.current) {
             const s = settingsRef.current;
+            // El propio playOrderSound frena ráfagas (ver sounds.ts).
             playOrderSound(s.orderVolume, s.orderRepeat);
             if (toastTimer.current) clearTimeout(toastTimer.current);
             setToast(`🛎 Pedido ${order.order_number} — ${order.customer_name}`);
             toastTimer.current = setTimeout(() => setToast(null), 5000);
-            router.refresh();
+            refreshSoon();
           }
 
           // Notificación in-app de refuerzo (el servidor ya disparó el push).
@@ -297,9 +316,14 @@ export default function AdminNotifications({
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
+      if (refreshTimer.current) {
+        clearTimeout(refreshTimer.current);
+        refreshTimer.current = null;
+      }
       if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId, router]);
 
   /* ── Clic en la campana ──────────────────────────────────────────── */

@@ -7,6 +7,7 @@ import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
 import { Icon } from '@/components/icons';
 import { exportOrdersStructured, updateOrderStatus } from '@/lib/actions/orders';
+import { playOrderSound, loadSoundSettings } from '@/lib/sounds';
 import { localDateKey } from '@/lib/hours';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
@@ -25,24 +26,15 @@ interface Props {
   autoConfirmMinutes?: number;
 }
 
+/** Sonido de pedido nuevo — el MISMO de sounds.ts a propósito: respeta el
+    volumen/repetición que el usuario configuró en la campana, reutiliza el
+    AudioContext compartido (la versión anterior creaba un contexto NUEVO por
+    cada pedido — fuga de recursos y sonidos encimados en ráfagas) y trae el
+    freno de ráfagas incorporado (15 pedidos sincronizando de golpe suenan
+    UNA vez, no 15). */
 function chime() {
-  try {
-    const ctx = new AudioContext();
-    const notes = [660, 880, 1100];
-    notes.forEach((freq, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const t = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      osc.start(t);
-      osc.stop(t + 0.6);
-    });
-  } catch {}
+  const s = loadSoundSettings();
+  playOrderSound(s.orderVolume, s.orderRepeat);
 }
 
 /** Formatea un monto con la moneda REAL del restaurante (no "Q" fijo). */
@@ -60,6 +52,27 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Coalescer de router.refresh() (mismo patrón que admin/notifications.tsx):
+  // en una ráfaga (15 pedidos sincronizando de golpe al volver la señal, o
+  // sus 15 auto-confirmaciones venciendo juntas un minuto después) cada
+  // evento disparaba un re-render COMPLETO del server component — el panel
+  // se congelaba justo en el momento de mayor presión. Máximo un refresh
+  // cada 2.5 s; el último evento de la ráfaga siempre queda cubierto.
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+  function refreshSoon() {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
 
   // ── Auto-confirm timers ────────────────────────────────────────
   const autoTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -81,7 +94,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     autoTimers.current.set(orderId, setTimeout(async () => {
       autoTimers.current.delete(orderId);
       await updateOrderStatus(orderId, 'PREP');
-      router.refresh();
+      refreshSoon();
     }, delay));
   }
 
@@ -140,7 +153,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
             chime();
             showToast(`Nuevo pedido ${newOrder.order_number} — ${newOrder.customer_name}`);
             if (newOrder.status === 'NEW') scheduleAutoConfirm(newOrder.id, newOrder.created_at);
-            router.refresh();
+            refreshSoon();
           },
         )
         .on(
@@ -151,7 +164,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
             if (updated.restaurant_id !== restaurantId) return;
             // Si el pedido ya no está en NEW, cancelar su timer de auto-confirm.
             if (updated.status !== 'NEW') cancelAutoConfirm(updated.id);
-            router.refresh();
+            refreshSoon();
           },
         )
         .subscribe((status) => {

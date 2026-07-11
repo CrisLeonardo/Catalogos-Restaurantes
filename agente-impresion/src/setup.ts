@@ -386,11 +386,22 @@ export async function runUninstall(): Promise<void> {
 /**
  * Ejecuta la instalación completa. Pensado para correr cuando el usuario hace
  * doble clic en el instalador descargado.
+ *
+ * `silent: true` (comando `update`, v0.7.0): misma instalación pero SIN
+ * cuadros de diálogo — la usa Leogin Desktop para mantener el servicio al
+ * día junto con su propio ciclo de actualización; el usuario no inició esa
+ * acción y no hay que interrumpirlo con un MessageBox de la nada.
  */
-export async function runSetup(): Promise<void> {
+export async function runSetup(opts: { silent?: boolean } = {}): Promise<void> {
+  const silent = opts.silent === true;
+  const notify = (text: string): void => {
+    if (silent) logger.info(text.replace(/\n+/g, ' '));
+    else messageBox(text);
+  };
+
   const params = await resolveParams();
   if (!params) {
-    messageBox(
+    notify(
       'No se encontro el codigo de vinculacion del restaurante.\n\n' +
         'Descarga el instalador desde tu panel (Perfil -> Agente Leogin -> ' +
         'Descargar) y NO le cambies el nombre al archivo. Luego haz doble clic.',
@@ -417,7 +428,7 @@ export async function runSetup(): Promise<void> {
       copied = true;
     } catch (err) {
       if (attempt === 4) {
-        messageBox(
+        notify(
           'No se pudo completar la instalacion porque el agente anterior sigue ' +
             'en uso. Cierra la sesion de Windows (o reinicia la PC) y vuelve a ' +
             'abrir el instalador.',
@@ -457,8 +468,8 @@ export async function runSetup(): Promise<void> {
     logger.warn('No se pudo lanzar el agente automaticamente:', (err as Error).message);
   }
 
-  // 7. Confirmar al usuario.
-  messageBox(
+  // 7. Confirmar al usuario (en modo silencioso solo queda en el log).
+  notify(
     'El Agente de impresion Leogin se instalo correctamente.\n\n' +
       'Ya quedo funcionando y se iniciara solo cada vez que enciendas esta PC.\n' +
       'Vuelve al panel: en unos segundos veras "Agente conectado".\n\n' +

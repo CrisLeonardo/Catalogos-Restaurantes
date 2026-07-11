@@ -631,6 +631,22 @@ export default function CheckoutForm({
       orderTypeSnapshot: type,
     };
 
+    // WRITE-AHEAD: el pedido queda en la cola del dispositivo ANTES de
+    // intentar cualquier red (finishSuccess lo quita al confirmarse). Bug
+    // real reproducido en pruebas (2026-07-10, panel de mesero — misma
+    // ventana aquí): si la página muere durante el intento (pestaña
+    // cerrada, WebView reiniciado, celular bloqueado), el pedido solo
+    // existía en memoria y se perdía sin rastro. Con la cola primero, el
+    // peor caso es un pedido que el reintento de la próxima visita envía
+    // solo — nunca uno perdido; el clientId idempotente (migración 061)
+    // garantiza que jamás se duplica.
+    saveQueuedOrder(restaurantId, {
+      clientId: clientIdRef.current,
+      payload,
+      queuedAt: new Date().toISOString(),
+      total: totalSnapshot,
+    });
+
     start(async () => {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         // "Sin internet" no implica "sin LAN" — justo el caso que resuelve
@@ -648,7 +664,14 @@ export default function CheckoutForm({
         await queueCurrentOrder();
         return;
       }
-      if (result.error) { setError(result.error); return; }
+      if (result.error) {
+        // Rechazo definitivo del servidor: fuera de la cola (si se quedara,
+        // el reintento de la próxima visita reenviaría un pedido ya
+        // rechazado).
+        if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
+        setError(result.error);
+        return;
+      }
       finishSuccess(result);
     });
   }

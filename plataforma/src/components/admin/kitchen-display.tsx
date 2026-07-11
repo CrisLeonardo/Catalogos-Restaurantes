@@ -89,6 +89,25 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
   const soundSettingsRef = useRef(loadSoundSettings());
   const C = scheme === 'light' ? C_LIGHT : C_DARK;
 
+  // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
+  // ráfaga de pedidos (p. ej. la cola offline sincronizando de golpe) hacía
+  // un re-render completo del server component POR PEDIDO — la pantalla de
+  // cocina se congelaba en plena hora pico. Máximo un refresh cada 2.5 s.
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+  function refreshSoon() {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
+
   // Reloj/temporizadores
   useEffect(() => {
     const t0 = setTimeout(() => setNow(Date.now()), 0);
@@ -130,7 +149,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
               const s = soundSettingsRef.current;
               playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
             }
-            router.refresh();
+            refreshSoon();
           },
         )
         .on(
@@ -147,7 +166,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
               const s = soundSettingsRef.current;
               playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
             }
-            router.refresh();
+            refreshSoon();
           },
         )
         .subscribe();

@@ -347,6 +347,25 @@ export default function WaiterPanel({
   const [queuedCount, setQueuedCount] = useState(0);
   const retryingQueueRef = useRef(false);
 
+  // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
+  // ráfaga de eventos Realtime (p. ej. la cola offline del hub sincronizando
+  // 20 pedidos de golpe) disparaba un re-render completo POR EVENTO y
+  // congelaba la tablet del mesero. Máximo un refresh cada 2.5 s.
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+  function refreshSoon() {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
+
   // Precalienta el hub HTTPS (DNS + permiso de red local) mientras hay señal,
   // para que el fallback funcione si el internet se cae a mitad del turno.
   useEffect(() => {
@@ -418,10 +437,10 @@ export default function WaiterPanel({
       channel = supabase
         .channel(`waiter-orders-${waiterId}-${crypto.randomUUID().slice(0, 8)}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
-          router.refresh();
+          refreshSoon();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, () => {
-          router.refresh();
+          refreshSoon();
         })
         .subscribe();
     })();
@@ -550,8 +569,21 @@ export default function WaiterPanel({
     };
 
     startSubmit(async () => {
+      // WRITE-AHEAD: el pedido se guarda en la cola del dispositivo ANTES de
+      // intentar cualquier red, y solo se quita tras un resultado definitivo.
+      // Bug real reproducido en pruebas (2026-07-10): con la nube caída, la
+      // página murió DURANTE la ventana del fallback (~2.5 s) y el pedido —
+      // que solo existía en memoria — se perdió sin dejar rastro (ni nube,
+      // ni hub, ni cola). Con la cola primero, el peor caso es un pedido que
+      // se reenvía solo más tarde — nunca uno perdido; el clientId
+      // idempotente (migración 061) garantiza que jamás se duplica aunque el
+      // reintento y este envío lleguen ambos.
+      saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
       try {
         const result = await createWaiterOrder(input);
+        // Respuesta del servidor (éxito o rechazo definitivo): ya no es un
+        // pedido "en el aire" — fuera de la cola en ambos casos.
+        removeQueuedOrder(restaurantId, clientId, 'waiter');
         if (result.error) {
           setSubmitError(result.error);
           return;
@@ -562,19 +594,22 @@ export default function WaiterPanel({
         router.refresh();
       } catch {
         // La nube no respondió (sin conexión o WiFi inestable): intenta el
-        // hub local del restaurante antes de encolar en este dispositivo
-        // (mismo patrón que checkout-form.tsx, clientId idempotente por
-        // migración 061 — reintentar nunca duplica la comanda).
+        // hub local del restaurante antes de dejarlo encolado en este
+        // dispositivo.
         if (hubUrl) {
           const hubResult = await tryHubOrder(hubUrl, hubToken, input);
           if (hubResult?.success) {
+            // El hub ya lo tiene (impreso y en SU cola de sincronización):
+            // sacarlo de la cola del dispositivo para no reenviarlo también
+            // desde aquí.
+            removeQueuedOrder(restaurantId, clientId, 'waiter');
             setSubmitOk(`Pedido ${hubResult.orderNumber} impreso — se sincronizará solo en cuanto vuelva la señal.`);
             resetOrder();
             setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2200);
             return;
           }
         }
-        saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
+        // Sin nube y sin hub: se queda donde ya estaba (cola local).
         setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
         setSubmitOk('Sin conexión: el pedido quedó guardado en este dispositivo y se enviará solo en cuanto vuelva la señal.');
         resetOrder();

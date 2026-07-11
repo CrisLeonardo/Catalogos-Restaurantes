@@ -47,6 +47,11 @@ export default function WaiterCallsAlert({
   const [calls, setCalls] = useState<WaiterCall[]>([]);
   const [, setTick] = useState(0);
   const [resolving, startResolve] = useTransition();
+  // Con media sala llamando a la vez, apilar UNA TARJETA POR LLAMADA cubría
+  // la pantalla completa del panel (y seguía creciendo sin tope). Se muestran
+  // las más antiguas (las que llevan más tiempo esperando) y el resto se
+  // resume en un contador expandible.
+  const [showAll, setShowAll] = useState(false);
 
   const muteRef = useRef(muteChime);
   useEffect(() => { muteRef.current = muteChime; }, [muteChime]);
@@ -179,13 +184,21 @@ export default function WaiterCallsAlert({
 
   if (calls.length === 0) return null;
 
+  const MAX_VISIBLE = 3;
+  // Más antiguas primero: son las mesas que llevan más tiempo esperando.
+  const sorted = [...calls].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const visible = showAll ? sorted : sorted.slice(0, MAX_VISIBLE);
+  const hiddenCount = sorted.length - visible.length;
+
   return (
     <div style={{
       position: 'fixed', left: 16, bottom: 16, zIndex: 70,
       display: 'flex', flexDirection: 'column', gap: 8,
       maxWidth: 'min(360px, calc(100vw - 32px))',
+      // Expandida, la lista es desplazable en vez de crecer sin límite.
+      maxHeight: 'calc(100vh - 90px)', overflowY: showAll ? 'auto' : 'visible',
     }}>
-      {calls.map((c) => (
+      {visible.map((c) => (
         <div
           key={c.id}
           className="glass-solid anim-slide-up"
@@ -240,6 +253,26 @@ export default function WaiterCallsAlert({
           </button>
         </div>
       ))}
+
+      {(hiddenCount > 0 || showAll) && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="glass-solid press"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '10px 14px', borderRadius: 14, cursor: 'pointer',
+            border: '1px solid rgba(245,158,11,0.45)',
+            color: '#fbbf24', fontSize: 13, fontWeight: 700,
+            boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
+          }}
+        >
+          <Icon name="bell" size={14} />
+          {showAll
+            ? 'Mostrar menos'
+            : `+${hiddenCount} mesa${hiddenCount === 1 ? '' : 's'} más esperando — ver todas`}
+        </button>
+      )}
 
       {/* Animación keyframe via style tag (solo se inserta una vez) */}
       <style>{`

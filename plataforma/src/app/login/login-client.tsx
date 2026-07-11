@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { Glass } from '@/components/glass';
 import { LeoginMark } from '@/components/leogin-logo';
 import { login, type AuthState } from '@/lib/actions/auth';
+import type { ResumeSession } from '@/lib/auth/resume';
 
 const emptyState: AuthState = null;
 
@@ -11,9 +12,11 @@ interface Props {
   restaurantName: string | null;
   logoUrl: string | null;
   slug: string | null;
+  /** Sesión de personal ya viva en este dominio → "Continuar como {nombre}". */
+  resume?: ResumeSession | null;
 }
 
-export default function LoginClient({ restaurantName, logoUrl, slug }: Props) {
+export default function LoginClient({ restaurantName, logoUrl, slug, resume }: Props) {
   const [state, formAction, isPending] = useActionState(login, emptyState);
 
   const inputStyle: React.CSSProperties = {
@@ -86,6 +89,30 @@ export default function LoginClient({ restaurantName, logoUrl, slug }: Props) {
             Acceso al panel de administración
           </p>
         </div>
+
+        {resume && (
+          <Glass style={{ padding: '18px 20px', marginBottom: 14 }}>
+            <a
+              href={resume.url}
+              className="press btn-accent"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '13px',
+                borderRadius: 'var(--radius-full)',
+                fontWeight: 600,
+                fontSize: 15,
+                textAlign: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              Continuar como {resume.name}
+            </a>
+            <p className="t-mute" style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>
+              Ya tienes una sesión iniciada — o entra con otra cuenta:
+            </p>
+          </Glass>
+        )}
 
         <Glass style={{ padding: '28px 24px' }}>
           <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

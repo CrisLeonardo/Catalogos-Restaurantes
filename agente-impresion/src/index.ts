@@ -5,6 +5,9 @@
 //   LeoginAgent.exe list           → lista impresoras
 //   LeoginAgent.exe test "preview:" → imprime un ticket de prueba
 //   LeoginAgent.exe setup           → fuerza la instalación
+//   LeoginAgent.exe update          → instalación SILENCIOSA (sin diálogos) —
+//                                     la usa Leogin Desktop para mantener el
+//                                     servicio al día junto con el shell
 //   LeoginAgent.exe uninstall       → desinstala (es el UninstallString de
 //                                     "Aplicaciones instaladas" de Windows)
 //   LeoginAgent.exe service         → fuerza el modo servicio
@@ -67,6 +70,8 @@ if (first && CLI_COMMANDS.has(first)) {
   runCli().catch(fail);
 } else if (first === 'setup' || first === 'install') {
   runSetup().catch(fail);
+} else if (first === 'update') {
+  runSetup({ silent: true }).catch(fail);
 } else if (first === 'uninstall') {
   runUninstall().catch(fail);
 } else if (first === 'service' || first === 'run') {

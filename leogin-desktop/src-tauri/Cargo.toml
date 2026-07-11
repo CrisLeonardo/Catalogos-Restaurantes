@@ -1,6 +1,6 @@
 [package]
 name = "leogin-desktop"
-version = "0.2.0"
+version = "0.3.0"
 description = "Leogin para escritorio — la app instalable del restaurante"
 authors = ["Leogin"]
 edition = "2021"
