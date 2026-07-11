@@ -41,6 +41,26 @@ import {
 } from '@/lib/sounds';
 import type { Order } from '@/types';
 
+/* ── Leogin Desktop (Tauri): notificaciones nativas ──────────────────────
+   Dentro del webview de escritorio, Notification.requestPermission()/
+   new Notification() de la Web API NO se resuelven de forma fiable (el
+   WebView2 no tiene el mismo manejo de permisos que un navegador real) —
+   por eso el plugin tauri-plugin-notification expone su propia API bajo
+   window.__TAURI__.notification (habilitado por withGlobalTauri en
+   tauri.conf.json). Cuando corre dentro de Leogin Desktop, este componente
+   usa esa API en vez de la Web Notification API/Push; fuera de ahí (navegador
+   normal) el flujo de abajo sigue sin cambios. */
+interface TauriNotificationApi {
+  isPermissionGranted: () => Promise<boolean>;
+  requestPermission: () => Promise<'granted' | 'denied' | 'default'>;
+  sendNotification: (options: { title: string; body?: string }) => void;
+}
+function getTauriNotification(): TauriNotificationApi | null {
+  if (typeof window === 'undefined') return null;
+  const t = (window as unknown as { __TAURI__?: { notification?: TauriNotificationApi } }).__TAURI__;
+  return t?.notification ?? null;
+}
+
 /* ── Web Push helpers ────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(b64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (b64.length % 4)) % 4);
@@ -122,6 +142,10 @@ export default function AdminNotifications({
   const [showSoundPanel, setShowSoundPanel] = useState(false);
   const [soundSettings,  setSoundSettings]  = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
   const [audioBlocked,   setAudioBlocked]   = useState(false);
+  // Diferido a un efecto (no calculado directo en el render) para no
+  // desalinear el HTML del servidor con el del cliente al hidratar.
+  const [isTauri,        setIsTauri]        = useState(false);
+  useEffect(() => { setIsTauri(Boolean(getTauriNotification())); }, []);
 
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popupTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -175,6 +199,13 @@ export default function AdminNotifications({
 
   /* ── Detectar estado inicial ─────────────────────────────────────── */
   useEffect(() => {
+    const tn = getTauriNotification();
+    if (tn) {
+      tn.isPermissionGranted()
+        .then((granted) => setState(granted ? 'on' : 'off'))
+        .catch(() => setState('off'));
+      return;
+    }
     if (typeof Notification === 'undefined') return;
     const perm = Notification.permission;
     if (perm === 'denied')   { setState('blocked'); return; }
@@ -188,6 +219,38 @@ export default function AdminNotifications({
       setState(existing ? 'on' : 'basic');
     }).catch(() => setState('basic'));
   }, []);
+
+  /** Notificación de fondo (pedido nuevo / llamada al mesero): dentro de
+      Leogin Desktop usa el plugin nativo de Tauri; en navegador, Push/SW si
+      hay suscripción activa, si no la Notification API directa. */
+  function notifyUser(
+    title: string,
+    body: string,
+    opts?: { tag?: string; url?: string; vibrate?: number[]; requireInteraction?: boolean },
+  ) {
+    const tn = getTauriNotification();
+    if (tn) {
+      try { tn.sendNotification({ title, body }); } catch {}
+      return;
+    }
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    try {
+      const reg = swRegRef.current;
+      if (reg) {
+        reg.showNotification(title, {
+          body, icon: '/icon-192.png', badge: '/badge.svg',
+          tag: opts?.tag,
+          data: opts?.url ? { url: opts.url } : undefined,
+          vibrate: opts?.vibrate,
+          requireInteraction: opts?.requireInteraction,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
+      } else {
+        const n = new Notification(title, { body, tag: opts?.tag });
+        if (opts?.url) n.onclick = () => { window.focus(); router.push(opts.url!); };
+      }
+    } catch {}
+  }
 
   /* ── Realtime: pedidos y llamadas al mesero ──────────────────────── */
   useEffect(() => {
@@ -226,27 +289,15 @@ export default function AdminNotifications({
             refreshSoon();
           }
 
-          // Notificación in-app de refuerzo (el servidor ya disparó el push).
-          try {
-            if (Notification.permission === 'granted') {
-              const typeLabel =
-                order.order_type === 'DELIVERY' ? 'A domicilio'
-                : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
-              const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
-              const reg  = swRegRef.current;
-              if (reg) {
-                reg.showNotification('🛎 Nuevo pedido', {
-                  body, icon: '/icon-192.png', badge: '/badge.svg',
-                  tag: order.id, data: { url: '/admin/pedidos' },
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  vibrate: [200, 100, 200],
-                } as any);
-              } else {
-                const n = new Notification('🛎 Nuevo pedido', { body, tag: order.id });
-                n.onclick = () => { window.focus(); router.push('/admin/pedidos'); };
-              }
-            }
-          } catch {}
+          // Notificación de fondo (en navegador, refuerza el push que ya
+          // disparó el servidor; en Leogin Desktop es la única vía real).
+          {
+            const typeLabel =
+              order.order_type === 'DELIVERY' ? 'A domicilio'
+              : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
+            const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
+            notifyUser('🛎 Nuevo pedido', body, { tag: order.id, url: '/admin/pedidos', vibrate: [200, 100, 200] });
+          }
         })
 
         /* ── Llamada al mesero ── */
@@ -272,23 +323,14 @@ export default function AdminNotifications({
           setToast(`🔔 Llamada al mesero${tableLabel}`);
           toastTimer.current = setTimeout(() => setToast(null), 8000);
 
-          try {
-            if (Notification.permission === 'granted') {
-              const reg  = swRegRef.current;
-              const body = `Un cliente${tableLabel} necesita atención.`;
-              if (reg) {
-                reg.showNotification('🔔 Llamada al mesero', {
-                  body, icon: '/icon-192.png', badge: '/badge.svg',
-                  data: { url: '/admin/mesas' },
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  vibrate: [300, 100, 300, 100, 300, 200, 600],
-                  requireInteraction: true,
-                } as any);
-              } else {
-                new Notification('🔔 Llamada al mesero', { body });
-              }
-            }
-          } catch {}
+          {
+            const body = `Un cliente${tableLabel} necesita atención.`;
+            notifyUser('🔔 Llamada al mesero', body, {
+              url: '/admin/mesas',
+              vibrate: [300, 100, 300, 100, 300, 200, 600],
+              requireInteraction: true,
+            });
+          }
         })
         .subscribe((status) => {
           if (cancelled || closing) return;
@@ -330,6 +372,31 @@ export default function AdminNotifications({
   async function handleBell() {
     if (state === 'busy') return;
     primeAudio();
+
+    // Leogin Desktop: permiso nativo de Windows, sin Push/Service Worker.
+    const tn = getTauriNotification();
+    if (tn) {
+      if (state === 'blocked') {
+        showPopup('Notificaciones bloqueadas por Windows. Ve a Configuración → Sistema → Notificaciones y actívalas para Leogin.', 'error');
+        return;
+      }
+      if (state === 'on') {
+        showPopup('Las notificaciones de Windows ya están activas para Leogin.', 'info');
+        return;
+      }
+      setState('busy');
+      let perm: 'granted' | 'denied' | 'default';
+      try { perm = await tn.requestPermission(); } catch { perm = 'denied'; }
+      if (perm === 'granted') {
+        setState('on');
+        showPopup('¡Listo! Windows te avisará cuando entre un pedido nuevo.', 'info');
+        try { tn.sendNotification({ title: 'Notificaciones activadas', body: 'Te avisaremos aquí cuando entre un pedido nuevo.' }); } catch {}
+      } else {
+        setState('blocked');
+        showPopup('Notificaciones bloqueadas por Windows. Ve a Configuración → Sistema → Notificaciones y actívalas para Leogin.', 'error');
+      }
+      return;
+    }
 
     if (state === 'blocked') {
       showPopup('Las notificaciones están bloqueadas. Toca el candado en la barra del navegador y cámbialas a "Permitir".', 'error');
@@ -437,7 +504,7 @@ export default function AdminNotifications({
     'color-mix(in srgb, var(--u-text) 25%, transparent)';
 
   const tooltip =
-    state === 'on'      ? 'Push activo — toca para desactivar' :
+    state === 'on'      ? (isTauri ? 'Notificaciones de Windows activas' : 'Push activo — toca para desactivar') :
     state === 'basic'   ? 'Toca para activar notificaciones en segundo plano' :
     state === 'blocked' ? 'Notificaciones bloqueadas — toca para instrucciones' :
     state === 'busy'    ? 'Configurando…' :

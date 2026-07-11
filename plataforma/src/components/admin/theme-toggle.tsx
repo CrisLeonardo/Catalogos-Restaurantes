@@ -12,7 +12,7 @@ const THEME_COOKIE = 'admin-theme';
 
 export default function AdminThemeToggle() {
   // El SSR ya pintó el tema correcto; aquí solo se sincroniza el botón.
-  const [scheme, setScheme] = useState<'light' | 'dark'>('dark');
+  const [scheme, setScheme] = useState<'light' | 'dark'>('light');
   useEffect(() => {
     setScheme(document.documentElement.dataset.scheme === 'light' ? 'light' : 'dark');
   }, []);

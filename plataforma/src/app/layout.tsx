@@ -29,7 +29,7 @@ const ADMIN_THEME_COOKIE = 'admin-theme';
 
 async function getAdminScheme(): Promise<'light' | 'dark'> {
   const jar = await cookies();
-  return jar.get(ADMIN_THEME_COOKIE)?.value === 'light' ? 'light' : 'dark';
+  return jar.get(ADMIN_THEME_COOKIE)?.value === 'dark' ? 'dark' : 'light';
 }
 
 /**

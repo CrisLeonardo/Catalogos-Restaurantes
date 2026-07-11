@@ -48,7 +48,7 @@ export default async function CocinaPage() {
   // el tema del restaurante — la paleta de alto contraste del KDS es fija
   // para legibilidad, pero antes ignoraba también este switch y se quedaba
   // siempre oscura.
-  const scheme = (await cookies()).get('admin-theme')?.value === 'light' ? 'light' : 'dark';
+  const scheme = (await cookies()).get('admin-theme')?.value === 'dark' ? 'dark' : 'light';
 
   return (
     <KitchenDisplay
