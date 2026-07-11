@@ -7,6 +7,7 @@
   },
   "permissions": [
     "opener:default",
-    "allow-install-agent-as-server"
+    "allow-install-agent-as-server",
+    "notification:default"
   ]
 }
