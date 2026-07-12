@@ -312,6 +312,7 @@ export default function OrderCard({
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const next = nextStatus(order);
 
   function handlePrint() {
@@ -329,15 +330,23 @@ export default function OrderCard({
 
   async function handleAdvance() {
     if (!next) return;
+    setActionError(null);
     // Solo imprimir la comanda desde el navegador si el agente NO la maneja
     // (evita doble impresión cuando el restaurante usa el Agente Leogin).
     if (next === 'PREP' && !agentKitchen) printKitchenTicket(order, restaurantName);
-    start(async () => { await updateOrderStatus(order.id, next); });
+    start(async () => {
+      const res = await updateOrderStatus(order.id, next);
+      if (res.error) setActionError(res.error);
+    });
   }
 
   async function handleCancel() {
     setConfirmCancel(false);
-    start(async () => { await updateOrderStatus(order.id, 'CANCEL'); });
+    setActionError(null);
+    start(async () => {
+      const res = await updateOrderStatus(order.id, 'CANCEL');
+      if (res.error) setActionError(res.error);
+    });
   }
 
   // SERVED es terminal para esta tarjeta (sin más botón de avance): cerrar la
@@ -558,6 +567,12 @@ export default function OrderCard({
         {' · '}
         {new Date(order.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
       </p>
+
+      {actionError && (
+        <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="alertCircle" size={13} /> {actionError}
+        </div>
+      )}
 
       {/* Acciones */}
       {!isTerminal && (

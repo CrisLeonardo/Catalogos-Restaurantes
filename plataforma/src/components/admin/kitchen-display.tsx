@@ -212,8 +212,8 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           <button onClick={toggleFullscreen} title="Pantalla completa" style={iconBtnStyle(C)}>
             <Icon name={isFull ? 'x' : 'grid'} size={17} />
           </button>
-          <a href="/admin/pedidos" title="Salir de cocina" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
-            <Icon name="logOut" size={17} />
+          <a href="/admin/pedidos" title="Volver al panel" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
+            <Icon name="chevronLeft" size={19} />
           </a>
         </div>
       </header>

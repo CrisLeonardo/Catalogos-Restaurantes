@@ -379,6 +379,7 @@ export default function WaiterPanel({
   const [submitOk, setSubmitOk] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderWithItems[]>(initialOrders);
   const [, startStatus] = useTransition();
+  const [statusError, setStatusError] = useState<string | null>(null);
   // Pedidos sin sincronizar con la nube (fallback offline, ver handleSubmit).
   const [queuedCount, setQueuedCount] = useState(0);
   const retryingQueueRef = useRef(false);
@@ -693,6 +694,12 @@ export default function WaiterPanel({
                 {queuedCount === 1 ? '1 pedido sin sincronizar — se enviará solo al volver la señal.' : `${queuedCount} pedidos sin sincronizar — se enviarán solos al volver la señal.`}
               </div>
             )}
+            {statusError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13, fontWeight: 600 }}>
+                <Icon name="alertCircle" size={15} />
+                {statusError}
+              </div>
+            )}
             {orders.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--u-text-4)', fontSize: 15 }}>
                 Sin pedidos activos. Tus pedidos en curso aparecerán aquí.
@@ -742,7 +749,9 @@ export default function WaiterPanel({
                         <button
                           type="button"
                           onClick={() => startStatus(async () => {
-                            await updateOrderStatus(order.id, next as import('@/types').OrderStatus);
+                            setStatusError(null);
+                            const res = await updateOrderStatus(order.id, next as import('@/types').OrderStatus);
+                            if (res.error) { setStatusError(res.error); return; }
                             router.refresh();
                           })}
                           className="press btn-accent"
@@ -756,7 +765,9 @@ export default function WaiterPanel({
                         onClick={() => {
                           if (confirm('¿Cancelar este pedido?')) {
                             startStatus(async () => {
-                              await updateOrderStatus(order.id, 'CANCEL');
+                              setStatusError(null);
+                              const res = await updateOrderStatus(order.id, 'CANCEL');
+                              if (res.error) { setStatusError(res.error); return; }
                               router.refresh();
                             });
                           }
