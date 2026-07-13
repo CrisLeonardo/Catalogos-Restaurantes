@@ -16,7 +16,17 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
+import { ADDON_MODULES, INCLUDED_MODULES, type PlanCode } from '@/lib/plans';
 import type { OrderType } from '@/lib/theme/defaults';
+
+/** Nota de precio para un módulo según si el plan actual lo incluye gratis. */
+function modulePriceNote(plan: string | null | undefined, key: ActivatableModuleKey): string {
+  const p = (plan ?? 'BASICO') as PlanCode;
+  const included = INCLUDED_MODULES[p]?.includes(key);
+  if (included) return 'Incluido en tu plan';
+  const addon = ADDON_MODULES[key];
+  return `Q${addon.price}/mes a la carta`;
+}
 
 /** Canal de servicio para efectos de precio/UI. "local" agrupa comer en el
    restaurante (mesa con QR) y para llevar en mostrador: son la misma idea de
@@ -134,7 +144,7 @@ function CardShell({ m, active, children, footer }: { m: ModuleMeta; active: boo
 }
 
 /** Tarjeta self-service: toggle libre. */
-function SelfServiceCard({ m, on, busy, onToggle }: { m: ModuleMeta; on: boolean; busy: boolean; onToggle: (next: boolean) => void }) {
+function SelfServiceCard({ m, on, busy, onToggle, priceNote }: { m: ModuleMeta; on: boolean; busy: boolean; onToggle: (next: boolean) => void; priceNote: string }) {
   return (
     <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
@@ -158,6 +168,9 @@ function SelfServiceCard({ m, on, busy, onToggle }: { m: ModuleMeta; on: boolean
         <Toggle on={on} busy={busy} onClick={() => onToggle(!on)} label={`${on ? 'Desactivar' : 'Activar'} ${m.label}`} />
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
+      <div style={{ fontSize: 11, fontWeight: 700, color: priceNote === 'Incluido en tu plan' ? '#4ade80' : 'var(--brand-accent)' }}>
+        {priceNote}
+      </div>
       {m.hint && (
         <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <Icon name="helpCircle" size={12} /> {m.hint}
@@ -173,7 +186,7 @@ function SelfServiceCard({ m, on, busy, onToggle }: { m: ModuleMeta; on: boolean
 }
 
 /** Tarjeta de módulo que requiere configuración de Leogin (p.ej. FEL). */
-function ManagedCard({ m, active, supportHref }: { m: ModuleMeta; active: boolean; supportHref: string }) {
+function ManagedCard({ m, active, supportHref, priceNote }: { m: ModuleMeta; active: boolean; supportHref: string; priceNote: string }) {
   return (
     <CardShell
       m={m}
@@ -192,6 +205,9 @@ function ManagedCard({ m, active, supportHref }: { m: ModuleMeta; active: boolea
       {active
         ? <StatusDot on label="Activo · lo administra Leogin" />
         : <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, marginTop: 2 }}>Lo activa el equipo de Leogin</div>}
+      <div style={{ fontSize: 11, fontWeight: 700, color: priceNote === 'Incluido en tu plan' ? '#4ade80' : 'var(--brand-accent)', marginTop: 4 }}>
+        {priceNote}
+      </div>
       <div style={{ marginTop: 10 }}>
         {active && m.href ? (
           <a href={m.href} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -297,12 +313,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               Tu plan Estándar incluye el paquete <strong style={{ color: 'var(--u-text-2)' }}>{estandarBundleLabel}</strong>.
-              Para combinar delivery y local en un mismo menú, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q599/mes)</strong>.{' '}
+              Para combinar delivery y local en un mismo menú, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q749/mes)</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
         )}
-        {(planActual === 'PREMIUM' || planActual === 'PREMIUM_PRO' || planActual === 'PREMIUM_ULTRA' || planActual === 'ALTO_VOLUMEN') && (
+        {(planActual === 'PREMIUM' || planActual === 'PRO') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: 12 }}>
             <Icon name="sparkle" size={14} style={{ color: '#4ade80', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
@@ -432,6 +448,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                       m={m}
                       active={isModuleActive(modules, settings, m.key)}
                       supportHref={supportHref}
+                      priceNote={modulePriceNote(planActual, m.key)}
                     />
                   );
                 }
@@ -444,6 +461,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     on={on}
                     busy={busy}
                     onToggle={(next) => toggle(m.key, next)}
+                    priceNote={modulePriceNote(planActual, m.key)}
                   />
                 );
               })}

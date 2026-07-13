@@ -5,7 +5,6 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
-import PlanGmvAlert from '@/components/admin/plan-gmv-alert';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
 import DesktopServerNudge from '@/components/admin/desktop-server-nudge';
 import { isMeseroOnly } from '@/lib/permissions';
@@ -113,7 +112,6 @@ export default async function AdminProtectedLayout({
   }
 
   const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
-  const showGmvAlert = !!currentRestaurant?.id && planActual !== null && !['BASICO', 'VARIABLE'].includes(planActual);
 
   // ¿El restaurante ya tiene su PC servidor (agente/modo local vinculado)?
   // Solo la nube lo sabe con certeza — ve TODO el local, no solo esta PC.
@@ -178,9 +176,6 @@ export default async function AdminProtectedLayout({
     >
       {groupReturnUrl && (
         <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />
-      )}
-      {showGmvAlert && (
-        <PlanGmvAlert restaurantId={currentRestaurant!.id} />
       )}
       {offerLocalServer && <DesktopServerNudge />}
       {children}

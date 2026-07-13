@@ -16,7 +16,7 @@ const PLAN_INFO = {
     badge: 'PRUEBA 30 DÍAS',
     badgeColor: '#818cf8',
     badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'luego Q599 / mes · sin tarjeta ni compromiso',
+    detail: 'luego Q749 / mes · sin tarjeta ni compromiso',
     subtitle: 'Tu prueba de 30 días comienza hoy.',
     features: [
       'Pedidos para llevar, en local y delivery',
@@ -56,7 +56,7 @@ const PLAN_INFO = {
     badge: 'PRUEBA 30 DÍAS',
     badgeColor: '#818cf8',
     badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'luego Q199 / mes · sin tarjeta ni compromiso',
+    detail: 'luego Q149 / mes · sin tarjeta ni compromiso',
     subtitle: 'Tu plan Básico (menú digital) está activo.',
     features: [
       'Menú digital con QR listo para imprimir',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
@@ -9,6 +9,9 @@ import { Icon } from '@/components/icons';
 import { exportOrdersStructured, updateOrderStatus } from '@/lib/actions/orders';
 import { playOrderSound, loadSoundSettings } from '@/lib/sounds';
 import { localDateKey } from '@/lib/hours';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ToastProvider, Toaster, useToastManager } from '@/components/ui/toast';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
@@ -48,10 +51,21 @@ export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-export default function OrdersPanel({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1 }: Props) {
+/** Envuelve el panel en el proveedor de notificaciones (Base UI Toast) —
+    reemplaza el toast local ad-hoc (useState + setTimeout) que antes se
+    reimplementaba a mano en este componente. */
+export default function OrdersPanel(props: Props) {
+  return (
+    <ToastProvider>
+      <OrdersPanelInner {...props} />
+      <Toaster />
+    </ToastProvider>
+  );
+}
+
+function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1 }: Props) {
   const router = useRouter();
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastManager = useToastManager();
 
   // Coalescer de router.refresh() (mismo patrón que admin/notifications.tsx):
   // en una ráfaga (15 pedidos sincronizando de golpe al volver la señal, o
@@ -114,9 +128,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
   const orders = initialOrders;
 
   function showToast(msg: string) {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 4000);
+    toastManager.add({ title: msg, type: 'info' });
   }
 
   useEffect(() => {
@@ -285,21 +297,6 @@ ${printScript}
         <Kpi label="En preparación" value={String(enPrep)} sub="en la barra" />
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div
-          className="glass anim-slide-up"
-          style={{
-            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 80, padding: '12px 20px', borderRadius: 'var(--radius-full)',
-            fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap',
-            pointerEvents: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
-          }}
-        >
-          <Icon name="bell" size={15} /> {toast}
-        </div>
-      )}
-
       {/* Board + sidebar */}
       <div className="orders-grid">
         {/* Left: tablero de pedidos */}
@@ -309,9 +306,9 @@ ${printScript}
             <span className="t-kicker" style={{ fontSize: 10 }}>{active.length} pedidos</span>
           </div>
           {active.length === 0 ? (
-            <div className="glass" style={{ borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14, marginBottom: 28 }}>
+            <Card className="mb-7 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
               Todo al día. No hay pedidos en curso.
-            </div>
+            </Card>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 28 }}>
               {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} />)}
@@ -331,35 +328,25 @@ ${printScript}
         <aside style={{ width: '100%', minWidth: 0 }}>
           <SalesChart series={stats.series} totalLast14={stats.totalLast14} currency={currency} />
           {stats.topToday.length > 0 && <TopToday items={stats.topToday} />}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button
+          <div className="mt-3 flex gap-2">
+            <Button
               onClick={downloadExcel}
               disabled={isExportingXls || isExportingPdf}
-              className="press glass-quiet"
-              style={{
-                flex: 1, padding: '12px 10px', borderRadius: 14,
-                border: 'none', cursor: isExportingXls ? 'wait' : 'pointer',
-                color: 'var(--u-text-2)', fontWeight: 600, fontSize: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                opacity: isExportingXls ? 0.7 : 1,
-              }}
+              variant="secondary"
+              size="sm"
+              className="flex-1"
             >
               {isExportingXls ? '…' : <><Icon name="download" size={13} /> Excel</>}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={downloadPdf}
               disabled={isExportingXls || isExportingPdf}
-              className="press glass-quiet"
-              style={{
-                flex: 1, padding: '12px 10px', borderRadius: 14,
-                border: 'none', cursor: isExportingPdf ? 'wait' : 'pointer',
-                color: 'var(--u-text-2)', fontWeight: 600, fontSize: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                opacity: isExportingPdf ? 0.7 : 1,
-              }}
+              variant="secondary"
+              size="sm"
+              className="flex-1"
             >
               {isExportingPdf ? '…' : <><Icon name="download" size={13} /> PDF</>}
-            </button>
+            </Button>
           </div>
         </aside>
       </div>
@@ -371,11 +358,13 @@ ${printScript}
 
 function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
+    <Card className="gap-1.5 p-0">
+      <CardContent className="flex flex-col gap-1.5 px-4.5 py-4">
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
+        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
+        {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -387,7 +376,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
   const max = Math.max(...series.map((d) => d.total), 1);
 
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 12 }}>
+    <Card className="mb-3 flex flex-col gap-3.5 p-4.5">
       <div>
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Ventas · 14 días</div>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
@@ -407,14 +396,14 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
                   height: `${Math.max(h, day.total > 0 ? 6 : 2)}%`,
                   minHeight: 2,
                   borderRadius: '4px 4px 0 0',
-                  background: day.isToday ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
+                  background: day.isToday ? 'var(--adm-accent-500, var(--u-text))' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
                   transition: 'height 400ms var(--ease-entry)',
                 }}
                 title={`${day.label}: ${fmtMoney(day.total, currency)}`}
               />
               <span
                 className="t-mono"
-                style={{ fontSize: 8.5, color: day.isToday ? 'var(--u-text)' : 'var(--u-text-4)', fontWeight: day.isToday ? 700 : 500 }}
+                style={{ fontSize: 8.5, color: day.isToday ? 'var(--adm-accent-500, var(--u-text))' : 'var(--u-text-4)', fontWeight: day.isToday ? 700 : 500 }}
               >
                 {day.label}
               </span>
@@ -422,7 +411,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -430,7 +419,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
 
 function TopToday({ items }: { items: TopProduct[] }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3 p-4.5">
       <div className="t-poster" style={{ fontSize: 15 }}>Top de hoy</div>
       {items.map((item, i) => (
         <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -445,6 +434,6 @@ function TopToday({ items }: { items: TopProduct[] }) {
           </span>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

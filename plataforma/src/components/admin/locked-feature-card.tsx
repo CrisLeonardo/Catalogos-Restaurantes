@@ -77,7 +77,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
   const [selected, setSelected] = useState<UpgradeFeature | null>(null);
 
   const isEstandar = planActual === 'ESTANDAR';
-  const currentPrice = isEstandar ? 'Q399' : 'Q199';
+  const currentPrice = isEstandar ? 'Q399' : 'Q149';
   const currentPlanLabel = isEstandar ? 'Estándar' : 'Básico';
   const fromPlanLabel = isEstandar ? 'de Estándar' : 'de Básico';
 
@@ -94,7 +94,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
 
   const headerDesc = isEstandar
     ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas delivery, comer en local y todo lo siguiente.'
-    : 'Están incluidas en Premium (Q599/mes). Toca cualquiera para ver cómo impacta tu negocio.';
+    : 'Están incluidas en Premium (Q749/mes). Toca cualquiera para ver cómo impacta tu negocio.';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -183,7 +183,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
           }}
         >
           <Icon name="sparkle" size={14} />
-          Actualizar a Premium — Q599/mes
+          Actualizar a Premium — Q749/mes
         </a>
         <a
           href="/admin/suscripcion"
@@ -275,9 +275,9 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                   <span>{selected.premiumLabel}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', marginTop: 12, lineHeight: 1 }}>
-                  Q599
+                  Q749
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · GMV hasta Q20k</div>
+                <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · sin límite de ventas</div>
               </div>
             </div>
 

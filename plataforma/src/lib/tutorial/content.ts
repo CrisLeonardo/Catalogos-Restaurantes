@@ -39,7 +39,7 @@ export interface TutorialSectionDef {
 
 export function getPlanLevelNum(plan: string | null): number {
   if (!plan) return 1;
-  if (['PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE'].includes(plan)) return 3;
+  if (['PREMIUM', 'PRO'].includes(plan)) return 3;
   if (['ESTANDAR', 'POPULAR'].includes(plan)) return 2;
   return 1; // BASICO
 }

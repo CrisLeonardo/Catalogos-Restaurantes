@@ -148,7 +148,7 @@ export async function updateRestaurantPlan(
 
   const id = formData.get('id') as string;
   const plan_actual = formData.get('plan_actual') as string;
-  const VALID_PLANS = ['BASICO','ESTANDAR','PREMIUM','PREMIUM_PRO','PREMIUM_ULTRA','ALTO_VOLUMEN','VARIABLE'];
+  const VALID_PLANS = ['BASICO', 'ESTANDAR', 'PREMIUM', 'PRO'];
   if (!VALID_PLANS.includes(plan_actual)) return { error: 'Plan inválido.' };
 
   const feat = (key: string) => formData.get(`feature_${key}`) === 'true';

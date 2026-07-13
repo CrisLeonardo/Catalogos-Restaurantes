@@ -5,10 +5,10 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import { getMyBilling } from '@/lib/actions/billing';
 import {
-  isOverdue, isOnTrial, trialDaysLeft, planLabel, planGmvLimit,
-  getRestaurantGmvCurrentMonth, getFeeBreakdown, type Invoice, type FeeBreakdown,
+  isOverdue, isOnTrial, trialDaysLeft, planLabel,
+  getFeeBreakdown, type Invoice, type FeeBreakdown,
 } from '@/lib/db/billing';
-import { PLANS, PLAN_ORDER, nextPlan, isUpgrade, type PlanCode } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, type PlanCode } from '@/lib/plans';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
@@ -32,10 +32,6 @@ function nextChargeLabel(billingDay: number): string {
   const day = Math.min(28, Math.max(1, billingDay || 1));
   if (now.getUTCDate() > day) { m += 1; if (m > 11) { m = 0; y += 1; } }
   return `${day} de ${MONTHS[m]} ${y}`;
-}
-
-function fmtQ(n: number) {
-  return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
 }
 
 function upgradeHref(restaurantName: string, targetPlan: string): string {
@@ -65,9 +61,8 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, gmvData, feeBreakdown] = await Promise.all([
+  const [billingResult, feeBreakdown] = await Promise.all([
     getMyBilling(restaurantId),
-    getRestaurantGmvCurrentMonth(restaurantId),
     getFeeBreakdown(restaurantId),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
@@ -97,16 +92,7 @@ export default async function SuscripcionPage() {
 
   const nextPlanCode = nextPlan(currentPlan);
   const nextPlanInfo = nextPlanCode ? PLANS[nextPlanCode] : null;
-
-  const hasGmvLimit = planGmvLimit(currentPlan) !== null;
-  const gmvPct = gmvData.pct ?? 0;
-  const gmvLimit = gmvData.limit ?? 0;
-  const gmv = gmvData.gmv;
-  const barColor =
-    gmvPct >= 1.0 ? '#f87171'
-    : gmvPct >= 0.8 ? '#fb923c'
-    : gmvPct >= 0.6 ? '#fbbf24'
-    : '#4ade80';
+  const includedCount = INCLUDED_MODULES[currentPlan].length;
 
   // Plan feature highlights
   const planFeatures = planInfo ? [
@@ -114,9 +100,9 @@ export default async function SuscripcionPage() {
     { label: 'Notificación WhatsApp',    active: planInfo.hasWhatsapp },
     { label: 'Alertas en tiempo real',   active: planInfo.hasRealtime },
     { label: 'Personalización completa', active: planInfo.hasFullTheme },
-    { label: 'Llamar al mesero',         active: planInfo.hasWaiterCall },
+    { label: 'Llamar al mesero',         active: isModuleIncluded(currentPlan, 'llamada_mesero') },
     { label: 'Estadísticas y reportes',  active: planInfo.hasAnalytics },
-    { label: 'Puntos de lealtad',        active: planInfo.hasLoyalty },
+    { label: 'Puntos de lealtad',        active: isModuleIncluded(currentPlan, 'loyalty') },
   ] : [];
 
   const rootDomain = rootDomainForUrls();
@@ -190,7 +176,8 @@ export default async function SuscripcionPage() {
               {planInfo?.priceLabel ?? '—'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {planInfo?.gmvLimitLabel ?? ''}
+              {planInfo?.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
+              {includedCount > 0 ? ` · ${includedCount} módulos incluidos` : ''}
             </div>
           </div>
         </div>
@@ -219,47 +206,11 @@ export default async function SuscripcionPage() {
         </a>
       </div>
 
-      {/* ── Plan a tu medida (descuento por canal) ───────────── */}
-      {feeBreakdown?.discountApplies && (
+      {/* ── Plan a tu medida (descuento por canal + módulos + sucursales) ── */}
+      {feeBreakdown && (feeBreakdown.discountApplies || feeBreakdown.addonTotal > 0 || feeBreakdown.branchDiscountPct > 0) && (
         <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
       )}
 
-      {/* ── GMV del mes actual (solo planes con límite) ──────── */}
-      {hasGmvLimit && (
-        <div className="glass" style={{ borderRadius: 14, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Ventas digitales este mes
-            </span>
-            <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
-              {Math.round(gmvPct * 100)}% del límite
-            </span>
-          </div>
-          <div>
-            <div style={{ height: 7, borderRadius: 99, background: 'var(--surface-3)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(gmvPct * 100, 100)}%`, borderRadius: 99, background: barColor, transition: 'width 0.4s ease' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: barColor, fontFamily: 'var(--ui-font-mono)' }}>{fmtQ(gmv)}</span>
-              <span style={{ fontSize: 12.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>de {fmtQ(gmvLimit)}</span>
-            </div>
-          </div>
-          {gmvPct >= 1.0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
-              <Icon name="alertCircle" size={15} style={{ color: '#f87171', flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: '#f87171', lineHeight: 1.4 }}>Has superado el límite este mes. Nos pondremos en contacto contigo.</span>
-            </div>
-          )}
-          {gmvPct >= 0.8 && gmvPct < 1.0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.25)' }}>
-              <Icon name="alertCircle" size={15} style={{ color: '#fb923c', flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: '#fb923c', lineHeight: 1.4 }}>Estás al {Math.round(gmvPct * 100)}% de tu límite mensual. Considera actualizar tu plan.</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Actualizar plan ──────────────────────────────────── */}
       {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
       {currentPlan === 'BASICO' && nextPlanInfo && (
         <div
@@ -269,12 +220,12 @@ export default async function SuscripcionPage() {
             border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)',
           }}
         >
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium (Q599/mes) desbloqueas</div>
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium ({PLANS.PREMIUM.priceLabel}) desbloqueas</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
-            {nextPlanInfo.gmvLimitLabel} · Sin compromiso · Tu menú sigue en vivo
+            Sin límite de ventas · Sin compromiso · Tu menú sigue en vivo
           </div>
 
           {/* Feature grid */}
@@ -285,7 +236,7 @@ export default async function SuscripcionPage() {
               { icon: 'ticket',   label: 'Cupones y descuentos',     desc: 'Convierte visitas en pedidos' },
               { icon: 'calendar', label: 'Reservaciones en línea',   desc: 'Mesas llenas incluso entre semana' },
               { icon: 'chart',    label: 'Estadísticas avanzadas',   desc: 'Ventas, horas pico y ticket promedio' },
-              { icon: 'users',    label: 'Hasta 3 usuarios',         desc: 'Tu equipo opera sin depender de ti' },
+              { icon: 'users',    label: 'Usuarios ilimitados',      desc: 'Tu equipo opera sin depender de ti' },
               { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Canal de delivery con mapa integrado' },
               { icon: 'grid',     label: 'Comer en local (QR)',      desc: 'Pedidos desde la mesa del cliente' },
               { icon: 'userPlus', label: 'Panel de mesero',          desc: 'Tablet para tomar pedidos en sala' },
@@ -321,7 +272,7 @@ export default async function SuscripcionPage() {
               }}
             >
               <Icon name="sparkle" size={14} />
-              Actualizar a Premium — Q599/mes
+              Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
             </a>
             <a
               href={planesUrl}
@@ -342,15 +293,9 @@ export default async function SuscripcionPage() {
         </div>
       )}
 
-      {/* ── Actualizar plan (planes PREMIUM en adelante) ───── */}
-      {nextPlanInfo && currentPlan !== 'VARIABLE' && currentPlan !== 'BASICO' && (
-        <div
-          className="glass"
-          style={{
-            borderRadius: 16, padding: 20,
-            border: gmvPct >= 0.8 ? '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' : undefined,
-          }}
-        >
+      {/* ── Actualizar plan (Estándar/Premium en adelante) ───── */}
+      {nextPlanInfo && currentPlan !== 'BASICO' && (
+        <div className="glass" style={{ borderRadius: 16, padding: 20 }}>
           <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>
             Siguiente plan disponible
           </div>
@@ -358,7 +303,7 @@ export default async function SuscripcionPage() {
             {nextPlanInfo.name} — {nextPlanInfo.priceLabel}
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
-            {nextPlanInfo.tagline} · {nextPlanInfo.gmvLimitLabel}
+            {nextPlanInfo.tagline}
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
@@ -396,10 +341,8 @@ export default async function SuscripcionPage() {
       )}
 
       {/* ── Más opciones de upgrade (planes 2+ pasos arriba) ── */}
-      {currentPlan !== 'VARIABLE' && (() => {
-        const higherPlans = PLAN_ORDER.filter(
-          (p) => p !== 'VARIABLE' && isUpgrade(currentPlan, p) && p !== nextPlanCode,
-        );
+      {(() => {
+        const higherPlans = PUBLIC_PLANS.filter((p) => isUpgrade(currentPlan, p) && p !== nextPlanCode);
         if (higherPlans.length === 0) return null;
         return (
           <div className="glass-quiet" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -428,7 +371,7 @@ export default async function SuscripcionPage() {
                       {p.priceLabel}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
-                      {p.gmvLimitLabel}
+                      {p.tagline}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--brand-accent)', fontWeight: 700, marginTop: 4 }}>
                       Solicitar →
@@ -438,19 +381,27 @@ export default async function SuscripcionPage() {
               })}
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
-              Puedes saltar directamente al plan que mejor se ajuste a tu volumen actual.
+              Puedes saltar directamente al plan que mejor se ajuste a lo que necesitas.
             </p>
           </div>
         );
       })()}
 
-      {/* VARIABLE plan — contact for custom billing */}
-      {currentPlan === 'VARIABLE' && (
-        <div className="glass" style={{ borderRadius: 14, padding: '14px 18px', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55 }}>
-          <Icon name="chart" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--brand-accent)' }} />
-          Estás en el plan Variable. Tu cobro mensual es el 1% de tus ventas digitales del mes (mínimo Q2,249). Se calcula al cierre de cada periodo.
+      {/* ── ¿Varias sucursales? ───────────────────────────────── */}
+      <div className="glass-quiet" style={{ borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Icon name="grid" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
+          ¿Tienes 2 o más sucursales? Obtienes descuento por volumen automáticamente y un panel de grupo consolidado.
         </div>
-      )}
+        <a
+          href={upgradeHref(restaurantName, 'Grupo / Franquicia')}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: 12.5, color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          Hablar con Leogin →
+        </a>
+      </div>
 
       {/* ── Estado de cuenta ─────────────────────────────────── */}
       {config && (config.monthly_fee > 0 || invoices.length > 0) && (
@@ -501,7 +452,7 @@ export default async function SuscripcionPage() {
             {invoices.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no hay cobros.</div>
             ) : (
-              invoices.map((inv) => <Row key={inv.id} inv={inv} currency={currency} />)
+              invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} />)
             )}
           </div>
         </>
@@ -518,7 +469,7 @@ export default async function SuscripcionPage() {
   );
 }
 
-function Row({ inv, currency }: { inv: Invoice; currency: string }) {
+function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
   const overdue = isOverdue(inv);
   const meta = overdue
     ? { label: 'Vencido', color: '#f87171', bg: 'rgba(248,113,113,0.13)' }
@@ -553,7 +504,7 @@ function Row({ inv, currency }: { inv: Invoice; currency: string }) {
 }
 
 function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
-  const saving = b.discount > 0;
+  const saving = b.discount > 0 || b.branchDiscountPct > 0;
   return (
     <div className="glass" style={{
       borderRadius: 16, padding: 20,
@@ -564,23 +515,29 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Plan a tu medida</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
-        Tu mensualidad se ajusta a los canales de servicio que usas: cada canal que
-        desactivas baja tu pago {fmtMoney(b.discountPer, currency)} (hasta {fmtMoney(b.discountPer * Math.max(b.channelsTotal - 1, 0), currency)}, siempre pagas al menos uno).
+        Tu mensualidad refleja exactamente lo que usas: canal de servicio que no usas, sucursales
+        del grupo, y módulos que has añadido aparte del plan.
       </div>
 
       {/* Desglose */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
-        {saving ? (
+        {b.discountApplies && b.discount > 0 && (
           <LineItem
             label={`${b.channelsOff} canal${b.channelsOff !== 1 ? 'es' : ''} sin usar`}
             value={`− ${fmtMoney(b.discount, currency)}`}
             accent="#4ade80"
           />
-        ) : (
-          <div style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>
-            Usas los {b.channelsActive} canales — sin descuento aplicable.
-          </div>
+        )}
+        {b.branchDiscountPct > 0 && (
+          <LineItem
+            label={`Descuento por volumen de sucursales (${Math.round(b.branchDiscountPct * 100)}%)`}
+            value="aplicado"
+            accent="#4ade80"
+          />
+        )}
+        {b.addonTotal > 0 && (
+          <LineItem label="Módulos añadidos aparte del plan" value={`+ ${fmtMoney(b.addonTotal, currency)}`} />
         )}
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -600,7 +557,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       )}
 
       <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 700 }}>
-        Cambiar mis canales de servicio <Icon name="arrowRight" size={13} />
+        Gestionar mis canales y módulos <Icon name="arrowRight" size={13} />
       </a>
     </div>
   );

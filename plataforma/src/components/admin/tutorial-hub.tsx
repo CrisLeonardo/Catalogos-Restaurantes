@@ -474,9 +474,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
 
 function getPlanDisplayName(plan: string): string {
   const names: Record<string, string> = {
-    BASICO: 'Básico', ESTANDAR: 'Estándar', POPULAR: 'Popular',
-    PREMIUM: 'Premium', PREMIUM_PRO: 'Premium Pro',
-    PREMIUM_ULTRA: 'Premium Ultra', ALTO_VOLUMEN: 'Alto Volumen', VARIABLE: 'Variable',
+    BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro',
   };
   return names[plan] ?? plan;
 }

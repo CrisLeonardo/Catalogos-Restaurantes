@@ -17,6 +17,51 @@
   --color-brand-accent: var(--brand-accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Rediseño panel admin (2026-07-12) — expone --adm-* (ver bloques
+     html[data-admin-area] más abajo) como utilidades Tailwind para
+     src/components/ui/*. Solo resuelven dentro del panel admin. */
+  --color-adm-bg:          var(--adm-bg);
+  --color-adm-bg-2:        var(--adm-bg-2);
+  --color-adm-card:        var(--adm-card);
+  --color-adm-card-hover:  var(--adm-card-hover);
+  --color-adm-overlay:     var(--adm-overlay);
+  --color-adm-border:      var(--adm-border);
+  --color-adm-border-2:    var(--adm-border-2);
+
+  --color-adm-accent-50:  var(--adm-accent-50);
+  --color-adm-accent-100: var(--adm-accent-100);
+  --color-adm-accent-200: var(--adm-accent-200);
+  --color-adm-accent-300: var(--adm-accent-300);
+  --color-adm-accent-400: var(--adm-accent-400);
+  --color-adm-accent-500: var(--adm-accent-500);
+  --color-adm-accent-600: var(--adm-accent-600);
+  --color-adm-accent-700: var(--adm-accent-700);
+  --color-adm-accent-800: var(--adm-accent-800);
+  --color-adm-accent-900: var(--adm-accent-900);
+  --color-adm-accent:     var(--adm-accent-500);
+
+  --color-adm-text:   var(--u-text);
+  --color-adm-text-2: var(--u-text-2);
+  --color-adm-text-3: var(--u-text-3);
+  --color-adm-text-4: var(--u-text-4);
+
+  --color-adm-ok:      var(--c-ok);
+  --color-adm-danger:  var(--c-danger);
+  --color-adm-warn:    var(--c-warn);
+  --color-adm-info:    var(--adm-info);
+
+  --shadow-adm-xs: var(--adm-shadow-xs);
+  --shadow-adm-sm: var(--adm-shadow-sm);
+  --shadow-adm-md: var(--adm-shadow-md);
+  --shadow-adm-lg: var(--adm-shadow-lg);
+  --shadow-adm-xl: var(--adm-shadow-xl);
+
+  --radius-adm-md:   var(--radius-md);
+  --radius-adm-lg:   var(--radius-lg);
+  --radius-adm-xl:   var(--radius-xl);
+  --radius-adm-2xl:  var(--radius-2xl);
+  --radius-adm-full: var(--radius-full);
 }
 
 :root {
@@ -230,6 +275,47 @@ html[data-admin-area] {
   --admin-content-hair-2: rgba(245, 243, 239, 0.18);
   --admin-content-bg-solid: #0b0b0c;
   --admin-content-scheme: dark;
+
+  /* ── Rediseño 2026-07-12 — namespace `--adm-*` (prefijo propio para no
+     chocar con `--surface-1/2/3` del menú del tenant, que ya existen con
+     otro significado). Rampa de acento + 3 niveles de elevación real en vez
+     de negro plano repetido en sidebar/topbar/contenido. ──────────────── */
+  --adm-accent-50:  #fdf1ec;
+  --adm-accent-100: #fbe1d5;
+  --adm-accent-200: #f6c3ab;
+  --adm-accent-300: #eea17c;
+  --adm-accent-400: #e58a5f;
+  --adm-accent-500: #D97757;
+  --adm-accent-600: #c2603f;
+  --adm-accent-700: #a04a30;
+  --adm-accent-800: #7c3a27;
+  --adm-accent-900: #5c2c1f;
+
+  --adm-bg:         #0a0a0d;  /* fondo de página */
+  --adm-bg-2:       #131317;  /* sidebar / topbar */
+  --adm-card:       #17171c;  /* tarjetas */
+  --adm-card-hover: #1c1c22;
+  --adm-overlay:    #1f1f26;  /* modales / popovers / dropdowns */
+  --adm-border:     rgba(255, 255, 255, 0.08);
+  --adm-border-2:   rgba(255, 255, 255, 0.14);
+
+  --adm-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --adm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.36);
+  --adm-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.44);
+  --adm-shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.52);
+  --adm-shadow-xl: 0 32px 80px rgba(0, 0, 0, 0.60);
+  --adm-shadow-accent: 0 10px 28px color-mix(in srgb, var(--adm-accent-500) 38%, transparent);
+
+  --adm-info:       #7dd3fc;
+  --adm-info-solid: #38bdf8;
+
+  /* Reapuntar tokens existentes a la nueva escala: elevación real (3 tonos)
+     en vez de sidebar #0c0c0e casi idéntico al fondo #0b0b0c de antes. */
+  --brand-bg:               var(--adm-bg);
+  --brand-bg-2:             var(--adm-bg-2);
+  --admin-panel-bg:         var(--adm-bg-2);
+  --admin-panel-card:       var(--adm-card);
+  --admin-content-bg-solid: var(--adm-bg);
 }
 html[data-admin-area][data-scheme="light"] {
   /* Paleta CLARA del panel: neutra, alto contraste, acento coral -600
@@ -265,6 +351,38 @@ html[data-admin-area][data-scheme="light"] {
   --admin-content-hair-2: rgba(0, 0, 0, 0.16);
   --admin-content-bg-solid: #f4f4f6;
   --admin-content-scheme: light;
+
+  /* ── Rediseño 2026-07-12 — mismo namespace `--adm-*` que el modo oscuro.
+     Base #f4f4f6/#17161a ya auditada por WCAG, no se toca: solo se añaden
+     capas de superficie/sombra encima. ──────────────────────────────── */
+  --adm-accent-50:  #fdf1ec;
+  --adm-accent-100: #fbe1d5;
+  --adm-accent-200: #f6c3ab;
+  --adm-accent-300: #eea17c;
+  --adm-accent-400: #d97757;
+  --adm-accent-500: #c2542f;
+  --adm-accent-600: #a8461f;
+  --adm-accent-700: #8a3818;
+  --adm-accent-800: #6b2b13;
+  --adm-accent-900: #4d1f0d;
+
+  --adm-bg:         #f4f4f6;
+  --adm-bg-2:       #ffffff;
+  --adm-card:       #ffffff;
+  --adm-card-hover: #f7f7f9;
+  --adm-overlay:    #ffffff;
+  --adm-border:     rgba(0, 0, 0, 0.08);
+  --adm-border-2:   rgba(0, 0, 0, 0.14);
+
+  --adm-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --adm-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --adm-shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --adm-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.10);
+  --adm-shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.12);
+  --adm-shadow-accent: 0 8px 20px color-mix(in srgb, var(--adm-accent-500) 22%, transparent);
+
+  --adm-info:       #0369a1;
+  --adm-info-solid: #0284c7;
 }
 
 @media (min-width: 768px) {
@@ -593,11 +711,12 @@ html[data-scheme="light"] .btn-white {
 }
 
 .admin-sidebar {
-  width: 240px; flex-shrink: 0;
+  width: 244px; flex-shrink: 0;
   display: flex; flex-direction: column; gap: 4px; padding: 18px 12px;
   position: sticky; top: 0; height: 100svh;
   background: var(--admin-panel-bg);
   border-right: 1px solid var(--admin-panel-hair);
+  box-shadow: 1px 0 0 var(--adm-border, transparent);
   font-family: var(--admin-panel-font, var(--ui-font-sans));
   /* Redirigir la escala de texto al tema del panel (dinámico: cliente o personalizado) */
   --u-text:   var(--admin-panel-text);
@@ -646,8 +765,8 @@ html[data-scheme="light"] .btn-white {
 .admin-topbar {
   min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 24px;
   border-bottom: 1px solid var(--admin-panel-hair); position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--admin-panel-bg) 85%, transparent);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--admin-panel-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
   font-family: var(--admin-panel-font, var(--ui-font-sans));
   --u-text:   var(--admin-panel-text);
   --u-text-2: var(--admin-panel-text-2);
@@ -689,21 +808,23 @@ html[data-scheme="light"] .btn-white {
   .admin-navgroup[data-collapsed="1"] .admin-navlink { display: none; }
 }
 .admin-navlink {
-  display: flex; align-items: center; gap: 11px; padding: 11px 12px;
-  border-radius: calc(12px * var(--admin-panel-radius, 1));
+  position: relative;
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+  border-radius: calc(11px * var(--admin-panel-radius, 1));
   border: none; cursor: pointer; text-align: left; text-decoration: none;
   color: var(--u-text-3); font-weight: 500;
-  font-size: calc(14px * var(--admin-panel-scale, 1)); transition: all 140ms;
+  font-size: calc(13.5px * var(--admin-panel-scale, 1)); transition: all 140ms var(--ease-out);
   background: transparent;
 }
 /* Tarjeta de usuario del panel: fondo personalizable. */
-.admin-usercard { background: var(--admin-panel-card, rgba(255,255,255,0.04)) !important; }
+.admin-usercard { background: var(--admin-panel-card, rgba(255,255,255,0.04)) !important; box-shadow: var(--adm-shadow-xs, none); }
 .admin-navlink .nav-label { flex: 1; }
-.admin-navlink:hover { background: color-mix(in srgb, var(--admin-panel-text) 7%, transparent); color: var(--u-text-2); }
+.admin-navlink:hover { background: var(--adm-card-hover, color-mix(in srgb, var(--admin-panel-text) 7%, transparent)); color: var(--u-text-2); }
 .admin-navlink[data-active="1"] {
-  background: color-mix(in srgb, var(--admin-panel-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--admin-panel-accent) 13%, transparent);
   color: var(--admin-panel-accent);
   font-weight: 600;
+  box-shadow: inset 2.5px 0 0 var(--admin-panel-accent);
 }
 
 /* Tabla de catálogo: grid en escritorio, tarjeta de 2 filas en móvil */

@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
+import { Badge } from '@/components/ui/badge';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
@@ -67,12 +68,10 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PREMIUM_PRO: '#a855f7',
-  PREMIUM_ULTRA: '#14b8a6', ALTO_VOLUMEN: '#f97316', VARIABLE: '#f59e0b',
+  BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PRO: '#a855f7',
 };
 const PLAN_NAMES: Record<string, string> = {
-  BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PREMIUM_PRO: 'Premium Pro',
-  PREMIUM_ULTRA: 'Premium Ultra', ALTO_VOLUMEN: 'Alto Volumen', VARIABLE: 'Variable',
+  BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro',
 };
 
 const NAV_DEFAULT: Record<string, boolean> = { Cuenta: true };
@@ -303,7 +302,7 @@ export default function AdminShell({
         {(() => {
           const brandInner = (
             <>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: logoUrl && logoBg ? logoBg : 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', background: logoUrl && logoBg ? logoBg : 'var(--adm-card, color-mix(in srgb, var(--u-text) 6%, transparent))', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', boxShadow: 'var(--adm-shadow-xs, none)', overflow: 'hidden', flexShrink: 0 }}>
                 {logoUrl ? (
                   <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
                 ) : (
@@ -357,13 +356,19 @@ export default function AdminShell({
             data-active="0"
             style={{ gap: 8, marginBottom: 4 }}
           >
-            <span style={{
-              width: 9, height: 9, borderRadius: 99, flexShrink: 0,
-              background: PLAN_COLORS[planActual] ?? '#94a3b8',
-            }} />
-            <span className="nav-label" style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
+            <Badge
+              variant="neutral"
+              className="nav-label justify-start border-none bg-transparent px-0 py-0 text-[12.5px] font-semibold text-[var(--u-text-2)]"
+            >
+              <span
+                style={{
+                  width: 8, height: 8, borderRadius: 99, flexShrink: 0,
+                  background: PLAN_COLORS[planActual] ?? '#94a3b8',
+                  boxShadow: `0 0 0 3px color-mix(in srgb, ${PLAN_COLORS[planActual] ?? '#94a3b8'} 18%, transparent)`,
+                }}
+              />
               Plan {PLAN_NAMES[planActual] ?? planActual}
-            </span>
+            </Badge>
           </Link>
         )}
 
@@ -386,9 +391,9 @@ export default function AdminShell({
           <h1 className="t-display" style={{ fontSize: 22, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
           {!preview && helpSection && <HelpButton section={helpSection} />}
           {isLive && (
-            <span className="glass-quiet admin-live" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 99, fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)' }}>
-              <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--u-text)', boxShadow: '0 0 8px var(--u-text)', animation: 'pulse-ring 2s infinite' }} /> En vivo
-            </span>
+            <Badge variant="accent" className="admin-live py-1.5">
+              <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
+            </Badge>
           )}
           {!preview && <AdminThemeToggle />}
           {!preview && restaurantId && ordersEnabled ? (
@@ -398,7 +403,7 @@ export default function AdminShell({
               kitchenMode={isKitchen}
             />
           ) : (
-            <span className="glass-quiet" style={{ width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
+            <span className="glass-quiet" style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', display: 'grid', placeItems: 'center', color: 'var(--u-text)', boxShadow: 'var(--adm-shadow-xs, none)' }}>
               <Icon name="bell" size={19} />
             </span>
           )}

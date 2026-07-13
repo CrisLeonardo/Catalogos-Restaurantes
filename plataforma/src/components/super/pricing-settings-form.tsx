@@ -1,10 +1,11 @@
 'use client';
 
 /* ============================================================
-   Precios globales del plan + reglas de cobro (mig. 035 + 049)
-   · Define el precio y límite GMV de cada plan.
+   Precios globales del plan + reglas de cobro (mig. 035 + 072)
+   · Define el precio fijo de cada plan y de cada módulo a la carta.
+     Sin GMV: nadie paga en función de cuánto vende.
    · Al guardar, recalcula la mensualidad de todos los que estén
-     en modo automático.
+     en modo automático (los congelados manualmente no se tocan).
    ============================================================ */
 
 import { useActionState } from 'react';
@@ -48,16 +49,14 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
 
       <form action={action} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Precios fijos por plan */}
+        {/* Precios fijos por plan — sin GMV, nadie paga según cuánto vende */}
         <div>
           <p style={sectionStyle}>Precio mensual por plan (Q)</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            <Field name="plan_price_BASICO"        label="Básico"        value={pricing.basico} />
-            <Field name="plan_price_ESTANDAR"      label="Estándar"      value={pricing.estandar} />
-            <Field name="plan_price_PREMIUM"       label="Premium"       value={pricing.premium} />
-            <Field name="plan_price_PREMIUM_PRO"   label="Premium Pro"   value={pricing.premiumPro} />
-            <Field name="plan_price_PREMIUM_ULTRA" label="Premium Ultra" value={pricing.premiumUltra} />
-            <Field name="plan_price_ALTO_VOLUMEN"  label="Alto Volumen"  value={pricing.altoVolumen} />
+            <Field name="plan_price_BASICO"   label="Básico"   value={pricing.basico} />
+            <Field name="plan_price_ESTANDAR" label="Estándar" value={pricing.estandar} />
+            <Field name="plan_price_PREMIUM"  label="Premium"  value={pricing.premium} />
+            <Field name="plan_price_PRO"      label="Pro"      value={pricing.pro} />
           </div>
         </div>
 
@@ -65,9 +64,9 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
         <div>
           <p style={sectionStyle}>Plan a tu medida (descuento por canal)</p>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '-4px 0 10px', lineHeight: 1.5 }}>
-            En planes Premium en adelante, cada canal de servicio que el restaurante NO use
-            (domicilio / comer en local / para llevar) descuenta este monto de su mensualidad.
-            El máximo de canales descontables fija el piso (siempre se paga al menos un canal).
+            En Premium y Pro, cada canal de servicio que el restaurante NO use (local / domicilio)
+            descuenta este monto de su mensualidad. El máximo de canales descontables fija el
+            piso (siempre se paga al menos un canal).
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field name="channel_discount_per" label="Descuento por canal (Q)" value={pricing.channelDiscountPer} step="1" />
@@ -75,24 +74,40 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
           </div>
         </div>
 
-        {/* Límites GMV por plan */}
+        {/* Módulos a la carta */}
         <div>
-          <p style={sectionStyle}>Límite GMV mensual por plan (Q)</p>
+          <p style={sectionStyle}>Módulos a la carta (Q/mes)</p>
+          <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '-4px 0 10px', lineHeight: 1.5 }}>
+            Precio de cada módulo cuando se activa en un restaurante cuyo plan no lo incluye
+            gratis (Premium incluye 6). Proveedores y FEL existen aquí para cuando estén listos,
+            pero no se ofrecen a clientes todavía — el plan Pro tampoco. Ver la ficha del
+            restaurante para activarlos manualmente.
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            <Field name="plan_gmv_limit_PREMIUM"       label="Premium"       value={pricing.gmvLimitPremium} />
-            <Field name="plan_gmv_limit_PREMIUM_PRO"   label="Premium Pro"   value={pricing.gmvLimitPremiumPro} />
-            <Field name="plan_gmv_limit_PREMIUM_ULTRA" label="Premium Ultra" value={pricing.gmvLimitPremiumUltra} />
-            <Field name="plan_gmv_limit_ALTO_VOLUMEN"  label="Alto Volumen"  value={pricing.gmvLimitAltoVolumen} />
+            <Field name="module_price_reservaciones"  label="Reservaciones"     value={pricing.modulePrices.reservaciones} />
+            <Field name="module_price_llamada_mesero" label="Llamar al mesero"  value={pricing.modulePrices.llamada_mesero} />
+            <Field name="module_price_encuestas"      label="Encuestas"         value={pricing.modulePrices.encuestas} />
+            <Field name="module_price_cupones"        label="Cupones"           value={pricing.modulePrices.cupones} />
+            <Field name="module_price_loyalty"        label="Lealtad / puntos"  value={pricing.modulePrices.loyalty} />
+            <Field name="module_price_recetas"        label="Recetas"           value={pricing.modulePrices.recetas} />
+            <Field name="module_price_proveedores"    label="Proveedores"       value={pricing.modulePrices.proveedores} />
+            <Field name="module_price_fel"            label="Factura Electrónica (FEL)" value={pricing.modulePrices.fel} />
+            <Field name="module_setup_fee_fel"        label="FEL — activación única" value={pricing.moduleSetupFeeFel} />
           </div>
         </div>
 
-        {/* Plan variable */}
+        {/* Implementación por plan */}
         <div>
-          <p style={sectionStyle}>Plan Variable</p>
+          <p style={sectionStyle}>Configuración asistida — cobro único (Q)</p>
+          <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '-4px 0 10px', lineHeight: 1.5 }}>
+            Referencia por plan; el cobro real se genera manual desde la ficha del restaurante
+            ("Cobro de implementación").
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            <Field name="plan_gmv_variable_threshold" label="Umbral de entrada (Q)" value={pricing.gmvVariableThreshold} />
-            <Field name="plan_gmv_variable_pct"       label="% del GMV (ej: 0.01)"  value={pricing.gmvVariablePct} step="0.001" />
-            <Field name="plan_gmv_alert_pct"          label="Alerta al % del límite" value={pricing.gmvAlertPct} step="0.01" />
+            <Field name="setup_fee_BASICO"   label="Básico"   value={pricing.setupFeeBasico} />
+            <Field name="setup_fee_ESTANDAR" label="Estándar" value={pricing.setupFeeEstandar} />
+            <Field name="setup_fee_PREMIUM"  label="Premium"  value={pricing.setupFeePremium} />
+            <Field name="setup_fee_PRO"      label="Pro (incluida)" value={pricing.setupFeePro} />
           </div>
         </div>
 
@@ -100,10 +115,14 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
         <div>
           <p style={sectionStyle}>Otros cobros</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            <Field name="group_panel_fee"  label="Panel grupo /mes" value={pricing.groupPanelFee} />
-            <Field name="setup_fee_default" label="Implementación (default)" value={pricing.setupFeeDefault} />
-            <Field name="grace_days"       label="Días de gracia (global)"  value={pricing.graceDays} step="1" />
+            <Field name="group_panel_fee"    label="Panel grupo /mes" value={pricing.groupPanelFee} />
+            <Field name="setup_fee_default"  label="Implementación (default)" value={pricing.setupFeeDefault} />
+            <Field name="grace_days"         label="Días de gracia (global)"  value={pricing.graceDays} step="1" />
           </div>
+          <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '10px 0 0', lineHeight: 1.5, fontStyle: 'italic' }}>
+            El descuento por volumen de sucursales (10% / 15% / 20% según el tamaño del grupo)
+            no es editable aquí: vive en <code>leogin_branch_discount_pct()</code> en la base de datos.
+          </p>
         </div>
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--u-text-2)', cursor: 'pointer' }}>

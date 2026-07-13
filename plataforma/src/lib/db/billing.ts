@@ -1,5 +1,7 @@
 import { cache } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
+import { PLANS, ADDON_MODULES, type PlanCode } from '@/lib/plans';
+import type { ActivatableModuleKey } from '@/lib/modules';
 
 /* ============================================================
    FACTURACIÓN — Cobro de Leogin a sus restaurantes (mig. 028)
@@ -36,48 +38,50 @@ export interface BillingConfig {
   updated_at: string;
 }
 
-/** Parámetros globales de precio + gracia (platform_settings, mig. 035 + 049). */
+/** Parámetros globales de precio + gracia (platform_settings, mig. 035 + 072). */
 export interface PricingSettings {
   basico: number;
   estandar: number;
   premium: number;
-  premiumPro: number;
-  premiumUltra: number;
-  altoVolumen: number;
+  pro: number;
   /** "Plan a tu medida": Q de descuento por cada canal de servicio desactivado. */
   channelDiscountPer: number;
   /** Máximo de canales descontables (piso: siempre se paga al menos 1 canal). */
   channelDiscountMax: number;
-  gmvLimitPremium: number;
-  gmvLimitPremiumPro: number;
-  gmvLimitPremiumUltra: number;
-  gmvLimitAltoVolumen: number;
-  gmvVariableThreshold: number;
-  gmvVariablePct: number;
-  gmvAlertPct: number;
-  groupPanelFee: number;
+  /** Cobro único de configuración asistida por plan (referencia; se factura manual). */
+  setupFeeBasico: number;
+  setupFeeEstandar: number;
+  setupFeePremium: number;
+  setupFeePro: number;
   setupFeeDefault: number;
+  /** Precio mensual de cada módulo a la carta (Q). */
+  modulePrices: Record<ActivatableModuleKey, number>;
+  /** Cobro único de activación de FEL (conexión con certificador). */
+  moduleSetupFeeFel: number;
+  groupPanelFee: number;
   graceDays: number;
   autoSuspend: boolean;
   autoGenerate: boolean;
   trialDays: number;
 }
 
+/** Metadatos de plan para UI (color de badge, etc.) — precio/label vienen de plans.ts. */
 export const PLAN_META: Record<string, {
   label: string;
   price: number;
-  gmvLimit: number | null;
   hasOrders: boolean;
   color: string;
-}> = {
-  BASICO:        { label: 'Básico',        price: 199,  gmvLimit: null,   hasOrders: false, color: 'gray'   },
-  ESTANDAR:      { label: 'Estándar',      price: 399,  gmvLimit: 10000,  hasOrders: true,  color: 'emerald'},
-  PREMIUM:       { label: 'Premium',       price: 599,  gmvLimit: 20000,  hasOrders: true,  color: 'blue'   },
-  PREMIUM_PRO:   { label: 'Premium Pro',   price: 999,  gmvLimit: 40000,  hasOrders: true,  color: 'purple' },
-  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 1499, gmvLimit: 75000,  hasOrders: true,  color: 'teal'   },
-  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 2249, gmvLimit: 150000, hasOrders: true,  color: 'orange' },
-  VARIABLE:      { label: 'Variable',      price: 0,    gmvLimit: null,   hasOrders: true,  color: 'amber'  },
-};
+}> = Object.fromEntries(
+  (Object.keys(PLANS) as PlanCode[]).map((code) => [
+    code,
+    {
+      label: PLANS[code].name,
+      price: PLANS[code].priceMonthly,
+      hasOrders: PLANS[code].hasOrders,
+      color: code === 'BASICO' ? 'gray' : code === 'ESTANDAR' ? 'emerald' : code === 'PREMIUM' ? 'blue' : 'purple',
+    },
+  ]),
+);
 
 export function planLabel(plan: string | null | undefined): string {
   return PLAN_META[plan ?? '']?.label ?? (plan ?? '—');
@@ -85,10 +89,6 @@ export function planLabel(plan: string | null | undefined): string {
 
 export function planHasOrders(plan: string | null | undefined): boolean {
   return PLAN_META[plan ?? '']?.hasOrders ?? false;
-}
-
-export function planGmvLimit(plan: string | null | undefined): number | null {
-  return PLAN_META[plan ?? '']?.gmvLimit ?? null;
 }
 
 export interface Invoice {
@@ -189,50 +189,31 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
   const n = (k: string, d: number) => { const v = parseFloat(map.get(k) ?? ''); return isNaN(v) ? d : v; };
   const b = (k: string, d: boolean) => { const v = map.get(k); return v == null || v === '' ? d : v === 'true'; };
   return {
-    basico:               n('plan_price_BASICO',         199),
-    estandar:             n('plan_price_ESTANDAR',       399),
-    premium:              n('plan_price_PREMIUM',         599),
-    premiumPro:           n('plan_price_PREMIUM_PRO',    999),
-    premiumUltra:         n('plan_price_PREMIUM_ULTRA', 1499),
-    altoVolumen:          n('plan_price_ALTO_VOLUMEN',  2249),
-    channelDiscountPer:   n('channel_discount_per',      100),
-    channelDiscountMax:   n('channel_discount_max',        2),
-    gmvLimitPremium:      n('plan_gmv_limit_PREMIUM',       20000),
-    gmvLimitPremiumPro:   n('plan_gmv_limit_PREMIUM_PRO',   40000),
-    gmvLimitPremiumUltra: n('plan_gmv_limit_PREMIUM_ULTRA', 75000),
-    gmvLimitAltoVolumen:  n('plan_gmv_limit_ALTO_VOLUMEN',  150000),
-    gmvVariableThreshold: n('plan_gmv_variable_threshold',  225000),
-    gmvVariablePct:       n('plan_gmv_variable_pct',        0.01),
-    gmvAlertPct:          n('plan_gmv_alert_pct',           0.80),
-    groupPanelFee:        n('group_panel_fee',              250),
-    setupFeeDefault:      n('setup_fee_default',            500),
-    graceDays:            n('billing_grace_days',           10),
-    autoSuspend:          b('billing_auto_suspend',         true),
-    autoGenerate:         b('billing_auto_generate',        true),
-    trialDays:            n('trial_days',                   30),
+    basico:             n('plan_price_BASICO',   PLANS.BASICO.priceMonthly),
+    estandar:           n('plan_price_ESTANDAR', PLANS.ESTANDAR.priceMonthly),
+    premium:            n('plan_price_PREMIUM',  PLANS.PREMIUM.priceMonthly),
+    pro:                n('plan_price_PRO',      PLANS.PRO.priceMonthly),
+    channelDiscountPer: n('channel_discount_per', 100),
+    channelDiscountMax: n('channel_discount_max',   1),
+    setupFeeBasico:     n('setup_fee_BASICO',   PLANS.BASICO.setupFee),
+    setupFeeEstandar:   n('setup_fee_ESTANDAR', PLANS.ESTANDAR.setupFee),
+    setupFeePremium:    n('setup_fee_PREMIUM',  PLANS.PREMIUM.setupFee),
+    setupFeePro:        n('setup_fee_PRO',      PLANS.PRO.setupFee),
+    setupFeeDefault:    n('setup_fee_default',  300),
+    modulePrices: Object.fromEntries(
+      (Object.keys(ADDON_MODULES) as ActivatableModuleKey[]).map((key) => [
+        key,
+        n(`module_price_${key}`, ADDON_MODULES[key].price),
+      ]),
+    ) as Record<ActivatableModuleKey, number>,
+    moduleSetupFeeFel: n('module_setup_fee_fel', ADDON_MODULES.fel.setupFee ?? 500),
+    groupPanelFee:      n('group_panel_fee',    299),
+    graceDays:          n('billing_grace_days',  10),
+    autoSuspend:        b('billing_auto_suspend', true),
+    autoGenerate:       b('billing_auto_generate', true),
+    trialDays:          n('trial_days',            30),
   };
 });
-
-/** GMV del restaurante en el mes actual. */
-export async function getRestaurantGmvCurrentMonth(restaurantId: string): Promise<{
-  gmv: number;
-  orders: number;
-  limit: number | null;
-  pct: number | null;
-  plan: string;
-}> {
-  const db = createServiceClient();
-  const [{ data: rest }, { data: gmvData }] = await Promise.all([
-    db.from('restaurants').select('plan_actual').eq('id', restaurantId).single(),
-    db.from('restaurant_gmv_current_month').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
-  ]);
-  const plan = (rest?.plan_actual as string) ?? 'BASICO';
-  const gmv = Number(gmvData?.gmv_current_month ?? 0);
-  const orders = Number(gmvData?.orders_current_month ?? 0);
-  const limit = planGmvLimit(plan);
-  const pct = limit ? Math.min(gmv / limit, 1) : null;
-  return { gmv, orders, limit, pct, plan };
-}
 
 /** Precio mensual sugerido por el plan + sucursales (vía RPC org-aware). */
 export async function computeSuggestedFee(restaurantId: string): Promise<number> {
@@ -252,6 +233,10 @@ export interface FeeBreakdown {
   discountPer: number;
   channelsOff: number;
   discount: number;
+  /** % de descuento por volumen de sucursales del grupo (0 si no aplica). */
+  branchDiscountPct: number;
+  /** Costo mensual de módulos a la carta no incluidos en el plan. */
+  addonTotal: number;
   final: number;
 }
 
@@ -262,15 +247,17 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
   const d = data as Record<string, unknown>;
   if (!d.plan) return null;
   return {
-    plan:            (d.plan as string) ?? null,
-    base:            Number(d.base ?? 0),
-    channelsActive:  Number(d.channels_active ?? 2),
-    channelsTotal:   Number(d.channels_total ?? 2),
-    discountApplies: Boolean(d.discount_applies),
-    discountPer:     Number(d.discount_per ?? 0),
-    channelsOff:     Number(d.channels_off ?? 0),
-    discount:        Number(d.discount ?? 0),
-    final:           Number(d.final ?? 0),
+    plan:              (d.plan as string) ?? null,
+    base:              Number(d.base ?? 0),
+    channelsActive:    Number(d.channels_active ?? 2),
+    channelsTotal:     Number(d.channels_total ?? 2),
+    discountApplies:   Boolean(d.discount_applies),
+    discountPer:       Number(d.discount_per ?? 0),
+    channelsOff:       Number(d.channels_off ?? 0),
+    discount:          Number(d.discount ?? 0),
+    branchDiscountPct: Number(d.branch_discount_pct ?? 0),
+    addonTotal:        Number(d.addon_total ?? 0),
+    final:             Number(d.final ?? 0),
   };
 }
 

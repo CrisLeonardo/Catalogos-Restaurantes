@@ -58,7 +58,7 @@ const PLAN_CARDS: PlanCardDef[] = [
   {
     code: 'BASICO',
     name: 'Básico',
-    priceLabel: 'Q199',
+    priceLabel: 'Q149',
     priceUnit: '/ mes',
     trialLabel: 'Con 30 días gratis',
     features: [
@@ -79,7 +79,7 @@ const PLAN_CARDS: PlanCardDef[] = [
       { text: 'Elige un paquete: Delivery o Local', positive: true },
       { text: 'Alertas en tiempo real · WhatsApp', positive: true },
       { text: 'Productos ilimitados · 2 usuarios', positive: true },
-      { text: 'Hasta Q10,000 en ventas / mes', positive: true },
+      { text: 'Sin límite de ventas', positive: true },
     ],
     highlight: false,
   },
@@ -89,12 +89,12 @@ const PLAN_CARDS: PlanCardDef[] = [
     badge: 'RECOMENDADO',
     priceLabel: 'Gratis 30 días',
     priceUnit: '',
-    trialLabel: 'luego Q599 / mes',
+    trialLabel: 'luego Q749 / mes',
     features: [
       { text: 'Para llevar, comer en local y delivery', positive: true },
       { text: 'Panel de mesero, recetas y cupones', positive: true },
       { text: 'Usuarios ilimitados · sin restricciones', positive: true },
-      { text: 'Hasta Q20,000 en ventas / mes', positive: true },
+      { text: 'Finanzas, inventario y analítica', positive: true },
     ],
     highlight: true,
   },
@@ -340,7 +340,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 3: Confirmar ── */}
       <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q599/mes' : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · Q399/mes (30 días gratis)` : 'Básico · Q199/mes (30 días gratis)'} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q749/mes' : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · Q399/mes (30 días gratis)` : 'Básico · Q149/mes (30 días gratis)'} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Tu cuenta" value={email || '—'} />
