@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/customers';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { Customer, Order } from '@/types';
 
 export const metadata = { title: 'Clientes – Panel admin' };
@@ -100,11 +101,11 @@ export default async function AdminClientesPage({
       </div>
 
       {customers.length === 0 ? (
-        <div className="glass" style={{ borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
+        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
           Aún no hay clientes. Se registran automáticamente cuando alguien hace su primer pedido.
-        </div>
+        </Card>
       ) : (
-        <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
+        <Card className="overflow-hidden p-0">
           {/* Header */}
           <div className="customers-head" style={{ padding: '10px 18px', borderBottom: '1px solid var(--u-hair)' }}>
             {['Cliente', 'Pedidos', 'Total', 'Frecuencia', 'Último'].map((h) => (
@@ -151,7 +152,7 @@ export default async function AdminClientesPage({
                       </div>
                     ) : (
                       selectedOrders.map((o) => (
-                        <Glass key={o.id} variant="quiet" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <Card key={o.id} className="flex flex-wrap items-center gap-3 p-3">
                           <span className="t-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text)' }}>{o.order_number}</span>
                           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{fmtDate(o.created_at, timezone)}</span>
                           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
@@ -169,7 +170,7 @@ export default async function AdminClientesPage({
                           <span className="t-mono" style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
                             {fmtQ(Number(o.total))}
                           </span>
-                        </Glass>
+                        </Card>
                       ))
                     )}
                   </div>
@@ -177,21 +178,21 @@ export default async function AdminClientesPage({
               </div>
             );
           })}
-        </div>
+        </Card>
       )}
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 4 }}>
           {page > 1 ? (
-            <Link href={pageHref(page - 1)} className="press" style={pagBtn}>← Anteriores</Link>
+            <Button render={<Link href={pageHref(page - 1)} />} variant="secondary" size="sm" className="rounded-adm-full">← Anteriores</Button>
           ) : (
-            <span style={{ ...pagBtn, opacity: 0.4, cursor: 'default' }}>← Anteriores</span>
+            <Button variant="secondary" size="sm" className="rounded-adm-full" disabled>← Anteriores</Button>
           )}
           <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Página {page} de {totalPages}</span>
           {page < totalPages ? (
-            <Link href={pageHref(page + 1)} className="press" style={pagBtn}>Siguientes →</Link>
+            <Button render={<Link href={pageHref(page + 1)} />} variant="secondary" size="sm" className="rounded-adm-full">Siguientes →</Button>
           ) : (
-            <span style={{ ...pagBtn, opacity: 0.4, cursor: 'default' }}>Siguientes →</span>
+            <Button variant="secondary" size="sm" className="rounded-adm-full" disabled>Siguientes →</Button>
           )}
         </div>
       )}
@@ -199,18 +200,12 @@ export default async function AdminClientesPage({
   );
 }
 
-const pagBtn: React.CSSProperties = {
-  padding: '8px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600,
-  textDecoration: 'none', color: 'var(--u-text)',
-  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', border: '1px solid var(--u-hair-2)',
-};
-
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
+    </Card>
   );
 }

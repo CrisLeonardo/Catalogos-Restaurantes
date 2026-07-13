@@ -6,7 +6,6 @@ import { deleteCashCount, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 
 const money = (n: number) => `Q${n.toFixed(2)}`;
-const DENOM_MAP = Object.fromEntries(DENOM_FIELDS.map(d => [d.field, d]));
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -136,7 +135,7 @@ function CashCountCard({
 
       {entry.notes && (
         <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, fontStyle: 'italic' }}>
-          "{entry.notes}"
+          &quot;{entry.notes}&quot;
         </div>
       )}
 

@@ -184,6 +184,7 @@ export default function AdminShell({
         ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
         ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
         ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
+        ...(on(promocionesEnabled) ? [{ href: '/admin/promociones', label: 'Promociones', icon: 'percent',  key: 'promociones' }] : []),
       ],
     },
     {

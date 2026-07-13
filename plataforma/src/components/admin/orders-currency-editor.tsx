@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Glass } from '@/components/glass';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 
@@ -36,14 +38,7 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className="press"
-        style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}
-      >
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
-      </button>
+      <Switch checked={value} onCheckedChange={onChange} aria-label={label} />
     </div>
   );
 }
@@ -153,7 +148,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
   }
 
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3 p-4">
       <div className="t-kicker" style={{ fontSize: 10.5 }}>Tipos de pedido</div>
 
       <Toggle label="Comer en local" value={patch.orderTypes.includes('dine_in')} onChange={(v) => set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', v))} />
@@ -216,9 +211,9 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
           {(['prefix', 'suffix'] as const).map((val) => {
             const on = patch.currencyPosition === val;
             return (
-              <button key={val} type="button" onClick={() => set('currencyPosition', val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+              <Button key={val} type="button" onClick={() => set('currencyPosition', val)} variant={on ? 'primary' : 'secondary'} size="sm" className="rounded-adm-full">
                 {val === 'prefix' ? 'Antes (Q10)' : 'Después (10Q)'}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -232,11 +227,11 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-        <button onClick={save} disabled={isPending} className="press btn-white" style={{ padding: '11px 20px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
           {isPending ? 'Guardando…' : 'Guardar'}
-        </button>
+        </Button>
         {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
       </div>
-    </Glass>
+    </Card>
   );
 }

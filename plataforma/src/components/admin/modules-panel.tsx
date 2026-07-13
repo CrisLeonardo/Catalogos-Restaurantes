@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { setModuleEnabled } from '@/lib/actions/modules';
 import { updateOwnOrderTypes } from '@/lib/actions/restaurant';
 import {
@@ -79,28 +80,12 @@ function Badge({ label }: { label: string }) {
 
 function Toggle({ on, busy, disabled, onClick, label }: { on: boolean; busy: boolean; disabled?: boolean; onClick: () => void; label: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Switch
+      checked={on}
+      onCheckedChange={onClick}
       disabled={busy || disabled}
       aria-label={label}
-      className="press"
-      style={{
-        width: 46, height: 26, borderRadius: 999, flexShrink: 0,
-        background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
-        boxShadow: 'inset 0 0 0 1.5px rgba(0,0,0,0.18)',
-        border: 'none', cursor: (busy || disabled) ? 'not-allowed' : 'pointer',
-        position: 'relative',
-        transition: 'background 200ms', opacity: (busy || disabled) ? 0.5 : 1,
-      }}
-    >
-      <span style={{
-        position: 'absolute', width: 20, height: 20, borderRadius: 999,
-        background: '#fff', boxShadow: '0 1px 5px rgba(0,0,0,0.45)',
-        top: 3, left: on ? 23 : 3,
-        transition: 'left 180ms ease',
-      }} />
-    </button>
+    />
   );
 }
 
@@ -117,7 +102,7 @@ function StatusDot({ on, label, color }: { on: boolean; label: string; color?: s
 function CardShell({ m, active, children, footer }: { m: ModuleMeta; active: boolean; children: React.ReactNode; footer?: React.ReactNode }) {
   const iconColor = active ? 'var(--brand-accent)' : 'var(--u-text-2)';
   return (
-    <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3 p-4.5">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
           <span style={{
@@ -139,14 +124,14 @@ function CardShell({ m, active, children, footer }: { m: ModuleMeta; active: boo
         {footer}
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
-    </Glass>
+    </Card>
   );
 }
 
 /** Tarjeta self-service: toggle libre. */
 function SelfServiceCard({ m, on, busy, onToggle, priceNote }: { m: ModuleMeta; on: boolean; busy: boolean; onToggle: (next: boolean) => void; priceNote: string }) {
   return (
-    <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3 p-4.5">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
           <span style={{
@@ -181,7 +166,7 @@ function SelfServiceCard({ m, on, busy, onToggle, priceNote }: { m: ModuleMeta; 
           Abrir {m.navLabel ?? m.label} <Icon name="arrowRight" size={13} />
         </a>
       )}
-    </Glass>
+    </Card>
   );
 }
 
@@ -342,7 +327,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
 
             if (lockedPremium) {
               return (
-                <Glass key={m.id} variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, opacity: 0.6, position: 'relative', overflow: 'hidden' }}>
+                <Card key={m.id} className="relative flex flex-col gap-3 overflow-hidden p-4.5" style={{ opacity: 0.6 }}>
                   <div style={{
                     position: 'absolute', top: 10, right: 10,
                     fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
@@ -364,12 +349,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     </div>
                   </div>
                   <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
-                </Glass>
+                </Card>
               );
             }
 
             return (
-              <Glass key={m.id} variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Card key={m.id} className="flex flex-col gap-3 p-4.5">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
                     <span style={{
@@ -402,7 +387,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     Configurar <Icon name="arrowRight" size={13} />
                   </a>
                 )}
-              </Glass>
+              </Card>
             );
           })}
         </div>
@@ -471,7 +456,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       })}
 
       {/* Nota multi-sucursal (en vez de "mejorar plan") */}
-      <Glass variant="quiet" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div style={{ fontSize: 13, color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Icon name="grid" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           <span>¿Tienes varias sucursales? Únelas en un panel de grupo con métricas consolidadas.</span>
@@ -480,7 +465,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.3)', borderRadius: 99, flexShrink: 0 }}>
           Hablar con Leogin <Icon name="arrowRight" size={13} />
         </a>
-      </Glass>
+      </Card>
     </div>
   );
 }

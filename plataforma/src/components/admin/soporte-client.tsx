@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { PlatformContactSettings } from '@/lib/actions/super-admin';
 
 interface FaqItem {
@@ -96,14 +98,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 32, maxWidth: 640 }}>
 
       {/* Intro */}
-      <div
-        style={{
-          borderRadius: 'var(--radius-lg)',
-          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          border: '1px solid var(--u-hair)',
-          padding: '20px 22px',
-        }}
-      >
+      <Card className="px-5.5 py-5">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(139,92,246,0.15)', display: 'grid', placeItems: 'center', color: '#a78bfa' }}>
             <Icon name="helpCircle" size={20} />
@@ -117,17 +112,10 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
           Aquí encontrarás respuestas a las preguntas más comunes sobre el panel de administración.
           Si no encuentras lo que buscas, puedes contactarnos directamente.
         </p>
-      </div>
+      </Card>
 
       {/* FAQ */}
-      <div
-        style={{
-          borderRadius: 'var(--radius-lg)',
-          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          border: '1px solid var(--u-hair)',
-          padding: '20px 22px',
-        }}
-      >
+      <Card className="px-5.5 py-5">
         <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
           Preguntas frecuentes
         </h3>
@@ -136,17 +124,10 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
             <FaqRow key={item.q} item={item} />
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Contacto */}
-      <div
-        style={{
-          borderRadius: 'var(--radius-lg)',
-          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          border: '1px solid var(--u-hair)',
-          padding: '20px 22px',
-        }}
-      >
+      <Card className="px-5.5 py-5">
         <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
           Contactar soporte
         </h3>
@@ -155,15 +136,11 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {waLink ? (
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
+            <Button
+              render={<a href={waLink} target="_blank" rel="noopener noreferrer" />}
+              size="lg"
+              className="justify-start"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '13px 18px', borderRadius: 'var(--radius-lg)',
-                fontWeight: 700, fontSize: 14, textDecoration: 'none',
                 background: 'rgba(34,197,94,0.12)',
                 border: '1px solid rgba(34,197,94,0.30)',
                 color: '#4ade80',
@@ -176,7 +153,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
                   {contact.support_whatsapp}
                 </span>
               )}
-            </a>
+            </Button>
           ) : (
             <div
               style={{
@@ -194,13 +171,11 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
           )}
 
           {mailLink ? (
-            <a
-              href={mailLink}
-              className="press"
+            <Button
+              render={<a href={mailLink} />}
+              size="lg"
+              className="justify-start"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '13px 18px', borderRadius: 'var(--radius-lg)',
-                fontWeight: 700, fontSize: 14, textDecoration: 'none',
                 background: 'rgba(59,130,246,0.12)',
                 border: '1px solid rgba(59,130,246,0.30)',
                 color: '#60a5fa',
@@ -213,7 +188,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
                   {contact.support_email}
                 </span>
               )}
-            </a>
+            </Button>
           ) : (
             <div
               style={{
@@ -230,7 +205,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
     </div>
   );

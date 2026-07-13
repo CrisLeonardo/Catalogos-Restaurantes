@@ -7,6 +7,7 @@
    PrintAgentSettings completo) para no duplicar el resto de esa pantalla. */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { getPrintAgentConfig, regenerateAgentToken, type PrintAgentConfig } from '@/lib/actions/print-agent';
 
 function connectionLabel(config: PrintAgentConfig | null): { text: string; color: string } {
@@ -83,19 +84,9 @@ export default function DesktopServerSettings() {
         ¿Esta es la PC del local? Con un clic la conviertes en el servidor: imprime sola y
         mantiene el restaurante funcionando aunque se corte el internet.
       </p>
-      <button
-        type="button"
-        onClick={handleInstallAsServer}
-        disabled={installing}
-        className="press"
-        style={{
-          alignSelf: 'flex-start', padding: '10px 16px', borderRadius: 'var(--radius-md)', border: 'none',
-          background: 'var(--brand-accent, rgba(99,102,241,0.85))', color: '#fff', fontWeight: 700, fontSize: 13,
-          cursor: installing ? 'default' : 'pointer', opacity: installing ? 0.7 : 1,
-        }}
-      >
+      <Button type="button" onClick={handleInstallAsServer} disabled={installing} size="sm" className="self-start">
         {installing ? 'Instalando…' : 'Hacer de esta PC el servidor del local'}
-      </button>
+      </Button>
       {msg && <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{msg}</div>}
     </div>
   );

@@ -2,9 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { saveSupplier, deleteSupplier, createPurchaseOrder, setPurchaseOrderStatus, type POLineInput } from '@/lib/actions/suppliers';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { Supplier, PurchaseOrder, SupplierSummary } from '@/lib/db/suppliers';
 
 interface Props {
@@ -58,10 +61,10 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
 
 function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <Glass variant="quiet" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card className="flex flex-col gap-1 p-3.5">
       <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
       <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-    </Glass>
+    </Card>
   );
 }
 
@@ -97,12 +100,12 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>+ Nuevo proveedor</button>
+        <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full">+ Nuevo proveedor</Button>
       </div>
       {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>{error}</div>}
 
       {edit && (
-        <Glass variant="quiet" style={{ padding: 16 }}>
+        <Card className="p-4">
           <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>{edit.id ? 'Editar proveedor' : 'Nuevo proveedor'}</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
             <div><label style={labelStyle}>Nombre *</label><input style={inputStyle} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
@@ -112,16 +115,16 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
             <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Notas</label><input style={inputStyle} value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={save} disabled={isPending} className="press btn-accent" style={{ padding: '8px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>{isPending ? 'Guardando…' : 'Guardar'}</button>
-            <button onClick={() => setEdit(null)} style={{ padding: '8px 16px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>Cancelar</button>
+            <Button onClick={save} disabled={isPending} size="sm" className="rounded-adm-full">{isPending ? 'Guardando…' : 'Guardar'}</Button>
+            <Button onClick={() => setEdit(null)} variant="outline" size="sm" className="rounded-adm-full">Cancelar</Button>
           </div>
-        </Glass>
+        </Card>
       )}
 
       {suppliers.length === 0 && !edit ? (
-        <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>Aún no tienes proveedores registrados.</Glass>
+        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no tienes proveedores registrados.</Card>
       ) : (
-        <Glass variant="quiet" style={{ overflow: 'hidden' }}>
+        <Card className="overflow-hidden p-0">
           {/* En móvil se oculta "Contacto" para que nombre/teléfono/acciones
               quepan sin desbordar; los botones crecen a target táctil cómodo. */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -136,15 +139,15 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
                   <td style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.phone || '—'}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button onClick={() => setEdit({ id: s.id, name: s.name, contact_name: s.contact_name, phone: s.phone, email: s.email, notes: s.notes })} className="press" title="Editar" aria-label={`Editar ${s.name}`} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', color: 'var(--u-text-2)' }}><Icon name="edit" size={14} /></button>
-                      <button onClick={() => remove(s)} disabled={isPending} className="press" title="Eliminar" aria-label={`Eliminar ${s.name}`} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="trash" size={14} /></button>
+                      <Button onClick={() => setEdit({ id: s.id, name: s.name, contact_name: s.contact_name, phone: s.phone, email: s.email, notes: s.notes })} variant="outline" size="icon" className="size-9" title="Editar" aria-label={`Editar ${s.name}`}><Icon name="edit" size={14} /></Button>
+                      <Button onClick={() => remove(s)} disabled={isPending} variant="outline" size="icon" className="size-9 border-[rgba(220,50,50,0.2)] text-[#f87171]" title="Eliminar" aria-label={`Eliminar ${s.name}`}><Icon name="trash" size={14} /></Button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </Glass>
+        </Card>
       )}
     </div>
   );
@@ -193,20 +196,21 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        {!creating && <button onClick={() => setCreating(true)} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>+ Nueva orden</button>}
+        {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full">+ Nueva orden</Button>}
       </div>
       {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>{error}</div>}
 
       {creating && (
-        <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Card className="flex flex-col gap-3 p-4">
           <p style={{ fontWeight: 600, fontSize: 14 }}>Nueva orden de compra</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={labelStyle}>Proveedor</label>
-              <select style={inputStyle} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-                <option value="">Sin asignar</option>
-                {suppliers.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <Select
+                options={[{ value: '', label: 'Sin asignar' }, ...suppliers.filter((s) => s.active).map((s) => ({ value: s.id, label: s.name }))]}
+                value={supplierId}
+                onValueChange={setSupplierId}
+              />
             </div>
             <div><label style={labelStyle}>Notas</label><input style={inputStyle} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Entrega, referencia…" /></div>
           </div>
@@ -222,28 +226,28 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
                 <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
                 <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
                 <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
-                <button type="button" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', color: '#f87171' }}><Icon name="x" size={13} /></button>
+                <Button type="button" variant="outline" size="icon" className="size-8 border-[rgba(220,50,50,0.2)] text-[#f87171]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
               </div>
             ))}
-            <button type="button" onClick={() => setLines((ls) => [...ls, { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }])} className="press" style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-2)' }}>+ Renglón</button>
+            <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }])}>+ Renglón</Button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--u-hair)', paddingTop: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 600 }}>Total: <span style={{ color: 'var(--brand-accent)', fontFamily: 'var(--ui-font-mono)' }}>{money(total)}</span></span>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={create} disabled={isPending} className="press btn-accent" style={{ padding: '8px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>{isPending ? 'Creando…' : 'Crear orden'}</button>
-              <button onClick={reset} style={{ padding: '8px 16px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>Cancelar</button>
+              <Button onClick={create} disabled={isPending} size="sm" className="rounded-adm-full">{isPending ? 'Creando…' : 'Crear orden'}</Button>
+              <Button onClick={reset} variant="outline" size="sm" className="rounded-adm-full">Cancelar</Button>
             </div>
           </div>
-        </Glass>
+        </Card>
       )}
 
       {orders.length === 0 && !creating ? (
-        <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>Aún no has creado órdenes de compra.</Glass>
+        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no has creado órdenes de compra.</Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {orders.map((po) => (
-            <Glass key={po.id} variant="quiet" style={{ padding: 14 }}>
+            <Card key={po.id} className="p-3.5">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Orden #{String(po.folio).padStart(4, '0')}</div>
@@ -267,7 +271,7 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
                   {(po.estado === 'BORRADOR' || po.estado === 'ENVIADA') && <ActionBtn label="Cancelar" danger onClick={() => changeStatus(po, 'CANCELADA')} disabled={isPending} />}
                 </div>
               </div>
-            </Glass>
+            </Card>
           ))}
         </div>
       )}
@@ -277,11 +281,14 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
 
 function ActionBtn({ label, onClick, disabled, accent, danger }: { label: string; onClick: () => void; disabled?: boolean; accent?: boolean; danger?: boolean }) {
   return (
-    <button onClick={onClick} disabled={disabled} className="press" style={{
-      padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: disabled ? 'wait' : 'pointer',
-      border: `1px solid ${danger ? 'rgba(239,68,68,0.3)' : accent ? 'transparent' : 'var(--u-hair-2)'}`,
-      background: accent ? 'var(--brand-accent)' : danger ? 'rgba(239,68,68,0.1)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-      color: accent ? '#fff' : danger ? '#f87171' : 'var(--u-text-2)',
-    }}>{label}</button>
+    <Button
+      onClick={onClick}
+      disabled={disabled}
+      size="sm"
+      variant={accent ? 'primary' : danger ? 'outline' : 'secondary'}
+      className={cn('rounded-adm-full', danger && 'border-[rgba(239,68,68,0.3)] text-[#f87171]')}
+    >
+      {label}
+    </Button>
   );
 }

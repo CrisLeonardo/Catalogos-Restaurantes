@@ -394,8 +394,17 @@ html[data-admin-area][data-scheme="light"] {
 }
 
 /* ── Reset / base ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
-* { margin: 0; padding: 0; }
+/* En @layer base: las capas SIN nombre (como esta lo era antes) le ganan a
+   CUALQUIER regla dentro de una @layer, sin importar especificidad — por eso
+   este reset universal (margin/padding:0) anulaba en silencio TODAS las
+   utilidades de padding de Tailwind (p, px, py, etc. — @layer utilities) en
+   toda la nueva librería de componentes (Card, Button, Input, Dialog, Sheet,
+   etc.). Al meterlo en @layer base queda donde Tailwind ya pone su propio
+   preflight, y @layer utilities (declarado después) vuelve a ganar. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+}
 
 /* Solo html recibe el background: el body queda transparente para que los
    elementos con z-index:-1 (asphalt, bg-layer) no queden tapados por el body.

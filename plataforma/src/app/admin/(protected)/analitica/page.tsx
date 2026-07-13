@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getAnalytics, type CountSplit, type Velocity } from '@/lib/db/analytics';
 import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
+import { Card } from '@/components/ui/card';
 
 export const metadata = { title: 'Analítica – Panel admin' };
 
@@ -59,14 +60,14 @@ export default async function AdminAnaliticaPage({
 
   if (!ordersEnabled) {
     return (
-      <div className="glass" style={{ borderRadius: 16, padding: '24px 22px', maxWidth: 560 }}>
+      <Card className="p-5" style={{ maxWidth: 560 }}>
         <div className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Analítica</div>
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
           La analítica de operación se basa en los pedidos en línea. Activa el módulo
           <strong> Pedidos</strong> (plan Premium) para ver horas pico, velocidad de
           productos, cancelaciones y tiempos.
         </p>
-      </div>
+      </Card>
     );
   }
 
@@ -82,9 +83,9 @@ export default async function AdminAnaliticaPage({
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className="glass" style={{ borderRadius: 16, padding: 16 }}>
+      <Card className="p-4">
         <DateRangeForm from={from} to={to} basePath="/admin/analitica" />
-      </div>
+      </Card>
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
@@ -96,14 +97,14 @@ export default async function AdminAnaliticaPage({
       </div>
 
       {a.avgPrepMin == null && a.validOrders > 0 && (
-        <div className="glass-quiet" style={{ borderRadius: 13, padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Los tiempos de preparación y entrega se miden desde que cambias el estado de los
           pedidos (Nuevo → Listo → Entregado). Empezarán a aparecer con los próximos pedidos.
-        </div>
+        </Card>
       )}
 
       {/* Mapa de calor de horas pico */}
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Card className="flex flex-col gap-3 p-4.5">
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Horas pico · pedidos por día y hora</div>
         {a.heatMax === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin pedidos en el rango.</div>
@@ -141,7 +142,7 @@ export default async function AdminAnaliticaPage({
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Velocidad de productos */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
@@ -161,18 +162,18 @@ export default async function AdminAnaliticaPage({
 
 function Kpi({ label, value, sub, hero, small }: { label: string; value: string; sub?: string; hero?: boolean; small?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
       <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: small ? 17 : hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
+    </Card>
   );
 }
 
 function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[]; accent?: boolean }) {
   const max = rows.reduce((m, r) => Math.max(m, r.qty), 1);
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
@@ -187,13 +188,13 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
           </div>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }
 
 function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; total: number }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
@@ -211,6 +212,6 @@ function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; 
           </div>
         );
       })}
-    </div>
+    </Card>
   );
 }

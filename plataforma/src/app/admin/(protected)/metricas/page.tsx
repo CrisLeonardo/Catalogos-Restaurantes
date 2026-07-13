@@ -4,6 +4,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats } from '@/lib/db/orders';
 import { getVisitStats } from '@/lib/actions/metrics';
+import { Card } from '@/components/ui/card';
 
 export const metadata = { title: 'Métricas – Panel admin' };
 
@@ -72,7 +73,7 @@ export default async function AdminMetricasPage() {
       </div>
 
       {/* Gráfica 14 días */}
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <Card className="flex flex-col gap-3.5 p-4.5">
         <div>
           <div className="t-kicker" style={{ fontSize: 9.5 }}>Visitas · 14 días</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
@@ -105,13 +106,13 @@ export default async function AdminMetricasPage() {
             );
           })}
         </div>
-      </div>
+      </Card>
 
       {visits.last30 === 0 && (
-        <div className="glass-quiet" style={{ borderRadius: 14, padding: '14px 18px', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Aún no hay visitas registradas. El contador empieza a funcionar desde que
           se activó esta función; comparte tu QR o tu enlace para ver movimiento aquí.
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -119,10 +120,10 @@ export default async function AdminMetricasPage() {
 
 function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
+    </Card>
   );
 }

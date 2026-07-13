@@ -4,6 +4,9 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { Icon } from '@/components/icons';
+import { Card, cardVariants } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Leogin Desktop – Panel admin' };
 
@@ -93,7 +96,7 @@ export default async function AdminEscritorioPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 900 }}>
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="glass" style={{ borderRadius: 18, padding: '24px 24px 22px' }}>
+      <Card className="p-6 pb-5.5">
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
           <div style={{
             width: 50, height: 50, borderRadius: 14, flexShrink: 0, display: 'grid', placeItems: 'center',
@@ -148,25 +151,17 @@ export default async function AdminEscritorioPage() {
 
         {/* CTA principal */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
-          <a
-            href="/api/desktop/download-exe"
-            className="press"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 20px',
-              borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 14, fontWeight: 700,
-              background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
-            }}
-          >
+          <Button render={<a href="/api/desktop/download-exe" />} size="lg">
             <Icon name="download" size={17} /> Descargar Leogin Desktop
-          </a>
+          </Button>
           <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
             Para Windows 10/11 (64 bits) · gratis · sin conocimientos técnicos.
           </span>
         </div>
-      </div>
+      </Card>
 
       {/* ── Cómo instalarla ──────────────────────────────────── */}
-      <div className="glass" style={{ borderRadius: 18, padding: '20px 22px' }}>
+      <Card className="px-5.5 py-5">
         <div className="t-kicker" style={{ fontSize: 10, marginBottom: 14 }}>Cómo instalarla — 3 pasos</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Step n={1} title="Descarga y ejecuta el instalador">
@@ -193,16 +188,13 @@ export default async function AdminEscritorioPage() {
             quieras.
           </Step>
         </div>
-      </div>
+      </Card>
 
       {/* ── Cross-link a Impresión ───────────────────────────── */}
       <a
         href="/admin/impresion"
-        className="glass press"
-        style={{
-          borderRadius: 14, padding: '14px 16px', textDecoration: 'none',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}
+        className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 no-underline')}
+        style={{ padding: '14px 16px' }}
       >
         <span style={{
           width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',

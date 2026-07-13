@@ -7,6 +7,8 @@ import ProfileForm from '@/components/admin/profile-form';
 import CollapsibleCard from '@/components/admin/collapsible-card';
 import { Icon } from '@/components/icons';
 import Link from 'next/link';
+import { cardVariants } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Perfil – Panel admin' };
@@ -90,11 +92,7 @@ export default async function AdminPerfilPage({
       <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 24, paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <Link
           href="/admin/ajustes"
-          className="glass press"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: 14,
-            borderRadius: 16, textDecoration: 'none', color: 'inherit',
-          }}
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 p-3.5 no-underline text-inherit')}
         >
           <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
             <Icon name="settings" size={19} />
@@ -109,11 +107,7 @@ export default async function AdminPerfilPage({
         </Link>
         <Link
           href="/admin/impresion"
-          className="glass press"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: 14,
-            borderRadius: 16, textDecoration: 'none', color: 'inherit',
-          }}
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 p-3.5 no-underline text-inherit')}
         >
           <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
             <Icon name="print" size={19} />

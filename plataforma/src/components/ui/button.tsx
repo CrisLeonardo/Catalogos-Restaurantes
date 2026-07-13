@@ -37,10 +37,15 @@ export interface ButtonProps
   extends React.ComponentProps<typeof BaseButton>,
     VariantProps<typeof buttonVariants> {}
 
-function Button({ className, variant, size, ...props }: ButtonProps) {
+function Button({ className, variant, size, render, ...props }: ButtonProps) {
   return (
     <BaseButton
       data-slot="button"
+      // render a un elemento no-<button> (p. ej. <a> para CTAs que navegan):
+      // sin esto Base UI asume `nativeButton` y tira un warning en consola
+      // porque espera un <button> real detrás del render prop.
+      nativeButton={render === undefined}
+      render={render}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

@@ -8,6 +8,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { adjustStock, saveInventory } from '@/lib/actions/inventory';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { Category, Product } from '@/types';
 
 interface Props {
@@ -43,31 +45,26 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
         {[{ id: 'todos', name: 'Todas' }, ...categories].map((c) => {
           const on = c.id === activeCat;
           return (
-            <button
+            <Button
               key={c.id}
-              className="press"
+              variant={on ? 'primary' : 'secondary'}
+              size="sm"
+              className="shrink-0 rounded-adm-full"
               onClick={() => setActiveCat(c.id)}
-              style={{
-                flexShrink: 0, padding: '8px 14px', borderRadius: 99, cursor: 'pointer',
-                background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-              }}
             >
               {c.name}
-            </button>
+            </Button>
           );
         })}
       </div>
 
       {/* Lista */}
       {list.length === 0 ? (
-        <div className="glass" style={{ borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
+        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
           No hay platillos en esta categoría.
-        </div>
+        </Card>
       ) : (
-        <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
+        <Card className="overflow-hidden p-0">
           {list.map((p, i) => (
             <Row
               key={p.id}
@@ -77,7 +74,7 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
               onChanged={() => router.refresh()}
             />
           ))}
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -86,10 +83,10 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
 function Summary({ label, value, tone }: { label: string; value: string; tone?: 'warn' | 'bad' }) {
   const color = tone === 'bad' ? '#f87171' : tone === 'warn' ? '#fbbf24' : 'var(--u-text)';
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <Card className="flex flex-col gap-1.5 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color, lineHeight: 1 }}>{value}</div>
-    </div>
+    </Card>
   );
 }
 
@@ -144,39 +141,39 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
               {stock}
             </span>
             <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" />
-            <button onClick={() => setOpen((v) => !v)} className="press glass-quiet" title="Ajustes" style={{ width: 34, height: 34, borderRadius: 9, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer' }}>
+            <Button onClick={() => setOpen((v) => !v)} variant="secondary" size="icon" className="size-8.5" title="Ajustes">
               <Icon name="settings" size={15} />
-            </button>
+            </Button>
           </div>
         ) : (
-          <button onClick={() => setOpen(true)} disabled={pending} className="press glass-quiet" style={{ padding: '8px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+          <Button onClick={() => setOpen(true)} disabled={pending} variant="secondary" size="sm">
             Activar control
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Ajustes inline (activar control o editar stock/umbral) */}
       {open && (
-        <div className="glass-quiet" style={{ borderRadius: 12, padding: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+        <Card variant="flat" className="flex flex-wrap items-end gap-3 p-3">
           <Field label="Stock exacto">
             <input type="number" inputMode="decimal" min="0" value={stockVal} onChange={(e) => setStockVal(e.target.value)} style={inputStyle} />
           </Field>
           <Field label="Alertar cuando ≤">
             <input type="number" inputMode="decimal" min="0" value={thresholdVal} onChange={(e) => setThresholdVal(e.target.value)} style={inputStyle} />
           </Field>
-          <button onClick={() => save(true)} disabled={pending} className="press btn-accent" style={{ padding: '9px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+          <Button onClick={() => save(true)} disabled={pending} size="sm">
             {pending ? '…' : tracked ? 'Guardar' : 'Activar'}
-          </button>
+          </Button>
           {tracked ? (
-            <button onClick={() => save(false)} disabled={pending} className="press" style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'transparent', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-4)' }}>
+            <Button onClick={() => save(false)} disabled={pending} variant="outline" size="sm">
               Desactivar control
-            </button>
+            </Button>
           ) : (
-            <button onClick={() => setOpen(false)} disabled={pending} className="press" style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'transparent', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-4)' }}>
+            <Button onClick={() => setOpen(false)} disabled={pending} variant="outline" size="sm">
               Cancelar
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -199,9 +196,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Stepper({ onClick, disabled, icon }: { onClick: () => void; disabled?: boolean; icon: string }) {
   return (
-    <button onClick={onClick} disabled={disabled} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 9, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}>
+    <Button onClick={onClick} disabled={disabled} variant="secondary" size="icon" className="size-8.5">
       <Icon name={icon} size={16} />
-    </button>
+    </Button>
   );
 }
 

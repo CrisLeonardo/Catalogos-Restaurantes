@@ -7,6 +7,8 @@ import { Icon } from '@/components/icons';
 import CollapsibleCard from '@/components/admin/collapsible-card';
 import PrintAgentSettings from '@/components/admin/print-agent-settings';
 import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export const metadata = { title: 'Impresión y modo offline – Panel admin' };
 
@@ -124,7 +126,7 @@ export default async function AdminImpresionPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 860 }}>
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="glass" style={{ borderRadius: 18, padding: '22px 22px 20px' }}>
+      <Card className="p-5">
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
           <div style={{
             width: 46, height: 46, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center',
@@ -179,26 +181,18 @@ export default async function AdminImpresionPage() {
         {/* CTA cuando aún no hay agente funcionando */}
         {!connected && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-            <a
-              href="#instalar"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 18px',
-                borderRadius: 'var(--radius-md)', textDecoration: 'none', fontSize: 13.5, fontWeight: 700,
-                background: 'var(--admin-panel-btn, var(--brand-accent))', color: 'var(--admin-panel-btn-text, #fff)',
-              }}
-            >
+            <Button render={<a href="#instalar" />}>
               <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi instalación' : 'Vincular impresora y servicio local · 5 minutos'}
-            </a>
+            </Button>
             <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
               Sin conocimientos técnicos: descargar, doble clic, listo.
             </span>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* ── Cadena de respaldo (estado en vivo) ──────────────── */}
-      <div className="glass" style={{ borderRadius: 18, padding: '18px 20px' }}>
+      <Card className="p-4.5">
         <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Cadena de respaldo — así no se detiene tu servicio</div>
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, flexWrap: 'wrap' }}>
           {chain.map((node, i) => (
@@ -243,22 +237,16 @@ export default async function AdminImpresionPage() {
                 muestra los pedidos que el agente capturó, incluso sin internet.
               </div>
             </div>
-            <a
-              href={kdsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press glass-quiet"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px',
-                borderRadius: 'var(--radius-md)', textDecoration: 'none',
-                fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-2)',
-              }}
+            <Button
+              render={<a href={kdsUrl} target="_blank" rel="noopener noreferrer" />}
+              variant="secondary"
+              size="sm"
             >
               <Icon name="flame" size={15} /> Abrir pantalla de respaldo
-            </a>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* ── Instalación y configuración (guiada) ─────────────── */}
       <div id="instalar">

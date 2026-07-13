@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
@@ -95,7 +95,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
   // cocina se congelaba en plena hora pico. Máximo un refresh cada 2.5 s.
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRefresh  = useRef(0);
-  function refreshSoon() {
+  const refreshSoon = useCallback(() => {
     if (refreshTimer.current) return;
     const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
     refreshTimer.current = setTimeout(() => {
@@ -103,7 +103,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
       lastRefresh.current = Date.now();
       router.refresh();
     }, wait);
-  }
+  }, [router]);
   useEffect(() => () => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
   }, []);
@@ -173,7 +173,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     })();
 
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
-  }, [restaurantId, router, confirmFirst]);
+  }, [restaurantId, confirmFirst, refreshSoon]);
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {

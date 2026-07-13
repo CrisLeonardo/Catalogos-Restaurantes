@@ -13,6 +13,9 @@ import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
+import { Card, cardVariants } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -114,10 +117,9 @@ export default async function SuscripcionPage() {
 
       {/* ── Trial banner ─────────────────────────────────────── */}
       {onTrial && (
-        <div
-          className="glass"
+        <Card
+          className="p-5"
           style={{
-            borderRadius: 16, padding: 20,
             border: trialLeft <= 3
               ? '1px solid rgba(248,113,113,0.4)'
               : trialLeft <= 7
@@ -140,27 +142,19 @@ export default async function SuscripcionPage() {
               : `Tu restaurante está en vivo sin costo. Cuando termine la prueba, te avisaremos antes de cualquier cobro.`}
           </div>
           {trialLeft <= 7 && (
-            <a
-              href={upgradeHref(restaurantName, planInfo?.name ?? 'Premium')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                marginTop: 14, padding: '10px 18px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
-                background: 'var(--brand-accent)', color: '#fff',
-              }}
+            <Button
+              render={<a href={upgradeHref(restaurantName, planInfo?.name ?? 'Premium')} target="_blank" rel="noopener noreferrer" />}
+              className="mt-3.5 rounded-adm-full"
             >
               <Icon name="sparkle" size={14} />
               Continuar con Leogin
-            </a>
+            </Button>
           )}
-        </div>
+        </Card>
       )}
 
       {/* ── Tu plan actual ───────────────────────────────────── */}
-      <div className="glass" style={{ borderRadius: 16, padding: 20 }}>
+      <Card className="p-5">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Tu plan actual</div>
@@ -204,7 +198,7 @@ export default async function SuscripcionPage() {
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
-      </div>
+      </Card>
 
       {/* ── Plan a tu medida (descuento por canal + módulos + sucursales) ── */}
       {feeBreakdown && (feeBreakdown.discountApplies || feeBreakdown.addonTotal > 0 || feeBreakdown.branchDiscountPct > 0) && (
@@ -213,12 +207,9 @@ export default async function SuscripcionPage() {
 
       {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
       {currentPlan === 'BASICO' && nextPlanInfo && (
-        <div
-          className="glass"
-          style={{
-            borderRadius: 16, padding: 20,
-            border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)',
-          }}
+        <Card
+          className="p-5"
+          style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
           <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium ({PLANS.PREMIUM.priceLabel}) desbloqueas</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
@@ -260,42 +251,20 @@ export default async function SuscripcionPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
-            <a
-              href={upgradeHref(restaurantName, nextPlanInfo.name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press btn-accent"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '11px 20px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
-              }}
-            >
+            <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
               <Icon name="sparkle" size={14} />
               Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
-            </a>
-            <a
-              href={planesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '11px 16px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
-                color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-              }}
-            >
+            </Button>
+            <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
               Ver todos los planes <Icon name="chevronRight" size={14} />
-            </a>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ── Actualizar plan (Estándar/Premium en adelante) ───── */}
       {nextPlanInfo && currentPlan !== 'BASICO' && (
-        <div className="glass" style={{ borderRadius: 16, padding: 20 }}>
+        <Card className="p-5">
           <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>
             Siguiente plan disponible
           </div>
@@ -307,37 +276,15 @@ export default async function SuscripcionPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-            <a
-              href={upgradeHref(restaurantName, nextPlanInfo.name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press btn-accent"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '10px 18px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
-              }}
-            >
+            <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
               <Icon name="sparkle" size={14} />
               Actualizar a {nextPlanInfo.name}
-            </a>
-            <a
-              href={planesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '10px 16px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
-                color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-              }}
-            >
+            </Button>
+            <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
               Ver todos los planes <Icon name="chevronRight" size={14} />
-            </a>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ── Más opciones de upgrade (planes 2+ pasos arriba) ── */}
@@ -345,7 +292,7 @@ export default async function SuscripcionPage() {
         const higherPlans = PUBLIC_PLANS.filter((p) => isUpgrade(currentPlan, p) && p !== nextPlanCode);
         if (higherPlans.length === 0) return null;
         return (
-          <div className="glass-quiet" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Card className="flex flex-col gap-3 p-4">
             <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--u-text-4)' }}>
               Más opciones de upgrade
             </div>
@@ -358,11 +305,7 @@ export default async function SuscripcionPage() {
                     href={upgradeHref(restaurantName, p.name)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="glass press"
-                    style={{
-                      display: 'flex', flexDirection: 'column', gap: 5,
-                      padding: '14px 16px', borderRadius: 14, textDecoration: 'none',
-                    }}
+                    className={cn(cardVariants({ variant: 'interactive' }), 'flex flex-col gap-1.5 p-3.5 no-underline')}
                   >
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
                       {p.name}
@@ -383,12 +326,12 @@ export default async function SuscripcionPage() {
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
               Puedes saltar directamente al plan que mejor se ajuste a lo que necesitas.
             </p>
-          </div>
+          </Card>
         );
       })()}
 
       {/* ── ¿Varias sucursales? ───────────────────────────────── */}
-      <div className="glass-quiet" style={{ borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="grid" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
           ¿Tienes 2 o más sucursales? Obtienes descuento por volumen automáticamente y un panel de grupo consolidado.
@@ -401,17 +344,14 @@ export default async function SuscripcionPage() {
         >
           Hablar con Leogin →
         </a>
-      </div>
+      </Card>
 
       {/* ── Estado de cuenta ─────────────────────────────────── */}
       {config && (config.monthly_fee > 0 || invoices.length > 0) && (
         <>
-          <div
-            className="glass"
-            style={{
-              borderRadius: 16, padding: 20,
-              border: hasOverdue ? '1px solid rgba(248,113,113,0.3)' : pendingTotal > 0 ? '1px solid rgba(251,191,36,0.25)' : '1px solid rgba(74,222,128,0.25)',
-            }}
+          <Card
+            className="p-5"
+            style={{ border: hasOverdue ? '1px solid rgba(248,113,113,0.3)' : pendingTotal > 0 ? '1px solid rgba(251,191,36,0.25)' : '1px solid rgba(74,222,128,0.25)' }}
           >
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Estado de cuenta</div>
             {pendingTotal > 0 ? (
@@ -431,7 +371,7 @@ export default async function SuscripcionPage() {
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
               </>
             )}
-          </div>
+          </Card>
 
           {/* Detalles del plan */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
@@ -441,29 +381,29 @@ export default async function SuscripcionPage() {
             {config.started_at && <Kpi label="Cliente desde" value={config.started_at.slice(0, 10)} small />}
           </div>
 
-          <div className="glass-quiet" style={{ borderRadius: 13, padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
             aparecerá como <strong style={{ color: '#4ade80' }}>Pagado</strong> aquí mismo.
-          </div>
+          </Card>
 
           {/* Historial */}
-          <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Card className="flex flex-col gap-2.5 p-4.5">
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Historial de cobros</div>
             {invoices.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no hay cobros.</div>
             ) : (
               invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} />)
             )}
-          </div>
+          </Card>
         </>
       )}
 
       {/* If no billing config yet */}
       {(!config || (config.monthly_fee <= 0 && invoices.length === 0)) && (
-        <div className="glass-quiet" style={{ borderRadius: 14, padding: '13px 16px', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="helpCircle" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
           Cuando se configure tu cobro, aquí verás tu mensualidad, fechas de pago y el historial completo.
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -506,10 +446,7 @@ function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
 function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
   const saving = b.discount > 0 || b.branchDiscountPct > 0;
   return (
-    <div className="glass" style={{
-      borderRadius: 16, padding: 20,
-      border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)',
-    }}>
+    <Card className="p-5" style={{ border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Icon name="sparkle" size={15} style={{ color: saving ? '#4ade80' : 'var(--brand-accent)' }} />
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Plan a tu medida</div>
@@ -559,7 +496,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 700 }}>
         Gestionar mis canales y módulos <Icon name="arrowRight" size={13} />
       </a>
-    </div>
+    </Card>
   );
 }
 
@@ -574,11 +511,11 @@ function LineItem({ label, value, accent }: { label: string; value: string; acce
 
 function Kpi({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
       <div style={{ fontFamily: small ? 'var(--font-sans)' : 'var(--ui-font-mono)', fontWeight: small ? 600 : 700, fontSize: small ? 15 : 22, color: 'var(--u-text)', lineHeight: 1.15 }}>
         {value}
       </div>
-    </div>
+    </Card>
   );
 }

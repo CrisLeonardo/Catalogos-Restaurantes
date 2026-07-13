@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Glass } from '@/components/glass';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { updateRestaurantInfo, type RestaurantState } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
 
@@ -63,7 +64,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
           <input type="hidden" name="restaurantId" value={restaurantId} />
           <input type="hidden" name="orders_whatsapp" value="" />
 
-          <Glass variant="quiet" style={{ padding: 16 }}>
+          <Card className="p-4">
             <label htmlFor="name" style={labelStyle}>Nombre del restaurante *</label>
             <input
               id="name"
@@ -73,9 +74,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               defaultValue={restaurant.name}
               style={inputStyle}
             />
-          </Glass>
+          </Card>
 
-          <Glass variant="quiet" style={{ padding: 16 }}>
+          <Card className="p-4">
             <label htmlFor="tagline" style={labelStyle}>Tagline</label>
             <input
               id="tagline"
@@ -85,9 +86,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               placeholder="Una frase que describe tu lugar"
               style={inputStyle}
             />
-          </Glass>
+          </Card>
 
-          <Glass variant="quiet" style={{ padding: 16 }}>
+          <Card className="p-4">
             <label htmlFor="address" style={labelStyle}>Dirección</label>
             <input
               id="address"
@@ -100,9 +101,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
               Se muestra cuando los clientes eligen sucursal en el link del grupo.
             </p>
-          </Glass>
+          </Card>
 
-          <Glass variant="quiet" data-tour-step="perfil-whatsapp" style={{ padding: 16 }}>
+          <Card data-tour-step="perfil-whatsapp" className="p-4">
             <label htmlFor="whatsapp_number" style={labelStyle}>WhatsApp</label>
             <input
               id="whatsapp_number"
@@ -125,9 +126,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
                 Acepta: 12345678 · 1234-5678 · 1234 5678 · +502 1234 5678
               </p>
             )}
-          </Glass>
+          </Card>
 
-          <Glass variant="quiet" style={{ padding: 16 }}>
+          <Card className="p-4">
             <label htmlFor="contact_email" style={labelStyle}>Email de contacto</label>
             <input
               id="contact_email"
@@ -137,18 +138,13 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               placeholder="hola@mirestaurante.com"
               style={inputStyle}
             />
-          </Glass>
+          </Card>
 
           {infoState?.error && <ErrorMsg msg={infoState.error} />}
 
-          <button
-            type="submit"
-            disabled={infoIsPending || !!whatsappErr}
-            className="press btn-accent"
-            style={saveBtnStyle(infoIsPending || !!whatsappErr)}
-          >
+          <Button type="submit" disabled={infoIsPending || !!whatsappErr} size="lg" className="w-full rounded-adm-full">
             {infoIsPending ? 'Guardando…' : 'Guardar información'}
-          </button>
+          </Button>
         </form>
       </section>
     </div>
@@ -172,17 +168,4 @@ function ErrorMsg({ msg }: { msg: string }) {
       {msg}
     </div>
   );
-}
-
-function saveBtnStyle(isPending: boolean): React.CSSProperties {
-  return {
-    width: '100%',
-    padding: '14px',
-    borderRadius: 'var(--radius-full)',
-    fontWeight: 600,
-    fontSize: 15,
-    border: 'none',
-    cursor: isPending ? 'not-allowed' : 'pointer',
-    opacity: isPending ? 0.7 : 1,
-  };
 }

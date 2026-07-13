@@ -16,6 +16,8 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { startGuidedTour } from '@/components/admin/guided-tour';
 import { getGuidedTour } from '@/lib/tutorial/tours';
 import {
@@ -81,7 +83,7 @@ export default function TutorialHub({ plan, modules }: Props) {
         </div>
 
         {/* Botón tour — reinicia el tour borrando la flag y redirige al dashboard */}
-        <button
+        <Button
           type="button"
           onClick={() => {
             if (typeof window !== 'undefined') {
@@ -89,17 +91,12 @@ export default function TutorialHub({ plan, modules }: Props) {
               window.location.href = '/admin';
             }
           }}
-          className="press glass-quiet"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '9px 16px', borderRadius: 12, border: 'none',
-            cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            color: 'var(--u-text-2)', background: 'none', flexShrink: 0,
-          }}
+          variant="secondary"
+          className="shrink-0"
         >
           <Icon name="sparkle" size={16} />
           Ver tour de bienvenida
-        </button>
+        </Button>
       </div>
 
       {/* Barra de búsqueda */}
@@ -142,14 +139,11 @@ export default function TutorialHub({ plan, modules }: Props) {
 
       {/* Resultados vacíos */}
       {isSearching && filteredSections.length === 0 && (
-        <div
-          className="glass"
-          style={{ borderRadius: 16, padding: '32px 20px', textAlign: 'center', color: 'var(--u-text-3)' }}
-        >
+        <Card className="px-5 py-8 text-center" style={{ color: 'var(--u-text-3)' }}>
           <Icon name="helpCircle" size={28} style={{ marginBottom: 10 }} />
           <p style={{ fontSize: 14 }}>No encontramos resultados para <strong>&quot;{query}&quot;</strong>.</p>
           <p style={{ fontSize: 12, marginTop: 4 }}>Intenta con otra palabra o <button type="button" onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: 'var(--brand-accent)', cursor: 'pointer', fontSize: 12 }}>limpia la búsqueda</button>.</p>
-        </div>
+        </Card>
       )}
 
       {/* Secciones */}
@@ -173,10 +167,7 @@ export default function TutorialHub({ plan, modules }: Props) {
       </div>
 
       {/* Soporte */}
-      <div
-        className="glass-quiet"
-        style={{ borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, marginTop: 4 }}
-      >
+      <Card variant="flat" className="px-4.5 py-4 flex items-center gap-3.5 mt-1">
         <span style={{
           width: 38, height: 38, borderRadius: 10, flexShrink: 0,
           display: 'grid', placeItems: 'center',
@@ -191,18 +182,15 @@ export default function TutorialHub({ plan, modules }: Props) {
             Nuestro equipo de soporte está disponible para ayudarte.
           </div>
         </div>
-        <Link
-          href="/admin/soporte"
-          className="press"
-          style={{
-            padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-            background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)',
-            color: 'var(--brand-accent)', textDecoration: 'none', flexShrink: 0,
-          }}
+        <Button
+          render={<Link href="/admin/soporte" />}
+          size="sm"
+          className="shrink-0"
+          style={{ background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent)' }}
         >
           Ir a soporte
-        </Link>
-      </div>
+        </Button>
+      </Card>
     </div>
   );
 }
@@ -225,13 +213,11 @@ function TutorialSection({
   const labelColor = planLabel ? (PLAN_COLORS[planLabel] ?? '#94a3b8') : null;
 
   return (
-    <div
+    <Card
       id={`ayuda-${section.id}`}
-      className="glass"
+      className="overflow-hidden p-0"
       style={{
-        borderRadius: 16,
         border: locked ? '1.5px solid var(--u-hair)' : '1.5px solid transparent',
-        overflow: 'hidden',
         opacity: locked ? 0.72 : 1,
       }}
     >
@@ -301,29 +287,21 @@ function TutorialSection({
             <>
               {/* Tour guiado sobre el panel real (si esta sección tiene uno) */}
               {getGuidedTour(section.id) && (
-                <button
+                <Button
                   type="button"
                   onClick={() => startGuidedTour(section.id)}
-                  className="press"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '10px 16px', borderRadius: 11, border: 'none',
-                    cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                    background: 'var(--brand-accent, #6366f1)',
-                    color: 'var(--brand-on-accent, #fff)',
-                    marginBottom: 18,
-                  }}
+                  className="mb-4.5"
                 >
                   <Icon name="sparkle" size={15} />
                   Ver en mi panel (guía interactiva)
-                </button>
+                </Button>
               )}
               <StepsList steps={section.steps} />
             </>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

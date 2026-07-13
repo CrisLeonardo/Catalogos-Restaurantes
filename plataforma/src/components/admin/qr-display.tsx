@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Glass } from '@/components/glass';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   restaurantName: string;
@@ -72,7 +73,7 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* QR code */}
-      <Glass style={{ padding: '28px 20px', textAlign: 'center' }}>
+      <Card className="px-5 py-7 text-center">
         <div
           style={{
             display: 'inline-block',
@@ -101,10 +102,10 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
         >
           Escanea con la cámara del teléfono para verificar
         </p>
-      </Glass>
+      </Card>
 
       {/* URL */}
-      <Glass data-tour-step="qr-enlace" style={{ padding: '14px 18px' }}>
+      <Card data-tour-step="qr-enlace" className="px-4.5 py-3.5">
         <p
           style={{
             fontSize: 10,
@@ -131,54 +132,31 @@ export default function QRDisplay({ restaurantName, menuUrl }: Props) {
             {menuUrl}
           </code>
 
-          <button
+          <Button
+            type="button"
             onClick={copyUrl}
-            className="press"
-            style={{
-              flexShrink: 0,
-              padding: '7px 14px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: 12,
-              fontWeight: 600,
-              background: copied
-                ? 'rgba(34,197,94,0.12)'
-                : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
-              color: copied ? '#22c55e' : 'var(--u-text)',
-              border: `1px solid ${copied ? 'rgba(34,197,94,0.28)' : 'var(--u-hair-2)'}`,
-              cursor: 'pointer',
-              transition: 'all 150ms',
-              whiteSpace: 'nowrap',
-            }}
+            variant={copied ? 'primary' : 'secondary'}
+            size="sm"
+            className="shrink-0 whitespace-nowrap"
+            style={copied ? { background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderColor: 'rgba(34,197,94,0.28)' } : undefined}
           >
             {copied ? '✓ Copiado' : 'Copiar'}
-          </button>
+          </Button>
         </div>
-      </Glass>
+      </Card>
 
       {/* Download */}
-      <button
+      <Button
+        type="button"
         onClick={downloadPng}
         disabled={downloading}
-        className="press"
         data-tour-step="qr-descargar"
-        style={{
-          display: 'block',
-          width: '100%',
-          textAlign: 'center',
-          padding: '13px 20px',
-          borderRadius: 'var(--radius-full)',
-          border: '1px solid var(--u-hair-2)',
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: downloading ? 'wait' : 'pointer',
-          color: 'var(--u-text)',
-          background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          fontFamily: 'var(--font-sans)',
-          opacity: downloading ? 0.7 : 1,
-        }}
+        variant="secondary"
+        size="lg"
+        className="w-full rounded-adm-full"
       >
         {downloading ? 'Generando…' : '↓ Descargar QR (.png)'}
-      </button>
+      </Button>
 
       {/* Instructions */}
       <p

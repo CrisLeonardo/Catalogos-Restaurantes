@@ -131,7 +131,7 @@ export default async function AdminHomePage() {
       {onTrial && (
         <Link
           href="/admin/suscripcion"
-          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 px-4 py-3.5 no-underline')}
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
           style={{
             border: trialLeft <= 3
               ? '1px solid rgba(248,113,113,0.4)'
@@ -173,7 +173,7 @@ export default async function AdminHomePage() {
       {agentBanner && (
         <Link
           href={agentBanner === 'offline' ? '/admin/impresion' : '/admin/escritorio'}
-          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 px-4 py-3.5 no-underline')}
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
           style={{
             border: agentBanner === 'offline'
               ? '1px solid rgba(251,146,60,0.4)'
@@ -214,7 +214,7 @@ export default async function AdminHomePage() {
 
       {/* Números de hoy (solo si tiene pedidos en línea) */}
       {stats && (
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} icon="list" hero />
           <Kpi label="Ventas hoy" value={fmt(stats.todaySales)} icon="wallet" />
           <Kpi label="Ticket promedio" value={fmt(stats.todayTicket)} icon="chart" />
@@ -223,8 +223,8 @@ export default async function AdminHomePage() {
 
       {/* Funciones bloqueadas (planes BASICO y ESTANDAR) */}
       {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'ESTANDAR') && (
-        <Card className="p-1">
-          <CardContent className="pt-4">
+        <Card>
+          <CardContent className="pt-5">
             <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />
           </CardContent>
         </Card>
@@ -233,12 +233,12 @@ export default async function AdminHomePage() {
       {/* Accesos rápidos */}
       <div>
         <div className="t-kicker mb-2.5" style={{ fontSize: 10 }}>Accesos rápidos</div>
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
           {actions.map((a) => {
             const inner = (
               <>
                 <div
-                  className="grid size-10 shrink-0 place-items-center rounded-adm-md"
+                  className="grid size-11 shrink-0 place-items-center rounded-adm-md"
                   style={{
                     background: a.accent ? 'var(--admin-panel-btn, var(--adm-accent-500))' : 'var(--adm-bg-2)',
                     color: a.accent ? 'var(--admin-panel-btn-text, #fff)' : 'var(--u-text)',
@@ -246,14 +246,14 @@ export default async function AdminHomePage() {
                 >
                   <Icon name={a.icon} size={19} />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{a.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>{a.desc}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>{a.desc}</div>
                 </div>
                 <Icon name={a.external ? 'arrowUpRight' : 'chevronRight'} size={16} style={{ color: 'var(--u-text-4)', marginLeft: 'auto', flexShrink: 0 }} />
               </>
             );
-            const className = cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 p-3.5 no-underline text-inherit');
+            const className = cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 p-4.5 no-underline text-inherit');
             return a.external ? (
               <a key={a.href + a.label} href={a.href} target="_blank" rel="noopener noreferrer" className={className}>{inner}</a>
             ) : (
@@ -268,13 +268,13 @@ export default async function AdminHomePage() {
 
 function Kpi({ label, value, icon, hero }: { label: string; value: string; icon: string; hero?: boolean }) {
   return (
-    <Card className="flex flex-col gap-2 p-0">
-      <CardContent className="flex flex-col gap-2 px-4.5 py-4 pt-4.5">
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-3 p-5">
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--u-text-3)' }}>
           <Icon name={icon} size={14} />
           <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
         </div>
-        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 30 : 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
+        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
       </CardContent>
     </Card>
   );

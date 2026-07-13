@@ -9,7 +9,10 @@
    ============================================================ */
 
 import { useActionState, useState } from 'react';
-import { Glass } from '@/components/glass';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Select } from '@/components/ui/select';
 import { updateRestaurantOps, type RestaurantState } from '@/lib/actions/restaurant';
 import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours } from '@/lib/hours';
 import type { Restaurant } from '@/types';
@@ -69,6 +72,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
   const [state, formAction, isPending] = useActionState(updateRestaurantOps, empty);
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
   const [paused, setPaused] = useState(restaurant.orders_paused === true);
+  const [timezone, setTimezone] = useState(restaurant.timezone || 'America/Guatemala');
 
   const toggleDay = (day: DayKey) =>
     setDays((prev) => ({ ...prev, [day]: { ...prev[day], on: !prev[day].on } }));
@@ -128,13 +132,10 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       <input type="hidden" name="orders_paused" value={String(paused)} />
 
       {/* ── Pausa de pedidos ── */}
-      <Glass
-        variant="quiet"
+      <Card
         data-tour-step="perfil-pausa"
-        style={{
-          padding: 16,
-          border: paused ? '1px solid rgba(245,158,11,0.4)' : undefined,
-        }}
+        className="p-4"
+        style={{ border: paused ? '1px solid rgba(245,158,11,0.4)' : undefined }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <div>
@@ -147,20 +148,12 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 : '¿Cocina saturada? Pausa sin tocar tus horarios.'}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setPaused(!paused)}
-            className="press"
+          <Switch
+            checked={paused}
+            onCheckedChange={setPaused}
             aria-label="Pausar pedidos"
-            style={{
-              width: 46, height: 27, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
-              background: paused ? '#f59e0b' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-              display: 'flex', justifyContent: paused ? 'flex-end' : 'flex-start',
-              transition: 'background 180ms', flexShrink: 0,
-            }}
-          >
-            <span style={{ width: 21, height: 21, borderRadius: 99, background: '#fff' }} />
-          </button>
+            className="data-[checked]:bg-[#f59e0b] data-[checked]:border-[#f59e0b]"
+          />
         </div>
         {paused && (
           <div style={{ marginTop: 12 }}>
@@ -178,10 +171,10 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
         {!paused && (
           <input type="hidden" name="pause_message" value={restaurant.pause_message ?? ''} />
         )}
-      </Glass>
+      </Card>
 
       {/* ── Horario semanal ── */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
+      <Card className="p-4">
         <label style={labelStyle}>Horario de apertura</label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12 }}>
           El badge “Abierto/Cerrado” y el checkout se rigen por este horario.
@@ -279,22 +272,18 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
             );
           })}
         </div>
-      </Glass>
+      </Card>
 
       {/* ── Zona horaria ── */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
+      <Card className="p-4">
         <label htmlFor="timezone" style={labelStyle}>Zona horaria</label>
-        <select
-          id="timezone"
-          name="timezone"
-          defaultValue={restaurant.timezone || 'America/Guatemala'}
-          style={{ ...inputStyle, width: '100%', fontFamily: 'var(--ui-font-sans)', cursor: 'pointer' }}
-        >
-          {TIMEZONES.map((tz) => (
-            <option key={tz} value={tz} style={{ color: '#000', background: '#fff' }}>{tz.replace('America/', '').replace(/_/g, ' ')}</option>
-          ))}
-        </select>
-      </Glass>
+        <input type="hidden" name="timezone" value={timezone} />
+        <Select
+          options={TIMEZONES.map((tz) => ({ value: tz, label: tz.replace('America/', '').replace(/_/g, ' ') }))}
+          value={timezone}
+          onValueChange={setTimezone}
+        />
+      </Card>
 
       {state?.error && (
         <div
@@ -311,23 +300,9 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="press btn-accent"
-        style={{
-          width: '100%',
-          padding: '14px',
-          borderRadius: 'var(--radius-full)',
-          fontWeight: 600,
-          fontSize: 15,
-          border: 'none',
-          cursor: isPending ? 'not-allowed' : 'pointer',
-          opacity: isPending ? 0.7 : 1,
-        }}
-      >
+      <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
         {isPending ? 'Guardando…' : 'Guardar operación'}
-      </button>
+      </Button>
     </form>
   );
 }

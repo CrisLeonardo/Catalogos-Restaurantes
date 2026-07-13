@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
@@ -75,7 +75,7 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
   // cada 2.5 s; el último evento de la ráfaga siempre queda cubierto.
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRefresh  = useRef(0);
-  function refreshSoon() {
+  const refreshSoon = useCallback(() => {
     if (refreshTimer.current) return;
     const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
     refreshTimer.current = setTimeout(() => {
@@ -83,7 +83,7 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
       lastRefresh.current = Date.now();
       router.refresh();
     }, wait);
-  }
+  }, [router]);
   useEffect(() => () => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
   }, []);
@@ -95,12 +95,12 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
   useEffect(() => { autoConfirmEnabledRef.current = autoConfirmEnabled; }, [autoConfirmEnabled]);
   useEffect(() => { autoConfirmMinutesRef.current = autoConfirmMinutes; }, [autoConfirmMinutes]);
 
-  function cancelAutoConfirm(orderId: string) {
+  const cancelAutoConfirm = useCallback((orderId: string) => {
     const t = autoTimers.current.get(orderId);
     if (t) { clearTimeout(t); autoTimers.current.delete(orderId); }
-  }
+  }, []);
 
-  function scheduleAutoConfirm(orderId: string, createdAt: string) {
+  const scheduleAutoConfirm = useCallback((orderId: string, createdAt: string) => {
     if (!autoConfirmEnabledRef.current) return;
     cancelAutoConfirm(orderId);
     const elapsed = Date.now() - new Date(createdAt).getTime();
@@ -110,7 +110,7 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
       await updateOrderStatus(orderId, 'PREP');
       refreshSoon();
     }, delay));
-  }
+  }, [cancelAutoConfirm, refreshSoon]);
 
   // Programar para pedidos NEW que ya llegaron al montar el panel.
   useEffect(() => {
@@ -119,7 +119,8 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
         scheduleAutoConfirm(o.id, o.created_at);
       });
     }
-    return () => { autoTimers.current.forEach(clearTimeout); autoTimers.current.clear(); };
+    const timers = autoTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
   // Solo al montar: initialOrders y autoConfirm* son props de servidor, estables.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -127,9 +128,9 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
   const [isExportingPdf, startExportPdf] = useTransition();
   const orders = initialOrders;
 
-  function showToast(msg: string) {
+  const showToast = useCallback((msg: string) => {
     toastManager.add({ title: msg, type: 'info' });
-  }
+  }, [toastManager]);
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
@@ -207,7 +208,7 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
       if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
-  }, [restaurantId, router]);
+  }, [restaurantId, refreshSoon, scheduleAutoConfirm, cancelAutoConfirm, showToast]);
 
   function buildExportHtml(
     headers: string[],
@@ -290,7 +291,7 @@ ${printScript}
   return (
     <>
       {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 22 }}>
         <Kpi label="Ventas hoy" value={fmtMoney(stats.todaySales, currency)} sub={`${stats.todayOrders} pedidos`} hero />
         <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} sub={`${active.length} activos`} />
         <Kpi label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} sub="por pedido" />
@@ -358,10 +359,10 @@ ${printScript}
 
 function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
   return (
-    <Card className="gap-1.5 p-0">
-      <CardContent className="flex flex-col gap-1.5 px-4.5 py-4">
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-2.5 p-5">
         <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
+        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.15, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
         {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
       </CardContent>
     </Card>
@@ -376,7 +377,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
   const max = Math.max(...series.map((d) => d.total), 1);
 
   return (
-    <Card className="mb-3 flex flex-col gap-3.5 p-4.5">
+    <Card className="mb-3 flex flex-col gap-4 p-5">
       <div>
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Ventas · 14 días</div>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
@@ -419,7 +420,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
 
 function TopToday({ items }: { items: TopProduct[] }) {
   return (
-    <Card className="flex flex-col gap-3 p-4.5">
+    <Card className="flex flex-col gap-3.5 p-5">
       <div className="t-poster" style={{ fontSize: 15 }}>Top de hoy</div>
       {items.map((item, i) => (
         <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

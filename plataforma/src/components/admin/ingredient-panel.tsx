@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { saveIngredient, deleteIngredient } from '@/lib/actions/recipes';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import type { Ingredient } from '@/lib/db/recipes';
 
 const UNITS = [
@@ -19,6 +21,8 @@ const UNITS = [
   'botella', 'lata', 'caja', 'bolsa', 'paquete', 'rollo',
 ];
 
+const UNIT_OPTIONS = UNITS.map((u) => ({ value: u, label: u }));
+
 const inputStyle: React.CSSProperties = {
   background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
   border: '1px solid var(--u-hair-2)',
@@ -28,11 +32,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: 14,
   outline: 'none',
   width: '100%',
-};
-
-const optionStyle: React.CSSProperties = {
-  color: '#111',
-  background: '#fff',
 };
 
 const labelStyle: React.CSSProperties = {
@@ -132,14 +131,13 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
             Define los insumos y su costo por unidad. Asígnalos a platillos para calcular el food cost automáticamente.
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={() => { setShowAdd(true); setEditState(null); }}
-          className="press btn-accent"
-          style={{ padding: '9px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          className="shrink-0 whitespace-nowrap rounded-adm-full"
         >
           + Nuevo insumo
-        </button>
+        </Button>
       </div>
 
 
@@ -151,7 +149,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
 
       {/* Formulario nuevo */}
       {showAdd && (
-        <Glass variant="quiet" style={{ padding: 16 }}>
+        <Card className="p-4">
           <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Nuevo insumo</p>
           <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -164,9 +162,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               </div>
               <div>
                 <label style={labelStyle}>Unidad</label>
-                <select style={inputStyle} value={newUnit} onChange={(e) => setNewUnit(e.target.value)}>
-                  {UNITS.map((u) => <option key={u} style={optionStyle}>{u}</option>)}
-                </select>
+                <Select options={UNIT_OPTIONS} value={newUnit} onValueChange={setNewUnit} />
               </div>
               <div>
                 <label style={labelStyle}>Costo / unidad</label>
@@ -174,29 +170,29 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" disabled={isPending} className="press btn-accent" style={{ padding: '10px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+              <Button type="submit" disabled={isPending} className="rounded-adm-full">
                 {isPending ? 'Guardando…' : 'Guardar'}
-              </button>
-              <button type="button" onClick={resetAdd} style={{ padding: '10px 16px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+              </Button>
+              <Button type="button" variant="outline" onClick={resetAdd} className="rounded-adm-full">
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
-        </Glass>
+        </Card>
       )}
 
       {/* Tabla de ingredientes */}
       {initialIngredients.length === 0 && !showAdd ? (
-        <Glass variant="quiet" style={{ padding: 32, textAlign: 'center' }}>
+        <Card className="p-8 text-center">
           <Icon name="flask" size={32} style={{ color: 'var(--u-text-4)', marginBottom: 10 }} />
           <p style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no tienes insumos registrados.</p>
           <p style={{ color: 'var(--u-text-4)', fontSize: 12, marginTop: 4 }}>Crea tu primer insumo para poder asignarlo a las recetas de tus platillos.</p>
-        </Glass>
+        </Card>
       ) : (
         /* Lista responsiva (patrón catalog/customers): grid de columnas en
            escritorio; en móvil cada fila es una tarjeta de 2 líneas (antes era
            un <table> de 5 columnas que se desbordaba y era inusable). */
-        <Glass variant="quiet" style={{ padding: '4px 14px', fontSize: 13 }}>
+        <Card className="px-3.5 py-1" style={{ fontSize: 13 }}>
           <div className="ing-head" style={{ padding: '10px 0', borderBottom: '1px solid var(--u-hair)' }}>
             {['Insumo', 'Unidad', 'Costo / unidad', 'Platillos', ''].map((h) => (
               <div key={h} style={{ color: 'var(--u-text-3)', fontWeight: 500, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</div>
@@ -222,9 +218,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                       </div>
                       <div>
                         <label style={labelStyle}>Unidad</label>
-                        <select style={inputStyle} value={editState.unit} onChange={(e) => setEditState({ ...editState, unit: e.target.value })}>
-                          {UNITS.map((u) => <option key={u} style={optionStyle}>{u}</option>)}
-                        </select>
+                        <Select options={UNIT_OPTIONS} value={editState.unit} onValueChange={(v) => setEditState({ ...editState, unit: v })} />
                       </div>
                       <div>
                         <label style={labelStyle}>Costo / unidad</label>
@@ -232,12 +226,12 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="submit" disabled={isPending} className="press btn-accent" style={{ padding: '10px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+                      <Button type="submit" disabled={isPending} className="rounded-adm-full">
                         {isPending ? '…' : 'Guardar'}
-                      </button>
-                      <button type="button" onClick={() => setEditState(null)} style={{ padding: '10px 14px', borderRadius: 'var(--radius-full)', fontSize: 13, background: 'none', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}>
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setEditState(null)} className="rounded-adm-full">
                         Cancelar
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 </div>
@@ -259,32 +253,34 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                 <div className="ing-col-desk" style={{ fontFamily: 'monospace' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</div>
                 <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{usageChip ?? '—'}</div>
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignSelf: 'start' }}>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-9.5"
                     onClick={() => setEditState({ id: ing.id, name: ing.name, unit: ing.unit, cost_per_unit: String(ing.cost_per_unit) })}
-                    className="press"
-                    style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)' }}
                     title="Editar"
                     aria-label={`Editar ${ing.name}`}
                   >
                     <Icon name="edit" size={15} />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-9.5 border-[rgba(220,50,50,0.2)] text-[#f87171]"
                     onClick={() => handleDelete(ing)}
                     disabled={isPending}
-                    className="press"
-                    style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', border: '1px solid rgba(220,50,50,0.2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#f87171' }}
                     title="Eliminar"
                     aria-label={`Eliminar ${ing.name}`}
                   >
                     <Icon name="trash" size={15} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
           })}
-        </Glass>
+        </Card>
       )}
     </div>
   );

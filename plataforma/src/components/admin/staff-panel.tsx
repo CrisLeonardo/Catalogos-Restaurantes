@@ -8,6 +8,9 @@
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ADMIN_SECTIONS } from '@/lib/permissions';
 import {
   createStaff, updateStaffPermissions, resetStaffPassword, removeStaff,
@@ -50,7 +53,7 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
   function MemberCard({ m }: { m: StaffMember }) {
     const isMesero = m.permissions?.includes('mesero') ?? false;
     return (
-      <div key={m.id} className="glass" style={{ borderRadius: 14, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <Card key={m.id} className="p-3.5 flex items-center gap-3">
         <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'rgba(251,191,36,0.12)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? '#fbbf24' : 'var(--u-text)', flexShrink: 0 }}>
           <Icon name={isMesero ? 'userPlus' : 'user'} size={18} />
         </div>
@@ -65,10 +68,10 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
             {describePerms(m)}
           </div>
         </div>
-        <button onClick={() => setEditor({ open: true, member: m })} className="press glass-quiet" style={{ padding: '7px 12px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-2)' }}>
+        <Button type="button" onClick={() => setEditor({ open: true, member: m })} variant="secondary" size="sm">
           Editar
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
@@ -78,19 +81,19 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="t-kicker" style={{ fontSize: 9.5 }}>Personal</div>
-          <button onClick={() => setEditor({ open: true, member: null })} className="press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, cursor: 'pointer', background: 'var(--u-text)', color: 'var(--brand-bg)', border: 'none', fontWeight: 600, fontSize: 12.5 }}>
+          <Button type="button" onClick={() => setEditor({ open: true, member: null })} size="sm">
             <Icon name="plus" size={14} /> Nuevo
-          </button>
+          </Button>
         </div>
         {staff.length === 0 ? (
-          <div className="glass" style={{ borderRadius: 14, padding: 18, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 13.5 }}>
+          <Card className="p-4.5 text-center" style={{ color: 'var(--u-text-3)', fontSize: 13.5 }}>
             Sin personal. Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca <strong>Mesero</strong> para que pueda tomar pedidos en mesa desde <strong>/admin/mesero</strong>.
-          </div>
+          </Card>
         ) : staff.map((m) => <MemberCard key={m.id} m={m} />)}
       </div>
 
       {/* Bitácora */}
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Card className="p-4.5 flex flex-col gap-2.5">
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Actividad reciente</div>
         {activity.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin actividad registrada todavía.</div>
@@ -100,7 +103,7 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
             <span style={{ fontSize: 11, color: 'var(--u-text-4)', flexShrink: 0 }}>{timeAgo(r.created_at)}</span>
           </div>
         ))}
-      </div>
+      </Card>
 
       {editor.open && (
         <StaffModal
@@ -142,12 +145,12 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
   const isMesero = perms.includes('mesero');
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'grid', placeItems: 'center', background: 'rgba(7,7,8,0.65)', backdropFilter: 'blur(8px)' }}>
-      <div className="glass-solid anim-pop" onClick={(e) => e.stopPropagation()} style={{ width: 480, maxWidth: '94vw', maxHeight: '90vh', borderRadius: 20, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid var(--u-hair)' }}>
-          <div className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || member!.email)}</div>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }}><Icon name="x" size={18} /></button>
-        </div>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent showClose={false} className="flex w-[480px] max-w-[94vw] max-h-[90vh] flex-col p-0">
+        <DialogHeader className="flex-row items-center justify-between px-5.5 py-4.5 border-b border-[var(--u-hair)] space-y-0">
+          <DialogTitle className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || member!.email)}</DialogTitle>
+          <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar"><Icon name="x" size={18} /></Button>
+        </DialogHeader>
 
         <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
           <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -208,9 +211,9 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
 
             {state && 'error' in state && <div style={{ fontSize: 13, color: '#f87171' }}>{state.error}</div>}
 
-            <button type="submit" disabled={isPending} className="press btn-accent" style={{ width: '100%', padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+            <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
               {isPending ? 'Guardando…' : isNew ? 'Crear miembro' : 'Guardar cambios'}
-            </button>
+            </Button>
           </form>
 
           {!isNew && (
@@ -223,22 +226,22 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
                     <label style={label}>Nueva contraseña</label>
                     <input name="password" type="text" minLength={8} placeholder="mínimo 8 caracteres" style={input} />
                   </div>
-                  <button type="submit" className="press glass-quiet" style={{ padding: '10px 14px', borderRadius: 11, border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>Cambiar</button>
+                  <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                 </form>
                 {resetAction[0] && 'error' in resetAction[0] && <div style={{ fontSize: 12.5, color: '#f87171' }}>{resetAction[0].error}</div>}
 
                 <form action={removeStaff} onSubmit={(e) => { if (!confirm('¿Quitar a este miembro? Perderá el acceso.')) e.preventDefault(); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="userId" value={member!.id} />
-                  <button type="submit" className="press" style={{ width: '100%', padding: '11px', borderRadius: 11, border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                  <Button type="submit" variant="destructive" className="w-full">
                     Quitar del equipo
-                  </button>
+                  </Button>
                 </form>
               </div>
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
