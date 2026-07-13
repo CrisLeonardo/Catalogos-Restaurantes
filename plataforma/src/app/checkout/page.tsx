@@ -7,7 +7,6 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isOpenNow } from '@/lib/hours';
 import { hasActiveCodePromos } from '@/lib/db/promos';
 import { isModuleActive } from '@/lib/modules';
-import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
@@ -41,7 +40,6 @@ export default async function CheckoutPage() {
   const { hubUrl, hubToken } = await getAgentHubInfo(restaurant.id);
   const mod = restaurant.modules as Record<string, boolean> | null;
   const modSettings = restaurant.module_settings ?? null;
-  const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
   const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
 
   if (paused || !open) {
@@ -67,9 +65,7 @@ export default async function CheckoutPage() {
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
           hasPromos={hasPromos}
-          loyaltyActive={loyaltyActive}
           encuestasActive={encuestasActive}
-          googleAuthEnabled={isGoogleAuthEnabled()}
           hubUrl={hubUrl}
           hubToken={hubToken}
         />

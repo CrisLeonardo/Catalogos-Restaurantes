@@ -4,6 +4,8 @@ import { useActionState, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import TemplateGallery from '@/components/admin/template-gallery';
+import { findTemplate } from '@/lib/theme/templates';
 import { signupRestaurant, type SignupState } from '@/lib/actions/signup';
 
 const empty: SignupState = null;
@@ -107,6 +109,8 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
   const [selectedPlan, setSelectedPlan] = useState<PlanOption>('PREMIUM');
   // Paquete de Estándar: 'local' = Para llevar + Comer en local · 'delivery' = Solo delivery.
   const [estandarBundle, setEstandarBundle] = useState<'local' | 'delivery'>('local');
+  // Estilo visual de inicio (plantilla); siempre se puede cambiar en Personalizar.
+  const [templateId, setTemplateId] = useState('carbon-autor');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
@@ -130,20 +134,22 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       if (name.trim().length < 2) return setStepError('Escribe el nombre de tu restaurante.');
       if (effectiveSlug.length < 3) return setStepError('La dirección debe tener al menos 3 caracteres.');
     }
-    if (step === 2) {
+    if (step === 3) {
       if (fullName.trim().length < 2) return setStepError('Escribe tu nombre.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStepError('Escribe un correo válido.');
       if (password.length < 8) return setStepError('La contraseña debe tener al menos 8 caracteres.');
     }
-    setStep((s) => Math.min(3, s + 1));
+    setStep((s) => Math.min(LAST_STEP, s + 1));
   }
 
-  const STEPS = ['Tu plan', 'Tu restaurante', 'Tu cuenta', 'Confirmar'];
+  const STEPS = ['Tu plan', 'Tu restaurante', 'Tu estilo', 'Tu cuenta', 'Confirmar'];
+  const LAST_STEP = STEPS.length - 1;
 
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <input type="hidden" name="plan_code" value={selectedPlan} />
       <input type="hidden" name="estandar_bundle" value={estandarBundle} />
+      <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="slug" value={effectiveSlug} />
       <input type="hidden" name="full_name" value={fullName} />
@@ -321,8 +327,17 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
         </Glass>
       </div>
 
-      {/* ── Paso 2: Tu cuenta ── */}
-      <div style={{ display: step === 2 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+      {/* ── Paso 2: Tu estilo (plantilla visual de inicio) ── */}
+      <div style={{ display: step === 2 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
+        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+          Elige el estilo con el que nace tu menú. Es solo el punto de partida:
+          después podrás cambiar colores, tipografías y cada detalle en «Personalizar».
+        </p>
+        <TemplateGallery mode="pick" appliedId={templateId} onApply={(tpl) => setTemplateId(tpl.id)} />
+      </div>
+
+      {/* ── Paso 3: Tu cuenta ── */}
+      <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Field label="Tu nombre">
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" style={inputStyle} />
         </Field>
@@ -337,12 +352,13 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
         </Field>
       </div>
 
-      {/* ── Paso 3: Confirmar ── */}
-      <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+      {/* ── Paso 4: Confirmar ── */}
+      <div style={{ display: step === 4 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q749/mes' : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · Q399/mes (30 días gratis)` : 'Básico · Q149/mes (30 días gratis)'} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
+          <Summary label="Estilo" value={findTemplate(templateId)?.name ?? 'Clásico'} />
           <Summary label="Tu cuenta" value={email || '—'} />
         </Glass>
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
@@ -391,7 +407,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
             Atrás
           </button>
         )}
-        {step < 3 ? (
+        {step < LAST_STEP ? (
           <button
             type="button"
             onClick={next}

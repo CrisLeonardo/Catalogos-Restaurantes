@@ -45,6 +45,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/admin") ||  // ya tiene el prefijo
+      pathname.startsWith("/preview") || // iframe de vista previa del editor (misma origin)
       pathname === "/favicon.ico" ||
       pathname === "/sw.js" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);

@@ -6,8 +6,8 @@
 
    Body: { orders: unknown[] } — cada uno con la misma forma que
    createOrderSchema (lo que checkout-form.tsx ya arma para createOrder;
-   el hub reusa ese mismo payload). rewardLines/promoCode/redeemPoints
-   se ignoran aquí: el hub no soporta promos ni lealtad sin conexión.
+   el hub reusa ese mismo payload). rewardLines/promoCode se ignoran
+   aquí: el hub no soporta promos ni lealtad sin conexión.
 
    Cada pedido se re-valida contra la BD REAL (nunca se confía en el
    snapshot del hub, que puede estar desactualizado) y se crea vía
@@ -26,7 +26,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { authenticateAgent, type AgentIdentity } from '@/lib/print-agent';
 import { createOrderSchema } from '@/lib/schemas';
 import { resolveItemOptions } from '@/lib/order-options';
-import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import { sendPushToRestaurant } from '@/lib/push';
 import type { ProductOptionGroup, OrderItemOption } from '@/types';
 
@@ -132,9 +132,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
 
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const fee = customer.type === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
-  const tipEnabled = customer.type === 'DINE_IN' && themeConfig.tipEnabled === true;
-  const tipPercent = tipEnabled ? Math.max(0, Number(themeConfig.tipPercent) || 0) : 0;
-  const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
+  const tip = computeTip(themeConfig, customer.type, tipAccepted, subtotal);
   const total = Math.max(0, subtotal + fee + tip);
 
   const address =

@@ -8,14 +8,14 @@ import { headers } from 'next/headers';
 import { createOrderSchema } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
-import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import { isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
-import { getRedeemContextByCustomer, getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
+import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
 import type {
   OrderItemOption,
@@ -313,37 +313,12 @@ export async function createOrder(
   const applied = await resolvePromo(restaurantId, parsed.data.promoCode, subtotal, fee);
   const discount = applied ? applied.discount : 0;
 
-  // Propina: solo para DINE_IN cuando el restaurante la habilita. Se calcula
-  // server-side sobre el subtotal (antes de descuento); el cliente solo indica
-  // si la acepta (boolean), nunca el monto.
-  const tipEnabled = customer.type === 'DINE_IN' && themeConfig.tipEnabled === true;
-  const tipPercent = tipEnabled ? Math.max(0, Number(themeConfig.tipPercent) || 0) : 0;
-  const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
+  // Propina: solo para los tipos de pedido que el restaurante habilitó
+  // (tipOrderTypes). Se calcula server-side sobre el subtotal (antes de
+  // descuento); el cliente solo indica si la acepta (boolean), nunca el monto.
+  const tip = computeTip(themeConfig, customer.type, tipAccepted, subtotal);
 
-  // Canje de puntos de lealtad. Autoritativo en el servidor: el saldo y el valor
-  // del punto se leen de la BD contra la cuenta de Google del comensal (nunca
-  // el teléfono del formulario); el cliente solo pide cuántos puntos canjear.
-  // Sin sesión enlazada, requestedPoints simplemente se ignora (no rompe el pedido).
-  let loyaltyPoints = 0;
-  let loyaltyDiscount = 0;
-  const requestedPoints = parsed.data.redeemPoints ?? 0;
-  if (requestedPoints > 0 && loyaltyCustomerId) {
-    const ctx = await getRedeemContextByCustomer(restaurantId, loyaltyCustomerId);
-    // Saldo disponible para descuento = saldo − lo ya comprometido en recompensas.
-    const availableBalance = Math.max(0, ctx.balance - rewardPointsTotal);
-    if (ctx.active && ctx.redeemValue > 0 && availableBalance >= ctx.minRedeem) {
-      // Tope: ni más puntos que el saldo, ni más descuento que el total restante.
-      const remaining = Math.max(0, subtotal + fee - discount + tip);
-      const maxByTotal = Math.floor(remaining / ctx.redeemValue);
-      const points = Math.min(requestedPoints, availableBalance, maxByTotal);
-      if (points >= ctx.minRedeem) {
-        loyaltyPoints = points;
-        loyaltyDiscount = Math.round(points * ctx.redeemValue * 100) / 100;
-      }
-    }
-  }
-
-  const total = Math.max(0, subtotal + fee - discount + tip - loyaltyDiscount);
+  const total = Math.max(0, subtotal + fee - discount + tip);
 
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
@@ -427,30 +402,6 @@ export async function createOrder(
       promo_code: applied.promo.code ?? null,
     }).eq('id', order.id);
     await db.rpc('increment_promo_usage', { p_id: applied.promo.id });
-  }
-
-  // Canje de puntos: registra en el pedido y descuenta del saldo del cliente
-  // de lealtad (cuenta de Google — puede ser distinto del customerId del
-  // pedido si el comensal pidió con un teléfono de contacto diferente al de
-  // su cuenta enlazada). El RPC re-valida el saldo (no deja negativo);
-  // best-effort para no romper el pedido ya creado si hubiera una carrera.
-  if (loyaltyPoints > 0 && loyaltyDiscount > 0 && loyaltyCustomerId) {
-    await db.from('orders').update({
-      loyalty_points_redeemed: loyaltyPoints,
-      loyalty_discount: loyaltyDiscount,
-    }).eq('id', order.id);
-    try {
-      await db.rpc('leogin_loyalty_apply', {
-        p_restaurant_id: restaurantId,
-        p_customer_id:   loyaltyCustomerId,
-        p_order_id:      order.id,
-        p_tipo:          'REDEEM',
-        p_points:        -loyaltyPoints,
-        p_note:          'Canje en pedido',
-      });
-    } catch {
-      /* best-effort: la lealtad no debe romper el pedido */
-    }
   }
 
   // Canje de recompensas (productos): descuenta los puntos de cada una de forma
@@ -605,7 +556,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     });
   }
 
-  // Propina (si aplica para DINE_IN).
+  // Propina (si el restaurante la habilita para este tipo de pedido).
   const { data: themeRow } = await db
     .from('restaurant_themes')
     .select('*')
@@ -614,9 +565,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const tipEnabled = customer.type === 'DINE_IN' && themeConfig.tipEnabled === true;
-  const tipPercent = tipEnabled ? Math.max(0, Number(themeConfig.tipPercent) || 0) : 0;
-  const tip = tipEnabled && tipAccepted ? Math.round(subtotal * tipPercent) / 100 : 0;
+  const tip = computeTip(themeConfig, customer.type, tipAccepted, subtotal);
   const total = Math.max(0, subtotal + tip);
 
   const address = customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null;

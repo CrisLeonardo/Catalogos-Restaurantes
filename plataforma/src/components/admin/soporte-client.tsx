@@ -139,7 +139,9 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
             <Button
               render={<a href={waLink} target="_blank" rel="noopener noreferrer" />}
               size="lg"
-              className="justify-start"
+              /* h-auto + whitespace-normal: el número se apila bajo la etiqueta
+                 en vez de forzar una sola línea que desborda en móviles. */
+              className="justify-start h-auto py-3 whitespace-normal"
               style={{
                 background: 'rgba(34,197,94,0.12)',
                 border: '1px solid rgba(34,197,94,0.30)',
@@ -147,12 +149,14 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
               }}
             >
               <Icon name="whatsapp" size={18} />
-              Escribir por WhatsApp
-              {contact.support_whatsapp && (
-                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 400, color: 'rgba(74,222,128,0.7)' }}>
-                  {contact.support_whatsapp}
-                </span>
-              )}
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, textAlign: 'left' }}>
+                <span>Escribir por WhatsApp</span>
+                {contact.support_whatsapp && (
+                  <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(74,222,128,0.7)', wordBreak: 'break-all' }}>
+                    {contact.support_whatsapp}
+                  </span>
+                )}
+              </span>
             </Button>
           ) : (
             <div
@@ -174,7 +178,7 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
             <Button
               render={<a href={mailLink} />}
               size="lg"
-              className="justify-start"
+              className="justify-start h-auto py-3 whitespace-normal"
               style={{
                 background: 'rgba(59,130,246,0.12)',
                 border: '1px solid rgba(59,130,246,0.30)',
@@ -182,12 +186,14 @@ export default function SoporteClient({ contact }: { contact: PlatformContactSet
               }}
             >
               <Icon name="mail" size={18} />
-              Enviar correo electrónico
-              {contact.support_email && (
-                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 400, color: 'rgba(96,165,250,0.7)' }}>
-                  {contact.support_email}
-                </span>
-              )}
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, textAlign: 'left' }}>
+                <span>Enviar correo electrónico</span>
+                {contact.support_email && (
+                  <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(96,165,250,0.7)', wordBreak: 'break-all' }}>
+                    {contact.support_email}
+                  </span>
+                )}
+              </span>
             </Button>
           ) : (
             <div

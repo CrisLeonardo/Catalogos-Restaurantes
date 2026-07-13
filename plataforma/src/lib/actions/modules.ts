@@ -16,13 +16,20 @@ export type ModuleActionResult = { error?: string; ok?: boolean };
 const VALID_KEYS = ACTIVATABLE_MODULES.map((m) => m.key) as string[];
 
 /**
- * El restaurante (dueño) prende/apaga un módulo self-service. No hay gating de
- * plan: son herramientas que el dueño activa a voluntad.
+ * El restaurante (dueño) prende/apaga un módulo self-service, una vez que
+ * Leogin lo habilitó (modules[key] === true — ver header de modules.ts).
+ * No hay gating de plan más allá de esa entitlement: son herramientas que el
+ * dueño activa o desactiva a voluntad dentro de lo que su plan ya incluye.
  *
  * Excepciones:
  *  · Módulos requiresSetup (FEL) los activa Leogin, no el restaurante.
- *  · Módulos gestionados por Leogin (modules[key] === true) están forzados ON
- *    y no se pueden apagar desde aquí.
+ *  · Módulos que Leogin NO habilitó (modules[key] !== true) no existen para
+ *    este restaurante — nada que prender/apagar (el panel ni los muestra).
+ *
+ * Bug corregido (2026-07-13): este guard antes bloqueaba exactamente el caso
+ * contrario — cualquier módulo SÍ habilitado por Leogin quedaba forzado ON
+ * para el dueño ("Leogin gestiona este módulo por ti"), dejando el toggle de
+ * la UI (SelfServiceCard) sin efecto real para todo módulo entitled.
  */
 export async function setModuleEnabled(
   restaurantId: string,
@@ -64,9 +71,10 @@ export async function setModuleEnabled(
     .single();
   if (!rest) return { error: 'Restaurante no encontrado.' };
 
-  // Si Leogin lo gestiona, está forzado ON y no se apaga desde el panel.
-  if (isManaged(rest.modules as Record<string, boolean> | null, key) && !isSuper) {
-    return { error: 'Leogin gestiona este módulo por ti. Contáctanos para cambiarlo.' };
+  // Leogin debe haber habilitado el módulo (modules[key]) para que exista algo
+  // que prender/apagar; si no, ni siquiera debería mostrarse en el panel.
+  if (!isManaged(rest.modules as Record<string, boolean> | null, key) && !isSuper) {
+    return { error: 'Este módulo no está disponible en tu plan. Contáctanos para activarlo.' };
   }
 
   const current = (rest.module_settings as ModuleSettings | null) ?? {};

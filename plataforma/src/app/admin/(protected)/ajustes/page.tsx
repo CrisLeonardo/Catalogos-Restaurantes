@@ -91,6 +91,7 @@ export default async function AdminAjustesPage() {
             dineInCourseOptions: resolved.config.dineInCourseOptions,
             tipEnabled: resolved.config.tipEnabled,
             tipPercent: resolved.config.tipPercent,
+            tipOrderTypes: resolved.config.tipOrderTypes,
             acceptsCard: resolved.config.acceptsCard,
             currencySymbol: resolved.config.currencySymbol,
             currencyPosition: resolved.config.currencyPosition,

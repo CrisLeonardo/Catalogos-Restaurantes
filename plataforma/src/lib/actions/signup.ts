@@ -22,6 +22,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getPricingSettings } from '@/lib/db/billing';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
+import { findTemplate } from '@/lib/theme/templates';
 
 export type SignupState = { error: string } | null;
 
@@ -96,6 +97,8 @@ export async function signupRestaurant(
   // 'local' = Para llevar + Comer en local. Solo aplica al plan Estándar.
   const rawBundle = formData.get('estandar_bundle') as string | null;
   const estandarBundle: 'delivery' | 'local' = rawBundle === 'delivery' ? 'delivery' : 'local';
+  // Plantilla visual elegida en el wizard; un id desconocido cae al look por defecto.
+  const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
 
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
@@ -180,10 +183,12 @@ export async function signupRestaurant(
       : planCode === 'ESTANDAR'
         ? (estandarBundle === 'delivery' ? ['delivery'] : ['pickup', 'dine_in'])
         : ['dine_in', 'delivery', 'pickup'];
+  // La plantilla solo trae claves visuales (nunca operación): orderTypes
+  // va después para que el canal del plan siempre gane.
   await db.from('restaurant_themes').insert({
     restaurant_id: restaurantId,
     brand_name: name,
-    config: { orderTypes },
+    config: { ...(template ? structuredClone(template.config) : {}), orderTypes },
   });
 
   // ── 4. Cobro pausado con prueba gratis ──────────────────────

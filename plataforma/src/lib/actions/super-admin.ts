@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { logChannelChanges } from '@/lib/db/channel-history';
 import { slugify, validateSlug, crossSlugCollision } from '@/lib/slug';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 
@@ -237,6 +238,15 @@ export async function saveRestaurantTheme(input: {
     ? config.portadaVariant
     : 'spotlight';
 
+  // Snapshot de orderTypes ANTES de sobrescribir — para el historial de
+  // canales (mig. 073) que sostiene el descuento "Plan a tu medida".
+  const { data: existingRow } = await db
+    .from('restaurant_themes')
+    .select('config')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  const previousOrderTypes = (existingRow?.config as { orderTypes?: OrderType[] } | null)?.orderTypes ?? config.orderTypes;
+
   // upsert: crea la fila de tema si el restaurante aún no tiene una.
   const { error } = await db
     .from('restaurant_themes')
@@ -262,6 +272,13 @@ export async function saveRestaurantTheme(input: {
     );
 
   if (error) return { error: error.message };
+
+  // Bitácora legible (activity_log) — el registro que sostiene el cobro
+  // (restaurant_channel_log) lo escribe un trigger en restaurant_themes,
+  // no esta llamada (ver channel-history.ts). Sin actor: verifySuperAdmin
+  // ya validó la sesión pero no expone el user id, y no vale la pena un
+  // segundo round-trip de auth solo para esta entrada informativa.
+  await logChannelChanges(restaurantId, previousOrderTypes, config.orderTypes, null);
 
   revalidatePath(`/super/restaurantes/${restaurantId}`);
   revalidatePath('/super/restaurantes');
@@ -571,6 +588,7 @@ export async function updateOrderTypes(
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
 
+  const previousOrderTypes = (existing?.config as { orderTypes?: OrderType[] } | null)?.orderTypes ?? orderTypes;
   const mergedConfig = { ...(existing?.config ?? {}), orderTypes };
 
   const { error } = await db
@@ -578,6 +596,11 @@ export async function updateOrderTypes(
     .upsert({ restaurant_id: restaurantId, config: mergedConfig }, { onConflict: 'restaurant_id' });
 
   if (error) return { error: error.message };
+
+  // Bitácora legible (activity_log) — el registro que sostiene el cobro
+  // (restaurant_channel_log) lo escribe un trigger en restaurant_themes,
+  // no esta llamada (ver channel-history.ts).
+  await logChannelChanges(restaurantId, previousOrderTypes, orderTypes, null);
 
   revalidatePath(`/super/restaurantes/${restaurantId}`);
   return { ok: true };

@@ -104,11 +104,13 @@ export default function FloorMap({
     moved: false, lastDist: 0, lastMid: null, last: null, start: null, downN: null,
   });
 
-  /* Limita el paneo: el mundo virtual nunca se sale por completo de la vista. */
+  /* Limita el paneo: el mundo virtual nunca se sale por completo de la vista.
+     Si el mundo es más chico que el viewport en un eje (el mapa es más alto
+     que 16:10 en móvil para que quepan dos dedos al pellizcar), se centra. */
   function clampPanWith(s: number, x: number, y: number, vpW: number, vpH: number) {
-    const minX = vpW - VIRT_W * s;
-    const minY = vpH - VIRT_H * s;
-    return { x: clamp(x, minX, 0), y: clamp(y, minY, 0) };
+    const axis = (v: number, world: number, vp: number) =>
+      world <= vp ? (vp - world) / 2 : clamp(v, vp - world, 0);
+    return { x: axis(x, VIRT_W * s, vpW), y: axis(y, VIRT_H * s, vpH) };
   }
 
   function clampPan(s: number, x: number, y: number) {
@@ -188,7 +190,9 @@ export default function FloorMap({
 
   function onPointerDown(e: React.PointerEvent) {
     e.preventDefault(); // impide que el browser tome control y dispare pointercancel
-    vpRef.current?.setPointerCapture(e.pointerId);
+    // try/catch: si setPointerCapture lanza (pointer ya inactivo), el gesto
+    // debe seguir registrándose — sin esto un throw aquí mataba el pellizco.
+    try { vpRef.current?.setPointerCapture(e.pointerId); } catch { /* no-op */ }
     const p = rel(e);
     pointers.current.set(e.pointerId, p);
     const tokenAttr = (e.target as HTMLElement).closest('[data-table]')?.getAttribute('data-table');

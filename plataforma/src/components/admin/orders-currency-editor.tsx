@@ -9,11 +9,17 @@ import type { ThemeConfig } from '@/lib/theme/defaults';
 
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
-  'tipEnabled' | 'tipPercent' | 'acceptsCard' |
+  'tipEnabled' | 'tipPercent' | 'tipOrderTypes' | 'acceptsCard' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
   'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
   'autoConfirmEnabled' | 'autoConfirmMinutes'
 >;
+
+const ORDER_TYPE_LABEL: Record<ThemeConfig['orderTypes'][number], string> = {
+  dine_in: 'Comer en local',
+  pickup: 'Para llevar',
+  delivery: 'Domicilio',
+};
 
 interface Props {
   restaurantId: string;
@@ -156,15 +162,6 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         <>
           <NumberCtl label="Cantidad de mesas" value={patch.dineInTableCount} min={1} max={50} onChange={(v) => set('dineInTableCount', v)} />
           <StringListCtl label="Preferencias de servicio" items={patch.dineInCourseOptions} onChange={(v) => set('dineInCourseOptions', v)} />
-          <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />
-          {patch.tipEnabled && (
-            <>
-              <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
-                Se agrega automáticamente al total del comensal (no puede quitarla).
-              </p>
-            </>
-          )}
         </>
       )}
       <ReadOnly label="Domicilio" value={patch.orderTypes.includes('delivery')} />
@@ -173,6 +170,29 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         Domicilio y Para llevar solo se activan desde el panel Leogin.
       </p>
       <Toggle label="Aceptar pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
+
+      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Propina</div>
+      <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />
+      {patch.tipEnabled && (
+        <>
+          <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
+          <Field label="Aplica a">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {patch.orderTypes.map((t) => (
+                <Toggle
+                  key={t}
+                  label={ORDER_TYPE_LABEL[t]}
+                  value={patch.tipOrderTypes.includes(t)}
+                  onChange={(v) => set('tipOrderTypes', toggleIn(patch.tipOrderTypes, t, v))}
+                />
+              ))}
+            </div>
+          </Field>
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+            Se agrega automáticamente al total en los tipos de pedido marcados (el comensal no puede quitarla).
+          </p>
+        </>
+      )}
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Confirmación automática</div>
       <Toggle label="Confirmar pedidos automáticamente" value={patch.autoConfirmEnabled} onChange={(v) => set('autoConfirmEnabled', v)} />

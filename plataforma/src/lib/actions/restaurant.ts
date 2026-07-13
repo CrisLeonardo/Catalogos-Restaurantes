@@ -3,10 +3,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
+import { logChannelChanges } from '@/lib/db/channel-history';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours } from '@/lib/hours';
-import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
+import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 
 export type RestaurantState = { error: string } | null;
 
@@ -308,7 +309,7 @@ export async function saveOrdersAndCurrency(input: {
     'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
     'tipEnabled' | 'tipPercent' | 'acceptsCard' |
     'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
-  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' | 'autoConfirmEnabled' | 'autoConfirmMinutes'>>;
+  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' | 'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes'>>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -338,6 +339,7 @@ export async function saveOrdersAndCurrency(input: {
     .maybeSingle();
 
   const existingConfig = (row?.config as Record<string, unknown>) ?? {};
+  const previousOrderTypes = (existingConfig.orderTypes as OrderType[] | undefined) ?? input.patch.orderTypes;
   const newConfig = { ...existingConfig, ...input.patch };
 
   const { error } = await db
@@ -345,6 +347,11 @@ export async function saveOrdersAndCurrency(input: {
     .upsert({ restaurant_id: input.restaurantId, config: newConfig }, { onConflict: 'restaurant_id' });
 
   if (error) return { error: error.message };
+
+  // Bitácora legible (activity_log) — el registro que sostiene el cobro
+  // (restaurant_channel_log) lo escribe un trigger en restaurant_themes,
+  // no esta llamada (ver channel-history.ts).
+  await logChannelChanges(input.restaurantId, previousOrderTypes, input.patch.orderTypes, user.id);
 
   revalidatePath('/admin/perfil');
   revalidatePath('/admin/personalizacion');
@@ -403,10 +410,16 @@ export async function updateOwnOrderTypes(
     .maybeSingle();
 
   const existing = (row?.config as Record<string, unknown>) ?? {};
+  const previousOrderTypes = (existing.orderTypes as OrderType[] | undefined) ?? orderTypes;
   const { error } = await db
     .from('restaurant_themes')
     .upsert({ restaurant_id: restaurantId, config: { ...existing, orderTypes } }, { onConflict: 'restaurant_id' });
   if (error) return { error: error.message };
+
+  // Bitácora legible (activity_log) — el registro que sostiene el cobro
+  // (restaurant_channel_log) lo escribe un trigger en restaurant_themes,
+  // no esta llamada (ver channel-history.ts).
+  await logChannelChanges(restaurantId, previousOrderTypes, orderTypes, user.id);
 
   // "Plan a tu medida": al cambiar canales, recalcula la mensualidad de los
   // restaurantes en modo automático (la función solo toca filas auto_price=true).

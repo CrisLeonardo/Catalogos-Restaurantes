@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import WaiterPanel from '@/components/admin/waiter-panel';
+import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
@@ -71,7 +72,7 @@ export default async function MeseroPage() {
       occupiedSince={occupiedSince}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
-      tipEnabled={resolvedConfig?.tipEnabled ?? false}
+      tipEnabled={resolvedConfig ? tipAppliesToType(resolvedConfig, 'DINE_IN') : false}
       tipPercent={resolvedConfig?.tipPercent ?? 10}
       currency={{
         symbol: resolvedConfig?.currencySymbol ?? 'Q',

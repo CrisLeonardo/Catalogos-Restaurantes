@@ -445,6 +445,12 @@ function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
 
 function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
   const saving = b.discount > 0 || b.branchDiscountPct > 0;
+  // Un canal recién apagado no baja el cobro de inmediato (mig. 073): debe
+  // seguir apagado la mayor parte del ciclo actual antes de que el
+  // descuento entre en el próximo cobro. Estos dos avisos cubren las dos
+  // direcciones de ese desfase (vivo vs. facturado).
+  const pendingDiscount = b.discountApplies && b.channelsActiveLive < b.channelsActiveBilled;
+  const pendingLoss      = b.discountApplies && b.channelsActiveLive > b.channelsActiveBilled;
   return (
     <Card className="p-5" style={{ border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -455,6 +461,25 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
         Tu mensualidad refleja exactamente lo que usas: canal de servicio que no usas, sucursales
         del grupo, y módulos que has añadido aparte del plan.
       </div>
+      {pendingDiscount && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
+          <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
+            Tienes un canal apagado ahora, pero el descuento entra hasta tu <strong>próximo cobro</strong> —
+            debe permanecer apagado al menos el 75% de los días de este ciclo. Este desglose ya
+            refleja lo que se te cobrará, no el estado de tu menú en este instante.
+          </p>
+        </div>
+      )}
+      {pendingLoss && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
+          <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
+            Este cobro todavía incluye el descuento de un canal que ya reactivaste. Si lo dejas
+            encendido, tu <strong>siguiente</strong> cobro (el que viene después de este) ya no lo traerá.
+          </p>
+        </div>
+      )}
 
       {/* Desglose */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -8,10 +8,10 @@ import { Icon } from '@/components/icons';
 import { Price, Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
-import { formatPrice, shadowCss } from '@/lib/theme/resolve';
+import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
 import { validatePromo } from '@/lib/actions/promos';
-import { getLoyaltyRedeemInfo, getMyCheckoutProfile } from '@/lib/actions/loyalty';
+import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order-queue';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
@@ -19,7 +19,6 @@ import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
-import GoogleSignInButton from '@/components/menu/google-signin';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -56,9 +55,7 @@ interface Props {
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
   hasPromos?: boolean;
-  loyaltyActive?: boolean;
   encuestasActive?: boolean;
-  googleAuthEnabled?: boolean;
   /** URL LAN del hub local del restaurante (Fase 2 offline), si tiene uno
       vinculado. Se intenta ANTES de encolar el pedido en el dispositivo. */
   hubUrl?: string | null;
@@ -77,7 +74,6 @@ interface PendingSnapshot {
   tipSnapshot: number;
   totalSnapshot: number;
   discountSnapshot: number;
-  loyaltySnapshot: number;
   paymentSnapshot: 'CASH' | 'CARD';
   cashAmountSnapshot: number;
   orderTypeSnapshot: OrderType;
@@ -96,9 +92,7 @@ export default function CheckoutForm({
   restaurantLng,
   deliveryRadiusKm,
   hasPromos = false,
-  loyaltyActive = false,
   encuestasActive = false,
-  googleAuthEnabled = false,
   hubUrl = null,
   hubToken = null,
 }: Props) {
@@ -164,7 +158,6 @@ export default function CheckoutForm({
   const [snapshotCashAmount, setSnapshotCashAmount] = useState(0);
   const [snapshotOrderType, setSnapshotOrderType] = useState<OrderType>('DINE_IN');
   const [snapshotTip, setSnapshotTip] = useState(0);
-  const [snapshotLoyalty, setSnapshotLoyalty] = useState(0);
 
   // Cola offline (Fase 1): clientId estable + el payload/snapshot
   // congelados del intento actual, para reintentar sin duplicar el pedido
@@ -201,8 +194,9 @@ export default function CheckoutForm({
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
   const [cashAmount, setCashAmount] = useState('');
 
-  // Propina obligatoria (solo "comer en local"). El admin decide si se cobra y
-  // el porcentaje; el comensal no puede quitarla. Monto calculado en el servidor.
+  // Propina obligatoria — el admin decide en qué tipos de pedido se cobra
+  // (tipOrderTypes) y el porcentaje; el comensal no puede quitarla. Monto
+  // calculado en el servidor.
 
   // DINE_IN: mesa y preferencia de servicio
   const [tableNumber, setTableNumber]         = useState<number | null>(null);
@@ -221,13 +215,6 @@ export default function CheckoutForm({
   const [appliedPromo, setAppliedPromo] = useState<{ discount: number; name: string; code: string } | null>(null);
   const [promoMsg, setPromoMsg] = useState('');
   const [promoChecking, setPromoChecking] = useState(false);
-
-  // Lealtad / canje de puntos — requiere sesión de Google (nunca por teléfono).
-  const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; loggedIn: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
-  const [redeemOn, setRedeemOn] = useState(false);
-  // Evita mostrar "Inicia sesión" un instante a un comensal que sí tiene
-  // sesión, mientras getLoyaltyRedeemInfo todavía está resolviendo.
-  const [redeemInfoLoaded, setRedeemInfoLoaded] = useState(false);
 
   useEffect(() => {
     // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
@@ -300,28 +287,6 @@ export default function CheckoutForm({
     setCashAmount('');
   }, [type, paymentMethod]);
 
-  // Lealtad: consulta el saldo de puntos del comensal (si el módulo está
-  // activo) SIEMPRE server-side — getLoyaltyRedeemInfo resuelve la sesión por
-  // cookies, nunca por el teléfono escrito en el formulario. No se gatea
-  // detrás de un `supabase.auth.getUser()` hecho en el navegador: ese fetch
-  // cliente-servidor puede fallar (red, bloqueadores) sin que la sesión sea
-  // inválida, y antes eso dejaba el widget de puntos oculto para alguien con
-  // sesión real.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      // Kiosko: sin lealtad — cualquier sesión en el aparato compartido sería
-      // de otra persona (o del dueño), y sus puntos no deben poder gastarse.
-      if (!loyaltyActive || isKioskMode()) {
-        if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); setRedeemInfoLoaded(true); }
-        return;
-      }
-      const info = await getLoyaltyRedeemInfo(restaurantId).catch(() => null);
-      if (!cancelled) { setRedeemInfo(info); setRedeemInfoLoaded(true); }
-    })();
-    return () => { cancelled = true; };
-  }, [loyaltyActive, restaurantId]);
-
   const errs = {
     name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
     phone: type === 'DINE_IN'
@@ -341,22 +306,12 @@ export default function CheckoutForm({
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
   const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
 
-  // Propina obligatoria — solo en "comer en local" y si el restaurante la habilita.
-  const tipAvailable = type === 'DINE_IN' && config.tipEnabled === true && (Number(config.tipPercent) || 0) > 0;
+  // Propina obligatoria — según los tipos de pedido que el restaurante habilitó (tipOrderTypes).
+  const tipAvailable = tipAppliesToType(config, type);
   const showTip      = tipAvailable;
   const tipAmount    = showTip ? Math.round(total * (Number(config.tipPercent) || 0)) / 100 : 0;
 
-  // Lealtad: máximo de puntos canjeables = min(saldo, lo que cabe en el total).
-  const redeemValue     = redeemInfo?.redeemValue ?? 0;
-  const baseForLoyalty  = Math.max(0, total + deliveryFee - discount);
-  const maxRedeemPoints = redeemInfo?.active && redeemValue > 0
-    ? Math.min(redeemInfo.balance, Math.floor(baseForLoyalty / redeemValue))
-    : 0;
-  const canRedeem       = !!redeemInfo?.active && maxRedeemPoints > 0 && maxRedeemPoints >= (redeemInfo?.minRedeem ?? 0);
-  const redeemPoints    = redeemOn && canRedeem ? maxRedeemPoints : 0;
-  const loyaltyDiscount = Math.round(redeemPoints * redeemValue * 100) / 100;
-
-  const finalTotal   = Math.max(0, total + deliveryFee - discount - loyaltyDiscount + tipAmount);
+  const finalTotal   = Math.max(0, total + deliveryFee - discount + tipAmount);
 
   // cashAmount: validación después de finalTotal porque depende del total final
   const cashAmountNum = parseFloat(cashAmount.replace(',', '.')) || 0;
@@ -432,7 +387,6 @@ export default function CheckoutForm({
     setSnapshot(snap.itemsSnapshot);
     setSnapshotFee(snap.feeSnapshot);
     setSnapshotDiscount(snap.discountSnapshot);
-    setSnapshotLoyalty(snap.loyaltySnapshot);
     setSnapshotTip(snap.tipSnapshot);
     setSnapshotTotal(snap.totalSnapshot);
     setSnapshotPayment(snap.paymentSnapshot);
@@ -461,7 +415,6 @@ export default function CheckoutForm({
       tip: snap.tipSnapshot,
       total: snap.totalSnapshot,
       discount: snap.discountSnapshot,
-      loyalty: snap.loyaltySnapshot,
       payment: snap.paymentSnapshot,
       cashAmt: snap.cashAmountSnapshot,
       orderType: snap.orderTypeSnapshot,
@@ -618,14 +571,12 @@ export default function CheckoutForm({
       paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
       ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
       tipAccepted: showTip,
-      ...(redeemPoints > 0 ? { redeemPoints } : {}),
       clientId: clientIdRef.current,
     };
     pendingPayloadRef.current = payload;
     pendingSnapshotRef.current = {
       itemsSnapshot, feeSnapshot, tipSnapshot, totalSnapshot,
       discountSnapshot: discount,
-      loyaltySnapshot: loyaltyDiscount,
       paymentSnapshot: type === 'DINE_IN' ? 'CASH' : paymentMethod,
       cashAmountSnapshot: needsCashAmount ? cashAmountNum : 0,
       orderTypeSnapshot: type,
@@ -683,7 +634,6 @@ export default function CheckoutForm({
     tip: number;
     total: number;
     discount?: number;
-    loyalty?: number;
     payment?: 'CASH' | 'CARD';
     cashAmt?: number;
     orderType?: OrderType;
@@ -693,7 +643,6 @@ export default function CheckoutForm({
     const lineItems = data?.snapshot ?? snapshot;
     const fee       = data?.fee ?? snapshotFee;
     const disc      = data?.discount ?? snapshotDiscount;
-    const loyaltyAmt = data?.loyalty ?? snapshotLoyalty;
     const tipAmt    = data?.tip ?? snapshotTip;
     const tot       = data?.total ?? snapshotTotal;
     const pmeth     = data?.payment ?? snapshotPayment;
@@ -727,9 +676,6 @@ export default function CheckoutForm({
     }
     if (disc > 0) {
       lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
-    }
-    if (loyaltyAmt > 0) {
-      lines.push(`⭐ Puntos canjeados: -${formatPrice(loyaltyAmt, config)}`);
     }
     if (tipAmt > 0) {
       lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);
@@ -1007,12 +953,6 @@ export default function CheckoutForm({
                 <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
-            {loyaltyDiscount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="star" size={13} /> {redeemPoints} puntos canjeados</span>
-                <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(loyaltyDiscount, config)}</span>
-              </div>
-            )}
             {tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
@@ -1057,52 +997,6 @@ export default function CheckoutForm({
             )}
             {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
-
-          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido.
-              En kiosko no se invita a iniciar sesión (aparato compartido). */}
-          {loyaltyActive && googleAuthEnabled && !kiosk && redeemInfoLoaded && !redeemInfo?.loggedIn && (
-            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
-                Inicia sesión para ganar y usar tus puntos de fidelidad
-              </span>
-              <GoogleSignInButton label="Continuar con Google" />
-            </div>
-          )}
-
-          {/* Lealtad — canje de puntos (si el cliente tiene cuenta con saldo) */}
-          {redeemInfo?.active && redeemInfo.balance > 0 && (
-            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
-                  Tienes <strong>{redeemInfo.balance.toLocaleString('es-GT')}</strong> puntos
-                  <span style={{ color: 'var(--u-text-4)' }}>≈ {formatPrice(redeemInfo.balance * redeemInfo.redeemValue, config)}</span>
-                </span>
-                {canRedeem ? (
-                  <button
-                    type="button"
-                    onClick={() => setRedeemOn((v) => !v)}
-                    className="press"
-                    style={{
-                      fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                      padding: '7px 13px', borderRadius: 'var(--radius-full)',
-                      border: redeemOn ? 'none' : '1px solid var(--u-hair)',
-                      background: redeemOn ? 'var(--brand-accent)' : 'transparent',
-                      color: redeemOn ? 'var(--brand-on-accent)' : 'var(--u-text-2)',
-                    }}
-                  >
-                    {redeemOn ? 'Quitar' : `Canjear −${formatPrice(maxRedeemPoints * redeemValue, config)}`}
-                  </button>
-                ) : null}
-              </div>
-              {!canRedeem && (
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
-                  Necesitas al menos {redeemInfo.minRedeem.toLocaleString('es-GT')} puntos para canjear.
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Propina — obligatoria cuando el restaurante la habilita. */}
           {tipAvailable && (

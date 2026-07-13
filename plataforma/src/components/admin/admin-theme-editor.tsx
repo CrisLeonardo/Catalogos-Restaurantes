@@ -10,9 +10,11 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
+import TemplateGallery from '@/components/admin/template-gallery';
 import { saveAdminRestaurantTheme } from '@/lib/actions/restaurant';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
+import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
 
 /* ── Contraste WCAG (asistente de legibilidad) ─────────────
    El dueño no sabe de ratios: si elige colores que no se leen,
@@ -53,8 +55,9 @@ interface Props {
   customCss: string;
 }
 
-type Tab = 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos';
+type Tab = 'plantillas' | 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos';
 const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'plantillas', label: 'Plantillas', icon: 'grid'  },
   { key: 'identidad', label: 'Identidad',  icon: 'sparkle' },
   { key: 'visual',    label: 'Visual',     icon: 'image'   },
   { key: 'portada',   label: 'Portada',    icon: 'phone'   },
@@ -68,9 +71,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
-  const [tab, setTab] = useState<Tab>('identidad');
+  const [tab, setTab] = useState<Tab>('plantillas');
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [appliedTpl, setAppliedTpl] = useState<string | null>(null);
 
   const setC = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setConfig((p) => ({ ...p, [k]: v }));
   const setT = (section: keyof ThemeContent, key: string, v: string) =>
@@ -86,6 +90,12 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
       if (res.error) setMsg(`Error: ${res.error}`);
       else { setMsg('Guardado ✓'); router.refresh(); }
     });
+  }
+
+  function applyBuiltinTemplate(tpl: BuiltinTemplate) {
+    setConfig((prev) => applyTemplateToConfig(prev, tpl));
+    setAppliedTpl(tpl.id);
+    setMsg(null);
   }
 
   function applyPalette(p: typeof PALETTES[0]) {
@@ -133,6 +143,30 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             );
           })}
         </div>
+
+        {/* ── Tab: Plantillas ── */}
+        {tab === 'plantillas' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Glass variant="quiet" style={{ padding: 16 }}>
+              <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
+                Elige un punto de partida y luego afínalo en las demás pestañas.
+                Tu logo, nombre, textos y configuración de pedidos <strong style={{ color: 'var(--u-text-2)' }}>se conservan</strong> —
+                la plantilla solo cambia colores, tipografía, portada y estilo.
+                Nada se publica hasta que toques «Guardar cambios».
+              </p>
+            </Glass>
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} />
+            {appliedTpl && (
+              <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Icon name="checkCircle" size={16} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+                  Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
+                  o sigue personalizando en las otras pestañas.
+                </span>
+              </Glass>
+            )}
+          </div>
+        )}
 
         {/* ── Tab: Identidad ── */}
         {tab === 'identidad' && (
@@ -357,6 +391,11 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Toggle label="Buscador de productos" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
               <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
               <Toggle label="Etiquetas (Picante, Nuevo, Veggie…)" value={config.showTags} onChange={(v) => setC('showTags', v)} />
+              <Toggle label="Favoritos como tarjeta destacada" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                Los productos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
+                (máximo 3), para guiar al cliente hacia tus platillos estrella.
+              </p>
             </Section>
 
             <Section title="Textos del menú">

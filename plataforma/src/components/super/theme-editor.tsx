@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
+import TemplateGallery from '@/components/admin/template-gallery';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
 import {
   saveRestaurantTheme,
@@ -28,6 +29,7 @@ import {
   type TypographyRole,
 } from '@/lib/theme/defaults';
 import { buildThemeVars } from '@/lib/theme/resolve';
+import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
 
 interface Props {
   restaurantId: string;
@@ -55,6 +57,13 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
   const [tplName, setTplName] = useState('');
   const [tplMsg, setTplMsg] = useState<string | null>(null);
   const [tplPending, startTpl] = useTransition();
+  const [appliedBuiltin, setAppliedBuiltin] = useState<string | null>(null);
+
+  function applyBuiltinTemplate(tpl: BuiltinTemplate) {
+    setConfig((prev) => applyTemplateToConfig(prev, tpl));
+    setAppliedBuiltin(tpl.id);
+    setTplMsg(`Plantilla "${tpl.name}" aplicada (recuerda guardar).`);
+  }
 
   function applyTemplate() {
     const tpl = templates.find((t) => t.id === selectedTpl);
@@ -144,6 +153,16 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
       {/* ── Plantillas ── */}
       {showTemplates && <Section title="Plantillas de tema">
+        {/* Galería integrada (prediseñadas): la misma que ve el dueño. */}
+        <details open>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
+            Galería prediseñada ({'>'}15 estilos)
+          </summary>
+          <div style={{ paddingTop: 10 }}>
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} />
+          </div>
+        </details>
+        <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
         <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
           Aplica un diseño guardado (la marca y el logo del restaurante se conservan)
           o guarda el tema actual para reutilizarlo con otro cliente.
@@ -305,6 +324,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Buscador" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
         <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
         <Toggle label="Mostrar tags" value={config.showTags} onChange={(v) => setC('showTags', v)} />
+        <Toggle label="Favoritos como tarjeta destacada (máx. 3)" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
       </Section>
 
       {/* ── Pedidos / Moneda ── */}
@@ -314,15 +334,25 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           <>
             <NumberCtl label="Cantidad de mesas" value={config.dineInTableCount} min={1} max={50} onChange={(v) => setC('dineInTableCount', v)} />
             <StringListCtl label="Preferencias de servicio" items={config.dineInCourseOptions} onChange={(v) => setC('dineInCourseOptions', v)} />
-            <Toggle label="Habilitar propina en comer en local" value={config.tipEnabled} onChange={(v) => setC('tipEnabled', v)} />
-            {config.tipEnabled && (
-              <NumberCtl label="Porcentaje de propina (%)" value={config.tipPercent} min={1} max={50} onChange={(v) => setC('tipPercent', v)} />
-            )}
           </>
         )}
         <Toggle label="Domicilio" value={config.orderTypes.includes('delivery')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'delivery', v))} />
         <Toggle label="Para llevar" value={config.orderTypes.includes('pickup')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'pickup', v))} />
         <Toggle label="Aceptar pago con tarjeta" value={config.acceptsCard} onChange={(v) => setC('acceptsCard', v)} />
+        <Toggle label="Habilitar propina" value={config.tipEnabled} onChange={(v) => setC('tipEnabled', v)} />
+        {config.tipEnabled && (
+          <>
+            <NumberCtl label="Porcentaje de propina (%)" value={config.tipPercent} min={1} max={50} onChange={(v) => setC('tipPercent', v)} />
+            {config.orderTypes.map((t) => (
+              <Toggle
+                key={t}
+                label={`Propina aplica a: ${t === 'dine_in' ? 'Comer en local' : t === 'pickup' ? 'Para llevar' : 'Domicilio'}`}
+                value={config.tipOrderTypes.includes(t)}
+                onChange={(v) => setC('tipOrderTypes', toggleIn(config.tipOrderTypes, t, v))}
+              />
+            ))}
+          </>
+        )}
         <Segmented label="Color activo en checkout (tabs/opciones)" value={config.checkoutActiveColor} options={[['text', 'Blanco/texto'], ['accent', 'Acento del restaurante']]} onChange={(v) => setC('checkoutActiveColor', v as ThemeConfig['checkoutActiveColor'])} />
         <Toggle label="Glass en campos del formulario" value={config.checkoutFormGlass} onChange={(v) => setC('checkoutFormGlass', v)} />
         <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>

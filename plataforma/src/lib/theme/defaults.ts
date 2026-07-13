@@ -164,6 +164,7 @@ export interface ThemeConfig {
   showCategoryIcons: boolean;
   productArt: ProductArt;       // auto = foto si existe, si no patrón
   showTags: boolean;
+  featuredFavorites: boolean;   // productos con etiqueta "Favorito" como tarjeta grande (máx. 3)
 
   // ── Pedidos / checkout ──
   orderTypes: OrderType[];
@@ -171,8 +172,9 @@ export interface ThemeConfig {
   dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
   dineInCourseOptions: string[];  // preferencias de servicio configurables
   acceptsCard: boolean;           // habilita la opción "pagar con tarjeta" en delivery y pickup
-  tipEnabled: boolean;            // propina obligatoria en pedidos DINE_IN
+  tipEnabled: boolean;            // propina obligatoria activa (ver tipOrderTypes)
   tipPercent: number;             // porcentaje a cobrar (ej. 10 = 10 %)
+  tipOrderTypes: OrderType[];     // a qué tipos de pedido aplica la propina obligatoria
 
   // ── Confirmación automática ──
   autoConfirmEnabled: boolean;    // confirma pedidos NEW→PREP automáticamente
@@ -333,6 +335,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   showCategoryIcons: true,
   productArt: 'auto',
   showTags: true,
+  featuredFavorites: false,
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,
@@ -341,6 +344,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   acceptsCard: false,
   tipEnabled: false,
   tipPercent: 10,
+  tipOrderTypes: ['dine_in'],
 
   autoConfirmEnabled: false,
   autoConfirmMinutes: 1,

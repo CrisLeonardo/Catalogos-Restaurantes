@@ -308,7 +308,9 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <Icon name="sparkle" size={14} style={{ color: '#4ade80', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               <strong style={{ color: 'var(--u-text-2)' }}>Plan a tu medida:</strong> desactiva un canal que no uses y baja tu
-              mensualidad Q100. Pagas solo por lo que usas.{' '}
+              mensualidad Q100. El descuento entra hasta tu <strong style={{ color: 'var(--u-text-2)' }}>próximo cobro</strong>, y
+              se calcula sobre todo el mes: necesitas dejarlo apagado al menos el 75% de los días de este mes para que aplique
+              (un 25% de margen para probarlo sin perder el descuento — entre más tarde en el mes lo apagues, menos margen te queda).{' '}
               <a href="/admin/suscripcion" style={{ color: '#4ade80', fontWeight: 700, textDecoration: 'none' }}>Ver mi mensualidad →</a>
             </p>
           </div>

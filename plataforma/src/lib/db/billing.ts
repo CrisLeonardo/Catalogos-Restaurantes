@@ -227,7 +227,12 @@ export async function computeSuggestedFee(restaurantId: string): Promise<number>
 export interface FeeBreakdown {
   plan: string | null;
   base: number;
-  channelsActive: number;
+  /** Canales activos AHORA MISMO (estado en vivo del checkout). */
+  channelsActiveLive: number;
+  /** Canales que cuentan como activos para EL COBRO (mig. 073: un canal
+   *  recién apagado sigue facturándose completo hasta el ciclo siguiente
+   *  — ver leogin_billed_active_channels). Puede diferir de channelsActiveLive. */
+  channelsActiveBilled: number;
   channelsTotal: number;
   discountApplies: boolean;
   discountPer: number;
@@ -247,17 +252,18 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
   const d = data as Record<string, unknown>;
   if (!d.plan) return null;
   return {
-    plan:              (d.plan as string) ?? null,
-    base:              Number(d.base ?? 0),
-    channelsActive:    Number(d.channels_active ?? 2),
-    channelsTotal:     Number(d.channels_total ?? 2),
-    discountApplies:   Boolean(d.discount_applies),
-    discountPer:       Number(d.discount_per ?? 0),
-    channelsOff:       Number(d.channels_off ?? 0),
-    discount:          Number(d.discount ?? 0),
-    branchDiscountPct: Number(d.branch_discount_pct ?? 0),
-    addonTotal:        Number(d.addon_total ?? 0),
-    final:             Number(d.final ?? 0),
+    plan:                  (d.plan as string) ?? null,
+    base:                  Number(d.base ?? 0),
+    channelsActiveLive:    Number(d.channels_active_live ?? 2),
+    channelsActiveBilled:  Number(d.channels_active_billed ?? 2),
+    channelsTotal:         Number(d.channels_total ?? 2),
+    discountApplies:       Boolean(d.discount_applies),
+    discountPer:           Number(d.discount_per ?? 0),
+    channelsOff:           Number(d.channels_off ?? 0),
+    discount:              Number(d.discount ?? 0),
+    branchDiscountPct:     Number(d.branch_discount_pct ?? 0),
+    addonTotal:            Number(d.addon_total ?? 0),
+    final:                 Number(d.final ?? 0),
   };
 }
 

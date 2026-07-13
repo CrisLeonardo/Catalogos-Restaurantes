@@ -27,6 +27,7 @@ import {
   type TypographyRole,
   type TextStyle,
   type GlassIntensity,
+  type OrderType,
 } from './defaults';
 import { getTenantOverride } from '@/tenants/registry';
 
@@ -384,4 +385,28 @@ export function formatPrice(amount: number, config: ThemeConfig): string {
   return config.currencyPosition === 'prefix'
     ? `${config.currencySymbol}${n}`
     : `${n}${config.currencySymbol}`;
+}
+
+/* ── Propina obligatoria ──────────────────────────────────────
+   'DINE_IN'/'PICKUP'/'DELIVERY' (mayúsculas, tipo de pedido del cliente/
+   schema) vs 'dine_in'/'pickup'/'delivery' (OrderType del tema, minúsculas)
+   son dos convenciones que ya conviven en el código — este mapeo evita
+   duplicar la comparación en cada punto que calcula la propina. */
+type CustomerOrderType = 'DINE_IN' | 'PICKUP' | 'DELIVERY';
+
+function toConfigOrderType(t: CustomerOrderType): OrderType {
+  return t === 'DINE_IN' ? 'dine_in' : t === 'PICKUP' ? 'pickup' : 'delivery';
+}
+
+/** ¿La propina obligatoria aplica a este tipo de pedido según la config? */
+export function tipAppliesToType(config: ThemeConfig, orderType: CustomerOrderType): boolean {
+  if (config.tipEnabled !== true) return false;
+  if (!((Number(config.tipPercent) || 0) > 0)) return false;
+  return config.tipOrderTypes.includes(toConfigOrderType(orderType));
+}
+
+/** Monto autoritativo de propina sobre un subtotal (servidor: siempre recalcular aquí, nunca confiar en un monto que mande el cliente). */
+export function computeTip(config: ThemeConfig, orderType: CustomerOrderType, tipAccepted: boolean, subtotal: number): number {
+  if (!tipAccepted || !tipAppliesToType(config, orderType)) return 0;
+  return Math.round(subtotal * (Number(config.tipPercent) || 0)) / 100;
 }
