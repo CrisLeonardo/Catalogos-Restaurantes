@@ -16,11 +16,13 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { touchOperatorSession } from '@/lib/actions/operator';
-import { ownerCtx, assertStaffOfRestaurant, UUID_RE } from '@/lib/actions/staff';
+import { ownerCtx, assertStaffOfRestaurant } from '@/lib/actions/staff';
 import {
   isValidPin, newPinSalt, hashPin, verifyPin,
   PIN_LENGTH, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS,
 } from '@/lib/staff-pin-crypto';
+
+const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 export type StaffPinState = { error: string } | { ok: true } | null;
 

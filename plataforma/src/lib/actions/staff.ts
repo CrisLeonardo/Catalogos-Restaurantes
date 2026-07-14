@@ -22,9 +22,9 @@ function syntheticStaffEmail(): string {
   return `staff-${crypto.randomBytes(12).toString('hex')}@staff.leogin.internal`;
 }
 
-export const UUID_RE = /^[0-9a-f-]{36}$/i;
+const UUID_RE = /^[0-9a-f-]{36}$/i;
 
-export type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
+type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
 
 /** Solo el DUEÑO (o super admin) gestiona personal. */
 export async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Ctx | null> {
