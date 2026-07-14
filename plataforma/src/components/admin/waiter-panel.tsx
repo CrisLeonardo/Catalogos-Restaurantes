@@ -23,7 +23,7 @@ import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
-import type { OrderWithItems } from '@/lib/db/orders';
+import type { OrderWithItems, TableOccupancy } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
 
 /* ── Tipos locales ────────────────────────────────────────── */
@@ -44,8 +44,8 @@ interface Props {
   categories: Category[];
   products: Product[];
   initialOrders: OrderWithItems[];
-  /** Mesa → ISO timestamp de cuándo se ocupó (created_at del pedido activo más antiguo). */
-  occupiedSince: Record<number, string>;
+  /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal por su cuenta). */
+  occupiedSince: Record<number, TableOccupancy>;
   tableCount: number;
   tipEnabled: boolean;
   tipPercent: number;
@@ -853,7 +853,7 @@ export default function WaiterPanel({
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Otras mesas</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
                       {otherTables.map((n) => (
-                        <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
+                        <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]?.since} waiterName={occupiedSince[n]?.waiterName} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                       ))}
                     </div>
                   </div>
@@ -862,7 +862,7 @@ export default function WaiterPanel({
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))', gap: 12 }}>
                 {Array.from({ length: tableCount }, (_, i) => i + 1).map((n) => (
-                  <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
+                  <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]?.since} waiterName={occupiedSince[n]?.waiterName} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                 ))}
               </div>
             )}
@@ -877,7 +877,12 @@ export default function WaiterPanel({
                 <div>
                   <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
                   <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
-                    Tiene un pedido activo{tableToFree != null && occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree]).getTime())}` : ''}
+                    Tiene un pedido activo{tableToFree != null && occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree].since).getTime())}` : ''}
+                    {tableToFree != null && occupiedSince[tableToFree] && (
+                      occupiedSince[tableToFree].waiterName
+                        ? ` · atendida por ${occupiedSince[tableToFree].waiterName}`
+                        : ' · pedido por el comensal'
+                    )}
                   </div>
                 </div>
                 <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>

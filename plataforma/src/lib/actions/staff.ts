@@ -184,22 +184,6 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
   return { ok: true };
 }
 
-export async function resetStaffPassword(prevState: StaffState, formData: FormData): Promise<StaffState> {
-  const ctx = await ownerCtx(formData.get('restaurantId') as string | null);
-  if (!ctx) return { error: 'No autorizado.' };
-
-  const userId = (formData.get('userId') as string)?.trim();
-  const password = (formData.get('password') as string) ?? '';
-  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
-  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
-
-  const { error } = await ctx.db.auth.admin.updateUserById(userId, { password });
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/personal');
-  return { ok: true };
-}
-
 export async function removeStaff(formData: FormData) {
   const ctx = await ownerCtx(formData.get('restaurantId') as string | null);
   if (!ctx) return;

@@ -13,10 +13,19 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ADMIN_SECTIONS } from '@/lib/permissions';
 import {
-  createStaff, updateStaffPermissions, resetStaffPassword, removeStaff,
+  createStaff, updateStaffPermissions, removeStaff,
   type StaffState, type StaffMember, type ActivityRow,
 } from '@/lib/actions/staff';
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
+
+/** Plantillas de permisos al crear personal — pre-llenan lo típico de cada
+    rol para no abrumar al dueño con ~20 opciones en un miembro nuevo; sigue
+    pudiendo ajustar libremente después de elegir una. */
+const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] }[] = [
+  { key: 'mesero', label: 'Mesero', icon: 'userPlus', perms: ['mesero'] },
+  { key: 'cajero', label: 'Cajero', icon: 'wallet', perms: ['pedidos', 'mesas', 'clientes'] },
+  { key: 'cocina', label: 'Cocina', icon: 'flame', perms: ['cocina'] },
+];
 
 const STATUS_ES: Record<string, string> = {
   NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
@@ -39,7 +48,14 @@ function timeAgo(iso: string): string {
 
 const SECTION_LABEL: Record<string, string> = Object.fromEntries(ADMIN_SECTIONS.map((s) => [s.key, s.label]));
 
-export default function StaffPanel({ restaurantId, staff, activity }: { restaurantId: string; staff: StaffMember[]; activity: ActivityRow[] }) {
+export default function StaffPanel({ restaurantId, staff, activity, enabledSections }: {
+  restaurantId: string;
+  staff: StaffMember[];
+  activity: ActivityRow[];
+  /** Secciones que el restaurante realmente tiene activas — el picker de
+      permisos no debe ofrecer módulos que el dueño ni siquiera prendió. */
+  enabledSections: string[];
+}) {
   const router = useRouter();
   const [editor, setEditor] = useState<{ open: boolean; member: StaffMember | null }>({ open: false, member: null });
 
@@ -110,6 +126,7 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
         <StaffModal
           restaurantId={restaurantId}
           member={editor.member}
+          enabledSections={enabledSections}
           onClose={() => setEditor({ open: false, member: null })}
           onSaved={() => { setEditor({ open: false, member: null }); router.refresh(); }}
         />
@@ -118,24 +135,28 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
   );
 }
 
-function StaffModal({ restaurantId, member, onClose, onSaved }: {
+function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }: {
   restaurantId: string;
   member: StaffMember | null;
+  enabledSections: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const isNew = !member;
   const [perms, setPerms] = useState<string[]>(member?.permissions ?? ['mesero']);
+  const visibleSections = ADMIN_SECTIONS.filter((s) => enabledSections.includes(s.key));
+
+  function applyPreset(presetPerms: string[]) {
+    setPerms(presetPerms.filter((p) => enabledSections.includes(p)));
+  }
 
   const createAction = useActionState<StaffState, FormData>(createStaff, null);
   const updateAction = useActionState<StaffState, FormData>(updateStaffPermissions, null);
-  const resetAction = useActionState<StaffState, FormData>(resetStaffPassword, null);
   const pinAction = useActionState<StaffPinState, FormData>(setStaffPin, null);
 
   const [state, formAction, isPending] = isNew ? createAction : updateAction;
 
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
-  useEffect(() => { if (resetAction[0] && 'ok' in resetAction[0]) alert('Contraseña actualizada.'); }, [resetAction]);
   useEffect(() => { if (pinAction[0] && 'ok' in pinAction[0]) alert('PIN actualizado.'); }, [pinAction]);
 
   function toggle(key: string) {
@@ -185,11 +206,37 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
               </div>
             )}
 
+            {isNew && (
+              <div>
+                <label style={label}>Plantilla</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {ROLE_PRESETS.map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => applyPreset(p.perms)}
+                      className="press"
+                      style={{
+                        padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                        color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
+                      }}
+                    >
+                      <Icon name={p.icon} size={12} />{p.label}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
+                  Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
+                </p>
+              </div>
+            )}
+
             {/* Permisos de secciones — incluye "Mesero" como una más */}
             <div>
               <label style={label}>Acceso a secciones</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {ADMIN_SECTIONS.map((s) => {
+                {visibleSections.map((s) => {
                   const on = perms.includes(s.key);
                   const accent = s.key === 'mesero';
                   return (
@@ -238,17 +285,6 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
                   <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                 </form>
                 {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: '#f87171' }}>{pinAction[0].error}</div>}
-
-                <form action={resetAction[1]} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                  <input type="hidden" name="restaurantId" value={restaurantId} />
-                  <input type="hidden" name="userId" value={member!.id} />
-                  <div style={{ flex: 1 }}>
-                    <label style={label}>Nueva contraseña (respaldo)</label>
-                    <input name="password" type="text" minLength={8} placeholder="mínimo 8 caracteres" style={input} />
-                  </div>
-                  <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
-                </form>
-                {resetAction[0] && 'error' in resetAction[0] && <div style={{ fontSize: 12.5, color: '#f87171' }}>{resetAction[0].error}</div>}
 
                 <form action={removeStaff} onSubmit={(e) => { if (!confirm('¿Quitar a este miembro? Perderá el acceso.')) e.preventDefault(); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />

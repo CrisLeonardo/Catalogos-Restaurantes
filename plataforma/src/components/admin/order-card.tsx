@@ -395,9 +395,12 @@ export default function OrderCard({
               <Icon name="grid" size={12} style={{ display: 'inline' }} /> {order.address}
             </p>
           )}
-          {order.waiter_name && (
+          {order.order_type === 'DINE_IN' && (
             <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Icon name="userPlus" size={12} style={{ display: 'inline' }} /> Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong>
+              <Icon name={order.waiter_name ? 'userPlus' : 'user'} size={12} style={{ display: 'inline' }} />
+              {order.waiter_name
+                ? <>Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong></>
+                : <>Pedido por el <strong style={{ color: 'var(--u-text-2)' }}>comensal</strong> (sin mesero)</>}
             </p>
           )}
           {order.synced_from_hub && (

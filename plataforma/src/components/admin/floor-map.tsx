@@ -9,6 +9,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { FloorTable } from '@/lib/theme/defaults';
+import type { TableOccupancy } from '@/lib/db/orders';
+
+/** Primer nombre — las mesas son chicas, no hay lugar para el nombre completo. */
+function firstName(fullName: string | null | undefined): string | null {
+  if (!fullName) return null;
+  return fullName.trim().split(/\s+/)[0] || null;
+}
 
 const VIRT_W = 1000;
 const VIRT_H = 625;
@@ -42,12 +49,14 @@ function occupiedColor(elapsedMs: number | null): string {
 
 /* Token de mesa (también lo usa la cuadrícula y "Otras mesas"). */
 export function TableToken({
-  n, occupied, since, now, onTap, style,
+  n, occupied, since, waiterName, now, onTap, style,
 }: {
   n: number;
   occupied: boolean;
   /** ISO timestamp de cuándo se ocupó (para el temporizador). */
   since?: string;
+  /** Quién atiende la mesa — null/undefined = el comensal pidió por su cuenta. */
+  waiterName?: string | null;
   now?: number | null;
   onTap: () => void;
   style?: React.CSSProperties;
@@ -55,6 +64,7 @@ export function TableToken({
   const elapsedMs = occupied && since && now != null ? now - new Date(since).getTime() : null;
   const elapsed = elapsedMs != null ? fmtOccupied(elapsedMs) : null;
   const color = occupied ? occupiedColor(elapsedMs) : null;
+  const attendedBy = firstName(waiterName);
   return (
     <button
       type="button"
@@ -74,6 +84,11 @@ export function TableToken({
       <span style={{ fontSize: 11, color: color ? `color-mix(in srgb, ${color} 85%, transparent)` : 'var(--u-text-4)', fontWeight: 600 }}>Mesa</span>
       <span style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{n}</span>
       {occupied && <span style={{ fontSize: 11, fontWeight: 700, marginTop: 1 }}>● {elapsed ?? 'activa'}</span>}
+      {occupied && (
+        <span style={{ fontSize: 9.5, fontWeight: 600, opacity: 0.85, maxWidth: '92%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {attendedBy ?? 'Cliente'}
+        </span>
+      )}
     </button>
   );
 }
@@ -89,8 +104,8 @@ export default function FloorMap({
 }: {
   tables: FloorTable[];
   occupied: Set<number>;
-  /** Mesa → ISO timestamp de cuándo se ocupó (para el temporizador). */
-  occupiedSince?: Record<number, string>;
+  /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal). */
+  occupiedSince?: Record<number, TableOccupancy>;
   now?: number | null;
   onSelect: (n: number) => void;
 }) {
@@ -299,10 +314,11 @@ export default function FloorMap({
             calcula aplicando el mismo transform (pan + zoom) al centro de la mesa. */}
         {tables.map((tb) => {
           const isOcc = occupied.has(tb.n);
-          const since = occupiedSince?.[tb.n];
-          const elapsedMs = isOcc && since && now != null ? now - new Date(since).getTime() : null;
+          const occ = occupiedSince?.[tb.n];
+          const elapsedMs = isOcc && occ && now != null ? now - new Date(occ.since).getTime() : null;
           const elapsed = elapsedMs != null ? fmtOccupied(elapsedMs) : null;
           const color = isOcc ? occupiedColor(elapsedMs) : null;
+          const attendedBy = firstName(occ?.waiterName);
           const sx = tb.x * VIRT_W * t.s + t.x;
           const sy = tb.y * VIRT_H * t.s + t.y;
           return (
@@ -326,7 +342,11 @@ export default function FloorMap({
             >
               <span style={{ fontSize: 10, color: color ? `color-mix(in srgb, ${color} 85%, transparent)` : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
               <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
-              {isOcc && <span style={{ fontSize: 9.5, fontWeight: 700, pointerEvents: 'none' }}>● {elapsed ?? 'activa'}</span>}
+              {isOcc && (
+                <span style={{ fontSize: 9.5, fontWeight: 700, pointerEvents: 'none', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  ● {elapsed ?? 'activa'} · {attendedBy ?? 'Cliente'}
+                </span>
+              )}
             </div>
           );
         })}

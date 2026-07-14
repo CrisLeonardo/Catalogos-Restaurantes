@@ -78,28 +78,37 @@ export async function getKitchenOrders(
   });
 }
 
-/** Mesas con un pedido DINE_IN activo (no entregado/cancelado) → desde cuándo
-   está ocupada (created_at del pedido más antiguo, si hay varios acumulados).
-   Se usa para marcar mesas ocupadas + su temporizador en el panel del mesero. */
-export async function getActiveTableNumbers(restaurantId: string): Promise<Record<number, string>> {
+/** Mesa ocupada: desde cuándo (created_at del pedido más antiguo, si hay
+    varios acumulados) y quién la atiende — mesero que tomó el pedido, o
+    `null` si el comensal ordenó por su cuenta (QR en mesa, sin mesero). */
+export type TableOccupancy = { since: string; waiterName: string | null };
+
+/** Mesas con un pedido DINE_IN activo (no entregado/cancelado). Se usa para
+    marcar mesas ocupadas + su temporizador + quién atiende en el panel del
+    mesero (varios meseros comparten el salón: evita que dos atiendan la
+    misma mesa sin saberlo). */
+export async function getActiveTableNumbers(restaurantId: string): Promise<Record<number, TableOccupancy>> {
   const db = createServiceClient();
   const { data } = await db
     .from('orders')
-    .select('address, created_at')
+    .select('address, created_at, waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
     .not('status', 'in', '("DELIVERED","CANCEL")')
     .order('created_at', { ascending: true })
     .limit(200);
 
-  const since: Record<number, string> = {};
-  for (const row of (data ?? []) as { address: string | null; created_at: string }[]) {
-    const m = row.address?.match(/Mesa\s+(\d+)/i);
+  const result: Record<number, TableOccupancy> = {};
+  for (const row of (data ?? []) as (Record<string, unknown>)[]) {
+    const { address, created_at, waiter } = row as {
+      address: string | null; created_at: string; waiter?: { full_name: string | null } | null;
+    };
+    const m = address?.match(/Mesa\s+(\d+)/i);
     if (!m) continue;
     const n = Number(m[1]);
-    if (!(n in since)) since[n] = row.created_at; // orden ascendente → el primero es el más antiguo
+    if (!(n in result)) result[n] = { since: created_at, waiterName: waiter?.full_name ?? null }; // orden ascendente → el primero es el más antiguo
   }
-  return since;
+  return result;
 }
 
 export type DaySale    = { label: string; total: number; isToday: boolean };

@@ -13,7 +13,6 @@ interface Props {
 
 export default function LogoutButton({ variant = 'pill', isOperatorSession = false }: Props) {
   const action = isOperatorSession ? changeOperatorUser : logout;
-  const label = isOperatorSession ? 'Cambiar de usuario' : 'Salir';
 
   if (variant === 'menu-item') {
     return (
@@ -34,13 +33,13 @@ export default function LogoutButton({ variant = 'pill', isOperatorSession = fal
             textAlign: 'left',
           }}
         >
-          {label}
+          {isOperatorSession ? 'Cambiar de usuario' : 'Salir'}
         </button>
       </form>
     );
   }
   return (
-    <form action={action}>
+    <form action={action} style={{ flexShrink: 0 }}>
       <button
         type="submit"
         className="press"
@@ -52,9 +51,14 @@ export default function LogoutButton({ variant = 'pill', isOperatorSession = fal
           borderRadius: 'var(--radius-full)',
           fontSize: 13,
           cursor: 'pointer',
+          whiteSpace: 'nowrap',
         }}
       >
-        {label}
+        {/* Espacio angosto (tarjeta del sidebar): "Cambiar de usuario" completo
+            envolvía en 2 líneas y se salía de la tarjeta encimándose con el
+            avatar. Aquí va corto; el texto completo queda en el menú ⋮
+            (variant="menu-item"), que tiene más ancho. */}
+        {isOperatorSession ? 'Cambiar' : 'Salir'}
       </button>
     </form>
   );
