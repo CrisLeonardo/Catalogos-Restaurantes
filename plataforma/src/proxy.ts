@@ -23,11 +23,15 @@ export async function proxy(request: NextRequest) {
   // Área de PERSONAL (admin, panel de grupo, super admin): estas rutas usan
   // los 2 temas fijos del panel (claro/oscuro) en vez del tema del restaurante,
   // y solo les interesa la sesión del personal. El layout raíz lee este header.
+  // EXCEPCIÓN: /preview/* renderiza el MENÚ del restaurante (iframe del editor)
+  // aunque viva en el subdominio *-admin — si se marcara como área admin, las
+  // vars de html[data-admin-area] pisarían el tema del tenant en la vista previa.
   const isAdminArea =
-    adminSub || groupSub ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/central") ||
-    pathname.startsWith("/super");
+    (adminSub || groupSub ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/central") ||
+      pathname.startsWith("/super")) &&
+    !pathname.startsWith("/preview");
 
   const requestHeaders = new Headers(request.headers);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
