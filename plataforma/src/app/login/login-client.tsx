@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { LeoginMark } from '@/components/leogin-logo';
+import { Icon } from '@/components/icons';
 import { login, type AuthState } from '@/lib/actions/auth';
 import type { ResumeSession } from '@/lib/auth/resume';
 import StaffPinLogin from '@/components/admin/staff-pin-login';
@@ -218,19 +219,40 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
           <button
             type="button"
             onClick={() => setMode('pin')}
+            className="press"
             style={{
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
               width: '100%',
-              textAlign: 'center',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--u-text-3)',
-              fontSize: 13,
               marginTop: 16,
+              padding: '13px 16px',
+              borderRadius: 'var(--radius-lg)',
+              border: '1.5px solid var(--u-hair-2)',
+              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+              cursor: 'pointer',
+              textAlign: 'left',
             }}
           >
-            ¿Eres del equipo? Entra con tu PIN
+            <span
+              style={{
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                display: 'grid', placeItems: 'center',
+                background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)',
+                color: 'var(--brand-accent)',
+              }}
+            >
+              <Icon name="key" size={17} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
+                Soy personal del restaurante
+              </span>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
+                Toca aquí para entrar con tu PIN
+              </span>
+            </span>
+            <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           </button>
         )}
       </div>

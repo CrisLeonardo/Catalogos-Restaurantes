@@ -36,10 +36,14 @@ export default async function MesasPage() {
     }
   }
 
-  // Gestión de mesas es exclusiva de Premium — no se vende a la carta. Un
-  // restaurante BASICO/ESTANDAR no debe poder usarla aunque conozca la URL.
+  // Gestión de mesas es de Premium en adelante, pero un restaurante ESTANDAR
+  // con el paquete "Local" (dine_in activo) también depende de esta pantalla
+  // para configurar su cantidad de mesas y preferencias — sin acceso aquí,
+  // "comer en local" no tendría cómo configurarse. Solo se bloquea si el
+  // restaurante ni tiene el plan ni tiene dine_in activo.
   const hasWaiterPanel = PLANS[(planActual ?? 'BASICO') as PlanCode]?.hasWaiterPanel ?? false;
-  if (ctx?.profile.role !== 'SUPER_ADMIN' && !hasWaiterPanel) {
+  const hasDineIn = resolvedConfig?.orderTypes.includes('dine_in') ?? false;
+  if (ctx?.profile.role !== 'SUPER_ADMIN' && !hasWaiterPanel && !hasDineIn) {
     return (
       <PlanLockedScreen
         feature="Gestión de mesas"

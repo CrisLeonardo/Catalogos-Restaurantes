@@ -351,7 +351,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
 
   const supportHref = supportWhatsapp
     ? `https://wa.me/${supportWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent('Hola, quiero activar la Factura Electrónica (FEL) en mi restaurante.')}`
-    : '/admin/soporte';
+    : '/admin/ayuda';
 
   // Módulos visibles en el panel (oculta los gestionados que no requieren setup).
   const visible = ACTIVATABLE_MODULES.filter((m) => showsInPanel(modules, m.key));
@@ -554,7 +554,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           <Icon name="grid" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           <span>¿Tienes varias sucursales? Únelas en un panel de grupo con métricas consolidadas.</span>
         </div>
-        <a href="/admin/soporte" className="press"
+        <a href="/admin/ayuda" className="press"
           style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.3)', borderRadius: 99, flexShrink: 0 }}>
           Hablar con Leogin <Icon name="arrowRight" size={13} />
         </a>

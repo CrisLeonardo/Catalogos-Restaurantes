@@ -15,7 +15,8 @@ function Switch({ className, ...props }: React.ComponentProps<typeof BaseSwitch.
     <BaseSwitch.Root
       data-slot="switch"
       className={cn(
-        'relative inline-flex h-6 w-10 shrink-0 items-center rounded-adm-full border border-adm-border-2 bg-adm-card transition-colors outline-none',
+        'relative inline-flex h-6 w-10 shrink-0 items-center rounded-adm-full border transition-colors outline-none',
+        'border-[var(--adm-switch-off-border)] bg-[var(--adm-switch-off-bg)]',
         'data-[checked]:bg-adm-accent-500 data-[checked]:border-adm-accent-500',
         'focus-visible:ring-2 focus-visible:ring-adm-accent-500/35',
         'disabled:pointer-events-none disabled:opacity-50',

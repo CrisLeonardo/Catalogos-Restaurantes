@@ -20,6 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { startGuidedTour } from '@/components/admin/guided-tour';
 import { getGuidedTour } from '@/lib/tutorial/tours';
+import type { PlatformContactSettings } from '@/lib/actions/super-admin';
 import {
   TUTORIAL_SECTIONS,
   getPlanLevelNum,
@@ -33,6 +34,7 @@ import {
 interface Props {
   plan: string | null;
   modules: Record<string, boolean>;
+  contact: PlatformContactSettings;
 }
 
 const PLAN_COLORS: Record<string, string> = {
@@ -41,7 +43,7 @@ const PLAN_COLORS: Record<string, string> = {
   'Módulo': '#14b8a6',
 };
 
-export default function TutorialHub({ plan, modules }: Props) {
+export default function TutorialHub({ plan, modules, contact }: Props) {
   const planNum = getPlanLevelNum(plan);
   const [query, setQuery] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -166,8 +168,23 @@ export default function TutorialHub({ plan, modules }: Props) {
         })}
       </div>
 
-      {/* Soporte */}
-      <Card variant="flat" className="px-4.5 py-4 flex items-center gap-3.5 mt-1">
+      {/* Contactar soporte */}
+      <ContactSupportCard contact={contact} />
+    </div>
+  );
+}
+
+/* ── Contactar soporte ───────────────────────────────────── */
+
+function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
+  const waLink = contact.support_whatsapp
+    ? `https://wa.me/${contact.support_whatsapp.replace(/\D/g, '')}`
+    : null;
+  const mailLink = contact.support_email ? `mailto:${contact.support_email}` : null;
+
+  return (
+    <Card className="px-5 py-4.5 mt-1">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <span style={{
           width: 38, height: 38, borderRadius: 10, flexShrink: 0,
           display: 'grid', placeItems: 'center',
@@ -179,19 +196,86 @@ export default function TutorialHub({ plan, modules }: Props) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>¿No encontraste lo que buscabas?</div>
           <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-            Nuestro equipo de soporte está disponible para ayudarte.
+            Escríbenos directamente y te respondemos a la brevedad.
           </div>
         </div>
-        <Button
-          render={<Link href="/admin/soporte" />}
-          size="sm"
-          className="shrink-0"
-          style={{ background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent)' }}
-        >
-          Ir a soporte
-        </Button>
-      </Card>
-    </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {waLink ? (
+          <Button
+            render={<a href={waLink} target="_blank" rel="noopener noreferrer" />}
+            size="lg"
+            className="justify-start h-auto py-3 whitespace-normal"
+            style={{
+              background: 'rgba(34,197,94,0.12)',
+              border: '1px solid rgba(34,197,94,0.30)',
+              color: '#4ade80',
+            }}
+          >
+            <Icon name="whatsapp" size={18} />
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, textAlign: 'left' }}>
+              <span>Escribir por WhatsApp</span>
+              {contact.support_whatsapp && (
+                <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(74,222,128,0.7)', wordBreak: 'break-all' }}>
+                  {contact.support_whatsapp}
+                </span>
+              )}
+            </span>
+          </Button>
+        ) : (
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 10,
+              padding: '13px 18px', borderRadius: 'var(--radius-lg)',
+              fontSize: 14, opacity: 0.4,
+              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+              border: '1px solid var(--u-hair)',
+              color: 'var(--u-text-3)',
+            }}
+          >
+            <Icon name="whatsapp" size={18} />
+            WhatsApp no configurado
+          </div>
+        )}
+
+        {mailLink ? (
+          <Button
+            render={<a href={mailLink} />}
+            size="lg"
+            className="justify-start h-auto py-3 whitespace-normal"
+            style={{
+              background: 'rgba(59,130,246,0.12)',
+              border: '1px solid rgba(59,130,246,0.30)',
+              color: '#60a5fa',
+            }}
+          >
+            <Icon name="mail" size={18} />
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, textAlign: 'left' }}>
+              <span>Enviar correo electrónico</span>
+              {contact.support_email && (
+                <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(96,165,250,0.7)', wordBreak: 'break-all' }}>
+                  {contact.support_email}
+                </span>
+              )}
+            </span>
+          </Button>
+        ) : (
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 10,
+              padding: '13px 18px', borderRadius: 'var(--radius-lg)',
+              fontSize: 14, opacity: 0.4,
+              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+              border: '1px solid var(--u-hair)',
+              color: 'var(--u-text-3)',
+            }}
+          >
+            <Icon name="mail" size={18} />
+            Correo no configurado
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 

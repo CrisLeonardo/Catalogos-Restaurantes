@@ -555,7 +555,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     payCashPickup: 'Efectivo',
     payCashPickupSub: 'Pagas en el local al recoger',
     payCard: 'Tarjeta (paga al recibir)',
-    payCardSub: 'El repartidor lleva terminal',
+    payCardSub: 'El repartidor lleva el dispositivo POS',
     payCardPickupSub: 'Pagas con tarjeta en el local',
     cashAmountLabel: '¿Con cuánto vas a pagar?',
     cashAmountSub: 'Para que el repartidor lleve el cambio exacto.',

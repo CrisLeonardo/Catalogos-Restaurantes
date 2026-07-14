@@ -775,6 +775,6 @@ export async function savePlatformSettings(
   if (error) return { error: error.message };
 
   revalidatePath('/super/configuracion');
-  revalidatePath('/admin/soporte');
+  revalidatePath('/admin/ayuda');
   return { saved: true };
 }

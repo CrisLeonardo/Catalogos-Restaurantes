@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
+import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { listStaff, getActivityLog } from '@/lib/actions/staff';
 import { ADMIN_SECTIONS, type SectionKey } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
@@ -29,10 +30,11 @@ export default async function AdminPersonalPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [staff, activity, { data: restaurant }] = await Promise.all([
+  const [staff, activity, { data: restaurant }, { data: themeRow }] = await Promise.all([
     listStaff(restaurantId),
     getActivityLog(restaurantId, 30),
     db.from('restaurants').select('modules, module_settings, plan_actual').eq('id', restaurantId).single(),
+    db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
 
   // No confundir al dueño con secciones que ni él mismo tiene activas (ej.
@@ -43,9 +45,13 @@ export default async function AdminPersonalPage() {
   const planActual = (restaurant?.plan_actual as string | null) ?? null;
   const ordersEnabled = mod?.['orders'] === true;
   const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
+  // Igual que en mesas/page.tsx: "comer en local" activo también da acceso
+  // a Mesas, aunque el plan no incluya el panel de mesero completo.
+  const dineInEnabled = resolveTheme((themeRow as ThemeRow) ?? null).config.orderTypes.includes('dine_in');
+  const mesasAccessible = hasWaiterPanel || dineInEnabled;
   const GATES: Partial<Record<SectionKey, boolean>> = {
     mesero: ordersEnabled && hasWaiterPanel,
-    mesas: ordersEnabled && hasWaiterPanel,
+    mesas: ordersEnabled && mesasAccessible,
     pedidos: ordersEnabled,
     cocina: ordersEnabled,
     impresion: ordersEnabled,

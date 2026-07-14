@@ -59,6 +59,10 @@ export default async function AdminProtectedLayout({
   let zone = '';
   // URL del panel del grupo para volver (solo dueño de grupo "entrando" a una sucursal).
   let groupReturnUrl: string | null = null;
+  // "Comer en local" activo → el restaurante depende de /admin/mesas para
+  // configurar cantidad de mesas y preferencias, aunque su plan no incluya
+  // el panel de mesero completo (ver mesas/page.tsx).
+  let dineInEnabled = false;
 
   if (profile.role === 'SUPER_ADMIN') {
     if (tenantSlug) {
@@ -68,6 +72,7 @@ export default async function AdminProtectedLayout({
       logoUrl = tenantData?.resolved.config.logoUrl ?? null;
       logoBg = tenantData?.resolved.config.colorBg ?? null;
       zone = tenantData?.resolved.config.zone ?? '';
+      dineInEnabled = tenantData?.resolved.config.orderTypes.includes('dine_in') ?? false;
     }
   } else if (profile.role === 'GROUP_OWNER') {
     // El dueño de grupo entra al admin de una sucursal de su organización sin
@@ -81,6 +86,7 @@ export default async function AdminProtectedLayout({
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
     logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
+    dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
 
     // Slug del grupo para el enlace "volver al grupo" (organizations no tiene
     // RLS para GROUP_OWNER → se lee con el cliente de servicio).
@@ -114,6 +120,7 @@ export default async function AdminProtectedLayout({
       logoUrl = tenantData.resolved.config.logoUrl ?? null;
       logoBg = tenantData.resolved.config.colorBg ?? null;
       zone = tenantData.resolved.config.zone ?? '';
+      dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
     } else {
       restaurantName = ctx.restaurant?.name ?? 'Panel admin';
     }
@@ -160,6 +167,7 @@ export default async function AdminProtectedLayout({
       restaurantName={restaurantName}
       restaurantId={currentRestaurant?.id ?? null}
       planActual={planActual}
+      dineInEnabled={dineInEnabled}
       ordersEnabled={m('orders')}
       analiticaEnabled={m('analitica')}
       inventarioEnabled={m('inventario')}

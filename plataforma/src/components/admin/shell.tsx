@@ -77,6 +77,9 @@ interface Props {
   canManageStaff?: boolean;
   /** Plan actual del restaurante — para mostrar badge en la barra lateral. */
   planActual?: string | null;
+  /** "Comer en local" activo — da acceso a Mesas aunque el plan no incluya
+   * el panel de mesero completo (ver layout.tsx y mesas/page.tsx). */
+  dineInEnabled?: boolean;
   /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
   preview?: boolean;
   /** Sesión iniciada por PIN — cambia "Salir" por "Cambiar de usuario". */
@@ -137,7 +140,7 @@ export default function AdminShell({
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
-  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, preview = false,
+  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, dineInEnabled = false, preview = false,
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -171,10 +174,13 @@ export default function AdminShell({
 
   const on = (flag: boolean) => preview || flag;
 
-  // BASICO y ESTANDAR no incluyen panel de mesero ni gestión de mesas
+  // BASICO y ESTANDAR no incluyen panel de mesero (toma de pedidos por staff)
   const planFeatures = PLANS[(planActual ?? 'BASICO') as PlanCode] ?? PLANS.BASICO;
   const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
   const hasAnalyticsPlan = planFeatures.hasAnalytics;
+  // Mesas (config de mesas/QR) también se habilita si el restaurante ya
+  // tiene "comer en local" activo (ESTANDAR con paquete Local), no solo por plan.
+  const mesasAccessible = hasWaiterPanel || dineInEnabled;
 
   const sections: { title: string; items: NavItem[] }[] = [
     {
@@ -183,7 +189,7 @@ export default function AdminShell({
         ...(on(ordersEnabled) ? lockableNavItem(preview, hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }) : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/cocina',    label: 'Cocina',      icon: 'flame', key: 'cocina'    }] : []),
-        ...(on(ordersEnabled) ? lockableNavItem(preview, hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }) : []),
+        ...(on(ordersEnabled) ? lockableNavItem(preview, mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }) : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
         ...(on(ordersEnabled)    ? [{ href: '/admin/impresion', label: 'Impresión', icon: 'print', key: 'impresion' }] : []),
@@ -219,7 +225,6 @@ export default function AdminShell({
         { href: '/admin/escritorio',    label: 'Leogin Desktop', icon: 'monitor',    key: 'escritorio'  },
         { href: '/admin/qr',            label: 'QR',             icon: 'image',      key: 'qr'          },
         { href: '/admin/ayuda',         label: 'Ayuda',          icon: 'helpCircle', key: 'ayuda'       },
-        { href: '/admin/soporte',       label: 'Soporte',        icon: 'headphones', key: 'soporte'     },
       ],
     },
   ]
@@ -248,7 +253,6 @@ export default function AdminShell({
     '/admin/escritorio': 'Leogin Desktop',
     '/admin/qr': 'Código QR',
     '/admin/ayuda': 'Centro de ayuda',
-    '/admin/soporte': 'Soporte',
     '/admin/reservaciones': 'Reservaciones',
     '/admin/encuestas': 'Encuestas',
     '/admin/cupones': 'Cupones',

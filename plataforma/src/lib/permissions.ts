@@ -34,7 +34,6 @@ export const ADMIN_SECTIONS = [
   { key: 'escritorio',   label: 'Leogin Desktop' },
   { key: 'qr',           label: 'QR' },
   { key: 'ayuda',        label: 'Centro de ayuda' },
-  { key: 'soporte',      label: 'Soporte' },
 ] as const;
 
 export type SectionKey = (typeof ADMIN_SECTIONS)[number]['key'];

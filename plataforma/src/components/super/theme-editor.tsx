@@ -338,7 +338,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         )}
         <Toggle label="Domicilio" value={config.orderTypes.includes('delivery')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'delivery', v))} />
         <Toggle label="Para llevar" value={config.orderTypes.includes('pickup')} onChange={(v) => setC('orderTypes', toggleIn(config.orderTypes, 'pickup', v))} />
-        <Toggle label="Aceptar pago con tarjeta" value={config.acceptsCard} onChange={(v) => setC('acceptsCard', v)} />
+        <Toggle label="Pago con tarjeta (a domicilio, el repartidor lleva el POS)" value={config.acceptsCard} onChange={(v) => setC('acceptsCard', v)} />
         <Toggle label="Habilitar propina" value={config.tipEnabled} onChange={(v) => setC('tipEnabled', v)} />
         {config.tipEnabled && (
           <>
