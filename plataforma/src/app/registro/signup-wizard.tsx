@@ -7,6 +7,7 @@ import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
 import { findTemplate } from '@/lib/theme/templates';
 import { signupRestaurant, type SignupState } from '@/lib/actions/signup';
+import { PLANS } from '@/lib/plans';
 
 const empty: SignupState = null;
 
@@ -60,7 +61,7 @@ const PLAN_CARDS: PlanCardDef[] = [
   {
     code: 'BASICO',
     name: 'Básico',
-    priceLabel: 'Q149',
+    priceLabel: `Q${PLANS.BASICO.priceMonthly}`,
     priceUnit: '/ mes',
     trialLabel: 'Con 30 días gratis',
     features: [
@@ -74,7 +75,7 @@ const PLAN_CARDS: PlanCardDef[] = [
   {
     code: 'ESTANDAR',
     name: 'Estándar',
-    priceLabel: 'Q399',
+    priceLabel: `Q${PLANS.ESTANDAR.priceMonthly}`,
     priceUnit: '/ mes',
     trialLabel: 'Con 30 días gratis',
     features: [
@@ -91,7 +92,7 @@ const PLAN_CARDS: PlanCardDef[] = [
     badge: 'RECOMENDADO',
     priceLabel: 'Gratis 30 días',
     priceUnit: '',
-    trialLabel: 'luego Q749 / mes',
+    trialLabel: `luego ${PLANS.PREMIUM.priceLabel}`,
     features: [
       { text: 'Para llevar, comer en local y delivery', positive: true },
       { text: 'Panel de mesero, recetas y cupones', positive: true },
@@ -251,7 +252,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
         {selectedPlan === 'ESTANDAR' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
-              Elige tu paquete Estándar (mismo precio, Q399/mes)
+              Elige tu paquete Estándar (mismo precio, {PLANS.ESTANDAR.priceLabel})
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {([
@@ -355,7 +356,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 4: Confirmar ── */}
       <div style={{ display: step === 4 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? 'Premium · 30 días gratis, luego Q749/mes' : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · Q399/mes (30 días gratis)` : 'Básico · Q149/mes (30 días gratis)'} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · 30 días gratis, luego ${PLANS.PREMIUM.priceLabel}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · ${PLANS.ESTANDAR.priceLabel} (30 días gratis)` : `Básico · ${PLANS.BASICO.priceLabel} (30 días gratis)`} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Estilo" value={findTemplate(templateId)?.name ?? 'Clásico'} />

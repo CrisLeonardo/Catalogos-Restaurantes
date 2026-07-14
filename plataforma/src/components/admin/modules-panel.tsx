@@ -17,7 +17,7 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ADDON_MODULES, INCLUDED_MODULES, type PlanCode } from '@/lib/plans';
+import { ADDON_MODULES, INCLUDED_MODULES, PLANS, isAddonAvailable, type PlanCode } from '@/lib/plans';
 import type { OrderType } from '@/lib/theme/defaults';
 
 /** Nota de precio para un módulo según si el plan actual lo incluye gratis. */
@@ -209,6 +209,93 @@ function ManagedCard({ m, active, supportHref, priceNote }: { m: ModuleMeta; act
   );
 }
 
+/** Tarjeta "esto lo pierdes por tu plan" — no vendible a la carta (todo el panel) o
+   módulo a la carta que no tienes activo todavía. Siempre visible, nunca se oculta. */
+function LockedPlanCard({ icon, label, description, priceNote }: { icon: string; label: string; description: string; priceNote: string }) {
+  return (
+    <Card className="relative flex flex-col gap-3 overflow-hidden p-4.5" style={{ opacity: 0.65 }}>
+      <div style={{
+        position: 'absolute', top: 10, right: 10,
+        fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
+        background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent)',
+        letterSpacing: '0.06em',
+      }}>
+        PREMIUM
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-4)' }}>
+          <Icon name={icon} size={20} />
+        </span>
+        <div>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-3)' }}>{label}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+            <Icon name="key" size={11} style={{ color: 'var(--u-text-4)' }} />
+            <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>No incluido en tu plan</span>
+          </div>
+        </div>
+      </div>
+      <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>{description}</p>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-accent)' }}>{priceNote}</div>
+    </Card>
+  );
+}
+
+/** Sección siempre visible con lo que el plan actual NO incluye: funciones exclusivas
+   de Premium que no se venden sueltas (mesero, finanzas/analítica) y módulos a la
+   carta que aún no están activos. Oculta solo si ya tienes Premium/Pro. */
+function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modules: ModulesMap; settings: ModuleSettings }) {
+  const f = PLANS[plan];
+  const missingAddons = ACTIVATABLE_MODULES.filter(
+    (m) => isAddonAvailable(m.key) && !INCLUDED_MODULES[plan]?.includes(m.key) && !isModuleActive(modules, settings, m.key),
+  );
+  const missingWaiter = !f.hasWaiterPanel;
+  const missingAnalytics = !f.hasAnalytics;
+
+  if (!missingWaiter && !missingAnalytics && missingAddons.length === 0) return null;
+
+  return (
+    <div>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: 10 }}>
+        Lo que obtienes con Premium
+      </div>
+      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginBottom: 12, marginTop: 0 }}>
+        Esto es lo que tu plan <strong style={{ color: 'var(--u-text-2)' }}>{PLANS[plan].name}</strong> todavía no incluye.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12, marginBottom: 14 }}>
+        {missingWaiter && (
+          <LockedPlanCard
+            icon="userPlus"
+            label="Panel de mesero y mapa de mesas"
+            description="Tu equipo toma pedidos desde una tablet en cada mesa y ves el mapa del salón en vivo. Es de todo el panel, no se compra por módulo."
+            priceNote={`Incluido en Premium (${PLANS.PREMIUM.priceLabel})`}
+          />
+        )}
+        {missingAnalytics && (
+          <LockedPlanCard
+            icon="chart"
+            label="Finanzas, analítica e inventario"
+            description="Estadísticas de ventas, control de inventario y costos, personal con roles, y promociones automáticas."
+            priceNote={`Incluido en Premium (${PLANS.PREMIUM.priceLabel})`}
+          />
+        )}
+        {missingAddons.map((m) => (
+          <LockedPlanCard
+            key={m.key}
+            icon={m.icon}
+            label={m.label}
+            description={m.description}
+            priceNote={`Incluido en Premium · o Q${ADDON_MODULES[m.key].price}/mes a la carta`}
+          />
+        ))}
+      </div>
+      <a href="/admin/suscripcion" className="press"
+        style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        Ver comparativa de planes <Icon name="arrowRight" size={13} />
+      </a>
+    </div>
+  );
+}
+
 export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -272,8 +359,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   const selfCount = visible.filter((m) => !m.requiresSetup).length;
   const selfActive = visible.filter((m) => !m.requiresSetup && settings[m.key]?.enabled !== false).length;
 
+  const currentPlan = (planActual ?? 'BASICO') as PlanCode;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+      <PremiumGapsSection plan={currentPlan} modules={modules} settings={settings} />
 
       {/* ── Modos de pedido ──────────────────────────────────── */}
       <div>
@@ -288,7 +379,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               El plan <strong style={{ color: 'var(--u-text-2)' }}>Básico</strong> es solo menú digital — no incluye pedidos en línea.
-              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent)' }}>Estándar (Q399/mes)</strong>.{' '}
+              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent)' }}>Estándar ({PLANS.ESTANDAR.priceLabel})</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
@@ -298,7 +389,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               Tu plan Estándar incluye el paquete <strong style={{ color: 'var(--u-text-2)' }}>{estandarBundleLabel}</strong>.
-              Para combinar delivery y local en un mismo menú, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium (Q749/mes)</strong>.{' '}
+              Para combinar delivery y local en un mismo menú, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium ({PLANS.PREMIUM.priceLabel})</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>

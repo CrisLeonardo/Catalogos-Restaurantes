@@ -20,10 +20,25 @@ import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
 import { can, isMeseroOnly } from '@/lib/permissions';
+import { PLANS, type PlanCode } from '@/lib/plans';
 
 const NAV_KEY = 'admin-nav-collapsed';
 
-interface NavItem { href: string; label: string; icon: string; key: string }
+interface NavItem { href: string; label: string; icon: string; key: string; locked?: boolean }
+
+/**
+ * Un ítem de nav que depende de un módulo activo (`enabled`) pero que además
+ * es una función exclusiva de Premium (`planHasFeature`): en vez de
+ * desaparecer sin explicación cuando el plan no la incluye, se muestra
+ * bloqueado (candado, lleva a "Mi suscripción"). Si el plan SÍ la incluye
+ * pero el módulo aún no está activo (pendiente de activación por Leogin),
+ * se mantiene oculto como antes — ahí no hay nada que "vender".
+ */
+function lockableNavItem(preview: boolean, enabled: boolean, planHasFeature: boolean, item: Omit<NavItem, 'locked'>): NavItem[] {
+  if (preview || enabled) return [item];
+  if (!planHasFeature) return [{ ...item, locked: true }];
+  return [];
+}
 
 interface Props {
   restaurantName: string;
@@ -157,20 +172,22 @@ export default function AdminShell({
   const on = (flag: boolean) => preview || flag;
 
   // BASICO y ESTANDAR no incluyen panel de mesero ni gestión de mesas
+  const planFeatures = PLANS[(planActual ?? 'BASICO') as PlanCode] ?? PLANS.BASICO;
   const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
+  const hasAnalyticsPlan = planFeatures.hasAnalytics;
 
   const sections: { title: string; items: NavItem[] }[] = [
     {
       title: 'Operación',
       items: [
-        ...(on(ordersEnabled) && on(hasWaiterPanel) ? [{ href: '/admin/mesero', label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }] : []),
+        ...(on(ordersEnabled) ? lockableNavItem(preview, hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }) : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
         ...(on(ordersEnabled)    ? [{ href: '/admin/cocina',    label: 'Cocina',      icon: 'flame', key: 'cocina'    }] : []),
-        ...(on(ordersEnabled) && on(hasWaiterPanel) ? [{ href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }] : []),
+        ...(on(ordersEnabled) ? lockableNavItem(preview, hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }) : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
         ...(on(ordersEnabled)    ? [{ href: '/admin/impresion', label: 'Impresión', icon: 'print', key: 'impresion' }] : []),
-        ...(on(inventarioEnabled) ? [{ href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }] : []),
+        ...lockableNavItem(preview, inventarioEnabled, hasAnalyticsPlan, { href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }),
         ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
         ...(on(reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', icon: 'calendar', key: 'reservaciones' }] : []),
         ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
@@ -180,14 +197,14 @@ export default function AdminShell({
       title: 'Negocio',
       items: [
         { href: '/admin/metricas', label: 'Métricas', icon: 'chart', key: 'metricas' },
-        ...(on(analiticaEnabled)   ? [{ href: '/admin/analitica',   label: 'Analítica', icon: 'dashboard', key: 'analitica'   }] : []),
-        ...(on(finanzasEnabled)    ? [{ href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }] : []),
+        ...lockableNavItem(preview, analiticaEnabled, hasAnalyticsPlan, { href: '/admin/analitica',   label: 'Analítica', icon: 'dashboard', key: 'analitica'   }),
+        ...lockableNavItem(preview, finanzasEnabled, hasAnalyticsPlan, { href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }),
         ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
         ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt',   key: 'fel'         }] : []),
         ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
         ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
         ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
-        ...(on(promocionesEnabled) ? [{ href: '/admin/promociones', label: 'Promociones', icon: 'percent',  key: 'promociones' }] : []),
+        ...lockableNavItem(preview, promocionesEnabled, hasAnalyticsPlan, { href: '/admin/promociones', label: 'Promociones', icon: 'percent',  key: 'promociones' }),
       ],
     },
     {
@@ -198,7 +215,7 @@ export default function AdminShell({
         { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle',   key: 'personalizar' },
         { href: '/admin/perfil',        label: 'Perfil',         icon: 'user',      key: 'perfil'      },
         { href: '/admin/ajustes',       label: 'Ajustes',        icon: 'settings',  key: 'ajustes'     },
-        ...(showStaff && on(personalEnabled) ? [{ href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }] : []),
+        ...(showStaff ? lockableNavItem(preview, personalEnabled, hasAnalyticsPlan, { href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }) : []),
         { href: '/admin/escritorio',    label: 'Leogin Desktop', icon: 'monitor',    key: 'escritorio'  },
         { href: '/admin/qr',            label: 'QR',             icon: 'image',      key: 'qr'          },
         { href: '/admin/ayuda',         label: 'Ayuda',          icon: 'helpCircle', key: 'ayuda'       },
@@ -283,6 +300,23 @@ export default function AdminShell({
 
   function renderLink(n: NavItem) {
     const active = pathname.startsWith(n.href);
+    if (n.locked) {
+      return (
+        <Link
+          key={n.href}
+          href="/admin/suscripcion"
+          className="admin-navlink press"
+          data-active="0"
+          data-tour-step={n.key}
+          title={`${n.label} requiere Premium (${PLANS.PREMIUM.priceLabel})`}
+          style={{ opacity: 0.55 }}
+        >
+          <Icon name={n.icon} size={18} />
+          <span className="nav-label">{n.label}</span>
+          <Icon name="key" size={12} style={{ marginLeft: 'auto', flexShrink: 0 }} />
+        </Link>
+      );
+    }
     if (preview) {
       return (
         <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={n.key} style={{ cursor: 'default' }}>

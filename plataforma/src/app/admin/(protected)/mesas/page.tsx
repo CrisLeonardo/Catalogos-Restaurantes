@@ -2,6 +2,8 @@ import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import TablesPanel from '@/components/admin/tables-panel';
+import PlanLockedScreen from '@/components/admin/plan-locked-screen';
+import { PLANS, type PlanCode } from '@/lib/plans';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 
 export const metadata = { title: 'Mesas — Panel Admin' };
@@ -14,6 +16,7 @@ export default async function MesasPage() {
   let slug = tenantSlug ?? ctx?.restaurant?.slug ?? null;
   let restaurantId: string | null = null;
   let resolvedConfig: ThemeConfig | null = null;
+  let planActual: string | null = null;
 
   if (tenantSlug) {
     const data = await getRestaurantBySlug(tenantSlug);
@@ -21,14 +24,29 @@ export default async function MesasPage() {
       restaurantId = data.restaurant.id;
       slug = tenantSlug;
       resolvedConfig = data.resolved.config;
+      planActual = data.restaurant.plan_actual ?? null;
     }
   } else if (ctx?.restaurant) {
     restaurantId = ctx.restaurant.id;
     slug = ctx.restaurant.slug;
+    planActual = ctx.restaurant.plan_actual ?? null;
     if (slug) {
       const data = await getRestaurantBySlug(slug);
       if (data) resolvedConfig = data.resolved.config;
     }
+  }
+
+  // Gestión de mesas es exclusiva de Premium — no se vende a la carta. Un
+  // restaurante BASICO/ESTANDAR no debe poder usarla aunque conozca la URL.
+  const hasWaiterPanel = PLANS[(planActual ?? 'BASICO') as PlanCode]?.hasWaiterPanel ?? false;
+  if (ctx?.profile.role !== 'SUPER_ADMIN' && !hasWaiterPanel) {
+    return (
+      <PlanLockedScreen
+        feature="Gestión de mesas"
+        description="El mapa de mesas y el control de estado (libre, ocupada, por cobrar) son parte del panel de mesero, exclusivo del plan Premium."
+        icon="grid"
+      />
+    );
   }
 
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'localhost:3000';
