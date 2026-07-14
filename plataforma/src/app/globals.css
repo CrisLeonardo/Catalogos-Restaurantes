@@ -461,6 +461,28 @@ body {
 /* Apagar los pools de luz (config.ambientGlow = false) */
 .asphalt[data-glow="0"]::before, .asphalt[data-glow="0"]::after { display: none; }
 
+/* Pools de luz reutilizables para fondos NO-asphalt (solid/gradient/image con
+   config.ambientGlow = true). El asphalt ya trae los suyos vía ::before/::after
+   arriba; esta capa es la misma animación pero como elemento aparte, para que
+   el glow no dependa de backgroundType === 'asphalt'. */
+.ambient-glow {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+}
+.ambient-glow::before, .ambient-glow::after {
+  content: ''; position: absolute; border-radius: 50%;
+  filter: blur(60px); opacity: 0.5; mix-blend-mode: screen;
+}
+.ambient-glow::before {
+  width: 60svmax; height: 60svmax; left: -10svmax; top: -20svmax;
+  background: radial-gradient(circle, rgba(255,255,255,0.10), transparent 60%);
+  animation: drift-a 26s var(--ease-out) infinite alternate;
+}
+.ambient-glow::after {
+  width: 50svmax; height: 50svmax; right: -8svmax; bottom: -16svmax;
+  background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 60%);
+  animation: drift-b 32s var(--ease-out) infinite alternate;
+}
+
 /* Fondos alternativos (config.backgroundType) — todos capa fija detrás del contenido */
 .bg-layer { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 .bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }

@@ -29,6 +29,10 @@ export default function ThemeBackground({ config }: { config?: ThemeConfig }) {
         />
       )}
 
+      {config.ambientGlow && config.backgroundType !== 'asphalt' && (
+        <div className="ambient-glow" aria-hidden />
+      )}
+
       {config.grain && <div className="asphalt-grain" aria-hidden />}
       {config.watermark && (config.markUrl || config.logoUrl) && (
         <div
