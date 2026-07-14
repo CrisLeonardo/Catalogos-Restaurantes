@@ -6,7 +6,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 /**
  * Manifest PWA dinámico:
  *  - En el subdominio de un restaurante → usa el nombre del restaurante
- *    (el comensal instala "Azúcar Negra", no "Leogin").
+ *    (el comensal instala "Café Demo", no "Leogin").
  *  - En la demo o el dominio raíz → "Leogin" (la plataforma).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
@@ -16,7 +16,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   let logoUrl: string | null = null;
   let pwaIconUrl: string | null = null;
   if (slug === DEMO_SLUG) {
-    name = 'Azúcar Negra';
+    name = 'Café Demo';
   } else if (slug) {
     try {
       const data = await getRestaurantBySlug(slug);

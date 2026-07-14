@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest) {
   let iconType = 'image/png';
 
   if (slug === DEMO_SLUG) {
-    name = 'Azúcar Negra';
+    name = 'Café Demo';
     themeColor = '#0b0b0c';
     bgColor = '#0b0b0c';
   } else if (slug) {

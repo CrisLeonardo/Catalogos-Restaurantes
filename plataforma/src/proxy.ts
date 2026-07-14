@@ -40,8 +40,8 @@ export async function proxy(request: NextRequest) {
   if (isAdminArea) requestHeaders.set("x-admin-area", "1");
 
   // 2) Rewrite para subdominio admin.*
-  //    admin.azucar-negra.leogin.online/       → /admin/
-  //    admin.azucar-negra.leogin.online/menu   → /admin/menu
+  //    admin.mi-restaurante.leogin.online/       → /admin/
+  //    admin.mi-restaurante.leogin.online/menu   → /admin/menu
   //    Rutas /api/, /_next/ y archivos estáticos no se reescriben.
   let rewriteUrl: URL | null = null;
   if (adminSub) {

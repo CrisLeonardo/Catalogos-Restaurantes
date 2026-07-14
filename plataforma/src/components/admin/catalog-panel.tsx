@@ -530,7 +530,7 @@ function ProductModal({
               label="Nombre"
               name="name"
               defaultValue={product?.name ?? ''}
-              placeholder="Ej. Mocha Negra"
+              placeholder="Ej. Café Latte"
               required
             />
 

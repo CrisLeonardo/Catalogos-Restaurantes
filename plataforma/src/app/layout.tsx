@@ -79,7 +79,7 @@ export async function generateViewport(): Promise<Viewport> {
   const slug = headersList.get('x-tenant-slug');
   let themeColor = '#0b0b0c';
   if (slug === DEMO_SLUG) {
-    themeColor = resolveTheme({ brand_name: 'Azúcar Negra' }, DEMO_SLUG).config.colorBg;
+    themeColor = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG).config.colorBg;
   } else if (slug) {
     const data = await getRestaurantBySlug(slug);
     if (data) themeColor = data.resolved.config.colorBg;
@@ -124,7 +124,7 @@ export default async function RootLayout({
   // (landing, login) no tienen slug → usan los defaults de globals.css.
   let resolved: ResolvedTheme | null = null;
   if (slug === DEMO_SLUG) {
-    resolved = resolveTheme({ brand_name: 'Azúcar Negra' }, DEMO_SLUG);
+    resolved = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG);
   } else if (slug) {
     const data = await getRestaurantBySlug(slug);
     resolved = data?.resolved ?? resolveTheme(null, slug);

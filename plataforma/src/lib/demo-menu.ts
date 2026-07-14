@@ -1,4 +1,4 @@
-/* Menú de ejemplo (Azúcar Negra) — se usa en el subdominio `demo` y como
+/* Menú de ejemplo (Café Demo) — se usa en el subdominio `demo` y como
    datos de muestra en la vista previa en vivo cuando un restaurante aún
    no tiene productos cargados. Sin dependencias: importable en server y cliente. */
 
@@ -21,7 +21,7 @@ export const DEMO_CATEGORIES: DemoCategory[] = [
    función en la demo (tamaños de bebida, extras del bagel). */
 export const DEMO_PRODUCTS: DemoProduct[] = [
   {
-    id: 'p1', category_id: 'c1', name: 'Negra Brava',
+    id: 'p1', category_id: 'c1', name: 'Bagel Bravo',
     description: 'Bagel de carbón activado, chorizo artesanal, huevo y jalapeño curtido.',
     price: 45, image_url: null, icon: null, tags: ['Picante', 'Favorito'],
     options: [
@@ -38,7 +38,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
   { id: 'p2', category_id: 'c1', name: 'El Clásico',     description: 'Bagel del día, queso crema batido y un toque de sal de mar.',            price: 28, image_url: null, icon: null, tags: [], options: null },
   { id: 'p3', category_id: 'c1', name: 'Lox del Barrio', description: 'Salmón curado en casa, queso crema, alcaparras y cebolla morada.',        price: 62, image_url: null, icon: null, tags: ['Favorito'], options: null },
   {
-    id: 'p4', category_id: 'c2', name: 'Mocha Negra',
+    id: 'p4', category_id: 'c2', name: 'Mocha de la Casa',
     description: 'Espresso doble, cacao 70% y leche al vapor. El sabor de la casa.',
     price: 26, image_url: null, icon: null, tags: ['Favorito'],
     options: [
@@ -64,5 +64,5 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
   { id: 'p6', category_id: 'c3', name: 'Cold Brew 18h',  description: 'Extracción en frío 18 horas. Suave, intenso, sin amargor.',               price: 24, image_url: null, icon: null, tags: [], options: null },
   { id: 'p7', category_id: 'c3', name: 'Frappé Azúcar',  description: 'Café, hielo, leche y caramelo de azúcar negra batido.',                   price: 30, image_url: null, icon: null, tags: ['Nuevo'], options: null },
   { id: 'p8', category_id: 'c4', name: 'Roll de Canela', description: 'Recién horneado, glaseado de queso crema. Caliente siempre.',             price: 25, image_url: null, icon: null, tags: ['Favorito'], options: null },
-  { id: 'p9', category_id: 'c4', name: 'Brownie Negro',  description: 'Chocolate 80%, centro fundido, sal Maldon encima.',                       price: 22, image_url: null, icon: null, tags: [], options: null },
+  { id: 'p9', category_id: 'c4', name: 'Brownie de Chocolate',  description: 'Chocolate 80%, centro fundido, sal Maldon encima.',                       price: 22, image_url: null, icon: null, tags: [], options: null },
 ];

@@ -1,5 +1,5 @@
 -- ============================================================
--- Demo: Azúcar Negra
+-- Demo: Café Demo
 -- Ejecutar DESPUÉS de 001_initial_schema.sql
 -- ============================================================
 
@@ -14,7 +14,7 @@ begin
 
 -- Restaurante
 insert into restaurants (id, slug, name, tagline, plan_actual, status)
-values (v_rid, 'azucar-negra', 'Azúcar Negra', 'Cafetería con sabor a calle', 'CATALOGO', 'active')
+values (v_rid, 'cafe-demo', 'Café Demo', 'Sabor de barrio', 'CATALOGO', 'active')
 on conflict (slug) do nothing;
 
 -- Tema
@@ -23,7 +23,7 @@ insert into restaurant_themes (
   color_primary, color_bg, color_text,
   font_display, portada_style, catalog_view, glass_intensity
 ) values (
-  v_rid, 'Azúcar Negra',
+  v_rid, 'Café Demo',
   '#D97757', '#0b0b0c', '#F5F3EF',
   'Unbounded', 'spotlight', 'grid', 'translucido'
 ) on conflict (restaurant_id) do nothing;
@@ -38,13 +38,13 @@ on conflict (id) do nothing;
 
 -- Productos
 insert into products (restaurant_id, category_id, name, description, price, tags, sort_order) values
-  (v_rid, v_c1, 'Negra Brava',
+  (v_rid, v_c1, 'Bagel Bravo',
    'Bagel de carbón activado, chorizo artesanal, huevo y jalapeño curtido.',
    45.00, ARRAY['Picante'], 0),
   (v_rid, v_c1, 'Lox del Barrio',
    'Salmón curado en casa, queso crema, alcaparras y cebolla morada.',
    62.00, ARRAY['Favorito'], 1),
-  (v_rid, v_c2, 'Mocha Negra',
+  (v_rid, v_c2, 'Mocha de la Casa',
    'Espresso doble, cacao 70% y leche al vapor. El sabor de la casa.',
    26.00, ARRAY['Favorito'], 0),
   (v_rid, v_c3, 'Cold Brew 18h',
@@ -53,7 +53,7 @@ insert into products (restaurant_id, category_id, name, description, price, tags
   (v_rid, v_c4, 'Roll de Canela',
    'Recién horneado, glaseado de queso crema. Caliente siempre.',
    25.00, ARRAY['Nuevo'], 0),
-  (v_rid, v_c4, 'Brownie Negro',
+  (v_rid, v_c4, 'Brownie de Chocolate',
    'Chocolate 80%, centro fundido, sal Maldon encima.',
    22.00, NULL, 1);
 

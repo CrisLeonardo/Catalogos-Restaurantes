@@ -300,7 +300,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Azúcar Negra"
+            placeholder="Ej. Tu Restaurante"
             style={inputStyle}
           />
         </Field>

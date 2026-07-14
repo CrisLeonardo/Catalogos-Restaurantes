@@ -92,7 +92,7 @@ export default function ProductForm({ restaurantId, categories, product, default
           type="text"
           required
           defaultValue={product?.name ?? ''}
-          placeholder="Ej: Mocha Negra"
+          placeholder="Ej: Café Latte"
           style={inputStyle}
         />
       </Glass>

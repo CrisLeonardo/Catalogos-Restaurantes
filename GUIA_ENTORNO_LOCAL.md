@@ -23,7 +23,7 @@ Tu plataforma son **dos piezas** que corren juntas:
 
 La app sabe a qué Supabase conectarse por el archivo **`.env.local`** (en local) o por las **variables de entorno** (en Render). Solo cambias esas 3 claves y la misma app apunta a una base u otra.
 
-> **Por eso antes "se sentía que no funcionaba":** sin `.env.local` con claves de Supabase, la app solo muestra la **demo** de un restaurante (Azúcar Negra) y los paneles `/admin` y `/super` te mandan a la portada. No es que falte código: faltaba conectar la base de datos. Eso ya está resuelto en local.
+> **Por eso antes "se sentía que no funcionaba":** sin `.env.local` con claves de Supabase, la app solo muestra la **demo** de un restaurante (Café Demo) y los paneles `/admin` y `/super` te mandan a la portada. No es que falte código: faltaba conectar la base de datos. Eso ya está resuelto en local.
 
 ---
 
@@ -138,8 +138,8 @@ Con Supabase local encendido, abre **http://localhost:54323** — es el "panel d
 Cada restaurante vive en su subdominio. En local Chrome resuelve `*.localhost` automáticamente:
 
 - **http://localhost:3000** → portada **demo** (sin restaurante real).
-- **http://azucar-negra.localhost:3000** → el menú **real** del restaurante `azucar-negra` leído de la base.
-- **http://azucar-negra.localhost:3000/login** → ahí entraría el dueño de ese restaurante.
+- **http://cafe-demo.localhost:3000** → el menú **real** del restaurante `cafe-demo` leído de la base.
+- **http://cafe-demo.localhost:3000/login** → ahí entraría el dueño de ese restaurante.
 
 Si creas otro restaurante con slug `tacos-pepe`, lo verás en `http://tacos-pepe.localhost:3000`.
 
