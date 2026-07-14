@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { DEMO_SLUG } from '@/lib/tenant';
 import { getResumeSession } from '@/lib/auth/resume';
+import { getAgentHubInfo } from '@/lib/print-agent';
 import LoginClient from '@/app/login/login-client';
 
 /**
@@ -15,6 +16,7 @@ export default async function AdminLoginPage() {
   const slug = (await headers()).get('x-tenant-slug');
 
   let restaurantName: string | null = null;
+  let restaurantId: string | null = null;
   let logoUrl: string | null = null;
 
   if (slug && slug !== DEMO_SLUG) {
@@ -22,6 +24,7 @@ export default async function AdminLoginPage() {
       const data = await getRestaurantBySlug(slug);
       if (data) {
         restaurantName = data.restaurant.name;
+        restaurantId = data.restaurant.id;
         logoUrl = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl ?? null;
       }
     } catch {
@@ -36,7 +39,30 @@ export default async function AdminLoginPage() {
     /* sin sesión utilizable → login normal */
   }
 
+  // Fallback del hub local (Fase 2 offline): si el PIN falla por conectividad
+  // intermitente justo al enviarlo, staff-pin-login.tsx reintenta contra el
+  // hub con esto — nunca abre sesión por sí solo, solo identifica al operador.
+  let hubUrl: string | null = null;
+  let hubToken: string | null = null;
+  if (restaurantId) {
+    try {
+      const hub = await getAgentHubInfo(restaurantId);
+      hubUrl = hub.hubUrl;
+      hubToken = hub.hubToken;
+    } catch {
+      /* sin agente vinculado → sin fallback offline */
+    }
+  }
+
   return (
-    <LoginClient restaurantName={restaurantName} logoUrl={logoUrl} slug={slug} resume={resume} />
+    <LoginClient
+      restaurantName={restaurantName}
+      restaurantId={restaurantId}
+      logoUrl={logoUrl}
+      slug={slug}
+      resume={resume}
+      hubUrl={hubUrl}
+      hubToken={hubToken}
+    />
   );
 }

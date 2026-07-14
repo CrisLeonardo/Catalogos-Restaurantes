@@ -64,6 +64,8 @@ interface Props {
   planActual?: string | null;
   /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
   preview?: boolean;
+  /** Sesión iniciada por PIN — cambia "Salir" por "Cambiar de usuario". */
+  isOperatorSession?: boolean;
   children: React.ReactNode;
 }
 
@@ -120,7 +122,8 @@ export default function AdminShell({
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
-  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, preview = false, children,
+  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, preview = false,
+  isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
   // Secciones del nav plegadas: se leen de localStorage de forma SSR-safe
@@ -383,7 +386,7 @@ export default function AdminShell({
             </div>
             <div style={{ fontSize: 10.5, color: 'var(--u-text-3)' }}>{preview ? 'Vista previa' : 'Sesión activa'}</div>
           </div>
-          {!preview && <LogoutButton />}
+          {!preview && <LogoutButton isOperatorSession={isOperatorSession} />}
         </div>
       </aside>
 

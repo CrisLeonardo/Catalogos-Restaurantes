@@ -65,6 +65,16 @@ export interface MenuSnapshot {
   kitchenTarget: string | null;
 }
 
+/** PIN de operador cacheado (login sin conexión, ver PLAN_LOGIN_STAFF_PIN.md).
+    hash+salt únicamente — nunca el PIN en claro, ni en la nube ni aquí. */
+export interface CachedStaffPin {
+  profileId: string;
+  fullName: string | null;
+  permissions: string[] | null;
+  pinHash: string;
+  pinSalt: string;
+}
+
 /** Certificado wildcard + hostname propio para el HTTPS del hub
     (migración 064, ARQUITECTURA_OFFLINE.md §8.1). Lo entrega la nube por
     /api/agent/hub-cert cuando el poll anuncia un certSha256 distinto. */
@@ -85,9 +95,12 @@ interface StoreData {
       Se genera una sola vez y se persiste — así sobrevive a reinicios. */
   hubOrderToken: string | null;
   tls: HubTls | null;
+  /** Cache de PINs de operador (login sin conexión), sincronizado igual que
+      `menu` desde /api/agent/staff-pins. */
+  staffPins: CachedStaffPin[];
 }
 
-const EMPTY: StoreData = { menu: null, menuSyncedAt: null, pendingOrders: [], hubOrderToken: null, tls: null };
+const EMPTY: StoreData = { menu: null, menuSyncedAt: null, pendingOrders: [], hubOrderToken: null, tls: null, staffPins: [] };
 
 function storeDir(): string {
   const dir = installDir();
@@ -109,6 +122,7 @@ function load(): StoreData {
       pendingOrders: Array.isArray(parsed.pendingOrders) ? parsed.pendingOrders : [],
       hubOrderToken: parsed.hubOrderToken ?? null,
       tls: parsed.tls ?? null,
+      staffPins: Array.isArray(parsed.staffPins) ? parsed.staffPins : [],
     };
   } catch {
     return { ...EMPTY };
@@ -150,6 +164,16 @@ export function saveMenuSnapshot(menu: StoreData['menu']): void {
   const data = load();
   data.menu = menu;
   data.menuSyncedAt = new Date().toISOString();
+  save(data);
+}
+
+export function getStaffPins(): CachedStaffPin[] {
+  return load().staffPins;
+}
+
+export function saveStaffPins(staffPins: CachedStaffPin[]): void {
+  const data = load();
+  data.staffPins = staffPins;
   save(data);
 }
 

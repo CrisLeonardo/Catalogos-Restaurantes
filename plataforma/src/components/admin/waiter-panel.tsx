@@ -55,6 +55,8 @@ interface Props {
       responde, antes de encolar el pedido en este dispositivo. */
   hubUrl: string | null;
   hubToken: string | null;
+  /** Sesión iniciada por PIN — el menú ⋮ ofrece "Cambiar de usuario" en vez de "Salir". */
+  isOperatorSession?: boolean;
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
@@ -276,7 +278,7 @@ function ProductOptionsModal({
 
 /* Menú ⋮ del encabezado: hoy solo trae "Salir", pero queda listo para más
    opciones futuras del mesero sin competir por espacio con la navegación. */
-function HeaderMenu() {
+function HeaderMenu({ isOperatorSession }: { isOperatorSession?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -302,7 +304,7 @@ function HeaderMenu() {
       </button>
       {open && (
         <div className="glass anim-pop" style={{ position: 'absolute', right: 0, top: 46, zIndex: 210, minWidth: 160, borderRadius: 14, padding: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-          <LogoutButton variant="menu-item" />
+          <LogoutButton variant="menu-item" isOperatorSession={isOperatorSession} />
         </div>
       )}
     </div>
@@ -311,7 +313,7 @@ function HeaderMenu() {
 
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders,
+  title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders, isOperatorSession,
 }: {
   title: string;
   waiterName: string;
@@ -320,6 +322,7 @@ function WaiterHeader({
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
+  isOperatorSession?: boolean;
 }) {
   return (
     <header style={{
@@ -348,7 +351,7 @@ function WaiterHeader({
             <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
           </button>
         )}
-        <HeaderMenu />
+        <HeaderMenu isOperatorSession={isOperatorSession} />
       </div>
     </header>
   );
@@ -361,7 +364,7 @@ export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
-  hubUrl, hubToken,
+  hubUrl, hubToken, isOperatorSession = false,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -588,6 +591,9 @@ export default function WaiterPanel({
     const input = {
       restaurantId,
       clientId,
+      // Solo lo usa el camino del hub offline (offline-orders/route.ts): la
+      // nube ya resuelve el mesero de la sesión real, ver createWaiterOrder.
+      waiterId,
       items: cart.map((l) => ({
         productId: l.productId,
         name: l.name,
@@ -676,6 +682,7 @@ export default function WaiterPanel({
     showOrders: view !== 'orders',
     ordersCount: orders.length,
     onShowOrders: () => setView('orders'),
+    isOperatorSession,
   };
 
   /* ════════════════ VISTA: MIS PEDIDOS ════════════════ */

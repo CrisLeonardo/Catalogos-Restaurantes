@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getKitchenOrders } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import KitchenDisplay from '@/components/admin/kitchen-display';
 
 export const metadata = { title: 'Cocina (KDS)' };
@@ -59,6 +60,7 @@ export default async function CocinaPage() {
       redMin={cfg.kdsRedMin}
       confirmFirst={cfg.kdsConfirmFirst}
       scheme={scheme}
+      isOperatorSession={!!(await cookies()).get(OPERATOR_COOKIE)?.value}
     />
   );
 }

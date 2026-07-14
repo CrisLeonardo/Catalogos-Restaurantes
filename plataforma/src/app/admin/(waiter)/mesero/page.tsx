@@ -1,9 +1,10 @@
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
 import { getAgentHubInfo } from '@/lib/print-agent';
+import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
@@ -81,6 +82,7 @@ export default async function MeseroPage() {
       }}
       hubUrl={hubInfo.hubUrl}
       hubToken={hubInfo.hubToken}
+      isOperatorSession={!!(await cookies()).get(OPERATOR_COOKIE)?.value}
     />
   );
 }

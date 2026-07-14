@@ -2,8 +2,7 @@ import 'server-only';
 
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { isMeseroOnly } from '@/lib/permissions';
-import { adminUrl } from '@/lib/tenant';
+import { resolveStaffDestination } from '@/lib/auth/destination';
 
 /**
  * Sesión de personal ya iniciada, lista para "Continuar como {nombre}" en las
@@ -41,26 +40,16 @@ export async function getResumeSession(): Promise<ResumeSession | null> {
   if (!profile) return null;
 
   const name = (profile.full_name as string | null) || user.email || 'tu cuenta';
+  if (!profile.restaurant_id && profile.role !== 'SUPER_ADMIN' && profile.role !== 'GROUP_OWNER') return null;
 
-  if (profile.role === 'SUPER_ADMIN') return { name, url: '/super/restaurantes' };
-  if (profile.role === 'GROUP_OWNER') return { name, url: '/central' };
-  if (!profile.restaurant_id) return null;
-
-  const { data: rest } = await supabase
-    .from('restaurants')
-    .select('slug')
-    .eq('id', profile.restaurant_id)
-    .single();
-  if (!rest?.slug) return null;
-
-  const mesero = isMeseroOnly(profile.role, profile.permissions as string[] | null);
   const tenantSlug = (await headers()).get('x-tenant-slug');
-
-  // Mismo criterio que login(): si ya estamos en el subdominio de SU
-  // restaurante, destino relativo; si no, URL absoluta a su panel.
-  if (rest.slug === tenantSlug) {
-    return { name, url: mesero ? '/admin/mesero' : '/admin/menu' };
-  }
-  const base = adminUrl(rest.slug);
-  return { name, url: mesero ? `${base}/mesero` : `${base}/menu` };
+  const url = await resolveStaffDestination(
+    supabase,
+    profile as { role: string; permissions: string[] | null; restaurant_id: string | null },
+    tenantSlug,
+  );
+  // resolveStaffDestination cae a /admin/login cuando no pudo resolver el
+  // restaurante (perfil huérfano) — ahí no hay nada útil que "continuar".
+  if (url === '/admin/login') return null;
+  return { name, url };
 }

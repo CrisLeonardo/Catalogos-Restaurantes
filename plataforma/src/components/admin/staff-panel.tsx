@@ -16,6 +16,7 @@ import {
   createStaff, updateStaffPermissions, resetStaffPassword, removeStaff,
   type StaffState, type StaffMember, type ActivityRow,
 } from '@/lib/actions/staff';
+import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
 
 const STATUS_ES: Record<string, string> = {
   NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
@@ -59,7 +60,7 @@ export default function StaffPanel({ restaurantId, staff, activity }: { restaura
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || m.email}</span>
+            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || 'Miembro del equipo'}</span>
             {isMesero && (
               <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
             )}
@@ -129,11 +130,13 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
   const createAction = useActionState<StaffState, FormData>(createStaff, null);
   const updateAction = useActionState<StaffState, FormData>(updateStaffPermissions, null);
   const resetAction = useActionState<StaffState, FormData>(resetStaffPassword, null);
+  const pinAction = useActionState<StaffPinState, FormData>(setStaffPin, null);
 
   const [state, formAction, isPending] = isNew ? createAction : updateAction;
 
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
   useEffect(() => { if (resetAction[0] && 'ok' in resetAction[0]) alert('Contraseña actualizada.'); }, [resetAction]);
+  useEffect(() => { if (pinAction[0] && 'ok' in pinAction[0]) alert('PIN actualizado.'); }, [pinAction]);
 
   function toggle(key: string) {
     setPerms((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
@@ -148,7 +151,7 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent showClose={false} className="flex w-[480px] max-w-[94vw] max-h-[90vh] flex-col p-0">
         <DialogHeader className="flex-row items-center justify-between px-5.5 py-4.5 border-b border-[var(--u-hair)] space-y-0">
-          <DialogTitle className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || member!.email)}</DialogTitle>
+          <DialogTitle className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || 'Miembro del equipo')}</DialogTitle>
           <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar"><Icon name="x" size={18} /></Button>
         </DialogHeader>
 
@@ -159,21 +162,27 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
             {perms.map((p) => <input key={p} type="hidden" name="permissions" value={p} />)}
 
             <div>
-              <label style={label}>Nombre</label>
-              <input name="full_name" defaultValue={member?.full_name ?? ''} placeholder="Ej. Carlos, Juan (cajero)…" style={input} />
+              <label style={label}>Nombre {isNew && '*'}</label>
+              <input name="full_name" required={isNew} defaultValue={member?.full_name ?? ''} placeholder="Ej. Carlos, Juan (cajero)…" style={input} />
             </div>
 
             {isNew && (
-              <>
-                <div>
-                  <label style={label}>Email *</label>
-                  <input name="email" type="email" required placeholder="persona@correo.com" style={input} />
-                </div>
-                <div>
-                  <label style={label}>Contraseña *</label>
-                  <input name="password" type="text" required minLength={8} placeholder="mínimo 8 caracteres" style={input} />
-                </div>
-              </>
+              <div>
+                <label style={label}>PIN de acceso (4 dígitos) *</label>
+                <input
+                  name="pin"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{4}"
+                  maxLength={4}
+                  required
+                  placeholder="1234"
+                  style={{ ...input, letterSpacing: '0.3em' }}
+                />
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                  Con este PIN entrará desde &quot;¿Quién eres?&quot; en el dispositivo del local — sin email ni contraseña.
+                </p>
+              </div>
             )}
 
             {/* Permisos de secciones — incluye "Mesero" como una más */}
@@ -219,11 +228,22 @@ function StaffModal({ restaurantId, member, onClose, onSaved }: {
           {!isNew && (
             <>
               <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <form action={pinAction[1]} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <input type="hidden" name="restaurantId" value={restaurantId} />
+                  <input type="hidden" name="userId" value={member!.id} />
+                  <div style={{ flex: 1 }}>
+                    <label style={label}>Cambiar PIN</label>
+                    <input name="pin" type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="1234" style={{ ...input, letterSpacing: '0.3em' }} />
+                  </div>
+                  <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
+                </form>
+                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: '#f87171' }}>{pinAction[0].error}</div>}
+
                 <form action={resetAction[1]} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="userId" value={member!.id} />
                   <div style={{ flex: 1 }}>
-                    <label style={label}>Nueva contraseña</label>
+                    <label style={label}>Nueva contraseña (respaldo)</label>
                     <input name="password" type="text" minLength={8} placeholder="mínimo 8 caracteres" style={input} />
                   </div>
                   <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>

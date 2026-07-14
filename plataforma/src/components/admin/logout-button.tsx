@@ -1,11 +1,23 @@
 'use client';
 
 import { logout } from '@/lib/actions/auth';
+import { changeOperatorUser } from '@/lib/actions/operator';
 
-export default function LogoutButton({ variant = 'pill' }: { variant?: 'pill' | 'menu-item' }) {
+interface Props {
+  variant?: 'pill' | 'menu-item';
+  /** Sesión iniciada por PIN: "Salir" se vuelve "Cambiar de usuario" y no
+      cierra la sesión de operador de golpe, solo vuelve a "¿Quién eres?" —
+      Capa A (el dispositivo ya vinculado a su restaurante) no se toca. */
+  isOperatorSession?: boolean;
+}
+
+export default function LogoutButton({ variant = 'pill', isOperatorSession = false }: Props) {
+  const action = isOperatorSession ? changeOperatorUser : logout;
+  const label = isOperatorSession ? 'Cambiar de usuario' : 'Salir';
+
   if (variant === 'menu-item') {
     return (
-      <form action={logout}>
+      <form action={action}>
         <button
           type="submit"
           className="press"
@@ -13,7 +25,7 @@ export default function LogoutButton({ variant = 'pill' }: { variant?: 'pill' | 
             width: '100%',
             background: 'none',
             border: 'none',
-            color: '#f87171',
+            color: isOperatorSession ? 'var(--u-text-2)' : '#f87171',
             padding: '10px 12px',
             borderRadius: 9,
             fontSize: 13.5,
@@ -22,13 +34,13 @@ export default function LogoutButton({ variant = 'pill' }: { variant?: 'pill' | 
             textAlign: 'left',
           }}
         >
-          Salir
+          {label}
         </button>
       </form>
     );
   }
   return (
-    <form action={logout}>
+    <form action={action}>
       <button
         type="submit"
         className="press"
@@ -42,7 +54,7 @@ export default function LogoutButton({ variant = 'pill' }: { variant?: 'pill' | 
           cursor: 'pointer',
         }}
       >
-        Salir
+        {label}
       </button>
     </form>
   );

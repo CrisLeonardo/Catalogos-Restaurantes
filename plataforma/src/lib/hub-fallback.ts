@@ -32,6 +32,52 @@ export function warmUpHub(hubUrl: string | null | undefined): void {
   }
 }
 
+export type HubPinStaffMember = { profileId: string; fullName: string | null };
+
+/** Grilla "¿Quién eres?" sin conexión (staff-pin-login.tsx): pide al hub la
+    lista de personal con PIN cacheado. null = hub inalcanzable. */
+export async function tryHubPinStaffList(hubUrl: string, hubToken: string | null): Promise<HubPinStaffMember[] | null> {
+  try {
+    const res = await fetch(`${hubUrl.replace(/\/+$/, '')}/pin/staff`, {
+      headers: { ...(hubToken ? { 'x-hub-token': hubToken } : {}) },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      targetAddressSpace: 'private',
+    } as RequestInit);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { staff?: HubPinStaffMember[] };
+    return data.staff ?? [];
+  } catch {
+    return null;
+  }
+}
+
+export type HubPinVerifyResult =
+  | { ok: true; profileId: string; fullName: string | null; permissions: string[] | null }
+  | { ok: false; error: string };
+
+/** Valida el PIN directo contra el hub (sin nube) — ver
+    agente-impresion/src/staff-pin.ts. No abre sesión de Supabase: solo
+    identifica al operador para atribución (waiter_id) mientras dura el corte. */
+export async function tryHubPinVerify(hubUrl: string, hubToken: string | null, profileId: string, pin: string): Promise<HubPinVerifyResult> {
+  try {
+    const res = await fetch(`${hubUrl.replace(/\/+$/, '')}/pin/verify`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(hubToken ? { 'x-hub-token': hubToken } : {}),
+      },
+      body: JSON.stringify({ profileId, pin }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      targetAddressSpace: 'private',
+    } as RequestInit);
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: (data as { error?: string }).error ?? 'No se pudo validar el PIN.' };
+    return { ok: true, profileId: data.profileId, fullName: data.fullName ?? null, permissions: data.permissions ?? null };
+  } catch {
+    return { ok: false, error: 'Hub local no disponible.' };
+  }
+}
+
 /** Intenta crear el pedido en el hub local. null = no se pudo (el llamador
     debe seguir con su plan B de siempre — cola local). `hubToken` viaja en
     x-hub-token (migración 063); si aún no se conoce (agente recién

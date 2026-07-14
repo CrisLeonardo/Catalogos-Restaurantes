@@ -26,6 +26,7 @@ import https from 'node:https';
 import { parseTarget, printRaw } from './printer/index.ts';
 import { acceptOfflineOrder } from './order-intake.ts';
 import { getHubOrderToken, getHubTls } from './store.ts';
+import { listCachedStaff, verifyPinOffline } from './staff-pin.ts';
 import { kdsOrdersPayload, kdsMarkDone, sendKdsPage } from './kds.ts';
 import { loadConfig } from './config.ts';
 import { AGENT_VERSION } from './version.ts';
@@ -150,6 +151,61 @@ async function handleOrder(req: http.IncomingMessage, res: http.ServerResponse):
   }));
 }
 
+/** GET /pin/staff — grilla "¿Quién eres?" sin conexión: solo nombre + id de
+    quienes tienen PIN cacheado, nunca hash/salt. Login por PIN offline
+    (PLAN_LOGIN_STAFF_PIN.md) — la PC ya está vinculada a este restaurante,
+    por eso basta el mismo x-hub-token que /orders. */
+function handlePinStaffList(req: http.IncomingMessage, res: http.ServerResponse): void {
+  res.setHeader('content-type', 'application/json');
+  const provided = req.headers['x-hub-token'];
+  if (provided !== getHubOrderToken()) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: 'Token del hub inválido o faltante.' }));
+    return;
+  }
+  res.end(JSON.stringify({ staff: listCachedStaff() }));
+}
+
+/** POST /pin/verify — valida el PIN localmente (crypto.scrypt, sin nube) y
+    devuelve la identidad del operador. NO abre una sesión de Supabase (es
+    imposible sin internet); solo identifica a la persona para atribución
+    (waiter_id) y para desbloquear la UI operativa mientras dura el corte. */
+async function handlePinVerify(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  res.setHeader('content-type', 'application/json');
+
+  const provided = req.headers['x-hub-token'];
+  if (provided !== getHubOrderToken()) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: 'Token del hub inválido o faltante.' }));
+    return;
+  }
+
+  let body: { profileId?: unknown; pin?: unknown };
+  try {
+    body = JSON.parse((await readBody(req)) || '{}');
+  } catch {
+    res.statusCode = 400;
+    res.end(JSON.stringify({ error: 'JSON inválido.' }));
+    return;
+  }
+
+  const profileId = typeof body.profileId === 'string' ? body.profileId : '';
+  const pin = typeof body.pin === 'string' ? body.pin : '';
+  if (!profileId || !/^\d{4}$/.test(pin)) {
+    res.statusCode = 400;
+    res.end(JSON.stringify({ error: 'Solicitud inválida.' }));
+    return;
+  }
+
+  const result = await verifyPinOffline(profileId, pin);
+  if (!result.ok) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ error: result.error }));
+    return;
+  }
+  res.end(JSON.stringify({ profileId: result.profileId, fullName: result.fullName, permissions: result.permissions }));
+}
+
 /** Handler compartido por el servidor HTTP (:47100) y el HTTPS (:47443) —
     mismas rutas, misma seguridad; solo cambia el transporte. */
 function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
@@ -229,6 +285,14 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
   }
   if (req.method === 'POST' && req.url === '/orders') {
     void handleOrder(req, res);
+    return;
+  }
+  if (req.method === 'GET' && req.url === '/pin/staff') {
+    handlePinStaffList(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/pin/verify') {
+    void handlePinVerify(req, res);
     return;
   }
   res.statusCode = 404;

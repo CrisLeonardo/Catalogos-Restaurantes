@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { changeOperatorUser } from '@/lib/actions/operator';
 import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
@@ -22,6 +23,8 @@ interface Props {
   confirmFirst?: boolean;
   /** Esquema claro/oscuro del panel admin (cookie `admin-theme`), NO el tema del restaurante. */
   scheme?: 'light' | 'dark';
+  /** Sesión iniciada por PIN — ofrece "Cambiar de usuario" en la barra superior. */
+  isOperatorSession?: boolean;
 }
 
 /* Paletas de alto contraste — independientes del tema del restaurante, pero
@@ -81,7 +84,7 @@ function semaforo(elapsedMin: number, yellowMin: number, redMin: number, C: Pale
   return C.green;
 }
 
-export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark' }: Props) {
+export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark', isOperatorSession = false }: Props) {
   const router = useRouter();
   const orders = initialOrders;
   const [now, setNow] = useState<number | null>(null);
@@ -212,9 +215,17 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           <button onClick={toggleFullscreen} title="Pantalla completa" style={iconBtnStyle(C)}>
             <Icon name={isFull ? 'x' : 'grid'} size={17} />
           </button>
-          <a href="/admin/pedidos" title="Volver al panel" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
-            <Icon name="chevronLeft" size={19} />
-          </a>
+          {isOperatorSession ? (
+            <form action={changeOperatorUser}>
+              <button type="submit" title="Cambiar de usuario" style={iconBtnStyle(C)}>
+                <Icon name="user" size={17} />
+              </button>
+            </form>
+          ) : (
+            <a href="/admin/pedidos" title="Volver al panel" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
+              <Icon name="chevronLeft" size={19} />
+            </a>
+          )}
         </div>
       </header>
 

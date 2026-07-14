@@ -83,6 +83,12 @@ export const createOrderSchema = z
      * cola offline reintenta un envío cuya respuesta se perdió.
      */
     clientId: z.string().uuid().optional(),
+    /**
+     * Mesero que tomó el pedido — solo relevante para el camino del hub
+     * offline (offline-orders/route.ts): createWaiterOrder() ya resuelve el
+     * mesero de la sesión real y lo ignora si viene en el payload.
+     */
+    waiterId: z.string().uuid().optional(),
   })
   .refine((data) => data.items.length + data.rewardLines.length >= 1, {
     message: 'El carrito está vacío',

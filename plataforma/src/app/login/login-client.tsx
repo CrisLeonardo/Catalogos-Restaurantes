@@ -1,22 +1,28 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { LeoginMark } from '@/components/leogin-logo';
 import { login, type AuthState } from '@/lib/actions/auth';
 import type { ResumeSession } from '@/lib/auth/resume';
+import StaffPinLogin from '@/components/admin/staff-pin-login';
 
 const emptyState: AuthState = null;
 
 interface Props {
   restaurantName: string | null;
+  restaurantId?: string | null;
   logoUrl: string | null;
   slug: string | null;
   /** Sesión de personal ya viva en este dominio → "Continuar como {nombre}". */
   resume?: ResumeSession | null;
+  /** Hub local (Fase 2 offline) — fallback si el PIN falla por conectividad. */
+  hubUrl?: string | null;
+  hubToken?: string | null;
 }
 
-export default function LoginClient({ restaurantName, logoUrl, slug, resume }: Props) {
+export default function LoginClient({ restaurantName, restaurantId, logoUrl, slug, resume, hubUrl, hubToken }: Props) {
+  const [mode, setMode] = useState<'password' | 'pin'>('password');
   const [state, formAction, isPending] = useActionState(login, emptyState);
 
   const inputStyle: React.CSSProperties = {
@@ -114,6 +120,9 @@ export default function LoginClient({ restaurantName, logoUrl, slug, resume }: P
           </Glass>
         )}
 
+        {mode === 'pin' && restaurantId ? (
+          <StaffPinLogin restaurantId={restaurantId} hubUrl={hubUrl ?? null} hubToken={hubToken ?? null} onBack={() => setMode('password')} />
+        ) : (
         <Glass style={{ padding: '28px 24px' }}>
           <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
@@ -203,6 +212,27 @@ export default function LoginClient({ restaurantName, logoUrl, slug, resume }: P
             </button>
           </form>
         </Glass>
+        )}
+
+        {restaurantId && mode === 'password' && (
+          <button
+            type="button"
+            onClick={() => setMode('pin')}
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'center',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--u-text-3)',
+              fontSize: 13,
+              marginTop: 16,
+            }}
+          >
+            ¿Eres del equipo? Entra con tu PIN
+          </button>
+        )}
       </div>
     </main>
   );

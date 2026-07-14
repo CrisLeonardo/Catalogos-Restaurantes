@@ -9,7 +9,7 @@ import { loadConfig, type AgentConfig } from './config.ts';
 import { discoverPrinters, parseTarget, printRaw } from './printer/index.ts';
 import type { DiscoveredPrinter } from './printer/types.ts';
 import { LOCAL_PORT, startTlsServer } from './local-server.ts';
-import { saveMenuSnapshot, getPendingOrders, markPendingOrderSynced, markPendingOrderFailed, getHubOrderToken, getHubTls, saveHubTls, type MenuSnapshot, type HubTls } from './store.ts';
+import { saveMenuSnapshot, saveStaffPins, getPendingOrders, markPendingOrderSynced, markPendingOrderFailed, getHubOrderToken, getHubTls, saveHubTls, type MenuSnapshot, type HubTls, type CachedStaffPin } from './store.ts';
 import { checkForUpdate } from './updater.ts';
 import { AGENT_VERSION } from './version.ts';
 import { logger } from './logger.ts';
@@ -118,6 +118,21 @@ async function syncMenu(cfg: AgentConfig): Promise<void> {
   }
 }
 
+/** Refresca el snapshot local de PINs de operador (login sin conexión,
+    PLAN_LOGIN_STAFF_PIN.md) — mismo patrón best-effort que syncMenu. */
+async function syncStaffPins(cfg: AgentConfig): Promise<void> {
+  try {
+    const res = await fetch(`${cfg.apiUrl}/api/agent/staff-pins`, {
+      headers: { authorization: `Bearer ${cfg.token}` },
+    });
+    if (!res.ok) throw new Error(`staff-pins respondió HTTP ${res.status}`);
+    const data = (await res.json()) as { staffPins: CachedStaffPin[] };
+    saveStaffPins(data.staffPins ?? []);
+  } catch (e) {
+    logger.warn('No se pudo refrescar los PIN de operador:', (e as Error).message);
+  }
+}
+
 /** Sincroniza los pedidos tomados sin conexión (Fase 2 offline). Best-effort:
     si sigue sin haber internet, simplemente quedan en cola para el próximo
     intento. */
@@ -220,6 +235,7 @@ export async function runAgent(opts: { once?: boolean } = {}): Promise<void> {
     // simplemente no avanzan hasta el próximo ciclo.
     if (Date.now() - lastHubSync > 60_000) {
       await syncMenu(cfg);
+      await syncStaffPins(cfg);
       await syncPendingOrders(cfg);
       lastHubSync = Date.now();
     }

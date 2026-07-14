@@ -55,7 +55,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
       error: parsed.error.errors[0]?.message ?? 'Datos inválidos.',
     };
   }
-  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId } = parsed.data;
+  const { restaurantId, items, customer, paymentMethod, cashAmount, tipAccepted, clientId, waiterId } = parsed.data;
 
   if (restaurantId !== agent.restaurantId) {
     return { clientId: clientId ?? null, ok: false, error: 'El pedido no pertenece a este restaurante.' };
@@ -162,6 +162,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
     p_cash_amount:    customer.type === 'DELIVERY' && (paymentMethod ?? 'CASH') === 'CASH' && cashAmount != null ? cashAmount : null,
     p_tip:            tip,
     p_client_id:      clientId,
+    p_waiter_id:      waiterId ?? null,
     p_items: verifiedItems.map((i) => ({
       product_id:       i.productId,
       name_snapshot:    i.name,

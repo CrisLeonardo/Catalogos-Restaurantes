@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import AdminShell from '@/components/admin/shell';
+import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,6 +32,12 @@ export default async function WaiterLayout({ children }: { children: React.React
 
   if (!profile || !can(profile.role as string, profile.permissions as string[] | null, 'mesero')) {
     redirect('/admin/login');
+  }
+
+  const opCookie = (await cookies()).get(OPERATOR_COOKIE)?.value;
+  const isOperatorSession = !!opCookie;
+  if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
+    redirect('/admin/logout-operator');
   }
 
   const headersList = await headers();
@@ -86,7 +94,9 @@ export default async function WaiterLayout({ children }: { children: React.React
       permissions={profile.permissions}
       userName={profile.full_name}
       canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
+      isOperatorSession={isOperatorSession}
     >
+      {isOperatorSession && <OperatorHeartbeat profileId={user.id} />}
       {children}
     </AdminShell>
   );

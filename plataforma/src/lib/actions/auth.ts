@@ -2,10 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { isMeseroOnly } from '@/lib/permissions';
-import { adminUrl } from '@/lib/tenant';
 import { headers } from 'next/headers';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { resolveStaffDestination } from '@/lib/auth/destination';
 
 export type AuthState = { error: string } | null;
 
@@ -39,14 +38,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     .eq('id', signInData.user.id)
     .single();
 
-  if (profile?.role === 'SUPER_ADMIN') {
-    redirect('/super/restaurantes');
-  }
-
-  // El jefe de grupo entra a su panel consolidado (host slug-central.dominio).
-  if (profile?.role === 'GROUP_OWNER') {
-    redirect('/central');
-  }
+  if (!profile) redirect('/admin/login');
 
   // Redirigir al subdominio del restaurante SIEMPRE que no sea ya el actual —
   // no solo cuando el login se hizo desde el dominio raíz. Antes esto solo
@@ -60,27 +52,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // un restaurante distinto al de la cuenta que se está probando).
   const tenantSlug = (await headers()).get('x-tenant-slug');
 
-  if (profile?.restaurant_id) {
-    const { data: rest } = await supabase
-      .from('restaurants')
-      .select('slug')
-      .eq('id', profile.restaurant_id)
-      .single();
-
-    if (rest?.slug && rest.slug !== tenantSlug) {
-      const destination = isMeseroOnly(profile?.role, profile?.permissions as string[] | null)
-        ? `${adminUrl(rest.slug)}/mesero?welcome=1`
-        : `${adminUrl(rest.slug)}/menu?welcome=1`;
-      redirect(destination);
-    }
-  }
-
-  // El mesero puro entra directo a su panel de toma de pedidos.
-  if (isMeseroOnly(profile?.role, profile?.permissions as string[] | null)) {
-    redirect('/admin/mesero?welcome=1');
-  }
-
-  redirect('/admin/menu?welcome=1');
+  redirect(await resolveStaffDestination(supabase, profile as { role: string; permissions: string[] | null; restaurant_id: string | null }, tenantSlug, '?welcome=1'));
 }
 
 export async function logout() {

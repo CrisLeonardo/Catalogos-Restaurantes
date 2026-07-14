@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -7,9 +7,11 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
 import DesktopServerNudge from '@/components/admin/desktop-server-nudge';
+import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
+import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import type { Restaurant } from '@/types';
 
 export default async function AdminProtectedLayout({
@@ -36,6 +38,12 @@ export default async function AdminProtectedLayout({
   // El "mesero puro" (solo sección mesero) no entra al panel admin.
   if (isMeseroOnly(profile.role, profile.permissions)) {
     redirect('/admin/mesero');
+  }
+
+  const opCookie = (await cookies()).get(OPERATOR_COOKIE)?.value;
+  const isOperatorSession = !!opCookie;
+  if (isOperatorSessionStale(opCookie, profile.role, ctx.userId)) {
+    redirect('/admin/logout-operator');
   }
 
   const headersList = await headers();
@@ -173,11 +181,13 @@ export default async function AdminProtectedLayout({
       permissions={profile.permissions}
       userName={profile.full_name}
       canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
+      isOperatorSession={isOperatorSession}
     >
       {groupReturnUrl && (
         <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />
       )}
       {offerLocalServer && <DesktopServerNudge />}
+      {isOperatorSession && <OperatorHeartbeat profileId={ctx.userId} />}
       {children}
     </AdminShell>
   );
