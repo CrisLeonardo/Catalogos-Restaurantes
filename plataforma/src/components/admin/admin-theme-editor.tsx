@@ -294,7 +294,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 />
               )}
               <Toggle label="Luz ambiental (efecto glow)" value={config.ambientGlow} onChange={(v) => setC('ambientGlow', v)} />
-              <Toggle label="Grano de concreto" value={config.grain} onChange={(v) => setC('grain', v)} />
+              <Toggle label="Grano / textura" value={config.grain} onChange={(v) => setC('grain', v)} />
+              {config.grain && (
+                <Segmented
+                  label="Estilo del grano"
+                  value={config.grainStyle}
+                  options={[['fino', 'Fino (concreto)'], ['grueso', 'Grueso (asfalto/parrilla)'], ['papel', 'Papel (fibra cálida)']]}
+                  onChange={(v) => setC('grainStyle', v as ThemeConfig['grainStyle'])}
+                />
+              )}
               <Toggle label="Marca de agua girando" value={config.watermark} onChange={(v) => setC('watermark', v)} />
               {config.watermark && (
                 <>

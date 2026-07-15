@@ -495,6 +495,31 @@ body {
   animation: drift-b 32s var(--ease-out) infinite alternate;
 }
 
+/* Modo claro: `mix-blend-mode: screen` con blancos es matemáticamente un
+   no-op sobre fondos ya claros (screen(fondo, blanco) → blanco; con el alpha
+   del gradiente, el resultado se mueve <2/255 sobre un fondo pastel — ver
+   auditoría de plantillas 2026-07-15). Las 7 plantillas claras activaban
+   `ambientGlow`/tenían `.asphalt` sin que se viera NADA: perdían el único
+   efecto que le da "vida"/atmósfera a las oscuras. Se reemplaza por manchas
+   TEÑIDAS con el acento de marca + `multiply` (oscurece de forma visible en
+   cualquier fondo claro, y de paso conecta el glow con el color elegido por
+   el restaurante en vez de un blanco genérico). */
+html[data-scheme="light"] .asphalt::before,
+html[data-scheme="light"] .asphalt::after,
+html[data-scheme="light"] .ambient-glow::before,
+html[data-scheme="light"] .ambient-glow::after {
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+}
+html[data-scheme="light"] .asphalt::before,
+html[data-scheme="light"] .ambient-glow::before {
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 32%, white), transparent 60%);
+}
+html[data-scheme="light"] .asphalt::after,
+html[data-scheme="light"] .ambient-glow::after {
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-bg-2) 75%, var(--brand-accent)), transparent 60%);
+}
+
 /* Fondos alternativos (config.backgroundType) — todos capa fija detrás del contenido */
 .bg-layer { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 .bg-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
@@ -508,11 +533,28 @@ body {
   opacity: var(--bg-overlay-opacity, 1);
 }
 
-/* Grano de concreto (config.grain) */
+/* Grano/textura de fondo (config.grain + config.grainStyle). Antes un único
+   ruido fijo servía por igual para "madera quemada", "papel" y "asfalto"
+   pese a prometer materiales distintos (ver auditoría de plantillas
+   2026-07-15) — 'fino' reproduce EXACTO el grano original (sin regresión),
+   'grueso' y 'papel' son variantes reales de tamaño de grano/mezcla. */
 .asphalt-grain {
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   opacity: 0.05; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 'grueso' — concreto/parrilla/asfalto: grano más grande y más marcado,
+   pensado para fondos casi negros donde el grano fino es imperceptible. */
+.asphalt-grain[data-style="grueso"] {
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.35' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 'papel' — fibra cálida de papel/kraft: grano fino y denso, mezcla suave
+   (soft-light en vez de overlay) para que tiña en vez de "ensuciar". */
+.asphalt-grain[data-style="papel"] {
+  opacity: 0.07;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* Watermark gigante girando (config.watermark) — opacidad y tamaño controlados por vars CSS */
@@ -587,9 +629,15 @@ html[data-scheme="light"] .btn-white {
   background: var(--brand-accent); color: var(--brand-on-accent, #fff); border: none;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-accent) 35%, transparent);
 }
+/* Antes era borde 1px + fondo transparente puro: sobre paletas de baja
+   saturación (Zen Carbón, Marfil & Oro…) el CTA principal (portada/checkout)
+   casi no se distinguía del fondo — apenas un hairline. Ahora lleva un
+   relleno tenue + borde más marcado, ambos derivados de --u-text (se adaptan
+   solos a cualquier paleta clara u oscura sin nueva variable de tema). */
 .btn-outline {
-  background: transparent; color: var(--u-text);
-  border: 1px solid var(--u-hair-2);
+  background: color-mix(in srgb, var(--u-text) 7%, transparent);
+  color: var(--u-text);
+  border: 1.5px solid color-mix(in srgb, var(--u-text) 34%, transparent);
 }
 
 /* ============================================================

@@ -33,7 +33,7 @@ export default function ThemeBackground({ config }: { config?: ThemeConfig }) {
         <div className="ambient-glow" aria-hidden />
       )}
 
-      {config.grain && <div className="asphalt-grain" aria-hidden />}
+      {config.grain && <div className="asphalt-grain" data-style={config.grainStyle} aria-hidden />}
       {config.watermark && (config.markUrl || config.logoUrl) && (
         <div
           className="asphalt-mark"

@@ -101,7 +101,12 @@ export function PrimaryButton({
   const sharedStyle: CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     padding: pad, borderRadius: 'var(--radius-lg)', fontSize: fs,
-    cursor: disabled ? 'not-allowed' : 'pointer', border: 'none', textDecoration: 'none',
+    // Sin `border: 'none'` aquí: un inline style le gana a CUALQUIER regla de
+    // clase (.btn-white/.btn-accent/.btn-outline), así que fijarlo en 'none'
+    // anulaba silenciosamente el borde 1px de .btn-outline — el CTA principal
+    // (portada, checkout) quedaba sin relleno NI borde = invisible. Cada clase
+    // btn-* ya declara su propio `border` en globals.css.
+    cursor: disabled ? 'not-allowed' : 'pointer', textDecoration: 'none',
     width: full ? '100%' : undefined,
     ...t.vars, ...style,
   };

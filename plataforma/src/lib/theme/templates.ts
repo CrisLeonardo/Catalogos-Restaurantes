@@ -18,7 +18,25 @@
    Sin dependencias de React (importable en server y cliente).
    ============================================================ */
 
-import { DEFAULT_CONFIG, type ThemeConfig } from './defaults';
+import {
+  DEFAULT_CONFIG, DEFAULT_TYPOGRAPHY,
+  type ThemeConfig, type ThemeTypography, type TextStyle, type TypographyRole,
+} from './defaults';
+
+/**
+ * Override tipográfico por ROL para una plantilla, sin tener que repetir los
+ * 10 roles completos a mano. Devuelve siempre un `ThemeTypography` íntegro
+ * (los roles no tocados = default exacto) — lo exige el tipo de
+ * `ThemeConfig['typography']`, y evita depender de que algún consumidor haga
+ * merge parcial por rol (el editor en vivo aplica el config tal cual llega).
+ */
+function typo(overrides: Partial<Record<TypographyRole, Partial<TextStyle>>>): ThemeTypography {
+  const out = { ...DEFAULT_TYPOGRAPHY } as ThemeTypography;
+  for (const role of Object.keys(overrides) as TypographyRole[]) {
+    out[role] = { ...DEFAULT_TYPOGRAPHY[role], ...overrides[role] };
+  }
+  return out;
+}
 
 /** Claves que una plantilla puede definir. Todo lo demás se conserva. */
 export const TEMPLATE_VISUAL_KEYS = [
@@ -31,7 +49,7 @@ export const TEMPLATE_VISUAL_KEYS = [
   'glassIntensity', 'glassAmount', 'cornerRadius', 'sheen',
   // Fondo / ambiente
   'backgroundType', 'backgroundImage', 'backgroundGradient',
-  'ambientGlow', 'grain', 'watermark', 'bgOverlayOpacity', 'watermarkOpacity', 'watermarkSize',
+  'ambientGlow', 'grain', 'grainStyle', 'watermark', 'bgOverlayOpacity', 'watermarkOpacity', 'watermarkSize',
   // CTA / checkout visual
   'ctaStyle', 'checkoutActiveColor', 'checkoutFormGlass', 'checkoutPayGlass', 'checkoutTextShadow',
   // Portada
@@ -111,6 +129,8 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'outline',
       catalogView: 'list', cornerRadius: 0.7, cardShadow: 0.6,
+      // Alta cocina = menos peso, más tracking (grito grueso ≠ elegancia).
+      typography: typo({ heading: { weight: 600 }, kicker: { tracking: 0.22, weight: 500 } }),
     },
   },
   {
@@ -142,6 +162,8 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent', checkoutActiveColor: 'accent',
       catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.3, featuredFavorites: true,
+      // "Aire tranquilo" = título menos macizo y con algo más de respiro.
+      typography: typo({ heading: { weight: 700, lineHeight: 1.05 } }),
     },
   },
   {
@@ -157,6 +179,9 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'asphalt', ambientGlow: true,
       portadaVariant: 'stack', ctaStyle: 'white',
       catalogView: 'grid', catalogColumns: 2, featuredFavorites: true,
+      // "Eléctrico moderno" era solo una promesa del texto: el título de
+      // portada ahora sí lleva un brillo neón real con el acento azul.
+      typography: typo({ heading: { shadow: 'neon' } }),
     },
   },
   {
@@ -172,6 +197,8 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent', checkoutActiveColor: 'accent',
       catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.5, featuredFavorites: true,
+      // Menos "GRITO EN MAYÚSCULAS" y más dulzura en los kickers.
+      typography: typo({ kicker: { tracking: 0.08 } }),
     },
   },
   {
@@ -200,9 +227,10 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       colorAccent: '#f97316', onAccent: '#1a0b04', scheme: 'dark',
       fontDisplay: 'Archivo Black', fontPoster: 'Anton', fontBody: 'Poppins',
       fontSerif: 'Instrument Serif', fontMono: 'Space Mono',
-      backgroundType: 'solid', grain: true,
+      backgroundType: 'solid', grain: true, grainStyle: 'grueso',
       portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
       catalogView: 'grid', catalogColumns: 3, cornerRadius: 0.9, featuredFavorites: true,
+      typography: typo({ poster: { tracking: -0.02 } }),
     },
   },
   {
@@ -219,6 +247,10 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       portadaVariant: 'none',
       catalogView: 'list', showCategoryIcons: false, ctaStyle: 'accent',
       checkoutActiveColor: 'accent', cornerRadius: 0.9, cardShadow: 0.5,
+      // Sin portada (`heading`/.t-display NUNCA se pinta aquí), el kicker +
+      // el .t-poster del catálogo SON la primera impresión: menos peso y
+      // más aire = "ultra limpio" real, no solo de palabra.
+      typography: typo({ poster: { weight: 300, tracking: 0.02 }, kicker: { tracking: 0.18 } }),
     },
   },
   {
@@ -234,6 +266,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent',
       catalogView: 'list', cornerRadius: 1.1, featuredFavorites: true,
+      typography: typo({ heading: { weight: 700 } }),
     },
   },
   {
@@ -262,9 +295,10 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       colorAccent: '#8b5e34', onAccent: '#ffffff', scheme: 'light',
       fontDisplay: 'Fraunces', fontPoster: 'Space Grotesk', fontBody: 'Manrope',
       fontSerif: 'Instrument Serif', fontMono: 'IBM Plex Mono',
-      backgroundType: 'solid', grain: true, ambientGlow: false, sheen: false,
+      backgroundType: 'solid', grain: true, grainStyle: 'papel', ambientGlow: false, sheen: false,
       portadaVariant: 'stack', ctaStyle: 'outline',
       catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.2,
+      typography: typo({ kicker: { tracking: 0.1 } }),
     },
   },
   {
@@ -277,9 +311,11 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       colorAccent: '#facc15', onAccent: '#131303', scheme: 'dark',
       fontDisplay: 'Archivo Black', fontPoster: 'Anton', fontBody: 'Space Grotesk',
       fontSerif: 'Instrument Serif', fontMono: 'Space Mono',
-      backgroundType: 'asphalt', grain: true,
+      backgroundType: 'asphalt', grain: true, grainStyle: 'grueso',
       portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
       catalogView: 'grid', catalogColumns: 3, cornerRadius: 0.8, featuredFavorites: true,
+      // Poster gráfico "que grita" = brillo neón amarillo, no un t-poster plano.
+      typography: typo({ poster: { shadow: 'neon' } }),
     },
   },
   {
@@ -295,6 +331,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'solid', ambientGlow: true, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent', checkoutActiveColor: 'accent',
       catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.4, featuredFavorites: true,
+      typography: typo({ heading: { weight: 700 } }),
     },
   },
   {

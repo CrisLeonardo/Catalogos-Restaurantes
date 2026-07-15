@@ -291,7 +291,15 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           <TextCtl label="CSS del gradiente" value={config.backgroundGradient ?? ''} onChange={(v) => setC('backgroundGradient', v || null)} placeholder="linear-gradient(160deg, #111, #333)" />
         )}
         <Toggle label="Luz ambiental (glow)" value={config.ambientGlow} onChange={(v) => setC('ambientGlow', v)} />
-        <Toggle label="Grano de concreto" value={config.grain} onChange={(v) => setC('grain', v)} />
+        <Toggle label="Grano / textura" value={config.grain} onChange={(v) => setC('grain', v)} />
+        {config.grain && (
+          <Segmented
+            label="Estilo del grano"
+            value={config.grainStyle}
+            options={[['fino', 'Fino (concreto)'], ['grueso', 'Grueso (asfalto/parrilla)'], ['papel', 'Papel (fibra cálida)']]}
+            onChange={(v) => setC('grainStyle', v as ThemeConfig['grainStyle'])}
+          />
+        )}
         <Toggle label="Watermark girando (usa logo)" value={config.watermark} onChange={(v) => setC('watermark', v)} />
         {config.watermark && (
           <>

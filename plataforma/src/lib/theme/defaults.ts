@@ -17,6 +17,10 @@
 export type GlassIntensity = 'translucido' | 'esmerilado' | 'solido';
 export type ColorScheme = 'dark' | 'light';
 export type BackgroundType = 'asphalt' | 'solid' | 'gradient' | 'image';
+/** Variante de textura para config.grain — antes un único ruido fijo servía
+    para "madera quemada", "papel" y "asfalto" por igual (ver auditoría de
+    plantillas 2026-07-15). 'fino' reproduce EXACTO el grano original. */
+export type GrainStyle = 'fino' | 'grueso' | 'papel';
 export type CtaStyle = 'white' | 'accent' | 'outline';
 export type CheckoutActiveColor = 'text' | 'accent';
 export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
@@ -35,8 +39,11 @@ export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 /* Sombra de texto: presets que mejoran la legibilidad sobre fondos vivos o
    con imagen. El "ink" (color de la sombra) se invierte según el esquema
-   (oscuro = sombra negra; claro = halo blanco) vía la var CSS --shadow-ink. */
-export type ShadowPreset = 'none' | 'soft' | 'medium' | 'strong' | 'glow';
+   (oscuro = sombra negra; claro = halo blanco) vía la var CSS --shadow-ink.
+   'neon' es distinto a propósito: no es legibilidad, es un brillo LITERAL
+   con el color de acento de la marca (antes ninguna plantilla tenía forma
+   de lograr un efecto "neón"/"eléctrico" real — ver auditoría 2026-07-15). */
+export type ShadowPreset = 'none' | 'soft' | 'medium' | 'strong' | 'glow' | 'neon';
 
 export const SHADOW_PRESETS: Record<ShadowPreset, string> = {
   none:   'none',
@@ -44,10 +51,11 @@ export const SHADOW_PRESETS: Record<ShadowPreset, string> = {
   medium: '0 1px 3px rgba(var(--shadow-ink, 0,0,0), 0.58)',
   strong: '0 2px 5px rgba(var(--shadow-ink, 0,0,0), 0.80)',
   glow:   '0 0 9px rgba(var(--shadow-ink, 0,0,0), 0.72), 0 1px 2px rgba(var(--shadow-ink, 0,0,0), 0.55)',
+  neon:   '0 0 6px var(--brand-accent), 0 0 20px color-mix(in srgb, var(--brand-accent) 70%, transparent), 0 1px 2px rgba(var(--shadow-ink, 0,0,0), 0.5)',
 };
 
 export const SHADOW_OPTIONS: Array<[ShadowPreset, string]> = [
-  ['none', 'Sin sombra'], ['soft', 'Suave'], ['medium', 'Media'], ['strong', 'Fuerte'], ['glow', 'Halo'],
+  ['none', 'Sin sombra'], ['soft', 'Suave'], ['medium', 'Media'], ['strong', 'Fuerte'], ['glow', 'Halo'], ['neon', 'Neón (acento)'],
 ];
 
 export interface TextStyle {
@@ -141,7 +149,8 @@ export interface ThemeConfig {
   backgroundImage: string | null;
   backgroundGradient: string | null;   // p.ej. "linear-gradient(...)"
   ambientGlow: boolean;         // pools de luz a la deriva
-  grain: boolean;               // grano de concreto
+  grain: boolean;               // activa la textura de grano (ver grainStyle)
+  grainStyle: GrainStyle;       // 'fino' (concreto, default) | 'grueso' (asfalto/parrilla) | 'papel' (fibra cálida)
   watermark: boolean;           // marca gigante girando (usa markUrl/logoUrl)
 
   // ── CTA / botones ──
@@ -316,6 +325,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   backgroundGradient: null,
   ambientGlow: true,
   grain: false,
+  grainStyle: 'fino',
   watermark: false,
 
   ctaStyle: 'white',
