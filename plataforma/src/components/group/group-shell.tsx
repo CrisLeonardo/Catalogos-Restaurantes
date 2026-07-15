@@ -45,7 +45,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
         <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', overflow: 'hidden', flexShrink: 0 }}>
             {logoUrl ? (
-              <Image src={logoUrl} alt={orgName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
+              <Image src={logoUrl} alt={orgName} width={42} height={42} style={{ objectFit: 'contain' }} />
             ) : (
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)' }}>{initial}</span>
             )}

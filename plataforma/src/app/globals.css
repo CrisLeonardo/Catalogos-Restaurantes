@@ -4,10 +4,9 @@
    Variables themeable por restaurante: --brand-*, --glass-*.
    ============================================================ */
 
-/* Fuentes display de marca (Geist va por next/font en layout.tsx) */
-/* IMPORTANTE: @import externos deben ir antes de @import "tailwindcss" */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@400;500;600;700;800;900&family=Anton&display=swap');
-
+/* Fuentes display de marca: Geist, Unbounded, Anton, Instrument Serif y
+   JetBrains Mono van todas por next/font en layout.tsx (self-hosted, sin
+   round-trip externo a Google Fonts — ver BRAND_FONT_VARS ahí). */
 @import "tailwindcss";
 
 /* Exponer algunos tokens a Tailwind v4 (opcional) */
@@ -16,7 +15,7 @@
   --color-brand-text: var(--brand-text);
   --color-brand-accent: var(--brand-accent);
   --font-sans: var(--font-geist-sans);
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* Rediseño panel admin (2026-07-12) — expone --adm-* (ver bloques
      html[data-admin-area] más abajo) como utilidades Tailwind para
@@ -66,11 +65,11 @@
 
 :root {
   /* ── Tipografía: familias ─────────────────────────────────── */
-  --font-display: 'Unbounded', system-ui, sans-serif;
-  --font-poster:  'Anton', 'Arial Narrow', sans-serif;
-  --font-serif:   'Instrument Serif', 'Times New Roman', serif;
+  --font-display: var(--font-unbounded), system-ui, sans-serif;
+  --font-poster:  var(--font-anton), 'Arial Narrow', sans-serif;
+  --font-serif:   var(--font-instrument-serif), 'Times New Roman', serif;
   --ui-font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --ui-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --ui-font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* ── TEMA POR RESTAURANTE (defaults = urbano oscuro) ─────── */
   /* Estas 3 variables son las que cambia el Super Admin por tenant. */

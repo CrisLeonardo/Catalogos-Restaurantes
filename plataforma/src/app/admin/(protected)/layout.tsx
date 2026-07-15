@@ -30,7 +30,17 @@ export default async function AdminProtectedLayout({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login');
 
-  const ctx = await getAdminContext();
+  const headersList = await headers();
+  const tenantSlug  = headersList.get('x-tenant-slug');
+
+  // ctx (perfil/permite) y tenantData (datos del restaurante del subdominio)
+  // son consultas independientes — tenantSlug sale de headers, no de ctx.
+  // Antes se esperaban en serie (2 round-trips a Supabase uno tras otro);
+  // se lanzan juntas para que corran en paralelo.
+  const [ctx, tenantData] = await Promise.all([
+    getAdminContext(),
+    tenantSlug ? getRestaurantBySlug(tenantSlug) : Promise.resolve(null),
+  ]);
   if (!ctx) redirect('/admin/login');
 
   const { profile } = ctx;
@@ -45,9 +55,6 @@ export default async function AdminProtectedLayout({
   if (isOperatorSessionStale(opCookie, profile.role, ctx.userId)) {
     redirect('/admin/logout-operator');
   }
-
-  const headersList = await headers();
-  const tenantSlug  = headersList.get('x-tenant-slug');
 
   let restaurantName = 'Panel admin';
   let currentRestaurant: Restaurant | null = ctx.restaurant;
@@ -66,7 +73,6 @@ export default async function AdminProtectedLayout({
 
   if (profile.role === 'SUPER_ADMIN') {
     if (tenantSlug) {
-      const tenantData = await getRestaurantBySlug(tenantSlug);
       restaurantName = tenantData?.restaurant.name ?? 'Panel admin';
       currentRestaurant = tenantData?.restaurant ?? null;
       logoUrl = tenantData?.resolved.config.logoUrl ?? null;
@@ -79,7 +85,6 @@ export default async function AdminProtectedLayout({
     // re-login. getRestaurantBySlug usa el cliente RLS: la migración 053 solo
     // devuelve la sucursal si pertenece a su grupo (candado de seguridad).
     if (!tenantSlug) redirect('/central');
-    const tenantData = await getRestaurantBySlug(tenantSlug);
     if (!tenantData) redirect('/central'); // no es una sucursal de su grupo
     restaurantName    = tenantData.restaurant.name;
     currentRestaurant = tenantData.restaurant;
@@ -103,7 +108,6 @@ export default async function AdminProtectedLayout({
     if (!profile.restaurant_id) redirect('/admin/login');
 
     if (tenantSlug) {
-      const tenantData = await getRestaurantBySlug(tenantSlug);
       if (!tenantData || tenantData.restaurant.id !== profile.restaurant_id) {
         // Sesión válida pero en el subdominio de OTRO restaurante (típico en
         // Leogin Desktop tras cambiar de cuenta, o en una pestaña vieja):

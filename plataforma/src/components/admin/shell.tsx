@@ -24,6 +24,15 @@ import { PLANS, type PlanCode } from '@/lib/plans';
 
 const NAV_KEY = 'admin-nav-collapsed';
 
+/**
+ * `pathname.startsWith(href)` marcaba "Personal" (/admin/personal) como activo
+ * estando en "Personalizar" (/admin/personalizacion), porque un string es
+ * prefijo literal del otro. Exige coincidencia exacta o límite de segmento (/).
+ */
+function isActivePath(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
 interface NavItem { href: string; label: string; icon: string; key: string; locked?: boolean }
 
 /**
@@ -303,7 +312,7 @@ export default function AdminShell({
   }
 
   function renderLink(n: NavItem) {
-    const active = pathname.startsWith(n.href);
+    const active = isActivePath(pathname, n.href);
     if (n.locked) {
       return (
         <Link
@@ -346,7 +355,7 @@ export default function AdminShell({
             <>
               <div style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', background: logoUrl && logoBg ? logoBg : 'var(--adm-card, color-mix(in srgb, var(--u-text) 6%, transparent))', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', boxShadow: 'var(--adm-shadow-xs, none)', overflow: 'hidden', flexShrink: 0 }}>
                 {logoUrl ? (
-                  <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} unoptimized />
+                  <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} />
                 ) : (
                   <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)' }}>{initial}</span>
                 )}
@@ -371,7 +380,7 @@ export default function AdminShell({
         <nav className="admin-nav" data-tour-step="nav">
           {sections.map((s) => {
             const isCollapsed = !!collapsed[s.title];
-            const hasActive = s.items.some((it) => pathname.startsWith(it.href));
+            const hasActive = s.items.some((it) => isActivePath(pathname, it.href));
             return (
               <div key={s.title} className="admin-navgroup" data-collapsed={isCollapsed ? '1' : '0'}>
                 <button

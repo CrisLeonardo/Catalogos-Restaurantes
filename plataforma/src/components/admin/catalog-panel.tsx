@@ -192,7 +192,6 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                         width={44}
                         height={44}
                         style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                        unoptimized
                       />
                     ) : (
                       <BrandPattern icon={icon} seed={seedFromString(p.id)} iconScale={0.85} />

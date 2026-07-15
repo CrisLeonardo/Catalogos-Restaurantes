@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Unbounded, Anton, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
 import { headers, cookies } from 'next/headers';
 import './globals.css';
 import ThemeBackground from '@/components/theme-background';
@@ -14,6 +14,24 @@ import { DEMO_SLUG } from '@/lib/tenant';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
+
+/**
+ * Fuentes de MARCA por defecto (Unbounded/Anton/Instrument Serif/JetBrains
+ * Mono): antes se pedían a Google Fonts vía @import en globals.css, sin
+ * condición — una petición externa bloqueante en TODA página, admin incluido
+ * (que nunca las usa salvo por .t-display/.t-poster/.t-kicker heredados del
+ * tema por defecto). Al self-hostearlas con next/font quedan como archivos
+ * estáticos de la app: sin round-trip externo, cacheables, sin bloquear el
+ * render. Ver fam() en lib/theme/resolve.ts — ahí se mapea el nombre de
+ * familia ('Unbounded', etc.) a estas variables cuando el tema de un tenant
+ * usa exactamente estos nombres (el resto de fuentes curadas del editor
+ * sigue viajando por Google Fonts en tiempo real, ver buildFontsHref).
+ */
+const brandDisplay = Unbounded({ variable: '--font-unbounded', subsets: ['latin'], weight: ['400', '500', '600', '700', '800', '900'] });
+const brandPoster = Anton({ variable: '--font-anton', subsets: ['latin'], weight: '400' });
+const brandSerif = Instrument_Serif({ variable: '--font-instrument-serif', subsets: ['latin'], weight: '400', style: ['normal', 'italic'] });
+const brandMono = JetBrains_Mono({ variable: '--font-jetbrains-mono', subsets: ['latin'], weight: ['400', '500', '600'] });
+const BRAND_FONT_VARS = `${brandDisplay.variable} ${brandPoster.variable} ${brandSerif.variable} ${brandMono.variable}`;
 
 /**
  * Tema del ÁREA DE PERSONAL (admin, panel de grupo, super admin).
@@ -112,7 +130,7 @@ export default async function RootLayout({
         data-admin-area=""
         data-scheme={adminScheme}
         data-glass="translucido"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${BRAND_FONT_VARS} h-full antialiased`}
         style={{ colorScheme: adminScheme }}
       >
         <body className="min-h-full flex flex-col">{children}</body>
@@ -149,7 +167,7 @@ export default async function RootLayout({
       lang="es"
       data-glass={glassIntensity}
       data-scheme={scheme}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${BRAND_FONT_VARS} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* Variables del tema: stylesheet en vez de inline style → el customCss

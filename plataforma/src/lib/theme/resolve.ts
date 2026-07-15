@@ -223,7 +223,10 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
   const bodyFont = findFont(config.fontBody);
   const monoFont = findFont(config.fontMono);
 
-  const fam = (family: string, fallback: string) => `'${family}', ${fallback}`;
+  const fam = (family: string, fallback: string) => {
+    const selfHosted = SELF_HOSTED_FONT_VARS[family];
+    return selfHosted ? `${selfHosted}, ${fallback}` : `'${family}', ${fallback}`;
+  };
 
   return {
     '--brand-bg': config.colorBg,
@@ -344,6 +347,24 @@ function buildSurfaceVars(config: ThemeConfig): Record<string, string> {
 
 /* ── Google Fonts href ────────────────────────────────────── */
 
+/**
+ * Familias que viajan self-hosted vía next/font (ver layout.tsx) en vez de
+ * pedirse a Google Fonts en tiempo real: Geist ya estaba cargada para toda la
+ * app (usada como fuente de cuerpo del panel), y Unbounded/Anton/Instrument
+ * Serif/JetBrains Mono son la paleta tipográfica por defecto del sistema
+ * (ver DEFAULT_CONFIG). Cuando el tema de un tenant elige exactamente una de
+ * estas familias, `fam()` usa la variable CSS en vez del nombre literal (el
+ * nombre generado internamente por next/font no coincide con el de Google),
+ * y `buildFontsHref` la excluye del <link> dinámico para no pedirla dos veces.
+ */
+const SELF_HOSTED_FONT_VARS: Record<string, string> = {
+  Geist: 'var(--font-geist-sans)',
+  Unbounded: 'var(--font-unbounded)',
+  Anton: 'var(--font-anton)',
+  'Instrument Serif': 'var(--font-instrument-serif)',
+  'JetBrains Mono': 'var(--font-jetbrains-mono)',
+};
+
 export function buildFontsHref(config: ThemeConfig): string | null {
   const families = [
     config.fontDisplay,
@@ -354,6 +375,7 @@ export function buildFontsHref(config: ThemeConfig): string | null {
   ];
   const axes = new Set<string>();
   for (const family of families) {
+    if (SELF_HOSTED_FONT_VARS[family]) continue;
     const f = findFont(family);
     if (f) axes.add(f.axis);
   }

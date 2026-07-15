@@ -51,7 +51,6 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/admin") ||  // ya tiene el prefijo
       pathname.startsWith("/preview") || // iframe de vista previa del editor (misma origin)
       pathname === "/favicon.ico" ||
-      pathname === "/sw.js" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {
       rewriteUrl = request.nextUrl.clone();
@@ -64,7 +63,6 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/central") ||
       pathname === "/favicon.ico" ||
-      pathname === "/sw.js" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {
       rewriteUrl = request.nextUrl.clone();
@@ -210,8 +208,12 @@ function applySecurityHeaders(headers: Headers): void {
 }
 
 export const config = {
-  // Corre en todo menos estáticos e imágenes.
+  // Corre en todo menos estáticos e imágenes. sw.js es un archivo estático de
+  // public/ (no depende de tenant-slug ni de sesión) pero el navegador lo
+  // vuelve a pedir seguido (revisión de actualización del Service Worker);
+  // sin esta exclusión, cada una de esas peticiones pagaba 1-2 round-trips
+  // de refresco de sesión a Supabase de balde.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
