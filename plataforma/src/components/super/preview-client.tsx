@@ -20,12 +20,25 @@ import { buildThemeVars, buildFontsHref, sanitizeCustomCss } from '@/lib/theme/r
 import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
-/** Oculta el ThemeBackground estático renderizado por layout.tsx (server-side)
- *  para que la capa dinámica actualizada por BroadcastChannel sea la única visible. */
+/** Neutraliza el tema estático que layout.tsx renderiza server-side (fondo,
+ *  vars y custom_css GUARDADOS) para que el estado vivo del editor sea la
+ *  única fuente de verdad dentro de la vista previa.
+ *
+ *  Crítico para #tenant-custom-css: el layout lo inyecta al FINAL del body,
+ *  después de este componente, así que por orden de cascada le ganaba a las
+ *  vars de la plantilla recién aplicada → la vista previa mostraba una mezcla
+ *  (colores del CSS viejo + esquema nuevo) en cualquier restaurante con CSS a
+ *  medida. Al hidratar, este componente re-emite vars y customCss desde su
+ *  estado (inicial = lo guardado), por lo que desactivar las copias del
+ *  layout no cambia el primer render. */
 function hideStaticBackground() {
   document.querySelectorAll<HTMLElement>(
     'body > .asphalt, body > .bg-layer, body > .asphalt-grain, body > .asphalt-mark',
   ).forEach((el) => { el.style.display = 'none'; });
+  for (const id of ['tenant-theme-vars', 'tenant-custom-css']) {
+    const el = document.getElementById(id) as HTMLStyleElement | null;
+    if (el) el.disabled = true;
+  }
 }
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;

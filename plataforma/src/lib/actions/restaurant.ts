@@ -470,6 +470,11 @@ export async function saveAdminRestaurantTheme(input: {
   config: ThemeConfig;
   content: ThemeContent;
   customCss: string;
+  /** true cuando el dueño aplicó una plantilla: el CSS a medida existente se
+      ELIMINA (se inyecta al final del documento y pisaría los colores de la
+      plantilla → mezcla ilegible). Es solo un borrado — el dueño sigue sin
+      poder escribir CSS propio. */
+  resetCustomCss?: boolean;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -495,9 +500,14 @@ export async function saveAdminRestaurantTheme(input: {
   // puede definirlo (modelo "Leonardo diseña"). Para un dueño NO se toca —
   // se conserva el valor existente, ignorando lo que mande el cliente (la UI
   // ya le oculta el campo, pero el server action es el candado real).
+  // EXCEPCIÓN segura: si aplicó una plantilla (resetCustomCss), el CSS se
+  // BORRA — borrar no es inyección, y sin esto el CSS del look anterior
+  // pisaba las variables de la plantilla recién elegida.
   let effectiveCss: string | null;
   if (isSuperAdmin) {
     effectiveCss = customCss?.trim() ? customCss : null;
+  } else if (input.resetCustomCss === true) {
+    effectiveCss = null;
   } else {
     const { data: existing } = await db
       .from('restaurant_themes')

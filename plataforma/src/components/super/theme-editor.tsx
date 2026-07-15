@@ -61,8 +61,11 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
   function applyBuiltinTemplate(tpl: BuiltinTemplate) {
     setConfig((prev) => applyTemplateToConfig(prev, tpl));
+    // El CSS a medida pisa las variables de la plantilla (se inyecta al final
+    // del documento) → sin limpiarlo, la plantilla sale como mezcla ilegible.
+    setCss('');
     setAppliedBuiltin(tpl.id);
-    setTplMsg(`Plantilla "${tpl.name}" aplicada (recuerda guardar).`);
+    setTplMsg(`Plantilla "${tpl.name}" aplicada (recuerda guardar). El CSS a medida se vació — vuelve a escribirlo si lo necesitas.`);
   }
 
   function applyTemplate() {

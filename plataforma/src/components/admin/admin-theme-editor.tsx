@@ -67,14 +67,24 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 /* ── Componente principal ─────────────────────────────────── */
-export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss }: Props) {
+export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
+  // El CSS a medida (lo escribe solo Leogin) vive en estado porque aplicar una
+  // plantilla lo RESETEA: ese CSS se inyecta al final del documento y le gana
+  // a las variables de cualquier plantilla — con un CSS hecho para el look
+  // anterior, la plantilla salía como mezcla ilegible (fondo/texto viejos +
+  // tarjetas del esquema nuevo) tanto en la vista previa como al publicar.
+  const [customCss, setCustomCss] = useState(initialCss);
   const [tab, setTab] = useState<Tab>('plantillas');
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [appliedTpl, setAppliedTpl] = useState<string | null>(null);
+  // ¿Este restaurante tenía CSS a medida y el dueño lo quitó al aplicar una
+  // plantilla? El server action solo permite al dueño LIMPIARLO (nunca
+  // escribir CSS arbitrario), por eso viaja como flag y no como texto.
+  const cssWasReset = initialCss.trim() !== '' && customCss === '';
 
   const setC = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setConfig((p) => ({ ...p, [k]: v }));
   const setT = (section: keyof ThemeContent, key: string, v: string) =>
@@ -86,7 +96,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
   function save() {
     setMsg(null);
     start(async () => {
-      const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss });
+      const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss, resetCustomCss: cssWasReset });
       if (res.error) setMsg(`Error: ${res.error}`);
       else { setMsg('Guardado ✓'); router.refresh(); }
     });
@@ -94,6 +104,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 
   function applyBuiltinTemplate(tpl: BuiltinTemplate) {
     setConfig((prev) => applyTemplateToConfig(prev, tpl));
+    // El CSS a medida se desactiva: pisa las variables de la plantilla y
+    // producía la mezcla ilegible (ver comentario en el estado customCss).
+    setCustomCss('');
     setAppliedTpl(tpl.id);
     setMsg(null);
   }
@@ -162,6 +175,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
                   Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
                   o sigue personalizando en las otras pestañas.
+                  {cssWasReset && (
+                    <> Este sitio tenía un <strong>diseño CSS a medida</strong> que pisaba los colores de las plantillas;
+                    se desactivó para que la plantilla se vea fiel (se elimina al guardar).</>
+                  )}
                 </span>
               </Glass>
             )}
