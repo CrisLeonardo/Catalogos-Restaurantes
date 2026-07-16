@@ -5,12 +5,14 @@ import { Glass } from '@/components/glass';
 import { updateOrderTypes } from '@/lib/actions/super-admin';
 import type { OrderType } from '@/lib/theme/defaults';
 
-/* "Comer aquí" y "Retiro en local" cuentan como un solo canal ("Local") para
-   el descuento de "Plan a tu medida" (ver mig. 064) — se activan/desactivan
-   juntos, aunque orderTypes siga guardando ambas llaves por separado. */
-const OPTIONS: { id: string; label: string; desc: string; types: OrderType[] }[] = [
-  { id: 'local',    label: 'Local (mesa + retiro)', desc: 'Pedidos en mesa con QR y retiro en el mostrador', types: ['dine_in', 'pickup'] },
-  { id: 'delivery', label: 'A domicilio',            desc: 'Entrega en la dirección del cliente',            types: ['delivery'] },
+/* Cada modo de pedido es su propio canal independiente. Nota de billing: para
+   el descuento "Plan a tu medida" (Premium+, ver mig. 070) "comer en local" y
+   "para llevar" cuentan como un solo canal si CUALQUIERA de los dos está
+   activo — el descuento solo aplica cuando ambos están apagados a la vez. */
+const OPTIONS: { id: OrderType; label: string; desc: string }[] = [
+  { id: 'dine_in', label: 'Comer en local', desc: 'Pedidos en mesa con QR' },
+  { id: 'pickup',  label: 'Para llevar',    desc: 'Retiro en el mostrador' },
+  { id: 'delivery', label: 'A domicilio',   desc: 'Entrega en la dirección del cliente' },
 ];
 
 export default function OrderTypesEditor({
@@ -24,11 +26,8 @@ export default function OrderTypesEditor({
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
-  function toggle(types: OrderType[]) {
-    setSelected((prev) => {
-      const isOn = types.some((t) => prev.includes(t));
-      return isOn ? prev.filter((t) => !types.includes(t)) : [...new Set([...prev, ...types])];
-    });
+  function toggle(id: OrderType) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
     setMsg(null);
   }
 
@@ -46,18 +45,19 @@ export default function OrderTypesEditor({
         Tipos de pedido
       </p>
       <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>
-        En planes Premium+, desactivar un canal descuenta Q100 de la mensualidad
-        automática (máx. un canal, −Q100). En Estándar define el paquete: Solo delivery,
-        o Para llevar + Comer en local. Mínimo un canal activo.
+        En planes Premium+, apagar comer en local y para llevar juntos (o a domicilio) descuenta
+        Q100 de la mensualidad automática (máx. un canal, −Q100). En Estándar el dueño puede
+        elegir hasta 2 de los 3 modos desde su panel — aquí puedes fijar cualquier combinación.
+        Mínimo un modo activo.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {OPTIONS.map(({ id, label, desc, types }) => {
-          const enabled = types.some((t) => selected.includes(t));
+        {OPTIONS.map(({ id, label, desc }) => {
+          const enabled = selected.includes(id);
           return (
             <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <button
                 type="button"
-                onClick={() => toggle(types)}
+                onClick={() => toggle(id)}
                 className="press"
                 aria-label={label}
                 style={{

@@ -53,7 +53,7 @@ const FAQS = [
   },
   {
     q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
-    a: 'Básico (Q149) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (Q399) agrega pedidos para llevar o a domicilio con avisos en tiempo real. Premium (Q749) incluye los 3 canales de pedido, panel de mesero, personalización completa, finanzas/analítica/inventario y todos los módulos disponibles sin costo extra.',
+    a: `Básico (${PLANS.BASICO.priceLabel}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${PLANS.ESTANDAR.priceLabel}) agrega pedidos en línea con avisos en tiempo real, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${PLANS.PREMIUM.priceLabel}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, finanzas/analítica/inventario y todos los módulos disponibles sin costo extra.`,
   },
   {
     q: '¿Cómo funciona Multisucursal / Franquicias?',
@@ -192,10 +192,10 @@ export default function PlanesPage() {
                     { label: 'Pedidos en línea', ok: false },
                   ] : code === 'ESTANDAR' ? [
                     { label: 'Todo lo del Básico', ok: true },
-                    { label: 'Pedidos para llevar o a domicilio', ok: true },
+                    { label: 'Elige 2 de 3 modos de pedido', ok: true },
                     { label: 'WhatsApp y panel en tiempo real', ok: true },
                     { label: 'Hasta 2 usuarios del panel', ok: true },
-                    { label: 'Delivery y comer en local juntos', ok: false },
+                    { label: 'Comer en local, para llevar y a domicilio juntos', ok: false },
                   ] : code === 'PREMIUM' ? [
                     { label: 'Todo lo del Estándar', ok: true },
                     { label: 'Para llevar, comer en local y delivery', ok: true },

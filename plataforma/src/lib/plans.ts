@@ -72,7 +72,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   ESTANDAR: {
     code: 'ESTANDAR',
     name: 'Estándar',
-    tagline: 'Pedidos para llevar o a domicilio con avisos en tiempo real',
+    tagline: 'Elige 2 de 3 modos de pedido, con avisos en tiempo real',
     priceMonthly: 299,
     priceLabel: 'Q299 / mes',
     setupFee: 300,
@@ -141,6 +141,11 @@ export const PLAN_ORDER: PlanCode[] = ['BASICO', 'ESTANDAR', 'PREMIUM', 'PRO'];
 export function isUpgrade(current: PlanCode, target: PlanCode): boolean {
   return PLAN_ORDER.indexOf(target) > PLAN_ORDER.indexOf(current);
 }
+
+/** El plan Estándar da a elegir 2 de los 3 modos de pedido (comer en local,
+ *  para llevar, a domicilio). Para tener los 3 a la vez hay que subir a
+ *  Premium — este número es la única fuente de verdad de ese tope. */
+export const ESTANDAR_MAX_ORDER_TYPES = 2;
 
 /** Siguiente plan que se le puede ofrecer a un cliente (solo dentro de
  *  PUBLIC_PLANS — nunca recomienda un plan pausado como Pro). */

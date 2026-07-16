@@ -23,6 +23,8 @@ import { getPricingSettings } from '@/lib/db/billing';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { findTemplate } from '@/lib/theme/templates';
+import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
+import type { OrderType } from '@/lib/theme/defaults';
 
 export type SignupState = { error: string } | null;
 
@@ -93,10 +95,14 @@ export async function signupRestaurant(
   const rawPlan = formData.get('plan_code') as string | null;
   const planCode: 'BASICO' | 'ESTANDAR' | 'PREMIUM' =
     rawPlan === 'BASICO' ? 'BASICO' : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
-  // Paquete de Estándar (elegido en el registro): 'delivery' = Solo Delivery,
-  // 'local' = Para llevar + Comer en local. Solo aplica al plan Estándar.
-  const rawBundle = formData.get('estandar_bundle') as string | null;
-  const estandarBundle: 'delivery' | 'local' = rawBundle === 'delivery' ? 'delivery' : 'local';
+  // Modos de pedido elegidos en el registro para Estándar (2 de 3: comer en
+  // local, para llevar, a domicilio). Un valor inválido o con conteo distinto
+  // de ESTANDAR_MAX_ORDER_TYPES cae al default (para llevar + comer en local).
+  const VALID_ORDER_TYPES: OrderType[] = ['dine_in', 'pickup', 'delivery'];
+  const rawTypes = ((formData.get('estandar_order_types') as string | null) ?? '').split(',').map((s) => s.trim());
+  const requestedEstandarTypes = [...new Set(rawTypes)].filter((t): t is OrderType => VALID_ORDER_TYPES.includes(t as OrderType));
+  const estandarOrderTypes: OrderType[] =
+    requestedEstandarTypes.length === ESTANDAR_MAX_ORDER_TYPES ? requestedEstandarTypes : ['pickup', 'dine_in'];
   // Plantilla visual elegida en el wizard; un id desconocido cae al look por defecto.
   const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
 
@@ -175,13 +181,13 @@ export async function signupRestaurant(
   // ── 3. Tema (marca) ─────────────────────────────────────────
   // Canales según plan:
   //   BASICO   → ['pickup'] (sin pedidos en línea, valor por defecto).
-  //   ESTANDAR → un paquete: 'delivery' = ['delivery'] o 'local' = ['pickup','dine_in'].
+  //   ESTANDAR → los 2 modos elegidos en el registro (editable después desde el panel).
   //   PREMIUM+ → los tres canales.
-  const orderTypes: ('dine_in' | 'delivery' | 'pickup')[] =
+  const orderTypes: OrderType[] =
     planCode === 'BASICO'
       ? ['pickup']
       : planCode === 'ESTANDAR'
-        ? (estandarBundle === 'delivery' ? ['delivery'] : ['pickup', 'dine_in'])
+        ? estandarOrderTypes
         : ['dine_in', 'delivery', 'pickup'];
   // La plantilla solo trae claves visuales (nunca operación): orderTypes
   // va después para que el canal del plan siempre gane.

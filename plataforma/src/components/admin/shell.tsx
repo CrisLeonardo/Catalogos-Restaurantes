@@ -188,7 +188,7 @@ export default function AdminShell({
   const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
   const hasAnalyticsPlan = planFeatures.hasAnalytics;
   // Mesas (config de mesas/QR) también se habilita si el restaurante ya
-  // tiene "comer en local" activo (ESTANDAR con paquete Local), no solo por plan.
+  // tiene "comer en local" activo (ESTANDAR puede elegirlo entre sus 2 modos), no solo por plan.
   const mesasAccessible = hasWaiterPanel || dineInEnabled;
 
   const sections: { title: string; items: NavItem[] }[] = [

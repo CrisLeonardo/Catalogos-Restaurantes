@@ -45,6 +45,19 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 type PlanOption = 'BASICO' | 'ESTANDAR' | 'PREMIUM';
+type OrderTypeOption = 'dine_in' | 'pickup' | 'delivery';
+
+const ORDER_TYPE_LABEL: Record<OrderTypeOption, string> = {
+  dine_in: 'Comer en local',
+  pickup: 'Para llevar',
+  delivery: 'A domicilio',
+};
+
+const ESTANDAR_TYPE_OPTIONS: { id: OrderTypeOption; icon: string; title: string; desc: string }[] = [
+  { id: 'dine_in', icon: 'utensils', title: 'Comer en local', desc: 'El cliente pide desde la mesa con QR. Ideal para restaurantes y cafeterías.' },
+  { id: 'pickup', icon: 'bag', title: 'Para llevar', desc: 'El cliente pide en línea y retira en el mostrador.' },
+  { id: 'delivery', icon: 'truck', title: 'A domicilio', desc: 'Tus clientes piden en línea y reciben en su dirección.' },
+];
 
 interface PlanCardDef {
   code: PlanOption;
@@ -79,7 +92,7 @@ const PLAN_CARDS: PlanCardDef[] = [
     priceUnit: '/ mes',
     trialLabel: 'Con 30 días gratis',
     features: [
-      { text: 'Elige un paquete: Delivery o Local', positive: true },
+      { text: 'Elige 2 de 3 modos de pedido', positive: true },
       { text: 'Alertas en tiempo real · WhatsApp', positive: true },
       { text: 'Productos ilimitados · 2 usuarios', positive: true },
       { text: 'Sin límite de ventas', positive: true },
@@ -108,8 +121,8 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
 
   const [step, setStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<PlanOption>('PREMIUM');
-  // Paquete de Estándar: 'local' = Para llevar + Comer en local · 'delivery' = Solo delivery.
-  const [estandarBundle, setEstandarBundle] = useState<'local' | 'delivery'>('local');
+  // Estándar elige 2 de los 3 modos de pedido (el 3ero requiere Premium).
+  const [estandarTypes, setEstandarTypes] = useState<OrderTypeOption[]>(['dine_in', 'pickup']);
   // Estilo visual de inicio (plantilla); siempre se puede cambiar en Personalizar.
   const [templateId, setTemplateId] = useState('carbon-autor');
   const [name, setName] = useState('');
@@ -123,6 +136,16 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
   const [stepError, setStepError] = useState<string | null>(null);
 
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
+
+  function toggleEstandarType(id: OrderTypeOption) {
+    setEstandarTypes((prev) => {
+      const isOn = prev.includes(id);
+      if (isOn) return prev.length === 1 ? prev : prev.filter((t) => t !== id);
+      return prev.length >= 2 ? prev : [...prev, id];
+    });
+  }
+
+  const estandarSummary = estandarTypes.map((t) => ORDER_TYPE_LABEL[t]).join(' + ');
 
   const previewHost = useMemo(() => {
     const root = rootDomain.replace(/:\d+$/, '');
@@ -149,7 +172,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <input type="hidden" name="plan_code" value={selectedPlan} />
-      <input type="hidden" name="estandar_bundle" value={estandarBundle} />
+      <input type="hidden" name="estandar_order_types" value={estandarTypes.join(',')} />
       <input type="hidden" name="template_id" value={templateId} />
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="slug" value={effectiveSlug} />
@@ -248,34 +271,34 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
           })}
         </div>
 
-        {/* Sub-selector de paquete para Estándar */}
+        {/* Sub-selector: Estándar elige 2 de 3 modos de pedido */}
         {selectedPlan === 'ESTANDAR' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
-              Elige tu paquete Estándar (mismo precio, {PLANS.ESTANDAR.priceLabel})
+              Elige 2 modos de pedido (mismo precio, {PLANS.ESTANDAR.priceLabel})
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {([
-                { id: 'local', icon: 'utensils', title: 'Local', desc: 'Para llevar + Comer en local con QR de mesa. Ideal para cafeterías.' },
-                { id: 'delivery', icon: 'truck', title: 'Solo Delivery', desc: 'Tus clientes piden en línea y reciben a domicilio.' },
-              ] as const).map((b) => {
-                const active = estandarBundle === b.id;
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {ESTANDAR_TYPE_OPTIONS.map((b) => {
+                const active = estandarTypes.includes(b.id);
+                const capped = !active && estandarTypes.length >= 2;
                 return (
                   <button
                     key={b.id}
                     type="button"
-                    onClick={() => setEstandarBundle(b.id)}
+                    onClick={() => toggleEstandarType(b.id)}
+                    disabled={capped}
                     style={{
                       padding: '12px 12px',
                       borderRadius: 'var(--radius-lg)',
                       border: active ? '2px solid var(--brand-accent)' : '2px solid var(--u-hair-2)',
                       background: active ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)' : 'rgba(255,255,255,0.03)',
-                      cursor: 'pointer',
+                      cursor: capped ? 'not-allowed' : 'pointer',
+                      opacity: capped ? 0.45 : 1,
                       textAlign: 'left',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 6,
-                      transition: 'border-color 150ms, background 150ms',
+                      transition: 'border-color 150ms, background 150ms, opacity 150ms',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -288,7 +311,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
               })}
             </div>
             <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.45 }}>
-              Para combinar delivery + local en un mismo menú necesitas Premium. Podrás cambiar de paquete escribiéndonos.
+              Para tener los 3 modos juntos necesitas Premium. Podrás cambiar tu elección cuando quieras desde el panel.
             </p>
           </div>
         )}
@@ -356,7 +379,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 4: Confirmar ── */}
       <div style={{ display: step === 4 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · 30 días gratis, luego ${PLANS.PREMIUM.priceLabel}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarBundle === 'delivery' ? 'Solo Delivery' : 'Local'} · ${PLANS.ESTANDAR.priceLabel} (30 días gratis)` : `Básico · ${PLANS.BASICO.priceLabel} (30 días gratis)`} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · 30 días gratis, luego ${PLANS.PREMIUM.priceLabel}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarSummary} · ${PLANS.ESTANDAR.priceLabel} (30 días gratis)` : `Básico · ${PLANS.BASICO.priceLabel} (30 días gratis)`} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Estilo" value={findTemplate(templateId)?.name ?? 'Clásico'} />
@@ -371,9 +394,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
             {selectedPlan === 'BASICO'
               ? 'Tu restaurante queda en vivo con tu menú digital. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'
               : selectedPlan === 'ESTANDAR'
-              ? (estandarBundle === 'delivery'
-                  ? 'Tu restaurante queda en vivo con pedidos a domicilio activos. Sin tarjeta. Sin compromiso.'
-                  : 'Tu restaurante queda en vivo con pedidos para llevar y comer en local activos. Sin tarjeta. Sin compromiso.')
+              ? `Tu restaurante queda en vivo con pedidos de ${estandarSummary.toLowerCase()} activos. Sin tarjeta. Sin compromiso.`
               : 'Tu restaurante queda en vivo con pedidos online activos. Sin tarjeta. Sin compromiso. Cancela cuando quieras.'}
           </p>
         </Glass>

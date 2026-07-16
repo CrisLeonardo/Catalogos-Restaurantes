@@ -11,7 +11,8 @@ import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
 import TemplateGallery from '@/components/admin/template-gallery';
-import { saveAdminRestaurantTheme } from '@/lib/actions/restaurant';
+import OwnerTemplates from '@/components/admin/owner-templates';
+import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/actions/restaurant';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
@@ -53,6 +54,7 @@ interface Props {
   config: ThemeConfig;
   content: ThemeContent;
   customCss: string;
+  ownerTemplates: RestaurantThemeTemplate[];
 }
 
 type Tab = 'plantillas' | 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos';
@@ -67,10 +69,11 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 /* ── Componente principal ─────────────────────────────────── */
-export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss }: Props) {
+export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, ownerTemplates: initialOwnerTemplates }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
+  const [ownerTemplates, setOwnerTemplates] = useState<RestaurantThemeTemplate[]>(initialOwnerTemplates);
   // El CSS a medida (lo escribe solo Leogin) vive en estado porque aplicar una
   // plantilla lo RESETEA: ese CSS se inyecta al final del documento y le gana
   // a las variables de cualquier plantilla — con un CSS hecho para el look
@@ -168,6 +171,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 Nada se publica hasta que toques «Guardar cambios».
               </p>
             </Glass>
+            <OwnerTemplates
+              restaurantId={restaurantId}
+              currentConfig={config}
+              templates={ownerTemplates}
+              onTemplatesChange={setOwnerTemplates}
+              onApply={applyBuiltinTemplate}
+              appliedId={appliedTpl}
+            />
+            <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} aria-hidden />
             <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} />
             {appliedTpl && (
               <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>

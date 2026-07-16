@@ -33,8 +33,10 @@ function approxFont(family: string, bold = false): React.CSSProperties {
   };
 }
 
-/* ── Miniatura: portada + catálogo pintados con la config ── */
-function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
+/* ── Miniatura: portada + catálogo pintados con la config ──
+   Exportada: la reutiliza owner-templates.tsx para las plantillas propias
+   del restaurante (misma forma BuiltinTemplate → mismo mini-preview). */
+export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
   const c: ThemeConfig = { ...DEFAULT_CONFIG, ...tpl.config };
   const light = c.scheme === 'light';
   const hair = light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)';

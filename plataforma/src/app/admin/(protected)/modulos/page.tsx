@@ -39,8 +39,9 @@ export default async function ModulosPage() {
   ]);
 
   const planActual = (rest?.plan_actual as string | null) ?? null;
-  // Default solo cuando aún no hay config: BASICO → pickup; ESTANDAR → paquete
-  // Local (para llevar + comer en local); Premium+ → los tres canales.
+  // Default solo cuando aún no hay config: BASICO → pickup; ESTANDAR → 2 modos
+  // por defecto (para llevar + comer en local, editable desde el panel);
+  // Premium+ → los tres canales.
   const defaultOrderTypes: OrderType[] =
     planActual === 'BASICO' ? ['pickup']
     : planActual === 'ESTANDAR' ? ['pickup', 'dine_in']

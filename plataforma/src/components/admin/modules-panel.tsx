@@ -17,7 +17,7 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ADDON_MODULES, INCLUDED_MODULES, PLANS, isAddonAvailable, type PlanCode } from '@/lib/plans';
+import { ADDON_MODULES, ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, isAddonAvailable, type PlanCode } from '@/lib/plans';
 import type { OrderType } from '@/lib/theme/defaults';
 
 /** Nota de precio para un módulo según si el plan actual lo incluye gratis. */
@@ -29,27 +29,30 @@ function modulePriceNote(plan: string | null | undefined, key: ActivatableModule
   return `Q${addon.price}/mes a la carta`;
 }
 
-/** Canal de servicio para efectos de precio/UI. "local" agrupa comer en el
-   restaurante (mesa con QR) y para llevar en mostrador: son la misma idea de
-   "vienen a mi local", así que cuentan como un solo canal (ver mig. 064). */
-type Channel = 'local' | 'delivery';
-
-const CHANNEL_META: { id: Channel; label: string; description: string; icon: string; configHref?: string; types: OrderType[] }[] = [
+/** Cada modo de pedido es su propio canal independiente — comer en local,
+   para llevar y a domicilio ya no se agrupan entre sí (antes "local" unía
+   comer en local + para llevar en un solo toggle). */
+const CHANNEL_META: { id: OrderType; label: string; description: string; icon: string; configHref?: string }[] = [
   {
-    id: 'local',
-    label: 'Comer en local y para llevar',
-    description: 'El cliente pide desde la mesa con QR o para retirar en el mostrador. Requiere configurar el número de mesas.',
+    id: 'dine_in',
+    label: 'Comer en el local',
+    description: 'El cliente pide desde la mesa escaneando el QR. Requiere configurar el número de mesas.',
     icon: 'utensils',
     configHref: '/admin/mesas',
-    types: ['dine_in', 'pickup'],
+  },
+  {
+    id: 'pickup',
+    label: 'Para llevar',
+    description: 'El cliente hace su pedido en línea y lo retira en el mostrador de tu local.',
+    icon: 'bag',
+    configHref: '/admin/personalizacion',
   },
   {
     id: 'delivery',
-    label: 'Pedidos a domicilio',
+    label: 'A domicilio',
     description: 'El cliente ingresa su dirección y el pedido se entrega donde está. Puedes definir zonas y costo de envío.',
     icon: 'truck',
     configHref: '/admin/personalizacion',
-    types: ['delivery'],
   },
 ];
 
@@ -304,14 +307,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
 
   // Estado local para modos de pedido (optimistic).
   const [localOrderTypes, setLocalOrderTypes] = useState<OrderType[]>(orderTypes);
-  const [orderBusy, setOrderBusy] = useState<Channel | null>(null);
+  const [orderBusy, setOrderBusy] = useState<OrderType | null>(null);
 
-  // Estándar: el paquete (canales) se fija en el registro y solo lo cambia
-  // Leogin. El dueño ve sus canales como incluidos (no editables).
+  // Estándar: el dueño elige libremente sus modos de pedido, con tope de
+  // ESTANDAR_MAX_ORDER_TYPES (2 de 3) — el 3ero requiere subir a Premium.
   const isEstandar = planActual === 'ESTANDAR';
   const isBasico = planActual === 'BASICO';
-  const isDeliveryBundle = localOrderTypes.includes('delivery');
-  const estandarBundleLabel = isDeliveryBundle ? 'Solo Delivery' : 'Local';
 
   function toggle(key: ActivatableModuleKey, next: boolean) {
     setError(null);
@@ -324,19 +325,25 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
     });
   }
 
-  function toggleChannel(channel: typeof CHANNEL_META[number]) {
-    const isOn = channel.types.some((t) => localOrderTypes.includes(t));
+  function toggleType(m: typeof CHANNEL_META[number]) {
+    const isOn = localOrderTypes.includes(m.id);
+
+    if (!isOn && isEstandar && localOrderTypes.length >= ESTANDAR_MAX_ORDER_TYPES) {
+      setError(`Tu plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido activos. Desactiva otro primero, o actualiza a Premium para tener los 3.`);
+      return;
+    }
+
     const next = isOn
-      ? localOrderTypes.filter((t) => !channel.types.includes(t))
-      : [...new Set([...localOrderTypes, ...channel.types])];
+      ? localOrderTypes.filter((t) => t !== m.id)
+      : [...localOrderTypes, m.id];
 
     if (next.length === 0) {
-      setError('Debe haber al menos un canal de servicio activo.');
+      setError('Debe haber al menos un modo de pedido activo.');
       return;
     }
     setError(null);
     setLocalOrderTypes(next);
-    setOrderBusy(channel.id);
+    setOrderBusy(m.id);
     startTransition(async () => {
       const res = await updateOwnOrderTypes(restaurantId, next);
       setOrderBusy(null);
@@ -388,8 +395,8 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-              Tu plan Estándar incluye el paquete <strong style={{ color: 'var(--u-text-2)' }}>{estandarBundleLabel}</strong>.
-              Para combinar delivery y local en un mismo menú, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium ({PLANS.PREMIUM.priceLabel})</strong>.{' '}
+              Tu plan Estándar te deja elegir hasta <strong style={{ color: 'var(--u-text-2)' }}>{ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido</strong>.
+              Para tener comer en local, para llevar y a domicilio juntos, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium ({PLANS.PREMIUM.priceLabel})</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
@@ -408,15 +415,19 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {CHANNEL_META.map((m) => {
-            const on = m.types.some((t) => localOrderTypes.includes(t));
-            // BASICO: solo el canal local (para llevar, sin mesas). ESTANDAR:
-            // solo los canales de su paquete (los demás se ofrecen como mejora a Premium).
-            const lockedPremium = isBasico ? m.id !== 'local' : isEstandar ? !on : false;
-            // ESTANDAR: los canales incluidos no son editables por el dueño.
-            const readOnly = isEstandar && on;
+            const on = localOrderTypes.includes(m.id);
+            const activeCount = localOrderTypes.length;
+            // BASICO: solo "para llevar" (sin pedidos reales todavía, ver banner arriba).
+            // ESTANDAR: cualquier modo, hasta el tope de 2 — el que falta pide Premium.
+            const lockedPremium = isBasico
+              ? m.id !== 'pickup'
+              : isEstandar
+                ? (!on && activeCount >= ESTANDAR_MAX_ORDER_TYPES)
+                : false;
+            const lockLabel = isBasico ? 'Requiere Estándar' : 'Requiere Premium';
+            const lockBadge = isBasico ? 'ESTÁNDAR' : 'PREMIUM';
             const busy = orderBusy === m.id && isPending;
-            const activeChannels = CHANNEL_META.filter((c) => c.types.some((t) => localOrderTypes.includes(t)));
-            const isLast = activeChannels.length === 1 && on;
+            const isLast = activeCount === 1 && on;
 
             if (lockedPremium) {
               return (
@@ -427,7 +438,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent)',
                     letterSpacing: '0.06em',
                   }}>
-                    PREMIUM
+                    {lockBadge}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                     <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text-4)' }}>
@@ -437,7 +448,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text-3)' }}>{m.label}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
                         <Icon name="key" size={11} style={{ color: 'var(--u-text-4)' }} />
-                        <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>Requiere Premium</span>
+                        <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{lockLabel}</span>
                       </div>
                     </div>
                   </div>
@@ -461,14 +472,14 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     </span>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{m.label}</div>
-                      <StatusDot on={on} label={readOnly ? 'Incluido en tu plan' : on ? 'Activo' : 'Inactivo'} />
+                      <StatusDot on={on} label={on ? 'Activo' : 'Inactivo'} />
                     </div>
                   </div>
                   <Toggle
                     on={on}
                     busy={busy}
-                    disabled={isLast || readOnly}
-                    onClick={() => { if (!readOnly) toggleChannel(m); }}
+                    disabled={isLast}
+                    onClick={() => toggleType(m)}
                     label={`${on ? 'Desactivar' : 'Activar'} ${m.label}`}
                   />
                 </div>

@@ -87,6 +87,20 @@ export function applyTemplateToConfig(prev: ThemeConfig, tpl: BuiltinTemplate): 
   return next;
 }
 
+/**
+ * Recorta una config completa a solo sus claves visuales — lo que se guarda
+ * cuando el restaurante guarda su DISEÑO ACTUAL como plantilla propia
+ * reutilizable (mismo subconjunto que una plantilla builtin, por eso el
+ * resultado encaja directo en `BuiltinTemplate.config` / `applyTemplateToConfig`).
+ */
+export function extractVisualConfig(config: ThemeConfig): TemplateConfig {
+  const out: TemplateConfig = {};
+  for (const k of TEMPLATE_VISUAL_KEYS) {
+    (out as Record<string, unknown>)[k] = structuredClone(config[k]);
+  }
+  return out;
+}
+
 /* ── La galería ─────────────────────────────────────────────── */
 
 export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
