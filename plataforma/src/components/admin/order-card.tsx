@@ -85,7 +85,7 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string): string
 
   const itemsHtml = order.items.map((item) => {
     const opts = item.options_snapshot?.length
-      ? `<div class="opts">– ${item.options_snapshot.map((o) => o.choice).join(' · ')}</div>`
+      ? `<div class="opts">– ${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}</div>`
       : '';
     return `
       <div class="row">
@@ -172,7 +172,7 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
 
   const itemsHtml = order.items.map((item) => {
     const opts = item.options_snapshot?.length
-      ? `<div class="opts">${item.options_snapshot.map((o) => o.choice).join(', ')}</div>`
+      ? `<div class="opts">${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(', ')}</div>`
       : '';
     return `
       <tr>
@@ -441,7 +441,7 @@ export default function OrderCard({
               {item.quantity}× {item.name_snapshot}
               {item.options_snapshot && item.options_snapshot.length > 0 && (
                 <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                  {item.options_snapshot.map((o) => o.choice).join(' · ')}
+                  {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                 </span>
               )}
             </span>

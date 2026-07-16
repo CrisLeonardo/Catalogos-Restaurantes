@@ -4,6 +4,8 @@ import { z } from 'zod';
 export const orderItemOptionSchema = z.object({
   groupId: z.string().min(1).max(60),
   choiceId: z.string().min(1).max(60),
+  /** Variante elegida del componente (ej. sabor de bebida), si tenía. */
+  variantId: z.string().min(1).max(60).optional(),
 });
 
 export const orderItemSchema = z.object({

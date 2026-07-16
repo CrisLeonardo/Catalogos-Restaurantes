@@ -333,7 +333,7 @@ export default function OrderTracker({
                 {item.quantity}× {item.name}
                 {item.options && item.options.length > 0 && (
                   <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                    {item.options.map((o) => o.choice).join(' · ')}
+                    {item.options.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                   </span>
                 )}
               </span>

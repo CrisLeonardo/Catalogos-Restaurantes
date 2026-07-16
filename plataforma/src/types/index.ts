@@ -116,11 +116,25 @@ export interface Category {
 
 /* ── Variantes / extras de producto (migración 009) ───────── */
 
+/** Variante de un componente de combo (ej. sabor de bebida, tipo de papas). */
+export interface ProductVariant {
+  id: string;
+  name: string;
+  priceDelta: number;
+}
+
 export interface ProductOptionChoice {
   id: string;
   name: string;
   /** Cuánto suma (o resta) al precio base. */
   priceDelta: number;
+  /**
+   * Variantes del componente (migración 077 combos+variantes). Solo tiene
+   * sentido en choices de un grupo tipo 'combo': si están presentes, el
+   * cliente/mesero debe elegir una para poder incluir este componente
+   * (ej. "Bebida" → Coca-Cola / Fanta / Agua).
+   */
+  variants?: ProductVariant[];
 }
 
 export interface ProductOptionGroup {
@@ -259,6 +273,8 @@ export interface OrderItemOption {
   group: string;
   choice: string;
   priceDelta: number;
+  /** Variante elegida del componente (ej. "Coca-Cola"), si aplicaba. */
+  variant?: string;
 }
 
 export interface OrderItem {
@@ -281,7 +297,11 @@ export interface CartItemOption {
   groupName: string;
   choiceId: string;
   choiceName: string;
+  /** Precio del componente + de la variante elegida (si tenía). */
   priceDelta: number;
+  /** Variante elegida del componente (ej. sabor de bebida), si tenía. */
+  variantId?: string;
+  variantName?: string;
 }
 
 export interface CartItem {

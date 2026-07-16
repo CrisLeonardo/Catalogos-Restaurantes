@@ -33,7 +33,7 @@ interface CartLine {
   name: string;
   price: number;
   quantity: number;
-  options: { groupId: string; groupName: string; choiceId: string; choiceName: string; priceDelta: number }[];
+  options: { groupId: string; groupName: string; choiceId: string; choiceName: string; priceDelta: number; variantId?: string; variantName?: string }[];
 }
 
 interface Props {
@@ -124,6 +124,8 @@ function ProductOptionsModal({
 }) {
   const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
   const [selected, setSelected] = useState<Record<string, string[]>>(() => initModalSelection(groups));
+  /** choiceId -> variantId elegida (solo choices de combo con variantes). */
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
 
   function toggleChoice(group: ProductOptionGroup, choiceId: string) {
@@ -139,6 +141,14 @@ function ProductOptionsModal({
       if (group.type === 'multi' && group.max && group.max > 0 && current.length >= group.max) return prev;
       return { ...prev, [group.id]: [...current, choiceId] };
     });
+    const choice = group.choices.find((c) => c.id === choiceId);
+    if (choice?.variants?.length && !variantSelected[choiceId]) {
+      setVariantSelected((prev) => ({ ...prev, [choiceId]: choice.variants![0].id }));
+    }
+  }
+
+  function chooseVariant(choiceId: string, variantId: string) {
+    setVariantSelected((prev) => ({ ...prev, [choiceId]: variantId }));
   }
 
   function buildOptions() {
@@ -146,7 +156,15 @@ function ProductOptionsModal({
     for (const group of groups) {
       for (const choiceId of selected[group.id] ?? []) {
         const choice = group.choices.find((c) => c.id === choiceId);
-        if (choice) opts.push({ groupId: group.id, groupName: group.name, choiceId: choice.id, choiceName: choice.name, priceDelta: choice.priceDelta });
+        if (!choice) continue;
+        const variant = choice.variants?.length
+          ? choice.variants.find((v) => v.id === variantSelected[choice.id]) ?? choice.variants[0]
+          : undefined;
+        const priceDelta = (Number(choice.priceDelta) || 0) + (variant ? Number(variant.priceDelta) || 0 : 0);
+        opts.push({
+          groupId: group.id, groupName: group.name, choiceId: choice.id, choiceName: choice.name, priceDelta,
+          ...(variant ? { variantId: variant.id, variantName: variant.name } : {}),
+        });
       }
     }
     return opts;
@@ -212,7 +230,8 @@ function ProductOptionsModal({
                       const included = picked.includes(choice.id);
                       const d = Number(choice.priceDelta) || 0;
                       return (
-                        <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
+                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <button type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
                             background: included ? 'rgba(34,197,94,0.10)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
                             border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}` }}>
@@ -229,6 +248,24 @@ function ProductOptionsModal({
                             </span>
                           )}
                         </button>
+                        {included && choice.variants && choice.variants.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 30 }}>
+                            {choice.variants.map((variant) => {
+                              const on = variantSelected[choice.id] === variant.id;
+                              const vDelta = Number(variant.priceDelta) || 0;
+                              return (
+                                <button key={variant.id} type="button" onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }} className="press"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 99, cursor: 'pointer',
+                                    background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 12 }}>
+                                  {variant.name}
+                                  {vDelta !== 0 && <span style={{ fontSize: 10.5, opacity: 0.75 }}>+{money(vDelta, currency)}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        </div>
                       );
                     })}
                   </div>

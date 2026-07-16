@@ -28,56 +28,6 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
   return arr;
 }
 
-function ServicePreferencesCtl({ items, onChange }: { items: string[]; onChange: (v: string[]) => void }) {
-  const [draft, setDraft] = useState('');
-  function add() {
-    const v = draft.trim();
-    if (!v || items.includes(v)) return;
-    onChange([...items, v]);
-    setDraft('');
-  }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {items.map((item, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)', padding: '7px 10px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)' }}>
-            {item}
-          </span>
-          <button
-            type="button"
-            onClick={() => onChange(items.filter((_, j) => j !== i))}
-            className="press"
-            style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'transparent', color: '#f87171', flexShrink: 0 }}
-          >
-            Quitar
-          </button>
-        </div>
-      ))}
-      <div style={{ display: 'flex', gap: 6 }}>
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
-          placeholder="Nueva preferencia…"
-          style={{
-            flex: 1, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
-            borderRadius: 'var(--radius-md)', padding: '7px 10px', color: 'var(--u-text)', fontSize: 13, outline: 'none',
-          }}
-        />
-        <button
-          type="button"
-          onClick={add}
-          className="press"
-          style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-2)', flexShrink: 0 }}
-        >
-          Agregar
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: string }) {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -270,19 +220,6 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
                 +
               </Button>
             </div>
-          </div>
-        )}
-
-        {dineInEnabled && (
-          <div style={{ paddingTop: 12, borderTop: '1px solid var(--u-hair)' }}>
-            <div style={{ fontSize: 13.5, color: 'var(--u-text-2)', fontWeight: 500, marginBottom: 2 }}>Preferencias de servicio</div>
-            <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 10 }}>
-              El cliente elige una al ordenar (ej. &quot;entrada primero&quot;).
-            </div>
-            <ServicePreferencesCtl
-              items={patch.dineInCourseOptions}
-              onChange={(v) => { set('dineInCourseOptions', v); setMsg(null); }}
-            />
           </div>
         )}
 

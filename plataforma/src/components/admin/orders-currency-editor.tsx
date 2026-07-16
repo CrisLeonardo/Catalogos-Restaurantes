@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
+import { ServicePreferencesCtl } from '@/components/admin/service-preferences-ctl';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 
 type Patch = Pick<ThemeConfig,
@@ -102,8 +103,21 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         A domicilio, el repartidor lleva el dispositivo POS para cobrar con tarjeta al entregar. Para recoger, se cobra con la terminal del local.
       </p>
       <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
-        Los modos de pedido (domicilio, para llevar, comer en local) se activan desde Módulos. La cantidad de mesas y preferencias de servicio se configuran en Mesas.
+        Los modos de pedido (domicilio, para llevar, comer en local) se activan desde Módulos. La cantidad de mesas se configura en Mesas.
       </p>
+
+      {patch.orderTypes.includes('dine_in') && (
+        <>
+          <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Preferencias de servicio</div>
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+            El cliente elige una al ordenar (ej. &quot;entrada primero&quot;), para comer en local.
+          </p>
+          <ServicePreferencesCtl
+            items={patch.dineInCourseOptions}
+            onChange={(v) => set('dineInCourseOptions', v)}
+          />
+        </>
+      )}
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Propina</div>
       <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />

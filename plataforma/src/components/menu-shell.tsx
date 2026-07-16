@@ -52,6 +52,14 @@ export default function MenuShell({ config, content, categories, products, resta
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       setScannedTable(restaurantId, initialMesa);
+      // Se borra el ?mesa= de la URL tras guardarlo: si no, cada vez que el
+      // navegador recarga o restaura esta misma pestaña (común en iOS/Android
+      // horas después) se vuelve a "escanear" la mesa y el TTL de la sesión
+      // nunca llega a cumplirse.
+      const params = new URLSearchParams(window.location.search);
+      params.delete('mesa');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
   }, [initialMesa, restaurantId]);
 

@@ -14,7 +14,7 @@ import type { OrderItemOption, ProductOptionGroup } from '@/types';
  */
 export function resolveItemOptions(
   groups: ProductOptionGroup[] | null,
-  picked: { groupId: string; choiceId: string }[] | undefined,
+  picked: { groupId: string; choiceId: string; variantId?: string }[] | undefined,
   productName: string,
 ): { delta: number; snapshot: OrderItemOption[] } | { error: string } {
   const safeGroups = Array.isArray(groups) ? groups : [];
@@ -45,9 +45,18 @@ export function resolveItemOptions(
       if (!choice)
         return { error: `"${productName}" cambió sus opciones. Actualiza tu carrito.` };
 
-      const d = Number(choice.priceDelta) || 0;
+      let d = Number(choice.priceDelta) || 0;
+      let variantName: string | undefined;
+      if (choice.variants && choice.variants.length > 0) {
+        const variant = choice.variants.find((v) => v.id === pick.variantId);
+        if (!variant)
+          return { error: `Elige una variante de "${choice.name}" en "${productName}".` };
+        d += Number(variant.priceDelta) || 0;
+        variantName = variant.name;
+      }
+
       delta += d;
-      snapshot.push({ group: group.name, choice: choice.name, priceDelta: d });
+      snapshot.push({ group: group.name, choice: choice.name, priceDelta: d, ...(variantName ? { variant: variantName } : {}) });
     }
   }
 

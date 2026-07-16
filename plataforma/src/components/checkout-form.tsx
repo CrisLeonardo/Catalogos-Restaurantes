@@ -17,7 +17,7 @@ import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
-import { getScannedTable } from '@/lib/table-session';
+import { getScannedTable, clearScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
@@ -401,6 +401,10 @@ export default function CheckoutForm({
     pendingPayloadRef.current = null;
     pendingSnapshotRef.current = null;
 
+    // El pedido ya salió: cierra la sesión de mesa del comensal para que no
+    // siga "detectándose" en ella si vuelve a abrir el mismo enlace después.
+    if (snap.orderTypeSnapshot === 'DINE_IN') clearScannedTable(restaurantId);
+
     clearCart();
     setStep('success');
 
@@ -536,7 +540,7 @@ export default function CheckoutForm({
 
     const itemsSnapshot = items.map((i) => ({
       name: i.rewardId ? `🎁 ${i.name}` : i.name,
-      opts: i.options?.map((o) => o.choiceName).join(', ') ?? '',
+      opts: i.options?.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(', ') ?? '',
       qty: i.quantity,
       sub: i.price * i.quantity,
     }));
@@ -553,7 +557,7 @@ export default function CheckoutForm({
         name: i.name,
         price: i.price,
         quantity: i.quantity,
-        options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
+        options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
       })),
       rewardLines: items.filter((i) => i.rewardId).map((i) => ({ rewardId: i.rewardId! })),
       customer: {
@@ -924,7 +928,7 @@ export default function CheckoutForm({
                   {item.quantity}× {item.name}
                   {item.options && item.options.length > 0 && (
                     <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                      {item.options.map((o) => o.choiceName).join(' · ')}
+                      {item.options.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(' · ')}
                     </span>
                   )}
                 </span>

@@ -164,6 +164,17 @@ function ConfigCard({
           <SuspensionBanner restaurantId={restaurantId} onResult={onResult} />
         )}
 
+        {config?.auto_price === false && Math.abs((config?.monthly_fee ?? 0) - suggestedFee) >= 1 && (
+          <div style={{
+            padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+            background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171',
+          }}>
+            ⚠ Precio manual desincronizado: cobra {fmtMoney(config?.monthly_fee ?? 0, currency)}/mes pero el precio
+            vigente del plan {planName} sería {fmtMoney(suggestedFee, currency)}/mes. Si no es un descuento
+            acordado a propósito, activa &quot;Precio automático&quot; abajo para sincronizarlo.
+          </div>
+        )}
+
         {!config?.suspended_for_nonpayment && config?.admin_override_suspend && (
           <div style={{
             padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,

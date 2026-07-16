@@ -90,7 +90,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                     </div>
                     {item.options && item.options.length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>
-                        {item.options.map((o) => o.choiceName).join(' · ')}
+                        {item.options.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(' · ')}
                       </div>
                     )}
                     {item.rewardId ? (

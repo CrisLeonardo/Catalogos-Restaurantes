@@ -66,7 +66,9 @@ function parseLoyaltyPoints(raw: string | null): number | null {
 
 /**
  * Valida los grupos de variantes/extras que manda el editor del admin.
- * Estructura final: [{ id, name, type, required?, max?, choices: [{ id, name, priceDelta }] }]
+ * Estructura final: [{ id, name, type, required?, max?, choices: [{ id, name, priceDelta, variants? }] }]
+ * `variants` (solo tiene efecto en choices de un grupo 'combo') son las
+ * sub-opciones del componente (ej. sabor de bebida): [{ id, name, priceDelta }].
  * Devuelve null si no hay grupos válidos (producto simple).
  */
 function parseOptions(raw: string | null): ProductOptionGroup[] | null | { error: string } {
@@ -89,11 +91,22 @@ function parseOptions(raw: string | null): ProductOptionGroup[] | null | { error
     if (g.choices.length > 20) return { error: 'Máximo 20 opciones por grupo.' };
 
     const choices = (g.choices as Record<string, unknown>[])
-      .map((c) => ({
-        id: typeof c.id === 'string' && c.id ? c.id.slice(0, 60) : Math.random().toString(36).slice(2, 9),
-        name: typeof c.name === 'string' ? c.name.trim().slice(0, 60) : '',
-        priceDelta: Math.max(-100_000, Math.min(100_000, Number(c.priceDelta) || 0)),
-      }))
+      .map((c) => {
+        const rawVariants = Array.isArray(c.variants) ? (c.variants as Record<string, unknown>[]).slice(0, 20) : [];
+        const variants = rawVariants
+          .map((v) => ({
+            id: typeof v.id === 'string' && v.id ? v.id.slice(0, 60) : Math.random().toString(36).slice(2, 9),
+            name: typeof v.name === 'string' ? v.name.trim().slice(0, 60) : '',
+            priceDelta: Math.max(-100_000, Math.min(100_000, Number(v.priceDelta) || 0)),
+          }))
+          .filter((v) => v.name.length > 0);
+        return {
+          id: typeof c.id === 'string' && c.id ? c.id.slice(0, 60) : Math.random().toString(36).slice(2, 9),
+          name: typeof c.name === 'string' ? c.name.trim().slice(0, 60) : '',
+          priceDelta: Math.max(-100_000, Math.min(100_000, Number(c.priceDelta) || 0)),
+          ...(variants.length > 0 ? { variants } : {}),
+        };
+      })
       .filter((c) => c.name.length > 0);
     if (choices.length === 0) continue;
 

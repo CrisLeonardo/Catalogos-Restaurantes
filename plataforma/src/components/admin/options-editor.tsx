@@ -9,8 +9,9 @@
    El padre guarda el estado y lo serializa en un input hidden.
    ============================================================ */
 
+import { useState } from 'react';
 import { Icon } from '@/components/icons';
-import type { ProductOptionGroup } from '@/types';
+import type { ProductOptionGroup, ProductVariant } from '@/types';
 
 function newId(): string {
   return Math.random().toString(36).slice(2, 9);
@@ -34,7 +35,12 @@ export function cleanOptions(groups: ProductOptionGroup[]): ProductOptionGroup[]
       ...g,
       name: g.name.trim(),
       choices: g.choices
-        .map((c) => ({ ...c, name: c.name.trim(), priceDelta: Number(c.priceDelta) || 0 }))
+        .map((c) => {
+          const variants = (c.variants ?? [])
+            .map((v) => ({ ...v, name: v.name.trim(), priceDelta: Number(v.priceDelta) || 0 }))
+            .filter((v) => v.name.length > 0);
+          return { ...c, name: c.name.trim(), priceDelta: Number(c.priceDelta) || 0, ...(variants.length > 0 ? { variants } : { variants: undefined }) };
+        })
         .filter((c) => c.name.length > 0),
     }))
     .filter((g) => g.name.length > 0 && g.choices.length > 0);
@@ -58,11 +64,13 @@ export default function OptionsEditor({
   onChange: (groups: ProductOptionGroup[]) => void;
 }) {
   const groups = value;
+  // Solo UI: qué choices tienen su editor de variantes desplegado.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const setGroup = (id: string, patch: Partial<ProductOptionGroup>) =>
     onChange(groups.map((g) => (g.id === id ? { ...g, ...patch } : g)));
 
-  const setChoice = (gId: string, cId: string, patch: { name?: string; priceDelta?: number }) =>
+  const setChoice = (gId: string, cId: string, patch: { name?: string; priceDelta?: number; variants?: ProductVariant[] }) =>
     onChange(
       groups.map((g) =>
         g.id === gId
@@ -70,6 +78,14 @@ export default function OptionsEditor({
           : g,
       ),
     );
+
+  function toggleExpanded(choiceId: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(choiceId)) next.delete(choiceId); else next.add(choiceId);
+      return next;
+    });
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -162,42 +178,134 @@ export default function OptionsEditor({
 
           {/* Opciones */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {group.choices.map((choice) => (
-              <div key={choice.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input
-                  type="text"
-                  value={choice.name}
-                  onChange={(e) => setChoice(group.id, choice.id, { name: e.target.value })}
-                  placeholder={group.type === 'combo' ? 'Componente (Papas fritas, Gaseosa…)' : 'Opción (Grande, Extra queso…)'}
-                  style={{ ...fieldStyle, flex: 1, minWidth: 0 }}
-                />
-                <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{group.type === 'combo' ? 'Q' : '+'}</span>
-                <input
-                  type="number" inputMode="decimal"
-                  step="0.01"
-                  min={group.type === 'combo' ? 0 : undefined}
-                  value={choice.priceDelta}
-                  onChange={(e) => setChoice(group.id, choice.id, { priceDelta: Number(e.target.value) || 0 })}
-                  style={{ ...fieldStyle, width: 78, fontFamily: 'var(--ui-font-mono)' }}
-                  aria-label={group.type === 'combo' ? 'Precio del componente' : 'Precio extra'}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setGroup(group.id, { choices: group.choices.filter((c) => c.id !== choice.id) })
-                  }
-                  className="press"
-                  aria-label="Quitar opción"
-                  style={{
-                    width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
-                    display: 'grid', placeItems: 'center', flexShrink: 0,
-                  }}
-                >
-                  <Icon name="x" size={13} />
-                </button>
+            {group.choices.map((choice) => {
+              const isOpen = expanded.has(choice.id);
+              const variantCount = choice.variants?.length ?? 0;
+              return (
+              <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={choice.name}
+                    onChange={(e) => setChoice(group.id, choice.id, { name: e.target.value })}
+                    placeholder={group.type === 'combo' ? 'Componente (Papas fritas, Gaseosa…)' : 'Opción (Grande, Extra queso…)'}
+                    style={{ ...fieldStyle, flex: 1, minWidth: 0 }}
+                  />
+                  <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{group.type === 'combo' ? 'Q' : '+'}</span>
+                  <input
+                    type="number" inputMode="decimal"
+                    step="0.01"
+                    min={group.type === 'combo' ? 0 : undefined}
+                    value={choice.priceDelta}
+                    onChange={(e) => setChoice(group.id, choice.id, { priceDelta: Number(e.target.value) || 0 })}
+                    style={{ ...fieldStyle, width: 78, fontFamily: 'var(--ui-font-mono)' }}
+                    aria-label={group.type === 'combo' ? 'Precio del componente' : 'Precio extra'}
+                  />
+                  {group.type === 'combo' && (
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(choice.id)}
+                      className="press"
+                      aria-label="Variantes del componente"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 9px', height: 28, borderRadius: 8,
+                        border: `1px solid ${variantCount > 0 ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}`, cursor: 'pointer',
+                        background: variantCount > 0 ? 'rgba(34,197,94,0.08)' : 'transparent',
+                        color: variantCount > 0 ? 'var(--brand-accent, #22c55e)' : 'var(--u-text-4)',
+                        fontSize: 11, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Icon name="chevronDown" size={12} style={{ transition: 'transform 160ms', transform: isOpen ? 'rotate(180deg)' : 'none' }} />
+                      {variantCount > 0 ? `Variantes (${variantCount})` : 'Variantes'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGroup(group.id, { choices: group.choices.filter((c) => c.id !== choice.id) })
+                    }
+                    className="press"
+                    aria-label="Quitar opción"
+                    style={{
+                      width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer',
+                      background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
+                      display: 'grid', placeItems: 'center', flexShrink: 0,
+                    }}
+                  >
+                    <Icon name="x" size={13} />
+                  </button>
+                </div>
+
+                {group.type === 'combo' && isOpen && (
+                  <div style={{
+                    marginLeft: 16, paddingLeft: 12, borderLeft: '2px solid var(--u-hair)',
+                    display: 'flex', flexDirection: 'column', gap: 5,
+                  }}>
+                    <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: 0 }}>
+                      Si agregas variantes, el cliente/mesero debe elegir una para incluir &quot;{choice.name || 'este componente'}&quot; (ej. sabor de bebida, tipo de papas).
+                    </p>
+                    {(choice.variants ?? []).map((variant) => (
+                      <div key={variant.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={variant.name}
+                          onChange={(e) => {
+                            const variants = (choice.variants ?? []).map((v) => v.id === variant.id ? { ...v, name: e.target.value } : v);
+                            setChoice(group.id, choice.id, { variants });
+                          }}
+                          placeholder="Variante (Coca-Cola, Papas rústicas…)"
+                          style={{ ...fieldStyle, flex: 1, minWidth: 0, fontSize: 12.5 }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>+</span>
+                        <input
+                          type="number" inputMode="decimal"
+                          step="0.01"
+                          value={variant.priceDelta}
+                          onChange={(e) => {
+                            const variants = (choice.variants ?? []).map((v) => v.id === variant.id ? { ...v, priceDelta: Number(e.target.value) || 0 } : v);
+                            setChoice(group.id, choice.id, { variants });
+                          }}
+                          style={{ ...fieldStyle, width: 68, fontFamily: 'var(--ui-font-mono)', fontSize: 12.5 }}
+                          aria-label="Precio extra de la variante"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const variants = (choice.variants ?? []).filter((v) => v.id !== variant.id);
+                            setChoice(group.id, choice.id, { variants });
+                          }}
+                          className="press"
+                          aria-label="Quitar variante"
+                          style={{
+                            width: 24, height: 24, borderRadius: 7, border: 'none', cursor: 'pointer',
+                            background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-4)',
+                            display: 'grid', placeItems: 'center', flexShrink: 0,
+                          }}
+                        >
+                          <Icon name="x" size={11} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const variants = [...(choice.variants ?? []), { id: newId(), name: '', priceDelta: 0 }];
+                        setChoice(group.id, choice.id, { variants });
+                      }}
+                      className="press"
+                      style={{
+                        alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '5px 9px', borderRadius: 8, border: '1px dashed var(--u-hair-2)',
+                        background: 'transparent', color: 'var(--u-text-3)', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                      }}
+                    >
+                      <Icon name="plus" size={11} /> Variante
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
             <button
               type="button"
               onClick={() =>

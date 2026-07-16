@@ -16,7 +16,7 @@ export function buildLineId(productId: string, options?: CartItemOption[], rewar
   if (rewardId) return `reward:${rewardId}`;
   if (!options?.length) return productId;
   const sig = options
-    .map((o) => `${o.groupId}:${o.choiceId}`)
+    .map((o) => `${o.groupId}:${o.choiceId}${o.variantId ? `:${o.variantId}` : ''}`)
     .sort()
     .join('|');
   return `${productId}__${sig}`;
