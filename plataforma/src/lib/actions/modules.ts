@@ -90,6 +90,9 @@ export async function setModuleEnabled(
   if (error) return { error: error.message };
 
   revalidatePath('/admin/modulos');
+  // El on/off del dueño ahora también afecta el cobro (mig. 078): el desglose
+  // de suscripción debe reflejar el cambio sin esperar a otro request.
+  revalidatePath('/admin/suscripcion');
   revalidatePath('/admin', 'layout');
   return { ok: true };
 }

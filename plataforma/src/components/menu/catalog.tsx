@@ -33,12 +33,22 @@ function isUnavailable(p: ProdItem): boolean {
   return !isAutoRestored(p);
 }
 
-/** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto). */
+/** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto).
+    Si un componente tiene variantes, se suma también la primera (es la que
+    arranca preseleccionada en la hoja del producto — mismo precio inicial). */
 function displayPrice(p: ProdItem): number {
   if (!p.options || p.options.length === 0) return p.price;
   const comboDelta = p.options
     .filter((g) => g.type === 'combo')
-    .reduce((sum, g) => sum + g.choices.reduce((s, c) => s + (c.priceDelta || 0), 0), 0);
+    .reduce(
+      (sum, g) =>
+        sum +
+        g.choices.reduce(
+          (s, c) => s + (c.priceDelta || 0) + (c.variants?.length ? Number(c.variants[0].priceDelta) || 0 : 0),
+          0,
+        ),
+      0,
+    );
   return p.price + comboDelta;
 }
 

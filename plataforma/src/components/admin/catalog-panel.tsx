@@ -248,7 +248,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                 {/* Toggle disponibilidad */}
                 <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {!p.is_active ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#f87171', padding: '3px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger, #f87171)', padding: '3px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
                       Desactivado
                     </span>
                   ) : (
@@ -698,7 +698,7 @@ function ProductModal({
                         <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{isNaN(p) ? '—' : p.toFixed(2)}</span>
                         <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>+ combo</span>
                         <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{comboDelta.toFixed(2)}</span>
-                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: '#4ade80' }}>= Q{totalPrice.toFixed(2)}</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>= Q{totalPrice.toFixed(2)}</span>
                       </div>
                     )}
                     {!isNaN(p) && costKnown && (
@@ -899,7 +899,7 @@ function ProductModal({
                   padding: '10px 14px', borderRadius: 13,
                   background: 'rgba(220,50,50,0.12)',
                   border: '1px solid rgba(220,50,50,0.25)',
-                  color: '#f87171', fontSize: 13,
+                  color: 'var(--c-danger, #f87171)', fontSize: 13,
                 }}
               >
                 {state.error}

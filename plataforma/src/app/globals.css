@@ -1157,6 +1157,15 @@ html { overflow-x: clip; }
 .signup-plans { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 560px) { .signup-plans { grid-template-columns: repeat(3, 1fr); } }
 
+/* Formulario de platillo (crear/editar): una columna en móvil; en PC la
+   columna lateral (foto + disponibilidad) acompaña al contenido principal. */
+.pform-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+@media (min-width: 900px) { .pform-grid { grid-template-columns: minmax(0, 1fr) 340px; } }
+.pform-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* En móvil la foto va primero (es lo primero que se quiere ver); en PC vive
+   en la columna lateral derecha. */
+@media (max-width: 899.98px) { .pform-side { order: -1; } }
+
 .press { transition: transform 90ms var(--ease-out); }
 .press:active { transform: scale(0.97); }
 

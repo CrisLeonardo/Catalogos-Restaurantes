@@ -265,7 +265,7 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
               </p>
             </div>
 
-            {state && 'error' in state && <div style={{ fontSize: 13, color: '#f87171' }}>{state.error}</div>}
+            {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>}
 
             <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
               {isPending ? 'Guardando…' : isNew ? 'Crear miembro' : 'Guardar cambios'}
@@ -284,7 +284,7 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
                   </div>
                   <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                 </form>
-                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: '#f87171' }}>{pinAction[0].error}</div>}
+                {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger, #f87171)' }}>{pinAction[0].error}</div>}
 
                 <form action={removeStaff} onSubmit={(e) => { if (!confirm('¿Quitar a este miembro? Perderá el acceso.')) e.preventDefault(); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />

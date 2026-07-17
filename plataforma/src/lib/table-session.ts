@@ -65,3 +65,74 @@ export function clearScannedTable(restaurantId: string): void {
     /* noop */
   }
 }
+
+/** Milisegundos hasta que expire la sesión de mesa vigente (null = no hay). */
+export function scannedTableMsLeft(restaurantId: string): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(storageKey(restaurantId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts?: number };
+    if (!Number.isFinite(parsed.ts)) return null;
+    const left = (parsed.ts as number) + TTL_MS - Date.now();
+    return left > 0 ? left : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------
+   Re-validación reactiva del TTL.
+   El bug que esto corrige: getScannedTable() solo se leía AL MONTAR
+   la página. En un teléfono real la PWA/pestaña queda viva en
+   memoria horas o días — al reabrirla NO se vuelve a montar nada,
+   así que "Llamar al mesero" y "Comer en local" seguían ofreciéndose
+   aunque el TTL de 3 horas ya hubiera vencido. Estos helpers avisan
+   cuándo re-leer: al volver la pestaña a primer plano (visibilitychange/
+   focus/pageshow) y en el instante exacto en que vence el TTL.
+   ------------------------------------------------------------ */
+
+/**
+ * Suscribe una re-validación de la mesa escaneada. Llama a `onChange` con el
+ * valor vigente (número de mesa o null) cada vez que puede haber cambiado.
+ * Devuelve la función de limpieza (para el return del useEffect).
+ */
+export function watchScannedTable(
+  restaurantId: string,
+  onChange: (table: number | null) => void,
+): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  let expiryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const check = () => {
+    onChange(getScannedTable(restaurantId));
+    // Programa el flip exacto al vencer el TTL (si hay sesión activa) para
+    // que la opción desaparezca incluso con la página abierta todo el rato.
+    if (expiryTimer) clearTimeout(expiryTimer);
+    const left = scannedTableMsLeft(restaurantId);
+    if (left != null) {
+      // +1s de margen; tope de 24h por sanidad de setTimeout.
+      expiryTimer = setTimeout(check, Math.min(left + 1000, 86_400_000));
+    }
+  };
+
+  const onVisible = () => { if (!document.hidden) check(); };
+
+  // Primer check en el siguiente tick, NO síncrono: los efectos de React
+  // corren hijo→padre, y es el padre (menu-shell) quien guarda el ?mesa=
+  // recién escaneado en localStorage — un check síncrono aquí leería el
+  // valor viejo y apagaría la mesa que se acaba de escanear.
+  const firstCheck = setTimeout(check, 0);
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('focus', check);
+  window.addEventListener('pageshow', check);
+
+  return () => {
+    clearTimeout(firstCheck);
+    if (expiryTimer) clearTimeout(expiryTimer);
+    document.removeEventListener('visibilitychange', onVisible);
+    window.removeEventListener('focus', check);
+    window.removeEventListener('pageshow', check);
+  };
+}

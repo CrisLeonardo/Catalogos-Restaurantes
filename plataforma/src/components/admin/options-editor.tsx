@@ -89,6 +89,21 @@ export default function OptionsEditor({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Estado vacío: explica los 3 tipos con ejemplos antes de que existan grupos */}
+      {groups.length === 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
+          {[
+            { title: 'Elegir 1', example: '"Tamaño: chico / mediano / grande" — el cliente elige una sola opción.' },
+            { title: 'Varios', example: '"Extras: queso +Q5, tocino +Q8" — puede marcar varios a la vez.' },
+            { title: 'Combo', example: '"Incluye: hamburguesa + papas + bebida" — todo viene incluido y cada componente puede tener variantes (sabor de bebida, tipo de papas).' },
+          ].map((t) => (
+            <div key={t.title} style={{ borderRadius: 12, padding: '11px 13px', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: '1px dashed var(--u-hair-2)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text-2)', marginBottom: 4 }}>{t.title}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>{t.example}</div>
+            </div>
+          ))}
+        </div>
+      )}
       {groups.map((group) => (
         <div
           key={group.id}
@@ -138,7 +153,7 @@ export default function OptionsEditor({
               aria-label="Quitar grupo"
               style={{
                 width: 30, height: 30, borderRadius: 9, border: 'none', cursor: 'pointer',
-                background: 'rgba(239,68,68,0.10)', color: '#f87171',
+                background: 'rgba(239,68,68,0.10)', color: 'var(--c-danger, #f87171)',
                 display: 'grid', placeItems: 'center', flexShrink: 0,
               }}
             >

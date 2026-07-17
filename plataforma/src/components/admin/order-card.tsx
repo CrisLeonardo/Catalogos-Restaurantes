@@ -472,19 +472,19 @@ export default function OrderCard({
             padding: '5px 8px', borderRadius: 8,
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
           }}>
-            <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="tag" size={12} style={{ display: 'inline' }} /> Cupón
               {order.promo_code && (
                 <span style={{
                   fontFamily: 'var(--ui-font-mono)', fontSize: 10.5, fontWeight: 700,
                   padding: '2px 6px', borderRadius: 5,
-                  background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--c-ok, #4ade80)',
                 }}>
                   {order.promo_code}
                 </span>
               )}
             </span>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4ade80' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-ok, #4ade80)' }}>
               −{money(Number(order.discount), currency)}
             </span>
           </div>
@@ -495,10 +495,10 @@ export default function OrderCard({
             padding: '5px 8px', borderRadius: 8,
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
           }}>
-            <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="star" size={12} style={{ display: 'inline' }} /> {Number(order.loyalty_points_redeemed)} puntos canjeados
             </span>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4ade80' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-ok, #4ade80)' }}>
               −{money(Number(order.loyalty_discount), currency)}
             </span>
           </div>
@@ -572,7 +572,7 @@ export default function OrderCard({
       </p>
 
       {actionError && (
-        <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon name="alertCircle" size={13} /> {actionError}
         </div>
       )}

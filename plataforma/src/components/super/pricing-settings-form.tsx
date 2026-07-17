@@ -69,8 +69,8 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
             piso (siempre se paga al menos un canal).
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            <Field name="channel_discount_per" label="Descuento por canal (Q)" value={pricing.channelDiscountPer} step="1" />
-            <Field name="channel_discount_max" label="Máx. canales descontables" value={pricing.channelDiscountMax} step="1" />
+            <Field name="channel_discount_per" label="Descuento por método de pedido (Q)" value={pricing.channelDiscountPer} step="1" />
+            <Field name="channel_discount_max" label="Máx. métodos descontables (de 3)" value={pricing.channelDiscountMax} step="1" />
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
           <p style={sectionStyle}>Configuración asistida — cobro único (Q)</p>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '-4px 0 10px', lineHeight: 1.5 }}>
             Referencia por plan; el cobro real se genera manual desde la ficha del restaurante
-            ("Cobro de implementación").
+            (&ldquo;Cobro de implementación&rdquo;).
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field name="setup_fee_BASICO"   label="Básico"   value={pricing.setupFeeBasico} />

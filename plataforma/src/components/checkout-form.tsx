@@ -17,7 +17,7 @@ import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
-import { getScannedTable, clearScannedTable } from '@/lib/table-session';
+import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
@@ -259,11 +259,26 @@ export default function CheckoutForm({
     // Se mantiene mientras el comensal está sentado (la sobrescribe el próximo escaneo).
     const n = getScannedTable(restaurantId);
     if (n != null && n <= config.dineInTableCount) {
-
       setHasScannedTable(true);
       setType('DINE_IN');
       setTableNumber(n);
     }
+    // Y se re-valida el TTL mientras la página sigue viva (PWA dormida que
+    // vuelve horas después): al vencer, "Comer en local" desaparece y el tipo
+    // activo salta al primer canal disponible.
+    return watchScannedTable(restaurantId, (t) => {
+      const valid = t != null && t <= config.dineInTableCount;
+      setHasScannedTable(valid);
+      if (valid) {
+        setTableNumber(t);
+      } else {
+        setTableNumber(null);
+        setType((prev) => {
+          if (prev !== 'DINE_IN') return prev;
+          return config.orderTypes.includes('delivery') ? 'DELIVERY' : 'PICKUP';
+        });
+      }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 

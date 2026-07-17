@@ -170,7 +170,7 @@ export default function KitchenPrintSettings() {
               </label>
               {usbKitchen ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     ● {usbDeviceLabel(usbKitchen)}
                   </span>
                   <Button type="button" onClick={() => configureUsb('kitchen')} variant="secondary" size="sm">
@@ -197,7 +197,7 @@ export default function KitchenPrintSettings() {
               </label>
               {usbReceipt ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     ● {usbDeviceLabel(usbReceipt)}
                   </span>
                   <Button type="button" onClick={() => configureUsb('receipt')} variant="secondary" size="sm">

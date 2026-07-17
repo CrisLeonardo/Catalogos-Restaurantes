@@ -9,6 +9,7 @@ import {
   getFeeBreakdown, type Invoice, type FeeBreakdown,
 } from '@/lib/db/billing';
 import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, type PlanCode } from '@/lib/plans';
+import { moduleMeta, type ActivatableModuleKey } from '@/lib/modules';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
@@ -200,8 +201,8 @@ export default async function SuscripcionPage() {
         </a>
       </Card>
 
-      {/* ── Plan a tu medida (descuento por canal + módulos + sucursales) ── */}
-      {feeBreakdown && (feeBreakdown.discountApplies || feeBreakdown.addonTotal > 0 || feeBreakdown.branchDiscountPct > 0) && (
+      {/* ── Plan a tu medida (lo que pagarás este mes, con desglose) ── */}
+      {feeBreakdown && (
         <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
       )}
 
@@ -365,7 +366,7 @@ export default async function SuscripcionPage() {
               </>
             ) : (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: '#4ade80', lineHeight: 1.1, marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--c-ok, #4ade80)', lineHeight: 1.1, marginTop: 4 }}>
                   Estás al día ✓
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
@@ -383,7 +384,7 @@ export default async function SuscripcionPage() {
 
           <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
-            aparecerá como <strong style={{ color: '#4ade80' }}>Pagado</strong> aquí mismo.
+            aparecerá como <strong style={{ color: 'var(--c-ok, #4ade80)' }}>Pagado</strong> aquí mismo.
           </Card>
 
           {/* Historial */}
@@ -412,9 +413,9 @@ export default async function SuscripcionPage() {
 function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
   const overdue = isOverdue(inv);
   const meta = overdue
-    ? { label: 'Vencido', color: '#f87171', bg: 'rgba(248,113,113,0.13)' }
+    ? { label: 'Vencido', color: 'var(--c-danger, #f87171)', bg: 'rgba(248,113,113,0.13)' }
     : inv.status === 'PAID'
-    ? { label: 'Pagado', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' }
+    ? { label: 'Pagado', color: 'var(--c-ok, #4ade80)', bg: 'rgba(74,222,128,0.12)' }
     : inv.status === 'CANCELLED'
     ? { label: 'Cancelado', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' }
     : { label: 'Pendiente', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
@@ -443,29 +444,38 @@ function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
   );
 }
 
+const CHANNEL_LABEL: Record<string, string> = {
+  dine_in: 'Comer en el local',
+  pickup: 'Para llevar',
+  delivery: 'A domicilio',
+};
+
 function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
   const saving = b.discount > 0 || b.branchDiscountPct > 0;
-  // Un canal recién apagado no baja el cobro de inmediato (mig. 073): debe
-  // seguir apagado la mayor parte del ciclo actual antes de que el
+  // Un método recién apagado no baja el cobro de inmediato (mig. 073/078):
+  // debe seguir apagado la mayor parte del ciclo actual antes de que el
   // descuento entre en el próximo cobro. Estos dos avisos cubren las dos
   // direcciones de ese desfase (vivo vs. facturado).
   const pendingDiscount = b.discountApplies && b.channelsActiveLive < b.channelsActiveBilled;
   const pendingLoss      = b.discountApplies && b.channelsActiveLive > b.channelsActiveBilled;
+  // Métodos que sí descuentan este ciclo, con nombre (respetando el tope).
+  const discountedKeys = b.channelsOffKeys.slice(0, b.channelsOff);
   return (
     <Card className="p-5" style={{ border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Icon name="sparkle" size={15} style={{ color: saving ? '#4ade80' : 'var(--brand-accent)' }} />
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Plan a tu medida</div>
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>Lo que pagarás este mes</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
-        Tu mensualidad refleja exactamente lo que usas: canal de servicio que no usas, sucursales
-        del grupo, y módulos que has añadido aparte del plan.
+        Tu mensualidad refleja exactamente lo que usas: cada método de pedido que desactives
+        {b.discountApplies ? ` descuenta ${fmtMoney(b.discountPer, currency)}` : ' puede descontar'} (hasta 2 de los 3),
+        y los módulos apagados que no vienen en tu plan dejan de cobrarse.
       </div>
       {pendingDiscount && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
           <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
           <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
-            Tienes un canal apagado ahora, pero el descuento entra hasta tu <strong>próximo cobro</strong> —
+            Tienes un método de pedido apagado ahora, pero el descuento entra hasta tu <strong>próximo cobro</strong> —
             debe permanecer apagado al menos el 75% de los días de este ciclo. Este desglose ya
             refleja lo que se te cobrará, no el estado de tu menú en este instante.
           </p>
@@ -475,7 +485,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
           <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
           <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
-            Este cobro todavía incluye el descuento de un canal que ya reactivaste. Si lo dejas
+            Este cobro todavía incluye el descuento de un método que ya reactivaste. Si lo dejas
             encendido, tu <strong>siguiente</strong> cobro (el que viene después de este) ya no lo traerá.
           </p>
         </div>
@@ -484,13 +494,14 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       {/* Desglose */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
-        {b.discountApplies && b.discount > 0 && (
+        {b.discountApplies && discountedKeys.map((k) => (
           <LineItem
-            label={`${b.channelsOff} canal${b.channelsOff !== 1 ? 'es' : ''} sin usar`}
-            value={`− ${fmtMoney(b.discount, currency)}`}
+            key={k}
+            label={`${CHANNEL_LABEL[k] ?? k} desactivado`}
+            value={`− ${fmtMoney(b.discountPer, currency)}`}
             accent="#4ade80"
           />
-        )}
+        ))}
         {b.branchDiscountPct > 0 && (
           <LineItem
             label={`Descuento por volumen de sucursales (${Math.round(b.branchDiscountPct * 100)}%)`}
@@ -498,9 +509,11 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
             accent="#4ade80"
           />
         )}
-        {b.addonTotal > 0 && (
-          <LineItem label="Módulos añadidos aparte del plan" value={`+ ${fmtMoney(b.addonTotal, currency)}`} />
-        )}
+        {b.addonItems.map((it) => {
+          let label = it.key;
+          try { label = moduleMeta(it.key as ActivatableModuleKey).label; } catch {}
+          return <LineItem key={it.key} label={`Módulo: ${label}`} value={`+ ${fmtMoney(it.price, currency)}`} />;
+        })}
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
@@ -519,7 +532,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       )}
 
       <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 700 }}>
-        Gestionar mis canales y módulos <Icon name="arrowRight" size={13} />
+        Gestionar mis métodos de pedido y módulos <Icon name="arrowRight" size={13} />
       </a>
     </Card>
   );

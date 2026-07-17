@@ -1,7 +1,21 @@
 'use client';
 
+/* ============================================================
+   FORMULARIO DE PLATILLO (crear / editar)
+   ------------------------------------------------------------
+   Reorganizado en secciones con propósito claro (antes era una
+   pila de 9 tarjetas sueltas — confuso en móvil y desperdiciado
+   en PC):
+     · Columna principal: Lo básico → Precio y ganancia →
+       Opciones y combos → Receta.
+     · Columna lateral (PC) / arriba (móvil): Foto + Disponible.
+     · Barra de guardar fija abajo: siempre a un toque, sin
+       perseguir el botón al final de un formulario largo.
+   ============================================================ */
+
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icons';
 import ImageUpload from './image-upload';
 import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
 import RecipeEditor from '@/components/admin/recipe-editor';
@@ -19,6 +33,16 @@ interface ProductFormProps {
 }
 
 const emptyState: ProductState = null;
+
+/** Encabezado de sección: título + explicación corta de para qué sirve. */
+function SectionHead({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{title}</div>
+      {hint && <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 3, lineHeight: 1.5 }}>{hint}</div>}
+    </div>
+  );
+}
 
 export default function ProductForm({ restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe }: ProductFormProps) {
   const isEdit = Boolean(product);
@@ -64,7 +88,7 @@ export default function ProductForm({ restaurantId, categories, product, default
   };
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Campos ocultos */}
       <input type="hidden" name="restaurantId" value={restaurantId} />
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
@@ -72,297 +96,316 @@ export default function ProductForm({ restaurantId, categories, product, default
       <input type="hidden" name="is_available" value={String(isAvailable)} />
       <input type="hidden" name="options" value={JSON.stringify(cleanOptions(options))} />
 
-      {/* Foto */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label style={labelStyle}>Foto del platillo</label>
-        <ImageUpload
-          restaurantId={restaurantId}
-          currentUrl={product?.image_url}
-          folder="products"
-          onUpload={setImageUrl}
-        />
-      </Glass>
-
-      {/* Nombre */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="name" style={labelStyle}>Nombre *</label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          defaultValue={product?.name ?? ''}
-          placeholder="Ej: Café Latte"
-          style={inputStyle}
-        />
-      </Glass>
-
-      {/* Precio y costo → margen en vivo */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label htmlFor="price" style={labelStyle}>Precio *</label>
-            <input
-              id="price"
-              name="price"
-              type="number" inputMode="decimal"
-              required
-              min="0"
-              step="0.01"
-              value={priceVal}
-              onChange={(e) => setPriceVal(e.target.value)}
-              placeholder="0.00"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label htmlFor="cost" style={labelStyle}>
-              Costo{hasRecipe && <span style={{ color: 'var(--brand-accent)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
-            </label>
-            <input
-              id="cost"
-              name="cost"
-              type="number" inputMode="decimal"
-              min="0"
-              step="0.0001"
-              value={hasRecipe ? displayCost : costVal}
-              onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
-              readOnly={hasRecipe}
-              placeholder="0.00"
-              style={{ ...inputStyle, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
-              title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
-            />
-          </div>
-        </div>
-        {(() => {
-          const p = parseFloat(priceVal);
-          const c = hasRecipe ? recipeCost : parseFloat(costVal);
-          if (isNaN(p) || isNaN(c) || (!hasRecipe && costVal.trim() === '')) {
-            return (
-              <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8, display: 'block' }}>
-                Captura el costo para ver tu utilidad y margen por venta.
-              </span>
-            );
-          }
-          const profit = p - c;
-          const margin = p > 0 ? (profit / p) * 100 : 0;
-          const good = profit >= 0;
-          return (
-            <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 12.5 }}>
-              <span style={{ color: 'var(--u-text-3)' }}>
-                Utilidad:{' '}
-                <strong style={{ color: good ? 'var(--u-text)' : '#f87171' }}>
-                  {profit.toFixed(2)}
-                </strong>
-              </span>
-              <span style={{ color: 'var(--u-text-3)' }}>
-                Margen:{' '}
-                <strong style={{ color: good ? 'var(--brand-accent)' : '#f87171' }}>
-                  {margin.toFixed(0)}%
-                </strong>
-              </span>
+      <div className="pform-grid">
+        {/* ══ Columna principal ══ */}
+        <div className="pform-col">
+          {/* ── Lo básico ── */}
+          <Glass variant="quiet" style={{ padding: 18 }}>
+            <SectionHead title="Lo básico" hint="Nombre, precio y dónde aparece en tu menú." />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(110px, 1fr)', gap: 12 }}>
+                <div>
+                  <label htmlFor="name" style={labelStyle}>Nombre *</label>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    defaultValue={product?.name ?? ''}
+                    placeholder="Ej: Café Latte"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="price" style={labelStyle}>Precio *</label>
+                  <input
+                    id="price"
+                    name="price"
+                    type="number" inputMode="decimal"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={priceVal}
+                    onChange={(e) => setPriceVal(e.target.value)}
+                    placeholder="0.00"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="category_id" style={labelStyle}>Categoría</label>
+                <select
+                  id="category_id"
+                  name="category_id"
+                  defaultValue={product?.category_id ?? defaultCategoryId ?? ''}
+                  style={inputStyle}
+                >
+                  <option value="">Sin categoría</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="description" style={labelStyle}>Descripción</label>
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={3}
+                  defaultValue={product?.description ?? ''}
+                  placeholder="Describe el platillo: ingredientes, tamaño, qué lo hace especial…"
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                />
+              </div>
+              <div>
+                <label htmlFor="tags" style={labelStyle}>Etiquetas</label>
+                <input
+                  id="tags"
+                  name="tags"
+                  type="text"
+                  defaultValue={product?.tags?.join(', ') ?? ''}
+                  placeholder="Picante, Favorito, Nuevo"
+                  style={inputStyle}
+                />
+                <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, display: 'block' }}>
+                  Separadas por coma — aparecen como sellos sobre la foto del platillo.
+                </span>
+              </div>
             </div>
-          );
-        })()}
-        {/* Puntos de lealtad por unidad (módulo Lealtad). Vacío = regla general. */}
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
-          <label htmlFor="loyalty_points" style={labelStyle}>
-            Puntos de lealtad <span style={{ color: 'var(--u-text-4)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(por unidad)</span>
-          </label>
-          <input
-            id="loyalty_points"
-            name="loyalty_points"
-            type="number" inputMode="decimal"
-            min="0"
-            step="1"
-            value={loyaltyPtsVal}
-            onChange={(e) => setLoyaltyPtsVal(e.target.value)}
-            placeholder="Vacío = regla general"
-            style={{ ...inputStyle, maxWidth: 220 }}
-          />
-          <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, display: 'block' }}>
-            Puntos que gana el cliente por cada unidad comprada. Vacío = usar la regla general del programa; 0 = no otorga puntos.
-          </span>
-        </div>
-      </Glass>
+          </Glass>
 
-      {/* Categoría */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="category_id" style={labelStyle}>Categoría</label>
-        <select
-          id="category_id"
-          name="category_id"
-          defaultValue={product?.category_id ?? defaultCategoryId ?? ''}
-          style={inputStyle}
-        >
-          <option value="">Sin categoría</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </Glass>
-
-      {/* Descripción */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="description" style={labelStyle}>Descripción</label>
-        <textarea
-          id="description"
-          name="description"
-          rows={3}
-          defaultValue={product?.description ?? ''}
-          placeholder="Describe el platillo…"
-          style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
-        />
-      </Glass>
-
-      {/* Tags */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="tags" style={labelStyle}>Etiquetas</label>
-        <input
-          id="tags"
-          name="tags"
-          type="text"
-          defaultValue={product?.tags?.join(', ') ?? ''}
-          placeholder="Picante, Favorito, Nuevo"
-          style={inputStyle}
-        />
-        <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, display: 'block' }}>
-          Separadas por coma
-        </span>
-      </Glass>
-
-      {/* Variantes / extras */}
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label style={labelStyle}>Variantes y extras</label>
-        <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 10px' }}>
-          Tamaños, extras con precio… el cliente los elige al pedir.
-        </p>
-        <OptionsEditor value={options} onChange={setOptions} />
-      </Glass>
-
-      {/* Disponibilidad */}
-      <Glass variant="quiet" style={{ padding: '14px 16px' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>Disponible</div>
-            <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-              {isAvailable ? 'Visible en el menú' : 'Oculto en el menú'}
+          {/* ── Costo y ganancia ── */}
+          <Glass variant="quiet" style={{ padding: 18 }}>
+            <SectionHead title="Costo y ganancia" hint="Opcional: captura tu costo para ver cuánto ganas por venta." />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label htmlFor="cost" style={labelStyle}>
+                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
+                </label>
+                <input
+                  id="cost"
+                  name="cost"
+                  type="number" inputMode="decimal"
+                  min="0"
+                  step="0.0001"
+                  value={hasRecipe ? displayCost : costVal}
+                  onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
+                  readOnly={hasRecipe}
+                  placeholder="0.00"
+                  style={{ ...inputStyle, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
+                  title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
+                />
+              </div>
+              <div>
+                <label htmlFor="loyalty_points" style={labelStyle}>Puntos de lealtad</label>
+                <input
+                  id="loyalty_points"
+                  name="loyalty_points"
+                  type="number" inputMode="decimal"
+                  min="0"
+                  step="1"
+                  value={loyaltyPtsVal}
+                  onChange={(e) => setLoyaltyPtsVal(e.target.value)}
+                  placeholder="Regla general"
+                  style={inputStyle}
+                />
+              </div>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsAvailable(!isAvailable)}
-            style={{
-              width: 44,
-              height: 26,
-              borderRadius: 999,
-              border: 'none',
-              cursor: 'pointer',
-              background: isAvailable ? 'var(--brand-accent)' : 'var(--u-hair-2)',
-              position: 'relative',
-              transition: 'background 200ms',
-              flexShrink: 0,
-            }}
-            aria-label="Disponibilidad"
-          >
-            <span
+            {(() => {
+              const p = parseFloat(priceVal);
+              const c = hasRecipe ? recipeCost : parseFloat(costVal);
+              if (isNaN(p) || isNaN(c) || (!hasRecipe && costVal.trim() === '')) {
+                return (
+                  <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 10, display: 'block' }}>
+                    Con el costo capturado verás aquí tu utilidad y margen por venta. Los puntos de lealtad
+                    vacíos usan la regla general del programa; 0 = este platillo no otorga puntos.
+                  </span>
+                );
+              }
+              const profit = p - c;
+              const margin = p > 0 ? (profit / p) * 100 : 0;
+              const good = profit >= 0;
+              return (
+                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12.5 }}>
+                  <span style={{ color: 'var(--u-text-3)' }}>
+                    Utilidad:{' '}
+                    <strong style={{ color: good ? 'var(--u-text)' : 'var(--c-danger, #f87171)' }}>
+                      {profit.toFixed(2)}
+                    </strong>
+                  </span>
+                  <span style={{ color: 'var(--u-text-3)' }}>
+                    Margen:{' '}
+                    <strong style={{ color: good ? 'var(--brand-accent)' : 'var(--c-danger, #f87171)' }}>
+                      {margin.toFixed(0)}%
+                    </strong>
+                  </span>
+                </div>
+              );
+            })()}
+          </Glass>
+
+          {/* ── Opciones y combos ── */}
+          <Glass variant="quiet" style={{ padding: 18 }}>
+            <SectionHead
+              title="Opciones y combos"
+              hint="Lo que el cliente elige al pedir: tamaños, extras con precio, o los componentes de un combo (con sus variantes, ej. sabor de bebida)."
+            />
+            <OptionsEditor value={options} onChange={setOptions} />
+          </Glass>
+
+          {/* ── Receta / costeo por ingrediente (solo en edición) ── */}
+          {product && ingredients && (
+            <Glass variant="quiet" style={{ padding: 18 }}>
+              <SectionHead
+                title="Receta"
+                hint="Define ingredientes y cantidades — el costo del platillo se calcula solo y descuenta inventario."
+              />
+              <RecipeEditor
+                productId={product.id}
+                restaurantId={restaurantId}
+                ingredients={ingredients}
+                initialRecipe={initialRecipe ?? []}
+                onCostChange={(c) => setRecipeCost(c)}
+              />
+            </Glass>
+          )}
+          {product && !ingredients && (
+            <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
+              <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
+                Activa el módulo <strong style={{ color: 'var(--u-text-2)' }}>Recetas e ingredientes</strong> desde tu{' '}
+                <a href="/admin/modulos" style={{ color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                  panel de Módulos
+                </a>{' '}
+                para gestionar el food cost de tus platillos.
+              </p>
+            </Glass>
+          )}
+          {!product && ingredients !== undefined && (
+            <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
+              <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+                Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular el food cost automáticamente.
+              </p>
+            </Glass>
+          )}
+        </div>
+
+        {/* ══ Columna lateral: foto + disponibilidad ══ */}
+        <div className="pform-col pform-side">
+          <Glass variant="quiet" style={{ padding: 18 }}>
+            <SectionHead title="Foto del platillo" hint="Una buena foto vende más — se muestra en el menú y al abrir el platillo." />
+            <ImageUpload
+              restaurantId={restaurantId}
+              currentUrl={product?.image_url}
+              folder="products"
+              onUpload={setImageUrl}
+            />
+          </Glass>
+
+          <Glass variant="quiet" style={{ padding: '14px 18px' }}>
+            <div
               style={{
-                position: 'absolute',
-                top: 3,
-                left: isAvailable ? 21 : 3,
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: '#fff',
-                transition: 'left 200ms',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
               }}
-            />
-          </button>
+            >
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>Disponible</div>
+                <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+                  {isAvailable ? 'Visible en el menú' : 'Oculto en el menú'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAvailable(!isAvailable)}
+                style={{
+                  width: 44,
+                  height: 26,
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: isAvailable ? 'var(--brand-accent)' : 'var(--u-hair-2)',
+                  position: 'relative',
+                  transition: 'background 200ms',
+                  flexShrink: 0,
+                }}
+                aria-label="Disponibilidad"
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 3,
+                    left: isAvailable ? 21 : 3,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left 200ms',
+                  }}
+                />
+              </button>
+            </div>
+          </Glass>
         </div>
-      </Glass>
+      </div>
 
-      {/* Receta: nota cuando es producto nuevo pero ya hay insumos */}
-      {!product && ingredients !== undefined && (
-        <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-            Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular el food cost automáticamente.
-          </p>
-        </Glass>
-      )}
-
-      {/* Receta / costeo por ingrediente (solo en edición) */}
-      {product && ingredients && (
-        <Glass variant="quiet" style={{ padding: 16 }}>
-          <div style={{ marginBottom: 12 }}>
-            <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>Receta</p>
-            <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 3 }}>
-              Define los ingredientes y cantidades. El costo del platillo se calcula automáticamente.
-            </p>
-          </div>
-          <RecipeEditor
-            productId={product.id}
-            restaurantId={restaurantId}
-            ingredients={ingredients}
-            initialRecipe={initialRecipe ?? []}
-            onCostChange={(c) => setRecipeCost(c)}
-          />
-        </Glass>
-      )}
-      {product && !ingredients && (
-        <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
-            Activa el módulo <strong style={{ color: 'var(--u-text-2)' }}>Recetas e ingredientes</strong> desde tu{' '}
-            <a href="/admin/modulos" style={{ color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
-              panel de Módulos
-            </a>{' '}
-            para gestionar el food cost de tus platillos.
-          </p>
-        </Glass>
-      )}
-
-      {/* Error */}
-      {state?.error && (
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(220,50,50,0.12)',
-            border: '1px solid rgba(220,50,50,0.25)',
-            color: '#f87171',
-            fontSize: 14,
-          }}
-        >
-          {state.error}
-        </div>
-      )}
-
-      {/* Botón guardar */}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="press btn-accent"
+      {/* ── Barra de guardar fija: el botón nunca queda fuera de alcance ── */}
+      <div
         style={{
-          width: '100%',
-          padding: '14px',
-          borderRadius: 'var(--radius-full)',
-          fontWeight: 600,
-          fontSize: 15,
-          border: 'none',
-          cursor: isPending ? 'not-allowed' : 'pointer',
-          opacity: isPending ? 0.7 : 1,
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 20,
+          margin: '4px -4px 0',
+          padding: '10px 4px calc(10px + env(safe-area-inset-bottom, 0px))',
+          background: 'color-mix(in srgb, var(--admin-content-bg-solid, var(--brand-bg)) 88%, transparent)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderTop: '1px solid var(--u-hair)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
         }}
       >
-        {isPending ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}
-      </button>
+        {state?.error && (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)',
+              color: 'var(--c-danger, #f87171)',
+              fontSize: 14,
+            }}
+          >
+            {state.error}
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={isPending}
+          className="press btn-accent"
+          style={{
+            width: '100%',
+            padding: '14px',
+            borderRadius: 'var(--radius-full)',
+            fontWeight: 600,
+            fontSize: 15,
+            border: 'none',
+            cursor: isPending ? 'not-allowed' : 'pointer',
+            opacity: isPending ? 0.7 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
+        >
+          {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> {isEdit ? 'Guardar cambios' : 'Crear platillo'}</>)}
+        </button>
+      </div>
     </form>
   );
 }

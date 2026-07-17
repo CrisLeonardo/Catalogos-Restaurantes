@@ -165,7 +165,7 @@ function CashCountCard({
             onClick={() => { setConfirmDelete(true); setDeleteError(null); }}
             style={{
               background: 'none', border: '1px solid rgba(248,113,113,0.3)', padding: '3px 9px',
-              borderRadius: 7, cursor: 'pointer', fontSize: 11, color: '#f87171',
+              borderRadius: 7, cursor: 'pointer', fontSize: 11, color: 'var(--c-danger, #f87171)',
               display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
@@ -185,7 +185,7 @@ function CashCountCard({
               style={{
                 background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)',
                 padding: '3px 10px', borderRadius: 7, cursor: isPending ? 'not-allowed' : 'pointer',
-                fontSize: 11, color: '#f87171', fontWeight: 600,
+                fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600,
               }}
             >
               {isPending ? '…' : 'Sí, eliminar'}
@@ -204,7 +204,7 @@ function CashCountCard({
         )}
       </div>
       {deleteError && (
-        <div style={{ fontSize: 11.5, color: '#f87171', marginTop: 4 }}>{deleteError}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--c-danger, #f87171)', marginTop: 4 }}>{deleteError}</div>
       )}
     </div>
   );

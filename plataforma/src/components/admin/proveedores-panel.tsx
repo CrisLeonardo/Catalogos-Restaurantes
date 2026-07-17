@@ -102,7 +102,7 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full">+ Nuevo proveedor</Button>
       </div>
-      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>{error}</div>}
 
       {edit && (
         <Card className="p-4">
@@ -198,7 +198,7 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full">+ Nueva orden</Button>}
       </div>
-      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>{error}</div>}
 
       {creating && (
         <Card className="flex flex-col gap-3 p-4">

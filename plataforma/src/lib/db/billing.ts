@@ -44,9 +44,10 @@ export interface PricingSettings {
   estandar: number;
   premium: number;
   pro: number;
-  /** "Plan a tu medida": Q de descuento por cada canal de servicio desactivado. */
+  /** "Plan a tu medida": Q de descuento por cada método de pedido desactivado
+   *  (comer en local / para llevar / a domicilio — mig. 078). */
   channelDiscountPer: number;
-  /** Máximo de canales descontables (piso: siempre se paga al menos 1 canal). */
+  /** Máximo de métodos descontables (piso: siempre se paga al menos 1 de los 3). */
   channelDiscountMax: number;
   /** Cobro único de configuración asistida por plan (referencia; se factura manual). */
   setupFeeBasico: number;
@@ -193,8 +194,8 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
     estandar:           n('plan_price_ESTANDAR', PLANS.ESTANDAR.priceMonthly),
     premium:            n('plan_price_PREMIUM',  PLANS.PREMIUM.priceMonthly),
     pro:                n('plan_price_PRO',      PLANS.PRO.priceMonthly),
-    channelDiscountPer: n('channel_discount_per', 100),
-    channelDiscountMax: n('channel_discount_max',   1),
+    channelDiscountPer: n('channel_discount_per', 50),
+    channelDiscountMax: n('channel_discount_max',  2),
     setupFeeBasico:     n('setup_fee_BASICO',   PLANS.BASICO.setupFee),
     setupFeeEstandar:   n('setup_fee_ESTANDAR', PLANS.ESTANDAR.setupFee),
     setupFeePremium:    n('setup_fee_PREMIUM',  PLANS.PREMIUM.setupFee),
@@ -227,9 +228,9 @@ export async function computeSuggestedFee(restaurantId: string): Promise<number>
 export interface FeeBreakdown {
   plan: string | null;
   base: number;
-  /** Canales activos AHORA MISMO (estado en vivo del checkout). */
+  /** Métodos de pedido activos AHORA MISMO (estado en vivo del checkout). */
   channelsActiveLive: number;
-  /** Canales que cuentan como activos para EL COBRO (mig. 073: un canal
+  /** Métodos que cuentan como activos para EL COBRO (mig. 073/078: uno
    *  recién apagado sigue facturándose completo hasta el ciclo siguiente
    *  — ver leogin_billed_active_channels). Puede diferir de channelsActiveLive. */
   channelsActiveBilled: number;
@@ -237,11 +238,15 @@ export interface FeeBreakdown {
   discountApplies: boolean;
   discountPer: number;
   channelsOff: number;
+  /** Qué métodos se facturan como apagados ('dine_in' | 'pickup' | 'delivery'). */
+  channelsOffKeys: string[];
   discount: number;
   /** % de descuento por volumen de sucursales del grupo (0 si no aplica). */
   branchDiscountPct: number;
-  /** Costo mensual de módulos a la carta no incluidos en el plan. */
+  /** Costo mensual de módulos a la carta facturados este periodo. */
   addonTotal: number;
+  /** Detalle por módulo facturado (para el desglose del dueño). */
+  addonItems: { key: string; price: number }[];
   final: number;
 }
 
@@ -254,15 +259,19 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
   return {
     plan:                  (d.plan as string) ?? null,
     base:                  Number(d.base ?? 0),
-    channelsActiveLive:    Number(d.channels_active_live ?? 2),
-    channelsActiveBilled:  Number(d.channels_active_billed ?? 2),
-    channelsTotal:         Number(d.channels_total ?? 2),
+    channelsActiveLive:    Number(d.channels_active_live ?? 3),
+    channelsActiveBilled:  Number(d.channels_active_billed ?? 3),
+    channelsTotal:         Number(d.channels_total ?? 3),
     discountApplies:       Boolean(d.discount_applies),
     discountPer:           Number(d.discount_per ?? 0),
     channelsOff:           Number(d.channels_off ?? 0),
+    channelsOffKeys:       Array.isArray(d.channels_off_keys) ? (d.channels_off_keys as string[]) : [],
     discount:              Number(d.discount ?? 0),
     branchDiscountPct:     Number(d.branch_discount_pct ?? 0),
     addonTotal:            Number(d.addon_total ?? 0),
+    addonItems:            Array.isArray(d.addon_items)
+      ? (d.addon_items as { key: string; price: number }[]).map((it) => ({ key: String(it.key), price: Number(it.price) || 0 }))
+      : [],
     final:                 Number(d.final ?? 0),
   };
 }

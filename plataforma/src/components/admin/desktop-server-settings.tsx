@@ -14,7 +14,7 @@ function connectionLabel(config: PrintAgentConfig | null): { text: string; color
   if (!config?.exists) return { text: 'Esta PC no es el servidor todavía', color: 'var(--u-text-4)' };
   if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: '#f59e0b' };
   const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
-  if (ageMs < 90_000) return { text: '● Conectado — esta PC es el servidor', color: '#4ade80' };
+  if (ageMs < 90_000) return { text: '● Conectado — esta PC es el servidor', color: 'var(--c-ok, #4ade80)' };
   const mins = Math.round(ageMs / 60_000);
   const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
   return { text: `Última conexión ${ago}`, color: '#f59e0b' };

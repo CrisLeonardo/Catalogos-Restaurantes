@@ -280,7 +280,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                   Premium
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.4 }}>
-                  <Icon name="check" size={13} style={{ color: '#4ade80', flexShrink: 0, marginTop: 1 }} />
+                  <Icon name="check" size={13} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0, marginTop: 1 }} />
                   <span>{selected.premiumLabel}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', marginTop: 12, lineHeight: 1 }}>

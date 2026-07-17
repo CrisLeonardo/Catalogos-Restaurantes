@@ -170,7 +170,7 @@ function InstallSteps({
       flexDirection: 'column',
       gap: 16,
     }}>
-      <div style={{ fontSize: 12, color: '#4ade80', fontWeight: 700 }}>
+      <div style={{ fontSize: 12, color: 'var(--c-ok, #4ade80)', fontWeight: 700 }}>
         ✓ Listo para instalar — solo descarga y haz doble clic en la PC del local
       </div>
 
@@ -226,7 +226,7 @@ function InstallSteps({
           </span>
           <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
             En unos segundos el estado cambiará a{' '}
-            <span style={{ color: '#4ade80', fontWeight: 600 }}>● Conectado</span>
+            <span style={{ color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>● Conectado</span>
             {' '}y verás las impresoras detectadas.
           </span>
         </div>
@@ -385,7 +385,7 @@ export default function PrintAgentSettings() {
     // propósito (es texto informativo del panel admin, no estado persistente).
     // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
-    if (ageMs < 90_000) return { text: '● Conectado', color: '#4ade80' };
+    if (ageMs < 90_000) return { text: '● Conectado', color: 'var(--c-ok, #4ade80)' };
     const mins = Math.round(ageMs / 60_000);
     const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
     return { text: `Última conexión ${ago}`, color: '#f59e0b' };

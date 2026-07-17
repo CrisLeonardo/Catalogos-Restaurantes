@@ -111,6 +111,19 @@ function initModalSelection(groups: ProductOptionGroup[]): Record<string, string
   return sel;
 }
 
+/** Variante inicial de cada componente con variantes: la primera (igual que la
+    hoja del comensal) — el precio ya la usaba como fallback, la píldora debe
+    verse marcada desde el inicio. */
+function initModalVariants(groups: ProductOptionGroup[]): Record<string, string> {
+  const sel: Record<string, string> = {};
+  for (const g of groups) {
+    for (const c of g.choices) {
+      if (c.variants?.length) sel[c.id] = c.variants[0].id;
+    }
+  }
+  return sel;
+}
+
 function ProductOptionsModal({
   product,
   currency,
@@ -125,7 +138,7 @@ function ProductOptionsModal({
   const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
   const [selected, setSelected] = useState<Record<string, string[]>>(() => initModalSelection(groups));
   /** choiceId -> variantId elegida (solo choices de combo con variantes). */
-  const [variantSelected, setVariantSelected] = useState<Record<string, string>>({});
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initModalVariants(groups));
   const [qty, setQty] = useState(1);
 
   function toggleChoice(group: ProductOptionGroup, choiceId: string) {
@@ -233,17 +246,17 @@ function ProductOptionsModal({
                         <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <button type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'rgba(34,197,94,0.10)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-                            border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}` }}>
+                            background: included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 10%, transparent)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+                            border: `1px solid ${included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 35%, transparent)' : 'var(--u-hair)'}` }}>
                           <span style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'grid', placeItems: 'center',
-                            background: included ? '#22c55e' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair)'}` }}>
+                            background: included ? 'var(--c-ok-solid, #22c55e)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: `1.5px solid ${included ? 'var(--c-ok-solid, #22c55e)' : 'var(--u-hair)'}` }}>
                             {included && <Icon name="check" size={12} style={{ color: '#fff' }} />}
                           </span>
                           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: included ? 'var(--u-text)' : 'var(--u-text-3)', textDecoration: included ? 'none' : 'line-through' }}>
                             {choice.name}
                           </span>
                           {d > 0 && (
-                            <span style={{ fontSize: 12, flexShrink: 0, color: included ? 'var(--u-text-2)' : '#f87171' }}>
+                            <span style={{ fontSize: 12, flexShrink: 0, color: included ? 'var(--u-text-2)' : 'var(--c-danger, #f87171)' }}>
                               {included ? `+${money(d, currency)}` : `−${money(d, currency)}`}
                             </span>
                           )}
@@ -259,7 +272,7 @@ function ProductOptionsModal({
                                     background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
                                     border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 12 }}>
                                   {variant.name}
-                                  {vDelta !== 0 && <span style={{ fontSize: 10.5, opacity: 0.75 }}>+{money(vDelta, currency)}</span>}
+                                  {vDelta !== 0 && <span style={{ fontSize: 10.5, opacity: 0.8, color: 'inherit' }}>{vDelta > 0 ? '+' : '−'}{money(Math.abs(vDelta), currency)}</span>}
                                 </button>
                               );
                             })}
@@ -636,7 +649,10 @@ export default function WaiterPanel({
         name: l.name,
         price: l.price,
         quantity: l.quantity,
-        options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
+        // El variantId es obligatorio para el servidor cuando el componente
+        // tiene variantes (resolveItemOptions lo exige) — sin él, TODO pedido
+        // de mesero con combo+variantes era rechazado con "Elige una variante".
+        options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
       })),
       customer: {
         name: finalName,
@@ -733,13 +749,13 @@ export default function WaiterPanel({
               ＋ Nuevo pedido
             </button>
             {queuedCount > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 30%, transparent)', color: '#f59e0b', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-warn, #f59e0b) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 30%, transparent)', color: 'var(--c-warn, #f59e0b)', fontSize: 13, fontWeight: 600 }}>
                 <Icon name="clock" size={15} />
                 {queuedCount === 1 ? '1 pedido sin sincronizar — se enviará solo al volver la señal.' : `${queuedCount} pedidos sin sincronizar — se enviarán solos al volver la señal.`}
               </div>
             )}
             {statusError && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', color: 'var(--c-danger, #f87171)', fontSize: 13, fontWeight: 600 }}>
                 <Icon name="alertCircle" size={15} />
                 {statusError}
               </div>
@@ -817,7 +833,7 @@ export default function WaiterPanel({
                           }
                         }}
                         className="press"
-                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
                       >
                         Cancelar
                       </button>
@@ -948,7 +964,7 @@ export default function WaiterPanel({
                     });
                   }}
                   className="press"
-                  style={{ padding: '14px', borderRadius: 14, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
+                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
                 >
                   {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar como libre</>}
                 </button>
@@ -980,7 +996,11 @@ export default function WaiterPanel({
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, color: 'var(--u-text)', fontWeight: 600 }}>{line.name}</div>
                         {line.options.length > 0 && (
-                          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>{line.options.map((o) => o.choiceName).join(', ')}</div>
+                          // La variante elegida (sabor/tipo) se muestra junto al componente —
+                          // el mesero debe poder confirmar "Bebida (Fanta)" antes de enviar.
+                          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                            {line.options.map((o) => (o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName)).join(', ')}
+                          </div>
                         )}
                         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>{money(line.price, currency)} c/u</div>
                       </div>
@@ -1007,8 +1027,10 @@ export default function WaiterPanel({
           </div>
         </div>
 
-        {/* Barra fija inferior: total + enviar */}
-        <div style={{ borderTop: '1px solid var(--u-hair)', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(16px)' }}>
+        {/* Barra fija inferior: total + enviar. El fondo sigue al tema (antes
+            rgba(0,0,0,0.35) fijo: en modo claro quedaba una franja oscura con
+            texto oscuro encima — ilegible). */}
+        <div style={{ borderTop: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--brand-bg) 82%, transparent)', backdropFilter: 'blur(16px)' }}>
           <div className="waiter-wrap-narrow" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tipEnabled && tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1026,8 +1048,8 @@ export default function WaiterPanel({
               <span style={{ fontSize: 15, color: 'var(--u-text-2)', fontWeight: 600 }}>Total</span>
               <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)' }}>{money(total, currency)}</span>
             </div>
-            {submitError && <div style={{ fontSize: 13, color: '#f87171', padding: '8px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>{submitError}</div>}
-            {submitOk && <div style={{ fontSize: 13, color: '#4ade80', padding: '8px 12px', borderRadius: 10, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}>{submitOk}</div>}
+            {submitError && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 20%, transparent)' }}>{submitError}</div>}
+            {submitOk && <div style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ok, #4ade80) 20%, transparent)' }}>{submitOk}</div>}
             <button
               type="button"
               onClick={handleSubmit}

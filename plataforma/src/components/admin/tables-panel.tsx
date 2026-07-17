@@ -124,7 +124,7 @@ function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: s
           variant="outline"
           size="sm"
           className="h-auto rounded-adm-full px-2.5 py-1 text-[11px]"
-          style={copied ? { background: 'rgba(74,222,128,0.15)', color: '#4ade80', borderColor: 'transparent' } : undefined}
+          style={copied ? { background: 'rgba(74,222,128,0.15)', color: 'var(--c-ok, #4ade80)', borderColor: 'transparent' } : undefined}
         >
           {copied ? '✓ Copiado' : 'Copiar'}
         </Button>

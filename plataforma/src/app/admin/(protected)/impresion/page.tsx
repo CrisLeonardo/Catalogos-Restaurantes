@@ -10,40 +10,16 @@ import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-export const metadata = { title: 'Impresión y modo offline – Panel admin' };
+export const metadata = { title: 'Impresión – Panel admin' };
 
 /* ============================================================
-   /admin/impresion — Impresión y modo offline
+   /admin/impresion — Impresión de comandas y recibos
    ------------------------------------------------------------
-   Sección propia del servicio de Leogin en la PC del local (antes
-   vivía plegado dentro de Perfil). Lo presenta como lo que es para
-   el restaurante — la pieza que imprime sola y mantiene el negocio
-   operando sin internet — con estado en vivo de la cadena de
-   respaldo e instalación guiada (o Leogin Desktop, un clic). La
-   impresión por navegador (QZ/USB) queda como alternativa plegada.
+   Solo impresoras: qué imprime, dónde y cómo dejarlo configurado.
+   El contenido de "modo offline" que antes vivía aquí se movió a
+   /admin/sin-internet — quien entra a configurar su impresora no
+   tiene por qué toparse con la cadena de respaldo.
    ============================================================ */
-
-type NodeState = 'ok' | 'warn' | 'off';
-
-interface ChainNode {
-  label: string;
-  state: NodeState;
-  detail: string;
-}
-
-const STATE_COLOR: Record<NodeState, string> = {
-  ok: '#4ade80',
-  warn: '#f59e0b',
-  off: 'var(--u-text-4)',
-};
-
-function timeAgo(iso: string): string {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (mins < 60) return `hace ${mins} min`;
-  const hours = Math.round(mins / 60);
-  if (hours < 48) return `hace ${hours} h`;
-  return `hace ${Math.round(hours / 24)} días`;
-}
 
 export default async function AdminImpresionPage() {
   const ctx = await getAdminContext();
@@ -64,62 +40,33 @@ export default async function AdminImpresionPage() {
   const db = createServiceClient();
   const { data: agent } = await db
     .from('print_agents')
-    .select('last_seen_at, agent_version, hub_url, hub_order_token, kitchen_target, receipt_target')
+    .select('last_seen_at, agent_version, kitchen_target, receipt_target')
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
 
   const lastSeen = (agent?.last_seen_at as string | null) ?? null;
-  const version = (agent?.agent_version as string | null) ?? null;
   // Estado calculado al momento del request a propósito (server component:
   // es texto informativo del panel, igual que en print-agent-settings.tsx).
   // eslint-disable-next-line react-hooks/purity
   const connected = !!lastSeen && Date.now() - new Date(lastSeen).getTime() < 90_000;
-  const hubReady = !!agent?.hub_url && !!agent?.hub_order_token;
+  const kitchenTarget = (agent?.kitchen_target as string | null) ?? null;
+  const receiptTarget = (agent?.receipt_target as string | null) ?? null;
 
-  const agentNode: ChainNode = !agent
-    ? { label: 'Leogin en el local', state: 'off', detail: 'Sin instalar' }
-    : !lastSeen
-      ? { label: 'Leogin en el local', state: 'warn', detail: 'Esperando primera conexión' }
-      : connected
-        ? { label: 'Leogin en el local', state: 'ok', detail: `Conectado${version ? ` · v${version}` : ''}` }
-        : { label: 'Leogin en el local', state: 'warn', detail: `Última conexión ${timeAgo(lastSeen)}` };
-
-  const hubNode: ChainNode = connected && hubReady
-    ? { label: 'Respaldo sin internet', state: 'ok', detail: 'Listo · toma pedidos e imprime en el local' }
-    : connected
-      ? { label: 'Respaldo sin internet', state: 'warn', detail: 'El servicio necesita actualizarse' }
-      : { label: 'Respaldo sin internet', state: 'off', detail: 'Se activa al instalar Leogin en tu PC' };
-
-  const chain: ChainNode[] = [
-    { label: 'Nube Leogin', state: 'ok', detail: 'En línea' },
-    agentNode,
-    hubNode,
-  ];
-
-  // Pantalla de cocina de respaldo servida por el propio hub en la LAN:
-  // navegación directa al hub (no sufre mixed content ni el permiso de red
-  // local del navegador — todo pasa a ser mismo-origen una vez dentro).
-  const hubUrl = (agent?.hub_url as string | null) ?? null;
-  const hubToken = (agent?.hub_order_token as string | null) ?? null;
-  const kdsUrl = hubUrl && hubToken
-    ? `${hubUrl.replace(/\/+$/, '')}/kds?t=${encodeURIComponent(hubToken)}`
-    : null;
-
-  const benefits = [
+  const steps = [
     {
-      icon: 'print',
-      title: 'Impresión automática',
-      desc: 'Comandas y recibos salen solos en cocina y caja, desde cualquier celular, tablet o PC — sin diálogos.',
+      n: '1',
+      title: 'Instala Leogin en la PC del local',
+      desc: 'Descarga tu instalador personalizado y haz doble clic. Una sola vez, sin conocimientos técnicos.',
     },
     {
-      icon: 'plug',
-      title: 'Funciona sin internet',
-      desc: 'Si se corta la señal, el local sigue tomando pedidos y la comanda se imprime igual.',
+      n: '2',
+      title: 'Asigna tus impresoras',
+      desc: 'Elige cuál imprime las comandas de cocina y cuál los recibos de caja. Puede ser la misma.',
     },
     {
-      icon: 'upload',
-      title: 'Se sincroniza solo',
-      desc: 'Al volver la conexión, todo sube a la nube automáticamente: nada se pierde ni se duplica.',
+      n: '3',
+      title: 'Listo — imprime solo',
+      desc: 'Cada pedido nuevo sale en la impresora correcta al instante, venga de un celular, tablet o PC.',
     },
   ];
 
@@ -136,114 +83,81 @@ export default async function AdminImpresionPage() {
           </div>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1 }}>Impresión y modo offline</h2>
+              <h2 className="t-display" style={{ fontSize: 21, lineHeight: 1.1 }}>Impresión</h2>
               <span style={{
                 fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
-                color: connected ? '#4ade80' : 'var(--u-text-3)',
-                background: connected ? 'rgba(74,222,128,0.1)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-                border: `1px solid ${connected ? 'rgba(74,222,128,0.3)' : 'var(--u-hair)'}`,
+                color: connected ? 'var(--c-ok, #4ade80)' : 'var(--u-text-3)',
+                background: connected ? 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+                border: `1px solid ${connected ? 'color-mix(in srgb, var(--c-ok, #4ade80) 30%, transparent)' : 'var(--u-hair)'}`,
               }}>
-                {connected ? '● Conectado' : lastSeen ? '○ Desconectado' : '○ Sin instalar'}
+                {connected ? '● Conectado' : lastSeen ? '○ Desconectado' : '○ Sin configurar'}
               </span>
             </div>
             <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
-              El servicio de Leogin que corre en la PC del local: se instala{' '}
-              <strong style={{ color: 'var(--u-text-2)' }}>una sola vez</strong> y convierte tu restaurante en
-              una operación que no se detiene — impresión automática y respaldo completo cuando falla el
-              internet.
+              Configura tus impresoras una sola vez y cada pedido sale{' '}
+              <strong style={{ color: 'var(--u-text-2)' }}>automáticamente</strong> en cocina y en caja —
+              sin diálogos de imprimir, sin depender de un navegador abierto.
             </p>
-            <a href="/admin/escritorio" style={{ fontSize: 11.5, color: 'var(--brand-accent)', marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none', fontWeight: 600 }}>
-              <Icon name="monitor" size={12} /> ¿Buscas la app completa para tu PC? Conoce Leogin Desktop →
-            </a>
           </div>
         </div>
 
-        {/* Beneficios */}
+        {/* Pasos */}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: 12, marginTop: 18,
         }}>
-          {benefits.map((b) => (
-            <div key={b.title} style={{
+          {steps.map((s) => (
+            <div key={s.n} style={{
               borderRadius: 14, padding: '13px 14px',
               background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
               border: '1px solid var(--u-hair)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent, var(--u-text))' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
+                <span style={{
+                  width: 20, height: 20, borderRadius: 99, flexShrink: 0, display: 'grid', placeItems: 'center',
+                  background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)', color: 'var(--brand-accent)',
+                  fontSize: 11, fontWeight: 800,
+                }}>{s.n}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{s.title}</span>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{s.desc}</div>
             </div>
           ))}
         </div>
+
+        {/* Estado de impresoras asignadas (cuando ya está conectado) */}
+        {connected && (
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gap: 12, marginTop: 14,
+          }}>
+            {[{ icon: 'flame', label: 'Comandas de cocina', target: kitchenTarget },
+              { icon: 'receipt', label: 'Recibos de caja', target: receiptTarget }].map((p) => (
+              <div key={p.label} style={{
+                display: 'flex', alignItems: 'center', gap: 10, borderRadius: 12, padding: '10px 13px',
+                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair)',
+              }}>
+                <Icon name={p.icon} size={16} style={{ color: p.target ? 'var(--c-ok, #4ade80)' : 'var(--u-text-4)', flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600 }}>{p.label}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: p.target ? 'var(--u-text)' : 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {p.target || 'Sin asignar — asígnala abajo'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* CTA cuando aún no hay agente funcionando */}
         {!connected && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
             <Button render={<a href="#instalar" />}>
-              <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi instalación' : 'Vincular impresora y servicio local · 5 minutos'}
+              <Icon name="download" size={16} /> {lastSeen ? 'Revisar mi instalación' : 'Conectar mi impresora · 5 minutos'}
             </Button>
             <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
               Sin conocimientos técnicos: descargar, doble clic, listo.
             </span>
-          </div>
-        )}
-      </Card>
-
-      {/* ── Cadena de respaldo (estado en vivo) ──────────────── */}
-      <Card className="p-4.5">
-        <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Cadena de respaldo — así no se detiene tu servicio</div>
-        <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, flexWrap: 'wrap' }}>
-          {chain.map((node, i) => (
-            <div key={node.label} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 180px', minWidth: 170 }}>
-              <div style={{
-                flex: 1, borderRadius: 12, padding: '10px 12px',
-                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                border: `1px solid ${node.state === 'ok' ? 'rgba(74,222,128,0.25)' : node.state === 'warn' ? 'rgba(245,158,11,0.3)' : 'var(--u-hair)'}`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 99, flexShrink: 0, background: STATE_COLOR[node.state] }} />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text)' }}>{node.label}</span>
-                </div>
-                <div style={{ fontSize: 10.5, color: node.state === 'warn' ? '#f59e0b' : 'var(--u-text-4)', marginTop: 4, lineHeight: 1.4 }}>
-                  {node.detail}
-                </div>
-              </div>
-              {i < chain.length - 1 && (
-                <Icon name="chevronRight" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-              )}
-            </div>
-          ))}
-        </div>
-        <p style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.5, margin: '12px 0 0' }}>
-          Si un eslabón falla, el siguiente lo cubre: la nube atiende normal, el agente imprime y toma
-          pedidos cuando la nube no responde, y los dispositivos guardan el pedido si nada más contesta.
-        </p>
-
-        {kdsUrl && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14,
-            borderRadius: 12, padding: '12px 14px',
-            background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-            border: '1px solid var(--u-hair)',
-          }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
-                Pantalla de cocina de respaldo
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 3 }}>
-                Ábrela en la tablet de cocina (misma red WiFi del local) y déjala de marcador:
-                muestra los pedidos que el agente capturó, incluso sin internet.
-              </div>
-            </div>
-            <Button
-              render={<a href={kdsUrl} target="_blank" rel="noopener noreferrer" />}
-              variant="secondary"
-              size="sm"
-            >
-              <Icon name="flame" size={15} /> Abrir pantalla de respaldo
-            </Button>
           </div>
         )}
       </Card>
@@ -271,6 +185,17 @@ export default async function AdminImpresionPage() {
       >
         <KitchenPrintSettings />
       </CollapsibleCard>
+
+      {/* ── Enlace al modo sin internet ──────────────────────── */}
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
+        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Icon name="plug" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
+          El mismo servicio que imprime también mantiene tu local operando cuando falla el internet.
+        </div>
+        <a href="/admin/sin-internet" style={{ fontSize: 12.5, color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          Ver modo sin internet →
+        </a>
+      </Card>
     </div>
   );
 }

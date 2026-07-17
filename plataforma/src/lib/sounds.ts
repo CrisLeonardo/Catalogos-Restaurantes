@@ -78,9 +78,12 @@ function burstThrottled(kind: keyof typeof MIN_GAP_MS): boolean {
  * 🛎 Pedido nuevo
  * 3 tonos ascendentes sine do-mi-sol (523→659→784 Hz).
  * Patrón agradable y reconocible como "llegó algo nuevo".
+ * `force` salta el freno de ráfagas — para el botón "Probar" del panel de
+ * sonidos: sin esto, el segundo clic en menos de 2.5-4s no sonaba nada y
+ * parecía que el sonido estaba roto.
  */
-export function playOrderSound(volume = 0.5, repeat = 1): void {
-  if (burstThrottled('order')) return;
+export function playOrderSound(volume = 0.5, repeat = 1, opts?: { force?: boolean }): void {
+  if (!opts?.force && burstThrottled('order')) return;
   const ctx = getCtx();
   if (!ctx) return;
   for (let r = 0; r < repeat; r++) {
@@ -106,8 +109,8 @@ export function playOrderSound(volume = 0.5, repeat = 1): void {
  * Ráfagas urgentes triangle sol-do-sol (880→1047→880 Hz) × repeat.
  * Deliberadamente más agresivo e insistente que el de pedidos.
  */
-export function playWaiterSound(volume = 0.75, repeat = 3): void {
-  if (burstThrottled('waiter')) return;
+export function playWaiterSound(volume = 0.75, repeat = 3, opts?: { force?: boolean }): void {
+  if (!opts?.force && burstThrottled('waiter')) return;
   const ctx = getCtx();
   if (!ctx) return;
   const pBurst = 3;
@@ -135,8 +138,8 @@ export function playWaiterSound(volume = 0.75, repeat = 3): void {
  * "Ding-dong" sawtooth descendente (784→523 Hz).
  * Onda sawtooth y patrón descendente lo distinguen claramente de pedidos.
  */
-export function playKitchenSound(volume = 0.5, repeat = 1): void {
-  if (burstThrottled('kitchen')) return;
+export function playKitchenSound(volume = 0.5, repeat = 1, opts?: { force?: boolean }): void {
+  if (!opts?.force && burstThrottled('kitchen')) return;
   const ctx = getCtx();
   if (!ctx) return;
   for (let r = 0; r < repeat; r++) {

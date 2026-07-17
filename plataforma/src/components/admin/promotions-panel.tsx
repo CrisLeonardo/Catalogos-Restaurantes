@@ -68,7 +68,7 @@ export default function PromotionsPanel({ restaurantId, promotions }: { restaura
               <form action={deletePromotion} onSubmit={(e) => { if (!confirm('¿Eliminar esta promoción?')) e.preventDefault(); }}>
                 <input type="hidden" name="restaurantId" value={restaurantId} />
                 <input type="hidden" name="id" value={p.id} />
-                <button type="submit" className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 9, border: 'none', display: 'grid', placeItems: 'center', color: '#f87171', cursor: 'pointer' }}>
+                <button type="submit" className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 9, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--c-danger, #f87171)', cursor: 'pointer' }}>
                   <Icon name="trash" size={14} />
                 </button>
               </form>
@@ -156,7 +156,7 @@ function PromoModal({ restaurantId, promo, onClose, onSaved }: { restaurantId: s
             </div>
           </div>
 
-          {state && 'error' in state && <div style={{ fontSize: 13, color: '#f87171' }}>{state.error}</div>}
+          {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>}
 
           <button type="submit" disabled={isPending} className="press btn-accent" style={{ width: '100%', padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
             {isPending ? 'Guardando…' : isNew ? 'Crear promoción' : 'Guardar cambios'}

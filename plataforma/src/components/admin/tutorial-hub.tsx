@@ -209,7 +209,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
             style={{
               background: 'rgba(34,197,94,0.12)',
               border: '1px solid rgba(34,197,94,0.30)',
-              color: '#4ade80',
+              color: 'var(--c-ok, #4ade80)',
             }}
           >
             <Icon name="whatsapp" size={18} />

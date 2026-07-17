@@ -37,7 +37,7 @@ export default function DesktopServerNudge() {
         background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.22)',
       }}
     >
-      <Icon name="print" size={15} style={{ color: '#4ade80', flexShrink: 0 }} />
+      <Icon name="print" size={15} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0 }} />
       <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text)', lineHeight: 1.4, minWidth: 220 }}>
         <b>¿Esta PC será el servidor del local?</b>{' '}
         <span className="t-mute">
@@ -48,7 +48,7 @@ export default function DesktopServerNudge() {
         <Link
           href="/admin/impresion"
           style={{
-            fontSize: 12, fontWeight: 700, color: '#4ade80', textDecoration: 'none',
+            fontSize: 12, fontWeight: 700, color: 'var(--c-ok, #4ade80)', textDecoration: 'none',
             padding: '6px 12px', borderRadius: 99, border: '1px solid rgba(74,222,128,0.35)',
           }}
         >

@@ -239,7 +239,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                             aria-label="Eliminar turno"
                             style={{
                               width: 26, height: 26, borderRadius: 99, border: 'none',
-                              background: 'rgba(239,68,68,0.14)', color: '#f87171',
+                              background: 'rgba(239,68,68,0.14)', color: 'var(--c-danger, #f87171)',
                               cursor: 'pointer', fontSize: 15, lineHeight: 1,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
@@ -292,7 +292,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
             borderRadius: 'var(--radius-md)',
             background: 'rgba(220,50,50,0.12)',
             border: '1px solid rgba(220,50,50,0.25)',
-            color: '#f87171',
+            color: 'var(--c-danger, #f87171)',
             fontSize: 14,
           }}
         >

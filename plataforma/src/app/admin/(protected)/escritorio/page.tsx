@@ -110,7 +110,7 @@ export default async function AdminEscritorioPage() {
               {installed && (
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
-                  color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)',
+                  color: 'var(--c-ok, #4ade80)', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)',
                 }}>
                   ● Instalada{shellVersion ? ` · v${shellVersion}` : ''}
                 </span>

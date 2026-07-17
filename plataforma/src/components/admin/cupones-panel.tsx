@@ -32,9 +32,9 @@ const emptyForm = {
 function couponStatus(c: Coupon): { label: string; color: string } {
   if (!c.is_active) return { label: 'Pausado', color: 'var(--u-text-4)' };
   const now = new Date();
-  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: '#f87171' };
+  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: 'var(--c-danger, #f87171)' };
   if (c.max_uses && c.uses >= c.max_uses) return { label: 'Agotado', color: '#fbbf24' };
-  return { label: 'Activo', color: '#4ade80' };
+  return { label: 'Activo', color: 'var(--c-ok, #4ade80)' };
 }
 
 export default function CuponesPanel({ restaurantId, coupons }: Props) {
@@ -115,7 +115,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
           {error}
         </div>
       )}

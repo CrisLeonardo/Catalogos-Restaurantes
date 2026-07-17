@@ -70,7 +70,7 @@ export default async function AdminPerfilPage({
             borderRadius: 'var(--radius-md)',
             background: 'rgba(50,200,100,0.12)',
             border: '1px solid rgba(50,200,100,0.25)',
-            color: '#4ade80',
+            color: 'var(--c-ok, #4ade80)',
             fontSize: 14,
             display: 'flex', alignItems: 'center', gap: 8,
           }}

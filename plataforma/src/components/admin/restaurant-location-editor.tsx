@@ -183,7 +183,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
         <div style={{
           padding: '10px 14px', borderRadius: 'var(--radius-md)',
           background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)',
-          color: '#f87171', fontSize: 14,
+          color: 'var(--c-danger, #f87171)', fontSize: 14,
         }}>
           {state.error}
         </div>

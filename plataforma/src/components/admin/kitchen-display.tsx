@@ -118,11 +118,17 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     return () => { clearTimeout(t0); clearInterval(id); };
   }, []);
 
-  // Desbloquear AudioContext al primer gesto del usuario en la pantalla de cocina
+  // Desbloquear AudioContext con el primer gesto del usuario (click, tecla o
+  // toque — antes solo click: en una tablet táctil el primer gesto suele ser
+  // un scroll/touch y el KDS quedaba mudo hasta el primer tap real).
   useEffect(() => {
-    const handler = () => primeAudio();
-    document.addEventListener('click', handler, { once: true });
-    return () => document.removeEventListener('click', handler);
+    const events: (keyof DocumentEventMap)[] = ['click', 'pointerdown', 'keydown', 'touchstart'];
+    const handler = () => {
+      primeAudio();
+      events.forEach((ev) => document.removeEventListener(ev, handler));
+    };
+    events.forEach((ev) => document.addEventListener(ev, handler, { once: true }));
+    return () => events.forEach((ev) => document.removeEventListener(ev, handler));
   }, []);
 
   // Realtime: pedido nuevo → sonido de cocina + refresco; cambio de estado → refresco.

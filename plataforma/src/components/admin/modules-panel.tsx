@@ -65,6 +65,10 @@ interface Props {
   supportWhatsapp?: string;
   /** Plan actual — determina qué tipos de pedido están disponibles. */
   planActual?: string | null;
+  /** Q de descuento por cada método de pedido desactivado (platform_settings). */
+  channelDiscountPer?: number;
+  /** Máximo de métodos descontables a la vez. */
+  channelDiscountMax?: number;
 }
 
 const BADGE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -158,6 +162,13 @@ function SelfServiceCard({ m, on, busy, onToggle, priceNote }: { m: ModuleMeta; 
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
       <div style={{ fontSize: 11, fontWeight: 700, color: priceNote === 'Incluido en tu plan' ? '#4ade80' : 'var(--brand-accent)' }}>
         {priceNote}
+        {priceNote !== 'Incluido en tu plan' && (
+          <span style={{ display: 'block', fontWeight: 400, color: 'var(--u-text-4)', marginTop: 2 }}>
+            {on
+              ? 'Si lo apagas, deja de cobrarse desde tu próximo ciclo (debe quedar apagado el 75% del mes).'
+              : 'Apagado no se cobra — el cambio se refleja en tu próximo ciclo.'}
+          </span>
+        )}
       </div>
       {m.hint && (
         <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -299,7 +310,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
   );
 }
 
-export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual }: Props) {
+export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, channelDiscountPer = 50, channelDiscountMax = 2 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -403,13 +414,14 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         )}
         {(planActual === 'PREMIUM' || planActual === 'PRO') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: 12 }}>
-            <Icon name="sparkle" size={14} style={{ color: '#4ade80', flexShrink: 0 }} />
+            <Icon name="sparkle" size={14} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-              <strong style={{ color: 'var(--u-text-2)' }}>Plan a tu medida:</strong> desactiva un canal que no uses y baja tu
-              mensualidad Q100. El descuento entra hasta tu <strong style={{ color: 'var(--u-text-2)' }}>próximo cobro</strong>, y
+              <strong style={{ color: 'var(--u-text-2)' }}>Plan a tu medida:</strong> cada método de pedido que desactives baja tu
+              mensualidad <strong style={{ color: 'var(--u-text-2)' }}>Q{channelDiscountPer}</strong> (hasta {channelDiscountMax} de los 3 —
+              siempre se paga al menos uno). El descuento entra hasta tu <strong style={{ color: 'var(--u-text-2)' }}>próximo cobro</strong>, y
               se calcula sobre todo el mes: necesitas dejarlo apagado al menos el 75% de los días de este mes para que aplique
               (un 25% de margen para probarlo sin perder el descuento — entre más tarde en el mes lo apagues, menos margen te queda).{' '}
-              <a href="/admin/suscripcion" style={{ color: '#4ade80', fontWeight: 700, textDecoration: 'none' }}>Ver mi mensualidad →</a>
+              <a href="/admin/suscripcion" style={{ color: 'var(--c-ok, #4ade80)', fontWeight: 700, textDecoration: 'none' }}>Ver mi mensualidad →</a>
             </p>
           </div>
         )}
@@ -513,7 +525,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
           {error}
         </div>
       )}

@@ -124,6 +124,11 @@ async function deleteSub(sub: PushSubscription): Promise<void> {
 /* ── Tipos ───────────────────────────────────────────────────────────── */
 type BellState = 'off' | 'basic' | 'on' | 'blocked' | 'busy';
 
+/** Flag local: el usuario ya activó las notificaciones nativas de Leogin
+    Desktop en este dispositivo (permite re-detectarlas en silencio al
+    recargar el webview — ver "Detectar estado inicial"). */
+const DESKTOP_NOTIF_KEY = 'leogin-desktop-notif-enabled';
+
 /* ── Componente principal ────────────────────────────────────────────── */
 export default function AdminNotifications({
   restaurantId,
@@ -201,8 +206,24 @@ export default function AdminNotifications({
   useEffect(() => {
     const tn = getTauriNotification();
     if (tn) {
+      // Leogin Desktop: isPermissionGranted() del plugin puede devolver false
+      // en cada nueva carga del webview AUNQUE Windows ya haya concedido el
+      // permiso — por eso, tras entrar a Cocina y volver (recarga de página),
+      // la campana aparecía apagada y había que "activar" de nuevo. Si el
+      // usuario ya las activó antes en este dispositivo (flag local), se
+      // re-pide el permiso en silencio: Windows responde 'granted' al instante
+      // sin mostrar ningún diálogo.
       tn.isPermissionGranted()
-        .then((granted) => setState(granted ? 'on' : 'off'))
+        .then(async (granted) => {
+          if (granted) { setState('on'); return; }
+          let enabledBefore = false;
+          try { enabledBefore = localStorage.getItem(DESKTOP_NOTIF_KEY) === '1'; } catch {}
+          if (!enabledBefore) { setState('off'); return; }
+          try {
+            const perm = await tn.requestPermission();
+            setState(perm === 'granted' ? 'on' : 'off');
+          } catch { setState('off'); }
+        })
         .catch(() => setState('off'));
       return;
     }
@@ -389,10 +410,12 @@ export default function AdminNotifications({
       try { perm = await tn.requestPermission(); } catch { perm = 'denied'; }
       if (perm === 'granted') {
         setState('on');
+        try { localStorage.setItem(DESKTOP_NOTIF_KEY, '1'); } catch {}
         showPopup('¡Listo! Windows te avisará cuando entre un pedido nuevo.', 'info');
         try { tn.sendNotification({ title: 'Notificaciones activadas', body: 'Te avisaremos aquí cuando entre un pedido nuevo.' }); } catch {}
       } else {
         setState('blocked');
+        try { localStorage.removeItem(DESKTOP_NOTIF_KEY); } catch {}
         showPopup('Notificaciones bloqueadas por Windows. Ve a Configuración → Sistema → Notificaciones y actívalas para Leogin.', 'error');
       }
       return;
@@ -593,7 +616,7 @@ export default function AdminNotifications({
             maxRepeat={3}
             onVolume={v  => updateSound({ orderVolume:  v })}
             onRepeat={r  => updateSound({ orderRepeat:  r })}
-            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat); }}
+            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat, { force: true }); }}
           />
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
@@ -606,7 +629,7 @@ export default function AdminNotifications({
             maxRepeat={3}
             onVolume={v  => updateSound({ waiterVolume:  v })}
             onRepeat={r  => updateSound({ waiterRepeat:  r })}
-            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat); }}
+            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat, { force: true }); }}
           />
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
@@ -624,7 +647,7 @@ export default function AdminNotifications({
               import('@/lib/sounds').then(m => {
                 primeAudio();
                 setAudioBlocked(!m.isAudioUnlocked());
-                m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat);
+                m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat, { force: true });
               });
             }}
           />

@@ -32,6 +32,19 @@ function initialSelection(groups: ProductOptionGroup[]): Record<string, string[]
   return sel;
 }
 
+/** Variante inicial de cada componente con variantes: la primera. El precio
+    SIEMPRE usó la primera como fallback — sin esto, la píldora no se veía
+    marcada aunque ya se estuviera cobrando esa variante. */
+function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
+  const sel: Record<string, string> = {};
+  for (const g of groups) {
+    for (const c of g.choices) {
+      if (c.variants?.length) sel[c.id] = c.variants[0].id;
+    }
+  }
+  return sel;
+}
+
 export default function ProductSheet({
   product, icon, ordersEnabled, onClose,
 }: {
@@ -52,7 +65,7 @@ export default function ProductSheet({
   );
   const [selected, setSelected] = useState<Record<string, string[]>>(() => initialSelection(groups));
   /** choiceId -> variantId elegida (solo choices de combo con variantes). */
-  const [variantSelected, setVariantSelected] = useState<Record<string, string>>({});
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initialVariants(groups));
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -271,8 +284,11 @@ export default function ProductSheet({
                                 >
                                   {variant.name}
                                   {vDelta !== 0 && (
-                                    <span className="t-mono" style={{ fontSize: 10.5, opacity: 0.75 }}>
-                                      +{formatPrice(vDelta, config)}
+                                    // color:'inherit' explícito: la regla `.themed-type .t-mono`
+                                    // fija color = --u-text, que es EL MISMO color del fondo de la
+                                    // píldora seleccionada — el precio desaparecía justo al elegirla.
+                                    <span className="t-mono" style={{ fontSize: 10.5, opacity: 0.8, color: 'inherit' }}>
+                                      {vDelta > 0 ? '+' : '−'}{formatPrice(Math.abs(vDelta), config)}
                                     </span>
                                   )}
                                 </button>
@@ -308,7 +324,8 @@ export default function ProductSheet({
                           {on && <Icon name="check" size={13} strokeWidth={3} />}
                           {choice.name}
                           {delta !== 0 && (
-                            <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.75 }}>
+                            // color:'inherit' explícito — ver nota en las píldoras de variantes.
+                            <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.8, color: 'inherit' }}>
                               {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
                             </span>
                           )}

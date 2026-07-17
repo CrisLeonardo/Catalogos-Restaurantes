@@ -217,7 +217,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
       </div>
 
       <div style={{ minHeight: 18, marginBottom: 10 }}>
-        {error && <span style={{ fontSize: 13, color: '#f87171' }}>{error}</span>}
+        {error && <span style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{error}</span>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 64px)', gap: 12, justifyContent: 'center' }}>

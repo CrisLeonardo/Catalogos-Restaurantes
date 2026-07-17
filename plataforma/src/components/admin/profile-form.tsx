@@ -118,9 +118,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               }}
             />
             {whatsappErr ? (
-              <p style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{whatsappErr}</p>
+              <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 6 }}>{whatsappErr}</p>
             ) : whatsappVal.trim() ? (
-              <p style={{ fontSize: 12, color: '#4ade80', marginTop: 6 }}>Número válido ✓</p>
+              <p style={{ fontSize: 12, color: 'var(--c-ok, #4ade80)', marginTop: 6 }}>Número válido ✓</p>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
                 Acepta: 12345678 · 1234-5678 · 1234 5678 · +502 1234 5678
@@ -161,7 +161,7 @@ function ErrorMsg({ msg }: { msg: string }) {
         borderRadius: 'var(--radius-md)',
         background: 'rgba(220,50,50,0.12)',
         border: '1px solid rgba(220,50,50,0.25)',
-        color: '#f87171',
+        color: 'var(--c-danger, #f87171)',
         fontSize: 14,
       }}
     >
