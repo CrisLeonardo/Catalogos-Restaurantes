@@ -32,7 +32,7 @@ function buildAlerts(rows: BillingRow[]): Alert[] {
         icon: 'alertCircle',
         title: `${r.name} tiene pagos vencidos`,
         body: `Pendiente ${fmtMoney(r.pendingTotal, r.config?.currency ?? 'GTQ')} · plan ${planLabel(r.plan)} · sigue activo`,
-        href: `/super/restaurantes/${r.restaurantId}`,
+        href: `/super/restaurantes/${r.restaurantId}/cobro`,
         cta: 'Gestionar',
       });
     }
@@ -62,7 +62,7 @@ function buildAlerts(rows: BillingRow[]): Alert[] {
         icon: 'wallet',
         title: `${r.name} no tiene mensualidad configurada`,
         body: 'Está activo pero no genera cobro mensual. Configura su tarifa en la ficha.',
-        href: `/super/restaurantes/${r.restaurantId}`,
+        href: `/super/restaurantes/${r.restaurantId}/cobro`,
         cta: 'Configurar',
       });
     }

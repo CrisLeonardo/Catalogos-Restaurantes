@@ -10,6 +10,7 @@
 import { useActionState, useEffect, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { fmtMoney } from '@/lib/money';
+import { downloadReceipt } from '@/lib/receipt';
 import {
   saveBillingConfig,
   liftSuspension,
@@ -49,9 +50,11 @@ function isOverdue(inv: Invoice) {
 }
 
 export default function BillingManager({
-  restaurantId, config, invoices, suggestedFee, planName, globalGraceDays,
+  restaurantId, restaurantName = 'Restaurante', config, invoices, suggestedFee, planName, globalGraceDays,
 }: {
   restaurantId: string;
+  /** Nombre del restaurante (para el recibo PDF). */
+  restaurantName?: string;
   config: BillingConfig | null;
   invoices: Invoice[];
   /** Precio mensual sugerido por el plan + sucursales (RPC org-aware). */
@@ -124,7 +127,7 @@ export default function BillingManager({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {invoices.map((inv) => (
-              <InvoiceRow key={inv.id} inv={inv} restaurantId={restaurantId} onResult={setToast} />
+              <InvoiceRow key={inv.id} inv={inv} restaurantId={restaurantId} restaurantName={restaurantName} onResult={setToast} />
             ))}
           </div>
         )}
@@ -345,11 +348,28 @@ function ManualInvoiceForm({
 
 /* ── Fila de factura ────────────────────────────────────────── */
 function InvoiceRow({
-  inv, restaurantId, onResult,
-}: { inv: Invoice; restaurantId: string; onResult: (t: { ok: boolean; msg: string }) => void }) {
+  inv, restaurantId, restaurantName, onResult,
+}: { inv: Invoice; restaurantId: string; restaurantName: string; onResult: (t: { ok: boolean; msg: string }) => void }) {
   const overdue = isOverdue(inv);
   const meta = STATUS_META[inv.status] ?? STATUS_META.PENDING;
   const [payOpen, setPayOpen] = useState(false);
+
+  async function receipt() {
+    try {
+      await downloadReceipt({
+        folio: inv.id.slice(0, 8).toUpperCase(),
+        restaurantName,
+        concept: inv.description ?? CONCEPT_LABEL[inv.concept],
+        period: inv.period,
+        amount: inv.paid_amount ?? inv.amount,
+        currency: inv.currency,
+        paidAt: inv.paid_at ?? new Date().toISOString(),
+        paymentMethod: inv.payment_method,
+      });
+    } catch {
+      onResult({ ok: false, msg: 'No se pudo generar el recibo.' });
+    }
+  }
 
   return (
     <div style={{
@@ -378,11 +398,18 @@ function InvoiceRow({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--u-text-4)' }}>
         {inv.due_date && <span>Vence {inv.due_date}</span>}
         {inv.status === 'PAID' && inv.paid_at && <span>Pagado {inv.paid_at.slice(0, 10)}{inv.payment_method ? ` · ${inv.payment_method}` : ''}</span>}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {inv.status === 'PENDING' ? (
             <button onClick={() => setPayOpen((v) => !v)} className="press" style={miniBtn('#4ade80')}>Registrar pago</button>
           ) : (
-            <ActionButton action={markInvoiceUnpaid} hidden={{ invoiceId: inv.id, restaurantId }} label="Marcar pendiente" onResult={onResult} />
+            <>
+              {inv.status === 'PAID' && (
+                <button onClick={receipt} className="press" style={miniBtn('var(--brand-accent)')} title="Descargar comprobante en PDF para enviárselo al dueño">
+                  Recibo PDF
+                </button>
+              )}
+              <ActionButton action={markInvoiceUnpaid} hidden={{ invoiceId: inv.id, restaurantId }} label="Marcar pendiente" onResult={onResult} />
+            </>
           )}
           <ActionButton action={deleteInvoice} hidden={{ invoiceId: inv.id, restaurantId }} label="Eliminar" onResult={onResult} danger />
         </div>

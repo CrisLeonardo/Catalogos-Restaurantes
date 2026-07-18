@@ -47,7 +47,7 @@ function revalidateBilling(restaurantId?: string) {
   revalidatePath('/super/cobros');
   revalidatePath('/super/metricas');
   revalidatePath('/admin/suscripcion');
-  if (restaurantId) revalidatePath(`/super/restaurantes/${restaurantId}`);
+  if (restaurantId) revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
 }
 
 /* ── Config de cobro (upsert) ───────────────────────────────── */

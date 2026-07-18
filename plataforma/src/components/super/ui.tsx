@@ -127,6 +127,29 @@ export function StatusChip({ status }: { status: string }) {
   );
 }
 
+/* ── Banner de éxito (tras un redirect ?saved=…) ──────────── */
+export function SavedBanner({ message }: { message: string }) {
+  return (
+    <div
+      style={{
+        padding: '12px 16px',
+        borderRadius: 12,
+        background: 'color-mix(in srgb, var(--c-ok) 10%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--c-ok) 25%, transparent)',
+        color: 'var(--c-ok)',
+        fontSize: 14,
+        fontWeight: 500,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 9,
+      }}
+    >
+      <Icon name="checkCircle" size={16} style={{ flexShrink: 0 }} />
+      {message}
+    </div>
+  );
+}
+
 /* ── Estado vacío ─────────────────────────────────────────── */
 export function EmptyState({
   icon = 'sparkle',

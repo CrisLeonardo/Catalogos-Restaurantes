@@ -136,8 +136,8 @@ export async function updateRestaurantBasic(
   }
 
   revalidatePath('/super/restaurantes');
-  revalidatePath(`/super/restaurantes/${id}`);
-  redirect(`/super/restaurantes/${id}?saved=info`);
+  revalidatePath(`/super/restaurantes/${id}`, 'layout');
+  redirect(`/super/restaurantes/${id}/informacion?saved=info`);
 }
 
 export async function updateRestaurantPlan(
@@ -182,8 +182,8 @@ export async function updateRestaurantPlan(
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: id });
 
   revalidatePath('/super/restaurantes');
-  revalidatePath(`/super/restaurantes/${id}`);
-  redirect(`/super/restaurantes/${id}?saved=plan`);
+  revalidatePath(`/super/restaurantes/${id}`, 'layout');
+  redirect(`/super/restaurantes/${id}/plan?saved=plan`);
 }
 
 export async function updateRestaurantThemeSuper(
@@ -213,8 +213,8 @@ export async function updateRestaurantThemeSuper(
   if (error) return { error: error.message };
 
   revalidatePath('/super/restaurantes');
-  revalidatePath(`/super/restaurantes/${restaurantId}`);
-  redirect(`/super/restaurantes/${restaurantId}?saved=tema`);
+  revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
+  redirect(`/super/restaurantes/${restaurantId}/apariencia?saved=tema`);
 }
 
 /**
@@ -280,7 +280,7 @@ export async function saveRestaurantTheme(input: {
   // segundo round-trip de auth solo para esta entrada informativa.
   await logChannelChanges(restaurantId, previousOrderTypes, config.orderTypes, null);
 
-  revalidatePath(`/super/restaurantes/${restaurantId}`);
+  revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
   revalidatePath('/super/restaurantes');
   return { ok: true };
 }
@@ -510,8 +510,8 @@ export async function createRestaurantUser(
     return { error: profErr.message };
   }
 
-  revalidatePath(`/super/restaurantes/${restaurantId}`);
-  redirect(`/super/restaurantes/${restaurantId}?saved=user`);
+  revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
+  redirect(`/super/restaurantes/${restaurantId}/accesos?saved=user`);
 }
 
 export async function resetRestaurantUserPassword(
@@ -541,8 +541,8 @@ export async function resetRestaurantUserPassword(
   const { error } = await db.auth.admin.updateUserById(userId, { password });
   if (error) return { error: error.message };
 
-  revalidatePath(`/super/restaurantes/${restaurantId}`);
-  redirect(`/super/restaurantes/${restaurantId}?saved=pass`);
+  revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
+  redirect(`/super/restaurantes/${restaurantId}/accesos?saved=pass`);
 }
 
 export async function deleteRestaurantUser(formData: FormData) {
@@ -566,7 +566,7 @@ export async function deleteRestaurantUser(formData: FormData) {
   // Borra el usuario de Auth; el profile cae por FK on delete cascade.
   await db.auth.admin.deleteUser(userId);
 
-  revalidatePath(`/super/restaurantes/${restaurantId}`);
+  revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
 }
 
 /**
@@ -602,7 +602,7 @@ export async function updateOrderTypes(
   // no esta llamada (ver channel-history.ts).
   await logChannelChanges(restaurantId, previousOrderTypes, orderTypes, null);
 
-  revalidatePath(`/super/restaurantes/${restaurantId}`);
+  revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
   return { ok: true };
 }
 

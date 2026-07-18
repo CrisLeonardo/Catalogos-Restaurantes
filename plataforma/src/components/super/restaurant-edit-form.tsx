@@ -22,14 +22,34 @@ const inputStyle: React.CSSProperties = {
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: 11.5,
   color: 'var(--u-text-3)',
-  fontWeight: 500,
+  fontWeight: 600,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
   marginBottom: 6,
   display: 'block',
 };
+
+function Field({
+  label,
+  hint,
+  span2,
+  children,
+}: {
+  label: string;
+  hint?: React.ReactNode;
+  span2?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={span2 ? { gridColumn: '1 / -1' } : undefined}>
+      <label style={labelStyle}>{label}</label>
+      {children}
+      {hint && <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>{hint}</p>}
+    </div>
+  );
+}
 
 export default function RestaurantEditForm({
   restaurant,
@@ -42,112 +62,71 @@ export default function RestaurantEditForm({
   );
 
   return (
-    <form
-      action={formAction}
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-    >
+    <form action={formAction}>
       <input type="hidden" name="id" value={restaurant.id} />
 
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="name" style={labelStyle}>Nombre *</label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          defaultValue={restaurant.name}
-          style={inputStyle}
-        />
+      <Glass variant="quiet" style={{ padding: 20 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 16,
+          }}
+        >
+          <Field label="Nombre *">
+            <input name="name" type="text" required defaultValue={restaurant.name} style={inputStyle} />
+          </Field>
+
+          <Field
+            label="Slug"
+            hint={
+              <>URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong> — cambiarlo rompe los QR ya impresos.</>
+            }
+          >
+            <input name="slug" type="text" required defaultValue={restaurant.slug} style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }} />
+          </Field>
+
+          <Field label="Tagline" span2>
+            <input name="tagline" type="text" defaultValue={restaurant.tagline ?? ''} placeholder="Una frase que describe tu lugar" style={inputStyle} />
+          </Field>
+
+          <Field label="Dirección" span2 hint="Se muestra en el selector de sucursal del grupo.">
+            <input name="address" type="text" defaultValue={restaurant.address ?? ''} placeholder="Ej. 5a Av. 10-23, Zona 1, Ciudad de Guatemala" style={inputStyle} />
+          </Field>
+
+          <Field label="Email">
+            <input name="contact_email" type="email" defaultValue={restaurant.contact_email ?? ''} style={inputStyle} />
+          </Field>
+
+          <Field label="WhatsApp" hint="Con código de país (ej. +502…). Se usa para avisos de pedidos y para contactar al dueño.">
+            <input name="whatsapp_number" type="tel" defaultValue={restaurant.whatsapp_number ?? ''} placeholder="+502 0000 0000" style={inputStyle} />
+          </Field>
+
+          <Field label="Estado" span2>
+            <StatusSelector defaultValue={restaurant.status} />
+          </Field>
+        </div>
+
+        {state?.error && <ErrorMsg msg={state.error} />}
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="press btn-accent"
+          style={{
+            marginTop: 18,
+            padding: '12px 28px',
+            borderRadius: 'var(--radius-full)',
+            fontWeight: 600,
+            fontSize: 14.5,
+            border: 'none',
+            cursor: isPending ? 'not-allowed' : 'pointer',
+            opacity: isPending ? 0.7 : 1,
+          }}
+        >
+          {isPending ? 'Guardando…' : 'Guardar información'}
+        </button>
       </Glass>
-
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="slug" style={labelStyle}>Slug</label>
-        <input
-          id="slug"
-          name="slug"
-          type="text"
-          required
-          defaultValue={restaurant.slug}
-          style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }}
-        />
-        <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-          URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong>
-        </p>
-      </Glass>
-
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="tagline" style={labelStyle}>Tagline</label>
-        <input
-          id="tagline"
-          name="tagline"
-          type="text"
-          defaultValue={restaurant.tagline ?? ''}
-          placeholder="Una frase que describe tu lugar"
-          style={inputStyle}
-        />
-      </Glass>
-
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="address" style={labelStyle}>Dirección</label>
-        <input
-          id="address"
-          name="address"
-          type="text"
-          defaultValue={restaurant.address ?? ''}
-          placeholder="Ej. 5a Av. 10-23, Zona 1, Ciudad de Guatemala"
-          style={inputStyle}
-        />
-        <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-          Se muestra en el selector de sucursal del grupo.
-        </p>
-      </Glass>
-
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="contact_email" style={labelStyle}>Email</label>
-        <input
-          id="contact_email"
-          name="contact_email"
-          type="email"
-          defaultValue={restaurant.contact_email ?? ''}
-          style={inputStyle}
-        />
-      </Glass>
-
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label htmlFor="whatsapp_number" style={labelStyle}>WhatsApp</label>
-        <input
-          id="whatsapp_number"
-          name="whatsapp_number"
-          type="tel"
-          defaultValue={restaurant.whatsapp_number ?? ''}
-          style={inputStyle}
-        />
-      </Glass>
-
-      <Glass variant="quiet" style={{ padding: 16 }}>
-        <label style={labelStyle}>Estado</label>
-        <StatusSelector defaultValue={restaurant.status} />
-      </Glass>
-
-      {state?.error && <ErrorMsg msg={state.error} />}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="press btn-accent"
-        style={{
-          width: '100%',
-          padding: '13px',
-          borderRadius: 'var(--radius-full)',
-          fontWeight: 600,
-          fontSize: 15,
-          border: 'none',
-          cursor: isPending ? 'not-allowed' : 'pointer',
-          opacity: isPending ? 0.7 : 1,
-        }}
-      >
-        {isPending ? 'Guardando…' : 'Guardar información'}
-      </button>
     </form>
   );
 }
@@ -161,7 +140,7 @@ function StatusSelector({ defaultValue }: { defaultValue: 'active' | 'suspended'
   ];
 
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
+    <div style={{ display: 'flex', gap: 8, maxWidth: 420 }}>
       <input type="hidden" name="status" value={selected} />
       {options.map((opt) => {
         const active = selected === opt.value;
@@ -197,6 +176,7 @@ function ErrorMsg({ msg }: { msg: string }) {
   return (
     <div
       style={{
+        marginTop: 16,
         padding: '10px 14px',
         borderRadius: 'var(--radius-md)',
         background: 'rgba(220,50,50,0.12)',

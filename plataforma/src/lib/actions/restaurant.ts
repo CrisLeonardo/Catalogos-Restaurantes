@@ -261,8 +261,8 @@ export async function updateRestaurantLocation(
   if (error) return { error: error.message };
 
   if (ctx.isSuperAdmin) {
-    revalidatePath(`/super/restaurantes/${ctx.restaurantId}`);
-    redirect(`/super/restaurantes/${ctx.restaurantId}?saved=location`);
+    revalidatePath(`/super/restaurantes/${ctx.restaurantId}`, 'layout');
+    redirect(`/super/restaurantes/${ctx.restaurantId}/informacion?saved=location`);
   }
   revalidatePath('/admin/perfil');
   revalidatePath('/');
