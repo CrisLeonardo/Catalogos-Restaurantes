@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Glass } from '@/components/glass';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/icons';
+import { PageHeader } from '@/components/super/ui';
+import { subdomainUrl } from '@/lib/tenant';
 import { getRestaurantFullById, getRestaurantUsers } from '@/lib/db/super-admin';
 import RestaurantEditForm from '@/components/super/restaurant-edit-form';
 import PlanEditor from '@/components/super/plan-editor';
@@ -65,52 +69,29 @@ export default async function EditRestaurantePage({
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
       {/* Header */}
-      <div>
-        <Link
-          href="/super/restaurantes"
-          style={{
-            fontSize: 13,
-            color: 'var(--u-text-3)',
-            textDecoration: 'none',
-            marginBottom: 10,
-            display: 'inline-block',
-          }}
-        >
-          ← Restaurantes
-        </Link>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            marginTop: 4,
-          }}
-        >
-          {theme && (
-            <div
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: theme.color_primary,
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <h1 className="t-display" style={{ fontSize: 24 }}>
-            {row.name}
-          </h1>
-          <span
-            style={{
-              fontSize: 12,
-              color: 'var(--u-text-4)',
-              fontFamily: 'monospace',
-            }}
-          >
-            {row.slug}
+      <PageHeader
+        backHref="/super/restaurantes"
+        backLabel="Restaurantes"
+        title={row.name}
+        subtitle={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            {theme && (
+              <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: theme.color_primary, flexShrink: 0 }} />
+            )}
+            <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{row.slug}</span>
           </span>
-        </div>
-      </div>
+        }
+        actions={
+          <>
+            <Button variant="secondary" size="sm" render={<a href={subdomainUrl(row.slug)} target="_blank" rel="noopener noreferrer" />}>
+              <Icon name="eye" size={14} /> Ver menú
+            </Button>
+            <Button variant="secondary" size="sm" render={<Link href={`/super/metricas/${row.id}`} />}>
+              <Icon name="chart" size={14} /> Métricas
+            </Button>
+          </>
+        }
+      />
 
       {/* Banner de éxito */}
       {(saved || isNew) && (

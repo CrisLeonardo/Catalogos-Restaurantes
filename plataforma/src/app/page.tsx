@@ -28,7 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title,
       description,
-      ...(base ? { metadataBase: new URL(base) } : {}),
+      keywords: [
+        'menú digital', 'menú QR', 'restaurantes', 'pedidos en línea',
+        'carta digital', 'Guatemala', 'sistema para restaurantes',
+        'pantalla de cocina', 'KDS', 'programa de lealtad',
+      ],
+      ...(base ? { metadataBase: new URL(base), alternates: { canonical: '/' } } : {}),
       openGraph: {
         title,
         description,

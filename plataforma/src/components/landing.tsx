@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
-import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
+import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
 import { PLANS, PUBLIC_PLANS, type PlanCode } from '@/lib/plans';
 
 /* ── Contacto (configurable por env; cae a valores por defecto) ──────────
@@ -79,6 +79,44 @@ const FAQS = [
   { q: '¿Sirve si tengo varias sucursales?', a: 'Sí. Cada sucursal tiene su menú y QR, y tú ves todo consolidado en un panel de grupo.' },
 ];
 
+/* Datos estructurados (JSON-LD): ficha de producto + FAQ para que Google
+   entienda qué es Leogin, muestre precios y despliegue las preguntas
+   frecuentes como rich results en la búsqueda. */
+function structuredData() {
+  const root = rootDomainForUrls();
+  const isLocal = root.includes('localhost') || root.startsWith('127.');
+  const url = `${isLocal ? 'http' : 'https'}://${root}`;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Leogin',
+      url,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      description:
+        'Plataforma de menús digitales QR para restaurantes con pedidos en línea, panel de administración, cocina (KDS) y programa de lealtad. Hecha en Guatemala.',
+      inLanguage: 'es',
+      offers: PUBLIC_PLANS.map((code) => ({
+        '@type': 'Offer',
+        name: `Plan ${PLANS[code].name}`,
+        price: PLANS[code].priceMonthly,
+        priceCurrency: 'GTQ',
+        category: 'subscription',
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: FAQS.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ];
+}
+
 export default function LeoginLanding() {
   const demoUrl = subdomainUrl(DEMO_SLUG);
   const ctaHref = CONTACT_WA
@@ -87,6 +125,10 @@ export default function LeoginLanding() {
 
   return (
     <div style={{ width: '100%' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData()) }}
+      />
       {/* ── Header ──────────────────────────────────────────── */}
       <header
         className="glass-solid"
@@ -100,7 +142,7 @@ export default function LeoginLanding() {
         <span style={{ flex: '0 0 auto' }}>
           <LeoginLogo size={26} />
         </span>
-        <nav style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+        <nav aria-label="Navegación principal" style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
           <a href="#funciones" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
             Funciones
           </a>
@@ -275,6 +317,31 @@ export default function LeoginLanding() {
               <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 12 }}>Para ti, el dueño</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {FOR_OWNER.map((f) => <FeatureRow key={f.title} {...f} />)}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Tu centro de control (mockup del panel) ───────── */}
+        <section style={{ marginTop: 64 }}>
+          <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', order: 0 }}>
+              <PanelMockup />
+            </div>
+            <div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 10 }}>Tu centro de control</div>
+              <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
+                Un panel que trabaja contigo
+              </h2>
+              <p className="t-mute" style={{ fontSize: 14.5, lineHeight: 1.6, marginTop: 12, maxWidth: 440 }}>
+                Cada pedido suena y aparece al instante. La cocina lo ve en su pantalla,
+                la comanda se imprime sola y al final del día tienes tu corte de caja
+                y tus números claros — incluso si se va el internet.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
+                {['Pedidos con sonido', 'Pantalla de cocina', 'Corte de caja', 'Aguanta sin internet'].map((t) => (
+                  <span key={t} className="glass-quiet" style={{ fontSize: 12, color: 'var(--u-text-2)', padding: '7px 13px', borderRadius: 99 }}>{t}</span>
+                ))}
               </div>
             </div>
           </div>
@@ -480,7 +547,7 @@ export default function LeoginLanding() {
               Menús interactivos para restaurantes
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+          <nav aria-label="Enlaces del pie" style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
             <a href="#funciones" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Funciones</a>
             <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
             <a href={demoUrl} className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Demo</a>
@@ -488,7 +555,7 @@ export default function LeoginLanding() {
             <Link href="/terminos" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Términos</Link>
             <Link href="/privacidad" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Privacidad</Link>
             <a href={ctaHref} target="_blank" rel="noopener noreferrer" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Contacto</a>
-          </div>
+          </nav>
         </div>
         <div style={{ maxWidth: 1040, margin: '16px auto 0' }}>
           <span className="t-mute" style={{ fontSize: 12 }}>
@@ -512,6 +579,63 @@ function FeatureRow({ icon, title, body }: { icon: string; title: string; body: 
         <p className="t-mute" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{body}</p>
       </div>
     </Glass>
+  );
+}
+
+/* ── Mockup del panel de administración (CSS puro, sin imágenes) ── */
+function PanelMockup() {
+  const kpis = [
+    { label: 'Ventas hoy', value: 'Q1,240' },
+    { label: 'Pedidos', value: '32' },
+    { label: 'Ticket prom.', value: 'Q39' },
+  ];
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+      <div aria-hidden style={{ position: 'absolute', inset: -30, background: 'radial-gradient(50% 50% at 50% 45%, color-mix(in srgb, var(--brand-accent) 18%, transparent), transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', borderRadius: 18, padding: 9, background: 'linear-gradient(160deg,#2a2a2e,#161618)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 70px rgba(0,0,0,0.45)' }}>
+        <div style={{ borderRadius: 11, overflow: 'hidden', background: '#0c0c0e' }}>
+          {/* Barra de ventana */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            {['#f87171', '#fbbf24', '#4ade80'].map((c) => (
+              <span key={c} style={{ width: 8, height: 8, borderRadius: 99, background: c, opacity: 0.85 }} />
+            ))}
+            <span style={{ fontSize: 10, color: 'rgba(245,243,239,0.5)', marginLeft: 8, fontWeight: 600 }}>Pedidos en vivo</span>
+            <span style={{ marginLeft: 'auto', fontSize: 8.5, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.14)', padding: '3px 8px', borderRadius: 99 }}>● EN VIVO</span>
+          </div>
+          {/* KPIs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, padding: '11px 12px 0' }}>
+            {kpis.map((k) => (
+              <div key={k.label} style={{ background: 'rgba(255,255,255,0.045)', borderRadius: 9, padding: '8px 9px' }}>
+                <div style={{ fontSize: 8, color: 'rgba(245,243,239,0.45)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>{k.label}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: '#F5F3EF', marginTop: 3, fontFamily: 'var(--ui-font-mono)' }}>{k.value}</div>
+              </div>
+            ))}
+          </div>
+          {/* Pedido entrante */}
+          <div style={{ margin: '11px 12px', background: 'rgba(255,255,255,0.045)', border: '1px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)', borderRadius: 11, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 8.5, fontWeight: 800, color: '#fff', background: 'var(--brand-accent)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>NUEVO</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#F5F3EF' }}>Mesa 4 · #128</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'rgba(245,243,239,0.5)' }}>hace 12 s</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: 'rgba(245,243,239,0.72)', marginTop: 7, lineHeight: 1.6 }}>
+              2× Tacos al pastor · 1× Burrito de res<br />1× Agua de horchata
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent)', fontFamily: 'var(--ui-font-mono)' }}>Q142</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: '#0b0b0c', background: '#F5F3EF', padding: '5px 11px', borderRadius: 99 }}>Aceptar</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(245,243,239,0.75)', border: '1px solid rgba(255,255,255,0.18)', padding: '5px 11px', borderRadius: 99 }}>Imprimir</span>
+            </div>
+          </div>
+          {/* Pedido en preparación */}
+          <div style={{ margin: '0 12px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 11, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 8.5, fontWeight: 800, color: '#fbbf24', background: 'rgba(251,191,36,0.13)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>EN COCINA</span>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'rgba(245,243,239,0.8)' }}>Para llevar · #127</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(245,243,239,0.5)', fontFamily: 'var(--ui-font-mono)' }}>08:41</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

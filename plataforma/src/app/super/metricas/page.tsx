@@ -1,298 +1,128 @@
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
-import { getGlobalMetrics, getAllRestaurants, getAllRestaurantsTraffic } from '@/lib/db/super-admin';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { PageHeader, StatCard, PlanChip, StatusChip, ActivityChart, PLAN_DOT } from '@/components/super/ui';
+import { Badge } from '@/components/ui/badge';
+import { getGlobalMetrics, getAllRestaurants, getAllRestaurantsTraffic, getPlatformDailySeries } from '@/lib/db/super-admin';
+import { planLabel } from '@/lib/db/billing';
+import { PLAN_ORDER } from '@/lib/plans';
 
 export const metadata = { title: 'Métricas — Super Admin' };
+export const dynamic = 'force-dynamic';
 
 export default async function MetricasPage() {
-  const [metrics, restaurants, traffic] = await Promise.all([
+  const [metrics, restaurants, traffic, series] = await Promise.all([
     getGlobalMetrics(),
     getAllRestaurants(),
     getAllRestaurantsTraffic(),
+    getPlatformDailySeries(),
   ]);
 
   const totalVisits30 = [...traffic.values()].reduce((s, t) => s + t.visits30, 0);
+  const totalUnique30 = [...traffic.values()].reduce((s, t) => s + t.unique30, 0);
   const totalOrders30 = [...traffic.values()].reduce((s, t) => s + t.orders30, 0);
+  const conversion = totalVisits30 > 0 ? (totalOrders30 / totalVisits30) * 100 : 0;
+
+  // Tabla ordenada por actividad (los que más visitas generan primero).
+  const sorted = [...restaurants].sort(
+    (a, b) => (traffic.get(b.id)?.visits30 ?? 0) - (traffic.get(a.id)?.visits30 ?? 0),
+  );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <div>
-        <h1 className="t-display" style={{ fontSize: 24, marginBottom: 6 }}>
-          Métricas
-        </h1>
-        <p className="t-mute" style={{ fontSize: 14 }}>
-          Vista global de la plataforma · haz clic en un restaurante para ver sus métricas a fondo
-        </p>
+    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <PageHeader
+        title="Métricas de la plataforma"
+        subtitle="Actividad global de los últimos 30 días. Entra a un restaurante para ver su detalle, crecimiento y evaluación de cobro."
+      />
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+        <StatCard label="Restaurantes" value={metrics.total} icon="utensils" sub={`${metrics.active} activos${metrics.suspended > 0 ? ` · ${metrics.suspended} susp.` : ''}`} />
+        <StatCard label="Visitas 30 días" value={totalVisits30.toLocaleString('es-GT')} icon="eye" />
+        <StatCard label="Visitantes únicos" value={totalUnique30.toLocaleString('es-GT')} icon="users" />
+        <StatCard label="Pedidos 30 días" value={totalOrders30.toLocaleString('es-GT')} icon="bag" tone="ok" />
+        <StatCard label="Conversión" value={`${conversion.toFixed(1)}%`} icon="chart" sub="pedidos / visitas" />
       </div>
 
-      {/* Métricas globales */}
-      <section>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 16,
-            marginBottom: 14,
-            color: 'var(--u-text-2)',
-          }}
-        >
-          Restaurantes
-        </h2>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: 10,
-          }}
-        >
-          <MetricCard label="Total" value={metrics.total} />
-          <MetricCard
-            label="Activos"
-            value={metrics.active}
-            color="#4ade80"
-          />
-          <MetricCard
-            label="Suspendidos"
-            value={metrics.suspended}
-            color="#f87171"
-          />
-          <MetricCard
-            label="Premium"
-            value={metrics.premium}
-            color="#f08060"
-          />
-          <MetricCard label="Catálogo" value={metrics.catalogo} />
-        </div>
-      </section>
+      {/* Gráfica global */}
+      <Card>
+        <CardHeader style={{ paddingBottom: 8 }}>
+          <CardTitle>Actividad diaria · 30 días</CardTitle>
+          <CardDescription>Todos los restaurantes juntos: visitas a menús y pedidos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActivityChart series={series} />
+        </CardContent>
+      </Card>
 
-      {/* Tráfico global (30 días) */}
-      <section>
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 16,
-            marginBottom: 14,
-            color: 'var(--u-text-2)',
-          }}
-        >
-          Tráfico · últimos 30 días
-        </h2>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: 10,
-          }}
-        >
-          <MetricCard label="Visitas" value={totalVisits30} />
-          <MetricCard label="Pedidos" value={totalOrders30} color="#4ade80" />
-        </div>
-      </section>
+      {/* Distribución por plan */}
+      <Card>
+        <CardHeader style={{ paddingBottom: 8 }}>
+          <CardTitle>Restaurantes por plan</CardTitle>
+        </CardHeader>
+        <CardContent style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {PLAN_ORDER.filter((p) => (metrics.byPlan[p] ?? 0) > 0).map((p) => (
+            <Badge key={p} variant="neutral" style={{ fontSize: 12.5, padding: '7px 12px', gap: 7 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: PLAN_DOT[p] }} />
+              {planLabel(p)} <strong style={{ fontFamily: 'var(--ui-font-mono)' }}>{metrics.byPlan[p]}</strong>
+            </Badge>
+          ))}
+          {Object.keys(metrics.byPlan).length === 0 && (
+            <span className="t-mute" style={{ fontSize: 13 }}>Sin restaurantes todavía.</span>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Tabla de restaurantes recientes */}
+      {/* Tabla completa */}
       {restaurants.length > 0 && (
         <section>
-          <h2
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 16,
-              marginBottom: 14,
-              color: 'var(--u-text-2)',
-            }}
-          >
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
             Todos los restaurantes
           </h2>
-          <Glass variant="quiet" style={{ overflow: 'hidden' }}>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: 14,
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    borderBottom: '1px solid var(--u-hair)',
-                  }}
-                >
-                  {['Nombre', 'Slug', 'Plan', 'Estado', 'Visitas 30d', 'Únicos', 'Pedidos 30d', 'Alta'].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        padding: '10px 16px',
-                        textAlign: 'left',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        color: 'var(--u-text-3)',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {restaurants.map((r, i) => (
-                  <tr
-                    key={r.id}
-                    style={{
-                      borderBottom:
-                        i < restaurants.length - 1
-                          ? '1px solid var(--u-hair)'
-                          : 'none',
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      <Link
-                        href={`/super/metricas/${r.id}`}
-                        style={{ color: 'var(--u-text)', textDecoration: 'none' }}
-                      >
+          <Table>
+            <TableHeader>
+              <TableRow style={{ borderTop: 'none' }}>
+                <TableHead>Restaurante</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Visitas 30d</TableHead>
+                <TableHead className="text-right">Únicos</TableHead>
+                <TableHead className="text-right">Pedidos 30d</TableHead>
+                <TableHead>Alta</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.map((r) => {
+                const t = traffic.get(r.id);
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      <Link href={`/super/metricas/${r.id}`} style={{ color: 'var(--u-text)', textDecoration: 'none', fontWeight: 600 }}>
                         {r.name}
                       </Link>
-                    </td>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--u-text-4)',
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                      }}
-                    >
-                      {r.slug}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          padding: '2px 7px',
-                          borderRadius: 'var(--radius-full)',
-                          background:
-                            r.plan_actual === 'PREMIUM'
-                              ? 'rgba(217,119,87,0.15)'
-                              : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-                          color:
-                            r.plan_actual === 'PREMIUM'
-                              ? '#f08060'
-                              : 'var(--u-text-3)',
-                          letterSpacing: '0.05em',
-                        }}
-                      >
-                        {r.plan_actual === 'PREMIUM' ? 'PREMIUM' : 'CATÁLOGO'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          padding: '2px 7px',
-                          borderRadius: 'var(--radius-full)',
-                          background:
-                            r.status === 'active'
-                              ? 'rgba(34,197,94,0.12)'
-                              : 'rgba(239,68,68,0.12)',
-                          color:
-                            r.status === 'active' ? '#4ade80' : '#f87171',
-                          letterSpacing: '0.05em',
-                        }}
-                      >
-                        {r.status === 'active' ? 'ACTIVO' : 'SUSP.'}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--u-text-2)',
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                      }}
-                    >
-                      {traffic.get(r.id)?.visits30 ?? 0}
-                    </td>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--u-text-3)',
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                      }}
-                    >
-                      {traffic.get(r.id)?.unique30 ?? 0}
-                    </td>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--u-text-2)',
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                      }}
-                    >
-                      {traffic.get(r.id)?.orders30 ?? 0}
-                    </td>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--u-text-4)',
-                        fontSize: 12,
-                      }}
-                    >
-                      {new Date(r.created_at).toLocaleDateString('es', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: '2-digit',
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Glass>
+                      <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)', marginTop: 2 }}>{r.slug}</div>
+                    </TableCell>
+                    <TableCell><PlanChip plan={r.plan_actual} /></TableCell>
+                    <TableCell><StatusChip status={r.status} /></TableCell>
+                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.visits30 ?? 0}</TableCell>
+                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-3)' }}>{t?.unique30 ?? 0}</TableCell>
+                    <TableCell className="text-right" style={{ fontFamily: 'var(--ui-font-mono)' }}>{t?.orders30 ?? 0}</TableCell>
+                    <TableCell style={{ color: 'var(--u-text-4)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {new Date(r.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })}
+                    </TableCell>
+                    <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
+                      <Link href={`/super/metricas/${r.id}`} style={{ fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                        Detalle →
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </section>
       )}
     </div>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color?: string;
-}) {
-  return (
-    <Glass
-      variant="quiet"
-      style={{ padding: '20px 16px', textAlign: 'center' }}
-    >
-      <div
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 700,
-          fontSize: 36,
-          color: color ?? 'var(--u-text)',
-          lineHeight: 1,
-          marginBottom: 6,
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500 }}>
-        {label}
-      </div>
-    </Glass>
   );
 }

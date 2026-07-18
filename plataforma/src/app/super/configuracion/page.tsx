@@ -5,6 +5,7 @@ import { getApiKeys } from '@/lib/actions/api-keys';
 import PlatformSettingsForm from '@/components/super/platform-settings-form';
 import PricingSettingsForm from '@/components/super/pricing-settings-form';
 import ApiKeysManager from '@/components/super/api-keys-manager';
+import { PageHeader } from '@/components/super/ui';
 
 export const metadata: Metadata = { title: 'Configuración — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -16,15 +17,11 @@ export default async function ConfiguracionPage() {
     getApiKeys(),
   ]);
   return (
-    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-      <div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>
-          Configuración de la plataforma
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginTop: 6 }}>
-          Precios de los planes, reglas de cobro y datos de contacto de soporte.
-        </p>
-      </div>
+    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <PageHeader
+        title="Configuración de la plataforma"
+        subtitle="Precios de los planes, reglas de cobro y datos de contacto de soporte."
+      />
       <PricingSettingsForm pricing={pricing} />
       <PlatformSettingsForm settings={settings} />
       <ApiKeysManager initialKeys={apiKeys} />

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Glass } from '@/components/glass';
+import { PageHeader } from '@/components/super/ui';
 import { getRestaurantFullById, getRestaurantDeepMetrics } from '@/lib/db/super-admin';
 import { getBillingConfig } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
@@ -30,18 +31,17 @@ export default async function RestaurantMetricsPage({ params }: { params: Promis
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
       {/* Header */}
-      <div>
-        <Link href="/super/metricas" style={{ fontSize: 13, color: 'var(--u-text-3)', textDecoration: 'none', marginBottom: 10, display: 'inline-block' }}>
-          ← Métricas
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <h1 className="t-display" style={{ fontSize: 24 }}>{row.name}</h1>
-          <span style={{ fontSize: 12, color: 'var(--u-text-4)', fontFamily: 'monospace' }}>{row.slug}</span>
-          <Link href={`/super/restaurantes/${row.id}`} style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--brand-accent)', textDecoration: 'none' }}>
+      <PageHeader
+        title={row.name}
+        subtitle={<span style={{ fontFamily: 'var(--ui-font-mono)' }}>{row.slug}</span>}
+        backHref="/super/metricas"
+        backLabel="Métricas"
+        actions={
+          <Link href={`/super/restaurantes/${row.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-accent)', textDecoration: 'none' }}>
             Gestionar cobro →
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPIs con crecimiento */}
       <section>

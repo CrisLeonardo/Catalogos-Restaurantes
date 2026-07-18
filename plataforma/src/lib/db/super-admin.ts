@@ -17,8 +17,8 @@ export type GlobalMetrics = {
   total: number;
   active: number;
   suspended: number;
-  premium: number;
-  catalogo: number;
+  /** Conteo por plan actual (BASICO/ESTANDAR/PREMIUM/PRO). */
+  byPlan: Record<string, number>;
 };
 
 // PostgREST trata el embed restaurant_themes como UNO-A-UNO (restaurant_id es
@@ -143,14 +143,61 @@ export const getGlobalMetrics = cache(async (): Promise<GlobalMetrics> => {
   const db = createServiceClient();
   const { data } = await db.from('restaurants').select('status, plan_actual');
   const rows = data ?? [];
+  const byPlan: Record<string, number> = {};
+  for (const r of rows) {
+    const p = (r.plan_actual as string) || 'BASICO';
+    byPlan[p] = (byPlan[p] ?? 0) + 1;
+  }
   return {
     total: rows.length,
     active: rows.filter((r) => r.status === 'active').length,
     suspended: rows.filter((r) => r.status === 'suspended').length,
-    premium: rows.filter((r) => r.plan_actual === 'PREMIUM').length,
-    catalogo: rows.filter((r) => r.plan_actual === 'CATALOGO').length,
+    byPlan,
   };
 });
+
+/* ── Serie diaria global de la plataforma (30 días) ─────────── */
+
+export type PlatformSeriesPoint = { date: string; visits: number; orders: number };
+
+/**
+ * Actividad diaria de TODA la plataforma en los últimos 30 días (visitas y
+ * pedidos por día, todos los tenants juntos). Para la gráfica del dashboard
+ * del Super Admin. 2 queries.
+ */
+export const getPlatformDailySeries = cache(
+  async (): Promise<PlatformSeriesPoint[]> => {
+    const db = createServiceClient();
+    const now = new Date();
+    const since = new Date(now);
+    since.setDate(since.getDate() - 30);
+    const sinceIso = since.toISOString();
+
+    const dayKeys: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      dayKeys.push(d.toISOString().slice(0, 10));
+    }
+    const map = new Map<string, PlatformSeriesPoint>(
+      dayKeys.map((k) => [k, { date: k, visits: 0, orders: 0 }]),
+    );
+
+    const [{ data: visits }, { data: orders }] = await Promise.all([
+      db.from('page_visits').select('created_at').gte('created_at', sinceIso).limit(100000),
+      db.from('orders').select('created_at').neq('status', 'CANCEL').gte('created_at', sinceIso).limit(100000),
+    ]);
+
+    for (const v of visits ?? []) {
+      const pt = map.get((v.created_at as string).slice(0, 10));
+      if (pt) pt.visits += 1;
+    }
+    for (const o of orders ?? []) {
+      const pt = map.get((o.created_at as string).slice(0, 10));
+      if (pt) pt.orders += 1;
+    }
+    return dayKeys.map((k) => map.get(k)!);
+  },
+);
 
 /* ── Visitas por restaurante (Super Admin) ─────────────────── */
 

@@ -1095,6 +1095,9 @@ html { overflow-x: clip; }
 /* Sección que rompe el max-width del layout (centrado de 800px) */
 .bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
 .bleed-inner { max-width: 1240px; margin: 0 auto; }
+/* Dentro del shell con sidebar (super admin renovado) el contenido ya es
+   ancho: el full-bleed de 100vw se saldría por debajo de la sidebar. */
+.admin-shell .bleed { width: 100%; margin-left: 0; padding: 0; }
 
 /* Grid del editor: controles + columna de vista previa.
    En pantallas chicas la columna de preview se apila DEBAJO de los controles
@@ -1176,4 +1179,10 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* Anclas (#funciones, #planes…) con desplazamiento suave — solo si el
+   usuario no pidió reducir movimiento. */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }

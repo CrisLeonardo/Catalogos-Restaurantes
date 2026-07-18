@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import SuperNav from '@/components/super/nav';
+import SuperShell from '@/components/super/shell';
 
 export default async function SuperLayout({
   children,
@@ -28,20 +28,5 @@ export default async function SuperLayout({
 
   if (profile?.role !== 'SUPER_ADMIN') redirect('/admin/menu');
 
-  return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
-      <SuperNav />
-      <div
-        style={{
-          flex: 1,
-          padding: '28px 16px',
-          maxWidth: 800,
-          margin: '0 auto',
-          width: '100%',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
+  return <SuperShell>{children}</SuperShell>;
 }
