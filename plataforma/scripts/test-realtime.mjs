@@ -14,7 +14,7 @@ console.log('AUTH:', error ? String(error) : auth.user?.email);
 await supabase.realtime.setAuth(auth?.session?.access_token ?? null);
 
 const { data: rest } = await supabase
-  .from('restaurants').select('id').eq('slug', 'azucar-negra').single();
+  .from('restaurants').select('id').eq('slug', 'cafe-demo').single();
 console.log('RESTAURANT:', rest?.id);
 
 supabase

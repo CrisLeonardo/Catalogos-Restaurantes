@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getAdminContext } from '@/lib/db/admin';
 import { isModuleActive } from '@/lib/modules';
+import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 import TutorialHub from '@/components/admin/tutorial-hub';
 
 export const metadata: Metadata = { title: 'Ayuda — Panel Admin' };
@@ -31,5 +32,7 @@ export default async function AyudaPage() {
     recetas:      isModuleActive(mod, modSettings, 'recetas'),
   };
 
-  return <TutorialHub plan={plan} modules={modules} />;
+  const contact = await getPlatformContactSettings();
+
+  return <TutorialHub plan={plan} modules={modules} contact={contact} />;
 }

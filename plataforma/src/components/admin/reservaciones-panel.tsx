@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   createReservation,
   updateReservationStatus,
@@ -140,15 +141,15 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
           { label: 'Confirmadas', value: String(summary.confirmed) },
           { label: 'Total próximas', value: String(reservations.length) },
         ].map(({ label, value, accent }) => (
-          <Glass key={label} variant="quiet" style={{ padding: '14px 16px' }}>
+          <Card key={label} className="p-3.5">
             <div style={{ fontSize: 24, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2 }}>{label}</div>
-          </Glass>
+          </Card>
         ))}
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -164,7 +165,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
       </div>
 
       {tab === 'nueva' ? (
-        <Glass variant="quiet" style={{ padding: 20, maxWidth: 520 }}>
+        <Card className="p-5" style={{ maxWidth: 520 }}>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -192,20 +193,18 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                 <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
               </div>
             </div>
-            <button type="submit" disabled={isPending} className="press"
-              style={{ padding: '10px 20px', background: 'var(--brand-accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: 14, cursor: isPending ? 'wait' : 'pointer', opacity: isPending ? 0.7 : 1, alignSelf: 'flex-start' }}>
+            <Button type="submit" disabled={isPending} className="self-start">
               {isPending ? 'Guardando…' : 'Guardar reservación'}
-            </button>
+            </Button>
           </form>
-        </Glass>
+        </Card>
       ) : grouped.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-3)' }}>
           <Icon name="calendar" size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
           <div style={{ fontSize: 14 }}>No hay reservaciones próximas</div>
-          <button type="button" onClick={() => setTab('nueva')} className="press"
-            style={{ marginTop: 12, padding: '8px 18px', background: 'var(--brand-accent)', color: '#fff', border: 'none', borderRadius: 99, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <Button type="button" onClick={() => setTab('nueva')} className="mt-3 rounded-adm-full" size="sm">
             Crear primera reservación
-          </button>
+          </Button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -219,7 +218,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                   const nextStatus = NEXT_STATUS[r.status];
                   const busy = busyId === r.id && isPending;
                   return (
-                    <Glass key={r.id} variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <Card key={r.id} className="flex flex-wrap items-center gap-3 p-3.5">
                       <div style={{ width: 8, height: 8, borderRadius: 99, background: STATUS_COLOR[r.status], flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 160 }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{r.customer_name}</div>
@@ -234,25 +233,23 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                           {STATUS_LABEL[r.status]}
                         </span>
                         {nextStatus && (
-                          <button type="button" onClick={() => handleStatus(r.id, nextStatus)} disabled={busy} className="press"
-                            style={{ padding: '5px 12px', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: 'none', borderRadius: 99, color: 'var(--u-text)', fontSize: 12, fontWeight: 600, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+                          <Button type="button" onClick={() => handleStatus(r.id, nextStatus)} disabled={busy} variant="secondary" size="sm" className="rounded-adm-full">
                             {STATUS_LABEL[nextStatus]} →
-                          </button>
+                          </Button>
                         )}
                         {r.status !== 'CANCELLED' && (
-                          <button type="button" onClick={() => handleStatus(r.id, 'CANCELLED')} disabled={busy} className="press"
-                            style={{ padding: '5px 10px', background: 'none', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 99, color: '#f87171', fontSize: 11.5, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.5 : 1 }}>
+                          <Button type="button" onClick={() => handleStatus(r.id, 'CANCELLED')} disabled={busy} variant="outline" size="sm"
+                            className="rounded-adm-full border-[rgba(248,113,113,0.3)] text-[#f87171]">
                             Cancelar
-                          </button>
+                          </Button>
                         )}
                         {(r.status === 'CANCELLED' || r.status === 'COMPLETED') && (
-                          <button type="button" onClick={() => handleDelete(r.id)} disabled={busy} className="press"
-                            style={{ padding: '5px 10px', background: 'none', border: 'none', color: 'var(--u-text-4)', fontSize: 11.5, cursor: busy ? 'wait' : 'pointer' }}>
+                          <Button type="button" onClick={() => handleDelete(r.id)} disabled={busy} variant="ghost" size="icon" className="size-7">
                             <Icon name="trash" size={13} />
-                          </button>
+                          </Button>
                         )}
                       </div>
-                    </Glass>
+                    </Card>
                   );
                 })}
               </div>

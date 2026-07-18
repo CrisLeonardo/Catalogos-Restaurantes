@@ -4,6 +4,7 @@
 
 import crypto from 'node:crypto';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getActiveHubCert, HUB_TLS_PORT } from '@/lib/hub-tls';
 import { buildKitchenEscPos, buildReceiptEscPos, type EscPosCurrency } from '@/lib/escpos';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { OrderWithItems } from '@/lib/db/orders';
@@ -42,6 +43,46 @@ export async function authenticateAgent(req: Request): Promise<AgentIdentity | n
 
   if (!data) return null;
   return { agentId: data.id as string, restaurantId: data.restaurant_id as string };
+}
+
+export interface AgentHubInfo {
+  hubUrl: string | null;
+  hubToken: string | null;
+}
+
+/**
+ * URL del hub local del restaurante (Fase 2 offline) + el token que ese
+ * hub exige en POST /orders (migración 063), si tiene un agente vinculado y
+ * ya reportó ambos en el heartbeat. Checkout y el panel de mesero lo usan
+ * como fallback cuando la nube no responde (ver lib/hub-fallback.ts).
+ *
+ * Con el HTTPS del hub activo (migración 064) se prefiere
+ * `https://<hostname>:47443` — la única forma en que una página HTTPS de
+ * producción puede hablarle al hub (mixed content). El hostname resuelve a
+ * la IP LAN vía DNS público (patrón Plex, ARQUITECTURA_OFFLINE.md §8.1).
+ * Sin certificado vigente se cae al `http://IP:47100` de siempre (útil en
+ * dev local; en prod ese camino lo bloquea el navegador y el pedido termina
+ * en la cola del dispositivo, como hasta ahora).
+ */
+export async function getAgentHubInfo(restaurantId: string): Promise<AgentHubInfo> {
+  const db = createServiceClient();
+  const { data } = await db
+    .from('print_agents')
+    .select('hub_url, hub_order_token, hub_hostname')
+    .eq('restaurant_id', restaurantId)
+    .single();
+
+  let hubUrl = (data?.hub_url as string | null) ?? null;
+  const hostname = (data?.hub_hostname as string | null) ?? null;
+  if (hostname) {
+    const cert = await getActiveHubCert(db).catch(() => null);
+    if (cert) hubUrl = `https://${hostname}:${HUB_TLS_PORT}`;
+  }
+
+  return {
+    hubUrl,
+    hubToken: (data?.hub_order_token as string | null) ?? null,
+  };
 }
 
 export type EnqueueResult = { id: string } | { error: string };

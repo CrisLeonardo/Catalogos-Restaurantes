@@ -23,11 +23,15 @@ export async function proxy(request: NextRequest) {
   // Área de PERSONAL (admin, panel de grupo, super admin): estas rutas usan
   // los 2 temas fijos del panel (claro/oscuro) en vez del tema del restaurante,
   // y solo les interesa la sesión del personal. El layout raíz lee este header.
+  // EXCEPCIÓN: /preview/* renderiza el MENÚ del restaurante (iframe del editor)
+  // aunque viva en el subdominio *-admin — si se marcara como área admin, las
+  // vars de html[data-admin-area] pisarían el tema del tenant en la vista previa.
   const isAdminArea =
-    adminSub || groupSub ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/central") ||
-    pathname.startsWith("/super");
+    (adminSub || groupSub ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/central") ||
+      pathname.startsWith("/super")) &&
+    !pathname.startsWith("/preview");
 
   const requestHeaders = new Headers(request.headers);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
@@ -36,8 +40,8 @@ export async function proxy(request: NextRequest) {
   if (isAdminArea) requestHeaders.set("x-admin-area", "1");
 
   // 2) Rewrite para subdominio admin.*
-  //    admin.azucar-negra.leogin.online/       → /admin/
-  //    admin.azucar-negra.leogin.online/menu   → /admin/menu
+  //    admin.mi-restaurante.leogin.online/       → /admin/
+  //    admin.mi-restaurante.leogin.online/menu   → /admin/menu
   //    Rutas /api/, /_next/ y archivos estáticos no se reescriben.
   let rewriteUrl: URL | null = null;
   if (adminSub) {
@@ -45,8 +49,8 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/admin") ||  // ya tiene el prefijo
+      pathname.startsWith("/preview") || // iframe de vista previa del editor (misma origin)
       pathname === "/favicon.ico" ||
-      pathname === "/sw.js" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {
       rewriteUrl = request.nextUrl.clone();
@@ -59,7 +63,6 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/central") ||
       pathname === "/favicon.ico" ||
-      pathname === "/sw.js" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {
       rewriteUrl = request.nextUrl.clone();
@@ -205,8 +208,12 @@ function applySecurityHeaders(headers: Headers): void {
 }
 
 export const config = {
-  // Corre en todo menos estáticos e imágenes.
+  // Corre en todo menos estáticos e imágenes. sw.js es un archivo estático de
+  // public/ (no depende de tenant-slug ni de sesión) pero el navegador lo
+  // vuelve a pedir seguido (revisión de actualización del Service Worker);
+  // sin esta exclusión, cada una de esas peticiones pagaba 1-2 round-trips
+  // de refresco de sesión a Supabase de balde.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

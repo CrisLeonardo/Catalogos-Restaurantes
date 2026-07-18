@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- Pantalla de arranque de Leogin Desktop.
+     Tres estados, decididos por get_setup_info + la query:
+     · PRIMERA VEZ (sin panel_url): bienvenida con UN solo camino — iniciar
+       sesión con la cuenta de Leogin. La web resuelve sola el restaurante y
+       Rust adopta el panel al que redirija (detect_resolved_panel). La
+       cuenta ES la identidad: sin direcciones que teclear, como cualquier
+       app de verdad (Netflix/Steam/Claude).
+     · ?setup=1 (bandeja → "Cambiar de cuenta o restaurante"): mismo login,
+       más "Volver a mi panel" para salir de aquí si se llegó por error —
+       antes esta pantalla era un callejón sin salida.
+     · ARRANQUES SIGUIENTES: "Abriendo tu restaurante…" mientras Rust
+       comprueba la nube; sin internet salta a offline.html. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leogin</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: #0b0e15;
+    background-image:
+      radial-gradient(520px 320px at 18% 0%, rgba(232, 83, 74, 0.13), transparent 65%),
+      radial-gradient(560px 360px at 85% 100%, rgba(245, 160, 48, 0.09), transparent 65%);
+    color: #e7eaf0;
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh; display: grid; place-items: center; padding: 24px;
+  }
+  main {
+    max-width: 440px; width: 100%;
+    background: rgba(21, 26, 38, 0.88);
+    border: 1px solid #262d40; border-radius: 20px;
+    padding: 36px 34px 28px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    opacity: 0; transform: translateY(6px);
+    animation: enter 0.35s ease-out 0.05s forwards;
+  }
+  @keyframes enter { to { opacity: 1; transform: none; } }
+  .logo { width: 56px; height: 56px; border-radius: 14px; background: #1c1c1e;
+          display: grid; place-items: center; margin-bottom: 18px;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
+  .logo svg { width: 36px; height: 36px; }
+  h1 { font-size: 22px; letter-spacing: -0.4px; font-weight: 800; }
+  .sub { font-size: 14px; color: #8b93a7; margin-top: 7px; }
+  .host { color: #c8cfdd; font-weight: 600; }
+  button, .btn {
+    width: 100%; margin-top: 22px; padding: 13px 16px; border: 0; border-radius: 12px;
+    cursor: pointer; font: inherit; font-weight: 800; font-size: 15px; text-align: center;
+    display: block; text-decoration: none;
+  }
+  .pri { background: linear-gradient(135deg, #e8534a, #f5a030); color: #fff;
+         transition: filter 0.15s ease, transform 0.1s ease; }
+  .pri:hover { filter: brightness(1.08); }
+  .pri:active { transform: scale(0.985); }
+  .sec { background: transparent; border: 1px solid #2c3550; color: #c8cfdd;
+         font-weight: 600; margin-top: 10px; }
+  .sec:hover { background: #1a2133; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .chip { display: none; align-items: center; gap: 8px; margin-top: 18px;
+          padding: 9px 12px; border-radius: 10px; font-size: 12.5px;
+          background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.22);
+          color: #a7e8bd; }
+  .chip .st { width: 8px; height: 8px; border-radius: 99px; background: #4ade80;
+              box-shadow: 0 0 8px #4ade80; flex: none; }
+  .note { margin-top: 20px; padding-top: 16px; border-top: 1px solid #262d40;
+          font-size: 12.5px; color: #8b93a7; display: none; }
+  .boot { display: none; margin-top: 26px; align-items: center; gap: 12px; }
+  .spin { width: 20px; height: 20px; border: 3px solid #2c3550; border-top-color: #f5a030;
+          border-radius: 99px; animation: r 0.8s linear infinite; flex: none; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  .ver { margin-top: 22px; font-size: 11.5px; color: #5b6378; text-align: center; }
+  .choice { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lg)"/></svg>
+  </div>
+  <h1 id="title">Leogin</h1>
+  <div class="sub" id="sub">Preparando…</div>
+
+  <div class="boot" id="boot"><div class="spin"></div><div id="bootmsg">Abriendo tu restaurante…</div></div>
+
+  <div class="choice" id="choice">
+    <button class="pri" id="loginBtn" type="button">Iniciar sesión</button>
+    <div class="err" id="err" style="display:none; margin-top:12px; padding:10px 13px; border-radius:10px; font-size:12.5px;
+         background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); color:#fca5a5;">
+      No hay conexión a internet en esta PC. Conéctala e inténtalo de nuevo — iniciar sesión requiere internet (solo la primera vez).
+    </div>
+    <button class="sec" id="backBtn" type="button" style="display:none">Volver a mi panel</button>
+    <div class="chip" id="hubChip"><span class="st"></span><span>El modo local (impresión y pedidos sin internet) ya está activo en esta PC.</span></div>
+    <div class="note" id="note">
+      ¿Esta PC va a <b>imprimir</b> y a mantener el restaurante <b>funcionando sin internet</b>?
+      Después de entrar, actívalo desde tu panel en <b>Impresión → Hacer de esta PC el servidor del local</b>
+      (solo se necesita en una PC del local).
+    </div>
+  </div>
+
+  <div class="ver" id="ver"></div>
+</main>
+
+<script>
+  const invoke = window.__TAURI__.core.invoke;
+  const $ = (id) => document.getElementById(id);
+
+  // El chip verde solo aparece si el hub local responde en esta PC — y de
+  // paso oculta la nota "¿esta PC va a imprimir?": ya está hecho.
+  async function paintHubChip() {
+    try {
+      const hub = await invoke('hub_status');
+      if (hub && hub.ok) {
+        $('hubChip').style.display = 'flex';
+        $('note').style.display = 'none';
+      }
+    } catch { /* sin hub, sin chip */ }
+  }
+
+  async function start() {
+    const info = await invoke('get_setup_info');
+    $('ver').textContent = 'Leogin para escritorio v' + info.appVersion;
+
+    // ?setup=1 (bandeja → "Cambiar de cuenta o restaurante").
+    const forceSetup = new URLSearchParams(location.search).has('setup');
+    if (forceSetup) {
+      $('title').textContent = 'Cambiar de cuenta';
+      $('sub').textContent = info.panelUrl
+        ? 'Inicia sesión con la otra cuenta y esta PC se conecta sola con su restaurante.'
+        : 'Conecta esta PC con tu restaurante.';
+      $('loginBtn').textContent = info.panelUrl ? 'Iniciar sesión con otra cuenta' : 'Iniciar sesión';
+      if (info.panelUrl) $('backBtn').style.display = 'block';
+      $('choice').style.display = 'block';
+      $('note').style.display = 'block';
+      paintHubChip();
+      return;
+    }
+
+    if (info.panelUrl) {
+      $('title').textContent = 'Leogin';
+      $('sub').innerHTML = 'Abriendo <span class="host"></span>…';
+      $('sub').querySelector('.host').textContent = info.panelUrl.replace(/^https?:\/\//, '');
+      $('boot').style.display = 'flex';
+      const dest = await invoke('boot');          // navega al panel si hay nube
+      if (dest === 'offline') location.replace('offline.html');
+      return;
+    }
+
+    $('title').textContent = 'Bienvenido a Leogin';
+    $('sub').textContent = 'El panel de tu restaurante, ahora en tu PC. Inicia sesión y listo: esta PC recuerda tu restaurante.';
+    $('choice').style.display = 'block';
+    $('note').style.display = 'block';
+    paintHubChip();
+  }
+
+  $('loginBtn').addEventListener('click', async () => {
+    $('loginBtn').disabled = true;
+    $('err').style.display = 'none';
+    const url = await invoke('begin_relink');
+    // Sondear ANTES de navegar: sin internet, saltar al login remoto dejaba
+    // al usuario en la página de error nativa del WebView (fea, en inglés y
+    // sin botón de regreso). no-cors: solo importa si la red responde.
+    try {
+      await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+      location.href = url;
+    } catch {
+      $('err').style.display = 'block';
+      $('loginBtn').disabled = false;
+    }
+  });
+
+  $('backBtn').addEventListener('click', () => invoke('open_panel').catch(() => {}));
+
+  start();
+</script>
+</body>
+</html>

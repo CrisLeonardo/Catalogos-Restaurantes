@@ -33,18 +33,43 @@ function isUnavailable(p: ProdItem): boolean {
   return !isAutoRestored(p);
 }
 
-/** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto). */
+/** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto).
+    Si un componente tiene variantes, se suma también la primera (es la que
+    arranca preseleccionada en la hoja del producto — mismo precio inicial). */
 function displayPrice(p: ProdItem): number {
   if (!p.options || p.options.length === 0) return p.price;
   const comboDelta = p.options
     .filter((g) => g.type === 'combo')
-    .reduce((sum, g) => sum + g.choices.reduce((s, c) => s + (c.priceDelta || 0), 0), 0);
+    .reduce(
+      (sum, g) =>
+        sum +
+        g.choices.reduce(
+          (s, c) => s + (c.priceDelta || 0) + (c.variants?.length ? Number(c.variants[0].priceDelta) || 0 : 0),
+          0,
+        ),
+      0,
+    );
   return p.price + comboDelta;
 }
 
 /** Normaliza para buscar sin acentos ni mayúsculas ("cafe" encuentra "Café"). */
 function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/* ── Platillos destacados (jerarquía comercial) ───────────────
+   Con config.featuredFavorites, los productos etiquetados como favorito/
+   destacado se dibujan como tarjeta GRANDE de ancho completo (máx. 3 por
+   vista, para que "destacado" siga significando algo). Las etiquetas son
+   texto libre del dueño → se aceptan las variantes usuales. */
+const FEATURED_TAG_KEYS = new Set([
+  'fav', 'favorito', 'favorita', 'favorite',
+  'destacado', 'destacada', 'estrella', 'star',
+]);
+const FEATURED_LIMIT = 3;
+
+function isFeaturedTag(p: ProdItem): boolean {
+  return (p.tags ?? []).some((t) => FEATURED_TAG_KEYS.has(fold(t.trim())));
 }
 
 /** Reloj que avanza cada `ms` para reevaluar los menús por franja sin recargar. */
@@ -133,6 +158,15 @@ export default function Catalog({
   const kicker = content.catalog.kicker || [config.brandName, config.zone].filter(Boolean).join(' · ');
   const cols = config.catalogColumns;
 
+  // Ids que se dibujan como tarjeta destacada (primeros N favoritos disponibles).
+  const featuredIds = new Set<string>();
+  if (config.featuredFavorites) {
+    for (const p of list) {
+      if (featuredIds.size >= FEATURED_LIMIT) break;
+      if (isFeaturedTag(p) && !isUnavailable(p)) featuredIds.add(p.id);
+    }
+  }
+
   return (
     <div>
       {/* Header */}
@@ -204,17 +238,28 @@ export default function Catalog({
         <p className="t-mute" style={{ textAlign: 'center', padding: '50px 0', fontSize: 14 }}>{content.catalog.empty}</p>
       ) : config.catalogView === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, marginTop: 12 }}>
-          {list.map((p, i) => (
-            <div key={p.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
-              <ProductTile p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
-            </div>
-          ))}
+          {list.map((p, i) => {
+            const featured = featuredIds.has(p.id);
+            return (
+              <div key={p.id} className={config.animations ? 'anim-fade-up' : ''} style={{ gridColumn: featured ? '1 / -1' : undefined, animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
+                {featured ? (
+                  <FeaturedTile p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
+                ) : (
+                  <ProductTile p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
           {list.map((p, i) => (
             <div key={p.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>
-              <ProductRow p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
+              {featuredIds.has(p.id) ? (
+                <FeaturedTile p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
+              ) : (
+                <ProductRow p={p} icon={p.icon || catIcon.get(p.category_id ?? '') || 'utensils'} qty={qtyOf(p.id)} ordersEnabled={ordersEnabled} forceUnavailable={activeCatLocked} onAdd={onAdd} onOpen={onOpen} />
+              )}
             </div>
           ))}
         </div>
@@ -350,6 +395,58 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
         <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Price amount={displayPrice(p)} size={15} muted={unavail} />
+          {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
+        </div>
+      </div>
+    </Glass>
+  );
+}
+
+/* Tarjeta destacada: ancho completo, arte grande y texto sobre un degradado
+   (blanco sobre velo oscuro = legible con foto o patrón en cualquier paleta). */
+function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; forceUnavailable?: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
+  const config = useThemeConfig();
+  const content = useThemeContent();
+  const unavail = forceUnavailable || isUnavailable(p);
+  return (
+    <Glass
+      interactive={!unavail}
+      onClick={() => !unavail && onOpen(p)}
+      style={{ borderRadius: 22, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}
+    >
+      <div style={{ position: 'relative', aspectRatio: '1.85', background: 'var(--surface-1)', overflow: 'hidden' }}>
+        <ProductArt p={p} icon={icon} scale={1.35} />
+        <div
+          aria-hidden
+          style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}
+        />
+        <div style={{ position: 'absolute', top: 10, left: 10 }}>
+          <span
+            className="ct-tag"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 999,
+              background: 'var(--brand-accent)', color: 'var(--brand-on-accent)',
+              fontSize: 10.5 * roleSize(config, 'tag'), fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+            }}
+          >
+            <Icon name="star" size={11} /> {content.tags.fav}
+          </span>
+        </div>
+        <div style={{ position: 'absolute', left: 14, right: 14, bottom: 12, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              className="ct-product-name"
+              style={{ fontSize: 19 * roleSize(config, 'productName'), color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', lineHeight: 1.15, textDecoration: unavail ? 'line-through' : 'none' }}
+            >
+              {p.name}
+            </div>
+            {p.description && (
+              <div className="line-clamp-2" style={{ fontSize: 12 * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                {p.description}
+              </div>
+            )}
+            <Price amount={displayPrice(p)} size={17} style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: 5, display: 'inline-block' }} />
+          </div>
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>

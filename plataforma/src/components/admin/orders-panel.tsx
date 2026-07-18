@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
 import { Icon } from '@/components/icons';
 import { exportOrdersStructured, updateOrderStatus } from '@/lib/actions/orders';
+import { playOrderSound, loadSoundSettings } from '@/lib/sounds';
 import { localDateKey } from '@/lib/hours';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ToastProvider, Toaster, useToastManager } from '@/components/ui/toast';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
@@ -25,24 +29,15 @@ interface Props {
   autoConfirmMinutes?: number;
 }
 
+/** Sonido de pedido nuevo — el MISMO de sounds.ts a propósito: respeta el
+    volumen/repetición que el usuario configuró en la campana, reutiliza el
+    AudioContext compartido (la versión anterior creaba un contexto NUEVO por
+    cada pedido — fuga de recursos y sonidos encimados en ráfagas) y trae el
+    freno de ráfagas incorporado (15 pedidos sincronizando de golpe suenan
+    UNA vez, no 15). */
 function chime() {
-  try {
-    const ctx = new AudioContext();
-    const notes = [660, 880, 1100];
-    notes.forEach((freq, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const t = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      osc.start(t);
-      osc.stop(t + 0.6);
-    });
-  } catch {}
+  const s = loadSoundSettings();
+  playOrderSound(s.orderVolume, s.orderRepeat);
 }
 
 /** Formatea un monto con la moneda REAL del restaurante (no "Q" fijo). */
@@ -56,10 +51,42 @@ export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-export default function OrdersPanel({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1 }: Props) {
+/** Envuelve el panel en el proveedor de notificaciones (Base UI Toast) —
+    reemplaza el toast local ad-hoc (useState + setTimeout) que antes se
+    reimplementaba a mano en este componente. */
+export default function OrdersPanel(props: Props) {
+  return (
+    <ToastProvider>
+      <OrdersPanelInner {...props} />
+      <Toaster />
+    </ToastProvider>
+  );
+}
+
+function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1 }: Props) {
   const router = useRouter();
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastManager = useToastManager();
+
+  // Coalescer de router.refresh() (mismo patrón que admin/notifications.tsx):
+  // en una ráfaga (15 pedidos sincronizando de golpe al volver la señal, o
+  // sus 15 auto-confirmaciones venciendo juntas un minuto después) cada
+  // evento disparaba un re-render COMPLETO del server component — el panel
+  // se congelaba justo en el momento de mayor presión. Máximo un refresh
+  // cada 2.5 s; el último evento de la ráfaga siempre queda cubierto.
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+  const refreshSoon = useCallback(() => {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }, [router]);
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
 
   // ── Auto-confirm timers ────────────────────────────────────────
   const autoTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -68,12 +95,12 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
   useEffect(() => { autoConfirmEnabledRef.current = autoConfirmEnabled; }, [autoConfirmEnabled]);
   useEffect(() => { autoConfirmMinutesRef.current = autoConfirmMinutes; }, [autoConfirmMinutes]);
 
-  function cancelAutoConfirm(orderId: string) {
+  const cancelAutoConfirm = useCallback((orderId: string) => {
     const t = autoTimers.current.get(orderId);
     if (t) { clearTimeout(t); autoTimers.current.delete(orderId); }
-  }
+  }, []);
 
-  function scheduleAutoConfirm(orderId: string, createdAt: string) {
+  const scheduleAutoConfirm = useCallback((orderId: string, createdAt: string) => {
     if (!autoConfirmEnabledRef.current) return;
     cancelAutoConfirm(orderId);
     const elapsed = Date.now() - new Date(createdAt).getTime();
@@ -81,9 +108,9 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     autoTimers.current.set(orderId, setTimeout(async () => {
       autoTimers.current.delete(orderId);
       await updateOrderStatus(orderId, 'PREP');
-      router.refresh();
+      refreshSoon();
     }, delay));
-  }
+  }, [cancelAutoConfirm, refreshSoon]);
 
   // Programar para pedidos NEW que ya llegaron al montar el panel.
   useEffect(() => {
@@ -92,7 +119,8 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
         scheduleAutoConfirm(o.id, o.created_at);
       });
     }
-    return () => { autoTimers.current.forEach(clearTimeout); autoTimers.current.clear(); };
+    const timers = autoTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
   // Solo al montar: initialOrders y autoConfirm* son props de servidor, estables.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -100,11 +128,9 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
   const [isExportingPdf, startExportPdf] = useTransition();
   const orders = initialOrders;
 
-  function showToast(msg: string) {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 4000);
-  }
+  const showToast = useCallback((msg: string) => {
+    toastManager.add({ title: msg, type: 'info' });
+  }, [toastManager]);
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
@@ -120,8 +146,14 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     function connect() {
+      // Guarda contra re-entradas: unsubscribe()/removeChannel() puede disparar
+      // el mismo callback de status de forma síncrona (p. ej. pasa a 'CLOSED'
+      // en la misma pila que lo originó) — sin este freno, se llamaría a sí
+      // mismo indefinidamente hasta reventar el stack ("Maximum call stack
+      // size exceeded"). Ver admin/notifications.tsx.
+      let closing = false;
       // Topic único por montaje (ver admin/notifications.tsx).
-      channel = supabase
+      const ch = supabase
         .channel(`orders-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
         .on(
           'postgres_changes',
@@ -134,7 +166,7 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
             chime();
             showToast(`Nuevo pedido ${newOrder.order_number} — ${newOrder.customer_name}`);
             if (newOrder.status === 'NEW') scheduleAutoConfirm(newOrder.id, newOrder.created_at);
-            router.refresh();
+            refreshSoon();
           },
         )
         .on(
@@ -145,21 +177,23 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
             if (updated.restaurant_id !== restaurantId) return;
             // Si el pedido ya no está en NEW, cancelar su timer de auto-confirm.
             if (updated.status !== 'NEW') cancelAutoConfirm(updated.id);
-            router.refresh();
+            refreshSoon();
           },
         )
         .subscribe((status) => {
-          if (cancelled) return;
+          if (cancelled || closing) return;
           if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
           // Sin reintento el canal puede quedar muerto en silencio (red
           // inestable, laptop en suspensión) hasta recargar la página
           // (ver admin/notifications.tsx). Backoff exponencial, máx 30s.
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            channel?.unsubscribe();
+            closing = true;
+            supabase.removeChannel(ch);
             retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
             retryDelay = Math.min(retryDelay * 2, 30_000);
           }
         });
+      channel = ch;
     }
 
     (async () => {
@@ -171,10 +205,10 @@ export default function OrdersPanel({ initialOrders, restaurantId, restaurantNam
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      channel?.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
-  }, [restaurantId, router]);
+  }, [restaurantId, refreshSoon, scheduleAutoConfirm, cancelAutoConfirm, showToast]);
 
   function buildExportHtml(
     headers: string[],
@@ -257,27 +291,12 @@ ${printScript}
   return (
     <>
       {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 22 }}>
         <Kpi label="Ventas hoy" value={fmtMoney(stats.todaySales, currency)} sub={`${stats.todayOrders} pedidos`} hero />
         <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} sub={`${active.length} activos`} />
         <Kpi label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} sub="por pedido" />
         <Kpi label="En preparación" value={String(enPrep)} sub="en la barra" />
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className="glass anim-slide-up"
-          style={{
-            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 80, padding: '12px 20px', borderRadius: 'var(--radius-full)',
-            fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap',
-            pointerEvents: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
-          }}
-        >
-          <Icon name="bell" size={15} /> {toast}
-        </div>
-      )}
 
       {/* Board + sidebar */}
       <div className="orders-grid">
@@ -288,9 +307,9 @@ ${printScript}
             <span className="t-kicker" style={{ fontSize: 10 }}>{active.length} pedidos</span>
           </div>
           {active.length === 0 ? (
-            <div className="glass" style={{ borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14, marginBottom: 28 }}>
+            <Card className="mb-7 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
               Todo al día. No hay pedidos en curso.
-            </div>
+            </Card>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 28 }}>
               {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} />)}
@@ -310,35 +329,25 @@ ${printScript}
         <aside style={{ width: '100%', minWidth: 0 }}>
           <SalesChart series={stats.series} totalLast14={stats.totalLast14} currency={currency} />
           {stats.topToday.length > 0 && <TopToday items={stats.topToday} />}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button
+          <div className="mt-3 flex gap-2">
+            <Button
               onClick={downloadExcel}
               disabled={isExportingXls || isExportingPdf}
-              className="press glass-quiet"
-              style={{
-                flex: 1, padding: '12px 10px', borderRadius: 14,
-                border: 'none', cursor: isExportingXls ? 'wait' : 'pointer',
-                color: 'var(--u-text-2)', fontWeight: 600, fontSize: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                opacity: isExportingXls ? 0.7 : 1,
-              }}
+              variant="secondary"
+              size="sm"
+              className="flex-1"
             >
               {isExportingXls ? '…' : <><Icon name="download" size={13} /> Excel</>}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={downloadPdf}
               disabled={isExportingXls || isExportingPdf}
-              className="press glass-quiet"
-              style={{
-                flex: 1, padding: '12px 10px', borderRadius: 14,
-                border: 'none', cursor: isExportingPdf ? 'wait' : 'pointer',
-                color: 'var(--u-text-2)', fontWeight: 600, fontSize: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                opacity: isExportingPdf ? 0.7 : 1,
-              }}
+              variant="secondary"
+              size="sm"
+              className="flex-1"
             >
               {isExportingPdf ? '…' : <><Icon name="download" size={13} /> PDF</>}
-            </button>
+            </Button>
           </div>
         </aside>
       </div>
@@ -350,11 +359,13 @@ ${printScript}
 
 function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-2.5 p-5">
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
+        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.15, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
+        {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -366,7 +377,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
   const max = Math.max(...series.map((d) => d.total), 1);
 
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 12 }}>
+    <Card className="mb-3 flex flex-col gap-4 p-5">
       <div>
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Ventas · 14 días</div>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
@@ -386,14 +397,14 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
                   height: `${Math.max(h, day.total > 0 ? 6 : 2)}%`,
                   minHeight: 2,
                   borderRadius: '4px 4px 0 0',
-                  background: day.isToday ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
+                  background: day.isToday ? 'var(--adm-accent-500, var(--u-text))' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
                   transition: 'height 400ms var(--ease-entry)',
                 }}
                 title={`${day.label}: ${fmtMoney(day.total, currency)}`}
               />
               <span
                 className="t-mono"
-                style={{ fontSize: 8.5, color: day.isToday ? 'var(--u-text)' : 'var(--u-text-4)', fontWeight: day.isToday ? 700 : 500 }}
+                style={{ fontSize: 8.5, color: day.isToday ? 'var(--adm-accent-500, var(--u-text))' : 'var(--u-text-4)', fontWeight: day.isToday ? 700 : 500 }}
               >
                 {day.label}
               </span>
@@ -401,7 +412,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -409,7 +420,7 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
 
 function TopToday({ items }: { items: TopProduct[] }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3.5 p-5">
       <div className="t-poster" style={{ fontSize: 15 }}>Top de hoy</div>
       {items.map((item, i) => (
         <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -424,6 +435,6 @@ function TopToday({ items }: { items: TopProduct[] }) {
           </span>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

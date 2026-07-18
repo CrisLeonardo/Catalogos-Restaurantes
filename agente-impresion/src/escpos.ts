@@ -117,3 +117,74 @@ export function buildTestTicket(label = 'PRUEBA'): Uint8Array {
 
   return new Uint8Array(b);
 }
+
+// ── Comanda de un pedido tomado sin conexión (hub local) ────────────────────
+// Formato deliberadamente simple (no busca igualar byte a byte el ticket que
+// arma el servidor en plataforma/src/lib/escpos.ts) — lo que importa acá es
+// que cocina reciba el contenido correcto al instante, sin depender de la nube.
+
+export interface LocalKitchenItem {
+  name: string;
+  quantity: number;
+  options?: string[];
+}
+
+export interface LocalKitchenOrder {
+  orderNumber: string;
+  customerName: string;
+  orderType: 'PICKUP' | 'DELIVERY' | 'DINE_IN';
+  address: string | null;
+  items: LocalKitchenItem[];
+  notes?: string | null;
+}
+
+export function buildLocalKitchenTicket(order: LocalKitchenOrder, restaurantName: string): Uint8Array {
+  const b: number[] = [];
+  const now = new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
+  const typeLabel =
+    order.orderType === 'PICKUP'  ? 'PARA LLEVAR' :
+    order.orderType === 'DINE_IN' ? 'EN LOCAL'    : 'DOMICILIO';
+
+  b.push(0x1b, 0x40);              // ESC @  reset
+  b.push(0x1b, 0x74, 0x02);        // ESC t 2  codepage PC850
+  b.push(0x1b, 0x61, 0x01);        // centrar
+
+  b.push(0x1d, 0x21, 0x11);        // doble alto+ancho
+  b.push(...enc('COCINA (SIN CONEXION)'), 0x0a);
+  b.push(...enc(`#${order.orderNumber}`), 0x0a);
+  b.push(0x1d, 0x21, 0x00);        // tamaño normal
+  b.push(...enc(`${now}  ${typeLabel}`), 0x0a);
+
+  b.push(0x1b, 0x61, 0x00);        // alinear a la izquierda
+  b.push(...enc('='.repeat(42)), 0x0a);
+
+  b.push(0x1b, 0x45, 0x01);        // bold on
+  b.push(...enc(order.customerName), 0x0a);
+  b.push(0x1b, 0x45, 0x00);        // bold off
+
+  if (order.address) b.push(...enc(order.address), 0x0a);
+
+  b.push(...enc('-'.repeat(42)), 0x0a);
+
+  for (const item of order.items) {
+    b.push(0x1d, 0x21, 0x11);      // doble alto+ancho
+    b.push(...enc(`${item.quantity}x ${item.name}`), 0x0a);
+    b.push(0x1d, 0x21, 0x00);      // tamaño normal
+    if (item.options?.length) b.push(...enc(`   > ${item.options.join(', ')}`), 0x0a);
+  }
+
+  if (order.notes) {
+    b.push(...enc('-'.repeat(42)), 0x0a);
+    b.push(0x1b, 0x45, 0x01, ...enc('NOTA:'), 0x0a, 0x1b, 0x45, 0x00);
+    b.push(...enc(order.notes), 0x0a);
+  }
+
+  b.push(...enc('='.repeat(42)), 0x0a);
+  b.push(0x1b, 0x61, 0x01);        // centrar
+  b.push(...enc(restaurantName || 'Restaurante'), 0x0a);
+
+  b.push(0x1b, 0x64, 0x04);        // avanzar 4 líneas
+  b.push(0x1d, 0x56, 0x42, 0x00);  // corte parcial
+
+  return new Uint8Array(b);
+}

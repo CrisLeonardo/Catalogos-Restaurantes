@@ -15,13 +15,16 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeContent } from '@/lib/theme/context';
-import { getPublicOrder, getMyOrderRefs } from '@/lib/actions/orders';
-import { getLocalOrders, type LocalOrderRef } from '@/lib/customer-local';
+import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/actions/orders';
+import { getLocalOrders, addLocalOrder, type LocalOrderRef } from '@/lib/customer-local';
 import type { OrderStatus } from '@/types';
 
-const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT'];
+const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'];
 /** Cuántos pedidos recientes consultan su estado real al servidor. */
 const STATUS_LOOKUPS = 8;
+/** Cada cuánto reintenta resolver el token real de un pedido de hub aún
+    pendiente de sincronizar (ver hub-fallback.ts / getOrderRefByClientId). */
+const PENDING_POLL_MS = 8_000;
 
 export default function MyOrders({ restaurantId, onBack }: { restaurantId: string; onBack?: () => void }) {
   const content = useThemeContent();
@@ -73,12 +76,49 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
     return () => { cancelled = true; };
   }, [restaurantId]);
 
+  // Resuelve en segundo plano los pedidos aceptados por el hub local sin
+  // conexión (llegan con token vacío + clientId — ver checkout-form.tsx /
+  // finishSuccess): consulta getOrderRefByClientId hasta que el agente los
+  // sincronice con Supabase, y entonces les asigna su token real.
+  useEffect(() => {
+    const pending = orders.filter((o) => !o.token && o.clientId);
+    if (pending.length === 0) return;
+
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      for (const o of pending) {
+        if (!o.clientId) continue;
+        try {
+          const resolved = await getOrderRefByClientId(restaurantId, o.clientId);
+          if (!resolved || cancelled) continue;
+          const updated: LocalOrderRef = {
+            token: resolved.token,
+            orderNumber: resolved.orderNumber || o.orderNumber,
+            createdAt: o.createdAt,
+            total: resolved.total || o.total,
+            // clientId viaja para que addLocalOrder deduplique y reemplace el
+            // registro "pendiente" — no hace falta conservarlo después.
+            clientId: o.clientId,
+          };
+          addLocalOrder(restaurantId, updated);
+          setOrders((prev) => [updated, ...prev.filter((p) => p.clientId !== o.clientId && p.token !== updated.token)]);
+          getPublicOrder(resolved.token, restaurantId)
+            .then((order) => { if (order && !cancelled) setStatuses((prev) => ({ ...prev, [resolved.token]: order.status })); })
+            .catch(() => {});
+        } catch { /* sigue pendiente: se reintenta en el próximo ciclo */ }
+      }
+    }, PENDING_POLL_MS);
+
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [orders, restaurantId]);
+
   const statusLabel = (s: OrderStatus | undefined) => {
     switch (s) {
       case 'NEW':       return content.tracking.statusNew;
       case 'PREP':      return content.tracking.statusPrep;
       case 'READY':     return content.tracking.statusReady;
       case 'TRANSIT':   return content.tracking.statusTransit;
+      case 'SERVED':    return content.tracking.statusServed;
       case 'DELIVERED': return content.tracking.statusDelivered;
       case 'CANCEL':    return content.tracking.statusCancel;
       default:          return '';
@@ -117,6 +157,7 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {orders.map((o) => {
+          const pending = !o.token;
           const status = statuses[o.token];
           const isActive = status !== undefined && ACTIVE.includes(status);
           const date = new Date(o.createdAt);
@@ -125,45 +166,55 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
             when = date.toLocaleDateString('es', { day: 'numeric', month: 'short' }) +
               ' · ' + date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
           } catch {}
-          return (
-            <Link key={o.token} href={`/pedido/${o.token}`} className="press" style={{ textDecoration: 'none' }}>
-              <Glass
+          const card = (
+            <Glass
+              style={{
+                padding: '15px 17px', display: 'flex', alignItems: 'center', gap: 13,
+                border: isActive ? '1px solid var(--u-hair-2)' : undefined,
+                opacity: pending ? 0.75 : 1,
+              }}
+            >
+              <div
                 style={{
-                  padding: '15px 17px', display: 'flex', alignItems: 'center', gap: 13,
-                  border: isActive ? '1px solid var(--u-hair-2)' : undefined,
+                  width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0,
+                  background: isActive ? 'var(--u-text)' : 'var(--surface-2)',
+                  color: isActive ? 'var(--brand-bg)' : 'var(--u-text-3)',
                 }}
               >
-                <div
-                  style={{
-                    width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', flexShrink: 0,
-                    background: isActive ? 'var(--u-text)' : 'var(--surface-2)',
-                    color: isActive ? 'var(--brand-bg)' : 'var(--u-text-3)',
-                  }}
-                >
-                  <Icon name={isActive ? 'flame' : status === 'CANCEL' ? 'x' : 'check'} size={19} />
+                <Icon name={pending ? 'clock' : isActive ? 'flame' : status === 'CANCEL' ? 'x' : 'check'} size={19} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span className="t-mono" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{o.orderNumber}</span>
+                  {pending ? (
+                    <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--u-text-3)' }}>
+                      Sincronizando…
+                    </span>
+                  ) : status && (
+                    <span
+                      style={{
+                        fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                        background: isActive ? 'rgba(74,222,128,0.14)' : 'var(--surface-2)',
+                        color: isActive ? '#4ade80' : status === 'CANCEL' ? '#f87171' : 'var(--u-text-3)',
+                      }}
+                    >
+                      {statusLabel(status)}
+                    </span>
+                  )}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span className="t-mono" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{o.orderNumber}</span>
-                    {status && (
-                      <span
-                        style={{
-                          fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                          background: isActive ? 'rgba(74,222,128,0.14)' : 'var(--surface-2)',
-                          color: isActive ? '#4ade80' : status === 'CANCEL' ? '#f87171' : 'var(--u-text-3)',
-                        }}
-                      >
-                        {statusLabel(status)}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3 }}>{when}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  {o.total > 0 && <Price amount={o.total} size={14} muted />}
-                  <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)' }} />
-                </div>
-              </Glass>
+                <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3 }}>{when}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {o.total > 0 && <Price amount={o.total} size={14} muted />}
+                {!pending && <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)' }} />}
+              </div>
+            </Glass>
+          );
+          return pending ? (
+            <div key={o.clientId || o.token}>{card}</div>
+          ) : (
+            <Link key={o.clientId || o.token} href={`/pedido/${o.token}`} className="press" style={{ textDecoration: 'none' }}>
+              {card}
             </Link>
           );
         })}

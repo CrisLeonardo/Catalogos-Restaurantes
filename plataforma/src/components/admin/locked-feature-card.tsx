@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
+import { PLANS } from '@/lib/plans';
 
 interface UpgradeFeature {
   icon: string;
@@ -14,6 +15,14 @@ interface UpgradeFeature {
 }
 
 const ALL_UPGRADE_FEATURES: UpgradeFeature[] = [
+  {
+    icon: 'userPlus',
+    name: 'Panel de mesero y mapa de mesas',
+    hook: 'Toma pedidos desde cada mesa',
+    impact: 'Tu equipo toma pedidos desde una tablet en la mesa y ves un mapa con el estado de cada una (libre, ocupada, por cobrar). No es un módulo que se compre aparte: es exclusivo de Premium.',
+    currentLabel: 'Sin panel de mesero ni mapa de mesas',
+    premiumLabel: 'Panel de mesero + mapa de mesas',
+  },
   {
     icon: 'whatsapp',
     name: 'Aviso por WhatsApp',
@@ -77,7 +86,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
   const [selected, setSelected] = useState<UpgradeFeature | null>(null);
 
   const isEstandar = planActual === 'ESTANDAR';
-  const currentPrice = isEstandar ? 'Q399' : 'Q199';
+  const currentPrice = `Q${isEstandar ? PLANS.ESTANDAR.priceMonthly : PLANS.BASICO.priceMonthly}`;
   const currentPlanLabel = isEstandar ? 'Estándar' : 'Básico';
   const fromPlanLabel = isEstandar ? 'de Estándar' : 'de Básico';
 
@@ -94,7 +103,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
 
   const headerDesc = isEstandar
     ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas delivery, comer en local y todo lo siguiente.'
-    : 'Están incluidas en Premium (Q599/mes). Toca cualquiera para ver cómo impacta tu negocio.';
+    : `Están incluidas en Premium (${PLANS.PREMIUM.priceLabel}). Toca cualquiera para ver cómo impacta tu negocio.`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -183,7 +192,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
           }}
         >
           <Icon name="sparkle" size={14} />
-          Actualizar a Premium — Q599/mes
+          Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
         </a>
         <a
           href="/admin/suscripcion"
@@ -271,13 +280,13 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                   Premium
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.4 }}>
-                  <Icon name="check" size={13} style={{ color: '#4ade80', flexShrink: 0, marginTop: 1 }} />
+                  <Icon name="check" size={13} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0, marginTop: 1 }} />
                   <span>{selected.premiumLabel}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', marginTop: 12, lineHeight: 1 }}>
-                  Q599
+                  Q{PLANS.PREMIUM.priceMonthly}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · GMV hasta Q20k</div>
+                <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · sin límite de ventas</div>
               </div>
             </div>
 

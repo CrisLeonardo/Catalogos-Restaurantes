@@ -3,6 +3,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
+import { PLANS, PUBLIC_PLANS, type PlanCode } from '@/lib/plans';
 
 /* ── Contacto (configurable por env; cae a valores por defecto) ──────────
    Define NEXT_PUBLIC_CONTACT_WHATSAPP (ej. "50212345678") para que el CTA
@@ -50,30 +51,24 @@ const STEPS = [
   { n: '03', title: 'Comparte tu QR',        body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
 ];
 
-const LANDING_PLANS = [
-  {
-    code: 'Básico',
-    price: 'Q199',
-    tagline: 'Tu menú digital con QR — ideal para empezar',
-    points: ['Menú digital con código QR', 'Productos ilimitados', 'Personalización con logo y color', 'Métricas de visitas'],
-    accent: false,
-  },
-  {
-    code: 'Estándar',
-    price: 'Q399',
-    tagline: 'Pedidos para llevar y alertas en tiempo real',
-    points: ['Todo lo del plan Básico', 'Pedidos para llevar en línea', 'Alerta en tiempo real + WhatsApp', 'Hasta Q10,000 en ventas / mes'],
-    accent: false,
-  },
-  {
-    code: 'Premium',
-    price: 'Q599',
-    tagline: 'Todas las funciones, sin límite de usuarios',
-    points: ['Para llevar, en local y a domicilio', 'Lealtad, cupones y reservaciones', 'Cocina, finanzas e inventario', 'Hasta Q20,000 en ventas / mes'],
-    accent: true,
-    badge: 'MÁS POPULAR',
-  },
-];
+/* Puntos de marketing por plan (los precios y el badge SIEMPRE salen de plans.ts,
+   fuente única de verdad — solo este texto descriptivo se cura a mano aquí). */
+const LANDING_PLAN_POINTS: Record<PlanCode, string[]> = {
+  BASICO: ['Menú digital con código QR', 'Productos ilimitados', 'Personalización con logo y color', 'Sin pedidos en línea'],
+  ESTANDAR: ['Todo lo del plan Básico', 'Pedidos para llevar o a domicilio', 'Alertas en tiempo real + WhatsApp', 'Nunca un % de tus ventas'],
+  PREMIUM: ['Para llevar, en local y a domicilio', 'Panel de mesero y mapa de mesas', 'Lealtad, cupones y reservaciones', 'Finanzas, inventario y analítica'],
+  PRO: [],
+};
+
+const LANDING_PLANS = PUBLIC_PLANS.map((code) => ({
+  code,
+  name: PLANS[code].name,
+  price: `Q${PLANS[code].priceMonthly}`,
+  tagline: PLANS[code].tagline,
+  points: LANDING_PLAN_POINTS[code],
+  accent: PLANS[code].highlight,
+  badge: PLANS[code].badge,
+}));
 
 const FAQS = [
   { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres, lo configuramos por ti.' },
@@ -115,6 +110,9 @@ export default function LeoginLanding() {
           <a href={demoUrl} className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
             Demo
           </a>
+          <Link href="/descargas" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
+            Escritorio
+          </Link>
           <Link
             href="/login"
             className="press"
@@ -345,7 +343,7 @@ export default function LeoginLanding() {
                     {p.badge}
                   </div>
                 )}
-                <h3 className="t-display" style={{ fontSize: 21, fontWeight: 800 }}>{p.code}</h3>
+                <h3 className="t-display" style={{ fontSize: 21, fontWeight: 800 }}>{p.name}</h3>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
                   <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--brand-accent)' }}>{p.price}</span>
                   <span className="t-mute" style={{ fontSize: 13 }}>/ mes</span>
@@ -395,7 +393,7 @@ export default function LeoginLanding() {
               className="t-mute"
               style={{ fontSize: 13.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--u-text-3)' }}
             >
-              Ver todos los planes (hasta Q150,000 en ventas) y comparativa completa
+              Ver todos los planes y comparativa completa
               <Icon name="arrowRight" size={14} />
             </Link>
           </div>
@@ -486,6 +484,7 @@ export default function LeoginLanding() {
             <a href="#funciones" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Funciones</a>
             <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
             <a href={demoUrl} className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Demo</a>
+            <Link href="/descargas" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Escritorio</Link>
             <Link href="/terminos" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Términos</Link>
             <Link href="/privacidad" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Privacidad</Link>
             <a href={ctaHref} target="_blank" rel="noopener noreferrer" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Contacto</a>

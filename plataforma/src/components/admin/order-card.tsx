@@ -33,6 +33,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   PREP:      'En preparación',
   READY:     'Listo',
   TRANSIT:   'En camino',
+  SERVED:    'Servido',
   DELIVERED: 'Entregado',
   CANCEL:    'Cancelado',
 };
@@ -42,15 +43,22 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   PREP:      '#f59e0b',
   READY:     '#8b5cf6',
   TRANSIT:   '#f97316',
+  SERVED:    '#06b6d4',
   DELIVERED: '#22c55e',
   CANCEL:    '#6b7280',
 };
 
+/** DINE_IN nunca llega a DELIVERED por esta vía: READY→SERVED se detiene ahí,
+    la mesa la cierra el mesero explícitamente ("Marcar como libre"). */
 function nextStatus(order: OrderWithItems): OrderStatus | null {
   const { status, order_type } = order;
   if (status === 'NEW')   return 'PREP';
   if (status === 'PREP')  return 'READY';
-  if (status === 'READY') return order_type === 'DELIVERY' ? 'TRANSIT' : 'DELIVERED';
+  if (status === 'READY') {
+    if (order_type === 'DELIVERY') return 'TRANSIT';
+    if (order_type === 'DINE_IN')  return 'SERVED';
+    return 'DELIVERED';
+  }
   if (status === 'TRANSIT') return 'DELIVERED';
   return null;
 }
@@ -61,7 +69,7 @@ function nextLabel(order: OrderWithItems): string {
   if (status === 'PREP')  return 'Marcar listo';
   if (status === 'READY') {
     if (order_type === 'DELIVERY') return 'En camino';
-    if (order_type === 'DINE_IN')  return 'Servir en mesa';
+    if (order_type === 'DINE_IN')  return 'Marcar servido';
     return 'Entregado';
   }
   if (status === 'TRANSIT') return 'Entregado';
@@ -77,7 +85,7 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string): string
 
   const itemsHtml = order.items.map((item) => {
     const opts = item.options_snapshot?.length
-      ? `<div class="opts">– ${item.options_snapshot.map((o) => o.choice).join(' · ')}</div>`
+      ? `<div class="opts">– ${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}</div>`
       : '';
     return `
       <div class="row">
@@ -164,7 +172,7 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
 
   const itemsHtml = order.items.map((item) => {
     const opts = item.options_snapshot?.length
-      ? `<div class="opts">${item.options_snapshot.map((o) => o.choice).join(', ')}</div>`
+      ? `<div class="opts">${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(', ')}</div>`
       : '';
     return `
       <tr>
@@ -304,6 +312,7 @@ export default function OrderCard({
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const next = nextStatus(order);
 
   function handlePrint() {
@@ -321,18 +330,28 @@ export default function OrderCard({
 
   async function handleAdvance() {
     if (!next) return;
+    setActionError(null);
     // Solo imprimir la comanda desde el navegador si el agente NO la maneja
     // (evita doble impresión cuando el restaurante usa el Agente Leogin).
     if (next === 'PREP' && !agentKitchen) printKitchenTicket(order, restaurantName);
-    start(async () => { await updateOrderStatus(order.id, next); });
+    start(async () => {
+      const res = await updateOrderStatus(order.id, next);
+      if (res.error) setActionError(res.error);
+    });
   }
 
   async function handleCancel() {
     setConfirmCancel(false);
-    start(async () => { await updateOrderStatus(order.id, 'CANCEL'); });
+    setActionError(null);
+    start(async () => {
+      const res = await updateOrderStatus(order.id, 'CANCEL');
+      if (res.error) setActionError(res.error);
+    });
   }
 
-  const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL';
+  // SERVED es terminal para esta tarjeta (sin más botón de avance): cerrar la
+  // mesa DINE_IN es solo vía "Marcar como libre" en el panel de mesero, no aquí.
+  const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL' || order.status === 'SERVED';
 
   return (
     <div
@@ -376,9 +395,24 @@ export default function OrderCard({
               <Icon name="grid" size={12} style={{ display: 'inline' }} /> {order.address}
             </p>
           )}
-          {order.waiter_name && (
+          {order.order_type === 'DINE_IN' && (
             <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Icon name="userPlus" size={12} style={{ display: 'inline' }} /> Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong>
+              <Icon name={order.waiter_name ? 'userPlus' : 'user'} size={12} style={{ display: 'inline' }} />
+              {order.waiter_name
+                ? <>Mesero: <strong style={{ color: 'var(--u-text-2)' }}>{order.waiter_name}</strong></>
+                : <>Pedido por el <strong style={{ color: 'var(--u-text-2)' }}>comensal</strong> (sin mesero)</>}
+            </p>
+          )}
+          {order.synced_from_hub && (
+            <p
+              title="Este pedido se tomó sin conexión (hub local) y se sincronizó al volver la señal."
+              style={{
+                fontSize: 11, fontWeight: 700, marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5,
+                color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+                borderRadius: 'var(--radius-full)', padding: '3px 9px', width: 'fit-content',
+              }}
+            >
+              📶 Sin conexión
             </p>
           )}
         </div>
@@ -407,7 +441,7 @@ export default function OrderCard({
               {item.quantity}× {item.name_snapshot}
               {item.options_snapshot && item.options_snapshot.length > 0 && (
                 <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                  {item.options_snapshot.map((o) => o.choice).join(' · ')}
+                  {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                 </span>
               )}
             </span>
@@ -438,19 +472,19 @@ export default function OrderCard({
             padding: '5px 8px', borderRadius: 8,
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
           }}>
-            <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="tag" size={12} style={{ display: 'inline' }} /> Cupón
               {order.promo_code && (
                 <span style={{
                   fontFamily: 'var(--ui-font-mono)', fontSize: 10.5, fontWeight: 700,
                   padding: '2px 6px', borderRadius: 5,
-                  background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--c-ok, #4ade80)',
                 }}>
                   {order.promo_code}
                 </span>
               )}
             </span>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4ade80' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-ok, #4ade80)' }}>
               −{money(Number(order.discount), currency)}
             </span>
           </div>
@@ -461,10 +495,10 @@ export default function OrderCard({
             padding: '5px 8px', borderRadius: 8,
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
           }}>
-            <span style={{ fontSize: 12.5, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="star" size={12} style={{ display: 'inline' }} /> {Number(order.loyalty_points_redeemed)} puntos canjeados
             </span>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4ade80' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-ok, #4ade80)' }}>
               −{money(Number(order.loyalty_discount), currency)}
             </span>
           </div>
@@ -536,6 +570,12 @@ export default function OrderCard({
         {' · '}
         {new Date(order.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
       </p>
+
+      {actionError && (
+        <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="alertCircle" size={13} /> {actionError}
+        </div>
+      )}
 
       {/* Acciones */}
       {!isTerminal && (

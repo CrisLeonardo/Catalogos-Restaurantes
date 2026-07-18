@@ -16,7 +16,7 @@ export interface Restaurant {
   slug: string;
   name: string;
   tagline: string | null;
-  plan_actual: 'BASICO' | 'ESTANDAR' | 'PREMIUM' | 'PREMIUM_PRO' | 'PREMIUM_ULTRA' | 'ALTO_VOLUMEN' | 'VARIABLE';
+  plan_actual: 'BASICO' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
   modules: {
     catalog: boolean;
     orders: boolean;
@@ -116,11 +116,25 @@ export interface Category {
 
 /* ── Variantes / extras de producto (migración 009) ───────── */
 
+/** Variante de un componente de combo (ej. sabor de bebida, tipo de papas). */
+export interface ProductVariant {
+  id: string;
+  name: string;
+  priceDelta: number;
+}
+
 export interface ProductOptionChoice {
   id: string;
   name: string;
   /** Cuánto suma (o resta) al precio base. */
   priceDelta: number;
+  /**
+   * Variantes del componente (migración 077 combos+variantes). Solo tiene
+   * sentido en choices de un grupo tipo 'combo': si están presentes, el
+   * cliente/mesero debe elegir una para poder incluir este componente
+   * (ej. "Bebida" → Coca-Cola / Fanta / Agua).
+   */
+  variants?: ProductVariant[];
 }
 
 export interface ProductOptionGroup {
@@ -211,7 +225,7 @@ export interface Promotion {
   created_at: string;
 }
 
-export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'DELIVERED' | 'CANCEL';
+export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'SERVED' | 'DELIVERED' | 'CANCEL';
 
 export interface Order {
   id: string;
@@ -250,6 +264,8 @@ export interface Order {
   cancelled_at: string | null;
   /** Mesero que tomó el pedido (migración 030); null = pedido online del cliente. */
   waiter_id: string | null;
+  /** Se tomó sin conexión (hub local) y se sincronizó después (migración 062). */
+  synced_from_hub: boolean;
 }
 
 /** Opción elegida congelada en el pedido. */
@@ -257,6 +273,8 @@ export interface OrderItemOption {
   group: string;
   choice: string;
   priceDelta: number;
+  /** Variante elegida del componente (ej. "Coca-Cola"), si aplicaba. */
+  variant?: string;
 }
 
 export interface OrderItem {
@@ -279,7 +297,11 @@ export interface CartItemOption {
   groupName: string;
   choiceId: string;
   choiceName: string;
+  /** Precio del componente + de la variante elegida (si tenía). */
   priceDelta: number;
+  /** Variante elegida del componente (ej. sabor de bebida), si tenía. */
+  variantId?: string;
+  variantName?: string;
 }
 
 export interface CartItem {

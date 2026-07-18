@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { saveFelSettings, emitInvoice, anularInvoice, type FelSettingsPatch } from '@/lib/actions/fel';
 import { PROVIDER_META, type FelProvider, type FelSettings, type FelDocument } from '@/lib/fel';
 import type { FelSummary, InvoiceableOrder } from '@/lib/db/fel';
@@ -74,11 +76,11 @@ export default function FacturacionPanel({ restaurantId, settings, documents, su
 
 function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
-    <Glass variant="quiet" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card className="flex flex-col gap-1 p-3.5">
       <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
       <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
       {sub && <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{sub}</span>}
-    </Glass>
+    </Card>
   );
 }
 
@@ -117,7 +119,7 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
   const meta = PROVIDER_META[p.provider];
 
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <Card className="flex flex-col gap-3.5 p-4">
       <div className="t-kicker" style={{ fontSize: 10.5 }}>Datos del emisor</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         <div><label style={labelStyle}>NIT emisor</label><input style={inputStyle} value={p.nit_emisor} onChange={(e) => set('nit_emisor', e.target.value)} placeholder="1234567K" /></div>
@@ -127,17 +129,19 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
         <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Dirección</label><input style={inputStyle} value={p.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, zona, ciudad" /></div>
         <div>
           <label style={labelStyle}>Afiliación IVA</label>
-          <select style={inputStyle} value={p.afiliacion_iva} onChange={(e) => set('afiliacion_iva', e.target.value as 'GEN' | 'PEQ')}>
-            <option value="GEN">Régimen general (IVA 12%)</option>
-            <option value="PEQ">Pequeño contribuyente (5%)</option>
-          </select>
+          <Select
+            options={[{ value: 'GEN', label: 'Régimen general (IVA 12%)' }, { value: 'PEQ', label: 'Pequeño contribuyente (5%)' }]}
+            value={p.afiliacion_iva}
+            onValueChange={(v) => set('afiliacion_iva', v as 'GEN' | 'PEQ')}
+          />
         </div>
         <div>
           <label style={labelStyle}>Precios incluyen IVA</label>
-          <select style={inputStyle} value={p.iva_incluido ? 'si' : 'no'} onChange={(e) => set('iva_incluido', e.target.value === 'si')}>
-            <option value="si">Sí (precio final con IVA)</option>
-            <option value="no">No (agregar IVA encima)</option>
-          </select>
+          <Select
+            options={[{ value: 'si', label: 'Sí (precio final con IVA)' }, { value: 'no', label: 'No (agregar IVA encima)' }]}
+            value={p.iva_incluido ? 'si' : 'no'}
+            onValueChange={(v) => set('iva_incluido', v === 'si')}
+          />
         </div>
       </div>
 
@@ -145,16 +149,19 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         <div>
           <label style={labelStyle}>Proveedor</label>
-          <select style={inputStyle} value={p.provider} onChange={(e) => set('provider', e.target.value as FelProvider)}>
-            {PROVIDERS.map((pv) => <option key={pv} value={pv}>{PROVIDER_META[pv].label}</option>)}
-          </select>
+          <Select
+            options={PROVIDERS.map((pv) => ({ value: pv, label: PROVIDER_META[pv].label }))}
+            value={p.provider}
+            onValueChange={(v) => set('provider', v as FelProvider)}
+          />
         </div>
         <div>
           <label style={labelStyle}>Ambiente</label>
-          <select style={inputStyle} value={p.ambiente} onChange={(e) => set('ambiente', e.target.value as 'PRUEBAS' | 'PRODUCCION')}>
-            <option value="PRUEBAS">Pruebas</option>
-            <option value="PRODUCCION">Producción</option>
-          </select>
+          <Select
+            options={[{ value: 'PRUEBAS', label: 'Pruebas' }, { value: 'PRODUCCION', label: 'Producción' }]}
+            value={p.ambiente}
+            onValueChange={(v) => set('ambiente', v as 'PRUEBAS' | 'PRODUCCION')}
+          />
         </div>
         <div><label style={labelStyle}>Serie (modo manual)</label><input style={inputStyle} value={p.serie_prefijo} onChange={(e) => set('serie_prefijo', e.target.value)} placeholder="FEL" /></div>
       </div>
@@ -171,12 +178,12 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={save} disabled={isPending} className="press btn-accent" style={{ padding: '10px 22px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
           {isPending ? 'Guardando…' : 'Guardar configuración'}
-        </button>
+        </Button>
         {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
       </div>
-    </Glass>
+    </Card>
   );
 }
 
@@ -195,11 +202,11 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
 
   if (!ready) {
     return (
-      <Glass variant="quiet" style={{ padding: 24, textAlign: 'center' }}>
+      <Card className="p-6 text-center">
         <Icon name="receipt" size={30} style={{ color: 'var(--u-text-4)', marginBottom: 10 }} />
         <p style={{ color: 'var(--u-text-3)', fontSize: 14, marginBottom: 12 }}>Primero configura tus datos fiscales (NIT y nombre del emisor).</p>
-        <button onClick={onGoConfig} className="press btn-accent" style={{ padding: '9px 18px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>Ir a configuración</button>
-      </Glass>
+        <Button onClick={onGoConfig} className="rounded-adm-full">Ir a configuración</Button>
+      </Card>
     );
   }
 
@@ -222,13 +229,12 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
   const pendientes = invoiceable.filter((o) => !o.already_invoiced);
 
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <Card className="flex flex-col gap-3.5 p-4">
       <div style={{ display: 'flex', gap: 8 }}>
         {([['pedido', 'Desde un pedido'], ['libre', 'Factura libre']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setMode(k)} className="press"
-            style={{ padding: '7px 14px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${mode === k ? 'transparent' : 'var(--u-hair)'}`, background: mode === k ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: mode === k ? 'var(--brand-bg)' : 'var(--u-text-3)' }}>
+          <Button key={k} type="button" onClick={() => setMode(k)} variant={mode === k ? 'primary' : 'secondary'} size="sm" className="rounded-adm-full">
             {label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -238,12 +244,12 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
           {pendientes.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--u-text-4)' }}>No hay pedidos pendientes de facturar.</p>
           ) : (
-            <select style={inputStyle} value={orderId} onChange={(e) => setOrderId(e.target.value)}>
-              <option value="">Selecciona un pedido…</option>
-              {pendientes.map((o) => (
-                <option key={o.id} value={o.id}>{o.order_number} · {o.customer_name} · {money(o.total)}</option>
-              ))}
-            </select>
+            <Select
+              options={pendientes.map((o) => ({ value: o.id, label: `${o.order_number} · ${o.customer_name} · ${money(o.total)}` }))}
+              value={orderId}
+              onValueChange={setOrderId}
+              placeholder="Selecciona un pedido…"
+            />
           )}
         </div>
       ) : (
@@ -265,12 +271,12 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
       <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: 0 }}>Usa <strong>CF</strong> en el NIT para consumidor final.</p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={emit} disabled={isPending || (mode === 'pedido' && !orderId)} className="press btn-accent" style={{ padding: '10px 22px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: (isPending || (mode === 'pedido' && !orderId)) ? 0.6 : 1 }}>
+        <Button onClick={emit} disabled={isPending || (mode === 'pedido' && !orderId)} className="rounded-adm-full">
           {isPending ? 'Emitiendo…' : 'Emitir factura'}
-        </button>
+        </Button>
         {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
       </div>
-    </Glass>
+    </Card>
   );
 }
 
@@ -292,14 +298,14 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
 
   if (documents.length === 0) {
     return (
-      <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
+      <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
         Aún no has emitido facturas.
-      </Glass>
+      </Card>
     );
   }
 
   return (
-    <Glass variant="quiet" style={{ overflow: 'hidden' }}>
+    <Card className="overflow-hidden p-0">
       {/* 6 columnas no caben en un teléfono: scroll horizontal en vez de
           romper el layout (los montos y estados se leen deslizando). */}
       <div className="table-scroll">
@@ -333,10 +339,10 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
               </td>
               <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                 {d.estado !== 'ANULADO' && (
-                  <button onClick={() => anular(d.id)} disabled={isPending && busy === d.id} className="press"
-                    style={{ padding: '5px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'transparent', color: '#f87171' }}>
+                  <Button onClick={() => anular(d.id)} disabled={isPending && busy === d.id} variant="outline" size="sm"
+                    className="border-[rgba(239,68,68,0.25)] text-[#f87171]">
                     {busy === d.id ? '…' : 'Anular'}
-                  </button>
+                  </Button>
                 )}
               </td>
             </tr>
@@ -344,6 +350,6 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
         </tbody>
       </table>
       </div>
-    </Glass>
+    </Card>
   );
 }

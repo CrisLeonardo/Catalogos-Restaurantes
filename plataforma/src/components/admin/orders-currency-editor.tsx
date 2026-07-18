@@ -1,17 +1,26 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Glass } from '@/components/glass';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
+import { ServicePreferencesCtl } from '@/components/admin/service-preferences-ctl';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
-  'tipEnabled' | 'tipPercent' | 'acceptsCard' |
+  'tipEnabled' | 'tipPercent' | 'tipOrderTypes' | 'acceptsCard' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
   'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
   'autoConfirmEnabled' | 'autoConfirmMinutes'
 >;
+
+const ORDER_TYPE_LABEL: Record<ThemeConfig['orderTypes'][number], string> = {
+  dine_in: 'Comer en local',
+  pickup: 'Para llevar',
+  delivery: 'Domicilio',
+};
 
 interface Props {
   restaurantId: string;
@@ -36,14 +45,7 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className="press"
-        style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}
-      >
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
-      </button>
+      <Switch checked={value} onCheckedChange={onChange} aria-label={label} />
     </div>
   );
 }
@@ -63,66 +65,6 @@ function NumberCtl({ label, value, min, max, onChange }: { label: string; value:
         }}
         style={{ ...inputStyle, width: 70, textAlign: 'center', padding: '6px 8px', fontSize: 14 }}
       />
-    </div>
-  );
-}
-
-function StringListCtl({ label, items, onChange }: { label: string; items: string[]; onChange: (v: string[]) => void }) {
-  const [draft, setDraft] = useState('');
-  function add() {
-    const v = draft.trim();
-    if (!v || items.includes(v)) return;
-    onChange([...items, v]);
-    setDraft('');
-  }
-  return (
-    <Field label={label}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {items.map((item, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)', padding: '7px 10px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair)' }}>
-              {item}
-            </span>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, j) => j !== i))}
-              className="press"
-              style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'transparent', color: '#f87171', flexShrink: 0 }}
-            >
-              Quitar
-            </button>
-          </div>
-        ))}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
-            placeholder="Nueva preferencia…"
-            style={{ ...inputStyle, flex: 1, padding: '7px 10px', fontSize: 13 }}
-          />
-          <button
-            type="button"
-            onClick={add}
-            className="press"
-            style={{ padding: '7px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-2)', flexShrink: 0 }}
-          >
-            Agregar
-          </button>
-        </div>
-      </div>
-    </Field>
-  );
-}
-
-function ReadOnly({ label, value }: { label: string; value: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, opacity: 0.55 }}>
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <div style={{ width: 42, height: 25, borderRadius: 99, padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', flexShrink: 0, cursor: 'not-allowed' }}>
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--brand-bg)' : 'var(--u-text)' }} />
-      </div>
     </div>
   );
 }
@@ -153,31 +95,52 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
   }
 
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="t-kicker" style={{ fontSize: 10.5 }}>Tipos de pedido</div>
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="t-kicker" style={{ fontSize: 10.5 }}>Métodos de pago</div>
 
-      <Toggle label="Comer en local" value={patch.orderTypes.includes('dine_in')} onChange={(v) => set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', v))} />
+      <Toggle label="Pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
+      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+        A domicilio, el repartidor lleva el dispositivo POS para cobrar con tarjeta al entregar. Para recoger, se cobra con la terminal del local.
+      </p>
+      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+        Los modos de pedido (domicilio, para llevar, comer en local) se activan desde Módulos. La cantidad de mesas se configura en Mesas.
+      </p>
+
       {patch.orderTypes.includes('dine_in') && (
         <>
-          <NumberCtl label="Cantidad de mesas" value={patch.dineInTableCount} min={1} max={50} onChange={(v) => set('dineInTableCount', v)} />
-          <StringListCtl label="Preferencias de servicio" items={patch.dineInCourseOptions} onChange={(v) => set('dineInCourseOptions', v)} />
-          <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />
-          {patch.tipEnabled && (
-            <>
-              <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
-                Se agrega automáticamente al total del comensal (no puede quitarla).
-              </p>
-            </>
-          )}
+          <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Preferencias de servicio</div>
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+            El cliente elige una al ordenar (ej. &quot;entrada primero&quot;), para comer en local.
+          </p>
+          <ServicePreferencesCtl
+            items={patch.dineInCourseOptions}
+            onChange={(v) => set('dineInCourseOptions', v)}
+          />
         </>
       )}
-      <ReadOnly label="Domicilio" value={patch.orderTypes.includes('delivery')} />
-      <ReadOnly label="Para llevar" value={patch.orderTypes.includes('pickup')} />
-      <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
-        Domicilio y Para llevar solo se activan desde el panel Leogin.
-      </p>
-      <Toggle label="Aceptar pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
+
+      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Propina</div>
+      <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />
+      {patch.tipEnabled && (
+        <>
+          <NumberCtl label="Porcentaje de propina (%)" value={patch.tipPercent} min={1} max={50} onChange={(v) => set('tipPercent', v)} />
+          <Field label="Aplica a">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {patch.orderTypes.map((t) => (
+                <Toggle
+                  key={t}
+                  label={ORDER_TYPE_LABEL[t]}
+                  value={patch.tipOrderTypes.includes(t)}
+                  onChange={(v) => set('tipOrderTypes', toggleIn(patch.tipOrderTypes, t, v))}
+                />
+              ))}
+            </div>
+          </Field>
+          <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+            Se agrega automáticamente al total en los tipos de pedido marcados (el comensal no puede quitarla).
+          </p>
+        </>
+      )}
 
       <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Confirmación automática</div>
       <Toggle label="Confirmar pedidos automáticamente" value={patch.autoConfirmEnabled} onChange={(v) => set('autoConfirmEnabled', v)} />
@@ -216,9 +179,9 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
           {(['prefix', 'suffix'] as const).map((val) => {
             const on = patch.currencyPosition === val;
             return (
-              <button key={val} type="button" onClick={() => set('currencyPosition', val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+              <Button key={val} type="button" onClick={() => set('currencyPosition', val)} variant={on ? 'primary' : 'secondary'} size="sm" className="rounded-adm-full">
                 {val === 'prefix' ? 'Antes (Q10)' : 'Después (10Q)'}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -232,11 +195,11 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-        <button onClick={save} disabled={isPending} className="press btn-white" style={{ padding: '11px 20px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
           {isPending ? 'Guardando…' : 'Guardar'}
-        </button>
+        </Button>
         {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
       </div>
-    </Glass>
+    </Card>
   );
 }

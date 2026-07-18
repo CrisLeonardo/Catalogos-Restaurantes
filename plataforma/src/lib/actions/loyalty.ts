@@ -8,34 +8,9 @@ import { createDinerClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import {
-  getDinerLoyalty, resolveDinerAuthUserId, getCustomerIdByAuthUser, getRedeemContextByCustomer,
-  type RedeemContext, type DinerLoyalty,
+  getDinerLoyalty, resolveDinerAuthUserId,
+  type DinerLoyalty,
 } from '@/lib/db/loyalty';
-
-const NO_REDEEM: RedeemContext = { active: false, loggedIn: false, balance: 0, minRedeem: 0, redeemValue: 0 };
-
-/**
- * Consulta para el checkout: cuántos puntos puede canjear el comensal con
- * SESIÓN DE GOOGLE iniciada. Sin sesión (o sin cuenta enlazada) no hay nada
- * que canjear — la lealtad ya no se resuelve por teléfono.
- *
- * Resuelve la sesión SIEMPRE server-side (cookies) — el llamador NO debe
- * gatear esta consulta detrás de un `supabase.auth.getUser()` hecho en el
- * navegador: ese fetch cliente-servidor es redundante y puede fallar de
- * forma independiente a que la sesión sea válida (red lenta, bloqueadores),
- * dejando la UI mostrando "inicia sesión" a alguien que sí tiene sesión.
- */
-export async function getLoyaltyRedeemInfo(restaurantId: string): Promise<RedeemContext> {
-  if (!restaurantId) return NO_REDEEM;
-  const supabase = await createDinerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
-  const loggedIn = !!authUserId;
-  const customerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
-  if (!customerId) return { ...NO_REDEEM, loggedIn };
-  const ctx = await getRedeemContextByCustomer(restaurantId, customerId);
-  return { ...ctx, loggedIn };
-}
 
 export type LoyaltyActionResult = { error?: string; ok?: boolean; balance?: number };
 

@@ -1,19 +1,29 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { LeoginMark } from '@/components/leogin-logo';
+import { Icon } from '@/components/icons';
 import { login, type AuthState } from '@/lib/actions/auth';
+import type { ResumeSession } from '@/lib/auth/resume';
+import StaffPinLogin from '@/components/admin/staff-pin-login';
 
 const emptyState: AuthState = null;
 
 interface Props {
   restaurantName: string | null;
+  restaurantId?: string | null;
   logoUrl: string | null;
   slug: string | null;
+  /** Sesión de personal ya viva en este dominio → "Continuar como {nombre}". */
+  resume?: ResumeSession | null;
+  /** Hub local (Fase 2 offline) — fallback si el PIN falla por conectividad. */
+  hubUrl?: string | null;
+  hubToken?: string | null;
 }
 
-export default function LoginClient({ restaurantName, logoUrl, slug }: Props) {
+export default function LoginClient({ restaurantName, restaurantId, logoUrl, slug, resume, hubUrl, hubToken }: Props) {
+  const [mode, setMode] = useState<'password' | 'pin'>('password');
   const [state, formAction, isPending] = useActionState(login, emptyState);
 
   const inputStyle: React.CSSProperties = {
@@ -87,6 +97,33 @@ export default function LoginClient({ restaurantName, logoUrl, slug }: Props) {
           </p>
         </div>
 
+        {resume && (
+          <Glass style={{ padding: '18px 20px', marginBottom: 14 }}>
+            <a
+              href={resume.url}
+              className="press btn-accent"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '13px',
+                borderRadius: 'var(--radius-full)',
+                fontWeight: 600,
+                fontSize: 15,
+                textAlign: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              Continuar como {resume.name}
+            </a>
+            <p className="t-mute" style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>
+              Ya tienes una sesión iniciada — o entra con otra cuenta:
+            </p>
+          </Glass>
+        )}
+
+        {mode === 'pin' && restaurantId ? (
+          <StaffPinLogin restaurantId={restaurantId} hubUrl={hubUrl ?? null} hubToken={hubToken ?? null} onBack={() => setMode('password')} />
+        ) : (
         <Glass style={{ padding: '28px 24px' }}>
           <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
@@ -176,6 +213,48 @@ export default function LoginClient({ restaurantName, logoUrl, slug }: Props) {
             </button>
           </form>
         </Glass>
+        )}
+
+        {restaurantId && mode === 'password' && (
+          <button
+            type="button"
+            onClick={() => setMode('pin')}
+            className="press"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              width: '100%',
+              marginTop: 16,
+              padding: '13px 16px',
+              borderRadius: 'var(--radius-lg)',
+              border: '1.5px solid var(--u-hair-2)',
+              background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <span
+              style={{
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                display: 'grid', placeItems: 'center',
+                background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)',
+                color: 'var(--brand-accent)',
+              }}
+            >
+              <Icon name="key" size={17} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
+                Soy personal del restaurante
+              </span>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
+                Toca aquí para entrar con tu PIN
+              </span>
+            </span>
+            <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+          </button>
+        )}
       </div>
     </main>
   );

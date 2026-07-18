@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import ModulesPanel from '@/components/admin/modules-panel';
 import { getPlatformContactSettings } from '@/lib/actions/super-admin';
+import { getPricingSettings } from '@/lib/db/billing';
 import type { ModulesMap, ModuleSettings } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
 
@@ -32,15 +33,17 @@ export default async function ModulosPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [{ data: rest }, { data: theme }, contact] = await Promise.all([
+  const [{ data: rest }, { data: theme }, contact, pricing] = await Promise.all([
     db.from('restaurants').select('modules, module_settings, plan_actual').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
     getPlatformContactSettings(),
+    getPricingSettings(),
   ]);
 
   const planActual = (rest?.plan_actual as string | null) ?? null;
-  // Default solo cuando aún no hay config: BASICO → pickup; ESTANDAR → paquete
-  // Local (para llevar + comer en local); Premium+ → los tres canales.
+  // Default solo cuando aún no hay config: BASICO → pickup; ESTANDAR → 2 modos
+  // por defecto (para llevar + comer en local, editable desde el panel);
+  // Premium+ → los tres canales.
   const defaultOrderTypes: OrderType[] =
     planActual === 'BASICO' ? ['pickup']
     : planActual === 'ESTANDAR' ? ['pickup', 'dine_in']
@@ -58,6 +61,8 @@ export default async function ModulosPage() {
         orderTypes={orderTypes}
         supportWhatsapp={contact.support_whatsapp}
         planActual={planActual}
+        channelDiscountPer={pricing.channelDiscountPer}
+        channelDiscountMax={pricing.channelDiscountMax}
       />
     </div>
   );

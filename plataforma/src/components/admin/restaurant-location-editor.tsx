@@ -11,8 +11,10 @@
 
 import { useActionState, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { updateRestaurantLocation } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
 
@@ -64,7 +66,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
       <input type="hidden" name="location_lng"       value={geoEnabled ? lng.toFixed(7)  : ''} />
       <input type="hidden" name="delivery_radius_km" value={geoEnabled ? radius.toString() : ''} />
 
-      <Glass variant="quiet" style={{ padding: 16 }}>
+      <Card className="p-4">
         {/* Toggle para activar/desactivar validación geográfica */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
@@ -76,29 +78,12 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
               cae dentro del radio que definas.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setGeoEnabled((v) => !v)}
-            className="press"
-            aria-pressed={geoEnabled}
-            style={{
-              flexShrink: 0,
-              marginLeft: 16,
-              width: 48, height: 28, borderRadius: 99,
-              border: 'none', cursor: 'pointer',
-              background: geoEnabled ? 'var(--c-accent, #D97757)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-              position: 'relative', transition: 'background 200ms',
-            }}
-          >
-            <span style={{
-              position: 'absolute', top: 3,
-              left: geoEnabled ? 23 : 3,
-              width: 22, height: 22, borderRadius: 99,
-              background: '#fff',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
-              transition: 'left 200ms',
-            }} />
-          </button>
+          <Switch
+            checked={geoEnabled}
+            onCheckedChange={setGeoEnabled}
+            aria-label="Validación por mapa"
+            className="ml-4 shrink-0"
+          />
         </div>
 
         {geoEnabled && (
@@ -192,30 +177,21 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
             de texto (si las configuraste) o aceptará cualquier dirección.
           </div>
         )}
-      </Glass>
+      </Card>
 
       {state?.error && (
         <div style={{
           padding: '10px 14px', borderRadius: 'var(--radius-md)',
           background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)',
-          color: '#f87171', fontSize: 14,
+          color: 'var(--c-danger, #f87171)', fontSize: 14,
         }}>
           {state.error}
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="press btn-accent"
-        style={{
-          width: '100%', padding: 14, borderRadius: 'var(--radius-full)',
-          fontWeight: 600, fontSize: 15, border: 'none',
-          cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1,
-        }}
-      >
+      <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
         {isPending ? 'Guardando…' : 'Guardar ubicación y radio'}
-      </button>
+      </Button>
     </form>
   );
 }

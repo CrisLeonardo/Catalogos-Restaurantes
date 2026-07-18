@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
 import { updateOrderStatus } from '@/lib/actions/orders';
+import { changeOperatorUser } from '@/lib/actions/operator';
 import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
@@ -22,6 +23,8 @@ interface Props {
   confirmFirst?: boolean;
   /** Esquema claro/oscuro del panel admin (cookie `admin-theme`), NO el tema del restaurante. */
   scheme?: 'light' | 'dark';
+  /** Sesión iniciada por PIN — ofrece "Cambiar de usuario" en la barra superior. */
+  isOperatorSession?: boolean;
 }
 
 /* Paletas de alto contraste — independientes del tema del restaurante, pero
@@ -81,13 +84,32 @@ function semaforo(elapsedMin: number, yellowMin: number, redMin: number, C: Pale
   return C.green;
 }
 
-export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark' }: Props) {
+export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark', isOperatorSession = false }: Props) {
   const router = useRouter();
   const orders = initialOrders;
   const [now, setNow] = useState<number | null>(null);
   const [isFull, setIsFull] = useState(false);
   const soundSettingsRef = useRef(loadSoundSettings());
   const C = scheme === 'light' ? C_LIGHT : C_DARK;
+
+  // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
+  // ráfaga de pedidos (p. ej. la cola offline sincronizando de golpe) hacía
+  // un re-render completo del server component POR PEDIDO — la pantalla de
+  // cocina se congelaba en plena hora pico. Máximo un refresh cada 2.5 s.
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+  const refreshSoon = useCallback(() => {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }, [router]);
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
 
   // Reloj/temporizadores
   useEffect(() => {
@@ -96,11 +118,17 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     return () => { clearTimeout(t0); clearInterval(id); };
   }, []);
 
-  // Desbloquear AudioContext al primer gesto del usuario en la pantalla de cocina
+  // Desbloquear AudioContext con el primer gesto del usuario (click, tecla o
+  // toque — antes solo click: en una tablet táctil el primer gesto suele ser
+  // un scroll/touch y el KDS quedaba mudo hasta el primer tap real).
   useEffect(() => {
-    const handler = () => primeAudio();
-    document.addEventListener('click', handler, { once: true });
-    return () => document.removeEventListener('click', handler);
+    const events: (keyof DocumentEventMap)[] = ['click', 'pointerdown', 'keydown', 'touchstart'];
+    const handler = () => {
+      primeAudio();
+      events.forEach((ev) => document.removeEventListener(ev, handler));
+    };
+    events.forEach((ev) => document.addEventListener(ev, handler, { once: true }));
+    return () => events.forEach((ev) => document.removeEventListener(ev, handler));
   }, []);
 
   // Realtime: pedido nuevo → sonido de cocina + refresco; cambio de estado → refresco.
@@ -130,7 +158,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
               const s = soundSettingsRef.current;
               playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
             }
-            router.refresh();
+            refreshSoon();
           },
         )
         .on(
@@ -147,14 +175,14 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
               const s = soundSettingsRef.current;
               playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
             }
-            router.refresh();
+            refreshSoon();
           },
         )
         .subscribe();
     })();
 
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
-  }, [restaurantId, router, confirmFirst]);
+  }, [restaurantId, confirmFirst, refreshSoon]);
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -193,9 +221,17 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           <button onClick={toggleFullscreen} title="Pantalla completa" style={iconBtnStyle(C)}>
             <Icon name={isFull ? 'x' : 'grid'} size={17} />
           </button>
-          <a href="/admin/pedidos" title="Salir de cocina" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
-            <Icon name="logOut" size={17} />
-          </a>
+          {isOperatorSession ? (
+            <form action={changeOperatorUser}>
+              <button type="submit" title="Cambiar de usuario" style={iconBtnStyle(C)}>
+                <Icon name="user" size={17} />
+              </button>
+            </form>
+          ) : (
+            <a href="/admin/pedidos" title="Volver al panel" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
+              <Icon name="chevronLeft" size={19} />
+            </a>
+          )}
         </div>
       </header>
 
@@ -288,7 +324,7 @@ function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: O
               <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.25 }}>{item.name_snapshot}</div>
               {item.options_snapshot && item.options_snapshot.length > 0 && (
                 <div style={{ fontSize: 13, color: C.amber, marginTop: 2, fontWeight: 600 }}>
-                  {item.options_snapshot.map((o) => o.choice).join(' · ')}
+                  {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                 </div>
               )}
             </div>

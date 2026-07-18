@@ -16,7 +16,7 @@ const PLAN_INFO = {
     badge: 'PRUEBA 30 DÍAS',
     badgeColor: '#818cf8',
     badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'luego Q599 / mes · sin tarjeta ni compromiso',
+    detail: 'luego Q749 / mes · sin tarjeta ni compromiso',
     subtitle: 'Tu prueba de 30 días comienza hoy.',
     features: [
       'Pedidos para llevar, en local y delivery',
@@ -56,7 +56,7 @@ const PLAN_INFO = {
     badge: 'PRUEBA 30 DÍAS',
     badgeColor: '#818cf8',
     badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'luego Q199 / mes · sin tarjeta ni compromiso',
+    detail: 'luego Q149 / mes · sin tarjeta ni compromiso',
     subtitle: 'Tu plan Básico (menú digital) está activo.',
     features: [
       'Menú digital con QR listo para imprimir',
@@ -179,6 +179,29 @@ export default async function RegistroListoPage({
             <Icon name="helpCircle" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
             Si te pide iniciar sesión, usa el correo y la contraseña que acabas de registrar.
           </Glass>
+
+          {/* Leogin Desktop */}
+          <a
+            href="/descargas"
+            className="glass-quiet press"
+            style={{
+              marginTop: 12, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12,
+              textAlign: 'left', textDecoration: 'none', borderRadius: 'var(--radius-md, 14px)',
+            }}
+          >
+            <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent)' }}>
+              <Icon name="monitor" size={17} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
+                ¿Prefieres administrar desde una app instalada?
+              </span>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+                Descarga Leogin Desktop — inicia sesión con esta misma cuenta y listo.
+              </span>
+            </span>
+            <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+          </a>
         </div>
       </div>
     </main>

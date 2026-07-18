@@ -29,7 +29,7 @@ export default function DeleteButton({
         style={{
           background: 'rgba(220,50,50,0.12)',
           border: '1px solid rgba(220,50,50,0.25)',
-          color: '#f87171',
+          color: 'var(--c-danger, #f87171)',
           padding: '5px 12px',
           borderRadius: 'var(--radius-full)',
           fontSize: 12,

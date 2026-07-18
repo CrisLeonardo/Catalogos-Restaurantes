@@ -10,9 +10,12 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
-import { saveAdminRestaurantTheme } from '@/lib/actions/restaurant';
+import TemplateGallery from '@/components/admin/template-gallery';
+import OwnerTemplates from '@/components/admin/owner-templates';
+import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/actions/restaurant';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
+import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
 
 /* ── Contraste WCAG (asistente de legibilidad) ─────────────
    El dueño no sabe de ratios: si elige colores que no se leen,
@@ -51,10 +54,12 @@ interface Props {
   config: ThemeConfig;
   content: ThemeContent;
   customCss: string;
+  ownerTemplates: RestaurantThemeTemplate[];
 }
 
-type Tab = 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos';
+type Tab = 'plantillas' | 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos';
 const TABS: { key: Tab; label: string; icon: string }[] = [
+  { key: 'plantillas', label: 'Plantillas', icon: 'grid'  },
   { key: 'identidad', label: 'Identidad',  icon: 'sparkle' },
   { key: 'visual',    label: 'Visual',     icon: 'image'   },
   { key: 'portada',   label: 'Portada',    icon: 'phone'   },
@@ -64,13 +69,25 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 /* ── Componente principal ─────────────────────────────────── */
-export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss }: Props) {
+export default function AdminThemeEditor({ restaurantId, config: initialConfig, content: initialContent, customCss: initialCss, ownerTemplates: initialOwnerTemplates }: Props) {
   const router = useRouter();
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
-  const [tab, setTab] = useState<Tab>('identidad');
+  const [ownerTemplates, setOwnerTemplates] = useState<RestaurantThemeTemplate[]>(initialOwnerTemplates);
+  // El CSS a medida (lo escribe solo Leogin) vive en estado porque aplicar una
+  // plantilla lo RESETEA: ese CSS se inyecta al final del documento y le gana
+  // a las variables de cualquier plantilla — con un CSS hecho para el look
+  // anterior, la plantilla salía como mezcla ilegible (fondo/texto viejos +
+  // tarjetas del esquema nuevo) tanto en la vista previa como al publicar.
+  const [customCss, setCustomCss] = useState(initialCss);
+  const [tab, setTab] = useState<Tab>('plantillas');
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [appliedTpl, setAppliedTpl] = useState<string | null>(null);
+  // ¿Este restaurante tenía CSS a medida y el dueño lo quitó al aplicar una
+  // plantilla? El server action solo permite al dueño LIMPIARLO (nunca
+  // escribir CSS arbitrario), por eso viaja como flag y no como texto.
+  const cssWasReset = initialCss.trim() !== '' && customCss === '';
 
   const setC = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setConfig((p) => ({ ...p, [k]: v }));
   const setT = (section: keyof ThemeContent, key: string, v: string) =>
@@ -82,10 +99,19 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
   function save() {
     setMsg(null);
     start(async () => {
-      const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss });
+      const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss, resetCustomCss: cssWasReset });
       if (res.error) setMsg(`Error: ${res.error}`);
       else { setMsg('Guardado ✓'); router.refresh(); }
     });
+  }
+
+  function applyBuiltinTemplate(tpl: BuiltinTemplate) {
+    setConfig((prev) => applyTemplateToConfig(prev, tpl));
+    // El CSS a medida se desactiva: pisa las variables de la plantilla y
+    // producía la mezcla ilegible (ver comentario en el estado customCss).
+    setCustomCss('');
+    setAppliedTpl(tpl.id);
+    setMsg(null);
   }
 
   function applyPalette(p: typeof PALETTES[0]) {
@@ -133,6 +159,43 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             );
           })}
         </div>
+
+        {/* ── Tab: Plantillas ── */}
+        {tab === 'plantillas' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Glass variant="quiet" style={{ padding: 16 }}>
+              <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
+                Elige un punto de partida y luego afínalo en las demás pestañas.
+                Tu logo, nombre, textos y configuración de pedidos <strong style={{ color: 'var(--u-text-2)' }}>se conservan</strong> —
+                la plantilla solo cambia colores, tipografía, portada y estilo.
+                Nada se publica hasta que toques «Guardar cambios».
+              </p>
+            </Glass>
+            <OwnerTemplates
+              restaurantId={restaurantId}
+              currentConfig={config}
+              templates={ownerTemplates}
+              onTemplatesChange={setOwnerTemplates}
+              onApply={applyBuiltinTemplate}
+              appliedId={appliedTpl}
+            />
+            <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} aria-hidden />
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} />
+            {appliedTpl && (
+              <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Icon name="checkCircle" size={16} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+                  Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
+                  o sigue personalizando en las otras pestañas.
+                  {cssWasReset && (
+                    <> Este sitio tenía un <strong>diseño CSS a medida</strong> que pisaba los colores de las plantillas;
+                    se desactivó para que la plantilla se vea fiel (se elimina al guardar).</>
+                  )}
+                </span>
+              </Glass>
+            )}
+          </div>
+        )}
 
         {/* ── Tab: Identidad ── */}
         {tab === 'identidad' && (
@@ -260,7 +323,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 />
               )}
               <Toggle label="Luz ambiental (efecto glow)" value={config.ambientGlow} onChange={(v) => setC('ambientGlow', v)} />
-              <Toggle label="Grano de concreto" value={config.grain} onChange={(v) => setC('grain', v)} />
+              <Toggle label="Grano / textura" value={config.grain} onChange={(v) => setC('grain', v)} />
+              {config.grain && (
+                <Segmented
+                  label="Estilo del grano"
+                  value={config.grainStyle}
+                  options={[['fino', 'Fino (concreto)'], ['grueso', 'Grueso (asfalto/parrilla)'], ['papel', 'Papel (fibra cálida)']]}
+                  onChange={(v) => setC('grainStyle', v as ThemeConfig['grainStyle'])}
+                />
+              )}
               <Toggle label="Marca de agua girando" value={config.watermark} onChange={(v) => setC('watermark', v)} />
               {config.watermark && (
                 <>
@@ -357,6 +428,11 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Toggle label="Buscador de productos" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
               <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
               <Toggle label="Etiquetas (Picante, Nuevo, Veggie…)" value={config.showTags} onChange={(v) => setC('showTags', v)} />
+              <Toggle label="Favoritos como tarjeta destacada" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                Los productos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
+                (máximo 3), para guiar al cliente hacia tus platillos estrella.
+              </p>
             </Section>
 
             <Section title="Textos del menú">

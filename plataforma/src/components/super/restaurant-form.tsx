@@ -81,7 +81,7 @@ export default function RestaurantForm() {
           autoFocus
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Azúcar Negra"
+          placeholder="Tu Restaurante"
           style={inputStyle}
         />
       </Glass>
@@ -98,7 +98,7 @@ export default function RestaurantForm() {
             setSlug(e.target.value);
             setSlugEdited(true);
           }}
-          placeholder="azucar-negra"
+          placeholder="mi-restaurante"
           style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }}
         />
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>

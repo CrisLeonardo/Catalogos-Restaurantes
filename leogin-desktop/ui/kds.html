@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- Modo kiosco (--kds): pantalla dedicada de cocina. Busca el hub local de
+     esta PC (LeoginAgent) y navega directo a su KDS de respaldo en cuanto
+     responde — sin bandeja, sin setup, sin toast de actualización. Si el hub
+     tarda en arrancar (la PC recién encendió), reintenta solo. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leogin — Cocina</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: #0d1017; color: #e7eaf0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         display: grid; place-items: center; }
+  main { text-align: center; }
+  .logo { width: 64px; height: 64px; border-radius: 16px; background: #1c1c1e; display: grid; place-items: center;
+          margin: 0 auto 20px; }
+  .logo svg { width: 40px; height: 40px; }
+  h1 { font-size: 22px; letter-spacing: -0.3px; }
+  .sub { font-size: 14px; color: #8b93a7; margin-top: 8px; }
+  .spin { width: 24px; height: 24px; border: 3px solid #2c3550; border-top-color: #f5a030; border-radius: 99px;
+          margin: 22px auto 0; animation: r 0.8s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lg)"/></svg>
+  </div>
+  <h1>Leogin — Cocina</h1>
+  <div class="sub" id="sub">Buscando el hub local de esta PC…</div>
+  <div class="spin"></div>
+</main>
+
+<script>
+  const invoke = window.__TAURI__.core.invoke;
+
+  async function tryConnect() {
+    try {
+      const url = await invoke('get_kds_url');
+      if (url) {
+        document.getElementById('sub').textContent = 'Conectado — abriendo la pantalla de cocina…';
+        location.href = url;
+        return;
+      }
+    } catch { /* se reintenta */ }
+    setTimeout(tryConnect, 2500);
+  }
+
+  tryConnect();
+</script>
+</body>
+</html>

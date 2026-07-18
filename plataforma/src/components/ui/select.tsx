@@ -1,0 +1,99 @@
+'use client';
+
+import * as React from 'react';
+import { Select as BaseSelect } from '@base-ui/react/select';
+
+import { cn } from '@/lib/utils';
+import { Icon } from '@/components/icons';
+
+/**
+ * Select accesible (Base UI) — reemplaza el <select> nativo cuyo popup de
+ * <option> ignora `color-scheme` en Chrome/Windows (bug documentado: el
+ * listado salía siempre blanco/negro fijo sin importar el tema del panel).
+ * Aquí el popup es un <div> propio: hereda los tokens del tema sin ese bug.
+ */
+export interface SelectOption {
+  value: string;
+  label: React.ReactNode;
+  disabled?: boolean;
+}
+
+export interface SelectProps {
+  options: SelectOption[];
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  name?: string;
+}
+
+function Select({
+  options,
+  value,
+  defaultValue,
+  onValueChange,
+  placeholder = 'Selecciona…',
+  disabled,
+  className,
+  name,
+}: SelectProps) {
+  return (
+    <BaseSelect.Root
+      items={options}
+      value={value}
+      defaultValue={defaultValue}
+      onValueChange={(v) => onValueChange?.(v as string)}
+      disabled={disabled}
+      name={name}
+    >
+      <BaseSelect.Trigger
+        data-slot="select-trigger"
+        className={cn(
+          'flex h-10 w-full items-center justify-between gap-2 rounded-adm-lg border border-adm-border bg-adm-card px-3.5 text-[13.5px] text-adm-text outline-none transition-colors',
+          'hover:border-adm-border-2 focus-visible:border-adm-accent-500 focus-visible:ring-2 focus-visible:ring-adm-accent-500/25',
+          'disabled:pointer-events-none disabled:opacity-50 data-[popup-open]:border-adm-accent-500',
+          className
+        )}
+      >
+        <BaseSelect.Value className="truncate text-left">
+          {(v: string | null) => options.find((o) => o.value === v)?.label ?? placeholder}
+        </BaseSelect.Value>
+        <BaseSelect.Icon className="text-adm-text-3">
+          <Icon name="chevronDown" size={15} />
+        </BaseSelect.Icon>
+      </BaseSelect.Trigger>
+      <BaseSelect.Portal>
+        <BaseSelect.Positioner sideOffset={6} className="z-[500] outline-none">
+          <BaseSelect.Popup
+            className={cn(
+              'max-h-72 min-w-[var(--anchor-width)] overflow-y-auto rounded-adm-lg border border-adm-border-2 bg-adm-overlay p-1 shadow-adm-lg outline-none',
+              'origin-[var(--transform-origin)] transition-[transform,opacity] data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0'
+            )}
+          >
+            {options.map((opt) => (
+              <BaseSelect.Item
+                key={opt.value}
+                value={opt.value}
+                disabled={opt.disabled}
+                className={cn(
+                  'flex cursor-pointer items-center justify-between gap-2 rounded-adm-md px-3 py-2 text-[13px] text-adm-text outline-none scroll-my-1',
+                  'data-[highlighted]:bg-adm-accent-500/12 data-[highlighted]:text-adm-accent-500',
+                  'data-[disabled]:pointer-events-none data-[disabled]:opacity-40'
+                )}
+              >
+                <BaseSelect.ItemText>{opt.label}</BaseSelect.ItemText>
+                <BaseSelect.ItemIndicator className="text-adm-accent-500">
+                  <Icon name="check" size={14} />
+                </BaseSelect.ItemIndicator>
+              </BaseSelect.Item>
+            ))}
+          </BaseSelect.Popup>
+        </BaseSelect.Positioner>
+      </BaseSelect.Portal>
+    </BaseSelect.Root>
+  );
+}
+
+export { Select };

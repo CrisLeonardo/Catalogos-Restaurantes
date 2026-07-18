@@ -17,6 +17,10 @@
 export type GlassIntensity = 'translucido' | 'esmerilado' | 'solido';
 export type ColorScheme = 'dark' | 'light';
 export type BackgroundType = 'asphalt' | 'solid' | 'gradient' | 'image';
+/** Variante de textura para config.grain — antes un único ruido fijo servía
+    para "madera quemada", "papel" y "asfalto" por igual (ver auditoría de
+    plantillas 2026-07-15). 'fino' reproduce EXACTO el grano original. */
+export type GrainStyle = 'fino' | 'grueso' | 'papel';
 export type CtaStyle = 'white' | 'accent' | 'outline';
 export type CheckoutActiveColor = 'text' | 'accent';
 export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
@@ -35,8 +39,11 @@ export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 /* Sombra de texto: presets que mejoran la legibilidad sobre fondos vivos o
    con imagen. El "ink" (color de la sombra) se invierte según el esquema
-   (oscuro = sombra negra; claro = halo blanco) vía la var CSS --shadow-ink. */
-export type ShadowPreset = 'none' | 'soft' | 'medium' | 'strong' | 'glow';
+   (oscuro = sombra negra; claro = halo blanco) vía la var CSS --shadow-ink.
+   'neon' es distinto a propósito: no es legibilidad, es un brillo LITERAL
+   con el color de acento de la marca (antes ninguna plantilla tenía forma
+   de lograr un efecto "neón"/"eléctrico" real — ver auditoría 2026-07-15). */
+export type ShadowPreset = 'none' | 'soft' | 'medium' | 'strong' | 'glow' | 'neon';
 
 export const SHADOW_PRESETS: Record<ShadowPreset, string> = {
   none:   'none',
@@ -44,10 +51,11 @@ export const SHADOW_PRESETS: Record<ShadowPreset, string> = {
   medium: '0 1px 3px rgba(var(--shadow-ink, 0,0,0), 0.58)',
   strong: '0 2px 5px rgba(var(--shadow-ink, 0,0,0), 0.80)',
   glow:   '0 0 9px rgba(var(--shadow-ink, 0,0,0), 0.72), 0 1px 2px rgba(var(--shadow-ink, 0,0,0), 0.55)',
+  neon:   '0 0 6px var(--brand-accent), 0 0 20px color-mix(in srgb, var(--brand-accent) 70%, transparent), 0 1px 2px rgba(var(--shadow-ink, 0,0,0), 0.5)',
 };
 
 export const SHADOW_OPTIONS: Array<[ShadowPreset, string]> = [
-  ['none', 'Sin sombra'], ['soft', 'Suave'], ['medium', 'Media'], ['strong', 'Fuerte'], ['glow', 'Halo'],
+  ['none', 'Sin sombra'], ['soft', 'Suave'], ['medium', 'Media'], ['strong', 'Fuerte'], ['glow', 'Halo'], ['neon', 'Neón (acento)'],
 ];
 
 export interface TextStyle {
@@ -141,7 +149,8 @@ export interface ThemeConfig {
   backgroundImage: string | null;
   backgroundGradient: string | null;   // p.ej. "linear-gradient(...)"
   ambientGlow: boolean;         // pools de luz a la deriva
-  grain: boolean;               // grano de concreto
+  grain: boolean;               // activa la textura de grano (ver grainStyle)
+  grainStyle: GrainStyle;       // 'fino' (concreto, default) | 'grueso' (asfalto/parrilla) | 'papel' (fibra cálida)
   watermark: boolean;           // marca gigante girando (usa markUrl/logoUrl)
 
   // ── CTA / botones ──
@@ -164,6 +173,7 @@ export interface ThemeConfig {
   showCategoryIcons: boolean;
   productArt: ProductArt;       // auto = foto si existe, si no patrón
   showTags: boolean;
+  featuredFavorites: boolean;   // productos con etiqueta "Favorito" como tarjeta grande (máx. 3)
 
   // ── Pedidos / checkout ──
   orderTypes: OrderType[];
@@ -171,8 +181,9 @@ export interface ThemeConfig {
   dineInTableCount: number;       // 1–50 mesas que aparecen en el selector
   dineInCourseOptions: string[];  // preferencias de servicio configurables
   acceptsCard: boolean;           // habilita la opción "pagar con tarjeta" en delivery y pickup
-  tipEnabled: boolean;            // propina obligatoria en pedidos DINE_IN
+  tipEnabled: boolean;            // propina obligatoria activa (ver tipOrderTypes)
   tipPercent: number;             // porcentaje a cobrar (ej. 10 = 10 %)
+  tipOrderTypes: OrderType[];     // a qué tipos de pedido aplica la propina obligatoria
 
   // ── Confirmación automática ──
   autoConfirmEnabled: boolean;    // confirma pedidos NEW→PREP automáticamente
@@ -314,6 +325,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   backgroundGradient: null,
   ambientGlow: true,
   grain: false,
+  grainStyle: 'fino',
   watermark: false,
 
   ctaStyle: 'white',
@@ -333,6 +345,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   showCategoryIcons: true,
   productArt: 'auto',
   showTags: true,
+  featuredFavorites: false,
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,
@@ -341,6 +354,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   acceptsCard: false,
   tipEnabled: false,
   tipPercent: 10,
+  tipOrderTypes: ['dine_in'],
 
   autoConfirmEnabled: false,
   autoConfirmMinutes: 1,
@@ -476,6 +490,7 @@ export interface ThemeContent {
     statusReady: string;
     statusReadyPickup: string;  // "Listo" cuando es para llevar
     statusTransit: string;
+    statusServed: string;       // comida entregada en mesa, cuenta aún pendiente
     statusDelivered: string;
     statusCancel: string;
     back: string;             // "Volver al menú"
@@ -550,7 +565,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     payCashPickup: 'Efectivo',
     payCashPickupSub: 'Pagas en el local al recoger',
     payCard: 'Tarjeta (paga al recibir)',
-    payCardSub: 'El repartidor lleva terminal',
+    payCardSub: 'El repartidor lleva el dispositivo POS',
     payCardPickupSub: 'Pagas con tarjeta en el local',
     cashAmountLabel: '¿Con cuánto vas a pagar?',
     cashAmountSub: 'Para que el repartidor lleve el cambio exacto.',
@@ -583,6 +598,7 @@ export const DEFAULT_CONTENT: ThemeContent = {
     statusReady: 'Listo',
     statusReadyPickup: 'Listo para recoger',
     statusTransit: 'En camino',
+    statusServed: 'Comida servida',
     statusDelivered: 'Entregado',
     statusCancel: 'Cancelado',
     back: 'Volver al menú',

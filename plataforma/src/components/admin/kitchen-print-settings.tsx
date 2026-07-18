@@ -2,6 +2,9 @@
 
 import { useState, useSyncExternalStore, useCallback } from 'react';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   PRINT_KEYS,
   type PrintRole,
@@ -37,34 +40,6 @@ function subscribePrintPrefs(cb: () => void): () => void {
 function notifyPrintPrefs(): void {
   window.dispatchEvent(new Event(PRINT_PREF_EVENT));
 }
-
-// ── Estilos reutilizables ─────────────────────────────────────────────────────
-
-const cardStyle: React.CSSProperties = {
-  borderRadius: 'var(--radius-lg)',
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair)',
-  padding: '18px 20px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-};
-
-const btnStyle: React.CSSProperties = {
-  padding: '9px 13px',
-  borderRadius: 'var(--radius-md)',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'var(--u-text-2)',
-  fontWeight: 600,
-  fontSize: 12.5,
-};
-
-const btnDangerStyle: React.CSSProperties = {
-  ...btnStyle,
-  color: '#f87171',
-  background: 'rgba(239,68,68,0.10)',
-};
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -138,10 +113,10 @@ export default function KitchenPrintSettings() {
   }
 
   return (
-    <div style={cardStyle}>
+    <Card className="flex flex-col gap-4 p-4.5">
 
       <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.55 }}>
-        Alternativa al Agente Leogin para equipos que prefieren impresión directa. Si no configuras
+        Alternativa a Leogin en tu PC para equipos que prefieren impresión directa. Si no configuras
         ninguna impresora aquí, los recibos y comandas salen por el <strong style={{ color: 'var(--u-text-3)' }}>diálogo
         del navegador</strong> (sirve también desde el celular hacia una impresora térmica conectada al dispositivo).
       </div>
@@ -158,21 +133,7 @@ export default function KitchenPrintSettings() {
             Al pasar un pedido a «En preparación» se imprime la comanda automáticamente
           </div>
         </div>
-        <button
-          type="button"
-          onClick={toggle}
-          className="press"
-          style={{
-            width: 46, height: 27, borderRadius: 99, border: 'none',
-            cursor: 'pointer', padding: 4, flexShrink: 0,
-            background: enabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-            display: 'flex',
-            justifyContent: enabled ? 'flex-end' : 'flex-start',
-            transition: 'background 180ms',
-          }}
-        >
-          <span style={{ width: 19, height: 19, borderRadius: 99, background: enabled ? 'var(--brand-bg)' : 'var(--u-text)' }} />
-        </button>
+        <Switch checked={enabled} onCheckedChange={toggle} aria-label="Imprimir comanda de cocina al confirmar" />
       </div>
 
       <div style={{ borderTop: '1px solid var(--u-hair)' }} />
@@ -209,23 +170,23 @@ export default function KitchenPrintSettings() {
               </label>
               {usbKitchen ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     ● {usbDeviceLabel(usbKitchen)}
                   </span>
-                  <button type="button" onClick={() => configureUsb('kitchen')} className="press glass-quiet" style={btnStyle}>
+                  <Button type="button" onClick={() => configureUsb('kitchen')} variant="secondary" size="sm">
                     Cambiar
-                  </button>
-                  <button type="button" onClick={() => removeUsb('kitchen')} className="press" style={btnDangerStyle}>
+                  </Button>
+                  <Button type="button" onClick={() => removeUsb('kitchen')} variant="destructive" size="sm">
                     Quitar
-                  </button>
-                  <button type="button" onClick={() => testUsb('kitchen')} className="press glass-quiet" style={btnStyle}>
+                  </Button>
+                  <Button type="button" onClick={() => testUsb('kitchen')} variant="secondary" size="sm">
                     Probar
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <button type="button" onClick={() => configureUsb('kitchen')} className="press glass-quiet" style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Button type="button" onClick={() => configureUsb('kitchen')} variant="secondary" size="sm">
                   <Icon name="print" size={14} /> Seleccionar impresora de cocina
-                </button>
+                </Button>
               )}
             </div>
 
@@ -236,23 +197,23 @@ export default function KitchenPrintSettings() {
               </label>
               {usbReceipt ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     ● {usbDeviceLabel(usbReceipt)}
                   </span>
-                  <button type="button" onClick={() => configureUsb('receipt')} className="press glass-quiet" style={btnStyle}>
+                  <Button type="button" onClick={() => configureUsb('receipt')} variant="secondary" size="sm">
                     Cambiar
-                  </button>
-                  <button type="button" onClick={() => removeUsb('receipt')} className="press" style={btnDangerStyle}>
+                  </Button>
+                  <Button type="button" onClick={() => removeUsb('receipt')} variant="destructive" size="sm">
                     Quitar
-                  </button>
-                  <button type="button" onClick={() => testUsb('receipt')} className="press glass-quiet" style={btnStyle}>
+                  </Button>
+                  <Button type="button" onClick={() => testUsb('receipt')} variant="secondary" size="sm">
                     Probar
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <button type="button" onClick={() => configureUsb('receipt')} className="press glass-quiet" style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Button type="button" onClick={() => configureUsb('receipt')} variant="secondary" size="sm">
                   <Icon name="print" size={14} /> Seleccionar impresora de caja
-                </button>
+                </Button>
               )}
             </div>
 
@@ -275,6 +236,6 @@ export default function KitchenPrintSettings() {
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

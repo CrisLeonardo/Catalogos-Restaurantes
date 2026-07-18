@@ -102,12 +102,12 @@ export default async function Home({
   // Dominio raíz → landing comercial de Leogin
   if (!slug) return <LeoginLanding />;
 
-  // Subdominio `demo` → menú de ejemplo (Azúcar Negra, sin BD)
+  // Subdominio `demo` → menú de ejemplo (Café Demo, sin BD)
   if (slug === DEMO_SLUG) {
     const demo = resolveTheme(
       {
-        brand_name: 'Azúcar Negra',
-        config: { tagline: 'Cafetería con sabor a calle', zone: 'Zona 1', portadaVariant: 'spotlight' },
+        brand_name: 'Café Demo',
+        config: { tagline: 'Sabor de barrio', zone: 'Zona 1', portadaVariant: 'spotlight' },
       },
       DEMO_SLUG,
     );

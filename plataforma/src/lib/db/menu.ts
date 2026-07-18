@@ -12,7 +12,7 @@ export type MenuData = {
 // filtra filas pero NO columnas, así que un select('*') los serializaba al
 // navegador del comensal (visibles en el payload de red). is_active lo filtra
 // la política RLS `products_select_available`, no hace falta pedirlo.
-const PUBLIC_PRODUCT_COLUMNS =
+export const PUBLIC_PRODUCT_COLUMNS =
   'id, category_id, name, description, price, image_url, icon, tags, options, is_available, unavailable_at, sort_order';
 
 /**

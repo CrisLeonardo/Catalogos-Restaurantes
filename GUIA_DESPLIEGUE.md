@@ -54,7 +54,7 @@ En el dashboard de tu proyecto (https://supabase.com/dashboard):
 
 > Alternativa (avanzada, con el CLI): `npx supabase link --project-ref TU_REF` y luego `npx supabase db push`. Para empezar, el copy-paste del SQL es lo más simple y seguro.
 
-> **Nota:** `setup_produccion.sql` NO incluye el restaurante demo "Azúcar Negra" — tu producción arranca limpia. (El demo solo existe en local.)
+> **Nota:** `setup_produccion.sql` NO incluye el restaurante demo "Café Demo" — tu producción arranca limpia. (El demo solo existe en local.)
 
 ## 1.3 Verificar el Storage (fotos)
 
@@ -199,8 +199,8 @@ NEXT_PUBLIC_ROOT_DOMAIN = tudominio.com
 
 Guarda (Render redepliega solo). Ahora:
 - `tudominio.com` → portada de la plataforma
-- `azucar-negra.tudominio.com` → menú de ese restaurante
-- `azucar-negra.tudominio.com/login` → acceso del dueño
+- `mi-restaurante.tudominio.com` → menú de ese restaurante
+- `mi-restaurante.tudominio.com/login` → acceso del dueño
 
 ---
 

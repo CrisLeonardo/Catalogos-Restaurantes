@@ -2,8 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { createCoupon, toggleCoupon, deleteCoupon } from '@/lib/actions/cupones';
 import type { Coupon } from '@/lib/db/cupones';
 
@@ -29,9 +32,9 @@ const emptyForm = {
 function couponStatus(c: Coupon): { label: string; color: string } {
   if (!c.is_active) return { label: 'Pausado', color: 'var(--u-text-4)' };
   const now = new Date();
-  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: '#f87171' };
+  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: 'var(--c-danger, #f87171)' };
   if (c.max_uses && c.uses >= c.max_uses) return { label: 'Agotado', color: '#fbbf24' };
-  return { label: 'Activo', color: '#4ade80' };
+  return { label: 'Activo', color: 'var(--c-ok, #4ade80)' };
 }
 
 export default function CuponesPanel({ restaurantId, coupons }: Props) {
@@ -97,30 +100,29 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       {/* Header con stats */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12 }}>
-          <Glass variant="quiet" style={{ padding: '10px 18px', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Card className="flex items-center gap-2 px-4.5 py-2.5">
             <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', fontFamily: 'var(--font-display)' }}>{active}</span>
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>activos</span>
-          </Glass>
-          <Glass variant="quiet" style={{ padding: '10px 18px', display: 'flex', gap: 8, alignItems: 'center' }}>
+          </Card>
+          <Card className="flex items-center gap-2 px-4.5 py-2.5">
             <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{coupons.length}</span>
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>total</span>
-          </Glass>
+          </Card>
         </div>
-        <button type="button" onClick={() => setShowForm((v) => !v)} className="press"
-          style={{ padding: '8px 16px', background: 'var(--admin-panel-btn)', color: 'var(--admin-panel-btn-text)', border: 'none', borderRadius: 99, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Button type="button" onClick={() => setShowForm((v) => !v)} className="rounded-adm-full">
           <Icon name="plus" size={15} /> Nuevo cupón
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
           {error}
         </div>
       )}
 
       {/* Formulario nuevo cupón */}
       {showForm && (
-        <Glass variant="quiet" style={{ padding: 20 }}>
+        <Card className="p-5">
           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', marginBottom: 14 }}>Crear cupón</div>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
@@ -130,11 +132,11 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
               </div>
               <div>
                 <label style={labelStyle}>Tipo *</label>
-                {/* Fondo adaptativo (antes #1a1a1c fijo → caja oscura en panel claro). */}
-                <select style={inputStyle} value={form.discount_type} onChange={(e) => setField('discount_type', e.target.value)}>
-                  <option value="PERCENT" style={{ background: '#fff', color: '#111' }}>Porcentaje (%)</option>
-                  <option value="FIXED" style={{ background: '#fff', color: '#111' }}>Monto fijo (Q)</option>
-                </select>
+                <Select
+                  options={[{ value: 'PERCENT', label: 'Porcentaje (%)' }, { value: 'FIXED', label: 'Monto fijo (Q)' }]}
+                  value={form.discount_type}
+                  onValueChange={(v) => setField('discount_type', v)}
+                />
               </div>
               <div>
                 <label style={labelStyle}>Valor * ({form.discount_type === 'PERCENT' ? '%' : 'Q'})</label>
@@ -158,17 +160,15 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-              <button type="submit" disabled={isPending} className="press"
-                style={{ padding: '9px 20px', background: 'var(--admin-panel-btn)', color: 'var(--admin-panel-btn-text)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, fontSize: 13.5, cursor: isPending ? 'wait' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+              <Button type="submit" disabled={isPending}>
                 {isPending ? 'Guardando…' : 'Crear cupón'}
-              </button>
-              <button type="button" onClick={() => setShowForm(false)} className="press"
-                style={{ padding: '9px 16px', background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', color: 'var(--u-text-3)', fontSize: 13.5, cursor: 'pointer' }}>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
-        </Glass>
+        </Card>
       )}
 
       {/* Lista de cupones */}
@@ -184,7 +184,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             const { label: statusLabel, color: statusColor } = couponStatus(c);
             const busy = busyId === c.id && isPending;
             return (
-              <Glass key={c.id} variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', opacity: busy ? 0.6 : 1 }}>
+              <Card key={c.id} className="flex flex-wrap items-center gap-3 p-3.5" style={{ opacity: busy ? 0.6 : 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', flexShrink: 0 }}>
                   <Icon name="ticket" size={18} style={{ color: statusLabel === 'Activo' ? 'var(--brand-accent)' : 'var(--u-text-4)' }} />
                 </div>
@@ -202,18 +202,18 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                   </div>
                   {c.description && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{c.description}</div>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                  {/* Toggle activo/inactivo */}
-                  <button type="button" onClick={() => handleToggle(c.id, c.is_active)} disabled={busy} className="press"
-                    style={{ width: 38, height: 22, borderRadius: 999, flexShrink: 0, padding: 3, background: c.is_active ? 'var(--admin-panel-btn)' : 'color-mix(in srgb, var(--u-text) 18%, transparent)', border: 'none', cursor: busy ? 'wait' : 'pointer', display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start', transition: 'background 180ms' }}>
-                    <span style={{ width: 16, height: 16, borderRadius: 999, background: c.is_active ? 'var(--admin-panel-btn-text)' : '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
-                  </button>
-                  <button type="button" onClick={() => handleDelete(c.id)} disabled={busy} className="press"
-                    style={{ padding: '5px 8px', background: 'none', border: 'none', color: 'var(--u-text-4)', cursor: busy ? 'wait' : 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <Switch
+                    checked={c.is_active}
+                    onCheckedChange={() => handleToggle(c.id, c.is_active)}
+                    disabled={busy}
+                    aria-label={c.is_active ? 'Desactivar cupón' : 'Activar cupón'}
+                  />
+                  <Button type="button" onClick={() => handleDelete(c.id)} disabled={busy} variant="ghost" size="icon" className="size-8">
                     <Icon name="trash" size={14} />
-                  </button>
+                  </Button>
                 </div>
-              </Glass>
+              </Card>
             );
           })}
         </div>

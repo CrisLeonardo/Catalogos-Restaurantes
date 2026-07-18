@@ -9,6 +9,7 @@ import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
 import CashCountForm from '@/components/admin/cash-count-form';
 import CashHistoryPanel from '@/components/admin/cash-history-panel';
+import { Card } from '@/components/ui/card';
 
 export const metadata = { title: 'Finanzas – Panel admin' };
 
@@ -62,14 +63,14 @@ export default async function AdminFinanzasPage({
 
   if (!ordersEnabled) {
     return (
-      <div className="glass" style={{ borderRadius: 16, padding: '24px 22px', maxWidth: 560 }}>
+      <Card className="p-5" style={{ maxWidth: 560 }}>
         <div className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Finanzas</div>
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
           Los reportes financieros y el corte de caja se basan en los pedidos en línea.
           Activa el módulo <strong>Pedidos</strong> (plan Premium) para empezar a medir
           ingresos, utilidad y margen.
         </p>
-      </div>
+      </Card>
     );
   }
 
@@ -89,12 +90,12 @@ export default async function AdminFinanzasPage({
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* Rango + export */}
-      <div className="glass" style={{ borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Card className="flex flex-col gap-3 p-4">
         <DateRangeForm from={from} to={to} />
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <ExportReportButton restaurantId={restaurantId} from={from} to={to} />
         </div>
-      </div>
+      </Card>
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
@@ -106,14 +107,14 @@ export default async function AdminFinanzasPage({
       </div>
 
       {report.marginPct == null && report.orders > 0 && (
-        <div className="glass-quiet" style={{ borderRadius: 13, padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Aún no hay costos capturados en tus productos: la utilidad y el margen aparecerán
           cuando pongas el <strong>Costo</strong> en el editor de cada platillo.
-        </div>
+        </Card>
       )}
 
       {/* Gráfica diaria */}
-      <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <Card className="flex flex-col gap-3.5 p-4.5">
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Ingreso por día</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
           {report.series.map((d, i) => {
@@ -136,7 +137,7 @@ export default async function AdminFinanzasPage({
           <span>{report.series[0]?.label}</span>
           <span>{report.series[report.series.length - 1]?.label}</span>
         </div>
-      </div>
+      </Card>
 
       {/* Mix de ventas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -164,17 +165,17 @@ export default async function AdminFinanzasPage({
 
 function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
+    </Card>
   );
 }
 
 function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total: number }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Card className="flex flex-col gap-3 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
@@ -192,13 +193,13 @@ function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total
           </div>
         );
       })}
-    </div>
+    </Card>
   );
 }
 
 function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name: string; a: string; b: string }[]; colA: string; colB: string }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
@@ -216,6 +217,6 @@ function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name
           ))}
         </>
       )}
-    </div>
+    </Card>
   );
 }

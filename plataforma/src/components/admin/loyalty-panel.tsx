@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   saveLoyaltySettings, adjustPoints, saveReward, deleteReward, toggleReward,
   type LoyaltySettingsPatch, type RewardPatch,
@@ -69,10 +72,10 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
 
 function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <Glass variant="quiet" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card className="flex flex-col gap-1 p-3.5">
       <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
       <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-    </Glass>
+    </Card>
   );
 }
 
@@ -100,7 +103,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
   }
 
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <Card className="flex flex-col gap-3.5 p-4">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
         <div><label style={labelStyle}>Por cada Q gastados</label><input style={inputStyle} type="number" inputMode="decimal" min="0.01" step="1" value={p.earn_amount} onChange={(e) => set('earn_amount', parseFloat(e.target.value) || 0)} /></div>
@@ -109,7 +112,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13.5, color: 'var(--u-text-2)' }}>
-        <input type="checkbox" checked={p.rewards_enabled} onChange={(e) => set('rewards_enabled', e.target.checked)} style={{ width: 17, height: 17, accentColor: 'var(--brand-accent)' }} />
+        <Switch checked={p.rewards_enabled} onCheckedChange={(v) => set('rewards_enabled', v)} />
         Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por productos)
       </label>
 
@@ -122,12 +125,12 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
         La identidad de lealtad es siempre la <strong>cuenta de Google</strong> del comensal: los pedidos hechos <strong>sin sesión iniciada</strong> (invitados) no acumulan puntos automáticamente ni reciben los puntos de bienvenida, aunque sí quedan registrados como pedido normal. Si un invitado inicia sesión más tarde, sus pedidos anteriores no ganan puntos retroactivamente.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={save} disabled={isPending} className="press btn-accent" style={{ padding: '10px 22px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 13.5, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
+        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
           {isPending ? 'Guardando…' : 'Guardar configuración'}
-        </button>
+        </Button>
         {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
       </div>
-    </Glass>
+    </Card>
   );
 }
 
@@ -187,15 +190,16 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Card className="flex flex-col gap-3 p-4">
         <div className="t-kicker" style={{ fontSize: 10.5 }}>{editingId ? 'Editar recompensa' : 'Nueva recompensa'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>Producto del menú</label>
-            <select style={inputStyle} value={form.product_id ?? ''} onChange={(e) => pickProduct(e.target.value)}>
-              <option value="">— Recompensa sin producto —</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name} · Q{Number(p.price).toFixed(2)}</option>)}
-            </select>
+            <Select
+              options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · Q${Number(p.price).toFixed(2)}` }))]}
+              value={form.product_id ?? ''}
+              onValueChange={pickProduct}
+            />
           </div>
           <div><label style={labelStyle}>Nombre visible</label><input style={inputStyle} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ej. Hamburguesa gratis" /></div>
           <div><label style={labelStyle}>Costo en puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="1" step="1" value={form.points_cost} onChange={(e) => set('points_cost', parseInt(e.target.value, 10) || 0)} /></div>
@@ -206,24 +210,24 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
           <div><label style={labelStyle}>Máx. por cliente (vacío = sin límite)</label><input style={inputStyle} type="number" inputMode="decimal" min="1" step="1" value={form.per_customer_limit ?? ''} onChange={(e) => set('per_customer_limit', e.target.value === '' ? null : parseInt(e.target.value, 10))} /></div>
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)' }}>
-          <input type="checkbox" checked={form.active !== false} onChange={(e) => set('active', e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--brand-accent)' }} />
+          <Switch checked={form.active !== false} onCheckedChange={(v) => set('active', v)} />
           Activa (visible para los comensales)
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={save} disabled={isPending || !form.title.trim() || !(form.points_cost > 0)} className="press btn-accent" style={{ padding: '9px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', opacity: (isPending || !form.title.trim() || !(form.points_cost > 0)) ? 0.6 : 1 }}>
+          <Button onClick={save} disabled={isPending || !form.title.trim() || !(form.points_cost > 0)} size="sm" className="rounded-adm-full">
             {isPending ? '…' : editingId ? 'Guardar cambios' : 'Agregar recompensa'}
-          </button>
-          {editingId && <button onClick={reset} className="press" style={{ background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--u-text-2)', fontSize: 13, cursor: 'pointer' }}>Cancelar</button>}
+          </Button>
+          {editingId && <Button onClick={reset} variant="outline" size="sm" className="rounded-adm-full">Cancelar</Button>}
           {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
         </div>
-      </Glass>
+      </Card>
 
       {rewards.length === 0 ? (
-        <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay recompensas. Crea la primera arriba.</Glass>
+        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay recompensas. Crea la primera arriba.</Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rewards.map((r) => (
-            <Glass key={r.id} variant="quiet" style={{ padding: 12, display: 'flex', gap: 12, alignItems: 'center', opacity: r.active ? 1 : 0.6 }}>
+            <Card key={r.id} className="flex items-center gap-3 p-3" style={{ opacity: r.active ? 1 : 0.6 }}>
               <div style={{ width: 46, height: 46, borderRadius: 11, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
                 {r.image_url
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -240,11 +244,11 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               </div>
               <div style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent)', fontSize: 14, whiteSpace: 'nowrap' }}>{r.points_cost.toLocaleString('es-GT')} pts</div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => toggle(r.id, !r.active)} disabled={isPending} className="press" title={r.active ? 'Desactivar' : 'Activar'} style={{ background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 9, padding: '6px 10px', color: 'var(--u-text-2)', fontSize: 12, cursor: 'pointer' }}>{r.active ? 'Ocultar' : 'Mostrar'}</button>
-                <button onClick={() => startEdit(r)} className="press" style={{ background: 'none', border: '1px solid var(--u-hair-2)', borderRadius: 9, padding: '6px 10px', color: 'var(--u-text-2)', fontSize: 12, cursor: 'pointer' }}>Editar</button>
-                <button onClick={() => remove(r.id)} disabled={isPending} className="press" style={{ background: 'none', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 9, padding: '6px 10px', color: '#f87171', fontSize: 12, cursor: 'pointer' }}>Borrar</button>
+                <Button onClick={() => toggle(r.id, !r.active)} disabled={isPending} variant="outline" size="sm" title={r.active ? 'Desactivar' : 'Activar'}>{r.active ? 'Ocultar' : 'Mostrar'}</Button>
+                <Button onClick={() => startEdit(r)} variant="outline" size="sm">Editar</Button>
+                <Button onClick={() => remove(r.id)} disabled={isPending} variant="outline" size="sm" className="border-[rgba(248,113,113,0.3)] text-[#f87171]">Borrar</Button>
               </div>
-            </Glass>
+            </Card>
           ))}
         </div>
       )}
@@ -274,41 +278,43 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Card className="flex flex-col gap-3 p-4">
         <div className="t-kicker" style={{ fontSize: 10.5 }}>Asignar / restar puntos manualmente</div>
         {/* .admin-form-3: 3 columnas en escritorio, apilado en móvil (antes
             columnas fijas que aplastaban el selector de cliente). */}
         <div className="admin-form-3">
           <div className="fg-full">
             <label style={labelStyle}>Cliente</label>
-            <select style={inputStyle} value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-              <option value="">Selecciona…</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>)}
-            </select>
+            <Select
+              options={[{ value: '', label: 'Selecciona…' }, ...customers.map((c) => ({ value: c.id, label: `${c.name}${c.phone ? ` · ${c.phone}` : ''}` }))]}
+              value={customerId}
+              onValueChange={setCustomerId}
+            />
           </div>
           <div><label style={labelStyle}>Puntos</label><input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="numeric" min="1" step="1" value={points} onChange={(e) => setPoints(e.target.value)} /></div>
           <div>
             <label style={labelStyle}>Tipo</label>
-            <select style={inputStyle} value={tipo} onChange={(e) => setTipo(e.target.value as 'ADJUST' | 'REDEEM')}>
-              <option value="ADJUST">Sumar</option>
-              <option value="REDEEM">Restar</option>
-            </select>
+            <Select
+              options={[{ value: 'ADJUST', label: 'Sumar' }, { value: 'REDEEM', label: 'Restar' }]}
+              value={tipo}
+              onValueChange={(v) => setTipo(v as 'ADJUST' | 'REDEEM')}
+            />
           </div>
         </div>
         <div><label style={labelStyle}>Nota (opcional)</label><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo del ajuste" /></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={apply} disabled={isPending || !customerId} className="press btn-accent" style={{ padding: '9px 20px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', opacity: (isPending || !customerId) ? 0.6 : 1 }}>
+          <Button onClick={apply} disabled={isPending || !customerId} size="sm" className="rounded-adm-full">
             {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}
-          </button>
+          </Button>
           {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ Q{((parseInt(points, 10) || 0) * settings.redeem_value).toFixed(2)} de descuento</span>}
           {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
         </div>
-      </Glass>
+      </Card>
 
       {accounts.length === 0 ? (
-        <Glass variant="quiet" style={{ padding: 28, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay miembros con puntos.</Glass>
+        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no hay miembros con puntos.</Card>
       ) : (
-        <Glass variant="quiet" style={{ overflow: 'hidden' }}>
+        <Card className="overflow-hidden p-0">
           {/* En móvil se oculta "Histórico" (columna menos útil) para que
               Cliente/Saldo/Valor quepan sin desbordar la pantalla. */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -326,7 +332,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
               ))}
             </tbody>
           </table>
-        </Glass>
+        </Card>
       )}
     </div>
   );

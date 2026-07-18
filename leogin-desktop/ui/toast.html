@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- Toast de actualización (esquina inferior izquierda, estilo Claude).
+     Vive en su propia ventana sin bordes, siempre visible y fuera de la barra
+     de tareas. Rust la muestra cuando la actualización YA se descargó; el
+     botón solo reinicia para aplicarla (instalación pasiva del NSIS). -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Actualización de Leogin</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: transparent; }
+  body { font: 13.5px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #e7eaf0; padding: 8px; }
+  .card { background: #151a26; border: 1px solid #2c3550; border-radius: 14px; padding: 14px 16px;
+          box-shadow: 0 10px 34px rgba(0,0,0,0.55); }
+  .row { display: flex; gap: 11px; align-items: flex-start; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; background: #1c1c1e; display: grid; place-items: center; flex: none; }
+  .logo svg { width: 22px; height: 22px; }
+  b { font-size: 14px; }
+  p { color: #aab2c5; font-size: 12.5px; margin-top: 2px; }
+  .btns { display: flex; gap: 8px; margin-top: 11px; justify-content: flex-end; }
+  button { padding: 8px 14px; border: 0; border-radius: 9px; cursor: pointer; font: inherit; font-weight: 800; font-size: 12.5px; }
+  .pri { background: linear-gradient(135deg, #e8534a, #f5a030); color: #fff; }
+  .sec { background: transparent; border: 1px solid #2c3550; color: #aab2c5; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <div class="logo">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stop-color="#E8534A"/><stop offset="1" stop-color="#F5A030"/></linearGradient></defs><path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#lg)"/></svg>
+      </div>
+      <div>
+        <b>Actualización lista <span id="ver"></span></b>
+        <p>Reinicia Leogin para aplicarla. Tus pedidos y la impresión no se detienen.</p>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="sec" id="later">Después</button>
+      <button class="pri" id="now">Reiniciar ahora</button>
+    </div>
+  </div>
+
+<script>
+  const invoke = window.__TAURI__.core.invoke;
+
+  async function fill() {
+    try {
+      const v = await invoke('get_pending_update');
+      if (v) document.getElementById('ver').textContent = 'v' + v;
+    } catch { /* sin versión visible */ }
+  }
+  window.__TAURI__.event.listen('update-ready', (e) => {
+    document.getElementById('ver').textContent = 'v' + e.payload.version;
+  });
+
+  document.getElementById('now').addEventListener('click', () => {
+    document.getElementById('now').textContent = 'Reiniciando…';
+    invoke('apply_update').catch(() => { document.getElementById('now').textContent = 'Reiniciar ahora'; });
+  });
+  document.getElementById('later').addEventListener('click', () => invoke('dismiss_update'));
+
+  fill();
+</script>
+</body>
+</html>

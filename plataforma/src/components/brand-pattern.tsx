@@ -5,7 +5,7 @@
    Reemplaza el placeholder "foto": cuando un producto no tiene imagen real, se
    muestra este patrón de marca para que la tarjeta siga viéndose premium. */
 
-import type { CSSProperties } from 'react';
+import { createElement, type CSSProperties } from 'react';
 import { ICON_PATHS } from '@/components/icons';
 
 /** Hash estable string → número, para usar el id del producto como seed. */
@@ -51,7 +51,10 @@ export function BrandPattern({
     { cx: r2(74 + rand() * 16), cy: r2(24 + rand() * 18), n: 2 + Math.floor(rand() * 3) },
     { cx: r2(82 + rand() * 10), cy: r2(78 + rand() * 14), n: 2 + Math.floor(rand() * 2) },
   ];
-  const path = ICON_PATHS[icon] ?? ICON_PATHS.utensils;
+  // ICON_PATHS ahora guarda iconos de Hugeicons (arreglo de tuplas [tag, attrs],
+  // no JSX) — se renderizan a mano en vez de dropearlos como children directos.
+  const iconEl = ICON_PATHS[icon] ?? ICON_PATHS.utensils;
+  const path = iconEl.map(([tag, attrs], i) => createElement(tag, { ...attrs, key: i }));
 
   return (
     <svg

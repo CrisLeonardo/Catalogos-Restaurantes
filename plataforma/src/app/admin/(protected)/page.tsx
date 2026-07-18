@@ -10,8 +10,9 @@ import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
 import { formatPrice } from '@/lib/theme/resolve';
 import OnboardingChecklist, { type OnboardingStep } from '@/components/admin/onboarding-checklist';
-import PlanGmvBar from '@/components/admin/plan-gmv-bar';
 import LockedFeatureSection from '@/components/admin/locked-feature-card';
+import { Card, CardContent, cardVariants } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant } from '@/types';
 
@@ -78,10 +79,30 @@ export default async function AdminHomePage() {
       { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: '/admin/categorias', done: (catCount ?? 0) > 0 },
       { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: '/admin/menu/productos/new', done: (prodCount ?? 0) > 0 },
       { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: '/admin/qr', done: false },
+      { key: 'escritorio', label: 'Instala Leogin en tu PC', desc: 'Impresión automática y modo offline', icon: 'monitor', href: '/admin/escritorio', done: false },
     ];
   }
 
   const allow = (key: string) => can(profile.role, profile.permissions, key);
+
+  // ── Agente Leogin (recomendación / salud) ───────────────────
+  // 'install': aún no hay agente funcionando → invitar a instalarlo.
+  // 'offline': existía y dejó de reportar >10 min → avisar (sin agente no hay
+  // impresión automática ni respaldo offline).
+  let agentBanner: 'install' | 'offline' | null = null;
+  if (ordersEnabled && restaurantId && allow('impresion')) {
+    const db = createServiceClient();
+    const { data: agent } = await db
+      .from('print_agents')
+      .select('last_seen_at')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+    const lastSeen = (agent?.last_seen_at as string | null) ?? null;
+    if (!lastSeen) agentBanner = 'install';
+    // Frescura evaluada al momento del request a propósito (server component).
+    // eslint-disable-next-line react-hooks/purity
+    else if (Date.now() - new Date(lastSeen).getTime() > 10 * 60_000) agentBanner = 'offline';
+  }
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
   const firstName = (profile.full_name || '').trim().split(' ')[0];
   const brandName = restaurant?.name ?? 'tu restaurante';
@@ -96,7 +117,7 @@ export default async function AdminHomePage() {
   ].filter(Boolean) as QuickAction[];
 
   return (
-    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 920 }}>
+    <div className="anim-fade-up flex max-w-[960px] flex-col gap-5">
       <div>
         <h2 className="t-display" style={{ fontSize: 24, lineHeight: 1.1 }}>
           {firstName ? `Hola, ${firstName}` : `Hola`}
@@ -110,29 +131,29 @@ export default async function AdminHomePage() {
       {onTrial && (
         <Link
           href="/admin/suscripcion"
-          className="glass press"
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
           style={{
-            borderRadius: 14, padding: '12px 16px', textDecoration: 'none',
-            display: 'flex', alignItems: 'center', gap: 11,
             border: trialLeft <= 3
-              ? '1px solid rgba(248,113,113,0.45)'
+              ? '1px solid rgba(248,113,113,0.4)'
               : trialLeft <= 7
-              ? '1px solid rgba(251,146,60,0.45)'
-              : '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
+              ? '1px solid rgba(251,146,60,0.4)'
+              : '1px solid color-mix(in srgb, var(--adm-accent-500) 30%, transparent)',
           }}
         >
-          <span style={{
-            width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
-            background: trialLeft <= 3
-              ? 'rgba(248,113,113,0.14)'
-              : trialLeft <= 7
-              ? 'rgba(251,146,60,0.14)'
-              : 'rgba(var(--brand-accent-rgb, 99,102,241),0.14)',
-            color: trialLeft <= 3 ? '#f87171' : trialLeft <= 7 ? '#fb923c' : 'var(--brand-accent)',
-          }}>
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-adm-md"
+            style={{
+              background: trialLeft <= 3
+                ? 'rgba(248,113,113,0.14)'
+                : trialLeft <= 7
+                ? 'rgba(251,146,60,0.14)'
+                : 'color-mix(in srgb, var(--adm-accent-500) 16%, transparent)',
+              color: trialLeft <= 3 ? '#f87171' : trialLeft <= 7 ? '#fb923c' : 'var(--adm-accent-500)',
+            }}
+          >
             <Icon name={trialLeft <= 7 ? 'alertCircle' : 'sparkle'} size={17} />
           </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="min-w-0 flex-1">
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
               {trialLeft <= 3
                 ? `¡Tu prueba termina en ${trialLeft} día${trialLeft !== 1 ? 's' : ''}!`
@@ -148,19 +169,52 @@ export default async function AdminHomePage() {
         </Link>
       )}
 
+      {/* Agente Leogin: invitar a instalarlo / avisar si se desconectó */}
+      {agentBanner && (
+        <Link
+          href={agentBanner === 'offline' ? '/admin/impresion' : '/admin/escritorio'}
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
+          style={{
+            border: agentBanner === 'offline'
+              ? '1px solid rgba(251,146,60,0.4)'
+              : '1px solid color-mix(in srgb, var(--adm-accent-500) 30%, transparent)',
+          }}
+        >
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-adm-md"
+            style={{
+              background: agentBanner === 'offline'
+                ? 'rgba(251,146,60,0.14)'
+                : 'color-mix(in srgb, var(--adm-accent-500) 16%, transparent)',
+              color: agentBanner === 'offline' ? '#fb923c' : 'var(--adm-accent-500)',
+            }}
+          >
+            <Icon name={agentBanner === 'offline' ? 'alertCircle' : 'monitor'} size={17} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              {agentBanner === 'offline'
+                ? 'Leogin en tu PC está desconectado'
+                : 'Recomendado: instala Leogin Desktop'}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+              {agentBanner === 'offline'
+                ? 'Revisa que la PC del local esté encendida — sin el servicio de Leogin no hay impresión automática ni respaldo sin internet.'
+                : 'La app de escritorio de Leogin: comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
+            </div>
+          </div>
+          <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        </Link>
+      )}
+
       {/* Onboarding guiado (primera vez) */}
       {needsOnboarding && onboardingSteps.length > 0 && restaurantId && (
         <OnboardingChecklist restaurantId={restaurantId} firstName={firstName} steps={onboardingSteps} />
       )}
 
-      {/* Barra GMV (solo para planes con límite mensual) */}
-      {restaurantId && restaurant?.plan_actual && !['VARIABLE'].includes(restaurant.plan_actual) && (
-        <PlanGmvBar restaurantId={restaurantId} />
-      )}
-
       {/* Números de hoy (solo si tiene pedidos en línea) */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} icon="list" hero />
           <Kpi label="Ventas hoy" value={fmt(stats.todaySales)} icon="wallet" />
           <Kpi label="Ticket promedio" value={fmt(stats.todayTicket)} icon="chart" />
@@ -169,40 +223,41 @@ export default async function AdminHomePage() {
 
       {/* Funciones bloqueadas (planes BASICO y ESTANDAR) */}
       {(restaurant?.plan_actual === 'BASICO' || restaurant?.plan_actual === 'ESTANDAR') && (
-        <div className="glass" style={{ borderRadius: 18, padding: '20px 18px' }}>
-          <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />
-        </div>
+        <Card>
+          <CardContent className="pt-5">
+            <LockedFeatureSection restaurantName={brandName} planActual={restaurant.plan_actual} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Accesos rápidos */}
       <div>
-        <div className="t-kicker" style={{ fontSize: 10, marginBottom: 10 }}>Accesos rápidos</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+        <div className="t-kicker mb-2.5" style={{ fontSize: 10 }}>Accesos rápidos</div>
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
           {actions.map((a) => {
             const inner = (
               <>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center',
-                  background: a.accent ? 'var(--admin-panel-btn, var(--brand-accent))' : 'var(--surface-3)',
-                  color: a.accent ? 'var(--admin-panel-btn-text, #fff)' : 'var(--u-text)',
-                }}>
+                <div
+                  className="grid size-11 shrink-0 place-items-center rounded-adm-md"
+                  style={{
+                    background: a.accent ? 'var(--admin-panel-btn, var(--adm-accent-500))' : 'var(--adm-bg-2)',
+                    color: a.accent ? 'var(--admin-panel-btn-text, #fff)' : 'var(--u-text)',
+                  }}
+                >
                   <Icon name={a.icon} size={19} />
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div className="min-w-0 flex-1">
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{a.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>{a.desc}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>{a.desc}</div>
                 </div>
                 <Icon name={a.external ? 'arrowUpRight' : 'chevronRight'} size={16} style={{ color: 'var(--u-text-4)', marginLeft: 'auto', flexShrink: 0 }} />
               </>
             );
-            const style: React.CSSProperties = {
-              display: 'flex', alignItems: 'center', gap: 12, padding: 14,
-              textDecoration: 'none', color: 'inherit', borderRadius: 16,
-            };
+            const className = cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 p-4.5 no-underline text-inherit');
             return a.external ? (
-              <a key={a.href + a.label} href={a.href} target="_blank" rel="noopener noreferrer" className="glass press" style={style}>{inner}</a>
+              <a key={a.href + a.label} href={a.href} target="_blank" rel="noopener noreferrer" className={className}>{inner}</a>
             ) : (
-              <Link key={a.href + a.label} href={a.href} className="glass press" style={style}>{inner}</Link>
+              <Link key={a.href + a.label} href={a.href} className={className}>{inner}</Link>
             );
           })}
         </div>
@@ -213,12 +268,14 @@ export default async function AdminHomePage() {
 
 function Kpi({ label, value, icon, hero }: { label: string; value: string; icon: string; hero?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--u-text-3)' }}>
-        <Icon name={icon} size={14} />
-        <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
-      </div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 30 : 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
-    </div>
+    <Card className="p-0">
+      <CardContent className="flex flex-col gap-3 p-5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--u-text-3)' }}>
+          <Icon name={icon} size={14} />
+          <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
+        </div>
+        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 28 : 24, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
+      </CardContent>
+    </Card>
   );
 }

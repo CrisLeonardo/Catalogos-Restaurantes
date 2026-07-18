@@ -46,9 +46,9 @@ export interface PrintAgentConfig {
   kitchenTarget: string | null;
   receiptTarget: string | null;
   version: string | null;
-  /** URL LAN del hub de emergencia (mig. 062) — null si el agente no la reporta. */
-  hubUrl: string | null;
-  /** Auto-pausa de pedidos en línea cuando el agente pierde conexión (mig. 063). */
+  /** Versión de Leogin Desktop (el shell), si el admin lo usó en esta PC — ver /api/agent/shell-heartbeat. */
+  shellVersion: string | null;
+  /** Auto-pausa de pedidos en línea cuando el agente pierde conexión (mig. 069). */
   autoPauseEnabled: boolean;
 }
 
@@ -60,7 +60,7 @@ const EMPTY: PrintAgentConfig = {
   kitchenTarget: null,
   receiptTarget: null,
   version: null,
-  hubUrl: null,
+  shellVersion: null,
   autoPauseEnabled: false,
 };
 
@@ -72,21 +72,11 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
   if (!restaurantId) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
-  // hub_url (mig. 062) y auto_pause_enabled (mig. 063) son opcionales: si esas
-  // migraciones no están aplicadas, el select falla → se reintenta sin ellas
-  // (degradación: hubUrl null / autoPause false).
-  let { data } = await db
+  const { data } = await db
     .from('print_agents')
-    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version, hub_url, auto_pause_enabled')
+    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version, shell_version, auto_pause_enabled')
     .eq('restaurant_id', restaurantId)
     .single();
-  if (!data) {
-    ({ data } = await db
-      .from('print_agents')
-      .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version')
-      .eq('restaurant_id', restaurantId)
-      .single());
-  }
 
   if (!data) return EMPTY;
   return {
@@ -99,14 +89,14 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
     kitchenTarget: (data.kitchen_target as string) ?? null,
     receiptTarget: (data.receipt_target as string) ?? null,
     version: (data.agent_version as string) ?? null,
-    hubUrl: ((data as Record<string, unknown>).hub_url as string | undefined) ?? null,
-    autoPauseEnabled: ((data as Record<string, unknown>).auto_pause_enabled as boolean | undefined) === true,
+    shellVersion: (data.shell_version as string) ?? null,
+    autoPauseEnabled: (data.auto_pause_enabled as boolean) === true,
   };
 }
 
 /**
  * Activa/desactiva la auto-pausa de pedidos EN LÍNEA cuando el agente pierde
- * conexión (mig. 063). Opcional por restaurante; solo el dueño la cambia.
+ * conexión (mig. 069). Opcional por restaurante; solo el dueño la cambia.
  */
 export async function setAutoPauseOffline(enabled: boolean): Promise<{ error?: string }> {
   const ctx = await getAdminContext();
@@ -125,8 +115,7 @@ export async function setAutoPauseOffline(enabled: boolean): Promise<{ error?: s
     .select('id');
 
   if (error) {
-    // Columna inexistente = migración 063 sin aplicar.
-    return { error: 'Esta opción requiere aplicar la migración 063 en la base de datos.' };
+    return { error: 'Esta opción requiere aplicar la migración 069 en la base de datos.' };
   }
   if (!data || data.length === 0) {
     return { error: 'Primero vincula el Agente Leogin (genera el token e instálalo).' };

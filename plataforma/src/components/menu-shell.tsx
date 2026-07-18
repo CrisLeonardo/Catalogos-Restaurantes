@@ -52,14 +52,22 @@ export default function MenuShell({ config, content, categories, products, resta
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       setScannedTable(restaurantId, initialMesa);
+      // Se borra el ?mesa= de la URL tras guardarlo: si no, cada vez que el
+      // navegador recarga o restaura esta misma pestaña (común en iOS/Android
+      // horas después) se vuelve a "escanear" la mesa y el TTL de la sesión
+      // nunca llega a cumplirse.
+      const params = new URLSearchParams(window.location.search);
+      params.delete('mesa');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
   }, [initialMesa, restaurantId]);
 
   return (
     <ThemeProvider config={config} content={content}>
       <CartProvider restaurantId={restaurantId}>
+        <OfflineSupport />
         <VisitTracker restaurantId={restaurantId} />
-        <OfflineSupport label="Sin conexión — puedes ver el menú; tu pedido se enviará al volver la señal." />
         <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: `0 16px calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>

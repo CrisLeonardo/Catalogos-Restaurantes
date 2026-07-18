@@ -6,6 +6,9 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon, ICON_PATHS } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 
 function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -112,6 +115,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew,   setShowNew]   = useState(false);
   const router = useRouter();
+  const toggleForms = useRef<Record<string, HTMLFormElement | null>>({});
 
   const count = (id: string) => products.filter((p) => p.category_id === id).length;
 
@@ -131,40 +135,24 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
             Ordená cómo aparecen en la app del cliente.
           </p>
         </div>
-        <button
-          className="press"
-          onClick={() => setShowNew(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '9px 16px', borderRadius: 99, cursor: 'pointer',
-            background: 'var(--u-text)', color: 'var(--brand-bg)',
-            border: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13,
-          }}
-        >
+        <Button onClick={() => setShowNew(true)} className="rounded-adm-full">
           <Icon name="plus" size={15} /> Nueva
-        </button>
+        </Button>
       </div>
 
       {/* Lista */}
       {categories.length === 0 && !showNew && (
-        <div
-          className="glass"
-          style={{ borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}
-        >
+        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
           Sin categorías aún. Crea una para organizar tu menú.
-        </div>
+        </Card>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {categories.map((c, i) => (
-          <div
+          <Card
             key={c.id}
-            className="glass"
-            style={{
-              borderRadius: 15, padding: '14px 16px',
-              display: 'flex', alignItems: 'center', gap: 12,
-              opacity: c.is_active ? 1 : 0.6, transition: 'opacity 160ms',
-            }}
+            className="flex items-center gap-3 p-4"
+            style={{ opacity: c.is_active ? 1 : 0.6, transition: 'opacity 160ms' }}
           >
             {/* Reordenar ↑↓ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
@@ -231,53 +219,40 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
 
             {/* Toggle activo */}
             {editingId !== c.id && (
-              <form action={toggleCategoryActive} style={{ flexShrink: 0 }}>
+              <form
+                action={toggleCategoryActive}
+                ref={(el) => { toggleForms.current[c.id] = el; }}
+                style={{ flexShrink: 0 }}
+              >
                 <input type="hidden" name="restaurantId" value={restaurantId} />
                 <input type="hidden" name="id"           value={c.id} />
                 <input type="hidden" name="is_active"    value={String(!c.is_active)} />
-                <button
-                  type="submit"
-                  className="press"
-                  title={c.is_active ? 'Desactivar' : 'Activar'}
-                  style={{
-                    width: 42, height: 25, borderRadius: 99, border: 'none',
-                    cursor: 'pointer', padding: 3,
-                    background: c.is_active ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-                    display: 'flex', justifyContent: c.is_active ? 'flex-end' : 'flex-start',
-                    transition: 'background 180ms',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 19, height: 19, borderRadius: 99,
-                      background: c.is_active ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)',
-                    }}
-                  />
-                </button>
+                <Switch
+                  checked={c.is_active}
+                  onCheckedChange={() => toggleForms.current[c.id]?.requestSubmit()}
+                  aria-label={c.is_active ? 'Desactivar' : 'Activar'}
+                />
               </form>
             )}
 
             {/* Editar */}
             {editingId !== c.id && (
-              <button
-                className="press glass-quiet"
+              <Button
+                variant="secondary"
+                size="icon"
+                className="size-8.5"
                 onClick={() => setEditingId(editingId === c.id ? null : c.id)}
-                style={{
-                  width: 34, height: 34, borderRadius: 10, border: 'none',
-                  display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', cursor: 'pointer',
-                  flexShrink: 0,
-                }}
                 title="Editar"
               >
                 <Icon name="edit" size={16} />
-              </button>
+              </Button>
             )}
 
             {/* Eliminar (solo si no tiene platillos) */}
             {editingId !== c.id && count(c.id) === 0 && (
               <DeleteCatButton restaurantId={restaurantId} categoryId={c.id} name={c.name} />
             )}
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -319,7 +294,7 @@ function NewCategoryForm({
   }, [state]);
 
   return (
-    <div className="glass" data-tour-step="categorias-nueva" style={{ borderRadius: 15, padding: '16px 18px' }}>
+    <Card data-tour-step="categorias-nueva" className="p-4.5">
       <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Nueva categoría</div>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -339,18 +314,18 @@ function NewCategoryForm({
         </div>
         <CategorySchedule defaultValue={null} />
         {state && 'error' in state && (
-          <span style={{ fontSize: 12, color: '#f87171' }}>{state.error}</span>
+          <span style={{ fontSize: 12, color: 'var(--c-danger, #f87171)' }}>{state.error}</span>
         )}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="submit" disabled={isPending} className="press" style={submitBtn}>
+          <Button type="submit" disabled={isPending} size="sm" className="rounded-adm-full">
             {isPending ? '…' : 'Crear'}
-          </button>
-          <button type="button" onClick={onClose} className="press" style={cancelBtn}>
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose} size="sm" className="rounded-adm-full">
             Cancelar
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 }
 
@@ -399,16 +374,16 @@ function InlineEditForm({
           autoFocus
           style={{ ...inlineInput, flex: 1, minWidth: 0 }}
         />
-        <button type="submit" disabled={isPending} aria-label="Guardar" className="press" style={{ ...submitBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        <Button type="submit" disabled={isPending} aria-label="Guardar" size="icon" className="size-8.5 shrink-0 rounded-adm-full">
           {isPending ? '…' : <Icon name="check" size={15} strokeWidth={2.6} />}
-        </button>
-        <button type="button" onClick={onClose} aria-label="Cancelar" className="press" style={{ ...cancelBtn, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose} aria-label="Cancelar" size="icon" className="size-8.5 shrink-0 rounded-adm-full">
           <Icon name="x" size={15} />
-        </button>
+        </Button>
       </div>
       <CategorySchedule defaultValue={category.availability} />
       {state && 'error' in state && (
-        <span style={{ fontSize: 11, color: '#f87171' }}>{state.error}</span>
+        <span style={{ fontSize: 11, color: 'var(--c-danger, #f87171)' }}>{state.error}</span>
       )}
     </form>
   );
@@ -437,19 +412,16 @@ function DeleteCatButton({
     <form ref={ref} action={deleteCategoryModal} style={{ flexShrink: 0 }}>
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id"           value={categoryId} />
-      <button
+      <Button
         type="submit"
-        className="press"
+        variant="outline"
+        size="icon"
+        className="size-8.5 text-[var(--u-text-4)]"
         onClick={handleClick}
         title="Eliminar categoría"
-        style={{
-          width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)',
-          display: 'grid', placeItems: 'center', background: 'transparent',
-          color: 'var(--u-text-4)', cursor: 'pointer', fontSize: 16,
-        }}
       >
         <Icon name="trash" size={14} />
-      </button>
+      </Button>
     </form>
   );
 }
@@ -474,20 +446,3 @@ const inlineInput: React.CSSProperties = {
   fontFamily: 'var(--font-sans)',
 };
 
-const submitBtn: React.CSSProperties = {
-  padding: '9px 18px',
-  borderRadius: 99,
-  fontWeight: 600, fontSize: 13,
-  border: 'none', cursor: 'pointer',
-  background: 'var(--u-text)', color: 'var(--brand-bg)',
-};
-
-const cancelBtn: React.CSSProperties = {
-  padding: '9px 14px',
-  borderRadius: 99,
-  fontSize: 13,
-  border: '1px solid var(--u-hair-2)',
-  background: 'transparent',
-  color: 'var(--u-text-3)',
-  cursor: 'pointer',
-};

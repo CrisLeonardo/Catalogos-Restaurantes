@@ -7,7 +7,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { callWaiter } from '@/lib/actions/waiter-call';
-import { getScannedTable } from '@/lib/table-session';
+import { getScannedTable, watchScannedTable } from '@/lib/table-session';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
@@ -24,8 +24,10 @@ export default function WaiterCallButton({
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-
     setTableNumber(getScannedTable(restaurantId));
+    // Re-valida el TTL al volver a primer plano / al vencer: el número de
+    // mesa no debe quedarse pegado en una PWA que estuvo dormida horas.
+    return watchScannedTable(restaurantId, setTableNumber);
   }, [restaurantId]);
 
   // Vuelve a 'idle' tras mostrar el resultado un momento.

@@ -203,7 +203,7 @@ export default function CashCountForm({
       </div>
 
       {state && 'error' in state && (
-        <div style={{ fontSize: 13, color: '#f87171' }}>{state.error}</div>
+        <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>
       )}
 
       <button

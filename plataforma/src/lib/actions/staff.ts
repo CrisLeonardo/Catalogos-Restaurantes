@@ -7,18 +7,27 @@
    Nunca puede tocar a otros dueños ni al super admin.
    ============================================================ */
 
+import crypto from 'node:crypto';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { STAFF_ASSIGNABLE } from '@/lib/permissions';
 import { logActivity } from '@/lib/activity';
+import { isValidPin, newPinSalt, hashPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
+
+/** Email interno autogenerado por miembro de staff — nunca se le pide al
+    dueño ni se le muestra a la persona: solo satisface el requisito de
+    Supabase Auth de tener un identificador. El PIN es la credencial real. */
+function syntheticStaffEmail(): string {
+  return `staff-${crypto.randomBytes(12).toString('hex')}@staff.leogin.internal`;
+}
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
 
 /** Solo el DUEÑO (o super admin) gestiona personal. */
-async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Ctx | null> {
+export async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Ctx | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -88,28 +97,32 @@ function readPermissions(formData: FormData): string[] {
 
 export type StaffState = { error: string } | { ok: true } | null;
 
+/**
+ * Crea un miembro de personal. Ya no pide email/contraseña: entra por PIN
+ * (ver src/lib/actions/staff-pin.ts). Por debajo se le sigue creando una
+ * cuenta de Supabase Auth con un email sintético + contraseña aleatoria que
+ * nadie usa — es un detalle interno para que profiles.id siga siendo un
+ * auth.users(id) real, no una credencial que la persona teclee.
+ */
 export async function createStaff(prevState: StaffState, formData: FormData): Promise<StaffState> {
   const ctx = await ownerCtx(formData.get('restaurantId') as string | null);
   if (!ctx) return { error: 'No autorizado.' };
 
-  const email = (formData.get('email') as string)?.trim().toLowerCase();
-  const password = (formData.get('password') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
+  const pin = (formData.get('pin') as string) ?? '';
   const permissions = readPermissions(formData);
 
-  if (!email || !email.includes('@')) return { error: 'Email inválido.' };
-  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+  if (!isValidPin(pin)) return { error: `El PIN debe tener ${PIN_LENGTH} dígitos.` };
   if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
+
+  const email = syntheticStaffEmail();
+  const password = crypto.randomBytes(24).toString('base64url');
 
   const { data: created, error: createErr } = await ctx.db.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { full_name: fullName },
   });
   if (createErr || !created?.user) {
-    const m = createErr?.message?.toLowerCase() ?? '';
-    if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
-      return { error: `Ya existe un usuario con el email ${email}.` };
-    }
-    return { error: createErr?.message ?? 'No se pudo crear el usuario.' };
+    return { error: createErr?.message ?? 'No se pudo crear el miembro.' };
   }
 
   const { error: profErr } = await ctx.db.from('profiles').upsert({
@@ -124,13 +137,26 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     return { error: profErr.message };
   }
 
-  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: email, meta: { added: true, role: 'RESTAURANT_STAFF', permissions } });
+  const salt = newPinSalt();
+  const pinHash = await hashPin(pin, salt);
+  const { error: pinErr } = await ctx.db.from('staff_pins').insert({
+    profile_id: created.user.id,
+    restaurant_id: ctx.restaurantId,
+    pin_hash: pinHash,
+    pin_salt: salt,
+  });
+  if (pinErr) {
+    await ctx.db.auth.admin.deleteUser(created.user.id); // el profile cae por FK cascade
+    return { error: pinErr.message };
+  }
+
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: fullName ?? 'Sin nombre', meta: { added: true, role: 'RESTAURANT_STAFF', permissions } });
   revalidatePath('/admin/personal');
   return { ok: true };
 }
 
 /** Solo permite operar sobre STAFF/WAITER de ESTE restaurante. */
-async function assertStaffOfRestaurant(ctx: Ctx, userId: string): Promise<boolean> {
+export async function assertStaffOfRestaurant(ctx: Ctx, userId: string): Promise<boolean> {
   const { data } = await ctx.db.from('profiles').select('role, restaurant_id').eq('id', userId).single();
   return !!data
     && (data.role === 'RESTAURANT_STAFF' || data.role === 'RESTAURANT_WAITER')
@@ -152,22 +178,6 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
   const { error } = await ctx.db.from('profiles')
     .update({ permissions, full_name: fullName, role: 'RESTAURANT_STAFF' })
     .eq('id', userId);
-  if (error) return { error: error.message };
-
-  revalidatePath('/admin/personal');
-  return { ok: true };
-}
-
-export async function resetStaffPassword(prevState: StaffState, formData: FormData): Promise<StaffState> {
-  const ctx = await ownerCtx(formData.get('restaurantId') as string | null);
-  if (!ctx) return { error: 'No autorizado.' };
-
-  const userId = (formData.get('userId') as string)?.trim();
-  const password = (formData.get('password') as string) ?? '';
-  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
-  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
-
-  const { error } = await ctx.db.auth.admin.updateUserById(userId, { password });
   if (error) return { error: error.message };
 
   revalidatePath('/admin/personal');

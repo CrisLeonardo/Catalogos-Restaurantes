@@ -5,6 +5,12 @@ trabajos de impresión desde la nube y los envía a impresoras térmicas (USB, r
 o Bluetooth) **sin diálogos del navegador** y funcionando igual desde celular,
 tablet o PC.
 
+> **Rol dentro del producto:** este agente es el **servicio** (sin ventana,
+> siempre encendido, update silencioso). La cara visible instalable es
+> **Leogin Desktop** ([`leogin-desktop/`](../leogin-desktop/)), que solo lo
+> observa por `/health` — ver
+> [plataforma/docs/LEOGIN_DESKTOP.md](../plataforma/docs/LEOGIN_DESKTOP.md) §2.
+
 > El navegador (mesero/cajero) solo manda un JSON a la API. El backend genera los
 > bytes ESC/POS y los publica; este agente, corriendo en **una** PC del local,
 > los imprime. Por eso funciona idéntico en iOS, Android y Windows.
@@ -114,8 +120,10 @@ y **se autoinstala**. El cliente NO necesita PowerShell, ni permisos de
 administrador, ni copiar/pegar nada:
 
 1. En el panel (Perfil → Agente Leogin) pulsa **Descargar instalador**. El panel
-   sirve el exe con el token embebido en el nombre
-   (`LeoginAgent~LG1~<token>~.exe`).
+   sirve el exe con el dominio + un código corto de un solo uso embebidos en el
+   nombre (`LeoginAgent-<restaurante>~LG2~<dominio>~<código>~.exe`, migración
+   066) — el token real se resuelve al instalar, sin viajar en claro en el
+   nombre del archivo.
 2. En la PC del local: **doble clic** en el archivo descargado.
 3. El exe se copia a `%LOCALAPPDATA%\Leogin\Agente`, escribe su config, se
    registra para arrancar solo (carpeta Inicio + Tarea Programada) y se lanza.
@@ -132,6 +140,8 @@ Equivalente manual, desde la carpeta `dist/` (PowerShell como Administrador):
 
 ```powershell
 .\LeoginAgent.exe setup            # autoinstala usando el token del nombre / env / config.local.json
+.\LeoginAgent.exe update           # lo mismo pero SIN cuadros de diálogo (v0.7.0) —
+                                   # así lo relanza Leogin Desktop para mantenerlo al día
 # o el instalador clásico:
 .\installer\install.ps1 -ApiUrl "https://tudominio.com" -Token "EL_TOKEN_DEL_PANEL"
 .\installer\uninstall.ps1          # para quitarlo
@@ -193,9 +203,41 @@ agente-impresion/
       `POST /print` (impresión directa sin nube — base para LAN); **auto-reinicio**
       (la Tarea Programada reintenta cada 3 min, sin duplicar gracias al candado);
       el agente **reporta su versión** (visible en el panel); `installer/sign.ps1`
-      listo para firmar. Pendiente solo lo que requiere recursos externos:
-      comprar el **certificado** de firma; exponer `/print` a la LAN (bind 0.0.0.0
-      + auth) para imprimir sin internet desde otros dispositivos; auto-update
-      binario (necesita hosting de releases).
+      listo para firmar. `/print` y `/orders` expuestos a la LAN (bind 0.0.0.0)
+      con auth por `x-hub-token`, y el instalador crea la regla de firewall del
+      puerto 47100 (v0.2.0 — un aviso de UAC; si se cancela, el respaldo LAN
+      queda limitado a esta PC). Pendiente solo lo que requiere recursos
+      externos: comprar el **certificado** de firma y auto-update binario
+      (necesita hosting de releases) — plan completo en
+      `plataforma/docs/ESTRATEGIA_INSTALABLE.md`.
+- [x] **KDS local de respaldo (v0.3.0):** el hub sirve `/kds?t=<token>` en la
+      LAN — pantalla de cocina autocontenida con los pedidos capturados sin
+      nube (badge de sincronización, botón LISTO local, poda a 48h). El panel
+      (sección Impresión) muestra el enlace listo. Los pedidos sincronizados
+      se conservan (estado `synced`) hasta que cocina los marca. _Verificado
+      E2E en navegador real._
+- [x] **HTTPS del hub (v0.4.0):** certificado wildcard entregado por la nube
+      (`/api/agent/hub-cert`, patrón Plex — ver
+      `plataforma/docs/ARQUITECTURA_OFFLINE.md` §8.1); servidor HTTPS en
+      `:47443` con rotación en caliente; firewall con ambos puertos.
+- [x] **Auto-update (v0.5.0):** chequeo cada 1h contra `/api/agent/latest`
+      (canal stable/beta por restaurante, migración 065), descarga + sha256 +
+      intercambio del exe en caliente + relanzamiento por el watchdog; el
+      `.old` queda para rollback manual y se borra al arrancar la versión
+      nueva. Publicar release: `npm run build:exe && npm run release`
+      (sube a Supabase Storage e inserta en `agent_releases`; kill switch con
+      `enabled=false`). El build usa **runtime pineado** (Node 22 LTS oficial,
+      cacheado en `.node-base/`). _Verificado E2E: v0.5.0 → v0.5.1 real._
+- [x] **Instalador con código corto (v0.6.0):** el nombre del instalador ya no
+      lleva el token en claro (era un base64 larguísimo) — ahora solo el
+      dominio del panel + un código corto de un solo uso (migración 066,
+      `/api/agent/resolve-install`), con el nombre del restaurante como
+      prefijo cosmético. El esquema viejo (`~LG1~`) se sigue reconociendo por
+      compatibilidad con instaladores ya descargados.
+- [x] **Identidad en Windows (v0.6.0):** entrada en "Aplicaciones instaladas"
+      (HKCU, con `UninstallString` → `LeoginAgent.exe uninstall`, versión
+      refrescada por el auto-update), acceso "Agente Leogin" en el menú Inicio
+      → página de estado local (`GET /` del hub: versión + enlaces al panel y
+      al KDS), y desinstalación completa con autoeliminación. _Verificado._
 - [ ] **Retiro de QZ** (cuando el agente esté validado en térmica real): eliminar
       `qz-tray`, `qz-cert.ts`, `/api/print/sign` y las secciones QZ de la UI.

@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   getPrintAgentConfig,
   regenerateAgentToken,
@@ -14,16 +18,6 @@ import {
 
 // ── Estilos ────────────────────────────────────────────────────────────────────
 
-const cardStyle: React.CSSProperties = {
-  borderRadius: 'var(--radius-lg)',
-  background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-  border: '1px solid var(--u-hair)',
-  padding: '18px 20px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-};
-
 const selectStyle: React.CSSProperties = {
   width: '100%',
   padding: '9px 11px',
@@ -32,16 +26,6 @@ const selectStyle: React.CSSProperties = {
   border: '1px solid var(--u-hair)',
   color: 'var(--u-text)',
   fontSize: 13,
-};
-
-const btnStyle: React.CSSProperties = {
-  padding: '9px 13px',
-  borderRadius: 'var(--radius-md)',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'var(--u-text-2)',
-  fontWeight: 600,
-  fontSize: 12.5,
 };
 
 const labelStyle: React.CSSProperties = {
@@ -86,22 +70,24 @@ function PrinterPicker({
   const isManual = value !== '' && value !== 'preview:' && !known.includes(value);
   const selectValue = isManual ? MANUAL : value;
 
+  const options = [
+    { value: '', label: '— No imprimir aquí —' },
+    { value: 'preview:', label: 'Simulador en pantalla (preview:)' },
+    ...printers.flatMap((p) => [
+      { value: p.target, label: `${p.name} (térmica)` },
+      { value: `doc:${p.name}`, label: `${p.name} · documento (impresora normal · pruebas)` },
+    ]),
+    { value: MANUAL, label: 'Otra · destino manual (tcp://…)' },
+  ];
+
   return (
     <div>
       <label style={labelStyle}>{label}</label>
-      <select
-        style={selectStyle}
+      <Select
+        options={options}
         value={selectValue}
-        onChange={(e) => onChange(e.target.value === MANUAL ? 'tcp://' : e.target.value)}
-      >
-        <option value="">— No imprimir aquí —</option>
-        <option value="preview:">Simulador en pantalla (preview:)</option>
-        {printers.flatMap((p) => [
-          <option key={p.target} value={p.target}>{p.name} (térmica)</option>,
-          <option key={`doc:${p.name}`} value={`doc:${p.name}`}>{p.name} · documento (impresora normal · pruebas)</option>,
-        ])}
-        <option value={MANUAL}>Otra · destino manual (tcp://…)</option>
-      </select>
+        onValueChange={(v) => onChange(v === MANUAL ? 'tcp://' : v)}
+      />
 
       {(isManual || selectValue === MANUAL) && (
         <input
@@ -113,14 +99,9 @@ function PrinterPicker({
         />
       )}
 
-      <button
-        type="button"
-        onClick={onTest}
-        className="press glass-quiet"
-        style={{ ...btnStyle, marginTop: 8, color: 'var(--u-text-3)' }}
-      >
+      <Button type="button" onClick={onTest} variant="secondary" size="sm" className="mt-2">
         Probar
-      </button>
+      </Button>
     </div>
   );
 }
@@ -174,8 +155,9 @@ function InstallSteps({
     gap: 7,
   };
 
-  // El token viaja embebido en el nombre del archivo → el exe se autoinstala con
-  // doble clic, sin copiar/pegar nada.
+  // El backend genera un código corto de un solo uso y lo embebe en el nombre
+  // del archivo → el exe lo resuelve al instalar y se autoinstala con doble
+  // clic, sin copiar/pegar nada.
   const downloadHref = `/api/agent/download-exe?token=${encodeURIComponent(token)}`;
 
   return (
@@ -188,7 +170,7 @@ function InstallSteps({
       flexDirection: 'column',
       gap: 16,
     }}>
-      <div style={{ fontSize: 12, color: '#4ade80', fontWeight: 700 }}>
+      <div style={{ fontSize: 12, color: 'var(--c-ok, #4ade80)', fontWeight: 700 }}>
         ✓ Listo para instalar — solo descarga y haz doble clic en la PC del local
       </div>
 
@@ -199,26 +181,9 @@ function InstallSteps({
           <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600 }}>
             Descarga el instalador en la PC del local
           </span>
-          <a
-            href={downloadHref}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              padding: '11px 16px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--brand-accent, rgba(99,102,241,0.85))',
-              border: 'none',
-              color: '#fff',
-              fontSize: 13.5,
-              fontWeight: 700,
-              textDecoration: 'none',
-              alignSelf: 'flex-start',
-            }}
-            className="press"
-          >
+          <Button render={<a href={downloadHref} />} className="self-start">
             ⬇ Descargar instalador (Windows)
-          </a>
+          </Button>
           <span style={{ fontSize: 11, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
             Tu código de vinculación ya viene dentro del archivo: no hay nada que copiar.
             {' '}<strong style={{ color: 'var(--u-text-3)' }}>No le cambies el nombre.</strong>
@@ -261,7 +226,7 @@ function InstallSteps({
           </span>
           <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
             En unos segundos el estado cambiará a{' '}
-            <span style={{ color: '#4ade80', fontWeight: 600 }}>● Agente conectado</span>
+            <span style={{ color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>● Conectado</span>
             {' '}y verás las impresoras detectadas.
           </span>
         </div>
@@ -286,14 +251,9 @@ function InstallSteps({
             whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6,
           }}>{psCommand}</pre>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={copyCmd}
-              className="press glass-quiet"
-              style={{ ...btnStyle, fontSize: 11.5, padding: '6px 10px' }}
-            >
+            <Button type="button" onClick={copyCmd} variant="secondary" size="sm">
               Copiar comando
-            </button>
+            </Button>
           </div>
           <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginTop: 4 }}>
             O descarga el config y colócalo junto al exe:
@@ -307,22 +267,12 @@ function InstallSteps({
             whiteSpace: 'pre-wrap', wordBreak: 'break-all',
           }}>{configJson}</pre>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={downloadConfig}
-              className="press glass-quiet"
-              style={{ ...btnStyle, fontSize: 11.5, padding: '6px 10px' }}
-            >
+            <Button type="button" onClick={downloadConfig} variant="secondary" size="sm">
               ⬇ Descargar config.local.json
-            </button>
-            <button
-              type="button"
-              onClick={copyConfig}
-              className="press glass-quiet"
-              style={{ ...btnStyle, fontSize: 11.5, padding: '6px 10px' }}
-            >
+            </Button>
+            <Button type="button" onClick={copyConfig} variant="secondary" size="sm">
               Copiar JSON
-            </button>
+            </Button>
           </div>
         </div>
       </details>
@@ -342,6 +292,7 @@ export default function PrintAgentSettings() {
   const [saving, setSaving] = useState(false);
   const [origin, setOrigin] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [inDesktopApp, setInDesktopApp] = useState(false);
   const [pauseToggling, setPauseToggling] = useState(false);
 
   async function handleAutoPauseToggle() {
@@ -373,6 +324,9 @@ export default function PrintAgentSettings() {
 
   useEffect(() => {
     setOrigin(window.location.origin);
+    // window.__TAURI__ solo existe dentro de la app instalable Leogin
+    // Desktop (ver leogin-desktop/) — desde el navegador normal es undefined.
+    setInDesktopApp(typeof window !== 'undefined' && Boolean((window as unknown as { __TAURI__?: unknown }).__TAURI__));
     void load();
   }, [load]);
 
@@ -425,13 +379,13 @@ export default function PrintAgentSettings() {
   }
 
   function connectionLabel(): { text: string; color: string } {
-    if (!config?.exists) return { text: 'Sin agente vinculado', color: 'var(--u-text-4)' };
+    if (!config?.exists) return { text: 'Sin vincular', color: 'var(--u-text-4)' };
     if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: '#f59e0b' };
     // Etiqueta de "última conexión": el tiempo relativo se calcula al render a
     // propósito (es texto informativo del panel admin, no estado persistente).
     // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
-    if (ageMs < 90_000) return { text: '● Agente conectado', color: '#4ade80' };
+    if (ageMs < 90_000) return { text: '● Conectado', color: 'var(--c-ok, #4ade80)' };
     const mins = Math.round(ageMs / 60_000);
     const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
     return { text: `Última conexión ${ago}`, color: '#f59e0b' };
@@ -441,12 +395,12 @@ export default function PrintAgentSettings() {
   const printers = config?.reportedPrinters ?? [];
 
   return (
-    <div style={cardStyle}>
+    <Card className="flex flex-col gap-4 p-4.5">
       {/* Encabezado */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
-            Agente Leogin
+            Leogin en tu PC
           </span>
           <span style={{
             fontSize: 10.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
@@ -457,8 +411,8 @@ export default function PrintAgentSettings() {
         </div>
         <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
           Imprime cocina y caja en silencio desde <strong style={{ color: 'var(--u-text-2)' }}>cualquier
-          dispositivo</strong> (celular, tablet o PC), sin abrir diálogos. Instala el agente una sola
-          vez en una PC del local; la configuración se guarda en la nube.
+          dispositivo</strong> (celular, tablet o PC), sin abrir diálogos. Instala el servicio de Leogin
+          una sola vez en la PC del local; la configuración se guarda en la nube.
         </p>
       </div>
 
@@ -469,47 +423,21 @@ export default function PrintAgentSettings() {
           <span style={{ color: 'var(--u-text-4)', fontWeight: 500 }}>
             {' · '}{printers.length} impresora{printers.length === 1 ? '' : 's'} detectada{printers.length === 1 ? '' : 's'}
             {config.version ? ` · v${config.version}` : ''}
+            {config.shellVersion ? ` · Leogin Desktop v${config.shellVersion}` : ''}
           </span>
         )}
-        <button
-          type="button"
-          onClick={load}
-          className="press"
-          style={{ ...btnStyle, marginLeft: 10, padding: '4px 9px', color: 'var(--u-text-4)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}
-        >
+        <Button type="button" onClick={load} variant="ghost" size="sm" className="ml-2.5 h-auto py-1">
           ↻ Actualizar
-        </button>
+        </Button>
       </div>
 
-      {/* Punto de emergencia (hub LAN): tomar pedidos sin internet */}
-      {config?.hubUrl && (
-        <div style={{
-          borderRadius: 'var(--radius-md)', padding: '12px 14px',
-          background: 'color-mix(in srgb, var(--c-warn, #fbbf24) 8%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 30%, transparent)',
-        }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon name="alertCircle" size={14} /> Modo emergencia (sin internet)
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '5px 0 0' }}>
-            Si el local se queda sin internet, el personal puede seguir tomando pedidos desde el WiFi
-            del local en{' '}
-            <strong style={{ color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)' }}>{config.hubUrl}</strong>
-            {' '}(cocina en <strong style={{ color: 'var(--u-text-2)', fontFamily: 'var(--ui-font-mono)' }}>{config.hubUrl}/cocina</strong>).
-            Las comandas se imprimen al momento y todo se sincroniza solo al volver la conexión.
-            Guarda esa dirección en los teléfonos del personal.
-          </p>
-        </div>
-      )}
+      {/* El toggle "hacer de esta PC el servidor" vive en Ajustes → Este
+          dispositivo (components/admin/desktop-server-settings.tsx): es una
+          decisión sobre el dispositivo, no sobre impresoras. */}
 
-      {/* Auto-pausa de pedidos en línea sin agente (opcional, mig. 063) */}
+      {/* Auto-pausa de pedidos en línea sin agente (opcional, mig. 069) */}
       {config?.exists && (
-        <div style={{
-          borderRadius: 'var(--radius-md)', padding: '12px 14px',
-          background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-          border: '1px solid var(--u-hair)',
-          display: 'flex', alignItems: 'flex-start', gap: 12,
-        }}>
+        <Card variant="flat" className="flex items-start gap-3 p-3.5">
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)' }}>
               Pausar pedidos en línea si el local pierde internet
@@ -523,42 +451,29 @@ export default function PrintAgentSettings() {
               línea se pausarían aunque sí haya internet.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleAutoPauseToggle}
+          <Switch
+            checked={config.autoPauseEnabled}
+            onCheckedChange={handleAutoPauseToggle}
             disabled={pauseToggling}
-            role="switch"
-            aria-checked={config.autoPauseEnabled}
             aria-label="Pausar pedidos en línea si el local pierde internet"
-            className="press"
-            style={{
-              flexShrink: 0, width: 44, height: 26, borderRadius: 99, border: 'none',
-              cursor: pauseToggling ? 'wait' : 'pointer', padding: 3,
-              background: config.autoPauseEnabled ? 'var(--c-ok-solid, #22c55e)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
-              display: 'flex', justifyContent: config.autoPauseEnabled ? 'flex-end' : 'flex-start',
-              transition: 'background 180ms', opacity: pauseToggling ? 0.6 : 1,
-            }}
-          >
-            <span style={{ width: 20, height: 20, borderRadius: 99, background: '#fff' }} />
-          </button>
-        </div>
+          />
+        </Card>
       )}
 
-      {/* Generar / rotar token */}
+      {/* Generar / rotar token (instalación manual — también sirve como respaldo dentro de la app) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={generating}
-          className="press glass-quiet"
-          style={{ ...btnStyle, alignSelf: 'flex-start', opacity: generating ? 0.6 : 1 }}
-        >
+        {inDesktopApp && (
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
+            Instalación manual (alternativa a &quot;Hacer de esta PC el servidor del local&quot; en Ajustes):
+          </span>
+        )}
+        <Button type="button" onClick={handleGenerate} disabled={generating} variant="secondary" size="sm" className="self-start">
           {generating
             ? 'Generando…'
             : config?.exists
-              ? <><Icon name="arrowRight" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Regenerar token de instalación</>
-              : <><Icon name="key" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Generar token de instalación</>}
-        </button>
+              ? <><Icon name="arrowRight" size={14} /> Regenerar token de instalación</>
+              : <><Icon name="key" size={14} /> Generar token de instalación</>}
+        </Button>
 
         {token && (
           <InstallSteps
@@ -615,15 +530,9 @@ export default function PrintAgentSettings() {
             onTest={() => handleTest('receipt')}
           />
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="press glass-quiet"
-            style={{ ...btnStyle, alignSelf: 'flex-start', opacity: saving ? 0.6 : 1 }}
-          >
+          <Button type="button" onClick={handleSave} disabled={saving} variant="secondary" size="sm" className="self-start">
             {saving ? 'Guardando…' : 'Guardar destinos'}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -640,6 +549,6 @@ export default function PrintAgentSettings() {
           {msg}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

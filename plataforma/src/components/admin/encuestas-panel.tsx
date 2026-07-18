@@ -1,7 +1,7 @@
 'use client';
 
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
+import { Card } from '@/components/ui/card';
 import type { OrderRating, RatingsSummary } from '@/lib/db/encuestas';
 
 interface Props {
@@ -47,28 +47,28 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
           { label: 'Este mes', value: avgMonthDisplay, sub: `${summary.thisMonth} reseñas` },
           { label: 'Total reseñas', value: String(summary.total) },
         ].map(({ label, value, sub, accent }) => (
-          <Glass key={label} variant="quiet" style={{ padding: '14px 16px' }}>
+          <Card key={label} className="p-3.5">
             <div style={{ fontSize: 26, fontWeight: 800, color: accent ? '#fbbf24' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
             {sub && <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1 }}>{sub}</div>}
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 4 }}>{label}</div>
-          </Glass>
+          </Card>
         ))}
       </div>
 
       {/* .enc-cols: lado a lado en escritorio, apilado en móvil */}
       <div className="enc-cols">
         {/* Distribución */}
-        <Glass variant="quiet" style={{ padding: '16px 18px' }}>
+        <Card className="p-4">
           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)', marginBottom: 12 }}>Distribución</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {([5, 4, 3, 2, 1] as const).map((s) => (
               <DistBar key={s} label={String(s)} count={summary.distribution[s]} total={summary.total} />
             ))}
           </div>
-        </Glass>
+        </Card>
 
         {/* Reseñas recientes */}
-        <Glass variant="quiet" style={{ padding: '16px 18px' }}>
+        <Card className="p-4">
           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--u-text)', marginBottom: 12 }}>Reseñas recientes</div>
           {ratings.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--u-text-3)' }}>
@@ -102,7 +102,7 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
               ))}
             </div>
           )}
-        </Glass>
+        </Card>
       </div>
 
       <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 13, color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -7,7 +7,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isOpenNow } from '@/lib/hours';
 import { hasActiveCodePromos } from '@/lib/db/promos';
 import { isModuleActive } from '@/lib/modules';
-import { isGoogleAuthEnabled } from '@/lib/auth-config';
+import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
 import CheckoutBlocked from '@/components/checkout-blocked';
 
@@ -26,7 +26,7 @@ export default async function CheckoutPage() {
   if (!modules?.orders || restaurant.status !== 'active') notFound();
 
   // BASICO solo soporta pickup. ESTANDAR y Premium+ honran sus orderTypes
-  // configurados (en Estándar es el paquete elegido: Solo Delivery o Local).
+  // configurados (en Estándar son los 2 de 3 modos elegidos por el dueño).
   const planActual = (restaurant.plan_actual as string | null) ?? null;
   const safeConfig = planActual === 'BASICO'
     ? { ...resolved.config, orderTypes: ['pickup' as const] }
@@ -37,9 +37,9 @@ export default async function CheckoutPage() {
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala');
   const hasPromos = await hasActiveCodePromos(restaurant.id);
+  const { hubUrl, hubToken } = await getAgentHubInfo(restaurant.id);
   const mod = restaurant.modules as Record<string, boolean> | null;
   const modSettings = restaurant.module_settings ?? null;
-  const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
   const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
 
   if (paused || !open) {
@@ -65,9 +65,9 @@ export default async function CheckoutPage() {
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
           hasPromos={hasPromos}
-          loyaltyActive={loyaltyActive}
           encuestasActive={encuestasActive}
-          googleAuthEnabled={isGoogleAuthEnabled()}
+          hubUrl={hubUrl}
+          hubToken={hubToken}
         />
       </CartProvider>
     </ThemeProvider>

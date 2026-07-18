@@ -7,7 +7,8 @@ import {
   updateRestaurantPlan,
   type SuperState,
 } from '@/lib/actions/super-admin';
-import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { ACTIVATABLE_MODULES, type ActivatableModuleKey } from '@/lib/modules';
+import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, ADDON_MODULES } from '@/lib/plans';
 import type { Restaurant } from '@/types';
 import type { PlanCode } from '@/lib/plans';
 
@@ -29,39 +30,46 @@ const FEATURE_KEYS: (keyof PlanFeatures)[] = [
   'promociones', 'personal', 'finanzas', 'multi_branch',
 ];
 
+// Flags legacy (restaurants.modules.{orders,whatsapp_notify,...}) — sin GMV
+// desde mig. 072. Se mantienen porque otras partes del código ya los leen;
+// el precio real ahora sale de plans.ts + módulos a la carta, no de aquí.
 const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
-  BASICO:        { orders: false, whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
-  ESTANDAR:      { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
-  PREMIUM:       { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
-  PREMIUM_PRO:   { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
-  PREMIUM_ULTRA: { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
-  ALTO_VOLUMEN:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
-  VARIABLE:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  BASICO:   { orders: false, whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
+  ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
+  PREMIUM:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  PRO:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
 };
 
-// reservaciones, loyalty, proveedores y fel no se auto-activan al seleccionar
-// el plan — deben activarse manualmente desde aquí cuando estén listos.
-const MANAGED_PRESETS: Record<PlanCode, Record<string, boolean>> = {
-  BASICO:        { reservaciones: false, llamada_mesero: false, encuestas: false, cupones: false, loyalty: false, proveedores: false, recetas: false, fel: false },
-  ESTANDAR:      { reservaciones: false, llamada_mesero: false, encuestas: false, cupones: false, loyalty: false, proveedores: false, recetas: false, fel: false },
-  PREMIUM:       { reservaciones: false, llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: false, proveedores: false, recetas: true,  fel: false },
-  PREMIUM_PRO:   { reservaciones: false, llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: false, proveedores: false, recetas: true,  fel: false },
-  PREMIUM_ULTRA: { reservaciones: false, llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: false, proveedores: false, recetas: true,  fel: false },
-  ALTO_VOLUMEN:  { reservaciones: false, llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: false, proveedores: false, recetas: true,  fel: false },
-  VARIABLE:      { reservaciones: false, llamada_mesero: true,  encuestas: true,  cupones: true,  loyalty: false, proveedores: false, recetas: true,  fel: false },
-};
+// Qué módulos activables vienen gratis con cada plan — misma fuente que la
+// página pública /planes (INCLUDED_MODULES en plans.ts). BASICO/ESTANDAR no
+// incluyen ninguno gratis (se venden a la carta); el super admin puede
+// activarlos igual manualmente y se facturan según ADDON_MODULES.
+const MANAGED_PRESETS: Record<PlanCode, Record<string, boolean>> = Object.fromEntries(
+  PLAN_ORDER.map((code) => [
+    code,
+    Object.fromEntries(
+      ACTIVATABLE_MODULES.map((m) => [m.key, INCLUDED_MODULES[code].includes(m.key)]),
+    ),
+  ]),
+) as Record<PlanCode, Record<string, boolean>>;
 
-const PLAN_META: Record<PlanCode, { label: string; price: string; sub: string; badge?: string }> = {
-  BASICO:        { label: 'Básico',        price: 'Q199',   sub: 'solo menú digital · sin pedidos' },
-  ESTANDAR:      { label: 'Estándar',      price: 'Q399',   sub: 'delivery o local · hasta Q10,000 GMV/mes' },
-  PREMIUM:       { label: 'Premium',       price: 'Q599',   sub: 'hasta Q20,000 GMV/mes', badge: 'MÁS POPULAR' },
-  PREMIUM_PRO:   { label: 'Premium Pro',   price: 'Q999',   sub: 'hasta Q40,000 GMV/mes' },
-  PREMIUM_ULTRA: { label: 'Premium Ultra', price: 'Q1,499', sub: 'hasta Q75,000 GMV/mes' },
-  ALTO_VOLUMEN:  { label: 'Alto Volumen',  price: 'Q2,249', sub: 'hasta Q150,000 GMV/mes' },
-  VARIABLE:      { label: 'Variable',      price: '1% GMV', sub: 'sin tope · mín. Q2,249' },
-};
+function fmtQ0(n: number) {
+  return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+}
 
-const ALL_PLANS: PlanCode[] = ['BASICO', 'ESTANDAR', 'PREMIUM', 'PREMIUM_PRO', 'PREMIUM_ULTRA', 'ALTO_VOLUMEN', 'VARIABLE'];
+/** ¿Este plan se ofrece a clientes? Si no, solo tú puedes asignarlo aquí. */
+function isPublicPlan(p: PlanCode): boolean {
+  return (PUBLIC_PLANS as PlanCode[]).includes(p);
+}
+
+const PLAN_META: Record<PlanCode, { label: string; price: string; sub: string; badge?: string }> = Object.fromEntries(
+  PLAN_ORDER.map((code) => {
+    const p = PLANS[code];
+    return [code, { label: p.name, price: fmtQ0(p.priceMonthly), sub: p.tagline, badge: p.badge }];
+  }),
+) as Record<PlanCode, { label: string; price: string; sub: string; badge?: string }>;
+
+const ALL_PLANS: PlanCode[] = PLAN_ORDER;
 
 const FEATURE_LIST: { key: keyof PlanFeatures; label: string; description: string }[] = [
   { key: 'orders',          label: 'Pedidos en línea',      description: 'Carrito + checkout + estados en tiempo real' },
@@ -138,7 +146,7 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
             Plan heredado «{rawPlan}». Selecciona el nuevo plan para actualizarlo.
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {ALL_PLANS.map((p) => {
             const active = plan === p;
             const meta = PLAN_META[p];
@@ -160,7 +168,16 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
                   position: 'relative',
                 }}
               >
-                {meta.badge && (
+                {!isPublicPlan(p) ? (
+                  <span style={{
+                    position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
+                    background: '#fbbf24', color: '#1a1a1a',
+                    fontSize: 8, fontWeight: 700, letterSpacing: '0.05em',
+                    padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
+                  }}>
+                    NO PUBLICADO
+                  </span>
+                ) : meta.badge && (
                   <span style={{
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: 'var(--brand-accent)', color: '#fff',
@@ -218,15 +235,23 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
           </span>
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {ACTIVATABLE_MODULES.map((m) => (
-            <ModuleRow
-              key={m.key}
-              label={m.label}
-              description={m.requiresSetup ? 'Requiere configuración de Leogin · actívalo aquí' : `${m.description.slice(0, 60)}…`}
-              enabled={managed[m.key] === true}
-              onToggle={() => toggleManaged(m.key)}
-            />
-          ))}
+          {ACTIVATABLE_MODULES.map((m) => {
+            const included = INCLUDED_MODULES[plan].includes(m.key);
+            const addon = ADDON_MODULES[m.key as ActivatableModuleKey];
+            const priceNote = (included
+              ? `Incluido gratis en ${PLAN_META[plan].label}`
+              : `Q${addon.price}/mes a la carta${addon.setupFee ? ` + Q${addon.setupFee} activación` : ''} — no incluido en ${PLAN_META[plan].label}`)
+              + (addon.comingSoon ? ' · aún no se ofrece a clientes (solo tú lo activas aquí)' : '');
+            return (
+              <ModuleRow
+                key={m.key}
+                label={m.label}
+                description={m.requiresSetup ? `${priceNote} · requiere configuración de Leogin` : priceNote}
+                enabled={managed[m.key] === true}
+                onToggle={() => toggleManaged(m.key)}
+              />
+            );
+          })}
         </div>
       </Glass>
 

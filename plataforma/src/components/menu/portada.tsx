@@ -26,7 +26,6 @@ function BrandMark({ size = 96 }: { size?: number }) {
         width={size}
         height={size}
         style={{ width: size, height: 'auto', objectFit: 'contain', display: 'block' }}
-        unoptimized
       />
     );
   }

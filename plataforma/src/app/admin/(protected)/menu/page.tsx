@@ -28,16 +28,20 @@ export default async function AdminMenuPage() {
 
   if (!restaurantId) redirect('/admin/login');
 
-  const { categories, products } = await getAdminMenu(restaurantId);
+  // getAdminMenu y la fila de módulos solo dependen de restaurantId, no una
+  // de la otra — se lanzan juntas en vez de esperarlas en serie.
+  const db = createServiceClient();
+  const [{ categories, products }, { data: rest }] = await Promise.all([
+    getAdminMenu(restaurantId),
+    db
+      .from('restaurants')
+      .select('modules, module_settings')
+      .eq('id', restaurantId)
+      .single(),
+  ]);
 
   // Módulo de recetas: si está activo, traemos los insumos para que el editor
   // de platillo permita armar la receta y costear automáticamente.
-  const db = createServiceClient();
-  const { data: rest } = await db
-    .from('restaurants')
-    .select('modules, module_settings')
-    .eq('id', restaurantId)
-    .single();
   const recetasActive = isModuleActive(
     rest?.modules as ModulesMap,
     rest?.module_settings as ModuleSettings,

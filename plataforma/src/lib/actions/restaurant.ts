@@ -3,10 +3,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
+import { logChannelChanges } from '@/lib/db/channel-history';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours } from '@/lib/hours';
-import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
+import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
+import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
+import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
 
 export type RestaurantState = { error: string } | null;
 
@@ -308,7 +311,7 @@ export async function saveOrdersAndCurrency(input: {
     'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
     'tipEnabled' | 'tipPercent' | 'acceptsCard' |
     'currencySymbol' | 'currencyPosition' | 'locale' | 'animations'
-  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' | 'autoConfirmEnabled' | 'autoConfirmMinutes'>>;
+  > & Partial<Pick<ThemeConfig, 'floorPlan' | 'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' | 'autoConfirmEnabled' | 'autoConfirmMinutes' | 'tipOrderTypes'>>;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -331,6 +334,21 @@ export async function saveOrdersAndCurrency(input: {
   }
 
   const db = createServiceClient();
+
+  // Mismo tope que updateOwnOrderTypes: esta acción también puede escribir
+  // orderTypes (p.ej. el toggle "Comer en local" de /admin/mesas), así que
+  // ESTANDAR no puede colarse a los 3 modos por esta vía tampoco.
+  if (!isSuperAdmin) {
+    const { data: rest } = await db
+      .from('restaurants')
+      .select('plan_actual')
+      .eq('id', input.restaurantId)
+      .single();
+    if (rest?.plan_actual === 'ESTANDAR' && input.patch.orderTypes.length > ESTANDAR_MAX_ORDER_TYPES) {
+      return { error: `El plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido a la vez. Para activar los 3, actualiza a Premium.` };
+    }
+  }
+
   const { data: row } = await db
     .from('restaurant_themes')
     .select('config')
@@ -338,6 +356,7 @@ export async function saveOrdersAndCurrency(input: {
     .maybeSingle();
 
   const existingConfig = (row?.config as Record<string, unknown>) ?? {};
+  const previousOrderTypes = (existingConfig.orderTypes as OrderType[] | undefined) ?? input.patch.orderTypes;
   const newConfig = { ...existingConfig, ...input.patch };
 
   const { error } = await db
@@ -345,6 +364,11 @@ export async function saveOrdersAndCurrency(input: {
     .upsert({ restaurant_id: input.restaurantId, config: newConfig }, { onConflict: 'restaurant_id' });
 
   if (error) return { error: error.message };
+
+  // Bitácora legible (activity_log) — el registro que sostiene el cobro
+  // (restaurant_channel_log) lo escribe un trigger en restaurant_themes,
+  // no esta llamada (ver channel-history.ts).
+  await logChannelChanges(input.restaurantId, previousOrderTypes, input.patch.orderTypes, user.id);
 
   revalidatePath('/admin/perfil');
   revalidatePath('/admin/personalizacion');
@@ -381,10 +405,10 @@ export async function updateOwnOrderTypes(
 
   const db = createServiceClient();
 
-  // En BASICO/ESTANDAR los canales (el "paquete") los fija Leogin en el
-  // registro y solo el super admin los cambia (updateOrderTypes). Así el
-  // checkout, que ahora honra orderTypes, no puede abusarse para obtener
-  // canales Premium a precio Estándar. Premium+ sí gestiona sus canales.
+  // BASICO no tiene pedidos en línea (hasOrders=false): sus canales los fija
+  // Leogin y solo el super admin los cambia. ESTANDAR sí administra sus
+  // propios canales, pero tope de ESTANDAR_MAX_ORDER_TYPES (2 de 3) — para
+  // tener los 3 a la vez hay que subir a Premium. Premium+ no tiene tope.
   if (!isSuperAdmin) {
     const { data: rest } = await db
       .from('restaurants')
@@ -392,8 +416,11 @@ export async function updateOwnOrderTypes(
       .eq('id', restaurantId)
       .single();
     const plan = (rest?.plan_actual as string | null) ?? null;
-    if (plan === 'BASICO' || plan === 'ESTANDAR') {
+    if (plan === 'BASICO') {
       return { error: 'Tu plan no permite cambiar los canales de pedido. Escríbenos para ajustar tu paquete.' };
+    }
+    if (plan === 'ESTANDAR' && orderTypes.length > ESTANDAR_MAX_ORDER_TYPES) {
+      return { error: `El plan Estándar permite hasta ${ESTANDAR_MAX_ORDER_TYPES} modos de pedido a la vez. Para activar los 3, actualiza a Premium.` };
     }
   }
   const { data: row } = await db
@@ -403,10 +430,16 @@ export async function updateOwnOrderTypes(
     .maybeSingle();
 
   const existing = (row?.config as Record<string, unknown>) ?? {};
+  const previousOrderTypes = (existing.orderTypes as OrderType[] | undefined) ?? orderTypes;
   const { error } = await db
     .from('restaurant_themes')
     .upsert({ restaurant_id: restaurantId, config: { ...existing, orderTypes } }, { onConflict: 'restaurant_id' });
   if (error) return { error: error.message };
+
+  // Bitácora legible (activity_log) — el registro que sostiene el cobro
+  // (restaurant_channel_log) lo escribe un trigger en restaurant_themes,
+  // no esta llamada (ver channel-history.ts).
+  await logChannelChanges(restaurantId, previousOrderTypes, orderTypes, user.id);
 
   // "Plan a tu medida": al cambiar canales, recalcula la mensualidad de los
   // restaurantes en modo automático (la función solo toca filas auto_price=true).
@@ -457,6 +490,11 @@ export async function saveAdminRestaurantTheme(input: {
   config: ThemeConfig;
   content: ThemeContent;
   customCss: string;
+  /** true cuando el dueño aplicó una plantilla: el CSS a medida existente se
+      ELIMINA (se inyecta al final del documento y pisaría los colores de la
+      plantilla → mezcla ilegible). Es solo un borrado — el dueño sigue sin
+      poder escribir CSS propio. */
+  resetCustomCss?: boolean;
 }): Promise<SaveThemeResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -482,9 +520,14 @@ export async function saveAdminRestaurantTheme(input: {
   // puede definirlo (modelo "Leonardo diseña"). Para un dueño NO se toca —
   // se conserva el valor existente, ignorando lo que mande el cliente (la UI
   // ya le oculta el campo, pero el server action es el candado real).
+  // EXCEPCIÓN segura: si aplicó una plantilla (resetCustomCss), el CSS se
+  // BORRA — borrar no es inyección, y sin esto el CSS del look anterior
+  // pisaba las variables de la plantilla recién elegida.
   let effectiveCss: string | null;
   if (isSuperAdmin) {
     effectiveCss = customCss?.trim() ? customCss : null;
+  } else if (input.resetCustomCss === true) {
+    effectiveCss = null;
   } else {
     const { data: existing } = await db
       .from('restaurant_themes')
@@ -526,4 +569,108 @@ export async function saveAdminRestaurantTheme(input: {
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   return { ok: true };
+}
+
+/* ============================================================
+   PLANTILLAS PROPIAS DEL RESTAURANTE
+   ------------------------------------------------------------
+   Cada restaurante puede guardar su propio diseño (mismo subconjunto
+   visual que una plantilla builtin — ver TEMPLATE_VISUAL_KEYS) como
+   plantilla reutilizable, hasta un máximo. A diferencia de
+   theme_templates (biblioteca GLOBAL, solo Super Admin), estas viven
+   en restaurant_theme_templates, una fila por diseño guardado,
+   scoped por restaurant_id.
+   ============================================================ */
+
+export interface RestaurantThemeTemplate {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  config: TemplateConfig;
+  created_at: string;
+}
+
+const MAX_RESTAURANT_TEMPLATES = 5;
+
+/** Verifica sesión + pertenencia al restaurante; null si no autorizado. */
+async function resolveOwnerThemeContext(restaurantId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('restaurant_id, role')
+    .eq('id', user.id)
+    .single();
+  if (!profile) return null;
+
+  const isSuperAdmin = profile.role === 'SUPER_ADMIN';
+  if (!isSuperAdmin && profile.restaurant_id !== restaurantId) return null;
+
+  return createServiceClient();
+}
+
+export async function listRestaurantThemeTemplates(restaurantId: string): Promise<RestaurantThemeTemplate[]> {
+  const db = await resolveOwnerThemeContext(restaurantId);
+  if (!db) return [];
+  const { data } = await db
+    .from('restaurant_theme_templates')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+  return (data ?? []) as RestaurantThemeTemplate[];
+}
+
+export async function saveRestaurantThemeTemplate(input: {
+  restaurantId: string;
+  name: string;
+  config: ThemeConfig;
+}): Promise<{ error?: string; template?: RestaurantThemeTemplate }> {
+  const db = await resolveOwnerThemeContext(input.restaurantId);
+  if (!db) return { error: 'No autorizado.' };
+
+  const name = input.name.trim();
+  if (!name) return { error: 'Ponle un nombre a la plantilla.' };
+  if (name.length > 60) return { error: 'Nombre demasiado largo (máx. 60 caracteres).' };
+
+  const { count } = await db
+    .from('restaurant_theme_templates')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', input.restaurantId);
+  if ((count ?? 0) >= MAX_RESTAURANT_TEMPLATES) {
+    return { error: `Ya tienes ${MAX_RESTAURANT_TEMPLATES} plantillas guardadas (el máximo). Elimina una para guardar otra.` };
+  }
+
+  const { data, error } = await db
+    .from('restaurant_theme_templates')
+    .insert({
+      restaurant_id: input.restaurantId,
+      name,
+      config: extractVisualConfig(input.config),
+    })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  revalidatePath('/admin/personalizacion');
+  return { template: data as RestaurantThemeTemplate };
+}
+
+export async function deleteRestaurantThemeTemplate(input: {
+  restaurantId: string;
+  id: string;
+}): Promise<{ error?: string }> {
+  const db = await resolveOwnerThemeContext(input.restaurantId);
+  if (!db) return { error: 'No autorizado.' };
+
+  const { error } = await db
+    .from('restaurant_theme_templates')
+    .delete()
+    .eq('id', input.id)
+    .eq('restaurant_id', input.restaurantId); // candado extra: no borrar plantillas de otro restaurante aunque adivinen el id
+
+  if (error) return { error: error.message };
+  revalidatePath('/admin/personalizacion');
+  return {};
 }

@@ -11,7 +11,7 @@
    salón (config.floorPlan), las mesas se muestran colocadas como en el local
    y con pestañas por nivel; si no, se usa la cuadrícula automática. */
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
@@ -19,12 +19,11 @@ import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
-import { outboxAdd } from '@/lib/offline/outbox';
-import { useOutbox } from '@/lib/offline/use-outbox';
-import { reportConnectivityProblem } from '@/lib/offline/use-online';
+import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
+import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
-import type { OrderWithItems } from '@/lib/db/orders';
+import type { OrderWithItems, TableOccupancy } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
 
 /* ── Tipos locales ────────────────────────────────────────── */
@@ -34,7 +33,7 @@ interface CartLine {
   name: string;
   price: number;
   quantity: number;
-  options: { groupId: string; groupName: string; choiceId: string; choiceName: string; priceDelta: number }[];
+  options: { groupId: string; groupName: string; choiceId: string; choiceName: string; priceDelta: number; variantId?: string; variantName?: string }[];
 }
 
 interface Props {
@@ -45,13 +44,19 @@ interface Props {
   categories: Category[];
   products: Product[];
   initialOrders: OrderWithItems[];
-  /** Mesa → ISO timestamp de cuándo se ocupó (created_at del pedido activo más antiguo). */
-  occupiedSince: Record<number, string>;
+  /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal por su cuenta). */
+  occupiedSince: Record<number, TableOccupancy>;
   tableCount: number;
   tipEnabled: boolean;
   tipPercent: number;
   currency: PanelCurrency;
   floorPlan: FloorPlan | null;
+  /** Hub local del restaurante (Fase 2 offline) — fallback cuando la nube no
+      responde, antes de encolar el pedido en este dispositivo. */
+  hubUrl: string | null;
+  hubToken: string | null;
+  /** Sesión iniciada por PIN — el menú ⋮ ofrece "Cambiar de usuario" en vez de "Salir". */
+  isOperatorSession?: boolean;
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */
@@ -70,22 +75,24 @@ function money(n: number, c: PanelCurrency): string {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
+  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', SERVED: 'Servido', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
 };
 const STATUS_COLOR: Record<string, string> = {
-  NEW: '#3b82f6', PREP: '#f59e0b', READY: '#8b5cf6', TRANSIT: '#f97316', DELIVERED: '#22c55e', CANCEL: '#6b7280',
+  NEW: '#3b82f6', PREP: '#f59e0b', READY: '#8b5cf6', TRANSIT: '#f97316', SERVED: '#06b6d4', DELIVERED: '#22c55e', CANCEL: '#6b7280',
 };
 
-function nextStatus(status: string, _type: string): string | null {
+/** Para DINE_IN, "servir" no cierra la mesa: READY→SERVED (intermedio) y ahí
+    se detiene el avance automático — solo "Marcar como libre" llega a DELIVERED. */
+function nextStatus(status: string, type: string): string | null {
   if (status === 'NEW') return 'PREP';
   if (status === 'PREP') return 'READY';
-  if (status === 'READY') return 'DELIVERED';
+  if (status === 'READY') return type === 'DINE_IN' ? 'SERVED' : 'DELIVERED';
   return null;
 }
-function nextLabel(status: string): string {
+function nextLabel(status: string, type: string): string {
   if (status === 'NEW') return 'Confirmar';
   if (status === 'PREP') return 'Marcar listo';
-  if (status === 'READY') return 'Servir en mesa';
+  if (status === 'READY') return type === 'DINE_IN' ? 'Marcar servido' : 'Servir en mesa';
   return '';
 }
 
@@ -104,6 +111,19 @@ function initModalSelection(groups: ProductOptionGroup[]): Record<string, string
   return sel;
 }
 
+/** Variante inicial de cada componente con variantes: la primera (igual que la
+    hoja del comensal) — el precio ya la usaba como fallback, la píldora debe
+    verse marcada desde el inicio. */
+function initModalVariants(groups: ProductOptionGroup[]): Record<string, string> {
+  const sel: Record<string, string> = {};
+  for (const g of groups) {
+    for (const c of g.choices) {
+      if (c.variants?.length) sel[c.id] = c.variants[0].id;
+    }
+  }
+  return sel;
+}
+
 function ProductOptionsModal({
   product,
   currency,
@@ -117,6 +137,8 @@ function ProductOptionsModal({
 }) {
   const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
   const [selected, setSelected] = useState<Record<string, string[]>>(() => initModalSelection(groups));
+  /** choiceId -> variantId elegida (solo choices de combo con variantes). */
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initModalVariants(groups));
   const [qty, setQty] = useState(1);
 
   function toggleChoice(group: ProductOptionGroup, choiceId: string) {
@@ -132,6 +154,14 @@ function ProductOptionsModal({
       if (group.type === 'multi' && group.max && group.max > 0 && current.length >= group.max) return prev;
       return { ...prev, [group.id]: [...current, choiceId] };
     });
+    const choice = group.choices.find((c) => c.id === choiceId);
+    if (choice?.variants?.length && !variantSelected[choiceId]) {
+      setVariantSelected((prev) => ({ ...prev, [choiceId]: choice.variants![0].id }));
+    }
+  }
+
+  function chooseVariant(choiceId: string, variantId: string) {
+    setVariantSelected((prev) => ({ ...prev, [choiceId]: variantId }));
   }
 
   function buildOptions() {
@@ -139,7 +169,15 @@ function ProductOptionsModal({
     for (const group of groups) {
       for (const choiceId of selected[group.id] ?? []) {
         const choice = group.choices.find((c) => c.id === choiceId);
-        if (choice) opts.push({ groupId: group.id, groupName: group.name, choiceId: choice.id, choiceName: choice.name, priceDelta: choice.priceDelta });
+        if (!choice) continue;
+        const variant = choice.variants?.length
+          ? choice.variants.find((v) => v.id === variantSelected[choice.id]) ?? choice.variants[0]
+          : undefined;
+        const priceDelta = (Number(choice.priceDelta) || 0) + (variant ? Number(variant.priceDelta) || 0 : 0);
+        opts.push({
+          groupId: group.id, groupName: group.name, choiceId: choice.id, choiceName: choice.name, priceDelta,
+          ...(variant ? { variantId: variant.id, variantName: variant.name } : {}),
+        });
       }
     }
     return opts;
@@ -205,23 +243,42 @@ function ProductOptionsModal({
                       const included = picked.includes(choice.id);
                       const d = Number(choice.priceDelta) || 0;
                       return (
-                        <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
+                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <button type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'rgba(34,197,94,0.10)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-                            border: `1px solid ${included ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}` }}>
+                            background: included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 10%, transparent)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+                            border: `1px solid ${included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 35%, transparent)' : 'var(--u-hair)'}` }}>
                           <span style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'grid', placeItems: 'center',
-                            background: included ? '#22c55e' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: `1.5px solid ${included ? '#22c55e' : 'var(--u-hair)'}` }}>
+                            background: included ? 'var(--c-ok-solid, #22c55e)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: `1.5px solid ${included ? 'var(--c-ok-solid, #22c55e)' : 'var(--u-hair)'}` }}>
                             {included && <Icon name="check" size={12} style={{ color: '#fff' }} />}
                           </span>
                           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: included ? 'var(--u-text)' : 'var(--u-text-3)', textDecoration: included ? 'none' : 'line-through' }}>
                             {choice.name}
                           </span>
                           {d > 0 && (
-                            <span style={{ fontSize: 12, flexShrink: 0, color: included ? 'var(--u-text-2)' : '#f87171' }}>
+                            <span style={{ fontSize: 12, flexShrink: 0, color: included ? 'var(--u-text-2)' : 'var(--c-danger, #f87171)' }}>
                               {included ? `+${money(d, currency)}` : `−${money(d, currency)}`}
                             </span>
                           )}
                         </button>
+                        {included && choice.variants && choice.variants.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 30 }}>
+                            {choice.variants.map((variant) => {
+                              const on = variantSelected[choice.id] === variant.id;
+                              const vDelta = Number(variant.priceDelta) || 0;
+                              return (
+                                <button key={variant.id} type="button" onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }} className="press"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 99, cursor: 'pointer',
+                                    background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 12 }}>
+                                  {variant.name}
+                                  {vDelta !== 0 && <span style={{ fontSize: 10.5, opacity: 0.8, color: 'inherit' }}>{vDelta > 0 ? '+' : '−'}{money(Math.abs(vDelta), currency)}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        </div>
                       );
                     })}
                   </div>
@@ -269,9 +326,44 @@ function ProductOptionsModal({
   );
 }
 
+/* Menú ⋮ del encabezado: hoy solo trae "Salir", pero queda listo para más
+   opciones futuras del mesero sin competir por espacio con la navegación. */
+function HeaderMenu({ isOperatorSession }: { isOperatorSession?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDocClick);
+    return () => document.removeEventListener('pointerdown', onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="press glass-quiet"
+        aria-label="Más opciones"
+        style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}
+      >
+        <Icon name="more" size={19} />
+      </button>
+      {open && (
+        <div className="glass anim-pop" style={{ position: 'absolute', right: 0, top: 46, zIndex: 210, minWidth: 160, borderRadius: 14, padding: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+          <LogoutButton variant="menu-item" isOperatorSession={isOperatorSession} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders,
+  title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders, isOperatorSession,
 }: {
   title: string;
   waiterName: string;
@@ -280,6 +372,7 @@ function WaiterHeader({
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
+  isOperatorSession?: boolean;
 }) {
   return (
     <header style={{
@@ -303,13 +396,12 @@ function WaiterHeader({
           </div>
           <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="userPlus" size={12} /> {waiterName}</div>
         </div>
-        {showOrders ? (
+        {showOrders && (
           <button type="button" onClick={onShowOrders} className="press glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
             <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
           </button>
-        ) : (
-          <LogoutButton />
         )}
+        <HeaderMenu isOperatorSession={isOperatorSession} />
       </div>
     </header>
   );
@@ -322,6 +414,7 @@ export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
+  hubUrl, hubToken, isOperatorSession = false,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -339,21 +432,85 @@ export default function WaiterPanel({
   const [submitOk, setSubmitOk] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderWithItems[]>(initialOrders);
   const [, startStatus] = useTransition();
+  const [statusError, setStatusError] = useState<string | null>(null);
+  // Pedidos sin sincronizar con la nube (fallback offline, ver handleSubmit).
+  const [queuedCount, setQueuedCount] = useState(0);
+  const retryingQueueRef = useRef(false);
 
-  // Cola offline (Fase 1): pedidos tomados sin señal. Se reenvían solos
-  // (evento online + cada 20 s); al lograrlo, refresca la lista de pedidos.
-  const outbox = useOutbox(
-    'waiter',
-    restaurantId,
-    (payload) => createWaiterOrder(payload),
-    () => router.refresh(),
-  );
-  const queuedCount = outbox.pending.length + outbox.failed.length;
+  // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
+  // ráfaga de eventos Realtime (p. ej. la cola offline del hub sincronizando
+  // 20 pedidos de golpe) disparaba un re-render completo POR EVENTO y
+  // congelaba la tablet del mesero. Máximo un refresh cada 2.5 s.
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+  const refreshSoon = useCallback(() => {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }, [router]);
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
+
+  // Precalienta el hub HTTPS (DNS + permiso de red local) mientras hay señal,
+  // para que el fallback funcione si el internet se cae a mitad del turno.
+  useEffect(() => {
+    warmUpHub(hubUrl);
+  }, [hubUrl]);
 
   // Nivel activo del plano del salón (si está habilitado).
   const planEnabled = !!floorPlan?.enabled && (floorPlan?.levels.length ?? 0) > 0;
   const levels = floorPlan?.levels ?? [];
   const [activeLevel, setActiveLevel] = useState<string>(levels[0]?.id ?? '');
+
+  /** Reintenta los pedidos que quedaron en la cola local del mesero (offline
+      total: ni la nube ni el hub respondieron). Éxito o rechazo definitivo
+      del servidor → se quitan de la cola (mismo patrón silencioso que la
+      reconciliación en segundo plano de checkout-form.tsx); fallo de red →
+      se quedan para el siguiente intento. */
+  async function retryWaiterQueue() {
+    if (retryingQueueRef.current) return;
+    retryingQueueRef.current = true;
+    try {
+      for (const q of getQueuedOrders(restaurantId, 'waiter')) {
+        try {
+          const result = await createWaiterOrder(q.payload);
+          if (result.success || result.error) {
+            removeQueuedOrder(restaurantId, q.clientId, 'waiter');
+          }
+        } catch { /* sigue sin conexión: se reintenta en el próximo ciclo */ }
+      }
+    } finally {
+      setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
+      retryingQueueRef.current = false;
+    }
+  }
+
+  // Al montar: cuenta lo que ya estaba en cola (pestaña cerrada a mitad de un
+  // corte) y lo reintenta en segundo plano.
+  useEffect(() => {
+    setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
+    retryWaiterQueue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
+  // Reintento automático mientras haya algo en cola: al volver la señal y,
+  // de respaldo, cada 15s (mismo ritmo que checkout-form.tsx).
+  useEffect(() => {
+    if (queuedCount === 0) return;
+    const onOnline = () => retryWaiterQueue();
+    window.addEventListener('online', onOnline);
+    const timer = setInterval(() => retryWaiterQueue(), 15_000);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queuedCount]);
 
   // Realtime: actualiza mis pedidos cuando hay cambios.
   useEffect(() => {
@@ -370,10 +527,10 @@ export default function WaiterPanel({
       channel = supabase
         .channel(`waiter-orders-${waiterId}-${crypto.randomUUID().slice(0, 8)}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
-          router.refresh();
+          refreshSoon();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, () => {
-          router.refresh();
+          refreshSoon();
         })
         .subscribe();
     })();
@@ -383,7 +540,7 @@ export default function WaiterPanel({
       if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
-  }, [waiterId, router]);
+  }, [waiterId, refreshSoon]);
 
   useEffect(() => {
     setOrders(initialOrders);
@@ -479,18 +636,23 @@ export default function WaiterPanel({
     setSubmitError(null);
 
     const finalName = guestName.trim() || `Mesa ${tableNumber}`;
+    const clientId = crypto.randomUUID();
 
     const input = {
       restaurantId,
-      // Idempotencia (mig. 061): si el envío se corta a media red y se
-      // reintenta desde la cola, la BD deduplica por este UUID.
-      clientId: crypto.randomUUID(),
+      clientId,
+      // Solo lo usa el camino del hub offline (offline-orders/route.ts): la
+      // nube ya resuelve el mesero de la sesión real, ver createWaiterOrder.
+      waiterId,
       items: cart.map((l) => ({
         productId: l.productId,
         name: l.name,
         price: l.price,
         quantity: l.quantity,
-        options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
+        // El variantId es obligatorio para el servidor cuando el componente
+        // tiene variantes (resolveItemOptions lo exige) — sin él, TODO pedido
+        // de mesero con combo+variantes era rechazado con "Elige una variante".
+        options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
       })),
       customer: {
         name: finalName,
@@ -502,44 +664,52 @@ export default function WaiterPanel({
       tipAccepted: tipEnabled && subtotal > 0,
     };
 
-    const queueLabel = `Mesa ${tableNumber} · ${cartCount} producto${cartCount === 1 ? '' : 's'} · ${currency}${total.toFixed(2)}`;
-
     startSubmit(async () => {
-      let result: Awaited<ReturnType<typeof createWaiterOrder>>;
+      // WRITE-AHEAD: el pedido se guarda en la cola del dispositivo ANTES de
+      // intentar cualquier red, y solo se quita tras un resultado definitivo.
+      // Bug real reproducido en pruebas (2026-07-10): con la nube caída, la
+      // página murió DURANTE la ventana del fallback (~2.5 s) y el pedido —
+      // que solo existía en memoria — se perdió sin dejar rastro (ni nube,
+      // ni hub, ni cola). Con la cola primero, el peor caso es un pedido que
+      // se reenvía solo más tarde — nunca uno perdido; el clientId
+      // idempotente (migración 061) garantiza que jamás se duplica aunque el
+      // reintento y este envío lleguen ambos.
+      saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
       try {
-        result = await createWaiterOrder(input);
-      } catch {
-        // Fallo de RED (el server action ni llegó): a la cola offline. El
-        // hook la reenvía solo al volver la señal; la BD deduplica por
-        // clientId si en realidad sí alcanzó a entrar.
-        reportConnectivityProblem();
-        try {
-          await outboxAdd({
-            clientId: input.clientId,
-            kind: 'waiter',
-            restaurantId,
-            payload: input,
-            label: queueLabel,
-            createdAt: Date.now(),
-            tries: 0,
-            status: 'pending',
-            lastError: null,
-          });
-          setSubmitOk('Sin señal — pedido guardado en cola. Se enviará a cocina en cuanto vuelva la conexión.');
-          resetOrder();
-          setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2400);
-        } catch {
-          setSubmitError('Sin señal y no se pudo guardar la cola en este dispositivo. Anota el pedido y reintenta.');
+        const result = await createWaiterOrder(input);
+        // Respuesta del servidor (éxito o rechazo definitivo): ya no es un
+        // pedido "en el aire" — fuera de la cola en ambos casos.
+        removeQueuedOrder(restaurantId, clientId, 'waiter');
+        if (result.error) {
+          setSubmitError(result.error);
+          return;
         }
-        return;
-      }
-      if (result.error) {
-        setSubmitError(result.error);
-      } else {
         setSubmitOk(`Pedido ${result.orderNumber} enviado a cocina.`);
         resetOrder();
         setTimeout(() => { setSubmitOk(null); setView('orders'); }, 1600);
         router.refresh();
+      } catch {
+        // La nube no respondió (sin conexión o WiFi inestable): intenta el
+        // hub local del restaurante antes de dejarlo encolado en este
+        // dispositivo.
+        if (hubUrl) {
+          const hubResult = await tryHubOrder(hubUrl, hubToken, input);
+          if (hubResult?.success) {
+            // El hub ya lo tiene (impreso y en SU cola de sincronización):
+            // sacarlo de la cola del dispositivo para no reenviarlo también
+            // desde aquí.
+            removeQueuedOrder(restaurantId, clientId, 'waiter');
+            setSubmitOk(`Pedido ${hubResult.orderNumber} impreso — se sincronizará solo en cuanto vuelva la señal.`);
+            resetOrder();
+            setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2200);
+            return;
+          }
+        }
+        // Sin nube y sin hub: se queda donde ya estaba (cola local).
+        setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
+        setSubmitOk('Sin conexión: el pedido quedó guardado en este dispositivo y se enviará solo en cuanto vuelva la señal.');
+        resetOrder();
+        setTimeout(() => { setSubmitOk(null); setView('orders'); }, 2600);
       }
     });
   }
@@ -563,9 +733,9 @@ export default function WaiterPanel({
     waiterName,
     onAdminBack: () => router.push('/admin'),
     showOrders: view !== 'orders',
-    // Incluye la cola offline para que el mesero vea que hay pendientes.
-    ordersCount: orders.length + queuedCount,
+    ordersCount: orders.length,
     onShowOrders: () => setView('orders'),
+    isOperatorSession,
   };
 
   /* ════════════════ VISTA: MIS PEDIDOS ════════════════ */
@@ -578,44 +748,29 @@ export default function WaiterPanel({
             <button type="button" onClick={() => { setView('tables'); }} className="press btn-accent" style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
               ＋ Nuevo pedido
             </button>
-
-            {/* ── Cola offline: pedidos por sincronizar ── */}
-            {outbox.pending.map((e) => (
-              <div key={e.clientId} className="glass-quiet" style={{ borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 40%, transparent)' }}>
-                <span style={{ color: 'var(--c-warn, #fbbf24)', flexShrink: 0 }}><Icon name="clock" size={17} /></span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{e.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--c-warn, #fbbf24)', marginTop: 1 }}>
-                    En cola — se enviará a cocina al volver la señal
-                  </div>
-                </div>
-                <button type="button" onClick={() => outbox.flush()} className="press" title="Reintentar ahora" style={{ flexShrink: 0, background: 'none', border: '1px solid var(--u-hair)', borderRadius: 99, padding: '6px 12px', color: 'var(--u-text-2)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  Reintentar
-                </button>
+            {queuedCount > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-warn, #f59e0b) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 30%, transparent)', color: 'var(--c-warn, #f59e0b)', fontSize: 13, fontWeight: 600 }}>
+                <Icon name="clock" size={15} />
+                {queuedCount === 1 ? '1 pedido sin sincronizar — se enviará solo al volver la señal.' : `${queuedCount} pedidos sin sincronizar — se enviarán solos al volver la señal.`}
               </div>
-            ))}
-            {outbox.failed.map((e) => (
-              <div key={e.clientId} className="glass-quiet" style={{ borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 45%, transparent)' }}>
-                <span style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0 }}><Icon name="alertCircle" size={17} /></span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{e.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--c-danger, #f87171)', marginTop: 1 }}>
-                    Rechazado al sincronizar: {e.lastError ?? 'error desconocido'}
-                  </div>
-                </div>
-                <button type="button" onClick={() => outbox.discard(e.clientId)} className="press" style={{ flexShrink: 0, background: 'none', border: '1px solid var(--u-hair)', borderRadius: 99, padding: '6px 12px', color: 'var(--u-text-3)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                  Descartar
-                </button>
+            )}
+            {statusError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', color: 'var(--c-danger, #f87171)', fontSize: 13, fontWeight: 600 }}>
+                <Icon name="alertCircle" size={15} />
+                {statusError}
               </div>
-            ))}
-
-            {orders.length === 0 && queuedCount === 0 ? (
+            )}
+            {orders.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--u-text-4)', fontSize: 15 }}>
                 Sin pedidos activos. Tus pedidos en curso aparecerán aquí.
               </div>
             ) : orders.map((order) => {
               const next = nextStatus(order.status, order.order_type);
-              const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL';
+              // SERVED también es terminal aquí (ya no hay más botón de avance en la
+              // tarjeta del pedido — cerrar la mesa es solo vía "Marcar como libre" en
+              // el diálogo de la mesa), aunque para las queries de ocupación no cuenta
+              // como cerrado (la mesa sigue viéndose ocupada).
+              const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL' || order.status === 'SERVED';
               return (
                 <div key={order.id} className="glass" style={{ borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, opacity: isTerminal ? 0.6 : 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -654,13 +809,15 @@ export default function WaiterPanel({
                         <button
                           type="button"
                           onClick={() => startStatus(async () => {
-                            await updateOrderStatus(order.id, next as import('@/types').OrderStatus);
+                            setStatusError(null);
+                            const res = await updateOrderStatus(order.id, next as import('@/types').OrderStatus);
+                            if (res.error) { setStatusError(res.error); return; }
                             router.refresh();
                           })}
                           className="press btn-accent"
                           style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
                         >
-                          {nextLabel(order.status)}
+                          {nextLabel(order.status, order.order_type)}
                         </button>
                       )}
                       <button
@@ -668,13 +825,15 @@ export default function WaiterPanel({
                         onClick={() => {
                           if (confirm('¿Cancelar este pedido?')) {
                             startStatus(async () => {
-                              await updateOrderStatus(order.id, 'CANCEL');
+                              setStatusError(null);
+                              const res = await updateOrderStatus(order.id, 'CANCEL');
+                              if (res.error) { setStatusError(res.error); return; }
                               router.refresh();
                             });
                           }
                         }}
                         className="press"
-                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
                       >
                         Cancelar
                       </button>
@@ -745,18 +904,18 @@ export default function WaiterPanel({
                 {otherTables.length > 0 && (
                   <div style={{ marginTop: 18 }}>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Otras mesas</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
                       {otherTables.map((n) => (
-                        <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
+                        <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]?.since} waiterName={occupiedSince[n]?.waiterName} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                       ))}
                     </div>
                   </div>
                 )}
               </>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))', gap: 12 }}>
                 {Array.from({ length: tableCount }, (_, i) => i + 1).map((n) => (
-                  <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
+                  <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]?.since} waiterName={occupiedSince[n]?.waiterName} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                 ))}
               </div>
             )}
@@ -771,7 +930,12 @@ export default function WaiterPanel({
                 <div>
                   <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
                   <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
-                    Tiene un pedido activo{tableToFree != null && occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree]).getTime())}` : ''}
+                    Tiene un pedido activo{tableToFree != null && occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree].since).getTime())}` : ''}
+                    {tableToFree != null && occupiedSince[tableToFree] && (
+                      occupiedSince[tableToFree].waiterName
+                        ? ` · atendida por ${occupiedSince[tableToFree].waiterName}`
+                        : ' · pedido por el comensal'
+                    )}
                   </div>
                 </div>
                 <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
@@ -800,7 +964,7 @@ export default function WaiterPanel({
                     });
                   }}
                   className="press"
-                  style={{ padding: '14px', borderRadius: 14, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
+                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
                 >
                   {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar como libre</>}
                 </button>
@@ -832,7 +996,11 @@ export default function WaiterPanel({
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, color: 'var(--u-text)', fontWeight: 600 }}>{line.name}</div>
                         {line.options.length > 0 && (
-                          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>{line.options.map((o) => o.choiceName).join(', ')}</div>
+                          // La variante elegida (sabor/tipo) se muestra junto al componente —
+                          // el mesero debe poder confirmar "Bebida (Fanta)" antes de enviar.
+                          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                            {line.options.map((o) => (o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName)).join(', ')}
+                          </div>
                         )}
                         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>{money(line.price, currency)} c/u</div>
                       </div>
@@ -859,8 +1027,10 @@ export default function WaiterPanel({
           </div>
         </div>
 
-        {/* Barra fija inferior: total + enviar */}
-        <div style={{ borderTop: '1px solid var(--u-hair)', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(16px)' }}>
+        {/* Barra fija inferior: total + enviar. El fondo sigue al tema (antes
+            rgba(0,0,0,0.35) fijo: en modo claro quedaba una franja oscura con
+            texto oscuro encima — ilegible). */}
+        <div style={{ borderTop: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--brand-bg) 82%, transparent)', backdropFilter: 'blur(16px)' }}>
           <div className="waiter-wrap-narrow" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tipEnabled && tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -878,8 +1048,8 @@ export default function WaiterPanel({
               <span style={{ fontSize: 15, color: 'var(--u-text-2)', fontWeight: 600 }}>Total</span>
               <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)' }}>{money(total, currency)}</span>
             </div>
-            {submitError && <div style={{ fontSize: 13, color: '#f87171', padding: '8px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>{submitError}</div>}
-            {submitOk && <div style={{ fontSize: 13, color: '#4ade80', padding: '8px 12px', borderRadius: 10, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)' }}>{submitOk}</div>}
+            {submitError && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 20%, transparent)' }}>{submitError}</div>}
+            {submitOk && <div style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ok, #4ade80) 20%, transparent)' }}>{submitOk}</div>}
             <button
               type="button"
               onClick={handleSubmit}

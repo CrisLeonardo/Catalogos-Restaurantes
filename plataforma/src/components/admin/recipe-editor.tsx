@@ -196,7 +196,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                   background: 'rgba(220,50,50,0.05)',
                   cursor: 'pointer',
                   display: 'grid', placeItems: 'center',
-                  color: '#f87171',
+                  color: 'var(--c-danger, #f87171)',
                 }}
               >
                 <Icon name="x" size={12} />
@@ -311,7 +311,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
       </div>
 
       {error && (
-        <p style={{ fontSize: 12, color: '#f87171', margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
           <Icon name="alertCircle" size={12} /> {error}
         </p>
       )}
@@ -346,7 +346,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 });
               }
             }}
-            style={{ marginLeft: 'auto', fontSize: 12, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--c-danger, #f87171)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             Borrar receta
           </button>

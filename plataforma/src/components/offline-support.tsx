@@ -1,26 +1,37 @@
 'use client';
 
 /* ============================================================
-   Soporte offline (Fase 0): registro del Service Worker + banner
-   de conexión. Se monta una vez por superficie (menú del comensal,
-   panel admin, mesero, cocina, panel de grupo).
-
-   El SW (public/sw.js) cachea el app-shell y las páginas visitadas:
-   con este componente montado, la pantalla abre aunque no haya señal
-   y este banner avisa que se trabaja con la última copia.
+   OFFLINE SUPPORT — Fase 1 de la arquitectura offline
+   ------------------------------------------------------------
+   · Registra /sw.js (precache + caché del catálogo). Idempotente con el
+     registro que ya hace admin/notifications.tsx para push: el navegador
+     devuelve el registro existente si ya estaba registrado.
+   · Muestra una barra fija superior cuando el dispositivo pierde
+     conexión. Puramente informativa — no implica que se estén cacheando
+     datos (en /admin, /super y /central el Service Worker deliberadamente
+     no cachea nada, ver public/sw.js).
    ============================================================ */
 
-import { useEffect } from 'react';
-import { useOnline } from '@/lib/offline/use-online';
+import { useEffect, useState } from 'react';
+import { Icon } from '@/components/icons';
 
-export default function OfflineSupport({ label }: { label?: string }) {
-  const online = useOnline();
+export default function OfflineSupport() {
+  const [online, setOnline] = useState(true);
 
-  // Registro del SW (idempotente; notifications.tsx también lo registra al
-  // activar push — register() con la misma URL devuelve el mismo registro).
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js').catch(() => { /* opcional */ });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    setOnline(navigator.onLine);
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
   }, []);
 
   if (online) return null;
@@ -28,18 +39,27 @@ export default function OfflineSupport({ label }: { label?: string }) {
   return (
     <div
       role="status"
-      aria-live="polite"
+      className="anim-fade-up"
       style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        padding: '8px 14px calc(8px)',
-        background: '#b45309', color: '#fff',
-        fontSize: 12.5, fontWeight: 600, letterSpacing: '0.01em',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 400,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 'calc(8px + env(safe-area-inset-top, 0px)) 16px 8px',
+        background: '#f59e0b',
+        color: '#1a1206',
+        fontSize: 12.5,
+        fontWeight: 700,
+        textAlign: 'center',
       }}
     >
-      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 99, background: '#fff', opacity: 0.9, animation: 'pulse-ring 2s infinite' }} />
-      {label ?? 'Sin conexión — trabajando con la última copia. Todo lo pendiente se enviará al volver la señal.'}
+      <Icon name="alertCircle" size={15} />
+      Sin conexión — mostrando la última información guardada
     </div>
   );
 }

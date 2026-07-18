@@ -23,10 +23,15 @@ export interface LocalCustomerProfile {
 }
 
 export interface LocalOrderRef {
+  /** Vacío mientras el pedido no tenga token público todavía (aceptado por
+      el hub local sin conexión, pendiente de sincronizar — ver clientId). */
   token: string;
   orderNumber: string;
   createdAt: string;       // ISO
   total: number;
+  /** clientId del pedido — presente solo mientras token está vacío, para
+      poder resolverlo después con getOrderRefByClientId (ver my-orders.tsx). */
+  clientId?: string;
 }
 
 const profileKey = (restaurantId: string) => `customer-${restaurantId}`;
@@ -76,6 +81,7 @@ export function getLocalOrders(restaurantId: string): LocalOrderRef[] {
         orderNumber: o.orderNumber!,
         createdAt: typeof o.createdAt === 'string' ? o.createdAt : new Date().toISOString(),
         total: Number(o.total) || 0,
+        clientId: typeof o.clientId === 'string' ? o.clientId : undefined,
       }));
   } catch {
     return [];
@@ -84,7 +90,16 @@ export function getLocalOrders(restaurantId: string): LocalOrderRef[] {
 
 export function addLocalOrder(restaurantId: string, order: LocalOrderRef): void {
   try {
-    const list = [order, ...getLocalOrders(restaurantId).filter((o) => o.token !== order.token)];
+    // Dedupe por clientId cuando lo hay (reemplaza el registro "pendiente" de
+    // un pedido de hub por el definitivo con token real), si no por token.
+    const list = [
+      order,
+      ...getLocalOrders(restaurantId).filter((o) => {
+        if (order.clientId && o.clientId === order.clientId) return false;
+        if (order.token && o.token === order.token) return false;
+        return true;
+      }),
+    ];
     localStorage.setItem(ordersKey(restaurantId), JSON.stringify(list.slice(0, MAX_ORDERS)));
   } catch {}
 }

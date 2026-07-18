@@ -9,6 +9,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { FloorTable } from '@/lib/theme/defaults';
+import type { TableOccupancy } from '@/lib/db/orders';
+
+/** Primer nombre — las mesas son chicas, no hay lugar para el nombre completo. */
+function firstName(fullName: string | null | undefined): string | null {
+  if (!fullName) return null;
+  return fullName.trim().split(/\s+/)[0] || null;
+}
 
 const VIRT_W = 1000;
 const VIRT_H = 625;
@@ -27,19 +34,37 @@ export function fmtOccupied(ms: number): string {
   return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}m`;
 }
 
+/** Umbrales fijos de antigüedad: recién ocupada / tardando / hay que revisarla. */
+const OCCUPIED_WARN_MIN = 30;
+const OCCUPIED_ALERT_MIN = 60;
+
+/** Color de la mesa según cuánto lleva ocupada (más tiempo = más urgente). */
+function occupiedColor(elapsedMs: number | null): string {
+  if (elapsedMs == null) return '#fbbf24'; // sin dato aún: ámbar por defecto
+  const min = elapsedMs / 60000;
+  if (min >= OCCUPIED_ALERT_MIN) return '#f87171'; // roja: revisar la mesa
+  if (min >= OCCUPIED_WARN_MIN) return '#f97316';  // naranja: se está tardando
+  return '#fbbf24';                                 // ámbar: recién ocupada
+}
+
 /* Token de mesa (también lo usa la cuadrícula y "Otras mesas"). */
 export function TableToken({
-  n, occupied, since, now, onTap, style,
+  n, occupied, since, waiterName, now, onTap, style,
 }: {
   n: number;
   occupied: boolean;
   /** ISO timestamp de cuándo se ocupó (para el temporizador). */
   since?: string;
+  /** Quién atiende la mesa — null/undefined = el comensal pidió por su cuenta. */
+  waiterName?: string | null;
   now?: number | null;
   onTap: () => void;
   style?: React.CSSProperties;
 }) {
-  const elapsed = occupied && since && now != null ? fmtOccupied(now - new Date(since).getTime()) : null;
+  const elapsedMs = occupied && since && now != null ? now - new Date(since).getTime() : null;
+  const elapsed = elapsedMs != null ? fmtOccupied(elapsedMs) : null;
+  const color = occupied ? occupiedColor(elapsedMs) : null;
+  const attendedBy = firstName(waiterName);
   return (
     <button
       type="button"
@@ -47,17 +72,23 @@ export function TableToken({
       className="press"
       style={{
         borderRadius: 16, cursor: 'pointer',
-        border: `1.5px solid ${occupied ? 'rgba(251,191,36,0.55)' : 'var(--u-hair-2)'}`,
-        background: occupied ? 'rgba(251,191,36,0.14)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-        color: occupied ? '#fbbf24' : 'var(--u-text)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-        boxShadow: occupied ? '0 4px 14px rgba(251,191,36,0.18)' : '0 2px 10px rgba(0,0,0,0.18)',
+        border: `1.5px solid ${color ? `color-mix(in srgb, ${color} 55%, transparent)` : 'var(--u-hair-2)'}`,
+        background: color ? `color-mix(in srgb, ${color} 14%, transparent)` : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+        color: color ?? 'var(--u-text)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+        boxShadow: color ? `0 4px 14px color-mix(in srgb, ${color} 18%, transparent)` : '0 2px 10px rgba(0,0,0,0.18)',
+        transition: 'border-color .3s, background .3s, color .3s, box-shadow .3s',
         ...style,
       }}
     >
-      <span style={{ fontSize: 10, color: occupied ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600 }}>Mesa</span>
-      <span style={{ fontSize: 23, fontWeight: 800, lineHeight: 1 }}>{n}</span>
-      {occupied && <span style={{ fontSize: 9, fontWeight: 700, marginTop: 1 }}>● {elapsed ?? 'activa'}</span>}
+      <span style={{ fontSize: 11, color: color ? `color-mix(in srgb, ${color} 85%, transparent)` : 'var(--u-text-4)', fontWeight: 600 }}>Mesa</span>
+      <span style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{n}</span>
+      {occupied && <span style={{ fontSize: 11, fontWeight: 700, marginTop: 1 }}>● {elapsed ?? 'activa'}</span>}
+      {occupied && (
+        <span style={{ fontSize: 9.5, fontWeight: 600, opacity: 0.85, maxWidth: '92%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {attendedBy ?? 'Cliente'}
+        </span>
+      )}
     </button>
   );
 }
@@ -73,8 +104,8 @@ export default function FloorMap({
 }: {
   tables: FloorTable[];
   occupied: Set<number>;
-  /** Mesa → ISO timestamp de cuándo se ocupó (para el temporizador). */
-  occupiedSince?: Record<number, string>;
+  /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal). */
+  occupiedSince?: Record<number, TableOccupancy>;
   now?: number | null;
   onSelect: (n: number) => void;
 }) {
@@ -88,11 +119,13 @@ export default function FloorMap({
     moved: false, lastDist: 0, lastMid: null, last: null, start: null, downN: null,
   });
 
-  /* Limita el paneo: el mundo virtual nunca se sale por completo de la vista. */
+  /* Limita el paneo: el mundo virtual nunca se sale por completo de la vista.
+     Si el mundo es más chico que el viewport en un eje (el mapa es más alto
+     que 16:10 en móvil para que quepan dos dedos al pellizcar), se centra. */
   function clampPanWith(s: number, x: number, y: number, vpW: number, vpH: number) {
-    const minX = vpW - VIRT_W * s;
-    const minY = vpH - VIRT_H * s;
-    return { x: clamp(x, minX, 0), y: clamp(y, minY, 0) };
+    const axis = (v: number, world: number, vp: number) =>
+      world <= vp ? (vp - world) / 2 : clamp(v, vp - world, 0);
+    return { x: axis(x, VIRT_W * s, vpW), y: axis(y, VIRT_H * s, vpH) };
   }
 
   function clampPan(s: number, x: number, y: number) {
@@ -172,7 +205,9 @@ export default function FloorMap({
 
   function onPointerDown(e: React.PointerEvent) {
     e.preventDefault(); // impide que el browser tome control y dispare pointercancel
-    vpRef.current?.setPointerCapture(e.pointerId);
+    // try/catch: si setPointerCapture lanza (pointer ya inactivo), el gesto
+    // debe seguir registrándose — sin esto un throw aquí mataba el pellizco.
+    try { vpRef.current?.setPointerCapture(e.pointerId); } catch { /* no-op */ }
     const p = rel(e);
     pointers.current.set(e.pointerId, p);
     const tokenAttr = (e.target as HTMLElement).closest('[data-table]')?.getAttribute('data-table');
@@ -279,8 +314,11 @@ export default function FloorMap({
             calcula aplicando el mismo transform (pan + zoom) al centro de la mesa. */}
         {tables.map((tb) => {
           const isOcc = occupied.has(tb.n);
-          const since = occupiedSince?.[tb.n];
-          const elapsed = isOcc && since && now != null ? fmtOccupied(now - new Date(since).getTime()) : null;
+          const occ = occupiedSince?.[tb.n];
+          const elapsedMs = isOcc && occ && now != null ? now - new Date(occ.since).getTime() : null;
+          const elapsed = elapsedMs != null ? fmtOccupied(elapsedMs) : null;
+          const color = isOcc ? occupiedColor(elapsedMs) : null;
+          const attendedBy = firstName(occ?.waiterName);
           const sx = tb.x * VIRT_W * t.s + t.x;
           const sy = tb.y * VIRT_H * t.s + t.y;
           return (
@@ -293,17 +331,22 @@ export default function FloorMap({
                 width: 'var(--floor-pin, 50px)', height: 'var(--floor-pin, 50px)',
                 transform: 'translate(-50%, -50%)',
                 borderRadius: tb.shape === 'square' ? 13 : 99, cursor: 'pointer',
-                border: `1.5px solid ${isOcc ? 'rgba(251,191,36,0.6)' : 'var(--u-hair-2)'}`,
-                background: isOcc ? 'rgba(251,191,36,0.18)' : 'color-mix(in srgb, var(--brand-bg) 80%, transparent)',
-                color: isOcc ? '#fbbf24' : 'var(--u-text)',
+                border: `1.5px solid ${color ? `color-mix(in srgb, ${color} 60%, transparent)` : 'var(--u-hair-2)'}`,
+                background: color ? `color-mix(in srgb, ${color} 18%, transparent)` : 'color-mix(in srgb, var(--brand-bg) 80%, transparent)',
+                color: color ?? 'var(--u-text)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0,
-                boxShadow: isOcc ? '0 4px 14px rgba(251,191,36,0.22)' : '0 2px 10px rgba(0,0,0,0.3)',
+                boxShadow: color ? `0 4px 14px color-mix(in srgb, ${color} 22%, transparent)` : '0 2px 10px rgba(0,0,0,0.3)',
                 WebkitBackdropFilter: 'blur(2px)', backdropFilter: 'blur(2px)',
+                transition: 'border-color .3s, background .3s, color .3s, box-shadow .3s',
               }}
             >
-              <span style={{ fontSize: 8.5, color: isOcc ? 'rgba(251,191,36,0.85)' : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
-              <span style={{ fontSize: 19, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
-              {isOcc && <span style={{ fontSize: 8, fontWeight: 700, pointerEvents: 'none' }}>● {elapsed ?? 'activa'}</span>}
+              <span style={{ fontSize: 10, color: color ? `color-mix(in srgb, ${color} 85%, transparent)` : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
+              <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
+              {isOcc && (
+                <span style={{ fontSize: 9.5, fontWeight: 700, pointerEvents: 'none', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  ● {elapsed ?? 'activa'} · {attendedBy ?? 'Cliente'}
+                </span>
+              )}
             </div>
           );
         })}

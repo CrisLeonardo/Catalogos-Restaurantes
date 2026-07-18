@@ -66,6 +66,11 @@ export default function GuidedTourHost() {
   const [settling, setSettling] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const locateTimer = useRef<number | null>(null);
+  /** Paso para el que ya se navegó a su `path`. Si el pathname vuelve a
+      cambiar mientras el paso sigue siendo el mismo, fue el usuario quien
+      se fue a otra sección (clic en el nav) — el tour se cierra en vez de
+      perseguirlo de regreso. */
+  const navigatedForStepRef = useRef<number | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 821);
@@ -123,11 +128,21 @@ export default function GuidedTourHost() {
     writeStore({ tourId: tour.id, step });
 
     if (def.path && pathname !== def.path) {
+      if (navigatedForStepRef.current === step) {
+        // Ya habíamos llegado a la página de este paso: si el pathname
+        // cambió de nuevo fue el usuario navegando a otra sección del panel
+        // (clic en el nav, atrás del navegador) — se respeta, no se le
+        // devuelve a la fuerza a la página del tour.
+        finish();
+        return;
+      }
+      navigatedForStepRef.current = step;
       setSettling(true);
       setSpotRect(null);
       router.push(def.path);
       return; // el cambio de pathname re-dispara este efecto
     }
+    navigatedForStepRef.current = step;
 
     if (!def.target) {
       setSpotRect(null);

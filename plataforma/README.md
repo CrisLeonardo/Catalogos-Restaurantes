@@ -39,9 +39,9 @@ npm run dev
 
 Detalle completo y troubleshooting en **`../GUIA_ENTORNO_LOCAL.md`**.
 
-Para probar **subdominios en local**, abre `http://azucar-negra.localhost:3000` (Chrome
+Para probar **subdominios en local**, abre `http://mi-restaurante.localhost:3000` (Chrome
 resuelve `*.localhost` sin configuración extra). El **proxy** (`src/proxy.ts`) detecta el slug
-`azucar-negra` y lo propaga como header `x-tenant-slug`.
+`mi-restaurante` y lo propaga como header `x-tenant-slug`.
 
 ---
 
@@ -59,7 +59,7 @@ resuelve `*.localhost` sin configuración extra). El **proxy** (`src/proxy.ts`) 
 
 ### DNS wildcard (Cloudflare)
 
-Para que `azucar-negra.midominio.com` apunte al mismo servicio:
+Para que `mi-restaurante.midominio.com` apunte al mismo servicio:
 
 1. En Cloudflare, agrega un registro CNAME:
    - **Name:** `*`

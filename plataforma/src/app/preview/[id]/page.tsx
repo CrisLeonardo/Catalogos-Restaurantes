@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { getMenuData } from '@/lib/db/menu';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
@@ -8,7 +9,7 @@ import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
 import PreviewClient from '@/components/super/preview-client';
 
 /* ============================================================
-   /preview/[id] — Vista previa en vivo (solo Super Admin)
+   /preview/[id] — Vista previa en vivo (personal autorizado)
    ------------------------------------------------------------
    Renderiza el menú del restaurante tal y como lo vería el
    comensal, pero conectado por BroadcastChannel al editor de
@@ -30,7 +31,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-async function requireSuperAdmin() {
+/* Acceso: Super Admin siempre; el dueño/staff del restaurante solo puede
+   previsualizar SU restaurante (el editor de /admin/personalizacion embebe
+   esta ruta en su iframe); un dueño de grupo, las sucursales de su grupo. */
+async function requirePreviewAccess(id: string) {
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -46,11 +50,31 @@ async function requireSuperAdmin() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, restaurant_id, organization_id')
     .eq('id', user.id)
     .single();
 
-  if (profile?.role !== 'SUPER_ADMIN') redirect('/admin/menu');
+  if (profile?.role === 'SUPER_ADMIN') return;
+
+  if (
+    id !== 'new' &&
+    (profile?.role === 'RESTAURANT_OWNER' || profile?.role === 'RESTAURANT_STAFF') &&
+    profile.restaurant_id === id
+  ) {
+    return;
+  }
+
+  if (id !== 'new' && profile?.role === 'GROUP_OWNER' && profile.organization_id) {
+    const svc = createServiceClient();
+    const { data: branch } = await svc
+      .from('restaurants')
+      .select('organization_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (branch?.organization_id === profile.organization_id) return;
+  }
+
+  redirect('/admin/menu');
 }
 
 export default async function PreviewPage({
@@ -59,7 +83,7 @@ export default async function PreviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireSuperAdmin();
+  await requirePreviewAccess(id);
 
   /* Modo creación: aún no existe el restaurante → defaults + menú demo. */
   if (id === 'new') {

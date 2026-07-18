@@ -32,6 +32,19 @@ function initialSelection(groups: ProductOptionGroup[]): Record<string, string[]
   return sel;
 }
 
+/** Variante inicial de cada componente con variantes: la primera. El precio
+    SIEMPRE usó la primera como fallback — sin esto, la píldora no se veía
+    marcada aunque ya se estuviera cobrando esa variante. */
+function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
+  const sel: Record<string, string> = {};
+  for (const g of groups) {
+    for (const c of g.choices) {
+      if (c.variants?.length) sel[c.id] = c.variants[0].id;
+    }
+  }
+  return sel;
+}
+
 export default function ProductSheet({
   product, icon, ordersEnabled, onClose,
 }: {
@@ -51,6 +64,8 @@ export default function ProductSheet({
     [product.options],
   );
   const [selected, setSelected] = useState<Record<string, string[]>>(() => initialSelection(groups));
+  /** choiceId -> variantId elegida (solo choices de combo con variantes). */
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initialVariants(groups));
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -74,6 +89,17 @@ export default function ProductSheet({
       if (group.type === 'multi' && group.max && group.max > 0 && current.length >= group.max) return prev;
       return { ...prev, [group.id]: [...current, choiceId] };
     });
+    // Al incluir un componente con variantes por primera vez, preselecciona la
+    // primera (igual que un grupo 'single' requerido) para no frenar al que
+    // no tiene preferencia; el que sí quiere elegir la cambia con las píldoras.
+    const choice = group.choices.find((c) => c.id === choiceId);
+    if (choice?.variants?.length && !variantSelected[choiceId]) {
+      setVariantSelected((prev) => ({ ...prev, [choiceId]: choice.variants![0].id }));
+    }
+  }
+
+  function chooseVariant(choiceId: string, variantId: string) {
+    setVariantSelected((prev) => ({ ...prev, [choiceId]: variantId }));
   }
 
   const chosenOptions: CartItemOption[] = useMemo(() => {
@@ -81,11 +107,19 @@ export default function ProductSheet({
     for (const g of groups) {
       for (const choiceId of selected[g.id] ?? []) {
         const c = g.choices.find((x) => x.id === choiceId);
-        if (c) out.push({ groupId: g.id, groupName: g.name, choiceId: c.id, choiceName: c.name, priceDelta: Number(c.priceDelta) || 0 });
+        if (!c) continue;
+        const variant = c.variants?.length
+          ? c.variants.find((v) => v.id === variantSelected[c.id]) ?? c.variants[0]
+          : undefined;
+        const priceDelta = (Number(c.priceDelta) || 0) + (variant ? Number(variant.priceDelta) || 0 : 0);
+        out.push({
+          groupId: g.id, groupName: g.name, choiceId: c.id, choiceName: c.name, priceDelta,
+          ...(variant ? { variantId: variant.id, variantName: variant.name } : {}),
+        });
       }
     }
     return out;
-  }, [groups, selected]);
+  }, [groups, selected, variantSelected]);
 
   const unitPrice = product.price + chosenOptions.reduce((s, o) => s + o.priceDelta, 0);
   const missingRequired = groups.some(
@@ -187,8 +221,8 @@ export default function ProductSheet({
                       const included = picked.includes(choice.id);
                       const delta = Number(choice.priceDelta) || 0;
                       return (
+                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <button
-                          key={choice.id}
                           type="button"
                           onClick={() => toggleChoice(group, choice.id)}
                           className="press"
@@ -228,6 +262,41 @@ export default function ProductSheet({
                             </span>
                           )}
                         </button>
+                        {included && choice.variants && choice.variants.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 30 }}>
+                            {choice.variants.map((variant) => {
+                              const on = variantSelected[choice.id] === variant.id;
+                              const vDelta = Number(variant.priceDelta) || 0;
+                              return (
+                                <button
+                                  key={variant.id}
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }}
+                                  className="press"
+                                  aria-pressed={on}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 99, cursor: 'pointer',
+                                    background: on ? 'var(--u-text)' : 'var(--surface-2)',
+                                    color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
+                                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
+                                    fontWeight: 600, fontSize: 12, transition: 'all 140ms',
+                                  }}
+                                >
+                                  {variant.name}
+                                  {vDelta !== 0 && (
+                                    // color:'inherit' explícito: la regla `.themed-type .t-mono`
+                                    // fija color = --u-text, que es EL MISMO color del fondo de la
+                                    // píldora seleccionada — el precio desaparecía justo al elegirla.
+                                    <span className="t-mono" style={{ fontSize: 10.5, opacity: 0.8, color: 'inherit' }}>
+                                      {vDelta > 0 ? '+' : '−'}{formatPrice(Math.abs(vDelta), config)}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        </div>
                       );
                     })}
                   </div>
@@ -255,7 +324,8 @@ export default function ProductSheet({
                           {on && <Icon name="check" size={13} strokeWidth={3} />}
                           {choice.name}
                           {delta !== 0 && (
-                            <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.75 }}>
+                            // color:'inherit' explícito — ver nota en las píldoras de variantes.
+                            <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.8, color: 'inherit' }}>
                               {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
                             </span>
                           )}

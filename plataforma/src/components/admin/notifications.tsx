@@ -41,6 +41,26 @@ import {
 } from '@/lib/sounds';
 import type { Order } from '@/types';
 
+/* ── Leogin Desktop (Tauri): notificaciones nativas ──────────────────────
+   Dentro del webview de escritorio, Notification.requestPermission()/
+   new Notification() de la Web API NO se resuelven de forma fiable (el
+   WebView2 no tiene el mismo manejo de permisos que un navegador real) —
+   por eso el plugin tauri-plugin-notification expone su propia API bajo
+   window.__TAURI__.notification (habilitado por withGlobalTauri en
+   tauri.conf.json). Cuando corre dentro de Leogin Desktop, este componente
+   usa esa API en vez de la Web Notification API/Push; fuera de ahí (navegador
+   normal) el flujo de abajo sigue sin cambios. */
+interface TauriNotificationApi {
+  isPermissionGranted: () => Promise<boolean>;
+  requestPermission: () => Promise<'granted' | 'denied' | 'default'>;
+  sendNotification: (options: { title: string; body?: string }) => void;
+}
+function getTauriNotification(): TauriNotificationApi | null {
+  if (typeof window === 'undefined') return null;
+  const t = (window as unknown as { __TAURI__?: { notification?: TauriNotificationApi } }).__TAURI__;
+  return t?.notification ?? null;
+}
+
 /* ── Web Push helpers ────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(b64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (b64.length % 4)) % 4);
@@ -104,6 +124,11 @@ async function deleteSub(sub: PushSubscription): Promise<void> {
 /* ── Tipos ───────────────────────────────────────────────────────────── */
 type BellState = 'off' | 'basic' | 'on' | 'blocked' | 'busy';
 
+/** Flag local: el usuario ya activó las notificaciones nativas de Leogin
+    Desktop en este dispositivo (permite re-detectarlas en silencio al
+    recargar el webview — ver "Detectar estado inicial"). */
+const DESKTOP_NOTIF_KEY = 'leogin-desktop-notif-enabled';
+
 /* ── Componente principal ────────────────────────────────────────────── */
 export default function AdminNotifications({
   restaurantId,
@@ -122,6 +147,10 @@ export default function AdminNotifications({
   const [showSoundPanel, setShowSoundPanel] = useState(false);
   const [soundSettings,  setSoundSettings]  = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
   const [audioBlocked,   setAudioBlocked]   = useState(false);
+  // Diferido a un efecto (no calculado directo en el render) para no
+  // desalinear el HTML del servidor con el del cliente al hidratar.
+  const [isTauri,        setIsTauri]        = useState(false);
+  useEffect(() => { setIsTauri(Boolean(getTauriNotification())); }, []);
 
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popupTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,6 +158,24 @@ export default function AdminNotifications({
   const kitchenRef  = useRef(kitchenMode);
   const settingsRef = useRef<SoundSettings>(DEFAULT_SOUND_SETTINGS);
   const swRegRef    = useRef<ServiceWorkerRegistration | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefresh  = useRef(0);
+
+  /* Coalescer de router.refresh(): una ráfaga de INSERTs (p. ej. 15 pedidos
+     encolados offline que sincronizan de golpe al volver la señal) disparaba
+     un refresh POR PEDIDO — 15 re-renders completos del server component en
+     segundos, con el panel congelado justo cuando más se necesita. Máximo un
+     refresh cada 2.5 s; el último evento de la ráfaga siempre queda cubierto
+     (trailing). */
+  function refreshSoon() {
+    if (refreshTimer.current) return;
+    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    }, wait);
+  }
 
   useEffect(() => { muteRef.current    = muteChime;    }, [muteChime]);
   useEffect(() => { kitchenRef.current = kitchenMode;  }, [kitchenMode]);
@@ -157,6 +204,29 @@ export default function AdminNotifications({
 
   /* ── Detectar estado inicial ─────────────────────────────────────── */
   useEffect(() => {
+    const tn = getTauriNotification();
+    if (tn) {
+      // Leogin Desktop: isPermissionGranted() del plugin puede devolver false
+      // en cada nueva carga del webview AUNQUE Windows ya haya concedido el
+      // permiso — por eso, tras entrar a Cocina y volver (recarga de página),
+      // la campana aparecía apagada y había que "activar" de nuevo. Si el
+      // usuario ya las activó antes en este dispositivo (flag local), se
+      // re-pide el permiso en silencio: Windows responde 'granted' al instante
+      // sin mostrar ningún diálogo.
+      tn.isPermissionGranted()
+        .then(async (granted) => {
+          if (granted) { setState('on'); return; }
+          let enabledBefore = false;
+          try { enabledBefore = localStorage.getItem(DESKTOP_NOTIF_KEY) === '1'; } catch {}
+          if (!enabledBefore) { setState('off'); return; }
+          try {
+            const perm = await tn.requestPermission();
+            setState(perm === 'granted' ? 'on' : 'off');
+          } catch { setState('off'); }
+        })
+        .catch(() => setState('off'));
+      return;
+    }
     if (typeof Notification === 'undefined') return;
     const perm = Notification.permission;
     if (perm === 'denied')   { setState('blocked'); return; }
@@ -171,6 +241,38 @@ export default function AdminNotifications({
     }).catch(() => setState('basic'));
   }, []);
 
+  /** Notificación de fondo (pedido nuevo / llamada al mesero): dentro de
+      Leogin Desktop usa el plugin nativo de Tauri; en navegador, Push/SW si
+      hay suscripción activa, si no la Notification API directa. */
+  function notifyUser(
+    title: string,
+    body: string,
+    opts?: { tag?: string; url?: string; vibrate?: number[]; requireInteraction?: boolean },
+  ) {
+    const tn = getTauriNotification();
+    if (tn) {
+      try { tn.sendNotification({ title, body }); } catch {}
+      return;
+    }
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    try {
+      const reg = swRegRef.current;
+      if (reg) {
+        reg.showNotification(title, {
+          body, icon: '/icon-192.png', badge: '/badge.svg',
+          tag: opts?.tag,
+          data: opts?.url ? { url: opts.url } : undefined,
+          vibrate: opts?.vibrate,
+          requireInteraction: opts?.requireInteraction,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
+      } else {
+        const n = new Notification(title, { body, tag: opts?.tag });
+        if (opts?.url) n.onclick = () => { window.focus(); router.push(opts.url!); };
+      }
+    } catch {}
+  }
+
   /* ── Realtime: pedidos y llamadas al mesero ──────────────────────── */
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
@@ -182,7 +284,13 @@ export default function AdminNotifications({
     const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
 
     function connect() {
-      channel = supabase
+      // Guarda contra re-entradas: unsubscribe()/removeChannel() puede disparar
+      // el mismo callback de status de forma síncrona (p. ej. pasa a 'CLOSED'
+      // en la misma pila que lo originó) — sin este freno, `closing` seguiría
+      // siendo false y se llamaría a sí mismo indefinidamente hasta reventar
+      // el stack ("Maximum call stack size exceeded").
+      let closing = false;
+      const ch = supabase
         .channel(`orders-notify-${restaurantId}-${crypto.randomUUID().slice(0, 8)}`)
 
         /* ── Pedido nuevo ── */
@@ -194,34 +302,23 @@ export default function AdminNotifications({
           // maneja el componente específico (kitchen-display / orders-panel).
           if (!muteRef.current && !kitchenRef.current) {
             const s = settingsRef.current;
+            // El propio playOrderSound frena ráfagas (ver sounds.ts).
             playOrderSound(s.orderVolume, s.orderRepeat);
             if (toastTimer.current) clearTimeout(toastTimer.current);
             setToast(`🛎 Pedido ${order.order_number} — ${order.customer_name}`);
             toastTimer.current = setTimeout(() => setToast(null), 5000);
-            router.refresh();
+            refreshSoon();
           }
 
-          // Notificación in-app de refuerzo (el servidor ya disparó el push).
-          try {
-            if (Notification.permission === 'granted') {
-              const typeLabel =
-                order.order_type === 'DELIVERY' ? 'A domicilio'
-                : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
-              const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
-              const reg  = swRegRef.current;
-              if (reg) {
-                reg.showNotification('🛎 Nuevo pedido', {
-                  body, icon: '/icon-192.png', badge: '/badge.svg',
-                  tag: order.id, data: { url: '/admin/pedidos' },
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  vibrate: [200, 100, 200],
-                } as any);
-              } else {
-                const n = new Notification('🛎 Nuevo pedido', { body, tag: order.id });
-                n.onclick = () => { window.focus(); router.push('/admin/pedidos'); };
-              }
-            }
-          } catch {}
+          // Notificación de fondo (en navegador, refuerza el push que ya
+          // disparó el servidor; en Leogin Desktop es la única vía real).
+          {
+            const typeLabel =
+              order.order_type === 'DELIVERY' ? 'A domicilio'
+              : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
+            const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
+            notifyUser('🛎 Nuevo pedido', body, { tag: order.id, url: '/admin/pedidos', vibrate: [200, 100, 200] });
+          }
         })
 
         /* ── Llamada al mesero ── */
@@ -247,37 +344,30 @@ export default function AdminNotifications({
           setToast(`🔔 Llamada al mesero${tableLabel}`);
           toastTimer.current = setTimeout(() => setToast(null), 8000);
 
-          try {
-            if (Notification.permission === 'granted') {
-              const reg  = swRegRef.current;
-              const body = `Un cliente${tableLabel} necesita atención.`;
-              if (reg) {
-                reg.showNotification('🔔 Llamada al mesero', {
-                  body, icon: '/icon-192.png', badge: '/badge.svg',
-                  data: { url: '/admin/mesas' },
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  vibrate: [300, 100, 300, 100, 300, 200, 600],
-                  requireInteraction: true,
-                } as any);
-              } else {
-                new Notification('🔔 Llamada al mesero', { body });
-              }
-            }
-          } catch {}
+          {
+            const body = `Un cliente${tableLabel} necesita atención.`;
+            notifyUser('🔔 Llamada al mesero', body, {
+              url: '/admin/mesas',
+              vibrate: [300, 100, 300, 100, 300, 200, 600],
+              requireInteraction: true,
+            });
+          }
         })
         .subscribe((status) => {
-          if (cancelled) return;
+          if (cancelled || closing) return;
           if (status === 'SUBSCRIBED') { retryDelay = 2000; return; }
           // El socket puede caerse en silencio (red inestable, laptop en
           // suspensión, JWT que tarda en refrescar) y el canal no se
           // reconecta solo — sin esto, el toast/sonido deja de llegar hasta
           // recargar la página. Reintentar con backoff exponencial (máx 30s).
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            channel?.unsubscribe();
+            closing = true;
+            supabase.removeChannel(ch);
             retryTimer = setTimeout(() => { if (!cancelled) connect(); }, retryDelay);
             retryDelay = Math.min(retryDelay * 2, 30_000);
           }
         });
+      channel = ch;
     }
 
     (async () => {
@@ -289,15 +379,47 @@ export default function AdminNotifications({
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      channel?.unsubscribe();
+      if (refreshTimer.current) {
+        clearTimeout(refreshTimer.current);
+        refreshTimer.current = null;
+      }
+      if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId, router]);
 
   /* ── Clic en la campana ──────────────────────────────────────────── */
   async function handleBell() {
     if (state === 'busy') return;
     primeAudio();
+
+    // Leogin Desktop: permiso nativo de Windows, sin Push/Service Worker.
+    const tn = getTauriNotification();
+    if (tn) {
+      if (state === 'blocked') {
+        showPopup('Notificaciones bloqueadas por Windows. Ve a Configuración → Sistema → Notificaciones y actívalas para Leogin.', 'error');
+        return;
+      }
+      if (state === 'on') {
+        showPopup('Las notificaciones de Windows ya están activas para Leogin.', 'info');
+        return;
+      }
+      setState('busy');
+      let perm: 'granted' | 'denied' | 'default';
+      try { perm = await tn.requestPermission(); } catch { perm = 'denied'; }
+      if (perm === 'granted') {
+        setState('on');
+        try { localStorage.setItem(DESKTOP_NOTIF_KEY, '1'); } catch {}
+        showPopup('¡Listo! Windows te avisará cuando entre un pedido nuevo.', 'info');
+        try { tn.sendNotification({ title: 'Notificaciones activadas', body: 'Te avisaremos aquí cuando entre un pedido nuevo.' }); } catch {}
+      } else {
+        setState('blocked');
+        try { localStorage.removeItem(DESKTOP_NOTIF_KEY); } catch {}
+        showPopup('Notificaciones bloqueadas por Windows. Ve a Configuración → Sistema → Notificaciones y actívalas para Leogin.', 'error');
+      }
+      return;
+    }
 
     if (state === 'blocked') {
       showPopup('Las notificaciones están bloqueadas. Toca el candado en la barra del navegador y cámbialas a "Permitir".', 'error');
@@ -405,7 +527,7 @@ export default function AdminNotifications({
     'color-mix(in srgb, var(--u-text) 25%, transparent)';
 
   const tooltip =
-    state === 'on'      ? 'Push activo — toca para desactivar' :
+    state === 'on'      ? (isTauri ? 'Notificaciones de Windows activas' : 'Push activo — toca para desactivar') :
     state === 'basic'   ? 'Toca para activar notificaciones en segundo plano' :
     state === 'blocked' ? 'Notificaciones bloqueadas — toca para instrucciones' :
     state === 'busy'    ? 'Configurando…' :
@@ -494,7 +616,7 @@ export default function AdminNotifications({
             maxRepeat={3}
             onVolume={v  => updateSound({ orderVolume:  v })}
             onRepeat={r  => updateSound({ orderRepeat:  r })}
-            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat); }}
+            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat, { force: true }); }}
           />
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
@@ -507,7 +629,7 @@ export default function AdminNotifications({
             maxRepeat={3}
             onVolume={v  => updateSound({ waiterVolume:  v })}
             onRepeat={r  => updateSound({ waiterRepeat:  r })}
-            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat); }}
+            onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playWaiterSound(soundSettings.waiterVolume, soundSettings.waiterRepeat, { force: true }); }}
           />
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
@@ -525,7 +647,7 @@ export default function AdminNotifications({
               import('@/lib/sounds').then(m => {
                 primeAudio();
                 setAudioBlocked(!m.isAudioUnlocked());
-                m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat);
+                m.playKitchenSound(soundSettings.kitchenVolume, soundSettings.kitchenRepeat, { force: true });
               });
             }}
           />

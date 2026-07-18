@@ -2,45 +2,12 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import type { LoyaltyReward } from '@/types';
 
-export interface RedeemContext {
-  active: boolean;       // módulo activo + cuenta con saldo canjeable
-  /** ¿Hay una sesión de Google iniciada? (independiente de `active`: puede estar
-   *  logueado sin cuenta enlazada, o sin saldo suficiente). */
-  loggedIn: boolean;
-  balance: number;       // saldo de puntos del cliente
-  minRedeem: number;     // mínimo de puntos para canjear
-  redeemValue: number;   // valor en moneda de cada punto
-}
-
-const NO_REDEEM: RedeemContext = { active: false, loggedIn: false, balance: 0, minRedeem: 0, redeemValue: 0 };
-
 /** ¿Está activo el módulo de lealtad para este restaurante? (entitlement + on) */
 async function loyaltyActive(restaurantId: string): Promise<boolean> {
   const db = createServiceClient();
   const { data: rest } = await db.from('restaurants').select('modules, module_settings').eq('id', restaurantId).single();
   if (!rest) return false;
   return isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'loyalty');
-}
-
-/** Contexto de canje a partir del customer_id (lo usa createOrder en el servidor). */
-export async function getRedeemContextByCustomer(restaurantId: string, customerId: string): Promise<RedeemContext> {
-  if (!customerId) return NO_REDEEM;
-  if (!(await loyaltyActive(restaurantId))) return NO_REDEEM;
-
-  const db = createServiceClient();
-  const [{ data: settings }, { data: acct }] = await Promise.all([
-    db.from('loyalty_settings').select('redeem_value, min_redeem').eq('restaurant_id', restaurantId).maybeSingle(),
-    db.from('loyalty_accounts').select('points_balance').eq('restaurant_id', restaurantId).eq('customer_id', customerId).maybeSingle(),
-  ]);
-  if (!settings || !acct) return NO_REDEEM;
-
-  return {
-    active: true,
-    loggedIn: true, // solo se llega aquí con un customerId ya resuelto por auth_user_id
-    balance: Number(acct.points_balance) || 0,
-    minRedeem: Number(settings.min_redeem) || 0,
-    redeemValue: Number(settings.redeem_value) || 0,
-  };
 }
 
 export interface LoyaltySettings {

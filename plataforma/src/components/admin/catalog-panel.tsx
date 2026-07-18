@@ -19,6 +19,10 @@ import {
   type ProductModalState,
 } from '@/lib/actions/products';
 import { getRecipeForProduct } from '@/lib/actions/recipes';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
 
@@ -92,6 +96,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
     product: null,
   });
   const router = useRouter();
+  const availForms = useRef<Record<string, HTMLFormElement | null>>({});
 
   const catIconMap = new Map(categories.map((c) => [c.id, pickIcon(c.icon)]));
   const list = products.filter(
@@ -109,50 +114,36 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
           {[{ id: 'todos', name: 'Todas' }, ...categories].map((c) => {
             const on = c.id === activeCat;
             return (
-              <button
+              <Button
                 key={c.id}
-                className="press"
+                variant={on ? 'primary' : 'secondary'}
+                size="sm"
+                className="shrink-0 rounded-adm-full"
                 onClick={() => setActiveCat(c.id)}
-                style={{
-                  flexShrink: 0, padding: '8px 14px', borderRadius: 99, cursor: 'pointer',
-                  background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                  color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                  border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                  fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-                }}
               >
                 {c.name}
-              </button>
+              </Button>
             );
           })}
         </div>
-        <button
-          className="press"
+        <Button
           onClick={() => setEditor({ open: true, product: null })}
           data-tour-step="catalogo-nuevo"
-          style={{
-            flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
-            padding: '9px 16px', borderRadius: 99, cursor: 'pointer',
-            background: 'var(--u-text)', color: 'var(--brand-bg)',
-            border: 'none', fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13,
-          }}
+          className="shrink-0 rounded-adm-full"
         >
           <Icon name="plus" size={15} /> Nuevo platillo
-        </button>
+        </Button>
       </div>
 
       {/* Tabla */}
       {list.length === 0 ? (
-        <div
-          className="glass"
-          style={{ borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}
-        >
+        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
           {products.length === 0
             ? 'No hay platillos aún. ¡Crea el primero!'
             : 'No hay platillos en esta categoría.'}
-        </div>
+        </Card>
       ) : (
-        <div className="glass" style={{ borderRadius: 16, overflow: 'hidden' }}>
+        <Card className="overflow-hidden p-0">
           {/* Header */}
           <div
             className="catalog-head"
@@ -201,7 +192,6 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                         width={44}
                         height={44}
                         style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                        unoptimized
                       />
                     ) : (
                       <BrandPattern icon={icon} seed={seedFromString(p.id)} iconScale={0.85} />
@@ -258,29 +248,20 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                 {/* Toggle disponibilidad */}
                 <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {!p.is_active ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#f87171', padding: '3px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger, #f87171)', padding: '3px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
                       Desactivado
                     </span>
                   ) : (
                     <>
-                      <form action={toggleProductAvailability}>
+                      <form ref={(el) => { availForms.current[p.id] = el; }} action={toggleProductAvailability}>
                         <input type="hidden" name="restaurantId" value={restaurantId} />
                         <input type="hidden" name="id" value={p.id} />
                         <input type="hidden" name="is_available" value={String(!p.is_available)} />
-                        <button
-                          type="submit"
-                          className="press"
-                          title={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
-                          style={{
-                            width: 42, height: 25, borderRadius: 99, border: 'none',
-                            cursor: 'pointer', padding: 3,
-                            background: p.is_available ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-                            display: 'flex', justifyContent: p.is_available ? 'flex-end' : 'flex-start',
-                            transition: 'background 180ms',
-                          }}
-                        >
-                          <span style={{ width: 19, height: 19, borderRadius: 99, background: p.is_available ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)', transition: 'all 180ms' }} />
-                        </button>
+                        <Switch
+                          checked={p.is_available}
+                          onCheckedChange={() => availForms.current[p.id]?.requestSubmit()}
+                          aria-label={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
+                        />
                       </form>
                       <span style={{ fontSize: 12, color: p.is_available ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
                         {p.is_available ? 'Activo' : 'Agotado'}
@@ -291,22 +272,18 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
 
                 {/* Acciones */}
                 <div className="catalog-cell-actions" style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                  <button
-                    className="press glass-quiet"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setEditor({ open: true, product: p })}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '6px 11px', borderRadius: 10, border: 'none',
-                      cursor: 'pointer', fontSize: 12, color: 'var(--u-text-2)',
-                    }}
                   >
                     <Icon name="edit" size={13} /> Editar
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
           })}
-        </div>
+        </Card>
       )}
 
       {/* Modal editor */}
@@ -437,23 +414,10 @@ function ProductModal({
   const previewSeed = seedFromString(product?.id ?? 'new');
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 300,
-        display: 'grid', placeItems: 'center',
-        background: 'var(--scrim, rgba(7,7,8,0.65))',
-        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-      }}
-    >
-      {/* Panel */}
-      <div
-        className="glass-solid anim-pop"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 560, maxWidth: '94vw', maxHeight: '90vh',
-          borderRadius: 22, display: 'flex', flexDirection: 'column',
-        }}
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
+        showClose={false}
+        className="flex w-[560px] max-w-[94vw] max-h-[90vh] flex-col p-0"
       >
         {/* Cabecera */}
         <div
@@ -465,17 +429,9 @@ function ProductModal({
           <div className="t-display" style={{ fontSize: 22 }}>
             {isNew ? 'Nuevo platillo' : 'Editar platillo'}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="press glass-quiet"
-            style={{
-              width: 34, height: 34, borderRadius: 10, border: 'none',
-              display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer',
-            }}
-          >
+          <Button type="button" onClick={onClose} variant="secondary" size="icon" className="size-8.5">
             <Icon name="x" size={18} />
-          </button>
+          </Button>
         </div>
 
         {/* Formulario (incluye cuerpo scrollable + footer) */}
@@ -547,30 +503,19 @@ function ProductModal({
                 onChange={handleFile}
               />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="press glass-quiet"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-                    borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--u-text-2)',
-                  }}
-                >
+                <Button type="button" onClick={() => fileRef.current?.click()} variant="secondary" size="sm" className="self-start">
                   <Icon name="upload" size={14} /> Subir foto
-                </button>
+                </Button>
                 {imagePreview && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => { setImageUrl(''); setImagePreview(''); }}
-                    className="press"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px',
-                      borderRadius: 10, border: '1px solid var(--u-hair)', background: 'transparent',
-                      cursor: 'pointer', fontSize: 12, color: 'var(--u-text-4)',
-                    }}
+                    variant="outline"
+                    size="sm"
+                    className="self-start text-[var(--u-text-4)]"
                   >
                     <Icon name="x" size={12} /> Quitar foto
-                  </button>
+                  </Button>
                 )}
                 <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.4, margin: 0 }}>
                   JPG, PNG o WebP · máx 5 MB.
@@ -584,7 +529,7 @@ function ProductModal({
               label="Nombre"
               name="name"
               defaultValue={product?.name ?? ''}
-              placeholder="Ej. Mocha Negra"
+              placeholder="Ej. Café Latte"
               required
             />
 
@@ -753,7 +698,7 @@ function ProductModal({
                         <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{isNaN(p) ? '—' : p.toFixed(2)}</span>
                         <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>+ combo</span>
                         <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{comboDelta.toFixed(2)}</span>
-                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: '#4ade80' }}>= Q{totalPrice.toFixed(2)}</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>= Q{totalPrice.toFixed(2)}</span>
                       </div>
                     )}
                     {!isNaN(p) && costKnown && (
@@ -918,10 +863,7 @@ function ProductModal({
             </div>
 
             {/* Disponibilidad temporal */}
-            <div
-              className="glass-quiet"
-              style={{ borderRadius: 13, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}
-            >
+            <Card variant="flat" className="flex items-center gap-3 p-3.5">
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)' }}>
                   Disponible ahora
@@ -930,26 +872,14 @@ function ProductModal({
                   Apagado → se muestra tachado; se restaura solo en 12 h
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAvailable((v) => !v)}
-                className="press"
-                style={{
-                  width: 42, height: 25, borderRadius: 99, border: 'none',
-                  cursor: 'pointer', padding: 3,
-                  background: isAvailable ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-                  display: 'flex', justifyContent: isAvailable ? 'flex-end' : 'flex-start',
-                  transition: 'background 180ms',
-                }}
-              >
-                <span style={{ width: 19, height: 19, borderRadius: 99, background: isAvailable ? 'var(--brand-bg)' : 'color-mix(in srgb, var(--u-text) 90%, transparent)', transition: 'all 180ms' }} />
-              </button>
-            </div>
+              <Switch checked={isAvailable} onCheckedChange={setIsAvailable} aria-label="Disponible ahora" />
+            </Card>
 
             {/* Activar / desactivar platillo (oculto permanente) */}
-            <div
-              className="glass-quiet"
-              style={{ borderRadius: 13, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, border: !isActive ? '1px solid rgba(248,113,113,0.2)' : '1px solid transparent' }}
+            <Card
+              variant="flat"
+              className="flex items-center gap-3 p-3.5"
+              style={{ borderColor: !isActive ? 'rgba(248,113,113,0.2)' : undefined }}
             >
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: isActive ? 'var(--u-text)' : '#f87171' }}>
@@ -959,21 +889,8 @@ function ProductModal({
                   Desactivado → no aparece en el menú hasta que lo reactives
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsActive((v) => !v)}
-                className="press"
-                style={{
-                  width: 42, height: 25, borderRadius: 99, border: 'none',
-                  cursor: 'pointer', padding: 3,
-                  background: isActive ? 'var(--u-text)' : 'rgba(248,113,113,0.3)',
-                  display: 'flex', justifyContent: isActive ? 'flex-end' : 'flex-start',
-                  transition: 'background 180ms',
-                }}
-              >
-                <span style={{ width: 19, height: 19, borderRadius: 99, background: isActive ? 'var(--brand-bg)' : '#f87171', transition: 'all 180ms' }} />
-              </button>
-            </div>
+              <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Platillo activo" />
+            </Card>
 
             {/* Error */}
             {state && 'error' in state && (
@@ -982,7 +899,7 @@ function ProductModal({
                   padding: '10px 14px', borderRadius: 13,
                   background: 'rgba(220,50,50,0.12)',
                   border: '1px solid rgba(220,50,50,0.25)',
-                  color: '#f87171', fontSize: 13,
+                  color: 'var(--c-danger, #f87171)', fontSize: 13,
                 }}
               >
                 {state.error}
@@ -997,34 +914,16 @@ function ProductModal({
               borderTop: '1px solid var(--u-hair)', flexShrink: 0,
             }}
           >
-            <button
-              type="button"
-              onClick={onClose}
-              className="press glass-quiet"
-              style={{
-                flex: 1, padding: '12px', borderRadius: 12, border: 'none',
-                cursor: 'pointer', fontSize: 14, color: 'var(--u-text-2)', fontWeight: 500,
-              }}
-            >
+            <Button type="button" onClick={onClose} variant="secondary" size="lg" className="flex-1">
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="press"
-              style={{
-                flex: 2, padding: '12px', borderRadius: 12, border: 'none',
-                cursor: isPending ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600,
-                background: 'var(--u-text)', color: 'var(--brand-bg)',
-                opacity: isPending ? 0.7 : 1, transition: 'opacity 160ms',
-              }}
-            >
+            </Button>
+            <Button type="submit" disabled={isPending} size="lg" className="flex-[2]">
               {isPending ? 'Guardando…' : isNew ? 'Crear platillo' : 'Guardar cambios'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1072,18 +971,8 @@ function RowBadge({ label, color, bg }: { label: string; color: string; bg: stri
 
 function CatChip({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="press"
-      style={{
-        padding: '8px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
-        border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-        color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-      }}
-    >
+    <Button type="button" onClick={onClick} variant={on ? 'primary' : 'secondary'} size="sm">
       {label}
-    </button>
+    </Button>
   );
 }

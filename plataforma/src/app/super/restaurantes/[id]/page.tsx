@@ -10,7 +10,7 @@ import RestaurantUsers from '@/components/super/restaurant-users';
 import BillingManager from '@/components/super/billing-manager';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import DeleteButton from '@/components/admin/delete-button';
-import { getBillingConfig, getInvoices, getPricingSettings, computeSuggestedFee, planLabel, getRestaurantGmvCurrentMonth } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, getPricingSettings, computeSuggestedFee, planLabel, getFeeBreakdown } from '@/lib/db/billing';
 import {
   deleteRestaurant,
   duplicateRestaurant,
@@ -47,15 +47,14 @@ export default async function EditRestaurantePage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
-  const hasGmvPlan = row.plan_actual && !['BASICO', 'VARIABLE'].includes(row.plan_actual);
-  const [users, templates, billingConfig, invoices, suggestedFee, pricing, gmvData] = await Promise.all([
+  const [users, templates, billingConfig, invoices, suggestedFee, pricing, feeBreakdown] = await Promise.all([
     getRestaurantUsers(id),
     listThemeTemplates(),
     getBillingConfig(id),
     getInvoices(id),
     computeSuggestedFee(id),
     getPricingSettings(),
-    hasGmvPlan ? getRestaurantGmvCurrentMonth(id) : Promise.resolve(null),
+    getFeeBreakdown(id),
   ]);
   const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
     brandName: row.name,
@@ -168,55 +167,35 @@ export default async function EditRestaurantePage({
         </div>
       </section>
 
-      {/* ── 2.5. GMV del mes actual ────────────────────────── */}
-      {gmvData && gmvData.limit !== null && (
+      {/* ── 2.5. Desglose de mensualidad (plan fijo, sin GMV) ── */}
+      {feeBreakdown && (
         <section>
-          <SectionTitle>Ventas digitales del mes actual</SectionTitle>
+          <SectionTitle>Desglose de mensualidad</SectionTitle>
           {(() => {
-            const pctSafe = gmvData.pct ?? 0;
-            const barColor =
-              pctSafe >= 1.0 ? '#f87171'
-              : pctSafe >= 0.8 ? '#fb923c'
-              : pctSafe >= 0.6 ? '#fbbf24'
-              : '#4ade80';
             const fmtQ = (n: number) => 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+            const b = feeBreakdown;
             return (
-              <Glass variant="quiet" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>GMV del mes</div>
-                      <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 22, color: barColor, marginTop: 2 }}>{fmtQ(gmvData.gmv)}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Límite del plan</div>
-                      <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 22, color: 'var(--u-text-3)', marginTop: 2 }}>{fmtQ(gmvData.limit)}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pedidos</div>
-                      <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 22, color: 'var(--u-text-2)', marginTop: 2 }}>{gmvData.orders}</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>Uso del límite</div>
-                    <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 28, color: barColor, lineHeight: 1.1 }}>
-                      {Math.round(pctSafe * 100)}%
-                    </div>
-                  </div>
-                </div>
-                <div style={{ height: 8, borderRadius: 99, background: 'var(--surface-3)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.min(pctSafe * 100, 100)}%`, borderRadius: 99, background: barColor, transition: 'width 0.4s ease' }} />
-                </div>
-                {pctSafe >= 1.0 && (
-                  <div style={{ fontSize: 13, color: '#f87171', fontWeight: 600 }}>
-                    Este restaurante superó su límite GMV. Considera ajustar su plan en la sección anterior.
-                  </div>
+              <Glass variant="quiet" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Row label="Precio base del plan" value={fmtQ(b.base)} />
+                {b.discountApplies && (
+                  <Row
+                    label={`Descuento "plan a tu medida" (${b.channelsOff} canal${b.channelsOff === 1 ? '' : 'es'} desactivado${b.channelsOff === 1 ? '' : 's'})`}
+                    value={b.discount > 0 ? `− ${fmtQ(b.discount)}` : 'Q0'}
+                    color={b.discount > 0 ? '#4ade80' : undefined}
+                  />
                 )}
-                {pctSafe >= 0.8 && pctSafe < 1.0 && (
-                  <div style={{ fontSize: 13, color: '#fb923c', fontWeight: 600 }}>
-                    Al {Math.round(pctSafe * 100)}% del límite. Candidato a upgrade de plan.
-                  </div>
+                {b.branchDiscountPct > 0 && (
+                  <Row label={`Descuento por volumen de sucursales (${Math.round(b.branchDiscountPct * 100)}%)`} value="aplicado sobre el neto del plan" color="#4ade80" />
                 )}
+                {b.addonTotal > 0 && (
+                  <Row label="Módulos a la carta (no incluidos en el plan)" value={`+ ${fmtQ(b.addonTotal)}`} />
+                )}
+                <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
+                <Row label="Mensualidad calculada" value={fmtQ(b.final)} bold />
+                <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '4px 0 0', lineHeight: 1.5 }}>
+                  Este es el precio automático según plan + módulos activos. Si «Cobro automático» está apagado abajo,
+                  el monto real facturado puede diferir (override manual).
+                </p>
               </Glass>
             );
           })()}
@@ -379,6 +358,17 @@ export default async function EditRestaurantePage({
           />
         </Glass>
       </section>
+    </div>
+  );
+}
+
+function Row({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
+      <span style={{ fontSize: bold ? 17 : 13.5, fontWeight: bold ? 800 : 600, fontFamily: 'var(--ui-font-mono)', color: color ?? (bold ? 'var(--u-text)' : 'var(--u-text-2)') }}>
+        {value}
+      </span>
     </div>
   );
 }

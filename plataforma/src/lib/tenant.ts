@@ -2,11 +2,11 @@
  * Resolución de tenant (restaurante) a partir del subdominio.
  *
  * Ejemplos (con NEXT_PUBLIC_ROOT_DOMAIN = "midominio.com"):
- *   azucar-negra.midominio.com  → "azucar-negra"
+ *   mi-restaurante.midominio.com  → "mi-restaurante"
  *   midominio.com               → null  (sitio raíz / landing)
  *   www.midominio.com           → null
  *
- * En local soporta subdominios tipo: azucar-negra.localhost:3000
+ * En local soporta subdominios tipo: mi-restaurante.localhost:3000
  */
 
 const ROOT_DOMAINS = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000")
@@ -32,7 +32,7 @@ export function rootDomainForUrls(): string {
 /**
  * URL absoluta a un subdominio (tenant o demo).
  *   subdomainUrl("demo")          → http://demo.localhost:3000   (local)
- *   subdomainUrl("azucar-negra")  → https://azucar-negra.leogin.com (prod)
+ *   subdomainUrl("mi-restaurante")  → https://mi-restaurante.leogin.com (prod)
  */
 export function subdomainUrl(sub: string): string {
   const root = rootDomainForUrls();
@@ -43,8 +43,8 @@ export function subdomainUrl(sub: string): string {
 
 /**
  * URL del PANEL de administración de un restaurante.
- *   prod:  https://azucar-negra-admin.leogin.online
- *   local: http://azucar-negra.localhost:3000/admin
+ *   prod:  https://mi-restaurante-admin.leogin.online
+ *   local: http://mi-restaurante.localhost:3000/admin
  * En prod el panel vive en su propio subdominio (PWA aparte); en local se
  * sirve bajo /admin del subdominio del tenant.
  */
@@ -66,7 +66,7 @@ export function getTenantSlug(host: string | null | undefined): string | null {
       if (!sub || sub === "www") return null;
       // slug-central.root → panel del GRUPO, no es un menú de restaurante.
       if (sub.endsWith("-central")) return null;
-      // azucar-negra-admin.root → slug es "azucar-negra"
+      // mi-restaurante-admin.root → slug es "mi-restaurante"
       if (sub.endsWith("-admin")) {
         return sub.slice(0, -6); // quita el sufijo "-admin"
       }
@@ -79,8 +79,8 @@ export function getTenantSlug(host: string | null | undefined): string | null {
 /**
  * Devuelve true cuando el host es el subdominio admin del tenant.
  * Patrón: SLUG-admin.leogin.online  (un solo nivel, cubierto por *.leogin.online)
- * Ejemplos: azucar-negra-admin.leogin.online → true
- *           azucar-negra.leogin.online       → false
+ * Ejemplos: mi-restaurante-admin.leogin.online → true
+ *           mi-restaurante.leogin.online       → false
  */
 export function isAdminSubdomain(host: string | null | undefined): boolean {
   if (!host) return false;

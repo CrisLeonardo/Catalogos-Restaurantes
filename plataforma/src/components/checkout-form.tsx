@@ -8,21 +8,17 @@ import { Icon } from '@/components/icons';
 import { Price, Field, PrimaryButton } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
-import { formatPrice, shadowCss } from '@/lib/theme/resolve';
-import { createOrder } from '@/lib/actions/orders';
+import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
+import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
 import { validatePromo } from '@/lib/actions/promos';
-import { getLoyaltyRedeemInfo, getMyCheckoutProfile } from '@/lib/actions/loyalty';
+import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
+import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order-queue';
+import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
-import { getScannedTable } from '@/lib/table-session';
+import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
-import GoogleSignInButton from '@/components/menu/google-signin';
-import { reportConnectivityProblem } from '@/lib/offline/use-online';
-import {
-  savePendingOrder, loadPendingOrder, clearPendingOrder,
-  PENDING_ORDER_TTL_MS, type PendingOrderBundle,
-} from '@/lib/offline/pending-order';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -59,12 +55,29 @@ interface Props {
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
   hasPromos?: boolean;
-  loyaltyActive?: boolean;
   encuestasActive?: boolean;
-  googleAuthEnabled?: boolean;
+  /** URL LAN del hub local del restaurante (Fase 2 offline), si tiene uno
+      vinculado. Se intenta ANTES de encolar el pedido en el dispositivo. */
+  hubUrl?: string | null;
+  /** Token que ese hub exige en POST /orders (migración 063). */
+  hubToken?: string | null;
 }
 
-type Step = 'form' | 'success';
+type Step = 'form' | 'success' | 'queued';
+
+/** Snapshot congelado al enviar — un reintento posterior (misma orden, mismo
+    clientId) usa exactamente estos valores en vez de releer el estado
+    en vivo del formulario. */
+interface PendingSnapshot {
+  itemsSnapshot: { name: string; opts: string; qty: number; sub: number }[];
+  feeSnapshot: number;
+  tipSnapshot: number;
+  totalSnapshot: number;
+  discountSnapshot: number;
+  paymentSnapshot: 'CASH' | 'CARD';
+  cashAmountSnapshot: number;
+  orderTypeSnapshot: OrderType;
+}
 type OrderType = 'PICKUP' | 'DELIVERY' | 'DINE_IN';
 
 const NO_ZONE = '__fuera__';
@@ -79,9 +92,9 @@ export default function CheckoutForm({
   restaurantLng,
   deliveryRadiusKm,
   hasPromos = false,
-  loyaltyActive = false,
   encuestasActive = false,
-  googleAuthEnabled = false,
+  hubUrl = null,
+  hubToken = null,
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -98,10 +111,7 @@ export default function CheckoutForm({
   // regreso automático al menú tras confirmar. Ver src/lib/kiosk.ts.
   const [kiosk, setKiosk] = useState(false);
   useEffect(() => {
-    if (isKioskMode()) {
-      setKiosk(true);
-      setType('PICKUP');
-    }
+    if (isKioskMode()) setKiosk(true);
   }, []);
 
   const typeOptions = kiosk
@@ -119,6 +129,12 @@ export default function CheckoutForm({
   const labelShadow = shadowCss(config.checkoutTextShadow);
   const payGlass    = config.checkoutPayGlass !== false;
 
+  // Precalienta el hub HTTPS (DNS + permiso de red local) mientras hay señal,
+  // para que el fallback funcione si el internet se cae a mitad del pedido.
+  useEffect(() => {
+    warmUpHub(hubUrl);
+  }, [hubUrl]);
+
   const [step, setStep] = useState<Step>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [trackToken, setTrackToken] = useState('');
@@ -126,15 +142,6 @@ export default function CheckoutForm({
   const [error, setError] = useState('');
   const [tried, setTried] = useState(false);
   const [isPending, start] = useTransition();
-
-  // ── Pedido pendiente por falta de señal (Fase 1 offline) ──
-  // Si createOrder falla por RED, el pedido queda "listo para enviar" con
-  // reintento automático durante 10 min; después pide confirmación (nadie
-  // quiere que un almuerzo viejo entre solo a la hora de la cena).
-  const [pendingOffline, setPendingOffline] = useState<PendingOrderBundle | null>(null);
-  const [pendingExpired, setPendingExpired] = useState(false);
-  const retryBusyRef = useRef(false);
-  const pendingRetryNowRef = useRef<(() => void) | null>(null);
 
   // Encuesta de satisfacción
   const [ratingValue, setRatingValue] = useState(0);
@@ -151,7 +158,14 @@ export default function CheckoutForm({
   const [snapshotCashAmount, setSnapshotCashAmount] = useState(0);
   const [snapshotOrderType, setSnapshotOrderType] = useState<OrderType>('DINE_IN');
   const [snapshotTip, setSnapshotTip] = useState(0);
-  const [snapshotLoyalty, setSnapshotLoyalty] = useState(0);
+
+  // Cola offline (Fase 1): clientId estable + el payload/snapshot
+  // congelados del intento actual, para reintentar sin duplicar el pedido
+  // ni releer estado en vivo del formulario.
+  const clientIdRef = useRef<string | null>(null);
+  const pendingPayloadRef = useRef<unknown>(null);
+  const pendingSnapshotRef = useRef<PendingSnapshot | null>(null);
+  const retryingRef = useRef(false);
 
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
@@ -161,12 +175,28 @@ export default function CheckoutForm({
   const [notes, setNotes]     = useState('');
   const [welcomeBack, setWelcomeBack] = useState(false);
 
+  // Kiosko: fuerza "para recoger" en cuanto se detecta el modo (typeOptions
+  // ya solo ofrece PICKUP, esto sincroniza el estado si arrancó en otro tipo).
+  useEffect(() => {
+    if (kiosk) setType('PICKUP');
+  }, [kiosk]);
+
+  // Kiosko: tras confirmar, la pantalla vuelve sola al menú para el siguiente
+  // cliente (recarga completa = estado limpio garantizado). El margen da
+  // tiempo a leer el número de pedido y dejar una calificación.
+  useEffect(() => {
+    if (!kiosk || step !== 'success') return;
+    const t = setTimeout(() => { window.location.href = '/'; }, 45_000);
+    return () => clearTimeout(t);
+  }, [kiosk, step]);
+
   // Método de pago
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
   const [cashAmount, setCashAmount] = useState('');
 
-  // Propina obligatoria (solo "comer en local"). El admin decide si se cobra y
-  // el porcentaje; el comensal no puede quitarla. Monto calculado en el servidor.
+  // Propina obligatoria — el admin decide en qué tipos de pedido se cobra
+  // (tipOrderTypes) y el porcentaje; el comensal no puede quitarla. Monto
+  // calculado en el servidor.
 
   // DINE_IN: mesa y preferencia de servicio
   const [tableNumber, setTableNumber]         = useState<number | null>(null);
@@ -185,13 +215,6 @@ export default function CheckoutForm({
   const [appliedPromo, setAppliedPromo] = useState<{ discount: number; name: string; code: string } | null>(null);
   const [promoMsg, setPromoMsg] = useState('');
   const [promoChecking, setPromoChecking] = useState(false);
-
-  // Lealtad / canje de puntos — requiere sesión de Google (nunca por teléfono).
-  const [redeemInfo, setRedeemInfo] = useState<{ active: boolean; loggedIn: boolean; balance: number; minRedeem: number; redeemValue: number } | null>(null);
-  const [redeemOn, setRedeemOn] = useState(false);
-  // Evita mostrar "Inicia sesión" un instante a un comensal que sí tiene
-  // sesión, mientras getLoyaltyRedeemInfo todavía está resolviendo.
-  const [redeemInfoLoaded, setRedeemInfoLoaded] = useState(false);
 
   useEffect(() => {
     // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
@@ -236,11 +259,26 @@ export default function CheckoutForm({
     // Se mantiene mientras el comensal está sentado (la sobrescribe el próximo escaneo).
     const n = getScannedTable(restaurantId);
     if (n != null && n <= config.dineInTableCount) {
-
       setHasScannedTable(true);
       setType('DINE_IN');
       setTableNumber(n);
     }
+    // Y se re-valida el TTL mientras la página sigue viva (PWA dormida que
+    // vuelve horas después): al vencer, "Comer en local" desaparece y el tipo
+    // activo salta al primer canal disponible.
+    return watchScannedTable(restaurantId, (t) => {
+      const valid = t != null && t <= config.dineInTableCount;
+      setHasScannedTable(valid);
+      if (valid) {
+        setTableNumber(t);
+      } else {
+        setTableNumber(null);
+        setType((prev) => {
+          if (prev !== 'DINE_IN') return prev;
+          return config.orderTypes.includes('delivery') ? 'DELIVERY' : 'PICKUP';
+        });
+      }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 
@@ -264,37 +302,6 @@ export default function CheckoutForm({
     setCashAmount('');
   }, [type, paymentMethod]);
 
-  // Kiosko: tras confirmar, la pantalla vuelve sola al menú para el siguiente
-  // cliente (recarga completa = estado limpio garantizado). El margen da
-  // tiempo a leer el número de pedido y dejar una calificación.
-  useEffect(() => {
-    if (!kiosk || step !== 'success') return;
-    const t = setTimeout(() => { window.location.href = '/'; }, 45_000);
-    return () => clearTimeout(t);
-  }, [kiosk, step]);
-
-  // Lealtad: consulta el saldo de puntos del comensal (si el módulo está
-  // activo) SIEMPRE server-side — getLoyaltyRedeemInfo resuelve la sesión por
-  // cookies, nunca por el teléfono escrito en el formulario. No se gatea
-  // detrás de un `supabase.auth.getUser()` hecho en el navegador: ese fetch
-  // cliente-servidor puede fallar (red, bloqueadores) sin que la sesión sea
-  // inválida, y antes eso dejaba el widget de puntos oculto para alguien con
-  // sesión real.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      // Kiosko: sin lealtad — cualquier sesión en el aparato compartido sería
-      // de otra persona (o del dueño), y sus puntos no deben poder gastarse.
-      if (!loyaltyActive || isKioskMode()) {
-        if (!cancelled) { setRedeemInfo(null); setRedeemOn(false); setRedeemInfoLoaded(true); }
-        return;
-      }
-      const info = await getLoyaltyRedeemInfo(restaurantId).catch(() => null);
-      if (!cancelled) { setRedeemInfo(info); setRedeemInfoLoaded(true); }
-    })();
-    return () => { cancelled = true; };
-  }, [loyaltyActive, restaurantId]);
-
   const errs = {
     name:  type !== 'DINE_IN' && !name.trim() ? content.checkout.errName : '',
     phone: type === 'DINE_IN'
@@ -314,22 +321,12 @@ export default function CheckoutForm({
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
   const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
 
-  // Propina obligatoria — solo en "comer en local" y si el restaurante la habilita.
-  const tipAvailable = type === 'DINE_IN' && config.tipEnabled === true && (Number(config.tipPercent) || 0) > 0;
+  // Propina obligatoria — según los tipos de pedido que el restaurante habilitó (tipOrderTypes).
+  const tipAvailable = tipAppliesToType(config, type);
   const showTip      = tipAvailable;
   const tipAmount    = showTip ? Math.round(total * (Number(config.tipPercent) || 0)) / 100 : 0;
 
-  // Lealtad: máximo de puntos canjeables = min(saldo, lo que cabe en el total).
-  const redeemValue     = redeemInfo?.redeemValue ?? 0;
-  const baseForLoyalty  = Math.max(0, total + deliveryFee - discount);
-  const maxRedeemPoints = redeemInfo?.active && redeemValue > 0
-    ? Math.min(redeemInfo.balance, Math.floor(baseForLoyalty / redeemValue))
-    : 0;
-  const canRedeem       = !!redeemInfo?.active && maxRedeemPoints > 0 && maxRedeemPoints >= (redeemInfo?.minRedeem ?? 0);
-  const redeemPoints    = redeemOn && canRedeem ? maxRedeemPoints : 0;
-  const loyaltyDiscount = Math.round(redeemPoints * redeemValue * 100) / 100;
-
-  const finalTotal   = Math.max(0, total + deliveryFee - discount - loyaltyDiscount + tipAmount);
+  const finalTotal   = Math.max(0, total + deliveryFee - discount + tipAmount);
 
   // cashAmount: validación después de finalTotal porque depende del total final
   const cashAmountNum = parseFloat(cashAmount.replace(',', '.')) || 0;
@@ -363,48 +360,66 @@ export default function CheckoutForm({
     }
   }
 
-  /**
-   * Aplica la respuesta de createOrder usando los datos congelados en el
-   * bundle (sirve igual para el envío directo que para un reintento offline,
-   * donde el carrito/estado ya pudo cambiar).
-   */
-  function applyOrderResult(
-    result: Awaited<ReturnType<typeof createOrder>>,
-    b: PendingOrderBundle,
-  ) {
-    if (result.error) { setError(result.error); return; }
+  /** Aplica el resultado exitoso de createOrder (primer intento o reintento
+      desde la cola) usando el snapshot congelado del pedido, no el estado
+      en vivo del formulario. */
+  function finishSuccess(result: CreateOrderResult) {
+    const snap = pendingSnapshotRef.current;
+    if (!snap) return;
+    const clientIdForRef = clientIdRef.current;
 
     // Kiosko: no dejar rastro del cliente en el aparato compartido (ni perfil
     // para autocompletar, ni su pedido en el historial local del dispositivo).
     if (!isKioskMode()) {
       saveLocalProfile(restaurantId, {
-        name: b.name, phone: b.phone,
-        ...(b.address.trim() ? { address: b.address } : {}),
-        ...(b.zone && b.zone !== NO_ZONE ? { zone: b.zone } : {}),
-        ...(b.lat !== undefined && b.lng !== undefined ? { lat: b.lat, lng: b.lng } : {}),
+        name, phone,
+        ...(address.trim() ? { address } : {}),
+        ...(zone && zone !== NO_ZONE ? { zone } : {}),
+        ...(deliveryLat !== undefined && deliveryLng !== undefined ? { lat: deliveryLat, lng: deliveryLng } : {}),
       });
       if (result.publicToken) {
         addLocalOrder(restaurantId, {
           token: result.publicToken,
           orderNumber: result.orderNumber ?? '',
           createdAt: new Date().toISOString(),
-          total: b.totalSnapshot,
+          total: snap.totalSnapshot,
+        });
+      } else if (clientIdForRef) {
+        // Pedido aceptado por el hub local sin conexión a la nube: todavía no
+        // hay token público (se genera cuando sincronice con Supabase). Se
+        // guarda con el clientId para que "Mis pedidos" lo resuelva en cuanto
+        // sincronice (ver my-orders.tsx / getOrderRefByClientId).
+        addLocalOrder(restaurantId, {
+          token: '',
+          clientId: clientIdForRef,
+          orderNumber: result.orderNumber ?? '',
+          createdAt: new Date().toISOString(),
+          total: snap.totalSnapshot,
         });
       }
     }
 
-    setSnapshot(b.itemsSnapshot);
-    setSnapshotFee(b.feeSnapshot);
-    setSnapshotDiscount(b.discount);
-    setSnapshotLoyalty(b.loyaltyDiscount);
-    setSnapshotTip(b.tipSnapshot);
-    setSnapshotTotal(b.totalSnapshot);
-    setSnapshotPayment(b.payment as 'CASH' | 'CARD');
-    setSnapshotCashAmount(b.cashAmount);
-    setSnapshotOrderType(b.orderType as OrderType);
+    setSnapshot(snap.itemsSnapshot);
+    setSnapshotFee(snap.feeSnapshot);
+    setSnapshotDiscount(snap.discountSnapshot);
+    setSnapshotTip(snap.tipSnapshot);
+    setSnapshotTotal(snap.totalSnapshot);
+    setSnapshotPayment(snap.paymentSnapshot);
+    setSnapshotCashAmount(snap.cashAmountSnapshot);
+    setSnapshotOrderType(snap.orderTypeSnapshot);
     setOrderNumber(result.orderNumber ?? '');
     setTrackToken(result.publicToken ?? '');
     setOrderId(result.orderId ?? '');
+
+    if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
+    clientIdRef.current = null;
+    pendingPayloadRef.current = null;
+    pendingSnapshotRef.current = null;
+
+    // El pedido ya salió: cierra la sesión de mesa del comensal para que no
+    // siga "detectándose" en ella si vuelve a abrir el mismo enlace después.
+    if (snap.orderTypeSnapshot === 'DINE_IN') clearScannedTable(restaurantId);
+
     clearCart();
     setStep('success');
 
@@ -414,34 +429,133 @@ export default function CheckoutForm({
 
     const waUrl = buildWhatsAppUrl({
       orderNumber: result.orderNumber ?? '',
-      snapshot: b.itemsSnapshot,
-      fee: b.feeSnapshot,
-      tip: b.tipSnapshot,
-      total: b.totalSnapshot,
-      discount: b.discount,
-      loyalty: b.loyaltyDiscount,
-      payment: b.payment as 'CASH' | 'CARD',
-      cashAmt: b.cashAmount,
-      orderType: b.orderType as OrderType,
+      snapshot: snap.itemsSnapshot,
+      fee: snap.feeSnapshot,
+      tip: snap.tipSnapshot,
+      total: snap.totalSnapshot,
+      discount: snap.discountSnapshot,
+      payment: snap.paymentSnapshot,
+      cashAmt: snap.cashAmountSnapshot,
+      orderType: snap.orderTypeSnapshot,
     });
     if (waUrl) {
-      // En un reintento en segundo plano el navegador puede bloquear la
-      // ventana (no hay gesto del usuario) — por eso el try.
+      // Nota: si esto corre desde un reintento automático (sin clic directo
+      // del usuario), el navegador puede bloquear el popup — es un
+      // degradado aceptable, el pedido ya quedó confirmado igual.
       try { window.open(waUrl, '_blank', 'noopener'); } catch {}
     }
   }
 
+  /** Antes de encolar en el dispositivo, intenta el hub local del restaurante
+      (Fase 2 offline) — si el comensal está en su WiFi, esto resuelve el
+      pedido al instante (con impresión inmediata) en vez de esperar a que
+      vuelva la señal. Si el hub también falla (o no hay uno configurado),
+      cae a la cola local de siempre. */
+  async function queueCurrentOrder() {
+    const clientId = clientIdRef.current;
+    const payload = pendingPayloadRef.current;
+    if (!clientId || !payload) return;
+
+    if (hubUrl) {
+      const hubResult = await tryHubOrder(hubUrl, hubToken, payload);
+      if (hubResult) { finishSuccess(hubResult); return; }
+    }
+
+    saveQueuedOrder(restaurantId, {
+      clientId,
+      payload,
+      queuedAt: new Date().toISOString(),
+      total: pendingSnapshotRef.current?.totalSnapshot,
+    });
+    setStep('queued');
+  }
+
+  /** Reintenta el pedido en cola. Idempotente: mismo clientId siempre,
+      así que reintentar nunca lo duplica (ver migración 061). */
+  function retryQueued() {
+    if (retryingRef.current) return;
+    const payload = pendingPayloadRef.current;
+    if (!payload) return;
+    retryingRef.current = true;
+    start(async () => {
+      try {
+        const result = await createOrder(payload);
+        if (result.error) {
+          // El servidor lo rechaza en definitiva (ej. producto agotado
+          // mientras esperaba la señal) — no tiene sentido seguir
+          // reintentando lo mismo.
+          if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
+          clientIdRef.current = null;
+          pendingPayloadRef.current = null;
+          pendingSnapshotRef.current = null;
+          setStep('form');
+          setError(result.error);
+          return;
+        }
+        finishSuccess(result);
+      } catch {
+        /* sigue sin conexión: se reintentará con el próximo evento/temporizador */
+      } finally {
+        retryingRef.current = false;
+      }
+    });
+  }
+
+  // Reintento automático mientras el pedido esté en cola: al volver la señal
+  // (evento 'online') y, de respaldo, cada 15s (el evento 'online' no
+  // siempre dispara, notablemente en iOS Safari).
+  useEffect(() => {
+    if (step !== 'queued') return;
+    const onOnline = () => retryQueued();
+    window.addEventListener('online', onOnline);
+    const timer = setInterval(() => retryQueued(), 15_000);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Al montar: si quedó algo en la cola de una visita anterior (la pestaña
+  // se cerró a mitad de un corte de conexión), reintenta en segundo plano
+  // sin tocar la pantalla actual — si se confirma, queda en "Mis pedidos".
+  useEffect(() => {
+    (async () => {
+      for (const q of getQueuedOrders(restaurantId)) {
+        try {
+          const result = await createOrder(q.payload);
+          if (result.success) {
+            removeQueuedOrder(restaurantId, q.clientId);
+            if (result.publicToken) {
+              addLocalOrder(restaurantId, {
+                token: result.publicToken,
+                orderNumber: result.orderNumber ?? '',
+                createdAt: q.queuedAt,
+                total: q.total ?? 0,
+              });
+            }
+          } else if (result.error) {
+            removeQueuedOrder(restaurantId, q.clientId); // rechazo definitivo del servidor
+          }
+        } catch {
+          /* sigue sin conexión: se reintentará en la próxima visita */
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Anti doble-submit: si ya se está enviando (o hay uno en cola offline),
-    // ignora clics repetidos — evita pedidos duplicados.
-    if (isPending || pendingOffline) return;
+    // Anti doble-submit: si ya se está enviando, ignora clics repetidos
+    // (evita pedidos duplicados aunque el botón quede visible).
+    if (isPending) return;
     setError('');
     if (!valid) { setTried(true); return; }
 
     const itemsSnapshot = items.map((i) => ({
       name: i.rewardId ? `🎁 ${i.name}` : i.name,
-      opts: i.options?.map((o) => o.choiceName).join(', ') ?? '',
+      opts: i.options?.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(', ') ?? '',
       qty: i.quantity,
       sub: i.price * i.quantity,
     }));
@@ -449,17 +563,16 @@ export default function CheckoutForm({
     const tipSnapshot   = tipAmount;
     const totalSnapshot = finalTotal;
 
-    // Idempotencia (mig. 061): reintentar este mismo payload jamás duplica.
-    const clientId = crypto.randomUUID();
+    if (!clientIdRef.current) clientIdRef.current = crypto.randomUUID();
+
     const payload = {
       restaurantId,
-      clientId,
       items: items.filter((i) => !i.rewardId).map((i) => ({
         productId: i.productId,
         name: i.name,
         price: i.price,
         quantity: i.quantity,
-        options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId })),
+        options: i.options?.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
       })),
       rewardLines: items.filter((i) => i.rewardId).map((i) => ({ rewardId: i.rewardId! })),
       customer: {
@@ -477,102 +590,60 @@ export default function CheckoutForm({
       paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
       ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
       tipAccepted: showTip,
-      ...(redeemPoints > 0 ? { redeemPoints } : {}),
+      clientId: clientIdRef.current,
+    };
+    pendingPayloadRef.current = payload;
+    pendingSnapshotRef.current = {
+      itemsSnapshot, feeSnapshot, tipSnapshot, totalSnapshot,
+      discountSnapshot: discount,
+      paymentSnapshot: type === 'DINE_IN' ? 'CASH' : paymentMethod,
+      cashAmountSnapshot: needsCashAmount ? cashAmountNum : 0,
+      orderTypeSnapshot: type,
     };
 
-    const bundle: PendingOrderBundle = {
-      clientId,
+    // WRITE-AHEAD: el pedido queda en la cola del dispositivo ANTES de
+    // intentar cualquier red (finishSuccess lo quita al confirmarse). Bug
+    // real reproducido en pruebas (2026-07-10, panel de mesero — misma
+    // ventana aquí): si la página muere durante el intento (pestaña
+    // cerrada, WebView reiniciado, celular bloqueado), el pedido solo
+    // existía en memoria y se perdía sin rastro. Con la cola primero, el
+    // peor caso es un pedido que el reintento de la próxima visita envía
+    // solo — nunca uno perdido; el clientId idempotente (migración 061)
+    // garantiza que jamás se duplica.
+    saveQueuedOrder(restaurantId, {
+      clientId: clientIdRef.current,
       payload,
-      createdAt: Date.now(),
-      itemsSnapshot,
-      feeSnapshot,
-      tipSnapshot,
-      totalSnapshot,
-      discount,
-      loyaltyDiscount,
-      payment: type === 'DINE_IN' ? 'CASH' : paymentMethod,
-      cashAmount: needsCashAmount ? cashAmountNum : 0,
-      orderType: type,
-      name, phone, address,
-      zone: zone ?? '',
-      ...(type === 'DELIVERY' && deliveryLat !== undefined && deliveryLng !== undefined
-        ? { lat: deliveryLat, lng: deliveryLng }
-        : {}),
-    };
+      queuedAt: new Date().toISOString(),
+      total: totalSnapshot,
+    });
 
     start(async () => {
-      let result: Awaited<ReturnType<typeof createOrder>>;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        // "Sin internet" no implica "sin LAN" — justo el caso que resuelve
+        // el hub local, por eso se intenta igual antes de encolar.
+        await queueCurrentOrder();
+        return;
+      }
+      let result: CreateOrderResult;
       try {
         result = await createOrder(payload);
       } catch {
-        // Fallo de RED: el pedido queda listo y se reenviará solo.
-        reportConnectivityProblem();
-        savePendingOrder(restaurantId, bundle);
-        setPendingExpired(false);
-        setPendingOffline(bundle);
+        // Falló a nivel de red (no es un error de negocio): puede que el
+        // servidor ya lo haya recibido — se encola y se reintenta con el
+        // MISMO clientId, que es idempotente (migración 061).
+        await queueCurrentOrder();
         return;
       }
-      applyOrderResult(result, bundle);
+      if (result.error) {
+        // Rechazo definitivo del servidor: fuera de la cola (si se quedara,
+        // el reintento de la próxima visita reenviaría un pedido ya
+        // rechazado).
+        if (clientIdRef.current) removeQueuedOrder(restaurantId, clientIdRef.current);
+        setError(result.error);
+        return;
+      }
+      finishSuccess(result);
     });
-  }
-
-  // Reanudar un pedido pendiente tras un reload (si no es demasiado viejo).
-  useEffect(() => {
-    const saved = loadPendingOrder(restaurantId);
-    if (saved) {
-      setPendingExpired(Date.now() - saved.createdAt > PENDING_ORDER_TTL_MS);
-      setPendingOffline(saved);
-    }
-  }, [restaurantId]);
-
-  // Reintento automático del pedido pendiente: evento online + cada 15 s,
-  // solo dentro de la ventana de 10 min (después, confirmación manual).
-  useEffect(() => {
-    if (!pendingOffline) return;
-    let stopped = false;
-
-    async function attempt(force = false) {
-      if (stopped || retryBusyRef.current || !pendingOffline) return;
-      if (!force && Date.now() - pendingOffline.createdAt > PENDING_ORDER_TTL_MS) {
-        setPendingExpired(true);
-        return;
-      }
-      retryBusyRef.current = true;
-      try {
-        const result = await createOrder(pendingOffline.payload);
-        if (stopped) return;
-        clearPendingOrder(restaurantId);
-        setPendingOffline(null);
-        applyOrderResult(result, pendingOffline);
-      } catch {
-        /* sigue sin señal: siguiente ciclo */
-      } finally {
-        retryBusyRef.current = false;
-      }
-    }
-
-    const onOnline = () => { attempt(); };
-    window.addEventListener('online', onOnline);
-    const timer = setInterval(() => attempt(), 15_000);
-    attempt();
-
-    // Botones "Enviar ahora" / "Descartar" (fuera del efecto vía window para
-    // no duplicar la lógica): se exponen como funciones del componente abajo.
-    pendingRetryNowRef.current = () => attempt(true);
-
-    return () => {
-      stopped = true;
-      window.removeEventListener('online', onOnline);
-      clearInterval(timer);
-      pendingRetryNowRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingOffline, restaurantId]);
-
-  function discardPendingOrder() {
-    clearPendingOrder(restaurantId);
-    setPendingOffline(null);
-    setPendingExpired(false);
   }
 
   function buildWhatsAppUrl(data?: {
@@ -582,7 +653,6 @@ export default function CheckoutForm({
     tip: number;
     total: number;
     discount?: number;
-    loyalty?: number;
     payment?: 'CASH' | 'CARD';
     cashAmt?: number;
     orderType?: OrderType;
@@ -592,7 +662,6 @@ export default function CheckoutForm({
     const lineItems = data?.snapshot ?? snapshot;
     const fee       = data?.fee ?? snapshotFee;
     const disc      = data?.discount ?? snapshotDiscount;
-    const loyaltyAmt = data?.loyalty ?? snapshotLoyalty;
     const tipAmt    = data?.tip ?? snapshotTip;
     const tot       = data?.total ?? snapshotTotal;
     const pmeth     = data?.payment ?? snapshotPayment;
@@ -627,9 +696,6 @@ export default function CheckoutForm({
     if (disc > 0) {
       lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
     }
-    if (loyaltyAmt > 0) {
-      lines.push(`⭐ Puntos canjeados: -${formatPrice(loyaltyAmt, config)}`);
-    }
     if (tipAmt > 0) {
       lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);
     }
@@ -645,7 +711,7 @@ export default function CheckoutForm({
   }
 
   /* ── Carrito vacío ── */
-  if (items.length === 0 && step !== 'success') {
+  if (items.length === 0 && step !== 'success' && step !== 'queued') {
     return (
       <main className="themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
         <Glass style={{ padding: '32px 24px', textAlign: 'center', maxWidth: 380, width: '100%' }}>
@@ -653,6 +719,40 @@ export default function CheckoutForm({
           <h2 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 10 }}>{content.cart.empty}</h2>
           <PrimaryButton href="/">{content.cart.emptyCta}</PrimaryButton>
         </Glass>
+      </main>
+    );
+  }
+
+  /* ── Pedido en cola (sin conexión) ── */
+  if (step === 'queued') {
+    return (
+      <main className="anim-fade-up themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+        <div style={{ textAlign: 'center', maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%', display: 'grid', placeItems: 'center',
+            background: 'var(--surface-2)', color: 'var(--u-text-2)',
+          }}>
+            <Icon name="clock" size={34} strokeWidth={1.6} />
+          </div>
+          <div>
+            <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 8 }}>Sin conexión</h1>
+            <p style={{ fontSize: 14, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+              Tu pedido se guardó. Se enviará solo en cuanto vuelva la señal —
+              no cierres esta pantalla.
+            </p>
+          </div>
+          {error && (
+            <p style={{ fontSize: 13, color: 'var(--c-danger, #ff6b6b)' }}>{error}</p>
+          )}
+          <button
+            onClick={retryQueued}
+            disabled={isPending}
+            className="btn-accent press"
+            style={{ padding: '13px 28px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: isPending ? 0.7 : 1 }}
+          >
+            {isPending ? 'Reintentando…' : 'Reintentar ahora'}
+          </button>
+        </div>
       </main>
     );
   }
@@ -843,7 +943,7 @@ export default function CheckoutForm({
                   {item.quantity}× {item.name}
                   {item.options && item.options.length > 0 && (
                     <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                      {item.options.map((o) => o.choiceName).join(' · ')}
+                      {item.options.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(' · ')}
                     </span>
                   )}
                 </span>
@@ -870,12 +970,6 @@ export default function CheckoutForm({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>Descuento{appliedPromo ? ` · ${appliedPromo.name}` : ''}</span>
                 <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
-              </div>
-            )}
-            {loyaltyDiscount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="star" size={13} /> {redeemPoints} puntos canjeados</span>
-                <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(loyaltyDiscount, config)}</span>
               </div>
             )}
             {tipAmount > 0 && (
@@ -922,52 +1016,6 @@ export default function CheckoutForm({
             )}
             {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
           </div>}
-
-          {/* Lealtad — sin sesión no ganas ni puedes usar puntos en este pedido.
-              En kiosko no se invita a iniciar sesión (aparato compartido). */}
-          {loyaltyActive && googleAuthEnabled && !kiosk && redeemInfoLoaded && !redeemInfo?.loggedIn && (
-            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
-                Inicia sesión para ganar y usar tus puntos de fidelidad
-              </span>
-              <GoogleSignInButton label="Continuar con Google" />
-            </div>
-          )}
-
-          {/* Lealtad — canje de puntos (si el cliente tiene cuenta con saldo) */}
-          {redeemInfo?.active && redeemInfo.balance > 0 && (
-            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="star" size={15} style={{ color: 'var(--brand-accent)' }} />
-                  Tienes <strong>{redeemInfo.balance.toLocaleString('es-GT')}</strong> puntos
-                  <span style={{ color: 'var(--u-text-4)' }}>≈ {formatPrice(redeemInfo.balance * redeemInfo.redeemValue, config)}</span>
-                </span>
-                {canRedeem ? (
-                  <button
-                    type="button"
-                    onClick={() => setRedeemOn((v) => !v)}
-                    className="press"
-                    style={{
-                      fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                      padding: '7px 13px', borderRadius: 'var(--radius-full)',
-                      border: redeemOn ? 'none' : '1px solid var(--u-hair)',
-                      background: redeemOn ? 'var(--brand-accent)' : 'transparent',
-                      color: redeemOn ? 'var(--brand-on-accent)' : 'var(--u-text-2)',
-                    }}
-                  >
-                    {redeemOn ? 'Quitar' : `Canjear −${formatPrice(maxRedeemPoints * redeemValue, config)}`}
-                  </button>
-                ) : null}
-              </div>
-              {!canRedeem && (
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
-                  Necesitas al menos {redeemInfo.minRedeem.toLocaleString('es-GT')} puntos para canjear.
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Propina — obligatoria cuando el restaurante la habilita. */}
           {tipAvailable && (
@@ -1298,42 +1346,8 @@ export default function CheckoutForm({
           <p style={{ fontSize: 13, color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
-        {/* ── Pedido en cola por falta de señal (Fase 1 offline) ── */}
-        {pendingOffline && (
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: 10,
-            background: 'color-mix(in srgb, var(--c-warn, #fbbf24) 10%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 35%, transparent)',
-            borderRadius: 'var(--radius-lg)', padding: '13px 15px',
-          }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span style={{ color: 'var(--c-warn, #fbbf24)', flexShrink: 0, marginTop: 1 }}><Icon name="clock" size={17} /></span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--u-text)' }}>
-                  {pendingExpired ? '¿Tu pedido sigue en pie?' : 'Sin conexión — tu pedido está listo'}
-                </div>
-                <p style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginTop: 3, lineHeight: 1.5 }}>
-                  {pendingExpired
-                    ? 'Pasaron más de 10 minutos sin señal, así que no lo enviamos solo. Confirma si aún lo quieres.'
-                    : `Se enviará automáticamente en cuanto vuelva la señal (total ${formatPrice(pendingOffline.totalSnapshot, config)}). Puedes dejar esta pantalla abierta.`}
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {pendingExpired && (
-                <button type="button" onClick={() => pendingRetryNowRef.current?.()} className="press btn-accent" style={{ flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-                  Sí, enviar ahora
-                </button>
-              )}
-              <button type="button" onClick={discardPendingOrder} className="press" style={{ flex: pendingExpired ? 1 : undefined, padding: '10px 14px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
-                {pendingExpired ? 'Descartar pedido' : 'Cancelar envío'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending || !!pendingOffline} style={{ opacity: isPending || pendingOffline ? 0.7 : 1, marginTop: 4 }}>
-          {isPending ? 'Enviando…' : pendingOffline ? 'Pedido en cola…' : content.checkout.confirm}
+        <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
+          {isPending ? 'Enviando…' : content.checkout.confirm}
         </PrimaryButton>
       </form>
     </main>

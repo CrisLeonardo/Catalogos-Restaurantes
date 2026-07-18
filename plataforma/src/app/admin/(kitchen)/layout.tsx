@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
+import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import OfflineSupport from '@/components/offline-support';
+import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Cocina (KDS)' };
@@ -32,9 +35,16 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     redirect('/admin/login');
   }
 
+  const opCookie = (await cookies()).get(OPERATOR_COOKIE)?.value;
+  const isOperatorSession = !!opCookie;
+  if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
+    redirect('/admin/logout-operator');
+  }
+
   return (
     <>
-      <OfflineSupport label="Sin conexión — mostrando las comandas ya recibidas; las nuevas llegarán al volver la señal." />
+      <OfflineSupport />
+      {isOperatorSession && <OperatorHeartbeat profileId={user.id} />}
       {children}
     </>
   );

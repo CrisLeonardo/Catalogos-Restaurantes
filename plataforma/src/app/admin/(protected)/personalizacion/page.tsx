@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import AdminThemeEditor from '@/components/admin/admin-theme-editor';
+import type { RestaurantThemeTemplate } from '@/lib/actions/restaurant';
 
 export const metadata = { title: 'Personalizar – Panel admin' };
 
@@ -30,11 +31,14 @@ export default async function AdminPersonalizacionPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const { data: themeRow } = await db
-    .from('restaurant_themes')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .single();
+  const [{ data: themeRow }, { data: ownerTemplates }] = await Promise.all([
+    db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single(),
+    db
+      .from('restaurant_theme_templates')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false }),
+  ]);
 
   const resolved = resolveTheme((themeRow as ThemeRow) ?? null);
 
@@ -45,6 +49,7 @@ export default async function AdminPersonalizacionPage() {
         config={resolved.config}
         content={resolved.content}
         customCss={resolved.customCss}
+        ownerTemplates={(ownerTemplates ?? []) as RestaurantThemeTemplate[]}
       />
     </div>
   );

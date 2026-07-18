@@ -1,9 +1,12 @@
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
+import { getAgentHubInfo } from '@/lib/print-agent';
+import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import WaiterPanel from '@/components/admin/waiter-panel';
+import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import type { Category, Product } from '@/types';
 
@@ -47,11 +50,12 @@ export default async function MeseroPage() {
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedSince] = await Promise.all([
+  const [categoriesRes, productsRes, activeOrders, occupiedSince, hubInfo] = await Promise.all([
     db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     getWaiterActiveOrders(restaurantId, user.id),
     getActiveTableNumbers(restaurantId),
+    getAgentHubInfo(restaurantId),
   ]);
 
   const categories = (categoriesRes.data ?? []) as Category[];
@@ -69,13 +73,16 @@ export default async function MeseroPage() {
       occupiedSince={occupiedSince}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
-      tipEnabled={resolvedConfig?.tipEnabled ?? false}
+      tipEnabled={resolvedConfig ? tipAppliesToType(resolvedConfig, 'DINE_IN') : false}
       tipPercent={resolvedConfig?.tipPercent ?? 10}
       currency={{
         symbol: resolvedConfig?.currencySymbol ?? 'Q',
         position: resolvedConfig?.currencyPosition ?? 'prefix',
         locale: resolvedConfig?.locale ?? 'es-GT',
       }}
+      hubUrl={hubInfo.hubUrl}
+      hubToken={hubInfo.hubToken}
+      isOperatorSession={!!(await cookies()).get(OPERATOR_COOKIE)?.value}
     />
   );
 }

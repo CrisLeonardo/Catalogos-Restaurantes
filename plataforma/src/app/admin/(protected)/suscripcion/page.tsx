@@ -5,14 +5,18 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import { getMyBilling } from '@/lib/actions/billing';
 import {
-  isOverdue, isOnTrial, trialDaysLeft, planLabel, planGmvLimit,
-  getRestaurantGmvCurrentMonth, getFeeBreakdown, type Invoice, type FeeBreakdown,
+  isOverdue, isOnTrial, trialDaysLeft, planLabel,
+  getFeeBreakdown, type Invoice, type FeeBreakdown,
 } from '@/lib/db/billing';
-import { PLANS, PLAN_ORDER, nextPlan, isUpgrade, type PlanCode } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, type PlanCode } from '@/lib/plans';
+import { moduleMeta, type ActivatableModuleKey } from '@/lib/modules';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
+import { Card, cardVariants } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -32,10 +36,6 @@ function nextChargeLabel(billingDay: number): string {
   const day = Math.min(28, Math.max(1, billingDay || 1));
   if (now.getUTCDate() > day) { m += 1; if (m > 11) { m = 0; y += 1; } }
   return `${day} de ${MONTHS[m]} ${y}`;
-}
-
-function fmtQ(n: number) {
-  return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
 }
 
 function upgradeHref(restaurantName: string, targetPlan: string): string {
@@ -65,9 +65,8 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, gmvData, feeBreakdown] = await Promise.all([
+  const [billingResult, feeBreakdown] = await Promise.all([
     getMyBilling(restaurantId),
-    getRestaurantGmvCurrentMonth(restaurantId),
     getFeeBreakdown(restaurantId),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
@@ -97,16 +96,7 @@ export default async function SuscripcionPage() {
 
   const nextPlanCode = nextPlan(currentPlan);
   const nextPlanInfo = nextPlanCode ? PLANS[nextPlanCode] : null;
-
-  const hasGmvLimit = planGmvLimit(currentPlan) !== null;
-  const gmvPct = gmvData.pct ?? 0;
-  const gmvLimit = gmvData.limit ?? 0;
-  const gmv = gmvData.gmv;
-  const barColor =
-    gmvPct >= 1.0 ? '#f87171'
-    : gmvPct >= 0.8 ? '#fb923c'
-    : gmvPct >= 0.6 ? '#fbbf24'
-    : '#4ade80';
+  const includedCount = INCLUDED_MODULES[currentPlan].length;
 
   // Plan feature highlights
   const planFeatures = planInfo ? [
@@ -114,9 +104,9 @@ export default async function SuscripcionPage() {
     { label: 'Notificación WhatsApp',    active: planInfo.hasWhatsapp },
     { label: 'Alertas en tiempo real',   active: planInfo.hasRealtime },
     { label: 'Personalización completa', active: planInfo.hasFullTheme },
-    { label: 'Llamar al mesero',         active: planInfo.hasWaiterCall },
+    { label: 'Llamar al mesero',         active: isModuleIncluded(currentPlan, 'llamada_mesero') },
     { label: 'Estadísticas y reportes',  active: planInfo.hasAnalytics },
-    { label: 'Puntos de lealtad',        active: planInfo.hasLoyalty },
+    { label: 'Puntos de lealtad',        active: isModuleIncluded(currentPlan, 'loyalty') },
   ] : [];
 
   const rootDomain = rootDomainForUrls();
@@ -128,10 +118,9 @@ export default async function SuscripcionPage() {
 
       {/* ── Trial banner ─────────────────────────────────────── */}
       {onTrial && (
-        <div
-          className="glass"
+        <Card
+          className="p-5"
           style={{
-            borderRadius: 16, padding: 20,
             border: trialLeft <= 3
               ? '1px solid rgba(248,113,113,0.4)'
               : trialLeft <= 7
@@ -154,27 +143,19 @@ export default async function SuscripcionPage() {
               : `Tu restaurante está en vivo sin costo. Cuando termine la prueba, te avisaremos antes de cualquier cobro.`}
           </div>
           {trialLeft <= 7 && (
-            <a
-              href={upgradeHref(restaurantName, planInfo?.name ?? 'Premium')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                marginTop: 14, padding: '10px 18px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
-                background: 'var(--brand-accent)', color: '#fff',
-              }}
+            <Button
+              render={<a href={upgradeHref(restaurantName, planInfo?.name ?? 'Premium')} target="_blank" rel="noopener noreferrer" />}
+              className="mt-3.5 rounded-adm-full"
             >
               <Icon name="sparkle" size={14} />
               Continuar con Leogin
-            </a>
+            </Button>
           )}
-        </div>
+        </Card>
       )}
 
       {/* ── Tu plan actual ───────────────────────────────────── */}
-      <div className="glass" style={{ borderRadius: 16, padding: 20 }}>
+      <Card className="p-5">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Tu plan actual</div>
@@ -190,7 +171,8 @@ export default async function SuscripcionPage() {
               {planInfo?.priceLabel ?? '—'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
-              {planInfo?.gmvLimitLabel ?? ''}
+              {planInfo?.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
+              {includedCount > 0 ? ` · ${includedCount} módulos incluidos` : ''}
             </div>
           </div>
         </div>
@@ -217,64 +199,25 @@ export default async function SuscripcionPage() {
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
-      </div>
+      </Card>
 
-      {/* ── Plan a tu medida (descuento por canal) ───────────── */}
-      {feeBreakdown?.discountApplies && (
+      {/* ── Plan a tu medida (lo que pagarás este mes, con desglose) ── */}
+      {feeBreakdown && (
         <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
       )}
 
-      {/* ── GMV del mes actual (solo planes con límite) ──────── */}
-      {hasGmvLimit && (
-        <div className="glass" style={{ borderRadius: 14, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--u-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Ventas digitales este mes
-            </span>
-            <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
-              {Math.round(gmvPct * 100)}% del límite
-            </span>
-          </div>
-          <div>
-            <div style={{ height: 7, borderRadius: 99, background: 'var(--surface-3)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(gmvPct * 100, 100)}%`, borderRadius: 99, background: barColor, transition: 'width 0.4s ease' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: barColor, fontFamily: 'var(--ui-font-mono)' }}>{fmtQ(gmv)}</span>
-              <span style={{ fontSize: 12.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>de {fmtQ(gmvLimit)}</span>
-            </div>
-          </div>
-          {gmvPct >= 1.0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
-              <Icon name="alertCircle" size={15} style={{ color: '#f87171', flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: '#f87171', lineHeight: 1.4 }}>Has superado el límite este mes. Nos pondremos en contacto contigo.</span>
-            </div>
-          )}
-          {gmvPct >= 0.8 && gmvPct < 1.0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.25)' }}>
-              <Icon name="alertCircle" size={15} style={{ color: '#fb923c', flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: '#fb923c', lineHeight: 1.4 }}>Estás al {Math.round(gmvPct * 100)}% de tu límite mensual. Considera actualizar tu plan.</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Actualizar plan ──────────────────────────────────── */}
       {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
       {currentPlan === 'BASICO' && nextPlanInfo && (
-        <div
-          className="glass"
-          style={{
-            borderRadius: 16, padding: 20,
-            border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)',
-          }}
+        <Card
+          className="p-5"
+          style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium (Q599/mes) desbloqueas</div>
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium ({PLANS.PREMIUM.priceLabel}) desbloqueas</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
-            {nextPlanInfo.gmvLimitLabel} · Sin compromiso · Tu menú sigue en vivo
+            Sin límite de ventas · Sin compromiso · Tu menú sigue en vivo
           </div>
 
           {/* Feature grid */}
@@ -285,7 +228,7 @@ export default async function SuscripcionPage() {
               { icon: 'ticket',   label: 'Cupones y descuentos',     desc: 'Convierte visitas en pedidos' },
               { icon: 'calendar', label: 'Reservaciones en línea',   desc: 'Mesas llenas incluso entre semana' },
               { icon: 'chart',    label: 'Estadísticas avanzadas',   desc: 'Ventas, horas pico y ticket promedio' },
-              { icon: 'users',    label: 'Hasta 3 usuarios',         desc: 'Tu equipo opera sin depender de ti' },
+              { icon: 'users',    label: 'Usuarios ilimitados',      desc: 'Tu equipo opera sin depender de ti' },
               { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Canal de delivery con mapa integrado' },
               { icon: 'grid',     label: 'Comer en local (QR)',      desc: 'Pedidos desde la mesa del cliente' },
               { icon: 'userPlus', label: 'Panel de mesero',          desc: 'Tablet para tomar pedidos en sala' },
@@ -309,48 +252,20 @@ export default async function SuscripcionPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
-            <a
-              href={upgradeHref(restaurantName, nextPlanInfo.name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press btn-accent"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '11px 20px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
-              }}
-            >
+            <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
               <Icon name="sparkle" size={14} />
-              Actualizar a Premium — Q599/mes
-            </a>
-            <a
-              href={planesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '11px 16px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
-                color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-              }}
-            >
+              Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
+            </Button>
+            <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
               Ver todos los planes <Icon name="chevronRight" size={14} />
-            </a>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* ── Actualizar plan (planes PREMIUM en adelante) ───── */}
-      {nextPlanInfo && currentPlan !== 'VARIABLE' && currentPlan !== 'BASICO' && (
-        <div
-          className="glass"
-          style={{
-            borderRadius: 16, padding: 20,
-            border: gmvPct >= 0.8 ? '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' : undefined,
-          }}
-        >
+      {/* ── Actualizar plan (Estándar/Premium en adelante) ───── */}
+      {nextPlanInfo && currentPlan !== 'BASICO' && (
+        <Card className="p-5">
           <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>
             Siguiente plan disponible
           </div>
@@ -358,51 +273,27 @@ export default async function SuscripcionPage() {
             {nextPlanInfo.name} — {nextPlanInfo.priceLabel}
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
-            {nextPlanInfo.tagline} · {nextPlanInfo.gmvLimitLabel}
+            {nextPlanInfo.tagline}
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-            <a
-              href={upgradeHref(restaurantName, nextPlanInfo.name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press btn-accent"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '10px 18px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 13.5, textDecoration: 'none',
-              }}
-            >
+            <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
               <Icon name="sparkle" size={14} />
               Actualizar a {nextPlanInfo.name}
-            </a>
-            <a
-              href={planesUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '10px 16px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 13.5, textDecoration: 'none',
-                color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-              }}
-            >
+            </Button>
+            <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
               Ver todos los planes <Icon name="chevronRight" size={14} />
-            </a>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ── Más opciones de upgrade (planes 2+ pasos arriba) ── */}
-      {currentPlan !== 'VARIABLE' && (() => {
-        const higherPlans = PLAN_ORDER.filter(
-          (p) => p !== 'VARIABLE' && isUpgrade(currentPlan, p) && p !== nextPlanCode,
-        );
+      {(() => {
+        const higherPlans = PUBLIC_PLANS.filter((p) => isUpgrade(currentPlan, p) && p !== nextPlanCode);
         if (higherPlans.length === 0) return null;
         return (
-          <div className="glass-quiet" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Card className="flex flex-col gap-3 p-4">
             <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--u-text-4)' }}>
               Más opciones de upgrade
             </div>
@@ -415,11 +306,7 @@ export default async function SuscripcionPage() {
                     href={upgradeHref(restaurantName, p.name)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="glass press"
-                    style={{
-                      display: 'flex', flexDirection: 'column', gap: 5,
-                      padding: '14px 16px', borderRadius: 14, textDecoration: 'none',
-                    }}
+                    className={cn(cardVariants({ variant: 'interactive' }), 'flex flex-col gap-1.5 p-3.5 no-underline')}
                   >
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>
                       {p.name}
@@ -428,7 +315,7 @@ export default async function SuscripcionPage() {
                       {p.priceLabel}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
-                      {p.gmvLimitLabel}
+                      {p.tagline}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--brand-accent)', fontWeight: 700, marginTop: 4 }}>
                       Solicitar →
@@ -438,29 +325,34 @@ export default async function SuscripcionPage() {
               })}
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
-              Puedes saltar directamente al plan que mejor se ajuste a tu volumen actual.
+              Puedes saltar directamente al plan que mejor se ajuste a lo que necesitas.
             </p>
-          </div>
+          </Card>
         );
       })()}
 
-      {/* VARIABLE plan — contact for custom billing */}
-      {currentPlan === 'VARIABLE' && (
-        <div className="glass" style={{ borderRadius: 14, padding: '14px 18px', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55 }}>
-          <Icon name="chart" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--brand-accent)' }} />
-          Estás en el plan Variable. Tu cobro mensual es el 1% de tus ventas digitales del mes (mínimo Q2,249). Se calcula al cierre de cada periodo.
+      {/* ── ¿Varias sucursales? ───────────────────────────────── */}
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
+        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Icon name="grid" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
+          ¿Tienes 2 o más sucursales? Obtienes descuento por volumen automáticamente y un panel de grupo consolidado.
         </div>
-      )}
+        <a
+          href={upgradeHref(restaurantName, 'Grupo / Franquicia')}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: 12.5, color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          Hablar con Leogin →
+        </a>
+      </Card>
 
       {/* ── Estado de cuenta ─────────────────────────────────── */}
       {config && (config.monthly_fee > 0 || invoices.length > 0) && (
         <>
-          <div
-            className="glass"
-            style={{
-              borderRadius: 16, padding: 20,
-              border: hasOverdue ? '1px solid rgba(248,113,113,0.3)' : pendingTotal > 0 ? '1px solid rgba(251,191,36,0.25)' : '1px solid rgba(74,222,128,0.25)',
-            }}
+          <Card
+            className="p-5"
+            style={{ border: hasOverdue ? '1px solid rgba(248,113,113,0.3)' : pendingTotal > 0 ? '1px solid rgba(251,191,36,0.25)' : '1px solid rgba(74,222,128,0.25)' }}
           >
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Estado de cuenta</div>
             {pendingTotal > 0 ? (
@@ -474,13 +366,13 @@ export default async function SuscripcionPage() {
               </>
             ) : (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: '#4ade80', lineHeight: 1.1, marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--c-ok, #4ade80)', lineHeight: 1.1, marginTop: 4 }}>
                   Estás al día ✓
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
               </>
             )}
-          </div>
+          </Card>
 
           {/* Detalles del plan */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
@@ -490,40 +382,40 @@ export default async function SuscripcionPage() {
             {config.started_at && <Kpi label="Cliente desde" value={config.started_at.slice(0, 10)} small />}
           </div>
 
-          <div className="glass-quiet" style={{ borderRadius: 13, padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
-            aparecerá como <strong style={{ color: '#4ade80' }}>Pagado</strong> aquí mismo.
-          </div>
+            aparecerá como <strong style={{ color: 'var(--c-ok, #4ade80)' }}>Pagado</strong> aquí mismo.
+          </Card>
 
           {/* Historial */}
-          <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Card className="flex flex-col gap-2.5 p-4.5">
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Historial de cobros</div>
             {invoices.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no hay cobros.</div>
             ) : (
-              invoices.map((inv) => <Row key={inv.id} inv={inv} currency={currency} />)
+              invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} />)
             )}
-          </div>
+          </Card>
         </>
       )}
 
       {/* If no billing config yet */}
       {(!config || (config.monthly_fee <= 0 && invoices.length === 0)) && (
-        <div className="glass-quiet" style={{ borderRadius: 14, padding: '13px 16px', fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="helpCircle" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
           Cuando se configure tu cobro, aquí verás tu mensualidad, fechas de pago y el historial completo.
-        </div>
+        </Card>
       )}
     </div>
   );
 }
 
-function Row({ inv, currency }: { inv: Invoice; currency: string }) {
+function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
   const overdue = isOverdue(inv);
   const meta = overdue
-    ? { label: 'Vencido', color: '#f87171', bg: 'rgba(248,113,113,0.13)' }
+    ? { label: 'Vencido', color: 'var(--c-danger, #f87171)', bg: 'rgba(248,113,113,0.13)' }
     : inv.status === 'PAID'
-    ? { label: 'Pagado', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' }
+    ? { label: 'Pagado', color: 'var(--c-ok, #4ade80)', bg: 'rgba(74,222,128,0.12)' }
     : inv.status === 'CANCELLED'
     ? { label: 'Cancelado', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' }
     : { label: 'Pendiente', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
@@ -552,36 +444,76 @@ function Row({ inv, currency }: { inv: Invoice; currency: string }) {
   );
 }
 
+const CHANNEL_LABEL: Record<string, string> = {
+  dine_in: 'Comer en el local',
+  pickup: 'Para llevar',
+  delivery: 'A domicilio',
+};
+
 function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
-  const saving = b.discount > 0;
+  const saving = b.discount > 0 || b.branchDiscountPct > 0;
+  // Un método recién apagado no baja el cobro de inmediato (mig. 073/078):
+  // debe seguir apagado la mayor parte del ciclo actual antes de que el
+  // descuento entre en el próximo cobro. Estos dos avisos cubren las dos
+  // direcciones de ese desfase (vivo vs. facturado).
+  const pendingDiscount = b.discountApplies && b.channelsActiveLive < b.channelsActiveBilled;
+  const pendingLoss      = b.discountApplies && b.channelsActiveLive > b.channelsActiveBilled;
+  // Métodos que sí descuentan este ciclo, con nombre (respetando el tope).
+  const discountedKeys = b.channelsOffKeys.slice(0, b.channelsOff);
   return (
-    <div className="glass" style={{
-      borderRadius: 16, padding: 20,
-      border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)',
-    }}>
+    <Card className="p-5" style={{ border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Icon name="sparkle" size={15} style={{ color: saving ? '#4ade80' : 'var(--brand-accent)' }} />
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Plan a tu medida</div>
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>Lo que pagarás este mes</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
-        Tu mensualidad se ajusta a los canales de servicio que usas: cada canal que
-        desactivas baja tu pago {fmtMoney(b.discountPer, currency)} (hasta {fmtMoney(b.discountPer * Math.max(b.channelsTotal - 1, 0), currency)}, siempre pagas al menos uno).
+        Tu mensualidad refleja exactamente lo que usas: cada método de pedido que desactives
+        {b.discountApplies ? ` descuenta ${fmtMoney(b.discountPer, currency)}` : ' puede descontar'} (hasta 2 de los 3),
+        y los módulos apagados que no vienen en tu plan dejan de cobrarse.
       </div>
+      {pendingDiscount && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
+          <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
+            Tienes un método de pedido apagado ahora, pero el descuento entra hasta tu <strong>próximo cobro</strong> —
+            debe permanecer apagado al menos el 75% de los días de este ciclo. Este desglose ya
+            refleja lo que se te cobrará, no el estado de tu menú en este instante.
+          </p>
+        </div>
+      )}
+      {pendingLoss && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
+          <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
+            Este cobro todavía incluye el descuento de un método que ya reactivaste. Si lo dejas
+            encendido, tu <strong>siguiente</strong> cobro (el que viene después de este) ya no lo traerá.
+          </p>
+        </div>
+      )}
 
       {/* Desglose */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
-        {saving ? (
+        {b.discountApplies && discountedKeys.map((k) => (
           <LineItem
-            label={`${b.channelsOff} canal${b.channelsOff !== 1 ? 'es' : ''} sin usar`}
-            value={`− ${fmtMoney(b.discount, currency)}`}
+            key={k}
+            label={`${CHANNEL_LABEL[k] ?? k} desactivado`}
+            value={`− ${fmtMoney(b.discountPer, currency)}`}
             accent="#4ade80"
           />
-        ) : (
-          <div style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>
-            Usas los {b.channelsActive} canales — sin descuento aplicable.
-          </div>
+        ))}
+        {b.branchDiscountPct > 0 && (
+          <LineItem
+            label={`Descuento por volumen de sucursales (${Math.round(b.branchDiscountPct * 100)}%)`}
+            value="aplicado"
+            accent="#4ade80"
+          />
         )}
+        {b.addonItems.map((it) => {
+          let label = it.key;
+          try { label = moduleMeta(it.key as ActivatableModuleKey).label; } catch {}
+          return <LineItem key={it.key} label={`Módulo: ${label}`} value={`+ ${fmtMoney(it.price, currency)}`} />;
+        })}
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
@@ -600,9 +532,9 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       )}
 
       <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 700 }}>
-        Cambiar mis canales de servicio <Icon name="arrowRight" size={13} />
+        Gestionar mis métodos de pedido y módulos <Icon name="arrowRight" size={13} />
       </a>
-    </div>
+    </Card>
   );
 }
 
@@ -617,11 +549,11 @@ function LineItem({ label, value, accent }: { label: string; value: string; acce
 
 function Kpi({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Card className="flex flex-col gap-2 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
       <div style={{ fontFamily: small ? 'var(--font-sans)' : 'var(--ui-font-mono)', fontWeight: small ? 600 : 700, fontSize: small ? 15 : 22, color: 'var(--u-text)', lineHeight: 1.15 }}>
         {value}
       </div>
-    </div>
+    </Card>
   );
 }

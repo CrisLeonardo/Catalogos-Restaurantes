@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
 import FloorPlanEditor from '@/components/admin/floor-plan-editor';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import type { ThemeConfig, FloorPlan } from '@/lib/theme/defaults';
 
 type Patch = Pick<ThemeConfig,
@@ -117,43 +119,24 @@ function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: s
       </div>
 
       <div style={{ display: 'flex', gap: 6 }}>
-        <button
+        <Button
           onClick={copyLink}
-          className="press"
-          style={{
-            padding: '5px 11px',
-            borderRadius: 99,
-            border: '1px solid var(--u-hair-2)',
-            background: copied ? 'rgba(74,222,128,0.15)' : 'transparent',
-            color: copied ? '#4ade80' : 'var(--u-text-3)',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'background 200ms, color 200ms',
-          }}
+          variant="outline"
+          size="sm"
+          className="h-auto rounded-adm-full px-2.5 py-1 text-[11px]"
+          style={copied ? { background: 'rgba(74,222,128,0.15)', color: 'var(--c-ok, #4ade80)', borderColor: 'transparent' } : undefined}
         >
           {copied ? '✓ Copiado' : 'Copiar'}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={downloadPng}
           disabled={downloading}
-          className="press"
-          style={{
-            padding: '5px 11px',
-            borderRadius: 99,
-            border: '1px solid var(--u-hair-2)',
-            background: 'transparent',
-            color: 'var(--u-text-3)',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: downloading ? 'wait' : 'pointer',
-            opacity: downloading ? 0.6 : 1,
-            whiteSpace: 'nowrap',
-          }}
+          variant="outline"
+          size="sm"
+          className="h-auto rounded-adm-full px-2.5 py-1 text-[11px]"
         >
           {downloading ? '…' : '↓ PNG'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -189,7 +172,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 760 }}>
 
       {/* ── Configuración ── */}
-      <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <Card className="flex flex-col gap-3.5 p-4.5">
         <div className="t-kicker" style={{ fontSize: 10.5 }}>Configuración</div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
@@ -199,19 +182,10 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
               Activa el modo mesa para que los clientes pidan desde su mesa.
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', !dineInEnabled)); setMsg(null); }}
-            className="press"
-            style={{
-              width: 44, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3,
-              background: dineInEnabled ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-              display: 'flex', justifyContent: dineInEnabled ? 'flex-end' : 'flex-start',
-              transition: 'background 180ms', flexShrink: 0,
-            }}
-          >
-            <span style={{ width: 20, height: 20, borderRadius: 99, background: dineInEnabled ? 'var(--brand-bg)' : 'var(--u-text)' }} />
-          </button>
+          <Switch
+            checked={dineInEnabled}
+            onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); setMsg(null); }}
+          />
         </div>
 
         {dineInEnabled && (
@@ -224,33 +198,27 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
               <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>Se generará un QR por cada mesa</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button
+              <Button
                 type="button"
-                className="press"
+                variant="outline"
+                size="icon"
+                className="size-8.5 text-[18px]"
                 onClick={() => set('dineInTableCount', Math.max(1, patch.dineInTableCount - 1))}
-                style={{
-                  width: 34, height: 34, borderRadius: 9, border: '1px solid var(--u-hair-2)',
-                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer',
-                  fontSize: 18, display: 'grid', placeItems: 'center',
-                }}
               >
                 −
-              </button>
+              </Button>
               <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)', minWidth: 30, textAlign: 'center' }}>
                 {patch.dineInTableCount}
               </span>
-              <button
+              <Button
                 type="button"
-                className="press"
+                variant="outline"
+                size="icon"
+                className="size-8.5 text-[18px]"
                 onClick={() => set('dineInTableCount', Math.min(50, patch.dineInTableCount + 1))}
-                style={{
-                  width: 34, height: 34, borderRadius: 9, border: '1px solid var(--u-hair-2)',
-                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer',
-                  fontSize: 18, display: 'grid', placeItems: 'center',
-                }}
               >
                 +
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -266,24 +234,16 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--u-hair)' }}>
-          <button
-            onClick={save}
-            disabled={isPending}
-            className="press btn-white"
-            style={{
-              padding: '10px 20px', borderRadius: 99, fontWeight: 700, fontSize: 13.5,
-              border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1,
-            }}
-          >
+          <Button onClick={save} disabled={isPending} className="rounded-adm-full">
             {isPending ? 'Guardando…' : 'Guardar cambios'}
-          </button>
+          </Button>
           {msg && (
             <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>
               {msg}
             </span>
           )}
         </div>
-      </Glass>
+      </Card>
 
       {/* ── QR por mesa ── */}
       {dineInEnabled && menuUrl ? (
@@ -309,12 +269,12 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
           </div>
         </div>
       ) : !dineInEnabled ? (
-        <Glass variant="quiet" style={{ padding: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
+        <Card className="flex flex-col items-center gap-2.5 p-7 text-center">
           <Icon name="utensils" size={28} style={{ color: 'var(--u-text-4)' }} />
           <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', fontWeight: 500 }}>
             Activa “Comer en local” y guarda para generar los QR por mesa.
           </div>
-        </Glass>
+        </Card>
       ) : null}
     </div>
   );

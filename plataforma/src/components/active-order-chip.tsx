@@ -14,11 +14,11 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent } from '@/lib/theme/context';
-import { getPublicOrder, getMyOrderRefs } from '@/lib/actions/orders';
-import { getLocalOrders } from '@/lib/customer-local';
+import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/actions/orders';
+import { getLocalOrders, addLocalOrder } from '@/lib/customer-local';
 import type { OrderStatus } from '@/types';
 
-const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT'];
+const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'];
 const POLL_MS = 20000;
 /** Solo miramos pedidos de las últimas 12 h: lo demás ya no es "en curso". */
 const FRESH_MS = 12 * 60 * 60 * 1000;
@@ -58,6 +58,24 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
         if (stopped.current || (document.hidden && !force)) return;
         for (const c of candidates) {
           try {
+            // Pedido aceptado por el hub local sin conexión: todavía sin
+            // token público (ver checkout-form.tsx / finishSuccess). Se
+            // resuelve por clientId; si el agente aún no sincronizó, se
+            // salta este candidato y se reintenta en el próximo ciclo.
+            if (!c.token && c.clientId) {
+              const resolved = await getOrderRefByClientId(restaurantId, c.clientId);
+              if (!resolved) continue;
+              c.token = resolved.token;
+              addLocalOrder(restaurantId, {
+                token: resolved.token,
+                orderNumber: resolved.orderNumber || c.orderNumber,
+                createdAt: c.createdAt,
+                total: resolved.total || c.total,
+                // clientId viaja para que addLocalOrder deduplique y
+                // reemplace el registro "pendiente" que dejó el hub.
+                clientId: c.clientId,
+              });
+            }
             const order = await getPublicOrder(c.token, restaurantId);
             if (order && ACTIVE.includes(order.status)) {
               if (!stopped.current) {
@@ -89,6 +107,7 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
     active.status === 'NEW'     ? content.tracking.statusNew
     : active.status === 'PREP'  ? content.tracking.statusPrep
     : active.status === 'READY' ? content.tracking.statusReady
+    : active.status === 'SERVED' ? content.tracking.statusServed
     : content.tracking.statusTransit;
 
   return (
