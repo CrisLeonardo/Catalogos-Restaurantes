@@ -13,11 +13,11 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const PERKS = [
+const perks = (trialDays: number) => [
   { icon: 'bag', text: 'Menú web por QR, rápido y a tu marca' },
   { icon: 'list', text: 'Pedidos en línea con alerta en tiempo real' },
   { icon: 'sparkle', text: 'Personalización total: colores, logo y estilo' },
-  { icon: 'wallet', text: '1 mes gratis · sin tarjeta · cancela cuando quieras' },
+  { icon: 'wallet', text: `${trialDays} días gratis · sin tarjeta · cancela cuando quieras` },
 ];
 
 // Los precios pueden cambiar desde /super/configuracion (ISR + revalidación al guardar).
@@ -61,7 +61,7 @@ export default async function RegistroPage() {
               Te guiamos paso a paso.
             </p>
             <ul style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {PERKS.map((p) => (
+              {perks(pricing.trialDays).map((p) => (
                 <li key={p.text} style={{ display: 'flex', gap: 11, alignItems: 'center', fontSize: 14 }}>
                   <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)', color: 'var(--brand-accent)' }}>
                     <Icon name={p.icon} size={16} />

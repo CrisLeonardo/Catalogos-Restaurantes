@@ -68,10 +68,13 @@ function orderLabel(o: OrderWithItems): { icon: string; text: string } {
   return { icon: 'truck', text: 'Domicilio' };
 }
 
-/** Tiempo transcurrido formateado mm:ss (o h:mm:ss si pasa de una hora). */
+/** Tiempo transcurrido formateado mm:ss (o h:mm:ss si pasa de una hora).
+ *  Pasadas 48 h el cronómetro deja de tener sentido operativo (pedido
+ *  olvidado/de prueba): se muestra en días para no pintar "193:00:12". */
 function fmtElapsed(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(totalSec / 3600);
+  if (h >= 48) return `${Math.floor(h / 24)} días`;
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
   const pad = (n: number) => String(n).padStart(2, '0');

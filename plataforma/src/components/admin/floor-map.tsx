@@ -26,10 +26,12 @@ function clamp(v: number, min: number, max: number): number {
   return v < min ? min : v > max ? max : v;
 }
 
-/** Tiempo ocupada, formato corto: "12m", "1h05". */
+/** Tiempo ocupada, formato corto: "12m", "1h05" — y en días pasadas 48 h
+ *  (una mesa "ocupada" hace 170 h es un pedido olvidado, no operación). */
 export function fmtOccupied(ms: number): string {
   const totalMin = Math.max(0, Math.floor(ms / 60000));
   const h = Math.floor(totalMin / 60);
+  if (h >= 48) return `${Math.floor(h / 24)}d`;
   const m = totalMin % 60;
   return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}m`;
 }

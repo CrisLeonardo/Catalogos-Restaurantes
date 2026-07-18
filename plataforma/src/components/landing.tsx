@@ -46,8 +46,8 @@ const CAPABILITIES = [
   { icon: 'dashboard',label: 'Multisucursal' },
 ];
 
-const STEPS = [
-  { n: '01', title: 'Regístrate en minutos', body: 'Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, 1 mes gratis.' },
+const steps = (trialDays: number) => [
+  { n: '01', title: 'Regístrate en minutos', body: `Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, ${trialDays} días gratis.` },
   { n: '02', title: 'Personalízalo, guiado', body: 'Colores, logo y tu primer menú con un asistente paso a paso. No necesitas saber de tecnología.' },
   { n: '03', title: 'Comparte tu QR',        body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
 ];
@@ -233,7 +233,7 @@ export default async function LeoginLanding() {
             </a>
           </div>
           <p className="t-mute" style={{ fontSize: 13, marginTop: 16 }}>
-            1 mes de prueba gratis · sin tarjeta · sin comisiones por pedido
+            {pricing.trialDays} días de prueba gratis · sin tarjeta · sin comisiones por pedido
           </p>
 
           {/* Tira de confianza */}
@@ -382,7 +382,7 @@ export default async function LeoginLanding() {
             Sin que toques una línea de código.
           </p>
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-            {STEPS.map((s) => (
+            {steps(pricing.trialDays).map((s) => (
               <Glass key={s.n} variant="quiet" style={{ padding: '24px 20px' }}>
                 <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)', fontWeight: 700 }}>{s.n}</div>
                 <h3 className="t-display" style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
@@ -505,7 +505,7 @@ export default async function LeoginLanding() {
               Moderniza tu restaurante hoy
             </h2>
             <p className="t-mute" style={{ fontSize: 15, maxWidth: 480, margin: '12px auto 0', lineHeight: 1.55, position: 'relative' }}>
-              Crea tu restaurante ahora y pruébalo gratis 1 mes completo. ¿Prefieres que te acompañemos? Escríbenos por WhatsApp.
+              Crea tu restaurante ahora y pruébalo gratis {pricing.trialDays} días. ¿Prefieres que te acompañemos? Escríbenos por WhatsApp.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24, position: 'relative' }}>
               <Link
