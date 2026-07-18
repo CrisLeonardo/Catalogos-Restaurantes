@@ -174,6 +174,55 @@ export function EmptyState({
   );
 }
 
+/* ── Gráfica de ingresos por mes (12 meses) ───────────────── */
+const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+export function IncomeChart({
+  points,
+  currencySymbol = 'Q',
+  height = 150,
+}: {
+  points: { month: string; total: number; count: number }[];
+  currencySymbol?: string;
+  height?: number;
+}) {
+  const max = Math.max(...points.map((p) => p.total), 1);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height }}>
+      {points.map((p, i) => {
+        const [, m] = p.month.split('-').map(Number);
+        const label = MONTH_SHORT[(m - 1) % 12];
+        const isLast = i === points.length - 1;
+        const barH = p.total > 0 ? Math.max((p.total / max) * (height - 34), 4) : 2;
+        return (
+          <div
+            key={p.month}
+            title={`${label} ${p.month.slice(0, 4)}: ${currencySymbol}${p.total.toLocaleString('es-GT', { maximumFractionDigits: 0 })} · ${p.count} pago(s)`}
+            style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%' }}
+          >
+            {p.total > 0 && (
+              <span style={{ fontSize: 9, fontFamily: 'var(--ui-font-mono)', color: isLast ? 'var(--brand-accent)' : 'var(--u-text-4)', fontWeight: isLast ? 800 : 600, whiteSpace: 'nowrap' }}>
+                {currencySymbol}{p.total >= 1000 ? `${(p.total / 1000).toFixed(p.total >= 10000 ? 0 : 1)}k` : p.total.toLocaleString('es-GT', { maximumFractionDigits: 0 })}
+              </span>
+            )}
+            <div
+              style={{
+                width: '70%', height: barH, borderRadius: '4px 4px 0 0',
+                background: isLast
+                  ? 'var(--brand-accent)'
+                  : p.total > 0
+                  ? 'color-mix(in srgb, var(--brand-accent) 45%, transparent)'
+                  : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
+              }}
+            />
+            <span style={{ fontSize: 9.5, color: isLast ? 'var(--u-text-2)' : 'var(--u-text-4)', fontWeight: isLast ? 700 : 500 }}>{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Gráfica de actividad diaria (visitas + pedidos) ──────── */
 export function ActivityChart({
   series,

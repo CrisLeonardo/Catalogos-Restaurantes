@@ -104,10 +104,10 @@ export default async function SuperHomePage() {
 
       {/* KPIs principales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 10 }}>
-        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/cobros" />
-        <StatCard label="Cobrado este mes" value={fmtMoney(stats.collectedThisMonth, stats.currency)} icon="checkCircle" tone="ok" href="/super/cobros" />
-        <StatCard label="Pendiente de cobro" value={fmtMoney(stats.pendingTotal, stats.currency)} icon="clock" tone={stats.pendingTotal > 0 ? 'warn' : undefined} href="/super/cobros" />
-        <StatCard label="Pagos vencidos" value={stats.overdueCount} icon="alertCircle" tone={stats.overdueCount > 0 ? 'danger' : undefined} sub={stats.overdueCount > 0 ? 'requieren acción' : 'todo al día'} href="/super/cobros" />
+        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/finanzas" />
+        <StatCard label="Cobrado este mes" value={fmtMoney(stats.collectedThisMonth, stats.currency)} icon="checkCircle" tone="ok" href="/super/finanzas" />
+        <StatCard label="Pendiente de cobro" value={fmtMoney(stats.pendingTotal, stats.currency)} icon="clock" tone={stats.pendingTotal > 0 ? 'warn' : undefined} href="/super/finanzas" />
+        <StatCard label="Pagos vencidos" value={stats.overdueCount} icon="alertCircle" tone={stats.overdueCount > 0 ? 'danger' : undefined} sub={stats.overdueCount > 0 ? 'requieren acción' : 'todo al día'} href="/super/finanzas" />
         <StatCard label="Restaurantes activos" value={`${metrics.active}/${metrics.total}`} icon="utensils" sub={trials > 0 ? `${trials} en prueba` : undefined} href="/super/restaurantes" />
         <StatCard label="Pedidos 30 días" value={orders30.toLocaleString('es-GT')} icon="bag" sub={`${visits30.toLocaleString('es-GT')} visitas`} href="/super/metricas" />
       </div>
@@ -153,8 +153,8 @@ export default async function SuperHomePage() {
             ))}
             {alerts.length > 6 && (
               <div style={{ padding: '10px 16px', borderTop: '1px solid var(--adm-border, var(--u-hair))', textAlign: 'center' }}>
-                <Link href="/super/cobros" style={{ fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
-                  Ver {alerts.length - 6} más en Cobros →
+                <Link href="/super/finanzas" style={{ fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                  Ver {alerts.length - 6} más en Finanzas →
                 </Link>
               </div>
             )}

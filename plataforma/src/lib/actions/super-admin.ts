@@ -443,6 +443,22 @@ export async function duplicateRestaurant(formData: FormData) {
   redirect(`/super/restaurantes/${copy.id}?new=1`);
 }
 
+/** Suspender / reactivar en un clic (desde Finanzas → Cobranza). */
+export async function setRestaurantStatusSuper(formData: FormData) {
+  const db = await verifySuperAdmin();
+  if (!db) return;
+
+  const id = (formData.get('id') as string)?.trim();
+  const status = formData.get('status') === 'suspended' ? 'suspended' : 'active';
+  if (!id) return;
+
+  await db.from('restaurants').update({ status }).eq('id', id);
+
+  revalidatePath('/super/restaurantes');
+  revalidatePath('/super/finanzas', 'layout');
+  revalidatePath(`/super/restaurantes/${id}`, 'layout');
+}
+
 export async function deleteRestaurant(formData: FormData) {
   const db = await verifySuperAdmin();
   if (!db) return;
@@ -655,7 +671,7 @@ export async function assignRestaurantToOrg(formData: FormData) {
   // El conteo de sucursales Premium cambió → recalcula precios automáticos.
   await db.rpc('leogin_apply_auto_price_all');
   revalidatePath(`/super/grupos/${orgId}`);
-  revalidatePath('/super/cobros');
+  revalidatePath('/super/finanzas', 'layout');
 }
 
 export async function unassignRestaurant(formData: FormData) {
@@ -668,7 +684,7 @@ export async function unassignRestaurant(formData: FormData) {
   // El conteo de sucursales Premium cambió → recalcula precios automáticos.
   await db.rpc('leogin_apply_auto_price_all');
   if (orgId) revalidatePath(`/super/grupos/${orgId}`);
-  revalidatePath('/super/cobros');
+  revalidatePath('/super/finanzas', 'layout');
 }
 
 export async function createGroupOwner(

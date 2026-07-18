@@ -317,6 +317,222 @@ export function isOverdue(inv: Invoice, today = new Date()): boolean {
   return inv.due_date < today.toISOString().slice(0, 10);
 }
 
+/* ── Finanzas (Super Admin) ────────────────────────────────── */
+
+export interface MonthlyIncomePoint {
+  /** YYYY-MM */
+  month: string;
+  total: number;
+  count: number;
+}
+
+export interface PaymentRecord {
+  invoiceId: string;
+  restaurantId: string;
+  restaurantName: string;
+  concept: InvoiceConcept;
+  description: string | null;
+  period: string | null;
+  /** Monto realmente cobrado (paid_amount, o amount si no se registró). */
+  amount: number;
+  currency: string;
+  paidAt: string;
+  method: string | null;
+}
+
+export interface ReceivableInvoice {
+  id: string;
+  description: string | null;
+  concept: InvoiceConcept;
+  amount: number;
+  dueDate: string | null;
+  overdue: boolean;
+}
+
+export interface ReceivableRow {
+  restaurantId: string;
+  name: string;
+  slug: string;
+  status: string;
+  whatsapp: string | null;
+  email: string | null;
+  currency: string;
+  pendingTotal: number;
+  overdueTotal: number;
+  invoices: ReceivableInvoice[];
+  lastPaidAt: string | null;
+}
+
+export interface FinanceOverview {
+  /** Ingresos cobrados por mes, últimos 12 meses (incluye el actual). */
+  incomeByMonth: MonthlyIncomePoint[];
+  collectedThisMonth: number;
+  collectedLastMonth: number;
+  /** Cobrado en los últimos 12 meses. */
+  collectedYear: number;
+  mrr: number;
+  pendingTotal: number;
+  overdueTotal: number;
+  /** Restaurantes con cobro activo facturando. */
+  activeBilling: number;
+  /** Pagos registrados, más recientes primero. */
+  payments: PaymentRecord[];
+  /** Cuentas por cobrar por restaurante (vencidos primero). */
+  receivables: ReceivableRow[];
+  /** Quién te ha pagado más en 12 meses. */
+  topClients: { restaurantId: string; name: string; paidYear: number }[];
+  currency: string;
+}
+
+/**
+ * Panorama financiero completo de la plataforma: ingresos históricos,
+ * cuentas por cobrar (con contacto para recordatorios) y pagos
+ * registrados. 3 queries. Para /super/finanzas.
+ */
+export const getFinanceOverview = cache(async (): Promise<FinanceOverview> => {
+  const db = createServiceClient();
+
+  const [{ data: restaurants }, { data: configs }, { data: invoices }] = await Promise.all([
+    db.from('restaurants').select('id, name, slug, status, whatsapp_number, contact_email'),
+    db.from('restaurant_billing').select('*'),
+    db.from('invoices').select('*').limit(20000),
+  ]);
+
+  const restMap = new Map<string, { name: string; slug: string; status: string; whatsapp: string | null; email: string | null }>();
+  for (const r of restaurants ?? []) {
+    restMap.set(r.id as string, {
+      name: (r.name as string) ?? '—',
+      slug: (r.slug as string) ?? '',
+      status: (r.status as string) ?? 'active',
+      whatsapp: (r.whatsapp_number as string | null) ?? null,
+      email: (r.contact_email as string | null) ?? null,
+    });
+  }
+
+  const configMap = new Map<string, BillingConfig>();
+  for (const c of configs ?? []) configMap.set(c.restaurant_id as string, normConfig(c as Record<string, unknown>));
+
+  const all = (invoices ?? []).map((r) => normInvoice(r as Record<string, unknown>));
+  const today = new Date();
+
+  // ── Serie de ingresos por mes (12 meses) ──
+  const monthKeys: string[] = [];
+  {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+    d.setUTCMonth(d.getUTCMonth() - 11);
+    for (let i = 0; i < 12; i++) {
+      monthKeys.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+      d.setUTCMonth(d.getUTCMonth() + 1);
+    }
+  }
+  const monthMap = new Map<string, MonthlyIncomePoint>(monthKeys.map((m) => [m, { month: m, total: 0, count: 0 }]));
+
+  const payments: PaymentRecord[] = [];
+  let collectedYear = 0;
+  const paidByClient = new Map<string, number>();
+
+  for (const inv of all) {
+    if (inv.status !== 'PAID' || !inv.paid_at) continue;
+    const amount = inv.paid_amount ?? inv.amount;
+    const monthKey = inv.paid_at.slice(0, 7);
+    const pt = monthMap.get(monthKey);
+    if (pt) { pt.total += amount; pt.count += 1; collectedYear += amount; }
+    paidByClient.set(inv.restaurant_id, (paidByClient.get(inv.restaurant_id) ?? 0) + (pt ? amount : 0));
+    payments.push({
+      invoiceId: inv.id,
+      restaurantId: inv.restaurant_id,
+      restaurantName: restMap.get(inv.restaurant_id)?.name ?? '—',
+      concept: inv.concept,
+      description: inv.description,
+      period: inv.period,
+      amount,
+      currency: inv.currency,
+      paidAt: inv.paid_at,
+      method: inv.payment_method,
+    });
+  }
+  payments.sort((a, b) => (a.paidAt < b.paidAt ? 1 : -1));
+
+  const thisMonthKey = monthKeys[11];
+  const lastMonthKey = monthKeys[10];
+  const collectedThisMonth = monthMap.get(thisMonthKey)?.total ?? 0;
+  const collectedLastMonth = monthMap.get(lastMonthKey)?.total ?? 0;
+
+  // ── Cuentas por cobrar ──
+  const pendingByRest = new Map<string, ReceivableInvoice[]>();
+  for (const inv of all) {
+    if (inv.status !== 'PENDING') continue;
+    const arr = pendingByRest.get(inv.restaurant_id) ?? [];
+    arr.push({
+      id: inv.id,
+      description: inv.description,
+      concept: inv.concept,
+      amount: inv.amount,
+      dueDate: inv.due_date,
+      overdue: isOverdue(inv, today),
+    });
+    pendingByRest.set(inv.restaurant_id, arr);
+  }
+
+  const lastPaidByRest = new Map<string, string>();
+  for (const p of payments) {
+    if (!lastPaidByRest.has(p.restaurantId)) lastPaidByRest.set(p.restaurantId, p.paidAt);
+  }
+
+  const receivables: ReceivableRow[] = [];
+  let pendingTotal = 0;
+  let overdueTotal = 0;
+  for (const [rid, invs] of pendingByRest) {
+    const meta = restMap.get(rid);
+    if (!meta) continue;
+    const cfg = configMap.get(rid);
+    const pend = invs.reduce((s, i) => s + i.amount, 0);
+    const over = invs.filter((i) => i.overdue).reduce((s, i) => s + i.amount, 0);
+    pendingTotal += pend;
+    overdueTotal += over;
+    invs.sort((a, b) => (a.dueDate ?? '9999') < (b.dueDate ?? '9999') ? -1 : 1);
+    receivables.push({
+      restaurantId: rid,
+      name: meta.name,
+      slug: meta.slug,
+      status: meta.status,
+      whatsapp: meta.whatsapp,
+      email: meta.email,
+      currency: cfg?.currency ?? 'GTQ',
+      pendingTotal: pend,
+      overdueTotal: over,
+      invoices: invs,
+      lastPaidAt: lastPaidByRest.get(rid) ?? null,
+    });
+  }
+  // Vencidos primero, luego por monto pendiente.
+  receivables.sort((a, b) => (b.overdueTotal - a.overdueTotal) || (b.pendingTotal - a.pendingTotal));
+
+  const mrr = [...configMap.values()].filter((c) => c.active).reduce((s, c) => s + c.monthly_fee, 0);
+  const activeBilling = [...configMap.values()].filter((c) => c.active && c.monthly_fee > 0).length;
+
+  const topClients = [...paidByClient.entries()]
+    .map(([restaurantId, paidYear]) => ({ restaurantId, name: restMap.get(restaurantId)?.name ?? '—', paidYear }))
+    .filter((t) => t.paidYear > 0)
+    .sort((a, b) => b.paidYear - a.paidYear)
+    .slice(0, 8);
+
+  return {
+    incomeByMonth: monthKeys.map((m) => monthMap.get(m)!),
+    collectedThisMonth,
+    collectedLastMonth,
+    collectedYear,
+    mrr,
+    pendingTotal,
+    overdueTotal,
+    activeBilling,
+    payments,
+    receivables,
+    topClients,
+    currency: 'GTQ',
+  };
+});
+
 /* ── Dashboard global de cobros (Super Admin) ──────────────── */
 
 export interface BillingRow {
@@ -367,7 +583,7 @@ export interface BillingDashboard {
 
 /**
  * Tablero completo de cobros: cruza restaurantes + config + facturas
- * + tráfico/ventas (30 días) en pocas queries. Para /super/cobros.
+ * + tráfico/ventas (30 días) en pocas queries. Para /super/finanzas/cobranza.
  */
 export const getBillingDashboard = cache(async (): Promise<BillingDashboard> => {
   const db = createServiceClient();

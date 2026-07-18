@@ -44,7 +44,7 @@ function num(formData: FormData, key: string): number {
 }
 
 function revalidateBilling(restaurantId?: string) {
-  revalidatePath('/super/cobros');
+  revalidatePath('/super/finanzas', 'layout');
   revalidatePath('/super/metricas');
   revalidatePath('/admin/suscripcion');
   if (restaurantId) revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');

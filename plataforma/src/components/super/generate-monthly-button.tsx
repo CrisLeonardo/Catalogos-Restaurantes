@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { generateMonthlyInvoices, recomputeAutoPrices, type BillingState } from '@/lib/actions/billing';
 
-/* Acciones de cobro para /super/cobros. El cron diario ya genera y procesa
+/* Acciones de cobro para Finanzas > Cobranza. El cron diario ya genera y procesa
    impago solo; estos botones son el respaldo manual del mismo motor. */
 export default function GenerateMonthlyButton() {
   const [genState, genAction, genPending] = useActionState<BillingState, FormData>(

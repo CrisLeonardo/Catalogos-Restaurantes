@@ -17,7 +17,7 @@ const NAV = [
   { href: '/super/restaurantes',  label: 'Restaurantes',  icon: 'utensils' },
   { href: '/super/grupos',        label: 'Grupos',        icon: 'users' },
   { href: '/super/metricas',      label: 'Métricas',      icon: 'chart' },
-  { href: '/super/cobros',        label: 'Cobros',        icon: 'wallet' },
+  { href: '/super/finanzas',      label: 'Finanzas',      icon: 'wallet' },
   { href: '/super/configuracion', label: 'Configuración', icon: 'settings' },
 ];
 
@@ -27,7 +27,8 @@ const TITLES: [string, string][] = [
   ['/super/grupos/new',       'Nuevo grupo'],
   ['/super/grupos',           'Grupos'],
   ['/super/metricas',         'Métricas'],
-  ['/super/cobros',           'Cobros'],
+  ['/super/finanzas',         'Finanzas'],
+  ['/super/cobros',           'Finanzas'],
   ['/super/configuracion',    'Configuración'],
 ];
 
