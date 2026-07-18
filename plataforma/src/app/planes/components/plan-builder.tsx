@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import {
-  PLANS, PUBLIC_PLANS, ADDON_MODULES, isModuleIncluded, planAddonCost, isAddonAvailable,
+  PLANS, PUBLIC_PLANS, isModuleIncluded, planAddonCostWith, isAddonAvailable,
+  defaultPlanPricing, planPriceLabel,
 } from '@/lib/plans';
-import type { PlanCode } from '@/lib/plans';
+import type { PlanCode, PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import type { ActivatableModuleKey } from '@/lib/modules';
 import { Icon } from '@/components/icons';
@@ -25,14 +26,14 @@ function defaultAddonsFor(plan: PlanCode): Set<ActivatableModuleKey> {
   return new Set(ACTIVATABLE_MODULES.filter((m) => isModuleIncluded(plan, m.key)).map((m) => m.key));
 }
 
-export default function PlanBuilder() {
+export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricing?: PlanPricing }) {
   const [plan, setPlan] = useState<PlanCode>('PREMIUM');
   const [addons, setAddons] = useState<Set<ActivatableModuleKey>>(() => defaultAddonsFor('PREMIUM'));
 
   const accent = ACCENT_BY_PLAN[plan];
   const addonList = [...addons];
-  const extraCost = planAddonCost(plan, addonList);
-  const total = PLANS[plan].priceMonthly + extraCost;
+  const extraCost = planAddonCostWith(pricing, plan, addonList);
+  const total = pricing.prices[plan] + extraCost;
 
   const notIncludedSelected = useMemo(
     () => addonList.filter((k) => !isModuleIncluded(plan, k)),
@@ -79,7 +80,7 @@ export default function PlanBuilder() {
               >
                 {p.name}
                 <br />
-                <span style={{ fontSize: 11, opacity: 0.8 }}>{p.priceLabel}</span>
+                <span style={{ fontSize: 11, opacity: 0.8 }}>{planPriceLabel(pricing, code)}</span>
               </button>
             );
           })}
@@ -117,7 +118,7 @@ export default function PlanBuilder() {
                 <span style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>{m.label}</div>
                   <div style={{ fontSize: 11, color: included ? '#4ade80' : 'var(--u-text-4)', fontWeight: included ? 700 : 500 }}>
-                    {included ? 'Incluido en tu plan' : `Q${ADDON_MODULES[m.key].price}/mes`}
+                    {included ? 'Incluido en tu plan' : `Q${pricing.modulePrices[m.key] ?? 0}/mes`}
                   </div>
                 </span>
               </button>
@@ -155,11 +156,11 @@ export default function PlanBuilder() {
 
         {notIncludedSelected.length > 0 && (
           <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
-            {fmtQ(PLANS[plan].priceMonthly)} de {PLANS[plan].name} + {notIncludedSelected.map((k) => ADDON_MODULES[k].price).reduce((a, b) => a + b, 0) > 0 ? (
+            {fmtQ(pricing.prices[plan])} de {PLANS[plan].name} + {notIncludedSelected.map((k) => pricing.modulePrices[k] ?? 0).reduce((a, b) => a + b, 0) > 0 ? (
               <>
                 {notIncludedSelected.map((k, i) => (
                   <span key={k}>
-                    {i > 0 ? ' + ' : ''}{fmtQ(ADDON_MODULES[k].price)} {ACTIVATABLE_MODULES.find((m) => m.key === k)?.label}
+                    {i > 0 ? ' + ' : ''}{fmtQ(pricing.modulePrices[k] ?? 0)} {ACTIVATABLE_MODULES.find((m) => m.key === k)?.label}
                   </span>
                 ))}
               </>

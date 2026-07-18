@@ -118,6 +118,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
             <Field name="group_panel_fee"    label="Panel grupo /mes" value={pricing.groupPanelFee} />
             <Field name="setup_fee_default"  label="Implementación (default)" value={pricing.setupFeeDefault} />
             <Field name="grace_days"         label="Días de gracia (global)"  value={pricing.graceDays} step="1" />
+            <Field name="trial_days"         label="Días de prueba gratis"    value={pricing.trialDays} step="1" />
           </div>
           <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '10px 0 0', lineHeight: 1.5, fontStyle: 'italic' }}>
             El descuento por volumen de sucursales (10% / 15% / 20% según el tamaño del grupo)

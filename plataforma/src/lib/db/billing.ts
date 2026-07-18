@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
-import { PLANS, ADDON_MODULES, type PlanCode } from '@/lib/plans';
+import { PLANS, ADDON_MODULES, type PlanCode, type PlanPricing } from '@/lib/plans';
 import type { ActivatableModuleKey } from '@/lib/modules';
 
 /* ============================================================
@@ -213,6 +213,28 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
     autoSuspend:        b('billing_auto_suspend', true),
     autoGenerate:       b('billing_auto_generate', true),
     trialDays:          n('trial_days',            30),
+  };
+});
+
+/** Precios vigentes en la forma que consumen las superficies públicas
+ *  (landing, /planes, /registro, suscripción, upsells del panel).
+ *  Única puerta para MOSTRAR precios: refleja los overrides que el
+ *  super admin guarda en /super/configuracion. */
+export const getEffectivePlanPricing = cache(async (): Promise<PlanPricing> => {
+  const s = await getPricingSettings();
+  return {
+    prices: {
+      BASICO: s.basico,
+      ESTANDAR: s.estandar,
+      PREMIUM: s.premium,
+      PRO: s.pro,
+    },
+    modulePrices: s.modulePrices,
+    moduleSetupFeeFel: s.moduleSetupFeeFel,
+    groupPanelFee: s.groupPanelFee,
+    channelDiscountPer: s.channelDiscountPer,
+    channelDiscountMax: s.channelDiscountMax,
+    trialDays: s.trialDays,
   };
 });
 

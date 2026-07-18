@@ -201,6 +201,7 @@ export async function savePricingSettings(
 
   const nonNeg = (key: string) => String(Math.max(0, num(formData, key)));
   const graceDays = String(Math.min(90, Math.max(0, Math.round(num(formData, 'grace_days') || 0))));
+  const trialDays = String(Math.min(365, Math.max(0, Math.round(num(formData, 'trial_days') || 0))));
 
   // Máx canales descontables: acotado 0..2 (siempre se paga ≥1 canal).
   const channelMax = String(Math.min(2, Math.max(0, Math.round(num(formData, 'channel_discount_max') || 0))));
@@ -228,6 +229,7 @@ export async function savePricingSettings(
     { key: 'group_panel_fee',              value: nonNeg('group_panel_fee') },
     { key: 'setup_fee_default',            value: nonNeg('setup_fee_default') },
     { key: 'billing_grace_days',           value: graceDays },
+    { key: 'trial_days',                   value: trialDays },
     { key: 'billing_auto_suspend',  value: formData.get('billing_auto_suspend')  === 'on' || formData.get('billing_auto_suspend')  === 'true' ? 'true' : 'false' },
     { key: 'billing_auto_generate', value: formData.get('billing_auto_generate') === 'on' || formData.get('billing_auto_generate') === 'true' ? 'true' : 'false' },
   ];
@@ -239,7 +241,12 @@ export async function savePricingSettings(
   const { data: count } = await db.rpc('leogin_apply_auto_price_all');
   revalidateBilling();
   revalidatePath('/super/configuracion');
-  return { ok: true, msg: `Precios guardados. ${Number(count ?? 0)} restaurante(s) recalculado(s).` };
+  // Las superficies PÚBLICAS muestran estos precios: hay que regenerarlas
+  // ya, no esperar el ciclo ISR (la landing '/' es dinámica y no lo necesita).
+  revalidatePath('/planes');
+  revalidatePath('/registro');
+  revalidatePath('/admin/modulos');
+  return { ok: true, msg: `Precios guardados y publicados en la web. ${Number(count ?? 0)} restaurante(s) recalculado(s).` };
 }
 
 /* ── Cobro prorrateado por lo que resta del mes ─────────────── */

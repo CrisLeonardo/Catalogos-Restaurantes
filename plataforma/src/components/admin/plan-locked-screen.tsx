@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
-import { PLANS } from '@/lib/plans';
+import { planPriceLabel } from '@/lib/plans';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 
 interface Props {
   feature: string;
@@ -9,8 +10,10 @@ interface Props {
 }
 
 /** Bloqueo de página completa para funciones exclusivas de Premium (no vendibles
-   a la carta) a las que un plan inferior no debería poder entrar ni por URL directa. */
-export default function PlanLockedScreen({ feature, description, icon = 'userPlus' }: Props) {
+   a la carta) a las que un plan inferior no debería poder entrar ni por URL directa.
+   Server component: lee el precio vigente directo de la BD. */
+export default async function PlanLockedScreen({ feature, description, icon = 'userPlus' }: Props) {
+  const pricing = await getEffectivePlanPricing();
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div className="glass-solid anim-fade-up" style={{ maxWidth: 440, width: '100%', borderRadius: 22, padding: '32px 26px', textAlign: 'center' }}>
@@ -28,7 +31,7 @@ export default function PlanLockedScreen({ feature, description, icon = 'userPlu
           className="press btn-accent"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, textDecoration: 'none', color: '#fff' }}
         >
-          <Icon name="sparkle" size={15} /> Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
+          <Icon name="sparkle" size={15} /> Actualizar a Premium — {planPriceLabel(pricing, 'PREMIUM')}
         </Link>
       </div>
     </div>

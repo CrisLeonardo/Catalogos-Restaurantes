@@ -188,6 +188,68 @@ export function isAddonAvailable(key: ActivatableModuleKey): boolean {
   return !ADDON_MODULES[key]?.comingSoon;
 }
 
+/* ── Precios efectivos (platform_settings puede sobreescribirlos) ──
+   Los montos de PLANS/ADDON_MODULES son los DEFAULTS de fábrica. El
+   super admin puede cambiarlos en /super/configuracion sin tocar
+   código; ese override vive en platform_settings y llega a la UI en
+   esta forma. Toda superficie que muestre un precio debe usar un
+   PlanPricing (el servidor lo obtiene con getEffectivePlanPricing()
+   de lib/db/billing; los componentes cliente lo reciben por props o
+   por usePlanPricing()). */
+
+export interface PlanPricing {
+  /** Precio mensual vigente de cada plan. */
+  prices: Record<PlanCode, number>;
+  /** Precio mensual vigente de cada módulo a la carta. */
+  modulePrices: Record<ActivatableModuleKey, number>;
+  /** Cobro único de activación de FEL. */
+  moduleSetupFeeFel: number;
+  /** Mensualidad del panel de grupo (franquicias). */
+  groupPanelFee: number;
+  /** Descuento "plan a tu medida" por método de pedido desactivado. */
+  channelDiscountPer: number;
+  channelDiscountMax: number;
+  /** Días de prueba gratis del registro self-serve. */
+  trialDays: number;
+}
+
+/** Precios de fábrica (fallback cuando no hay override cargado). */
+export function defaultPlanPricing(): PlanPricing {
+  return {
+    prices: Object.fromEntries(
+      PLAN_ORDER.map((code) => [code, PLANS[code].priceMonthly]),
+    ) as Record<PlanCode, number>,
+    modulePrices: Object.fromEntries(
+      (Object.keys(ADDON_MODULES) as ActivatableModuleKey[]).map((k) => [k, ADDON_MODULES[k].price]),
+    ) as Record<ActivatableModuleKey, number>,
+    moduleSetupFeeFel: ADDON_MODULES.fel.setupFee ?? 500,
+    groupPanelFee: GROUP_PANEL_FEE,
+    channelDiscountPer: 50,
+    channelDiscountMax: 2,
+    trialDays: 30,
+  };
+}
+
+/** "Q599" — precio vigente del plan, sin decimales. */
+export function planPriceQ(pricing: PlanPricing, code: PlanCode): string {
+  return 'Q' + pricing.prices[code].toLocaleString('es-GT', { maximumFractionDigits: 0 });
+}
+
+/** "Q599 / mes" — etiqueta de precio vigente (reemplaza a PLANS[x].priceLabel). */
+export function planPriceLabel(pricing: PlanPricing, code: PlanCode): string {
+  return `${planPriceQ(pricing, code)} / mes`;
+}
+
+/** Costo mensual de una lista de módulos con precios vigentes (Q0 si el plan los incluye). */
+export function planAddonCostWith(pricing: PlanPricing, plan: PlanCode, addons: ActivatableModuleKey[]): number {
+  return addons.reduce((sum, key) => sum + (isModuleIncluded(plan, key) ? 0 : (pricing.modulePrices[key] ?? 0)), 0);
+}
+
+/** Total mensual con precios vigentes: plan base + módulos no incluidos. */
+export function planTotalWith(pricing: PlanPricing, plan: PlanCode, addons: ActivatableModuleKey[]): number {
+  return pricing.prices[plan] + planAddonCostWith(pricing, plan, addons);
+}
+
 /** Módulos incluidos SIN costo adicional en cada plan. */
 export const INCLUDED_MODULES: Record<PlanCode, ActivatableModuleKey[]> = {
   BASICO: [],

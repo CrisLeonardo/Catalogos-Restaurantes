@@ -3,7 +3,8 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PUBLIC_PLANS, type PlanCode } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, planPriceQ, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 
 /* ── Contacto (configurable por env; cae a valores por defecto) ──────────
    Define NEXT_PUBLIC_CONTACT_WHATSAPP (ej. "50212345678") para que el CTA
@@ -60,15 +61,19 @@ const LANDING_PLAN_POINTS: Record<PlanCode, string[]> = {
   PRO: [],
 };
 
-const LANDING_PLANS = PUBLIC_PLANS.map((code) => ({
-  code,
-  name: PLANS[code].name,
-  price: `Q${PLANS[code].priceMonthly}`,
-  tagline: PLANS[code].tagline,
-  points: LANDING_PLAN_POINTS[code],
-  accent: PLANS[code].highlight,
-  badge: PLANS[code].badge,
-}));
+/* Los precios salen del PlanPricing vigente (overrides del super admin),
+   no del default de plans.ts — por eso esto es función y no constante. */
+function landingPlans(pricing: PlanPricing) {
+  return PUBLIC_PLANS.map((code) => ({
+    code,
+    name: PLANS[code].name,
+    price: planPriceQ(pricing, code),
+    tagline: PLANS[code].tagline,
+    points: LANDING_PLAN_POINTS[code],
+    accent: PLANS[code].highlight,
+    badge: PLANS[code].badge,
+  }));
+}
 
 const FAQS = [
   { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres, lo configuramos por ti.' },
@@ -82,7 +87,7 @@ const FAQS = [
 /* Datos estructurados (JSON-LD): ficha de producto + FAQ para que Google
    entienda qué es Leogin, muestre precios y despliegue las preguntas
    frecuentes como rich results en la búsqueda. */
-function structuredData() {
+function structuredData(pricing: PlanPricing) {
   const root = rootDomainForUrls();
   const isLocal = root.includes('localhost') || root.startsWith('127.');
   const url = `${isLocal ? 'http' : 'https'}://${root}`;
@@ -100,7 +105,7 @@ function structuredData() {
       offers: PUBLIC_PLANS.map((code) => ({
         '@type': 'Offer',
         name: `Plan ${PLANS[code].name}`,
-        price: PLANS[code].priceMonthly,
+        price: pricing.prices[code],
         priceCurrency: 'GTQ',
         category: 'subscription',
       })),
@@ -117,7 +122,8 @@ function structuredData() {
   ];
 }
 
-export default function LeoginLanding() {
+export default async function LeoginLanding() {
+  const pricing = await getEffectivePlanPricing();
   const demoUrl = subdomainUrl(DEMO_SLUG);
   const ctaHref = CONTACT_WA
     ? `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent('Hola, quiero una demo de Leogin para mi restaurante')}`
@@ -127,7 +133,7 @@ export default function LeoginLanding() {
     <div style={{ width: '100%' }}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(pricing)) }}
       />
       {/* ── Header ──────────────────────────────────────────── */}
       <header
@@ -395,7 +401,7 @@ export default function LeoginLanding() {
             Empieza gratis. Sin comisiones por pedido. Cancela cuando quieras.
           </p>
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', alignItems: 'start' }}>
-            {LANDING_PLANS.map((p) => (
+            {landingPlans(pricing).map((p) => (
               <Glass
                 key={p.code}
                 style={{

@@ -20,7 +20,8 @@ import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
 import { can, isMeseroOnly } from '@/lib/permissions';
-import { PLANS, type PlanCode } from '@/lib/plans';
+import { PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
+import { usePlanPricing } from '@/components/plan-pricing-context';
 
 const NAV_KEY = 'admin-nav-collapsed';
 
@@ -153,6 +154,7 @@ export default function AdminShell({
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
+  const pricing = usePlanPricing();
   // Secciones del nav plegadas: se leen de localStorage de forma SSR-safe
   // (sin setState en efecto). 'Cuenta' arranca plegada.
   const collapsed = usePersisted(NAV_KEY, readNav, NAV_DEFAULT);
@@ -323,7 +325,7 @@ export default function AdminShell({
           className="admin-navlink press"
           data-active="0"
           data-tour-step={n.key}
-          title={`${n.label} requiere Premium (${PLANS.PREMIUM.priceLabel})`}
+          title={`${n.label} requiere Premium (${planPriceLabel(pricing, 'PREMIUM')})`}
           style={{ opacity: 0.55 }}
         >
           <Icon name={n.icon} size={18} />

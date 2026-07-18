@@ -7,7 +7,7 @@ import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
 import { findTemplate } from '@/lib/theme/templates';
 import { signupRestaurant, type SignupState } from '@/lib/actions/signup';
-import { PLANS } from '@/lib/plans';
+import { defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 
 const empty: SignupState = null;
 
@@ -70,53 +70,66 @@ interface PlanCardDef {
   highlight: boolean;
 }
 
-const PLAN_CARDS: PlanCardDef[] = [
-  {
-    code: 'BASICO',
-    name: 'Básico',
-    priceLabel: `Q${PLANS.BASICO.priceMonthly}`,
-    priceUnit: '/ mes',
-    trialLabel: 'Con 30 días gratis',
-    features: [
-      { text: 'Menú digital con QR imprimible', positive: true },
-      { text: 'Productos ilimitados · 1 usuario', positive: true },
-      { text: 'Tu logo y color de marca', positive: true },
-      { text: 'Sin pedidos en línea', positive: false },
-    ],
-    highlight: false,
-  },
-  {
-    code: 'ESTANDAR',
-    name: 'Estándar',
-    priceLabel: `Q${PLANS.ESTANDAR.priceMonthly}`,
-    priceUnit: '/ mes',
-    trialLabel: 'Con 30 días gratis',
-    features: [
-      { text: 'Elige 2 de 3 modos de pedido', positive: true },
-      { text: 'Alertas en tiempo real · WhatsApp', positive: true },
-      { text: 'Productos ilimitados · 2 usuarios', positive: true },
-      { text: 'Sin límite de ventas', positive: true },
-    ],
-    highlight: false,
-  },
-  {
-    code: 'PREMIUM',
-    name: 'Premium',
-    badge: 'RECOMENDADO',
-    priceLabel: 'Gratis 30 días',
-    priceUnit: '',
-    trialLabel: `luego ${PLANS.PREMIUM.priceLabel}`,
-    features: [
-      { text: 'Para llevar, comer en local y delivery', positive: true },
-      { text: 'Panel de mesero, recetas y cupones', positive: true },
-      { text: 'Usuarios ilimitados · sin restricciones', positive: true },
-      { text: 'Finanzas, inventario y analítica', positive: true },
-    ],
-    highlight: true,
-  },
-];
+/* Los precios y los días de prueba salen del PlanPricing vigente
+   (overrides del super admin) — el servidor los pasa por props. */
+function buildPlanCards(pricing: PlanPricing): PlanCardDef[] {
+  const trial = pricing.trialDays;
+  return [
+    {
+      code: 'BASICO',
+      name: 'Básico',
+      priceLabel: planPriceQ(pricing, 'BASICO'),
+      priceUnit: '/ mes',
+      trialLabel: `Con ${trial} días gratis`,
+      features: [
+        { text: 'Menú digital con QR imprimible', positive: true },
+        { text: 'Productos ilimitados · 1 usuario', positive: true },
+        { text: 'Tu logo y color de marca', positive: true },
+        { text: 'Sin pedidos en línea', positive: false },
+      ],
+      highlight: false,
+    },
+    {
+      code: 'ESTANDAR',
+      name: 'Estándar',
+      priceLabel: planPriceQ(pricing, 'ESTANDAR'),
+      priceUnit: '/ mes',
+      trialLabel: `Con ${trial} días gratis`,
+      features: [
+        { text: 'Elige 2 de 3 modos de pedido', positive: true },
+        { text: 'Alertas en tiempo real · WhatsApp', positive: true },
+        { text: 'Productos ilimitados · 2 usuarios', positive: true },
+        { text: 'Sin límite de ventas', positive: true },
+      ],
+      highlight: false,
+    },
+    {
+      code: 'PREMIUM',
+      name: 'Premium',
+      badge: 'RECOMENDADO',
+      priceLabel: `Gratis ${trial} días`,
+      priceUnit: '',
+      trialLabel: `luego ${planPriceLabel(pricing, 'PREMIUM')}`,
+      features: [
+        { text: 'Para llevar, comer en local y delivery', positive: true },
+        { text: 'Panel de mesero, recetas y cupones', positive: true },
+        { text: 'Usuarios ilimitados · sin restricciones', positive: true },
+        { text: 'Finanzas, inventario y analítica', positive: true },
+      ],
+      highlight: true,
+    },
+  ];
+}
 
-export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
+export default function SignupWizard({
+  rootDomain,
+  pricing = defaultPlanPricing(),
+}: {
+  rootDomain: string;
+  pricing?: PlanPricing;
+}) {
+  const PLAN_CARDS = buildPlanCards(pricing);
+  const trialDays = pricing.trialDays;
   const [state, formAction, isPending] = useActionState(signupRestaurant, empty);
 
   const [step, setStep] = useState(0);
@@ -201,7 +214,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 0: Tu plan ── */}
       <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
         <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          Elige el plan con el que quieres empezar. Todos incluyen 30 días gratis.
+          Elige el plan con el que quieres empezar. Todos incluyen {trialDays} días gratis.
         </p>
         <div className="signup-plans">
           {PLAN_CARDS.map((plan) => {
@@ -275,7 +288,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
         {selectedPlan === 'ESTANDAR' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, fontWeight: 600 }}>
-              Elige 2 modos de pedido (mismo precio, {PLANS.ESTANDAR.priceLabel})
+              Elige 2 modos de pedido (mismo precio, {planPriceLabel(pricing, 'ESTANDAR')})
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {ESTANDAR_TYPE_OPTIONS.map((b) => {
@@ -379,7 +392,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
       {/* ── Paso 4: Confirmar ── */}
       <div style={{ display: step === 4 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · 30 días gratis, luego ${PLANS.PREMIUM.priceLabel}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarSummary} · ${PLANS.ESTANDAR.priceLabel} (30 días gratis)` : `Básico · ${PLANS.BASICO.priceLabel} (30 días gratis)`} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · ${trialDays} días gratis, luego ${planPriceLabel(pricing, 'PREMIUM')}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarSummary} · ${planPriceLabel(pricing, 'ESTANDAR')} (${trialDays} días gratis)` : `Básico · ${planPriceLabel(pricing, 'BASICO')} (${trialDays} días gratis)`} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Estilo" value={findTemplate(templateId)?.name ?? 'Clásico'} />
@@ -388,7 +401,7 @@ export default function SignupWizard({ rootDomain }: { rootDomain: string }) {
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
             <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent)' }} />
-            30 días de prueba gratis
+            {trialDays} días de prueba gratis
           </div>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
             {selectedPlan === 'BASICO'

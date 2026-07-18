@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
-import { PLANS } from '@/lib/plans';
+import { planPriceLabel, planPriceQ } from '@/lib/plans';
+import { usePlanPricing } from '@/components/plan-pricing-context';
 
 interface UpgradeFeature {
   icon: string;
@@ -84,9 +85,10 @@ interface Props {
 
 export default function LockedFeatureSection({ restaurantName, planActual = 'BASICO' }: Props) {
   const [selected, setSelected] = useState<UpgradeFeature | null>(null);
+  const pricing = usePlanPricing();
 
   const isEstandar = planActual === 'ESTANDAR';
-  const currentPrice = `Q${isEstandar ? PLANS.ESTANDAR.priceMonthly : PLANS.BASICO.priceMonthly}`;
+  const currentPrice = planPriceQ(pricing, isEstandar ? 'ESTANDAR' : 'BASICO');
   const currentPlanLabel = isEstandar ? 'Estándar' : 'Básico';
   const fromPlanLabel = isEstandar ? 'de Estándar' : 'de Básico';
 
@@ -103,7 +105,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
 
   const headerDesc = isEstandar
     ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas delivery, comer en local y todo lo siguiente.'
-    : `Están incluidas en Premium (${PLANS.PREMIUM.priceLabel}). Toca cualquiera para ver cómo impacta tu negocio.`;
+    : `Están incluidas en Premium (${planPriceLabel(pricing, 'PREMIUM')}). Toca cualquiera para ver cómo impacta tu negocio.`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -192,7 +194,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
           }}
         >
           <Icon name="sparkle" size={14} />
-          Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
+          Actualizar a Premium — {planPriceLabel(pricing, 'PREMIUM')}
         </a>
         <a
           href="/admin/suscripcion"
@@ -284,7 +286,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                   <span>{selected.premiumLabel}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', marginTop: 12, lineHeight: 1 }}>
-                  Q{PLANS.PREMIUM.priceMonthly}
+                  {planPriceQ(pricing, 'PREMIUM')}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · sin límite de ventas</div>
               </div>

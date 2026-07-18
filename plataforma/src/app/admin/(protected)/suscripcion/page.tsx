@@ -8,7 +8,8 @@ import {
   isOverdue, isOnTrial, trialDaysLeft, planLabel,
   getFeeBreakdown, type Invoice, type FeeBreakdown,
 } from '@/lib/db/billing';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, type PlanCode } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, planPriceLabel, type PlanCode } from '@/lib/plans';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { moduleMeta, type ActivatableModuleKey } from '@/lib/modules';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
@@ -65,9 +66,10 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, feeBreakdown] = await Promise.all([
+  const [billingResult, feeBreakdown, pricing] = await Promise.all([
     getMyBilling(restaurantId),
     getFeeBreakdown(restaurantId),
+    getEffectivePlanPricing(),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
 
@@ -168,7 +170,7 @@ export default async function SuscripcionPage() {
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 20, color: 'var(--u-text)' }}>
-              {planInfo?.priceLabel ?? '—'}
+              {planInfo ? planPriceLabel(pricing, currentPlan) : '—'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
               {planInfo?.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
@@ -212,7 +214,7 @@ export default async function SuscripcionPage() {
           className="p-5"
           style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium ({PLANS.PREMIUM.priceLabel}) desbloqueas</div>
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
@@ -254,7 +256,7 @@ export default async function SuscripcionPage() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
             <Button render={<a href={upgradeHref(restaurantName, nextPlanInfo.name)} target="_blank" rel="noopener noreferrer" />} className="rounded-adm-full">
               <Icon name="sparkle" size={14} />
-              Actualizar a Premium — {PLANS.PREMIUM.priceLabel}
+              Actualizar a Premium — {planPriceLabel(pricing, 'PREMIUM')}
             </Button>
             <Button render={<a href={planesUrl} target="_blank" rel="noopener noreferrer" />} variant="secondary" className="rounded-adm-full">
               Ver todos los planes <Icon name="chevronRight" size={14} />
@@ -270,7 +272,7 @@ export default async function SuscripcionPage() {
             Siguiente plan disponible
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)', marginTop: 4 }}>
-            {nextPlanInfo.name} — {nextPlanInfo.priceLabel}
+            {nextPlanInfo.name} — {nextPlanCode ? planPriceLabel(pricing, nextPlanCode) : ''}
           </div>
           <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.5 }}>
             {nextPlanInfo.tagline}
@@ -312,7 +314,7 @@ export default async function SuscripcionPage() {
                       {p.name}
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>
-                      {p.priceLabel}
+                      {planPriceLabel(pricing, code)}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
                       {p.tagline}

@@ -14,7 +14,7 @@ import RestaurantUsers from '@/components/super/restaurant-users';
 import BillingManager from '@/components/super/billing-manager';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import DeleteButton from '@/components/admin/delete-button';
-import { getBillingConfig, getInvoices, getPricingSettings, computeSuggestedFee, planLabel, getFeeBreakdown } from '@/lib/db/billing';
+import { getBillingConfig, getInvoices, getPricingSettings, getEffectivePlanPricing, computeSuggestedFee, planLabel, getFeeBreakdown } from '@/lib/db/billing';
 import {
   deleteRestaurant,
   duplicateRestaurant,
@@ -51,13 +51,14 @@ export default async function EditRestaurantePage({
   if (!row) notFound();
 
   const theme = row.restaurant_themes[0] ?? null;
-  const [users, templates, billingConfig, invoices, suggestedFee, pricing, feeBreakdown] = await Promise.all([
+  const [users, templates, billingConfig, invoices, suggestedFee, pricing, planPricing, feeBreakdown] = await Promise.all([
     getRestaurantUsers(id),
     listThemeTemplates(),
     getBillingConfig(id),
     getInvoices(id),
     computeSuggestedFee(id),
     getPricingSettings(),
+    getEffectivePlanPricing(),
     getFeeBreakdown(id),
   ]);
   const resolved = resolveTheme(theme as ThemeRow | null, row.slug, {
@@ -137,7 +138,7 @@ export default async function EditRestaurantePage({
       <section>
         <SectionTitle>Plan y módulos</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <PlanEditor key={row.id} restaurant={row} />
+          <PlanEditor key={row.id} restaurant={row} pricing={planPricing} />
           {resolved.config.orderTypes && (
             <OrderTypesEditor
               key={row.id}

@@ -3,14 +3,19 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import PlanBuilder from './components/plan-builder';
-import { PLANS, PUBLIC_PLANS, ADDON_MODULES, INCLUDED_MODULES, BRANCH_DISCOUNT_TIERS, GROUP_PANEL_FEE, isAddonAvailable } from '@/lib/plans';
-import type { PlanCode } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, BRANCH_DISCOUNT_TIERS, isAddonAvailable, planPriceLabel } from '@/lib/plans';
+import type { PlanCode, PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 
 export const metadata = {
   title: 'Planes y precios — Leogin',
-  description: 'Menú digital con pedidos en línea para tu restaurante. Planes fijos desde Q149/mes, sin cobro por tus ventas, con 30 días de prueba gratis.',
+  description: 'Menú digital con pedidos en línea para tu restaurante. Planes de precio fijo, sin cobro por tus ventas, con 30 días de prueba gratis.',
 };
+
+// Los precios pueden cambiar desde /super/configuracion: la página se
+// regenera sola (ISR) y además savePricingSettings la revalida al guardar.
+export const revalidate = 600;
 
 const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
@@ -38,32 +43,34 @@ const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
   { label: 'Descuento "plan a tu medida" por canal', key: 'hasChannelDiscount' },
 ];
 
-const FAQS = [
-  {
-    q: '¿Por qué no cobran según lo que vendo?',
-    a: 'Porque no queremos ser un costo que crece cuando te va mejor. Pagas un precio fijo por el plan y los módulos que usas — igual Q100 en un mes flojo que en tu mejor mes. Es la misma razón por la que existimos: reemplazar el modelo de comisión de las apps de delivery (18-30% por pedido) por algo predecible.',
-  },
-  {
-    q: '¿Qué pasa si mi restaurante crece mucho?',
-    a: 'Nada cambia en tu cobro. No hay tope de ventas ni de pedidos en ningún plan. Solo subes de plan cuando necesitas más funciones (más usuarios, panel de mesero, facturación electrónica) — nunca porque vendiste más.',
-  },
-  {
-    q: '¿Cómo funcionan los módulos a la carta?',
-    a: 'Reservaciones, llamar al mesero, encuestas, cupones, lealtad y recetas se pueden activar sobre cualquier plan por su precio individual. Premium ya los incluye todos sin costo extra. Activas solo lo que tu restaurante realmente usa.',
-  },
-  {
-    q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
-    a: `Básico (${PLANS.BASICO.priceLabel}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${PLANS.ESTANDAR.priceLabel}) agrega pedidos en línea con avisos en tiempo real, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${PLANS.PREMIUM.priceLabel}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, finanzas/analítica/inventario y todos los módulos disponibles sin costo extra.`,
-  },
-  {
-    q: '¿Cómo funciona Multisucursal / Franquicias?',
-    a: 'Cada sucursal paga su propio plan según lo que necesita, con descuento por volumen a partir de la 2a sucursal del grupo (10% con 2-4 sucursales, 15% con 5-9, 20% con 10+). El grupo paga además ' + `Q${GROUP_PANEL_FEE}/mes` + ' por el panel consolidado que muestra todas las sucursales juntas.',
-  },
-  {
-    q: '¿Hay periodo de prueba?',
-    a: '30 días gratis en cualquier plan, sin tarjeta. Si decides no continuar, tu menú simplemente se pausa — no hay cobro ni compromiso.',
-  },
-];
+function buildFaqs(pricing: PlanPricing) {
+  return [
+    {
+      q: '¿Por qué no cobran según lo que vendo?',
+      a: 'Porque no queremos ser un costo que crece cuando te va mejor. Pagas un precio fijo por el plan y los módulos que usas — igual en un mes flojo que en tu mejor mes. Es la misma razón por la que existimos: reemplazar el modelo de comisión de las apps de delivery (18-30% por pedido) por algo predecible.',
+    },
+    {
+      q: '¿Qué pasa si mi restaurante crece mucho?',
+      a: 'Nada cambia en tu cobro. No hay tope de ventas ni de pedidos en ningún plan. Solo subes de plan cuando necesitas más funciones (más usuarios, panel de mesero, facturación electrónica) — nunca porque vendiste más.',
+    },
+    {
+      q: '¿Cómo funcionan los módulos a la carta?',
+      a: 'Reservaciones, llamar al mesero, encuestas, cupones, lealtad y recetas se pueden activar sobre cualquier plan por su precio individual. Premium ya los incluye todos sin costo extra. Activas solo lo que tu restaurante realmente usa.',
+    },
+    {
+      q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
+      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, finanzas/analítica/inventario y todos los módulos disponibles sin costo extra.`,
+    },
+    {
+      q: '¿Cómo funciona Multisucursal / Franquicias?',
+      a: 'Cada sucursal paga su propio plan según lo que necesita, con descuento por volumen a partir de la 2a sucursal del grupo (10% con 2-4 sucursales, 15% con 5-9, 20% con 10+). El grupo paga además ' + `Q${pricing.groupPanelFee}/mes` + ' por el panel consolidado que muestra todas las sucursales juntas.',
+    },
+    {
+      q: '¿Hay periodo de prueba?',
+      a: `${pricing.trialDays} días gratis en cualquier plan, sin tarjeta. Si decides no continuar, tu menú simplemente se pausa — no hay cobro ni compromiso.`,
+    },
+  ];
+}
 
 function fmtQ(n: number) {
   return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
@@ -80,7 +87,9 @@ function PlanFeatureRow({ value }: { value: boolean | number | string }) {
   return <span style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>{value === 'unlimited' ? '∞' : String(value)}</span>;
 }
 
-export default function PlanesPage() {
+export default async function PlanesPage() {
+  const pricing = await getEffectivePlanPricing();
+  const FAQS = buildFaqs(pricing);
   return (
     <div style={{ width: '100%', minHeight: '100svh' }}>
       {/* Header */}
@@ -122,7 +131,7 @@ export default function PlanesPage() {
             padding: '11px 24px', borderRadius: 99, fontSize: 14, fontWeight: 700,
             textDecoration: 'none', background: 'var(--brand-accent)', color: '#fff',
           }}>
-            30 días gratis · sin tarjeta
+            {pricing.trialDays} días gratis · sin tarjeta
           </Link>
           <a
             href="#armar-plan"
@@ -176,7 +185,7 @@ export default function PlanesPage() {
 
                 <div>
                   <div style={{ fontSize: 32, fontWeight: 800, color: accent, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
-                    {p.priceLabel}
+                    {planPriceLabel(pricing, code)}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 5 }}>
                     {p.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
@@ -257,7 +266,8 @@ export default function PlanesPage() {
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
           {ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).map((m) => {
-            const addon = ADDON_MODULES[m.key];
+            const price = pricing.modulePrices[m.key] ?? 0;
+            const setupFee = m.key === 'fel' ? pricing.moduleSetupFeeFel : 0;
             return (
               <Glass key={m.key} variant="quiet" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -266,8 +276,8 @@ export default function PlanesPage() {
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0, minHeight: 36 }}>{m.description}</p>
                 <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--brand-accent)', fontFamily: 'var(--font-display)' }}>
-                  {fmtQ(addon.price)}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)' }}> /mes</span>
-                  {addon.setupFee ? <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-4)' }}> + {fmtQ(addon.setupFee)} activación</span> : null}
+                  {fmtQ(price)}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)' }}> /mes</span>
+                  {setupFee ? <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-4)' }}> + {fmtQ(setupFee)} activación</span> : null}
                 </div>
               </Glass>
             );
@@ -296,11 +306,10 @@ export default function PlanesPage() {
               <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.02)' }}>
                 <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Precio mensual</td>
                 {PUBLIC_PLANS.map((code) => {
-                  const p = PLANS[code];
                   const accent = ACCENT_BY_PLAN[code];
                   return (
                     <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: accent }}>
-                      {p.priceLabel}
+                      {planPriceLabel(pricing, code)}
                     </td>
                   );
                 })}
@@ -351,7 +360,7 @@ export default function PlanesPage() {
           Elige tu plan base y marca los módulos que quieres — el precio se arma solo, y nunca depende de cuánto vendas.
         </p>
         <Glass variant="quiet" style={{ borderRadius: 20, padding: '28px 24px' }}>
-          <PlanBuilder />
+          <PlanBuilder pricing={pricing} />
         </Glass>
       </section>
 
@@ -388,7 +397,7 @@ export default function PlanesPage() {
         </Glass>
         <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 14, lineHeight: 1.6 }}>
           El panel de grupo consolidado (ver todas tus sucursales en un solo lugar) cuesta{' '}
-          {fmtQ(GROUP_PANEL_FEE)}/mes, una sola vez por grupo, sin importar cuántas sucursales tengas.
+          {fmtQ(pricing.groupPanelFee)}/mes, una sola vez por grupo, sin importar cuántas sucursales tengas.
           Para grupos de 10 o más sucursales, escríbenos: armamos un plan a medida.
         </p>
         <a
@@ -429,7 +438,7 @@ export default function PlanesPage() {
             ¿Listo para modernizar tu menú?
           </div>
           <p style={{ fontSize: 15, color: 'var(--u-text-3)', lineHeight: 1.6, marginBottom: 24 }}>
-            Empieza con 30 días gratis. Sin tarjeta, sin compromiso.
+            Empieza con {pricing.trialDays} días gratis. Sin tarjeta, sin compromiso.
             Tu menú queda en vivo el mismo día.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>

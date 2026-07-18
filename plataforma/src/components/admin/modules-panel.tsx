@@ -17,16 +17,16 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ADDON_MODULES, ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, isAddonAvailable, type PlanCode } from '@/lib/plans';
+import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, isAddonAvailable, planPriceLabel, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
 
 /** Nota de precio para un módulo según si el plan actual lo incluye gratis. */
-function modulePriceNote(plan: string | null | undefined, key: ActivatableModuleKey): string {
+function modulePriceNote(pricing: PlanPricing, plan: string | null | undefined, key: ActivatableModuleKey): string {
   const p = (plan ?? 'BASICO') as PlanCode;
   const included = INCLUDED_MODULES[p]?.includes(key);
   if (included) return 'Incluido en tu plan';
-  const addon = ADDON_MODULES[key];
-  return `Q${addon.price}/mes a la carta`;
+  return `Q${pricing.modulePrices[key] ?? 0}/mes a la carta`;
 }
 
 /** Cada modo de pedido es su propio canal independiente — comer en local,
@@ -258,6 +258,8 @@ function LockedPlanCard({ icon, label, description, priceNote }: { icon: string;
    de Premium que no se venden sueltas (mesero, finanzas/analítica) y módulos a la
    carta que aún no están activos. Oculta solo si ya tienes Premium/Pro. */
 function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modules: ModulesMap; settings: ModuleSettings }) {
+  const pricing = usePlanPricing();
+  const premiumLabel = planPriceLabel(pricing, 'PREMIUM');
   const f = PLANS[plan];
   const missingAddons = ACTIVATABLE_MODULES.filter(
     (m) => isAddonAvailable(m.key) && !INCLUDED_MODULES[plan]?.includes(m.key) && !isModuleActive(modules, settings, m.key),
@@ -281,7 +283,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
             icon="userPlus"
             label="Panel de mesero y mapa de mesas"
             description="Tu equipo toma pedidos desde una tablet en cada mesa y ves el mapa del salón en vivo. Es de todo el panel, no se compra por módulo."
-            priceNote={`Incluido en Premium (${PLANS.PREMIUM.priceLabel})`}
+            priceNote={`Incluido en Premium (${premiumLabel})`}
           />
         )}
         {missingAnalytics && (
@@ -289,7 +291,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
             icon="chart"
             label="Finanzas, analítica e inventario"
             description="Estadísticas de ventas, control de inventario y costos, personal con roles, y promociones automáticas."
-            priceNote={`Incluido en Premium (${PLANS.PREMIUM.priceLabel})`}
+            priceNote={`Incluido en Premium (${premiumLabel})`}
           />
         )}
         {missingAddons.map((m) => (
@@ -298,7 +300,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
             icon={m.icon}
             label={m.label}
             description={m.description}
-            priceNote={`Incluido en Premium · o Q${ADDON_MODULES[m.key].price}/mes a la carta`}
+            priceNote={`Incluido en Premium · o Q${pricing.modulePrices[m.key] ?? 0}/mes a la carta`}
           />
         ))}
       </div>
@@ -312,6 +314,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
 
 export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, channelDiscountPer = 50, channelDiscountMax = 2 }: Props) {
   const router = useRouter();
+  const pricing = usePlanPricing();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -397,7 +400,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               El plan <strong style={{ color: 'var(--u-text-2)' }}>Básico</strong> es solo menú digital — no incluye pedidos en línea.
-              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent)' }}>Estándar ({PLANS.ESTANDAR.priceLabel})</strong>.{' '}
+              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent)' }}>Estándar ({planPriceLabel(pricing, 'ESTANDAR')})</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
@@ -407,7 +410,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
             <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               Tu plan Estándar te deja elegir hasta <strong style={{ color: 'var(--u-text-2)' }}>{ESTANDAR_MAX_ORDER_TYPES} de 3 modos de pedido</strong>.
-              Para tener comer en local, para llevar y a domicilio juntos, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium ({PLANS.PREMIUM.priceLabel})</strong>.{' '}
+              Para tener comer en local, para llevar y a domicilio juntos, cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium ({planPriceLabel(pricing, 'PREMIUM')})</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
@@ -549,7 +552,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                       m={m}
                       active={isModuleActive(modules, settings, m.key)}
                       supportHref={supportHref}
-                      priceNote={modulePriceNote(planActual, m.key)}
+                      priceNote={modulePriceNote(pricing, planActual, m.key)}
                     />
                   );
                 }
@@ -562,7 +565,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     on={on}
                     busy={busy}
                     onToggle={(next) => toggle(m.key, next)}
-                    priceNote={modulePriceNote(planActual, m.key)}
+                    priceNote={modulePriceNote(pricing, planActual, m.key)}
                   />
                 );
               })}

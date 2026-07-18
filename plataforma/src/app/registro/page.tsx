@@ -4,6 +4,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import { rootDomainForUrls } from '@/lib/tenant';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 import SignupWizard from './signup-wizard';
 
 export const metadata: Metadata = {
@@ -19,8 +20,12 @@ const PERKS = [
   { icon: 'wallet', text: '1 mes gratis · sin tarjeta · cancela cuando quieras' },
 ];
 
-export default function RegistroPage() {
+// Los precios pueden cambiar desde /super/configuracion (ISR + revalidación al guardar).
+export const revalidate = 600;
+
+export default async function RegistroPage() {
   const rootDomain = rootDomainForUrls();
+  const pricing = await getEffectivePlanPricing();
 
   return (
     <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
@@ -69,7 +74,7 @@ export default function RegistroPage() {
 
           {/* Lado derecho: wizard */}
           <Glass style={{ padding: '26px 24px' }}>
-            <SignupWizard rootDomain={rootDomain} />
+            <SignupWizard rootDomain={rootDomain} pricing={pricing} />
           </Glass>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
+import { PlanPricingProvider } from '@/components/plan-pricing-context';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
 import DesktopServerNudge from '@/components/admin/desktop-server-nudge';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
@@ -166,7 +168,12 @@ export default async function AdminProtectedLayout({
   const recetasActive = isModuleActive(mod, modSettings, 'recetas');
   const llamadaMeseroActive = isModuleActive(mod, modSettings, 'llamada_mesero');
 
+  // Precios vigentes para los upsells del panel (candados de plan, módulos,
+  // suscripción): reflejan lo que el super admin configuró, no el default.
+  const pricing = await getEffectivePlanPricing();
+
   return (
+    <PlanPricingProvider pricing={pricing}>
     <AdminShell
       restaurantName={restaurantName}
       restaurantId={currentRestaurant?.id ?? null}
@@ -202,5 +209,6 @@ export default async function AdminProtectedLayout({
       {isOperatorSession && <OperatorHeartbeat profileId={ctx.userId} />}
       {children}
     </AdminShell>
+    </PlanPricingProvider>
   );
 }

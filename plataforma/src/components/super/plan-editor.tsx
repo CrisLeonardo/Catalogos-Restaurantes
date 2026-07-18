@@ -8,7 +8,7 @@ import {
   type SuperState,
 } from '@/lib/actions/super-admin';
 import { ACTIVATABLE_MODULES, type ActivatableModuleKey } from '@/lib/modules';
-import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, ADDON_MODULES } from '@/lib/plans';
+import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, ADDON_MODULES, defaultPlanPricing, type PlanPricing } from '@/lib/plans';
 import type { Restaurant } from '@/types';
 import type { PlanCode } from '@/lib/plans';
 
@@ -62,12 +62,16 @@ function isPublicPlan(p: PlanCode): boolean {
   return (PUBLIC_PLANS as PlanCode[]).includes(p);
 }
 
-const PLAN_META: Record<PlanCode, { label: string; price: string; sub: string; badge?: string }> = Object.fromEntries(
-  PLAN_ORDER.map((code) => {
-    const p = PLANS[code];
-    return [code, { label: p.name, price: fmtQ0(p.priceMonthly), sub: p.tagline, badge: p.badge }];
-  }),
-) as Record<PlanCode, { label: string; price: string; sub: string; badge?: string }>;
+/* El precio mostrado sale del PlanPricing vigente (overrides del super
+   admin en /super/configuracion), por eso se construye con función. */
+function buildPlanMeta(pricing: PlanPricing): Record<PlanCode, { label: string; price: string; sub: string; badge?: string }> {
+  return Object.fromEntries(
+    PLAN_ORDER.map((code) => {
+      const p = PLANS[code];
+      return [code, { label: p.name, price: fmtQ0(pricing.prices[code]), sub: p.tagline, badge: p.badge }];
+    }),
+  ) as Record<PlanCode, { label: string; price: string; sub: string; badge?: string }>;
+}
 
 const ALL_PLANS: PlanCode[] = PLAN_ORDER;
 
@@ -86,8 +90,15 @@ const VALID_PLANS = new Set<string>(ALL_PLANS);
 
 const empty: SuperState = null;
 
-export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
+export default function PlanEditor({
+  restaurant,
+  pricing = defaultPlanPricing(),
+}: {
+  restaurant: Restaurant;
+  pricing?: PlanPricing;
+}) {
   const [state, formAction, isPending] = useActionState(updateRestaurantPlan, empty);
+  const PLAN_META = buildPlanMeta(pricing);
 
   const rawPlan = restaurant.plan_actual as string;
   const initialPlan: PlanCode = VALID_PLANS.has(rawPlan) ? (rawPlan as PlanCode) : 'PREMIUM';
@@ -238,9 +249,11 @@ export default function PlanEditor({ restaurant }: { restaurant: Restaurant }) {
           {ACTIVATABLE_MODULES.map((m) => {
             const included = INCLUDED_MODULES[plan].includes(m.key);
             const addon = ADDON_MODULES[m.key as ActivatableModuleKey];
+            const addonPrice = pricing.modulePrices[m.key as ActivatableModuleKey] ?? addon.price;
+            const addonSetup = m.key === 'fel' ? pricing.moduleSetupFeeFel : addon.setupFee;
             const priceNote = (included
               ? `Incluido gratis en ${PLAN_META[plan].label}`
-              : `Q${addon.price}/mes a la carta${addon.setupFee ? ` + Q${addon.setupFee} activación` : ''} — no incluido en ${PLAN_META[plan].label}`)
+              : `Q${addonPrice}/mes a la carta${addonSetup ? ` + Q${addonSetup} activación` : ''} — no incluido en ${PLAN_META[plan].label}`)
               + (addon.comingSoon ? ' · aún no se ofrece a clientes (solo tú lo activas aquí)' : '');
             return (
               <ModuleRow
