@@ -56,6 +56,26 @@ export function isAudioUnlocked(): boolean {
   return ctx?.state === 'running';
 }
 
+/**
+ * Intenta desbloquear el AudioContext SIN esperar un gesto del usuario y
+ * espera el resultado real de resume() antes de responder.
+ * getCtx()/isAudioUnlocked() disparan resume() pero no esperan la promesa,
+ * así que un chequeo síncrono justo después casi siempre reporta "bloqueado"
+ * aunque el resume() termine resolviendo solo un instante después (algunos
+ * entornos —como el WebView de Leogin Desktop— no exigen un gesto real y
+ * lo resuelven solos). Ese hueco es lo que hacía ver el botón de sonido
+ * como "apagado" en cada apertura de la app aunque el audio funcionara.
+ * Devuelve el estado ya resuelto para que el llamador actualice su UI.
+ */
+export async function tryAutoUnlockAudio(): Promise<boolean> {
+  const ctx = getCtx();
+  if (!ctx) return false;
+  if (ctx.state === 'suspended') {
+    try { await ctx.resume(); } catch { /* requiere gesto real, se resolverá con el listener */ }
+  }
+  return ctx.state === 'running';
+}
+
 /* ── Sonidos distintivos por tipo de evento ──────────────────────────── */
 
 /* Freno de ráfagas: N eventos casi simultáneos (p. ej. 15 pedidos encolados
@@ -105,60 +125,88 @@ export function playOrderSound(volume = 0.5, repeat = 1, opts?: { force?: boolea
 }
 
 /**
+ * Un solo "golpe de campana": oscilador fundamental + un parcial armónico
+ * breve (relación inarmónica ~2.4×, típica de campanas y carrillones reales)
+ * que decae más rápido que el fundamental. Ese segundo tono es lo que da el
+ * brillo metálico corto del golpe — con un solo oscilador de onda cruda
+ * (triangle/sawtooth) suena a "beep" de electrodoméstico barato en vez de a
+ * campana. Se reutiliza en mesero y cocina para que ambos suenen a la misma
+ * familia "profesional" pero con timbre/registro distintos entre sí.
+ */
+function bellStrike(
+  ctx: AudioContext,
+  freq: number,
+  t: number,
+  volume: number,
+  opts?: { duration?: number; partial?: number; partialGain?: number; wave?: OscillatorType },
+): void {
+  const duration    = opts?.duration    ?? 0.5;
+  const partial      = opts?.partial     ?? 2.42;
+  const partialGain   = opts?.partialGain ?? 0.32;
+  const wave         = opts?.wave        ?? 'sine';
+
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.value = freq;
+  osc.type = wave;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(volume, t + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  osc.start(t);
+  osc.stop(t + duration);
+
+  const osc2  = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+  osc2.frequency.value = freq * partial;
+  osc2.type = 'sine';
+  gain2.gain.setValueAtTime(0, t);
+  gain2.gain.linearRampToValueAtTime(volume * partialGain, t + 0.006);
+  gain2.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.42);
+  osc2.start(t);
+  osc2.stop(t + duration * 0.42);
+}
+
+/**
  * 🔔 Llamar al mesero
- * Ráfagas urgentes triangle sol-do-sol (880→1047→880 Hz) × repeat.
- * Deliberadamente más agresivo e insistente que el de pedidos.
+ * Campanilla de recepción: dos golpes brillantes ascendentes (sol5→do6,
+ * 784→1047 Hz) por ráfaga, timbre de campana cálida (bellStrike) en vez del
+ * "buzzer" triangle plano de antes. Registro agudo y tempo rápido para que
+ * siga sintiéndose urgente e insistente, pero reconocible como una campana
+ * real y no como una alarma genérica.
  */
 export function playWaiterSound(volume = 0.75, repeat = 3, opts?: { force?: boolean }): void {
   if (!opts?.force && burstThrottled('waiter')) return;
   const ctx = getCtx();
   if (!ctx) return;
-  const pBurst = 3;
-  const total  = repeat * pBurst;
-  for (let i = 0; i < total; i++) {
-    const burst = Math.floor(i / pBurst);
-    const pos   = i % pBurst;
-    const t = ctx.currentTime + burst * 1.1 + pos * 0.22;
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = pos === 1 ? 1047 : 880;
-    osc.type = 'triangle';
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(volume, t + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-    osc.start(t);
-    osc.stop(t + 0.35);
+  const notes = [784, 1047]; // G5 → C6
+  for (let r = 0; r < repeat; r++) {
+    const base = ctx.currentTime + r * 0.6;
+    notes.forEach((freq, i) => {
+      bellStrike(ctx, freq, base + i * 0.17, volume, { duration: 0.4, partial: 2.42, partialGain: 0.38, wave: 'sine' });
+    });
   }
 }
 
 /**
  * 👨‍🍳 Cocina — nuevo pedido en pantalla de cocina
- * "Ding-dong" sawtooth descendente (784→523 Hz).
- * Onda sawtooth y patrón descendente lo distinguen claramente de pedidos.
+ * "Ding-dong" de timbre cálido y grave (fa5→do5, 698→523 Hz) con fundamental
+ * triangle (más redondo/cálido que sine) + parcial de campana, tempo pausado.
+ * Registro más grave y contorno más lento que el de mesero para que ambos
+ * sean inconfundibles entre sí incluso a volumen bajo o de oído.
  */
 export function playKitchenSound(volume = 0.5, repeat = 1, opts?: { force?: boolean }): void {
   if (!opts?.force && burstThrottled('kitchen')) return;
   const ctx = getCtx();
   if (!ctx) return;
+  const notes: [number, number][] = [[698, 0], [523, 0.4]]; // F5 → C5
   for (let r = 0; r < repeat; r++) {
-    const base = ctx.currentTime + r * 0.9;
-    ([
-      [784, 0],
-      [523, 0.38],
-    ] as [number, number][]).forEach(([freq, offset]) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sawtooth';
-      const t = base + offset;
-      gain.gain.setValueAtTime(volume * 0.38, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-      osc.start(t);
-      osc.stop(t + 0.55);
+    const base = ctx.currentTime + r * 1.15;
+    notes.forEach(([freq, offset]) => {
+      bellStrike(ctx, freq, base + offset, volume * 0.85, { duration: 0.65, partial: 2.0, partialGain: 0.25, wave: 'triangle' });
     });
   }
 }

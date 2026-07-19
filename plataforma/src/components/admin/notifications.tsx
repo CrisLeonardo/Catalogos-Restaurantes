@@ -17,8 +17,8 @@
 
    Sonidos (ver src/lib/sounds.ts):
    · Pedido nuevo  → playOrderSound   (sine ascendente, do-mi-sol)
-   · Llamar mesero → playWaiterSound  (triangle urgente, 3 ráfagas)
-   · Cocina        → playKitchenSound (sawtooth descendente ding-dong)
+   · Llamar mesero → playWaiterSound  (campanilla aguda sol5-do6, 3 ráfagas)
+   · Cocina        → playKitchenSound (campana cálida y grave fa5-do5)
 
    kitchenMode=true → silencia pedidos y llamadas de mesero en la
    pantalla de cocina; kitchen-display.tsx maneja su propio sonido.
@@ -36,6 +36,7 @@ import {
   loadSoundSettings,
   saveSoundSettings,
   isAudioUnlocked,
+  tryAutoUnlockAudio,
   DEFAULT_SOUND_SETTINGS,
   type SoundSettings,
 } from '@/lib/sounds';
@@ -191,7 +192,15 @@ export default function AdminNotifications({
      con normalidad pero suenan en silencio. Mientras siga bloqueado, se
      muestra un indicador junto al botón de sonido (ver JSX más abajo). */
   useEffect(() => {
+    let cancelled = false;
     setAudioBlocked(!isAudioUnlocked());
+    // tryAutoUnlockAudio() espera de verdad el resultado de resume() antes de
+    // reportar el estado — un chequeo síncrono aquí mismo casi siempre daría
+    // "bloqueado" aunque el contexto termine reanudándose solo un instante
+    // después (p. ej. dentro del WebView de Leogin Desktop, que no exige un
+    // gesto real). Sin este await, el punto rojo quedaba encendido en cada
+    // apertura de la app aunque el sonido sonara con normalidad.
+    tryAutoUnlockAudio().then((unlocked) => { if (!cancelled) setAudioBlocked(!unlocked); });
     const events: (keyof DocumentEventMap)[] = ['click', 'pointerdown', 'keydown', 'touchstart'];
     const handler = () => {
       primeAudio();
@@ -199,7 +208,10 @@ export default function AdminNotifications({
       events.forEach((ev) => document.removeEventListener(ev, handler));
     };
     events.forEach((ev) => document.addEventListener(ev, handler, { once: true }));
-    return () => events.forEach((ev) => document.removeEventListener(ev, handler));
+    return () => {
+      cancelled = true;
+      events.forEach((ev) => document.removeEventListener(ev, handler));
+    };
   }, []);
 
   /* ── Detectar estado inicial ─────────────────────────────────────── */
@@ -208,23 +220,27 @@ export default function AdminNotifications({
     if (tn) {
       // Leogin Desktop: isPermissionGranted() del plugin puede devolver false
       // en cada nueva carga del webview AUNQUE Windows ya haya concedido el
-      // permiso — por eso, tras entrar a Cocina y volver (recarga de página),
-      // la campana aparecía apagada y había que "activar" de nuevo. Si el
-      // usuario ya las activó antes en este dispositivo (flag local), se
-      // re-pide el permiso en silencio: Windows responde 'granted' al instante
-      // sin mostrar ningún diálogo.
+      // permiso — por eso, tras entrar a Cocina y volver (recarga de página)
+      // o reabrir la app entera, la campana aparecía apagada un momento
+      // (o de plano se quedaba así) y había que "activar" de nuevo aunque las
+      // notificaciones reales seguían funcionando. Si el usuario ya las
+      // activó antes en este dispositivo (flag local), se muestra 'on' desde
+      // el primer render — optimista — y se confirma/corrige en silencio:
+      // Windows responde 'granted' al instante sin mostrar ningún diálogo.
+      let enabledBefore = false;
+      try { enabledBefore = localStorage.getItem(DESKTOP_NOTIF_KEY) === '1'; } catch {}
+      if (enabledBefore) setState('on');
+
       tn.isPermissionGranted()
         .then(async (granted) => {
           if (granted) { setState('on'); return; }
-          let enabledBefore = false;
-          try { enabledBefore = localStorage.getItem(DESKTOP_NOTIF_KEY) === '1'; } catch {}
           if (!enabledBefore) { setState('off'); return; }
           try {
             const perm = await tn.requestPermission();
             setState(perm === 'granted' ? 'on' : 'off');
           } catch { setState('off'); }
         })
-        .catch(() => setState('off'));
+        .catch(() => { if (!enabledBefore) setState('off'); });
       return;
     }
     if (typeof Notification === 'undefined') return;
