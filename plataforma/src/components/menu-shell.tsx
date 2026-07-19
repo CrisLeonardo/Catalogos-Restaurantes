@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { setScannedTable } from '@/lib/table-session';
+import { setScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import Portada from '@/components/menu/portada';
@@ -51,8 +51,13 @@ interface Props {
 export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
-      setScannedTable(restaurantId, initialMesa);
-      // Se borra el ?mesa= de la URL tras guardarlo: si no, cada vez que el
+      // "Añadir a inicio" guarda la URL con ?mesa= para siempre (ver
+      // isStandaloneLaunch) — si se abre así, NO se re-marca la mesa: se deja
+      // que localStorage + TTL decidan si la sesión de mesa sigue vigente.
+      if (!isStandaloneLaunch()) {
+        setScannedTable(restaurantId, initialMesa);
+      }
+      // Se borra el ?mesa= de la URL tras leerlo: si no, cada vez que el
       // navegador recarga o restaura esta misma pestaña (común en iOS/Android
       // horas después) se vuelve a "escanear" la mesa y el TTL de la sesión
       // nunca llega a cumplirse.

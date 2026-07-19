@@ -15,7 +15,7 @@ import GoogleLoyaltyIntro from '@/components/menu/google-loyalty-intro';
 import MyOrders from '@/components/my-orders';
 import OverlayBackground from '@/components/menu/overlay-background';
 import { useCart } from '@/lib/cart-context';
-import { getScannedTable, watchScannedTable } from '@/lib/table-session';
+import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
 import { getMyAccount } from '@/lib/actions/loyalty';
 import type { WeeklyHours } from '@/lib/hours';
@@ -80,8 +80,11 @@ export default function MenuClient({
   useEffect(() => {
     if (!restaurantId) return;
     // Primer render: initialMesa cubre la carrera con el efecto de menu-shell
-    // que aún no guardó el ?mesa= en localStorage.
-    setTableScanned((initialMesa != null && initialMesa > 0) || getScannedTable(restaurantId) !== null);
+    // que aún no guardó el ?mesa= en localStorage — salvo en modo standalone
+    // ("Añadir a inicio"), donde ?mesa= puede ser un valor viejo congelado en
+    // el ícono y NO debe asumirse como mesa vigente (ver isStandaloneLaunch).
+    const trustInitialMesa = initialMesa != null && initialMesa > 0 && !isStandaloneLaunch();
+    setTableScanned(trustInitialMesa || getScannedTable(restaurantId) !== null);
     // Después, la fuente de verdad es localStorage + TTL: watchScannedTable
     // re-valida al volver a primer plano y al vencer el TTL — sin esto, una
     // PWA que quedó viva en memoria seguía ofreciendo "comer en local" y

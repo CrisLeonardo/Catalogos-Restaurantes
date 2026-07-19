@@ -20,6 +20,26 @@ function storageKey(restaurantId: string): string {
   return `${STORAGE_PREFIX}${restaurantId}`;
 }
 
+/**
+ * ¿Esta carga viene de un ícono "Añadir a inicio" (modo standalone)?
+ * "Añadir a inicio" (a diferencia de una instalación real de PWA) guarda la
+ * URL EXACTA que estaba abierta al agregarlo — si el comensal lo hizo justo
+ * tras escanear el QR, ese ícono queda apuntando a ...?mesa=N para siempre.
+ * Un escaneo real de QR siempre abre en el navegador normal (nunca directo
+ * en el ícono standalone), así que aquí NUNCA hay que confiar en ?mesa= de
+ * la URL: solo refleja lo que ya haya vigente en localStorage + su TTL.
+ */
+export function isStandaloneLaunch(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.matchMedia?.('(display-mode: standalone)').matches) return true;
+    if ((window.navigator as Navigator & { standalone?: boolean }).standalone === true) return true;
+  } catch {
+    /* noop */
+  }
+  return false;
+}
+
 /** Mesa escaneada por el comensal, o null si no escaneó el QR de mesa (o ya expiró). */
 export function getScannedTable(restaurantId: string): number | null {
   if (typeof window === 'undefined') return null;
