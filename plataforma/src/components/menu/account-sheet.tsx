@@ -78,6 +78,7 @@ export default function AccountSheet({
   const [accountLoading, setAccountLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [linkPhone, setLinkPhone] = useState('');
+  const [linkTotal, setLinkTotal] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMsg, setLinkMsg] = useState<string | null>(null);
 
@@ -123,9 +124,11 @@ export default function AccountSheet({
   async function handleLink() {
     const cleanPhone = linkPhone.replace(/\D/g, '');
     if (cleanPhone.length < 8) { setLinkMsg('Ingresa tu número de 8 dígitos.'); return; }
+    const total = Number(linkTotal.replace(',', '.'));
+    if (!linkTotal.trim() || !Number.isFinite(total) || total < 0) { setLinkMsg('Ingresa el total (Q) de tu pedido más reciente.'); return; }
     setLinkBusy(true);
     setLinkMsg(null);
-    const res = await linkMyAccountByPhone(restaurantId, cleanPhone);
+    const res = await linkMyAccountByPhone(restaurantId, cleanPhone, total);
     if (res.error) {
       setLinkMsg(res.error);
     } else {
@@ -285,21 +288,28 @@ export default function AccountSheet({
                   </div>
                 </div>
                 <p className="t-mute" style={{ fontSize: 12.5, marginBottom: 10, lineHeight: 1.5 }}>
-                  ¿Ya habías pedido antes? Ingresa el número con el que pediste para enlazar tu historial y tus datos a esta cuenta.
+                  ¿Ya habías pedido antes? Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) y enlazamos tu historial y tus datos a esta cuenta.
                 </p>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <input
                     inputMode="numeric"
                     value={linkPhone}
                     onChange={(e) => setLinkPhone(e.target.value)}
                     placeholder="Tu número (8 dígitos)"
-                    style={{ ...inputStyle, flex: 1 }}
+                    style={inputStyle}
+                  />
+                  <input
+                    inputMode="decimal"
+                    value={linkTotal}
+                    onChange={(e) => setLinkTotal(e.target.value)}
+                    placeholder="Total de tu pedido más reciente (Q)"
+                    style={inputStyle}
                   />
                   <button
                     onClick={handleLink}
                     disabled={linkBusy}
                     className="press btn-accent"
-                    style={{ padding: '0 18px', borderRadius: 12, fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                    style={{ padding: '11px 18px', borderRadius: 12, fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}
                   >
                     {linkBusy ? '…' : 'Enlazar'}
                   </button>

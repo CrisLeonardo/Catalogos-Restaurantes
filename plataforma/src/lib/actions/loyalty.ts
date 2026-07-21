@@ -1,5 +1,6 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
 // Cliente del COMENSAL: todas las resoluciones de sesión de este módulo son
@@ -7,6 +8,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { createDinerClient } from '@/lib/supabase/server';
 import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 import {
   getDinerLoyalty, resolveDinerAuthUserId,
   type DinerLoyalty,
@@ -220,8 +222,15 @@ export async function getMyAccount(restaurantId: string): Promise<MyAccount> {
  * Un usuario con sesión iniciada reclama el historial de puntos de su número
  * (pedidos hechos antes sin cuenta). Enlace 1:1: no roba un número ya enlazado
  * a otra cuenta.
+ *
+ * `confirmTotal` es la prueba de titularidad del número: el total exacto (Q)
+ * del pedido más reciente hecho con ese teléfono, un dato que solo conoce
+ * quien recibió ese pedido — no alguien que solo adivinó/conoce el número.
+ * Cierra el hallazgo de la auditoría del 2026-07-03 (§2.4): antes, cualquier
+ * sesión de Google podía reclamar un número no enlazado y ver de inmediato
+ * el nombre y la dirección guardada de ese comensal.
  */
-export async function linkMyAccountByPhone(restaurantId: string, phone: string): Promise<LoyaltyActionResult> {
+export async function linkMyAccountByPhone(restaurantId: string, phone: string, confirmTotal: number): Promise<LoyaltyActionResult> {
   const supabase = await createDinerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const authUserId = await resolveDinerAuthUserId(user?.id ?? null);
@@ -229,6 +238,14 @@ export async function linkMyAccountByPhone(restaurantId: string, phone: string):
 
   const phoneKey = (phone || '').replace(/\D/g, '');
   if (phoneKey.length < 7) return { error: 'Número inválido.' };
+
+  // Anti fuerza bruta: sin esto, el total de 2 dígitos decimales sigue siendo
+  // adivinable a punta de intentos repetidos.
+  const ip = clientIp(await headers());
+  if (!rateLimit(`link-phone:${ip}`, 8, 15 * 60_000) ||
+      !rateLimit(`link-phone:${restaurantId}:${phoneKey}`, 5, 15 * 60_000)) {
+    return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
+  }
 
   const db = createServiceClient();
   const { data: c } = await db
@@ -239,6 +256,20 @@ export async function linkMyAccountByPhone(restaurantId: string, phone: string):
     .maybeSingle();
   if (!c) return { error: 'No encontramos pedidos con ese número todavía.' };
   if (c.auth_user_id && c.auth_user_id !== authUserId) return { error: 'Ese número ya está enlazado a otra cuenta.' };
+
+  const { data: lastOrder } = await db
+    .from('orders')
+    .select('total')
+    .eq('restaurant_id', restaurantId)
+    .eq('customer_id', c.id as string)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const expectedCents = Math.round(Number(lastOrder?.total ?? NaN) * 100);
+  const givenCents = Math.round(Number(confirmTotal) * 100);
+  if (!lastOrder || !Number.isFinite(givenCents) || expectedCents !== givenCents) {
+    return { error: 'El total no coincide con tu pedido más reciente. Revisa tu último recibo.' };
+  }
 
   // 1:1 — suelta el enlace previo de esta cuenta y asigna al número pedido.
   await db.from('customers').update({ auth_user_id: null }).eq('restaurant_id', restaurantId).eq('auth_user_id', authUserId);

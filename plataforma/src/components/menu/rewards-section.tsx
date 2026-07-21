@@ -229,6 +229,7 @@ function RewardsMenu({
 }) {
   const config = useThemeConfig();
   const [phone, setPhone] = useState(initialPhone);
+  const [total, setTotal] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -244,8 +245,10 @@ function RewardsMenu({
 
   async function link() {
     if (cleanPhone.length < 8) { setMsg('Ingresa tu número de 8 dígitos.'); return; }
+    const totalNum = Number(total.replace(',', '.'));
+    if (!total.trim() || !Number.isFinite(totalNum) || totalNum < 0) { setMsg('Ingresa el total (Q) de tu pedido más reciente.'); return; }
     setBusy(true); setMsg(null);
-    const res = await linkMyAccountByPhone(restaurantId, cleanPhone);
+    const res = await linkMyAccountByPhone(restaurantId, cleanPhone, totalNum);
     if (res.error) setMsg(res.error);
     else { setMsg('¡Listo! Tu cuenta quedó enlazada.'); await onRefresh(); }
     setBusy(false);
@@ -299,12 +302,14 @@ function RewardsMenu({
             <div>
               <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Recupera tu historial</div>
               <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
-                ¿Ya habías pedido antes? Ingresa el número con el que pediste para enlazar tu historial a esta cuenta.
+                ¿Ya habías pedido antes? Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) para enlazar tu historial a esta cuenta.
               </p>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
-                  style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
-                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '0 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
+                <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="Total de tu pedido más reciente (Q)"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
+                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
                   {busy ? '…' : 'Enlazar'}
                 </button>
               </div>

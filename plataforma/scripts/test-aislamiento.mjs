@@ -67,7 +67,7 @@ async function makeTenant(tag) {
     if (error) throw new Error(`insert ${table} (${tag}): ${error.message}`);
     return data;
   };
-  const r = await ins('restaurants', { name: `Test ${tag.toUpperCase()} ${SUFFIX}`, slug: `test-iso-${tag}-${SUFFIX}`, status: 'active', plan_actual: 'POPULAR' });
+  const r = await ins('restaurants', { name: `Test ${tag.toUpperCase()} ${SUFFIX}`, slug: `test-iso-${tag}-${SUFFIX}`, status: 'active', plan_actual: 'PREMIUM' });
   created.restaurants.push(r.id);
   await ins('restaurant_themes', { restaurant_id: r.id, brand_name: `Test ${tag}` }, null);
   const cat = await ins('categories', { restaurant_id: r.id, name: `Cat ${tag}`, sort_order: 0, is_active: true });
