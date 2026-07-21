@@ -2,11 +2,17 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { resolveGroupBranchId, getAdminMenu } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { ProductOptionGroup } from '@/types';
+import { resolveRestaurantBranding } from '@/lib/documents/branding';
+import {
+  createBrandedWorkbook, addBrandedHeader, writeStyledTable, freezeHeaderRow, autoFitColumns, workbookToBase64,
+} from '@/lib/documents/excel';
+import { longDate } from '@/lib/documents/format';
+import type { DocumentBranding } from '@/lib/documents/types';
+import type { Category, Product, ProductOptionGroup } from '@/types';
 
 export type ProductState = { error: string } | null;
 
@@ -408,4 +414,113 @@ export async function updateProductModal(
 
   revalidatePath('/admin/menu');
   return { success: true };
+}
+
+/* ── Export del catálogo — PDF (cliente) + Excel (servidor) ──── */
+
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+export interface ProductExportRow {
+  categoryName: string;
+  name: string;
+  price: number;
+  cost: number | null;
+  stock: number | null;
+  trackStock: boolean;
+  isActive: boolean;
+  isAvailable: boolean;
+  hasVariants: boolean;
+}
+
+type ProductsExportData = {
+  rows: ProductExportRow[];
+  branding: DocumentBranding;
+  slug: string;
+};
+
+async function authAndBuildProductsExport(restaurantId: string): Promise<ProductsExportData | { error: string }> {
+  if (!UUID_RE.test(restaurantId)) return { error: 'Restaurante inválido.' };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, restaurant_id, permissions')
+    .eq('id', user.id)
+    .single();
+
+  const belongs =
+    profile?.role === 'SUPER_ADMIN' ||
+    (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
+      profile?.restaurant_id === restaurantId) ||
+    (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+  if (!belongs) return { error: 'No autorizado.' };
+  if (!can(profile?.role, profile?.permissions as string[] | null, 'catalogo')) {
+    return { error: 'No autorizado.' };
+  }
+
+  const db = createServiceClient();
+  const [{ categories, products }, { data: rest }, branding] = await Promise.all([
+    getAdminMenu(restaurantId),
+    db.from('restaurants').select('slug').eq('id', restaurantId).single(),
+    resolveRestaurantBranding(restaurantId),
+  ]);
+
+  const categoryName = new Map<string, string>();
+  const categoryOrder = new Map<string, number>();
+  [...(categories as Category[])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .forEach((c, i) => { categoryName.set(c.id, c.name); categoryOrder.set(c.id, i); });
+
+  const rows: ProductExportRow[] = [...(products as Product[])]
+    .sort((a, b) => (categoryOrder.get(a.category_id ?? '') ?? 999) - (categoryOrder.get(b.category_id ?? '') ?? 999))
+    .map((p) => ({
+      categoryName: p.category_id ? (categoryName.get(p.category_id) ?? 'Sin categoría') : 'Sin categoría',
+      name: p.name,
+      price: Number(p.price),
+      cost: p.cost != null ? Number(p.cost) : null,
+      stock: p.track_stock ? p.stock : null,
+      trackStock: p.track_stock,
+      isActive: p.is_active,
+      isAvailable: p.is_available,
+      hasVariants: (p.options?.length ?? 0) > 0,
+    }));
+
+  return { rows, branding, slug: (rest?.slug as string) ?? 'restaurante' };
+}
+
+/** Datos ya armados (agrupables por categoría + marca) para dibujar el PDF en el cliente. */
+export async function getProductsPdfData(restaurantId: string): Promise<ProductsExportData | { error: string }> {
+  return authAndBuildProductsExport(restaurantId);
+}
+
+/** Genera el catálogo como .xlsx real, con marca del restaurante. */
+export async function exportProductsXlsx(
+  restaurantId: string,
+): Promise<{ xlsx?: string; filename?: string; error?: string }> {
+  const data = await authAndBuildProductsExport(restaurantId);
+  if ('error' in data) return data;
+  const { rows, branding, slug } = data;
+
+  const subtitle = `${rows.length} producto${rows.length === 1 ? '' : 's'} · Generado el ${longDate(new Date().toISOString())}`;
+  const wb = await createBrandedWorkbook();
+  const ws = wb.addWorksheet('Productos');
+  const headers = ['Categoría', 'Producto', 'Precio', 'Costo', 'Margen', 'Stock', 'Activo', 'Disponible', 'Tiene variantes'];
+  addBrandedHeader(ws, { branding, title: 'Catálogo de productos', subtitle, columnsSpan: headers.length });
+
+  const { headerRow } = writeStyledTable(
+    ws, branding, headers,
+    rows.map((p) => [
+      p.categoryName, p.name, p.price, p.cost, p.cost != null ? p.price - p.cost : null,
+      p.stock, p.isActive ? 'Sí' : 'No', p.isAvailable ? 'Sí' : 'No', p.hasVariants ? 'Sí' : 'No',
+    ]),
+    { currencyCols: [3, 4, 5] },
+  );
+  freezeHeaderRow(ws, headerRow);
+  autoFitColumns(ws);
+
+  const xlsx = await workbookToBase64(wb);
+  return { xlsx, filename: `productos-${slug}-${new Date().toISOString().slice(0, 10)}.xlsx` };
 }

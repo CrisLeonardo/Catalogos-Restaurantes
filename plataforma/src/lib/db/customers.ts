@@ -120,3 +120,69 @@ export async function getCustomerOrders(
 
   return (data ?? []) as Order[];
 }
+
+export interface CustomerExportRow extends Customer {
+  /** null cuando el módulo de lealtad no está activo (no se consultó). */
+  pointsBalance: number | null;
+  lifetimePoints: number | null;
+}
+
+/**
+ * TODOS los clientes del restaurante, sin paginar — pensado para exportar
+ * (a diferencia de getCustomers, que tope a 100/página para la UI). El
+ * listado de clientes de un restaurante es de cientos, no millones, así que
+ * un solo select() es seguro.
+ */
+export async function getAllCustomersForExport(
+  restaurantId: string,
+  includeLoyalty: boolean,
+): Promise<CustomerExportRow[]> {
+  const db = createServiceClient();
+
+  const { data: customers } = await db
+    .from('customers')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('last_order_at', { ascending: false, nullsFirst: false });
+
+  const rows = (customers ?? []) as Customer[];
+  const ids = rows.map((c) => c.id);
+
+  const [delivered, loyaltyAccounts] = await Promise.all([
+    ids.length
+      ? db.from('orders').select('customer_id, total').eq('restaurant_id', restaurantId).eq('status', 'DELIVERED').in('customer_id', ids)
+      : Promise.resolve({ data: [] as { customer_id: string; total: number }[] }),
+    includeLoyalty && ids.length
+      ? db.from('loyalty_accounts').select('customer_id, points_balance, lifetime_points').eq('restaurant_id', restaurantId).in('customer_id', ids)
+      : Promise.resolve({ data: [] as { customer_id: string; points_balance: number; lifetime_points: number }[] }),
+  ]);
+
+  const deliveredMap = new Map<string, { orders: number; spent: number }>();
+  for (const o of delivered.data ?? []) {
+    const cid = o.customer_id as string;
+    const curr = deliveredMap.get(cid) ?? { orders: 0, spent: 0 };
+    curr.orders++;
+    curr.spent += Number(o.total);
+    deliveredMap.set(cid, curr);
+  }
+
+  const loyaltyMap = new Map<string, { balance: number; lifetime: number }>();
+  for (const a of loyaltyAccounts.data ?? []) {
+    loyaltyMap.set(a.customer_id as string, {
+      balance: Number(a.points_balance) || 0,
+      lifetime: Number(a.lifetime_points) || 0,
+    });
+  }
+
+  return rows.map((c) => {
+    const d = deliveredMap.get(c.id) ?? { orders: 0, spent: 0 };
+    const l = includeLoyalty ? loyaltyMap.get(c.id) : undefined;
+    return {
+      ...c,
+      total_orders: d.orders,
+      total_spent: d.spent,
+      pointsBalance: l ? l.balance : null,
+      lifetimePoints: l ? l.lifetime : null,
+    };
+  });
+}

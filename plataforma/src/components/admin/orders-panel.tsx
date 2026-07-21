@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
 import { Icon } from '@/components/icons';
-import { exportOrdersStructured, updateOrderStatus } from '@/lib/actions/orders';
+import { getOrdersPdfData, exportOrdersXlsx, updateOrderStatus } from '@/lib/actions/orders';
+import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
+import { formatDocMoney, longDate } from '@/lib/documents/format';
 import { playOrderSound, loadSoundSettings } from '@/lib/sounds';
 import { localDateKey } from '@/lib/hours';
 import { Card, CardContent } from '@/components/ui/card';
@@ -210,56 +212,18 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
     };
   }, [restaurantId, refreshSoon, scheduleAutoConfirm, cancelAutoConfirm, showToast]);
 
-  function buildExportHtml(
-    headers: string[],
-    rows: string[][],
-    restaurantName: string,
-    forPrint: boolean,
-  ): string {
-    const today = new Date().toLocaleDateString('es-GT');
-    const thCells = headers.map((h) => `<th>${h}</th>`).join('');
-    const bodyRows = rows
-      .map((r) => `<tr>${r.map((c) => `<td>${c.replace(/</g, '&lt;')}</td>`).join('')}</tr>`)
-      .join('');
-    const printScript = forPrint ? '<script>window.onload=()=>{window.print();}<\/script>' : '';
-    return `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Pedidos — ${restaurantName}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; }
-  h2 { font-size: 15px; margin: 0 0 4px; }
-  p { margin: 0 0 12px; color: #555; font-size: 11px; }
-  table { border-collapse: collapse; width: 100%; }
-  th { background: #f0f0f0; font-weight: bold; padding: 6px 8px; border: 1px solid #ccc; text-align: left; font-size: 11px; }
-  td { padding: 5px 8px; border: 1px solid #e0e0e0; vertical-align: top; }
-  tr:nth-child(even) td { background: #fafafa; }
-  @media print { body { margin: 0; } }
-</style>
-${printScript}
-</head>
-<body>
-<h2>${restaurantName} — Pedidos (últimos 30 días)</h2>
-<p>Generado el ${today} · ${rows.length} pedidos</p>
-<table>
-<thead><tr>${thCells}</tr></thead>
-<tbody>${bodyRows}</tbody>
-</table>
-</body>
-</html>`;
-  }
-
   function downloadExcel() {
     startExportXls(async () => {
-      const res = await exportOrdersStructured(restaurantId, 30);
-      if ('error' in res) { showToast(res.error); return; }
-      const html = buildExportHtml(res.headers, res.rows, res.restaurantName, false);
-      const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const res = await exportOrdersXlsx(restaurantId, 30);
+      if (res.error || !res.xlsx) { showToast(res.error ?? 'No se pudo exportar.'); return; }
+      const binary = atob(res.xlsx);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${res.filename}.xls`;
+      a.download = res.filename ?? 'pedidos.xlsx';
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -267,13 +231,30 @@ ${printScript}
 
   function downloadPdf() {
     startExportPdf(async () => {
-      const res = await exportOrdersStructured(restaurantId, 30);
+      const res = await getOrdersPdfData(restaurantId, 30);
       if ('error' in res) { showToast(res.error); return; }
-      const html = buildExportHtml(res.headers, res.rows, res.restaurantName, true);
-      const win = window.open('', '_blank');
-      if (!win) { showToast('Permite ventanas emergentes para descargar el PDF.'); return; }
-      win.document.write(html);
-      win.document.close();
+      const { rows, branding, filename } = res;
+
+      const doc = await createDoc({ format: 'a4', orientation: 'l' });
+      const y = await drawPdfHeader(doc, {
+        branding,
+        title: 'Listado de pedidos',
+        subtitle: `Últimos 30 días · ${rows.length} pedido${rows.length === 1 ? '' : 's'}`,
+      });
+
+      await brandedAutoTable(doc, branding, {
+        startY: y,
+        head: [['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Productos', 'Subtotal', 'Envío', 'Total', 'Notas']],
+        body: rows.map((r) => [
+          r.orderNumber, r.date, r.time, r.customerName, r.customerPhone, r.orderType, r.status, r.items,
+          formatDocMoney(r.subtotal, branding), formatDocMoney(r.deliveryFee, branding), formatDocMoney(r.total, branding), r.notes,
+        ]),
+        styles: { fontSize: 7.5, cellPadding: 1.6 },
+        columnStyles: { 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right' } },
+      });
+
+      finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
+      doc.save(`${filename}.pdf`);
     });
   }
 

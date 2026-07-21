@@ -7,6 +7,7 @@ import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/c
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import ClientesExportButton from '@/components/admin/clientes-export-button';
 import type { Customer, Order } from '@/types';
 
 export const metadata = { title: 'Clientes – Panel admin' };
@@ -93,6 +94,12 @@ export default async function AdminClientesPage({
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {total > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <ClientesExportButton restaurantId={restaurantId} />
+        </div>
+      )}
+
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <Kpi label="Clientes" value={String(total)} sub="registrados al pedir" />

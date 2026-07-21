@@ -3,7 +3,7 @@ import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modu
 import type { LoyaltyReward } from '@/types';
 
 /** ¿Está activo el módulo de lealtad para este restaurante? (entitlement + on) */
-async function loyaltyActive(restaurantId: string): Promise<boolean> {
+export async function loyaltyActive(restaurantId: string): Promise<boolean> {
   const db = createServiceClient();
   const { data: rest } = await db.from('restaurants').select('modules, module_settings').eq('id', restaurantId).single();
   if (!rest) return false;

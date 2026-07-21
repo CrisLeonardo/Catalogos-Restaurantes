@@ -18,6 +18,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { Card, cardVariants } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -395,7 +396,7 @@ export default async function SuscripcionPage() {
             {invoices.length === 0 ? (
               <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no hay cobros.</div>
             ) : (
-              invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} />)
+              invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} restaurantName={restaurantName} />)
             )}
           </Card>
         </>
@@ -412,7 +413,7 @@ export default async function SuscripcionPage() {
   );
 }
 
-function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
+function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency: string; restaurantName: string }) {
   const overdue = isOverdue(inv);
   const meta = overdue
     ? { label: 'Vencido', color: 'var(--c-danger, #f87171)', bg: 'rgba(248,113,113,0.13)' }
@@ -442,6 +443,20 @@ function InvoiceRow({ inv, currency }: { inv: Invoice; currency: string }) {
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)', minWidth: 90, textAlign: 'right' }}>
         {fmtMoney(inv.amount, inv.currency || currency)}
       </div>
+      {inv.status === 'PAID' && (
+        <ReceiptDownloadButton
+          data={{
+            folio: inv.id.slice(0, 8).toUpperCase(),
+            restaurantName,
+            concept: inv.description ?? CONCEPT_LABEL[inv.concept],
+            period: inv.period,
+            amount: inv.paid_amount ?? inv.amount,
+            currency: inv.currency,
+            paidAt: inv.paid_at ?? new Date().toISOString(),
+            paymentMethod: inv.payment_method,
+          }}
+        />
+      )}
     </div>
   );
 }

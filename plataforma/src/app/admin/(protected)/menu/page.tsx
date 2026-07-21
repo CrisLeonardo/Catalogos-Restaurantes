@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { getIngredients, type Ingredient } from '@/lib/db/recipes';
 import CatalogPanel from '@/components/admin/catalog-panel';
+import ProductosExportButton from '@/components/admin/productos-export-button';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
 
@@ -51,6 +52,11 @@ export default async function AdminMenuPage() {
 
   return (
     <div className="anim-fade-up">
+      {products.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+          <ProductosExportButton restaurantId={restaurantId} />
+        </div>
+      )}
       <CatalogPanel
         restaurantId={restaurantId}
         categories={categories}

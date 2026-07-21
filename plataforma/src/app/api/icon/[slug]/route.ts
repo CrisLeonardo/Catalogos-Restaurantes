@@ -1,30 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-
-/**
- * Anti-SSRF: este handler hace fetch server-side de la URL del ícono, que
- * proviene de un campo editable por el dueño (logo_url / pwaIconUrl). Sin
- * esta validación, un dueño podría apuntarlo a `http://169.254.169.254/…`
- * (metadata de la nube) o a servicios internos y leer la respuesta.
- * Solo permitimos HTTPS hacia el Storage de Supabase del proyecto.
- */
-function isAllowedIconUrl(raw: string): boolean {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (u.protocol !== 'https:') return false;
-  const host = u.hostname.toLowerCase();
-  let supabaseHost = '';
-  try {
-    supabaseHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname.toLowerCase();
-  } catch {
-    /* sin configuración → solo el dominio público de Supabase */
-  }
-  return host === supabaseHost || host.endsWith('.supabase.co');
-}
+import { isAllowedAssetUrl } from '@/lib/asset-url';
 
 /**
  * Proxy del ícono de la PWA del restaurante (mismo origen que el manifest).
@@ -57,7 +33,7 @@ export async function GET(
     /* BD no disponible → ícono estático */
   }
 
-  if (!iconUrl || !isAllowedIconUrl(iconUrl)) {
+  if (!iconUrl || !isAllowedAssetUrl(iconUrl)) {
     return Response.redirect(new URL('/icon-512.png', request.url));
   }
 

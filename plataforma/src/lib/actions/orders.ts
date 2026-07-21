@@ -17,6 +17,13 @@ import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agen
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
+import { resolveRestaurantBranding } from '@/lib/documents/branding';
+import {
+  createBrandedWorkbook, addBrandedHeader, writeStyledTable, freezeHeaderRow, autoFitColumns,
+  workbookToBase64,
+} from '@/lib/documents/excel';
+import { longDate } from '@/lib/documents/format';
+import type { DocumentBranding } from '@/lib/documents/types';
 import type {
   OrderItemOption,
   OrderStatus,
@@ -827,20 +834,40 @@ export async function printReceiptViaAgent(orderId: string): Promise<{ error?: s
   return {};
 }
 
-/* ── Export CSV (panel del dueño) ──────────────────────────── */
+/* ── Export de pedidos — PDF (cliente) + Excel (servidor) ────── */
 
-function csvCell(v: string | number): string {
-  const s = String(v);
-  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  NEW: 'Nuevo',
+  PREP: 'En preparación',
+  READY: 'Listo',
+  TRANSIT: 'En camino',
+  SERVED: 'Servido',
+  DELIVERED: 'Entregado',
+  CANCEL: 'Cancelado',
+};
+
+export interface OrderExportRow {
+  orderNumber: string;
+  date: string;
+  time: string;
+  customerName: string;
+  customerPhone: string;
+  orderType: string;
+  status: string;
+  items: string;
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  notes: string;
 }
 
-/** Autentica y devuelve los datos crudos de pedidos para exportar. */
-async function fetchOrdersForExport(
+/** Autentica y arma los datos de pedidos para exportar (el PDF y el Excel comparten esta base). */
+async function buildOrdersExportData(
   restaurantId: string,
   days: number,
 ): Promise<{
-  rows: string[][];
-  headers: string[];
+  rows: OrderExportRow[];
+  branding: DocumentBranding;
   restaurantName: string;
   filename: string;
 } | { error: string }> {
@@ -853,7 +880,7 @@ async function fetchOrdersForExport(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, restaurant_id')
+    .select('role, restaurant_id, permissions')
     .eq('id', user.id)
     .single();
 
@@ -863,12 +890,15 @@ async function fetchOrdersForExport(
       profile?.restaurant_id === restaurantId) ||
     (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
   if (!allowed) return { error: 'No autorizado.' };
+  if (!can(profile?.role, profile?.permissions as string[] | null, 'pedidos')) {
+    return { error: 'No autorizado.' };
+  }
 
   const db = createServiceClient();
   const since = new Date();
   since.setDate(since.getDate() - safeDays);
 
-  const [{ data: restaurant }, { data: orders }] = await Promise.all([
+  const [{ data: restaurant }, { data: orders }, branding] = await Promise.all([
     db.from('restaurants').select('name, slug, timezone').eq('id', restaurantId).single(),
     db
       .from('orders')
@@ -877,15 +907,12 @@ async function fetchOrdersForExport(
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
       .limit(5000),
+    resolveRestaurantBranding(restaurantId),
   ]);
 
   const tz = (restaurant?.timezone as string) || 'America/Guatemala';
-  const headers = [
-    'Numero', 'Fecha', 'Hora', 'Cliente', 'Telefono', 'Tipo', 'Estado',
-    'Productos', 'Subtotal', 'Envio', 'Total', 'Notas',
-  ];
 
-  const rows = (orders ?? []).map((o) => {
+  const rows: OrderExportRow[] = (orders ?? []).map((o) => {
     const created = new Date(o.created_at as string);
     let fecha = '';
     let hora = '';
@@ -896,54 +923,76 @@ async function fetchOrdersForExport(
       fecha = created.toLocaleDateString('es-GT');
       hora = created.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
     }
-    const productos = ((o.items as Record<string, unknown>[] | null) ?? [])
+    const items = ((o.items as Record<string, unknown>[] | null) ?? [])
       .map((it) => {
         const opts = (it.options_snapshot as OrderItemOption[] | null) ?? [];
         const extra = opts.length > 0 ? ` (${opts.map((x) => x.choice).join(', ')})` : '';
         return `${it.quantity}x ${it.name_snapshot}${extra}`;
       })
       .join(' | ');
-    return [
-      String(o.order_number), fecha, hora, String(o.customer_name), String(o.customer_phone),
-      o.order_type === 'PICKUP' ? 'Para llevar' : o.order_type === 'DINE_IN' ? 'En local' : 'Domicilio',
-      String(o.status), productos,
-      Number(o.subtotal).toFixed(2), Number(o.delivery_fee).toFixed(2), Number(o.total).toFixed(2),
-      (o.notes as string | null) ?? '',
-    ];
+    return {
+      orderNumber: String(o.order_number),
+      date: fecha,
+      time: hora,
+      customerName: String(o.customer_name),
+      customerPhone: String(o.customer_phone),
+      orderType: o.order_type === 'PICKUP' ? 'Para llevar' : o.order_type === 'DINE_IN' ? 'En local' : 'Domicilio',
+      status: ORDER_STATUS_LABEL[o.status as OrderStatus] ?? String(o.status),
+      items,
+      subtotal: Number(o.subtotal),
+      deliveryFee: Number(o.delivery_fee),
+      total: Number(o.total),
+      notes: (o.notes as string | null) ?? '',
+    };
   });
 
   const today = new Date().toISOString().slice(0, 10);
   return {
     rows,
-    headers,
+    branding,
     restaurantName: (restaurant?.name as string) ?? 'Restaurante',
     filename: `pedidos-${restaurant?.slug ?? 'restaurante'}-${today}`,
   };
 }
 
-/**
- * Exporta pedidos de los últimos `days` días como datos estructurados
- * (para generar Excel HTML o PDF en el cliente sin dependencias extra).
- */
-export async function exportOrdersStructured(
+/** Datos ya armados (numéricos + marca) para dibujar el PDF de pedidos en el cliente. */
+export async function getOrdersPdfData(
   restaurantId: string,
   days: number = 30,
-): Promise<{ rows: string[][]; headers: string[]; restaurantName: string; filename: string } | { error: string }> {
-  return fetchOrdersForExport(restaurantId, days);
+): Promise<{
+  rows: OrderExportRow[]; branding: DocumentBranding; restaurantName: string; filename: string;
+} | { error: string }> {
+  return buildOrdersExportData(restaurantId, days);
 }
 
-/**
- * Exporta los pedidos de los últimos `days` días como CSV (para Excel).
- * Solo el staff del restaurante (o el Super Admin) puede exportar.
- */
-export async function exportOrdersCsv(
+/** Genera el listado de pedidos como .xlsx real, con marca del restaurante. */
+export async function exportOrdersXlsx(
   restaurantId: string,
   days: number = 30,
-): Promise<{ csv?: string; filename?: string; error?: string }> {
-  const result = await fetchOrdersForExport(restaurantId, days);
-  if ('error' in result) return result;
-  const csv = '﻿' + [result.headers.join(','), ...result.rows.map((r) => r.map(csvCell).join(','))].join('\r\n');
-  return { csv, filename: `${result.filename}.csv` };
+): Promise<{ xlsx?: string; filename?: string; error?: string }> {
+  const data = await buildOrdersExportData(restaurantId, days);
+  if ('error' in data) return data;
+  const { rows, branding, filename } = data;
+
+  const subtitle = `Últimos ${days} días · Generado el ${longDate(new Date().toISOString())}`;
+  const wb = await createBrandedWorkbook();
+  const ws = wb.addWorksheet('Pedidos');
+  addBrandedHeader(ws, { branding, title: 'Listado de pedidos', subtitle, columnsSpan: 12 });
+
+  const { headerRow } = writeStyledTable(
+    ws, branding,
+    ['Número', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Tipo', 'Estado', 'Productos', 'Subtotal', 'Envío', 'Total', 'Notas'],
+    rows.map((r) => [
+      r.orderNumber, r.date, r.time, r.customerName, r.customerPhone, r.orderType, r.status, r.items,
+      r.subtotal, r.deliveryFee, r.total, r.notes,
+    ]),
+    { currencyCols: [9, 10, 11] },
+  );
+  freezeHeaderRow(ws, headerRow);
+  autoFitColumns(ws, { max: 36 });
+
+  const xlsx = await workbookToBase64(wb);
+  return { xlsx, filename: `${filename}.xlsx` };
 }
 
 

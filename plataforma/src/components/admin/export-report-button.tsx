@@ -3,6 +3,13 @@
 import { useTransition, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { exportSalesReportXlsx, getSalesReportData } from '@/lib/actions/finanzas';
+import type { Split } from '@/lib/db/reports';
+import type { ReportProduct } from '@/lib/db/reports';
+import {
+  createDoc, drawPdfHeader, brandedAutoTable, getLastAutoTableFinalY,
+  pageBreakIfNeeded, finalizePdf, INK_RGB,
+} from '@/lib/documents/pdf';
+import { formatDocMoney, formatDateRangeLabel, longDate } from '@/lib/documents/format';
 
 export default function ExportReportButton({
   restaurantId, from, to,
@@ -29,68 +36,78 @@ export default function ExportReportButton({
     });
   }
 
-  async function downloadPdf() {
+  function downloadPdf() {
     setErr(null);
     startPdf(async () => {
       const res = await getSalesReportData(restaurantId, from, to);
-      if (res.error || !res.report) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.report || !res.branding) { setErr(res.error ?? 'No se pudo exportar.'); return; }
       const r = res.report;
+      const branding = res.branding;
+      const money = (n: number) => formatDocMoney(n, branding);
 
-      const { default: jsPDF } = await import('jspdf');
-      const { default: autoTable } = await import('jspdf-autotable');
+      const doc = await createDoc({ format: 'a4', orientation: 'p' });
+      let y = await drawPdfHeader(doc, {
+        branding,
+        title: 'Reporte de ventas',
+        subtitle: formatDateRangeLabel(from, to),
+      });
 
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text('Reporte de Ventas', 14, 18);
-      doc.setFontSize(10);
-      doc.setTextColor(120);
-      doc.text(`${r.from} a ${r.to}`, 14, 25);
-      doc.setTextColor(0);
-
-      autoTable(doc, {
-        startY: 31,
+      await brandedAutoTable(doc, branding, {
+        startY: y,
         head: [['Métrica', 'Valor']],
         body: [
           ['Pedidos', String(r.orders)],
-          ['Ingreso bruto', `Q${r.revenue.toFixed(2)}`],
-          ['Ingreso productos', `Q${r.productRevenue.toFixed(2)}`],
-          ['Envíos', `Q${r.deliveryRevenue.toFixed(2)}`],
-          ['Costo', `Q${r.cost.toFixed(2)}`],
-          ['Utilidad', `Q${r.profit.toFixed(2)}`],
+          ['Ingreso bruto', money(r.revenue)],
+          ['Ingreso de productos', money(r.productRevenue)],
+          ['Envíos', money(r.deliveryRevenue)],
+          ['Costo', money(r.cost)],
+          ['Utilidad', money(r.profit)],
           ['Margen %', r.marginPct != null ? `${r.marginPct.toFixed(1)}%` : 'n/d'],
-          ['Ticket promedio', `Q${r.avgTicket.toFixed(2)}`],
+          ['Ticket promedio', money(r.avgTicket)],
         ],
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [30, 30, 30] },
+        columnStyles: { 1: { halign: 'right' } },
       });
+      y = getLastAutoTableFinalY(doc) + 9;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const y1: number = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(12);
-      doc.text('Ventas por día', 14, y1);
-      autoTable(doc, {
-        startY: y1 + 4,
-        head: [['Fecha', 'Pedidos', 'Ingreso']],
-        body: r.series.map((d) => [d.date, String(d.orders), `Q${d.revenue.toFixed(2)}`]),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [30, 30, 30] },
-      });
+      const sectionTitle = (title: string) => {
+        y = pageBreakIfNeeded(doc, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...INK_RGB);
+        doc.text(title, 14, y);
+        y += 4;
+      };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const y2: number = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(12);
-      doc.text('Productos por ingreso', 14, y2);
-      autoTable(doc, {
-        startY: y2 + 4,
-        head: [['Producto', 'Cant.', 'Ingreso', 'Costo', 'Utilidad']],
-        body: r.topByRevenue.map((p) => [
-          p.name, String(p.qty),
-          `Q${p.revenue.toFixed(2)}`, `Q${p.cost.toFixed(2)}`, `Q${p.profit.toFixed(2)}`,
-        ]),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [30, 30, 30] },
-      });
+      const splitTable = async (title: string, rows: Split[]) => {
+        if (rows.length === 0) return;
+        sectionTitle(title);
+        await brandedAutoTable(doc, branding, {
+          startY: y,
+          head: [[title, 'Pedidos', 'Ingreso']],
+          body: rows.map((x) => [x.label, String(x.orders), money(x.revenue)]),
+          columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+        });
+        y = getLastAutoTableFinalY(doc) + 9;
+      };
+      await splitTable('Canal', r.byChannel);
+      await splitTable('Método de pago', r.byPayment);
+      await splitTable('Zona de entrega', r.byZone);
 
+      const productTable = async (title: string, rows: ReportProduct[]) => {
+        if (rows.length === 0) return;
+        sectionTitle(title);
+        await brandedAutoTable(doc, branding, {
+          startY: y,
+          head: [['Producto', 'Cant.', 'Ingreso', 'Costo', 'Utilidad']],
+          body: rows.map((p) => [p.name, String(p.qty), money(p.revenue), money(p.cost), money(p.profit)]),
+          columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+        });
+        y = getLastAutoTableFinalY(doc) + 9;
+      };
+      await productTable('Más vendidos (por ingreso)', r.topByRevenue);
+      await productTable('Más rentables (por utilidad)', r.topByProfit);
+
+      finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`reporte-ventas-${r.from}_a_${r.to}.pdf`);
     });
   }

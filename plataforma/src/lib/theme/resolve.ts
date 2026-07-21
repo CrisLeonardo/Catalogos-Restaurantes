@@ -171,7 +171,7 @@ export function sanitizeCustomCss(css: string | null | undefined): string {
 
 /* ── Helpers de color ─────────────────────────────────────── */
 
-function hexToRgb(hex: string): [number, number, number] {
+export function hexToRgb(hex: string): [number, number, number] {
   let h = hex.trim().replace('#', '');
   if (h.length === 3) h = h.split('').map((c) => c + c).join('');
   const n = parseInt(h.slice(0, 6), 16);

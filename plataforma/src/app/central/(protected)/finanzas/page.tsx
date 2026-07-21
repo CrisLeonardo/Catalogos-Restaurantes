@@ -35,7 +35,7 @@ export default async function CentralFinanzasPage({
       <div className="glass" style={{ borderRadius: 16, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <DateRangeForm from={from} to={to} basePath="/central/finanzas" />
         {report.perBranch.length > 0 && (
-          <GroupFinanceExport rows={report.perBranch} from={from} to={to} orgName={ctx.org.name} />
+          <GroupFinanceExport from={from} to={to} />
         )}
       </div>
 

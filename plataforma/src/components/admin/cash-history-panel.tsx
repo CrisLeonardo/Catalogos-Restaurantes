@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteCashCount, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
+import CashHistoryExportButton from '@/components/admin/cash-history-export-button';
 
 const money = (n: number) => `Q${n.toFixed(2)}`;
 
@@ -215,7 +216,10 @@ export default function CashHistoryPanel({
 }: { history: CashCount[]; restaurantId: string }) {
   return (
     <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5, marginBottom: 4 }}>Cortes recientes</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>Cortes recientes</div>
+        {history.length > 0 && <CashHistoryExportButton restaurantId={restaurantId} />}
+      </div>
       {history.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 8 }}>
           Aún no hay arqueos guardados.

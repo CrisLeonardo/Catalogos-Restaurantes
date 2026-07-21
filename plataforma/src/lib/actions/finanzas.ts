@@ -19,8 +19,15 @@ import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { localDateKey } from '@/lib/hours';
 import { getSalesReport } from '@/lib/db/reports';
-import type { SalesReport } from '@/lib/db/reports';
+import type { SalesReport, Split } from '@/lib/db/reports';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
+import { resolveRestaurantBranding } from '@/lib/documents/branding';
+import {
+  createBrandedWorkbook, addBrandedHeader, styleTableHeaderRow, freezeHeaderRow,
+  writeStyledTable, autoFitColumns, setCurrencyCell, PERCENT_NUM_FMT, workbookToBase64,
+} from '@/lib/documents/excel';
+import { formatDateRangeLabel, longDate } from '@/lib/documents/format';
+import type { DocumentBranding } from '@/lib/documents/types';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -31,6 +38,7 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
 async function authRestaurant(restaurantId: string): Promise<{
   db: ReturnType<typeof createServiceClient>;
   tz: string;
+  slug: string;
   userId: string;
   cashierName: string | null;
 } | null> {
@@ -57,13 +65,14 @@ async function authRestaurant(restaurantId: string): Promise<{
   const db = createServiceClient();
   const { data: r } = await db
     .from('restaurants')
-    .select('timezone')
+    .select('timezone, slug')
     .eq('id', restaurantId)
     .single();
 
   return {
     db,
     tz: (r?.timezone as string) || 'America/Guatemala',
+    slug: (r?.slug as string) || 'restaurante',
     userId: user.id,
     cashierName: (profile?.full_name as string) || null,
   };
@@ -245,11 +254,14 @@ export async function getSalesReportData(
   restaurantId: string,
   from: string,
   to: string,
-): Promise<{ report?: SalesReport; error?: string }> {
+): Promise<{ report?: SalesReport; branding?: DocumentBranding; error?: string }> {
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
-  const report = await getSalesReport(restaurantId, from, to, ctx.tz);
-  return { report };
+  const [report, branding] = await Promise.all([
+    getSalesReport(restaurantId, from, to, ctx.tz),
+    resolveRestaurantBranding(restaurantId),
+  ]);
+  return { report, branding };
 }
 
 export async function exportSalesReportXlsx(
@@ -260,35 +272,146 @@ export async function exportSalesReportXlsx(
   const ctx = await authRestaurant(restaurantId);
   if (!ctx) return { error: 'No autorizado.' };
 
-  const report = await getSalesReport(restaurantId, from, to, ctx.tz);
-
-  const { Workbook } = await import('exceljs');
-  const wb = new Workbook();
-
-  const ws1 = wb.addWorksheet('Resumen');
-  ws1.addRows([
-    ['Reporte de Ventas', `${from} a ${to}`],
-    [],
-    ['Métrica', 'Valor'],
-    ['Pedidos', report.orders],
-    ['Ingreso bruto', report.revenue],
-    ['Ingreso productos', report.productRevenue],
-    ['Envíos', report.deliveryRevenue],
-    ['Costo', report.cost],
-    ['Utilidad', report.profit],
-    ['Margen %', report.marginPct != null ? `${report.marginPct.toFixed(1)}%` : 'n/d'],
-    ['Ticket promedio', report.avgTicket],
+  const [report, branding] = await Promise.all([
+    getSalesReport(restaurantId, from, to, ctx.tz),
+    resolveRestaurantBranding(restaurantId),
   ]);
 
+  const subtitle = `${formatDateRangeLabel(from, to)} · Generado el ${longDate(new Date().toISOString())}`;
+  const wb = await createBrandedWorkbook();
+
+  /* — Resumen: KPIs + mezcla de ventas — */
+  const ws1 = wb.addWorksheet('Resumen');
+  addBrandedHeader(ws1, { branding, title: 'Reporte de ventas', subtitle, columnsSpan: 3 });
+
+  const kpiHeaderRow = ws1.addRow(['Métrica', 'Valor']);
+  styleTableHeaderRow(ws1, kpiHeaderRow.number, branding);
+  freezeHeaderRow(ws1, kpiHeaderRow.number);
+
+  const moneyRow = (label: string, value: number) => {
+    setCurrencyCell(ws1.addRow([label, value]).getCell(2), branding);
+  };
+  ws1.addRow(['Pedidos', report.orders]);
+  moneyRow('Ingreso bruto', report.revenue);
+  moneyRow('Ingreso de productos', report.productRevenue);
+  moneyRow('Envíos', report.deliveryRevenue);
+  moneyRow('Costo', report.cost);
+  moneyRow('Utilidad', report.profit);
+  if (report.marginPct != null) {
+    ws1.addRow(['Margen %', report.marginPct]).getCell(2).numFmt = PERCENT_NUM_FMT;
+  } else {
+    ws1.addRow(['Margen %', 'n/d']);
+  }
+  moneyRow('Ticket promedio', report.avgTicket);
+
+  const addSplitSection = (label: string, rows: Split[]) => {
+    if (rows.length === 0) return;
+    ws1.addRow([]);
+    ws1.addRow([label]).getCell(1).font = { bold: true, size: 10.5 };
+    writeStyledTable(
+      ws1, branding, [label, 'Pedidos', 'Ingreso'],
+      rows.map((x) => [x.label, x.orders, x.revenue]),
+      { currencyCols: [3] },
+    );
+  };
+  addSplitSection('Canal', report.byChannel);
+  addSplitSection('Método de pago', report.byPayment);
+  addSplitSection('Zona de entrega', report.byZone);
+  autoFitColumns(ws1);
+
+  /* — Ventas por día — */
   const ws2 = wb.addWorksheet('Ventas por día');
-  ws2.addRow(['Fecha', 'Pedidos', 'Ingreso']);
-  ws2.addRows(report.series.map((d) => [d.date, d.orders, d.revenue]));
+  addBrandedHeader(ws2, { branding, title: 'Ventas por día', subtitle, columnsSpan: 3, compact: true });
+  const { headerRow: dayHeader } = writeStyledTable(
+    ws2, branding, ['Fecha', 'Pedidos', 'Ingreso'],
+    report.series.map((d) => [d.label, d.orders, d.revenue]),
+    { currencyCols: [3] },
+  );
+  freezeHeaderRow(ws2, dayHeader);
+  autoFitColumns(ws2);
 
-  const ws3 = wb.addWorksheet('Productos');
-  ws3.addRow(['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad']);
-  ws3.addRows(report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]));
+  /* — Más vendidos — */
+  const ws3 = wb.addWorksheet('Más vendidos');
+  addBrandedHeader(ws3, { branding, title: 'Más vendidos (por ingreso)', subtitle, columnsSpan: 5, compact: true });
+  const { headerRow: revHeader } = writeStyledTable(
+    ws3, branding, ['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
+    report.topByRevenue.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]),
+    { currencyCols: [3, 4, 5] },
+  );
+  freezeHeaderRow(ws3, revHeader);
+  autoFitColumns(ws3);
 
-  const buf = await wb.xlsx.writeBuffer();
-  const xlsx = Buffer.from(buf).toString('base64');
+  /* — Más rentables (solo si hay productos con costo capturado) — */
+  if (report.topByProfit.length > 0) {
+    const ws4 = wb.addWorksheet('Más rentables');
+    addBrandedHeader(ws4, { branding, title: 'Más rentables (por utilidad)', subtitle, columnsSpan: 5, compact: true });
+    const { headerRow: profitHeader } = writeStyledTable(
+      ws4, branding, ['Producto', 'Cantidad', 'Ingreso', 'Costo', 'Utilidad'],
+      report.topByProfit.map((p) => [p.name, p.qty, p.revenue, p.cost, p.profit]),
+      { currencyCols: [3, 4, 5] },
+    );
+    freezeHeaderRow(ws4, profitHeader);
+    autoFitColumns(ws4);
+  }
+
+  const xlsx = await workbookToBase64(wb);
   return { xlsx, filename: `reporte-ventas-${from}_a_${to}.xlsx` };
+}
+
+/* ── Export del arqueo de caja — PDF (cliente) + Excel (servidor) ── */
+
+function summarizeByMethod(byMethod: Record<string, number> | null): string {
+  if (!byMethod) return '';
+  return Object.entries(byMethod)
+    .map(([method, amount]) => `${method === 'CASH' ? 'Efectivo' : method}: ${Number(amount).toFixed(2)}`)
+    .join(', ');
+}
+
+/** Datos ya armados (marca + historial) para dibujar el PDF de arqueo en el cliente. */
+export async function getCashHistoryPdfData(
+  restaurantId: string,
+  limit = 200,
+): Promise<{ rows?: CashCount[]; branding?: DocumentBranding; slug?: string; error?: string }> {
+  const ctx = await authRestaurant(restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+  const [rows, branding] = await Promise.all([
+    getCashHistory(restaurantId, limit),
+    resolveRestaurantBranding(restaurantId),
+  ]);
+  return { rows, branding, slug: ctx.slug };
+}
+
+/** Genera el historial de arqueos como .xlsx real, con marca del restaurante. */
+export async function exportCashHistoryXlsx(
+  restaurantId: string,
+  limit = 200,
+): Promise<{ xlsx?: string; filename?: string; error?: string }> {
+  const ctx = await authRestaurant(restaurantId);
+  if (!ctx) return { error: 'No autorizado.' };
+
+  const [rows, branding] = await Promise.all([
+    getCashHistory(restaurantId, limit),
+    resolveRestaurantBranding(restaurantId),
+  ]);
+
+  const subtitle = `${rows.length} corte${rows.length === 1 ? '' : 's'} · Generado el ${longDate(new Date().toISOString())}`;
+  const wb = await createBrandedWorkbook();
+  const ws = wb.addWorksheet('Arqueo de caja');
+  const headers = ['Fecha', 'Turno', 'Cajero', 'Fondo inicial', 'Esperado', 'Contado', 'Diferencia', 'Por método', 'Notas'];
+  addBrandedHeader(ws, { branding, title: 'Arqueo de caja', subtitle, columnsSpan: headers.length });
+
+  const { headerRow } = writeStyledTable(
+    ws, branding, headers,
+    rows.map((c) => [
+      c.business_date, c.shift_label ?? '', c.cashier_name ?? '',
+      Number(c.opening_float), Number(c.expected_cash), Number(c.counted_cash), Number(c.difference),
+      summarizeByMethod(c.by_method), c.notes ?? '',
+    ]),
+    { currencyCols: [4, 5, 6, 7] },
+  );
+  freezeHeaderRow(ws, headerRow);
+  autoFitColumns(ws, { max: 46 });
+
+  const xlsx = await workbookToBase64(wb);
+  return { xlsx, filename: `arqueo-caja-${ctx.slug}-${new Date().toISOString().slice(0, 10)}.xlsx` };
 }
