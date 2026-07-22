@@ -29,6 +29,8 @@ export type PlanCode = 'BASICO' | 'ESTANDAR' | 'PREMIUM' | 'PRO';
 
 export interface PlanFeatures {
   products: 'unlimited';
+  /** Tope duro de productos (solo el plan gratuito lo tiene; el resto es ilimitado). */
+  maxProducts?: number;
   users: number | 'unlimited';
   hasOrders: boolean;
   hasWhatsapp: boolean;
@@ -41,11 +43,13 @@ export interface PlanFeatures {
   hasAnalytics: boolean;
   /** Participa del descuento "Plan a tu medida" por canal desactivado. */
   hasChannelDiscount: boolean;
+  /** Visitas mensuales al menú público a partir de las que se avisa (solo aviso, nunca bloquea el menú). */
+  monthlyVisitWarning?: number;
   priceMonthly: number;
   priceLabel: string;
   /** Cobro único de configuración asistida (referencia; el cobro real es manual). */
   setupFee: number;
-  badge?: 'MÁS POPULAR' | 'TODO INCLUIDO';
+  badge?: 'MÁS POPULAR' | 'TODO INCLUIDO' | 'GRATIS';
   highlight: boolean;
 }
 
@@ -53,11 +57,14 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   BASICO: {
     code: 'BASICO',
     name: 'Básico',
-    tagline: 'Menú digital con QR — muestra tu carta sin pedidos en línea',
-    priceMonthly: 149,
-    priceLabel: 'Q149 / mes',
+    tagline: 'Menú digital con QR, gratis para siempre — sin pedidos en línea',
+    badge: 'GRATIS',
+    priceMonthly: 0,
+    priceLabel: 'Gratis',
     setupFee: 0,
     products: 'unlimited',
+    maxProducts: 150,
+    monthlyVisitWarning: 3000,
     users: 1,
     hasOrders: false,
     hasWhatsapp: false,
@@ -236,8 +243,9 @@ export function planPriceQ(pricing: PlanPricing, code: PlanCode): string {
   return 'Q' + pricing.prices[code].toLocaleString('es-GT', { maximumFractionDigits: 0 });
 }
 
-/** "Q599 / mes" — etiqueta de precio vigente (reemplaza a PLANS[x].priceLabel). */
+/** "Q599 / mes" — etiqueta de precio vigente (reemplaza a PLANS[x].priceLabel). "Gratis" si el precio vigente es Q0. */
 export function planPriceLabel(pricing: PlanPricing, code: PlanCode): string {
+  if (pricing.prices[code] === 0) return 'Gratis';
   return `${planPriceQ(pricing, code)} / mes`;
 }
 

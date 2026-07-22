@@ -55,7 +55,7 @@ const steps = (trialDays: number) => [
 /* Puntos de marketing por plan (los precios y el badge SIEMPRE salen de plans.ts,
    fuente única de verdad — solo este texto descriptivo se cura a mano aquí). */
 const LANDING_PLAN_POINTS: Record<PlanCode, string[]> = {
-  BASICO: ['Menú digital con código QR', 'Productos ilimitados', 'Personalización con logo y color', 'Sin pedidos en línea'],
+  BASICO: ['Menú digital con código QR', 'Gratis para siempre, hasta 150 productos', 'Personalización con logo y color', 'Sin pedidos en línea'],
   ESTANDAR: ['Todo lo del plan Básico', 'Pedidos para llevar o a domicilio', 'Alertas en tiempo real + WhatsApp', 'Nunca un % de tus ventas'],
   PREMIUM: ['Para llevar, en local y a domicilio', 'Panel de mesero y mapa de mesas', 'Lealtad, cupones y reservaciones', 'Finanzas, inventario y analítica'],
   PRO: [],
@@ -67,7 +67,8 @@ function landingPlans(pricing: PlanPricing) {
   return PUBLIC_PLANS.map((code) => ({
     code,
     name: PLANS[code].name,
-    price: planPriceQ(pricing, code),
+    price: pricing.prices[code] === 0 ? 'Gratis' : planPriceQ(pricing, code),
+    isFree: pricing.prices[code] === 0,
     tagline: PLANS[code].tagline,
     points: LANDING_PLAN_POINTS[code],
     accent: PLANS[code].highlight,
@@ -419,7 +420,7 @@ export default async function LeoginLanding() {
                 <h3 className="t-display" style={{ fontSize: 21, fontWeight: 800 }}>{p.name}</h3>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
                   <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--brand-accent)' }}>{p.price}</span>
-                  <span className="t-mute" style={{ fontSize: 13 }}>/ mes</span>
+                  {!p.isFree && <span className="t-mute" style={{ fontSize: 13 }}>/ mes</span>}
                 </div>
                 <p className="t-mute" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{p.tagline}</p>
                 <ul style={{ listStyle: 'none', margin: '16px 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>

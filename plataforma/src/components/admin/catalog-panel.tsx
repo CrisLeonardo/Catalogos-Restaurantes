@@ -5,6 +5,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { compressImage } from '@/components/admin/image-upload';
@@ -88,9 +89,11 @@ interface Props {
   ingredients?: Ingredient[];
   /** ¿El módulo de recetas/ingredientes está activo? */
   recetasActive?: boolean;
+  /** Tope de productos del plan (solo el plan gratuito lo trae, ver PLANS.BASICO.maxProducts). */
+  maxProducts?: number;
 }
 
-export default function CatalogPanel({ restaurantId, categories, products, ingredients = [], recetasActive = false }: Props) {
+export default function CatalogPanel({ restaurantId, categories, products, ingredients = [], recetasActive = false, maxProducts }: Props) {
   const [activeCat, setActiveCat] = useState<string>('todos');
   const [editor, setEditor] = useState<{ open: boolean; product: Product | null }>({
     open: false,
@@ -98,6 +101,9 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
   });
   const router = useRouter();
   const availForms = useRef<Record<string, HTMLFormElement | null>>({});
+
+  const atProductLimit = maxProducts != null && products.length >= maxProducts;
+  const nearProductLimit = maxProducts != null && !atProductLimit && products.length >= maxProducts * 0.8;
 
   const catIconMap = new Map(categories.map((c) => [c.id, pickIcon(c.icon)]));
   const list = products.filter(
@@ -127,13 +133,32 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
             );
           })}
         </div>
-        <Button
-          onClick={() => setEditor({ open: true, product: null })}
-          data-tour-step="catalogo-nuevo"
-          className="shrink-0 rounded-adm-full"
-        >
-          <Icon name="plus" size={15} /> Nuevo platillo
-        </Button>
+        {maxProducts != null && (
+          <span
+            className="shrink-0"
+            style={{
+              fontSize: 11.5, fontWeight: 600,
+              color: atProductLimit ? '#f87171' : nearProductLimit ? '#fb923c' : 'var(--u-text-4)',
+            }}
+          >
+            {products.length}/{maxProducts} productos
+          </span>
+        )}
+        {atProductLimit ? (
+          <Link href="/admin/suscripcion" className="shrink-0">
+            <Button variant="secondary" className="rounded-adm-full">
+              <Icon name="key" size={15} /> Sube de plan para más
+            </Button>
+          </Link>
+        ) : (
+          <Button
+            onClick={() => setEditor({ open: true, product: null })}
+            data-tour-step="catalogo-nuevo"
+            className="shrink-0 rounded-adm-full"
+          >
+            <Icon name="plus" size={15} /> Nuevo platillo
+          </Button>
+        )}
       </div>
 
       {/* Tabla */}

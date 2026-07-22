@@ -78,12 +78,13 @@ function buildPlanCards(pricing: PlanPricing): PlanCardDef[] {
     {
       code: 'BASICO',
       name: 'Básico',
-      priceLabel: planPriceQ(pricing, 'BASICO'),
-      priceUnit: '/ mes',
-      trialLabel: `Con ${trial} días gratis`,
+      badge: 'GRATIS',
+      priceLabel: planPriceLabel(pricing, 'BASICO'),
+      priceUnit: '',
+      trialLabel: 'Gratis para siempre, sin tarjeta',
       features: [
         { text: 'Menú digital con QR imprimible', positive: true },
-        { text: 'Productos ilimitados · 1 usuario', positive: true },
+        { text: 'Hasta 150 productos · 1 usuario', positive: true },
         { text: 'Tu logo y color de marca', positive: true },
         { text: 'Sin pedidos en línea', positive: false },
       ],
@@ -392,7 +393,7 @@ export default function SignupWizard({
       {/* ── Paso 4: Confirmar ── */}
       <div style={{ display: step === 4 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
         <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · ${trialDays} días gratis, luego ${planPriceLabel(pricing, 'PREMIUM')}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarSummary} · ${planPriceLabel(pricing, 'ESTANDAR')} (${trialDays} días gratis)` : `Básico · ${planPriceLabel(pricing, 'BASICO')} (${trialDays} días gratis)`} />
+          <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · ${trialDays} días gratis, luego ${planPriceLabel(pricing, 'PREMIUM')}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarSummary} · ${planPriceLabel(pricing, 'ESTANDAR')} (${trialDays} días gratis)` : `Básico · ${planPriceLabel(pricing, 'BASICO')} para siempre`} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Estilo" value={findTemplate(templateId)?.name ?? 'Clásico'} />
@@ -401,7 +402,7 @@ export default function SignupWizard({
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
             <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent)' }} />
-            {trialDays} días de prueba gratis
+            {selectedPlan === 'BASICO' ? 'Gratis para siempre' : `${trialDays} días de prueba gratis`}
           </div>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
             {selectedPlan === 'BASICO'

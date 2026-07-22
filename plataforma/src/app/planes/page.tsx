@@ -10,7 +10,7 @@ import { getEffectivePlanPricing } from '@/lib/db/billing';
 
 export const metadata = {
   title: 'Planes y precios — Leogin',
-  description: 'Menú digital con pedidos en línea para tu restaurante. Planes de precio fijo, sin cobro por tus ventas, con 30 días de prueba gratis.',
+  description: 'Menú digital gratis para siempre, con planes de pedidos en línea a precio fijo — sin cobro por tus ventas.',
 };
 
 // Los precios pueden cambiar desde /super/configuracion: la página se
@@ -67,7 +67,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Hay periodo de prueba?',
-      a: `${pricing.trialDays} días gratis en cualquier plan, sin tarjeta. Si decides no continuar, tu menú simplemente se pausa — no hay cobro ni compromiso.`,
+      a: `El plan Básico es gratis para siempre, sin necesidad de probarlo. Estándar y Premium tienen ${pricing.trialDays} días de prueba gratis, sin tarjeta — si decides no continuar, tu menú simplemente se pausa, no hay cobro ni compromiso.`,
     },
   ];
 }
@@ -131,7 +131,7 @@ export default async function PlanesPage() {
             padding: '11px 24px', borderRadius: 99, fontSize: 14, fontWeight: 700,
             textDecoration: 'none', background: 'var(--brand-accent)', color: '#fff',
           }}>
-            {pricing.trialDays} días gratis · sin tarjeta
+            Empieza gratis · sin tarjeta
           </Link>
           <a
             href="#armar-plan"
@@ -195,7 +195,7 @@ export default async function PlanesPage() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {(code === 'BASICO' ? [
                     { label: 'Menú digital con QR imprimible', ok: true },
-                    { label: 'Catálogo de productos ilimitados', ok: true },
+                    { label: `Hasta ${PLANS.BASICO.maxProducts} productos`, ok: true },
                     { label: 'Tu logo y color de marca', ok: true },
                     { label: 'Añade módulos sueltos si los necesitas', ok: true },
                     { label: 'Pedidos en línea', ok: false },

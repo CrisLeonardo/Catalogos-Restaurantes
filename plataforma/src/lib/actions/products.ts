@@ -13,6 +13,7 @@ import {
 import { longDate } from '@/lib/documents/format';
 import type { DocumentBranding } from '@/lib/documents/types';
 import { sanitizeDietaryTags } from '@/lib/dietary-tags';
+import { PLANS, type PlanCode } from '@/lib/plans';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 
 export type ProductState = { error: string } | null;
@@ -47,6 +48,36 @@ async function resolveContext(formData: FormData) {
 
   const db = elevated ? createServiceClient() : supabase;
   return { db, restaurantId, role: profile.role };
+}
+
+/**
+ * Tope de productos del plan gratuito (BASICO, ver PLANS.maxProducts en
+ * plans.ts). Devuelve un mensaje de error si el restaurante ya llegó al
+ * tope, o null si puede seguir creando productos.
+ */
+async function checkProductLimit(
+  ctx: NonNullable<Awaited<ReturnType<typeof resolveContext>>>,
+): Promise<string | null> {
+  const { data: restaurant } = await ctx.db
+    .from('restaurants')
+    .select('plan_actual')
+    .eq('id', ctx.restaurantId)
+    .single();
+
+  const maxProducts = restaurant?.plan_actual
+    ? PLANS[restaurant.plan_actual as PlanCode]?.maxProducts
+    : undefined;
+  if (!maxProducts) return null;
+
+  const { count } = await ctx.db
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', ctx.restaurantId);
+
+  if ((count ?? 0) >= maxProducts) {
+    return `Llegaste al límite de ${maxProducts} productos del plan gratuito. Sube de plan para agregar productos ilimitados.`;
+  }
+  return null;
 }
 
 function parseTags(raw: string | null): string[] | null {
@@ -138,6 +169,9 @@ function parseOptions(raw: string | null): ProductOptionGroup[] | null | { error
 export async function createProduct(prevState: ProductState, formData: FormData): Promise<ProductState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
+
+  const limitError = await checkProductLimit(ctx);
+  if (limitError) return { error: limitError };
 
   const name = (formData.get('name') as string)?.trim();
   const priceRaw = formData.get('price') as string;
@@ -345,6 +379,9 @@ export async function createProductModal(
 ): Promise<ProductModalState> {
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
+
+  const limitError = await checkProductLimit(ctx);
+  if (limitError) return { error: limitError };
 
   const name = (formData.get('name') as string)?.trim();
   const priceRaw = formData.get('price') as string;

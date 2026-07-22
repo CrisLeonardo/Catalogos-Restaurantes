@@ -4,74 +4,82 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
+import { getEffectivePlanPricing } from '@/lib/db/billing';
+import { planPriceLabel, PLANS, type PlanPricing } from '@/lib/plans';
 
 export const metadata: Metadata = {
   title: '¡Tu restaurante está listo! — Leogin',
   robots: { index: false, follow: false },
 };
 
-const PLAN_INFO = {
-  PREMIUM: {
-    name: 'Premium',
-    badge: 'PRUEBA 30 DÍAS',
-    badgeColor: '#818cf8',
-    badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'luego Q749 / mes · sin tarjeta ni compromiso',
-    subtitle: 'Tu prueba de 30 días comienza hoy.',
-    features: [
-      'Pedidos para llevar, en local y delivery',
-      'Alerta WhatsApp al recibir pedido',
-      'Notificaciones en tiempo real',
-      'Usuarios ilimitados con roles',
-    ],
-    nextSteps: [
-      'Sube tus productos y fotos',
-      'Personaliza colores y logo',
-      'Comparte tu código QR con clientes',
-      'Activa WhatsApp en Módulos para alertas',
-    ],
-  },
-  ESTANDAR: {
-    name: 'Estándar',
-    badge: 'PRUEBA 30 DÍAS',
-    badgeColor: '#10b981',
-    badgeBg: 'rgba(16,185,129,0.14)',
-    detail: 'luego Q399 / mes · sin tarjeta ni compromiso',
-    subtitle: 'Tu prueba de 30 días comienza hoy.',
-    features: [
-      'Pedidos para llevar activos en tu menú',
-      'Alerta WhatsApp al recibir pedido',
-      'Notificaciones en tiempo real',
-      'Personalización completa de marca',
-    ],
-    nextSteps: [
-      'Sube tus productos y fotos',
-      'Personaliza colores y logo',
-      'Comparte tu código QR con clientes',
-      'Activa WhatsApp en Módulos para alertas',
-    ],
-  },
-  BASICO: {
-    name: 'Básico',
-    badge: 'PRUEBA 30 DÍAS',
-    badgeColor: '#818cf8',
-    badgeBg: 'rgba(129,140,248,0.14)',
-    detail: 'luego Q149 / mes · sin tarjeta ni compromiso',
-    subtitle: 'Tu plan Básico (menú digital) está activo.',
-    features: [
-      'Menú digital con QR listo para imprimir',
-      'Productos ilimitados en catálogo',
-      'Logo y colores de tu marca',
-      'Panel de administración completo',
-    ],
-    nextSteps: [
-      'Sube tus productos y fotos',
-      'Personaliza colores y logo',
-      'Imprime o comparte tu código QR',
-      'Actualiza a Estándar (Q399) para agregar pedidos para llevar',
-    ],
-  },
-} as const;
+/* Precios y días de prueba salen de PlanPricing vigente (overrides del
+   super admin), nunca hardcodeados — así esta página nunca queda stale
+   frente a plans.ts / platform_settings. */
+function buildPlanInfo(pricing: PlanPricing) {
+  const trialDays = pricing.trialDays;
+  return {
+    PREMIUM: {
+      name: 'Premium',
+      badge: `PRUEBA ${trialDays} DÍAS`,
+      badgeColor: '#818cf8',
+      badgeBg: 'rgba(129,140,248,0.14)',
+      detail: `luego ${planPriceLabel(pricing, 'PREMIUM')} · sin tarjeta ni compromiso`,
+      subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
+      features: [
+        'Pedidos para llevar, en local y delivery',
+        'Alerta WhatsApp al recibir pedido',
+        'Notificaciones en tiempo real',
+        'Usuarios ilimitados con roles',
+      ],
+      nextSteps: [
+        'Sube tus productos y fotos',
+        'Personaliza colores y logo',
+        'Comparte tu código QR con clientes',
+        'Activa WhatsApp en Módulos para alertas',
+      ],
+    },
+    ESTANDAR: {
+      name: 'Estándar',
+      badge: `PRUEBA ${trialDays} DÍAS`,
+      badgeColor: '#10b981',
+      badgeBg: 'rgba(16,185,129,0.14)',
+      detail: `luego ${planPriceLabel(pricing, 'ESTANDAR')} · sin tarjeta ni compromiso`,
+      subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
+      features: [
+        'Pedidos para llevar activos en tu menú',
+        'Alerta WhatsApp al recibir pedido',
+        'Notificaciones en tiempo real',
+        'Personalización completa de marca',
+      ],
+      nextSteps: [
+        'Sube tus productos y fotos',
+        'Personaliza colores y logo',
+        'Comparte tu código QR con clientes',
+        'Activa WhatsApp en Módulos para alertas',
+      ],
+    },
+    BASICO: {
+      name: 'Básico',
+      badge: 'GRATIS',
+      badgeColor: '#4ade80',
+      badgeBg: 'rgba(74,222,128,0.14)',
+      detail: `${planPriceLabel(pricing, 'BASICO')} para siempre · hasta ${PLANS.BASICO.maxProducts} productos`,
+      subtitle: 'Tu plan Básico (menú digital) es gratis para siempre.',
+      features: [
+        'Menú digital con QR listo para imprimir',
+        `Hasta ${PLANS.BASICO.maxProducts} productos en catálogo`,
+        'Logo y colores de tu marca',
+        'Panel de administración completo',
+      ],
+      nextSteps: [
+        'Sube tus productos y fotos',
+        'Personaliza colores y logo',
+        'Imprime o comparte tu código QR',
+        `Sube a Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) para agregar pedidos para llevar`,
+      ],
+    },
+  } as const;
+}
 
 export default async function RegistroListoPage({
   searchParams,
@@ -83,7 +91,8 @@ export default async function RegistroListoPage({
   const safePlan = plan === 'BASICO' ? 'BASICO' : plan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
   const panelUrl = safeSlug ? adminUrl(safeSlug) : '/login';
   const menuUrl = safeSlug ? subdomainUrl(safeSlug) : '/';
-  const info = PLAN_INFO[safePlan];
+  const pricing = await getEffectivePlanPricing();
+  const info = buildPlanInfo(pricing)[safePlan];
 
   return (
     <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>

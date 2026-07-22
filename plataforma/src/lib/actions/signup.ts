@@ -198,17 +198,20 @@ export async function signupRestaurant(
     config: { ...(template ? structuredClone(template.config) : {}), orderTypes },
   });
 
-  // ── 4. Cobro pausado con prueba gratis ──────────────────────
+  // ── 4. Cobro ──────────────────────────────────────────────
+  // BASICO es gratis para siempre (Q0, sin trial que "vencer"): se activa
+  // el cobro automático desde ya — como la tarifa calculada es 0, nunca
+  // genera factura (ver leogin_generate_monthly_invoices), y así el panel
+  // no muestra un banner de "tu prueba termina en X días" que no aplica.
+  // ESTANDAR/PREMIUM sí quedan en prueba gratis, sin cobrar hasta graduar.
   const pricing = await getPricingSettings();
   const trialDays = Math.max(0, Math.round(pricing.trialDays || 30));
   const trialEnds = new Date(Date.now() + trialDays * 86_400_000).toISOString();
-  await db.from('restaurant_billing').insert({
-    restaurant_id: restaurantId,
-    auto_price: true,
-    active: false,            // sin cobro durante la prueba
-    trial_ends_at: trialEnds,
-    currency: 'GTQ',
-  });
+  await db.from('restaurant_billing').insert(
+    planCode === 'BASICO'
+      ? { restaurant_id: restaurantId, auto_price: true, active: true, trial_ends_at: null, currency: 'GTQ' }
+      : { restaurant_id: restaurantId, auto_price: true, active: false, trial_ends_at: trialEnds, currency: 'GTQ' },
+  );
   // Calcula y guarda la mensualidad del plan (se muestra al dueño, se cobra al graduar).
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 

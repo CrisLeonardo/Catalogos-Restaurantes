@@ -6,6 +6,8 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats } from '@/lib/db/orders';
 import { getBillingConfig, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
+import { getVisitStats } from '@/lib/actions/metrics';
+import { PLANS } from '@/lib/plans';
 import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
 import { formatPrice } from '@/lib/theme/resolve';
@@ -62,6 +64,13 @@ export default async function AdminHomePage() {
   const billing = restaurantId ? await getBillingConfig(restaurantId) : null;
   const onTrial = isOnTrial(billing);
   const trialLeft = onTrial ? trialDaysLeft(billing) : 0;
+
+  // ── Aviso de visitas del plan gratuito (solo aviso, nunca bloquea el menú) ──
+  const visitWarningLimit = restaurant?.plan_actual ? PLANS[restaurant.plan_actual].monthlyVisitWarning : undefined;
+  const visitStats = visitWarningLimit && restaurantId
+    ? await getVisitStats(restaurantId, timezone)
+    : null;
+  const visitWarning = !!visitStats && !!visitWarningLimit && visitStats.last30 >= visitWarningLimit;
 
   // ── Onboarding guiado (solo el dueño, primera vez) ──────────
   const needsOnboarding =
@@ -163,6 +172,31 @@ export default async function AdminHomePage() {
               {trialLeft <= 3
                 ? 'Contáctanos para continuar sin interrupciones.'
                 : 'Tu menú ya está en vivo. Aprovéchalo al máximo.'}
+            </div>
+          </div>
+          <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        </Link>
+      )}
+
+      {/* Aviso de visitas del plan gratuito (solo aviso — el menú público nunca se bloquea) */}
+      {visitWarning && visitStats && (
+        <Link
+          href="/admin/suscripcion"
+          className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
+          style={{ border: '1px solid rgba(251,146,60,0.4)' }}
+        >
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-adm-md"
+            style={{ background: 'rgba(251,146,60,0.14)', color: '#fb923c' }}
+          >
+            <Icon name="chart" size={17} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+              Tu menú va muy bien: {visitStats.last30.toLocaleString('es-GT')} visitas este mes
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
+              Pasaste el uso típico del plan gratuito. Sube de plan para pedidos en línea, WhatsApp y avisos en tiempo real.
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
