@@ -87,7 +87,11 @@ async function makeTenant(tag) {
   // order_voids (migración 079, Fase 1): auditoría de anulaciones, sin políticas RLS.
   const voidRow = await ins('order_voids', { restaurant_id: r.id, order_id: ord.id, reason: `Prueba de aislamiento ${tag}`, requested_by: u.user.id });
 
-  return { id: r.id, email, categoryId: cat.id, prodActive: prodActive.id, prodHidden: prodHidden.id, orderId: ord.id, customerId: cust.id, invoiceId: inv.id, ownerId: u.user.id, voidId: voidRow.id };
+  // gift_cards / tip_distributions (migración 081-082, Fase 2): sin políticas RLS.
+  const giftCard = await ins('gift_cards', { restaurant_id: r.id, code: `TEST-${tag}-${SUFFIX}`, initial_balance: 50, balance: 50, created_by: u.user.id });
+  const tipDist = await ins('tip_distributions', { restaurant_id: r.id, period_start: '2026-01-01T00:00:00Z', period_end: '2026-01-07T23:59:59Z', total_tip: 10, created_by: u.user.id });
+
+  return { id: r.id, email, categoryId: cat.id, prodActive: prodActive.id, prodHidden: prodHidden.id, orderId: ord.id, customerId: cust.id, invoiceId: inv.id, ownerId: u.user.id, voidId: voidRow.id, giftCardId: giftCard.id, tipDistId: tipDist.id };
 }
 
 async function cleanup() {
@@ -135,6 +139,19 @@ async function main() {
   {
     const { data } = await asA.from('order_voids').insert({ restaurant_id: A.id, order_id: A.orderId, reason: 'Intento anon', requested_by: A.ownerId }).select('id');
     check('A no puede insertar en order_voids por anon', (data?.length ?? 0) === 0, `insertó ${data?.length}`);
+  }
+
+  console.log('\n── gift_cards / tip_distributions (Fase 2): sin políticas RLS ──');
+  check('A no ve SUS PROPIAS gift_cards por anon (tabla sin políticas, solo service_role)', (await rows(asA, 'gift_cards', 'restaurant_id', A.id)) === 0);
+  check('A no ve gift_cards de B por anon', (await rows(asA, 'gift_cards', 'restaurant_id', B.id)) === 0);
+  check('A no ve tip_distributions de B por anon', (await rows(asA, 'tip_distributions', 'restaurant_id', B.id)) === 0);
+  {
+    const { data } = await asA.from('gift_cards').insert({ restaurant_id: A.id, code: `HACK-${SUFFIX}`, initial_balance: 999, balance: 999 }).select('id');
+    check('A no puede insertar en gift_cards por anon', (data?.length ?? 0) === 0, `insertó ${data?.length}`);
+  }
+  {
+    const { data, error } = await asA.rpc('redeem_gift_card', { p_gift_card_id: B.giftCardId, p_order_id: A.orderId, p_amount: 1, p_created_by: A.ownerId });
+    check('A no puede redimir el vale de B contra un pedido de A por anon', !!error && !data, error?.message ?? `devolvió ${data}`);
   }
 
   console.log('\n── Menú PÚBLICO de B: visible a propósito (no es fuga) ──');

@@ -174,6 +174,7 @@ export interface AddonModule {
 
 export const ADDON_MODULES: Record<ActivatableModuleKey, AddonModule> = {
   reservaciones:  { key: 'reservaciones',  price: 99,  minPlan: 'BASICO' },
+  lista_espera:   { key: 'lista_espera',   price: 49,  minPlan: 'BASICO' },
   llamada_mesero: { key: 'llamada_mesero', price: 49,  minPlan: 'ESTANDAR' },
   encuestas:      { key: 'encuestas',      price: 49,  minPlan: 'ESTANDAR' },
   cupones:        { key: 'cupones',        price: 79,  minPlan: 'ESTANDAR' },
@@ -254,8 +255,8 @@ export function planTotalWith(pricing: PlanPricing, plan: PlanCode, addons: Acti
 export const INCLUDED_MODULES: Record<PlanCode, ActivatableModuleKey[]> = {
   BASICO: [],
   ESTANDAR: [],
-  PREMIUM: ['llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'reservaciones'],
-  PRO: ['reservaciones', 'llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'proveedores', 'fel'],
+  PREMIUM: ['llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'reservaciones', 'lista_espera'],
+  PRO: ['reservaciones', 'lista_espera', 'llamada_mesero', 'encuestas', 'cupones', 'loyalty', 'recetas', 'proveedores', 'fel'],
 };
 
 export function isModuleIncluded(plan: PlanCode, key: ActivatableModuleKey): boolean {

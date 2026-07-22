@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select } from '@/components/ui/select';
 import { updateRestaurantOps, type RestaurantState } from '@/lib/actions/restaurant';
-import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours } from '@/lib/hours';
+import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import type { Restaurant } from '@/types';
 
 const TIMEZONES = [
@@ -66,6 +66,32 @@ function buildHoursJson(days: Record<DayKey, DayState>): string {
   return Object.keys(out).length > 0 ? JSON.stringify(out) : '';
 }
 
+/* ── Excepciones de horario por fecha (feriados) ────────────── */
+
+type ExceptionRow = { date: string; closed: boolean; intervals: Interval[] };
+
+function initExceptions(exceptions: HourExceptions | null): ExceptionRow[] {
+  if (!exceptions) return [];
+  return Object.entries(exceptions)
+    .map(([date, list]) => ({
+      date,
+      closed: list.length === 0,
+      intervals: list.length > 0 ? list.map(([open, close]) => ({ open, close })) : [{ open: '08:00', close: '21:00' }],
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function buildExceptionsJson(rows: ExceptionRow[]): string {
+  const out: HourExceptions = {};
+  for (const row of rows) {
+    if (!row.date) continue;
+    out[row.date] = row.closed
+      ? []
+      : row.intervals.filter((iv) => iv.open && iv.close).map((iv) => [iv.open, iv.close] as HourInterval);
+  }
+  return Object.keys(out).length > 0 ? JSON.stringify(out) : '';
+}
+
 const empty: RestaurantState = null;
 
 export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) {
@@ -73,6 +99,23 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
   const [paused, setPaused] = useState(restaurant.orders_paused === true);
   const [timezone, setTimezone] = useState(restaurant.timezone || 'America/Guatemala');
+  const [exceptions, setExceptions] = useState<ExceptionRow[]>(() => initExceptions(restaurant.hour_exceptions));
+
+  const addException = () =>
+    setExceptions((prev) => [...prev, { date: '', closed: true, intervals: [{ open: '08:00', close: '21:00' }] }]);
+
+  const patchException = (idx: number, patch: Partial<ExceptionRow>) =>
+    setExceptions((prev) => prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+
+  const removeException = (idx: number) =>
+    setExceptions((prev) => prev.filter((_, i) => i !== idx));
+
+  const setExceptionInterval = (idx: number, ivIdx: number, patch: Partial<Interval>) =>
+    setExceptions((prev) =>
+      prev.map((row, i) =>
+        i === idx ? { ...row, intervals: row.intervals.map((iv, j) => (j === ivIdx ? { ...iv, ...patch } : iv)) } : row,
+      ),
+    );
 
   const toggleDay = (day: DayKey) =>
     setDays((prev) => ({ ...prev, [day]: { ...prev[day], on: !prev[day].on } }));
@@ -129,6 +172,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
       <input type="hidden" name="hours" value={buildHoursJson(days)} />
+      <input type="hidden" name="hour_exceptions" value={buildExceptionsJson(exceptions)} />
       <input type="hidden" name="orders_paused" value={String(paused)} />
 
       {/* ── Pausa de pedidos ── */}
@@ -271,6 +315,103 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
               </div>
             );
           })}
+        </div>
+      </Card>
+
+      {/* ── Excepciones por fecha (feriados) ── */}
+      <Card className="p-4">
+        <label style={labelStyle}>Feriados y excepciones</label>
+        <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12 }}>
+          Para una fecha exacta (25 de diciembre, un evento privado, etc.) puedes
+          cerrar el local todo el día o darle un horario distinto al normal —
+          sin tocar tu horario semanal de siempre.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {exceptions.map((row, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start',
+                padding: '10px', borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--u-hair-2)',
+              }}
+            >
+              <input
+                type="date"
+                value={row.date}
+                onChange={(e) => patchException(idx, { date: e.target.value })}
+                style={{ ...inputStyle, width: 150 }}
+                aria-label={`Fecha excepción ${idx + 1}`}
+              />
+
+              <button
+                type="button"
+                onClick={() => patchException(idx, { closed: !row.closed })}
+                className="press"
+                style={{
+                  padding: '8px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                  background: row.closed ? 'rgba(239,68,68,0.14)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
+                  border: `1px solid ${row.closed ? 'rgba(239,68,68,0.3)' : 'var(--u-hair-2)'}`,
+                  color: row.closed ? 'var(--c-danger, #f87171)' : 'var(--u-text)',
+                  fontSize: 13, fontWeight: 600,
+                }}
+              >
+                {row.closed ? 'Cerrado todo el día' : 'Horario especial'}
+              </button>
+
+              {!row.closed && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+                  {row.intervals.map((iv, ivIdx) => (
+                    <div key={ivIdx} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <input
+                        type="time"
+                        value={iv.open}
+                        onChange={(e) => setExceptionInterval(idx, ivIdx, { open: e.target.value })}
+                        style={inputStyle}
+                        aria-label={`Apertura especial turno ${ivIdx + 1}`}
+                      />
+                      <span style={{ color: 'var(--u-text-4)', fontSize: 13 }}>a</span>
+                      <input
+                        type="time"
+                        value={iv.close}
+                        onChange={(e) => setExceptionInterval(idx, ivIdx, { close: e.target.value })}
+                        style={inputStyle}
+                        aria-label={`Cierre especial turno ${ivIdx + 1}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => removeException(idx)}
+                className="press"
+                aria-label="Eliminar excepción"
+                style={{
+                  width: 26, height: 26, borderRadius: 99, border: 'none',
+                  background: 'rgba(239,68,68,0.14)', color: 'var(--c-danger, #f87171)',
+                  cursor: 'pointer', fontSize: 15, lineHeight: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto',
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addException}
+            className="press"
+            style={{
+              alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 'var(--radius-md)',
+              border: '1px dashed var(--u-hair-2)', background: 'transparent',
+              color: 'var(--u-text-4)', fontSize: 13, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            + Agregar fecha
+          </button>
         </div>
       </Card>
 

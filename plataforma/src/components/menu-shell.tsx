@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { setScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
+import { LocaleProvider } from '@/lib/locale/context';
 import Portada from '@/components/menu/portada';
 import MenuClient from '@/components/menu-client';
 import VisitTracker from '@/components/visit-tracker';
@@ -15,8 +16,8 @@ import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
-type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
+type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
 
 interface Props {
   config: ThemeConfig;
@@ -46,9 +47,11 @@ interface Props {
   restaurantLat?: number | null;
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
+  /** Idiomas adicionales al español activos para el menú (migración 086). */
+  menuLanguages?: string[];
 }
 
-export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null }: Props) {
+export default function MenuShell({ config, content, categories, products, restaurantId, ordersEnabled, isOpen = true, reopenHint = null, timezone = 'America/Guatemala', initialMesa, llamadaMeseroEnabled = false, loyaltyOn = false, rewardsCatalog = null, googleAuthEnabled = false, whatsappNumber = null, restaurantLat = null, restaurantLng = null, deliveryRadiusKm = null, menuLanguages = [] }: Props) {
   useEffect(() => {
     if (initialMesa && initialMesa > 0) {
       // "Añadir a inicio" guarda la URL con ?mesa= para siempre (ver
@@ -70,6 +73,7 @@ export default function MenuShell({ config, content, categories, products, resta
 
   return (
     <ThemeProvider config={config} content={content}>
+      <LocaleProvider restaurantId={restaurantId} extraLanguages={menuLanguages}>
       <CartProvider restaurantId={restaurantId}>
         <OfflineSupport />
         <VisitTracker restaurantId={restaurantId} />
@@ -106,6 +110,7 @@ export default function MenuShell({ config, content, categories, products, resta
         </main>
         <InstallBanner brandName={config.brandName} />
       </CartProvider>
+      </LocaleProvider>
     </ThemeProvider>
   );
 }

@@ -10,6 +10,7 @@ import DesktopServerSettings from '@/components/admin/desktop-server-settings';
 import HoursEditor from '@/components/admin/hours-editor';
 import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
 import OrdersCurrencyEditor from '@/components/admin/orders-currency-editor';
+import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
@@ -80,6 +81,10 @@ export default async function AdminAjustesPage() {
         subtitle="Activa esto para que el cliente vea un mapa interactivo en el checkout y coloque su pin. El pedido se rechaza si el pin cae fuera del radio."
       >
         <RestaurantLocationEditor restaurant={restaurant as Restaurant} />
+      </CollapsibleCard>
+
+      <CollapsibleCard title="Idiomas del menú" icon="globe" storageKey="ajustes-idiomas" defaultOpen={false}>
+        <MenuLanguagesEditor restaurant={restaurant as Restaurant} />
       </CollapsibleCard>
 
       <CollapsibleCard title="Pedidos y moneda" icon="wallet" storageKey="ajustes-pedidos" defaultOpen={false}>

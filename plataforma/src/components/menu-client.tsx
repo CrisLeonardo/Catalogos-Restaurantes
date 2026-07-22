@@ -22,8 +22,8 @@ import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
 
-type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'> & {
+type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
 };

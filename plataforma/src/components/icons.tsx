@@ -82,6 +82,7 @@ import {
   SmileIcon,
   Notification03Icon,
   ComputerIcon,
+  GlobalIcon,
 } from '@hugeicons/core-free-icons';
 
 export const ICON_PATHS: Record<string, IconSvgElement> = {
@@ -161,6 +162,7 @@ export const ICON_PATHS: Record<string, IconSvgElement> = {
   smile: SmileIcon,
   bellRing: Notification03Icon,
   monitor: ComputerIcon,
+  globe: GlobalIcon,
 };
 
 export type IconName = keyof typeof ICON_PATHS;

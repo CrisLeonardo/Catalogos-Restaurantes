@@ -11,6 +11,7 @@
 export const ADMIN_SECTIONS = [
   { key: 'mesero',       label: 'Mesero' },
   { key: 'pedidos',      label: 'Pedidos' },
+  { key: 'lista_espera', label: 'Lista de espera' },
   { key: 'aprobar_anulaciones', label: 'Aprobar anulaciones' },
   { key: 'cocina',       label: 'Cocina (KDS)' },
   { key: 'catalogo',     label: 'Catálogo' },
@@ -22,6 +23,7 @@ export const ADMIN_SECTIONS = [
   { key: 'analitica',    label: 'Analítica' },
   { key: 'finanzas',     label: 'Finanzas' },
   { key: 'promociones',  label: 'Promociones' },
+  { key: 'vales',        label: 'Tarjetas de regalo' },
   { key: 'fel',          label: 'Facturación (FEL)' },
   { key: 'proveedores',  label: 'Proveedores' },
   { key: 'loyalty',      label: 'Lealtad' },

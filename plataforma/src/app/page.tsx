@@ -143,8 +143,8 @@ export default async function Home({
   const menu = await getMenuData(data.restaurant.id);
   const ordersEnabled = data.restaurant.modules?.orders === true;
   const tz = data.restaurant.timezone || 'America/Guatemala';
-  const isOpen = isOpenNow(data.restaurant.hours, tz);
-  const reopenHint = !isOpen ? nextOpenLabel(data.restaurant.hours, tz) : null;
+  const isOpen = isOpenNow(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions);
+  const reopenHint = !isOpen ? nextOpenLabel(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions) : null;
 
   const mod = data.restaurant.modules as Record<string, boolean> | null;
   const modSettings = data.restaurant.module_settings ?? null;
@@ -183,6 +183,7 @@ export default async function Home({
       restaurantLat={data.restaurant.location_lat}
       restaurantLng={data.restaurant.location_lng}
       deliveryRadiusKm={data.restaurant.delivery_radius_km}
+      menuLanguages={data.restaurant.menu_languages ?? []}
     />
   );
 }

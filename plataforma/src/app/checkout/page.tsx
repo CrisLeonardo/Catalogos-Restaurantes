@@ -35,7 +35,7 @@ export default async function CheckoutPage() {
   // Operación: pausa manual ("cocina saturada") y horario real.
   // createOrder vuelve a validar en el servidor; esto es solo la UX.
   const paused = restaurant.orders_paused === true;
-  const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala');
+  const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala', new Date(), restaurant.hour_exceptions);
   const hasPromos = await hasActiveCodePromos(restaurant.id);
   const { hubUrl, hubToken } = await getAgentHubInfo(restaurant.id);
   const mod = restaurant.modules as Record<string, boolean> | null;

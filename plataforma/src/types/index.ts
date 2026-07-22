@@ -1,4 +1,4 @@
-import type { WeeklyHours } from '@/lib/hours';
+import type { WeeklyHours, HourExceptions } from '@/lib/hours';
 
 /** Grupo/cadena dueño de varias sucursales (migración 024). */
 export interface Organization {
@@ -32,6 +32,7 @@ export interface Restaurant {
     proveedores?: boolean;
     loyalty?: boolean;
     reservaciones?: boolean;
+    lista_espera?: boolean;
     llamada_mesero?: boolean;
     encuestas?: boolean;
     cupones?: boolean;
@@ -45,6 +46,8 @@ export interface Restaurant {
   // Operación (migración 009)
   timezone: string;
   hours: WeeklyHours | null;
+  /** Excepciones puntuales por fecha (feriados) — migración 083. */
+  hour_exceptions: HourExceptions | null;
   orders_paused: boolean;
   pause_message: string | null;
   // Pedidos por WhatsApp + cobertura de delivery (migración 010)
@@ -60,6 +63,8 @@ export interface Restaurant {
   address: string | null;
   /** false = mostrar el asistente de configuración inicial (registro self-serve, mig. 047). */
   onboarding_done?: boolean;
+  /** Idiomas adicionales al español activos en el menú público (migración 086). Vacío = selector oculto. */
+  menu_languages?: string[] | null;
   created_at: string;
 }
 
@@ -103,6 +108,8 @@ export interface Category {
   id: string;
   restaurant_id: string;
   name: string;
+  /** Traducción al inglés del nombre (migración 086); vacío = usa `name` (fallback). */
+  name_en?: string | null;
   icon: string | null;
   sort_order: number;
   is_active: boolean;
@@ -154,12 +161,17 @@ export interface Product {
   category_id: string | null;
   name: string;
   description: string | null;
+  /** Traducciones opcionales al inglés (migración 086); vacío = usa el español (fallback). */
+  name_en?: string | null;
+  description_en?: string | null;
   price: number;
   /** Costo del producto (migración 019). Margen = price - cost. NULL = sin costo. */
   cost: number | null;
   image_url: string | null;
   icon: string | null;
   tags: string[] | null;
+  /** Claves de alérgenos/dietas del vocabulario fijo (migración 085, ver lib/dietary-tags.ts). */
+  dietary_tags?: string[] | null;
   options: ProductOptionGroup[] | null;
   is_available: boolean;
   /** Timestamp de cuando se marcó no-disponible; NULL si está disponible. */

@@ -170,6 +170,7 @@ export async function createCategoryModal(
   const { error } = await ctx.db.from('categories').insert({
     restaurant_id: ctx.restaurantId,
     name,
+    name_en: (formData.get('name_en') as string)?.trim() || null,
     icon: (formData.get('icon') as string) || null,
     availability: parseAvailability(formData.get('availability') as string | null),
     sort_order,
@@ -196,6 +197,7 @@ export async function updateCategoryModal(
     .from('categories')
     .update({
       name,
+      name_en: (formData.get('name_en') as string)?.trim() || null,
       icon: (formData.get('icon') as string) || null,
       availability: parseAvailability(formData.get('availability') as string | null),
     })

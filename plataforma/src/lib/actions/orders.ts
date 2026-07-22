@@ -9,7 +9,7 @@ import { createOrderSchema } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
-import { isOpenNow, type WeeklyHours } from '@/lib/hours';
+import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
@@ -98,7 +98,7 @@ export async function createOrder(
 
   const { data: restaurant } = await db
     .from('restaurants')
-    .select('id, modules, status, whatsapp_number, timezone, hours, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
+    .select('id, modules, status, whatsapp_number, timezone, hours, hour_exceptions, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
     .eq('id', restaurantId)
     .single();
 
@@ -147,6 +147,8 @@ export async function createOrder(
     !isOpenNow(
       restaurant.hours as WeeklyHours | null,
       (restaurant.timezone as string) || 'America/Guatemala',
+      new Date(),
+      restaurant.hour_exceptions as HourExceptions | null,
     )
   ) {
     return { error: 'El restaurante está cerrado en este momento.' };

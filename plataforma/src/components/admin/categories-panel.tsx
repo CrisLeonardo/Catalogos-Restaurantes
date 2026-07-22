@@ -312,6 +312,12 @@ function NewCategoryForm({
             style={{ ...inlineInput, flex: 1 }}
           />
         </div>
+        <input
+          name="name_en"
+          type="text"
+          placeholder="Nombre en inglés (opcional)"
+          style={inlineInput}
+        />
         <CategorySchedule defaultValue={null} />
         {state && 'error' in state && (
           <span style={{ fontSize: 12, color: 'var(--c-danger, #f87171)' }}>{state.error}</span>
@@ -381,6 +387,13 @@ function InlineEditForm({
           <Icon name="x" size={15} />
         </Button>
       </div>
+      <input
+        name="name_en"
+        type="text"
+        defaultValue={category.name_en ?? ''}
+        placeholder="Nombre en inglés (opcional)"
+        style={inlineInput}
+      />
       <CategorySchedule defaultValue={category.availability} />
       {state && 'error' in state && (
         <span style={{ fontSize: 11, color: 'var(--c-danger, #f87171)' }}>{state.error}</span>

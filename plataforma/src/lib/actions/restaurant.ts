@@ -6,7 +6,7 @@ import { resolveGroupBranchId } from '@/lib/db/admin';
 import { logChannelChanges } from '@/lib/db/channel-history';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { HourInterval, WeeklyHours } from '@/lib/hours';
+import type { HourInterval, WeeklyHours, HourExceptions } from '@/lib/hours';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
 import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
@@ -186,6 +186,42 @@ function parseHours(raw: string | null): { hours: WeeklyHours | null } | { error
   return { hours: Object.keys(out).length > 0 ? out : null };
 }
 
+/** Excepciones puntuales por fecha (feriados) — mismo formato que parseHours pero con clave "YYYY-MM-DD". */
+function parseHourExceptions(raw: string | null): { exceptions: HourExceptions | null } | { error: string } {
+  if (!raw?.trim()) return { exceptions: null };
+  let obj: unknown;
+  try {
+    obj = JSON.parse(raw);
+  } catch {
+    return { error: 'Excepciones de horario inválidas.' };
+  }
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return { error: 'Excepciones de horario inválidas.' };
+  }
+
+  const out: HourExceptions = {};
+  for (const [date, list] of Object.entries(obj as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(list)) {
+      return { error: 'Excepciones de horario inválidas.' };
+    }
+    const intervals: HourInterval[] = [];
+    for (const iv of list) {
+      if (!Array.isArray(iv) || iv.length !== 2) return { error: 'Excepciones de horario inválidas.' };
+      const [open, close] = iv as [unknown, unknown];
+      if (
+        typeof open !== 'string' || typeof close !== 'string' ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(open) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(close)
+      ) {
+        return { error: 'Las horas de las excepciones deben tener formato HH:MM.' };
+      }
+      intervals.push([open, close]);
+    }
+    out[date] = intervals; // [] = cerrado ese día (feriado completo)
+  }
+  return { exceptions: Object.keys(out).length > 0 ? out : null };
+}
+
 /* ── Cobertura de delivery: zonas a las que llega el restaurante ── */
 
 export async function updateDeliveryZones(
@@ -279,6 +315,9 @@ export async function updateRestaurantOps(
   const parsed = parseHours(formData.get('hours') as string | null);
   if ('error' in parsed) return { error: parsed.error };
 
+  const parsedExceptions = parseHourExceptions(formData.get('hour_exceptions') as string | null);
+  if ('error' in parsedExceptions) return { error: parsedExceptions.error };
+
   const timezone = (formData.get('timezone') as string)?.trim() || 'America/Guatemala';
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: timezone });
@@ -290,6 +329,7 @@ export async function updateRestaurantOps(
     .from('restaurants')
     .update({
       hours: parsed.hours,
+      hour_exceptions: parsedExceptions.exceptions,
       timezone,
       orders_paused: formData.get('orders_paused') === 'true',
       pause_message: (formData.get('pause_message') as string)?.trim() || null,
@@ -301,6 +341,33 @@ export async function updateRestaurantOps(
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   redirect('/admin/perfil?saved=1');
+}
+
+/** Idiomas de menú soportados hoy además del español (siempre disponible). */
+const SUPPORTED_MENU_LANGUAGES = ['en'];
+
+/**
+ * Activa/desactiva el selector de idioma del menú público (Fase 3 auditoría
+ * de lanzamiento). El dueño no tiene que traducir todo su catálogo primero:
+ * los productos/categorías sin traducción muestran el español (fallback,
+ * ver lib/locale) — esto solo prende o apaga el switch ES/EN que ve el
+ * comensal.
+ */
+export async function updateMenuLanguages(formData: FormData): Promise<void> {
+  const ctx = await resolveContext(formData);
+  if (!ctx) return;
+
+  const requested = (formData.get('menu_languages') as string | null)
+    ?.split(',').map((l) => l.trim()).filter(Boolean) ?? [];
+  const menu_languages = SUPPORTED_MENU_LANGUAGES.filter((l) => requested.includes(l));
+
+  await ctx.db
+    .from('restaurants')
+    .update({ menu_languages })
+    .eq('id', ctx.restaurantId);
+
+  revalidatePath('/admin/ajustes');
+  revalidatePath('/');
 }
 
 export type SaveThemeResult = { error?: string; ok?: boolean };

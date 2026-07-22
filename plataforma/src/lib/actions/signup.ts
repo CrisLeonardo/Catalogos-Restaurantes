@@ -46,6 +46,7 @@ const SIGNUP_MODULES_PREMIUM = {
   cupones: true,
   recetas: true,
   reservaciones: false,
+  lista_espera: false,
   loyalty: false,
   proveedores: false,
   fel: false,

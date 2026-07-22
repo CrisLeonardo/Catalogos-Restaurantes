@@ -163,6 +163,7 @@ export default async function AdminProtectedLayout({
   const proveedoresActive = isModuleActive(mod, modSettings, 'proveedores');
   const loyaltyActive = isModuleActive(mod, modSettings, 'loyalty');
   const reservacionesActive = isModuleActive(mod, modSettings, 'reservaciones');
+  const listaEsperaActive = isModuleActive(mod, modSettings, 'lista_espera');
   const encuestasActive = isModuleActive(mod, modSettings, 'encuestas');
   const cuponesActive = isModuleActive(mod, modSettings, 'cupones');
   const recetasActive = isModuleActive(mod, modSettings, 'recetas');
@@ -190,6 +191,7 @@ export default async function AdminProtectedLayout({
       proveedoresActive={proveedoresActive}
       loyaltyActive={loyaltyActive}
       reservacionesActive={reservacionesActive}
+      listaEsperaActive={listaEsperaActive}
       encuestasActive={encuestasActive}
       cuponesActive={cuponesActive}
       llamadaMeseroActive={llamadaMeseroActive}

@@ -65,6 +65,7 @@ interface Props {
   proveedoresActive?: boolean;
   loyaltyActive?: boolean;
   reservacionesActive?: boolean;
+  listaEsperaActive?: boolean;
   encuestasActive?: boolean;
   cuponesActive?: boolean;
   /** Módulo "Llamar al mesero" activo → muestra la alerta de llamadas pendientes. */
@@ -148,7 +149,7 @@ export default function AdminShell({
   analiticaEnabled = false, inventarioEnabled = false, ingredientesEnabled = false,
   promocionesEnabled = false, personalEnabled = false, finanzasEnabled = false,
   felActive = false, proveedoresActive = false, loyaltyActive = false,
-  reservacionesActive = false, encuestasActive = false, cuponesActive = false,
+  reservacionesActive = false, listaEsperaActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
   logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, dineInEnabled = false, preview = false,
   isOperatorSession = false, children,
@@ -208,6 +209,7 @@ export default function AdminShell({
         ...lockableNavItem(preview, inventarioEnabled, hasAnalyticsPlan, { href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }),
         ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
         ...(on(reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', icon: 'calendar', key: 'reservaciones' }] : []),
+        ...(on(listaEsperaActive) ? [{ href: '/admin/lista-espera', label: 'Lista de espera', icon: 'users', key: 'lista_espera' }] : []),
         ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
       ],
     },
@@ -223,6 +225,7 @@ export default function AdminShell({
         ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
         ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
         ...lockableNavItem(preview, promocionesEnabled, hasAnalyticsPlan, { href: '/admin/promociones', label: 'Promociones', icon: 'percent',  key: 'promociones' }),
+        ...(on(ordersEnabled)      ? [{ href: '/admin/vales',       label: 'Tarjetas de regalo', icon: 'gift', key: 'vales' }] : []),
       ],
     },
     {
@@ -267,10 +270,12 @@ export default function AdminShell({
     '/admin/qr': 'Código QR',
     '/admin/ayuda': 'Centro de ayuda',
     '/admin/reservaciones': 'Reservaciones',
+    '/admin/lista-espera': 'Lista de espera',
     '/admin/encuestas': 'Encuestas',
     '/admin/cupones': 'Cupones',
     '/admin/lealtad': 'Lealtad',
     '/admin/modulos': 'Módulos',
+    '/admin/vales': 'Tarjetas de regalo',
   };
   const title = pathname === '/admin'
     ? 'Inicio'

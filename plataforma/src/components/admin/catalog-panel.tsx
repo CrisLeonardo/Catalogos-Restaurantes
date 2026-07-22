@@ -19,6 +19,7 @@ import {
   type ProductModalState,
 } from '@/lib/actions/products';
 import { getRecipeForProduct } from '@/lib/actions/recipes';
+import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -335,6 +336,7 @@ function ProductModal({
   const [isAvailable,  setIsAvailable]  = useState<boolean>(product?.is_available ?? true);
   const [isActive,     setIsActive]     = useState<boolean>(product?.is_active ?? true);
   const [tags,         setTags]         = useState<string[]>(product?.tags ?? []);
+  const [dietaryTags,  setDietaryTags]  = useState<string[]>(product?.dietary_tags ?? []);
   const [customTagInput, setCustomTagInput] = useState('');
   const [iconSearch,   setIconSearch]   = useState('');
   const [options,      setOptions]      = useState<ProductOptionGroup[]>(
@@ -403,6 +405,10 @@ function ProductModal({
     setTags((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
 
+  function toggleDietaryTag(key: string) {
+    setDietaryTags((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
+  }
+
   function addCustomTag() {
     const t = customTagInput.trim();
     if (!t || tags.includes(t)) { setCustomTagInput(''); return; }
@@ -448,6 +454,7 @@ function ProductModal({
           <input type="hidden" name="is_available" value={String(isAvailable)} />
           <input type="hidden" name="is_active"    value={String(isActive)} />
           <input type="hidden" name="tags"         value={tags.join(',')} />
+          <input type="hidden" name="dietary_tags" value={dietaryTags.join(',')} />
           <input type="hidden" name="options"      value={JSON.stringify(cleanOptions(options))} />
 
           {/* Cuerpo scrollable */}
@@ -773,6 +780,42 @@ function ProductModal({
               />
             </div>
 
+            {/* Traducción al inglés (opcional) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
+                  Nombre (inglés)
+                </label>
+                <input
+                  type="text"
+                  name="name_en"
+                  defaultValue={product?.name_en ?? ''}
+                  placeholder="Opcional"
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 11, outline: 'none',
+                    fontSize: 13.5, color: 'var(--u-text)',
+                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
+                  }}
+                />
+              </div>
+              <div>
+                <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
+                  Descripción (inglés)
+                </label>
+                <input
+                  type="text"
+                  name="description_en"
+                  defaultValue={product?.description_en ?? ''}
+                  placeholder="Opcional"
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 11, outline: 'none',
+                    fontSize: 13.5, color: 'var(--u-text)',
+                    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
+                  }}
+                />
+              </div>
+            </div>
+
             {/* Etiquetas */}
             <div>
               <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 8 }}>
@@ -849,6 +892,46 @@ function ProductModal({
                   +
                 </button>
               </div>
+            </div>
+
+            {/* Alérgenos y dietas — vocabulario fijo, no ocultable (info de seguridad alimentaria) */}
+            <div>
+              <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 8 }}>
+                Alérgenos y dietas
+                <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--u-text-4)' }}>
+                  · se muestran con ícono en el menú del comensal
+                </span>
+              </label>
+              {(['diet', 'allergen'] as const).map((kind) => (
+                <div key={kind} style={{ marginBottom: kind === 'diet' ? 10 : 0 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                    {kind === 'diet' ? 'Apto para' : 'Contiene'}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {DIETARY_TAG_OPTIONS.filter((o) => o.kind === kind).map((o) => {
+                      const on = dietaryTags.includes(o.key);
+                      return (
+                        <button
+                          key={o.key}
+                          type="button"
+                          className="press"
+                          onClick={() => toggleDietaryTag(o.key)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '6px 11px', borderRadius: 99, cursor: 'pointer',
+                            border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
+                            background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                            color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
+                            fontWeight: 600, fontSize: 12,
+                          }}
+                        >
+                          <span aria-hidden>{o.icon}</span> {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Variantes / extras */}

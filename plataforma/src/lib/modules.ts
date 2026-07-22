@@ -30,6 +30,7 @@
 
 export type ActivatableModuleKey =
   | 'reservaciones'
+  | 'lista_espera'
   | 'llamada_mesero'
   | 'encuestas'
   | 'cupones'
@@ -83,6 +84,17 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
     icon: 'calendar',
     href: '/admin/reservaciones',
     navLabel: 'Reservaciones',
+    navSection: 'Operación',
+    group: 'atencion',
+    badge: 'NUEVO',
+  },
+  {
+    key: 'lista_espera',
+    label: 'Lista de espera',
+    description: 'Anota a los grupos que llegan sin reservar, avísales cuando hay mesa y controla el orden de la cola.',
+    icon: 'users',
+    href: '/admin/lista-espera',
+    navLabel: 'Lista de espera',
     navSection: 'Operación',
     group: 'atencion',
     badge: 'NUEVO',

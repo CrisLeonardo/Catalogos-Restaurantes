@@ -20,6 +20,7 @@ import ImageUpload from './image-upload';
 import OptionsEditor, { cleanOptions } from '@/components/admin/options-editor';
 import RecipeEditor from '@/components/admin/recipe-editor';
 import { createProduct, updateProduct, type ProductState } from '@/lib/actions/products';
+import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
 
@@ -65,6 +66,10 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [options, setOptions] = useState<ProductOptionGroup[]>(
     Array.isArray(product?.options) ? product!.options! : [],
   );
+  const [dietaryTags, setDietaryTags] = useState<string[]>(product?.dietary_tags ?? []);
+  function toggleDietaryTag(key: string) {
+    setDietaryTags((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -95,6 +100,7 @@ export default function ProductForm({ restaurantId, categories, product, default
       <input type="hidden" name="image_url" value={imageUrl} />
       <input type="hidden" name="is_available" value={String(isAvailable)} />
       <input type="hidden" name="options" value={JSON.stringify(cleanOptions(options))} />
+      <input type="hidden" name="dietary_tags" value={dietaryTags.join(',')} />
 
       <div className="pform-grid">
         {/* ══ Columna principal ══ */}
@@ -159,6 +165,33 @@ export default function ProductForm({ restaurantId, categories, product, default
                   style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label htmlFor="name_en" style={labelStyle}>Nombre (inglés)</label>
+                  <input
+                    id="name_en"
+                    name="name_en"
+                    type="text"
+                    defaultValue={product?.name_en ?? ''}
+                    placeholder="Opcional"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="description_en" style={labelStyle}>Descripción (inglés)</label>
+                  <input
+                    id="description_en"
+                    name="description_en"
+                    type="text"
+                    defaultValue={product?.description_en ?? ''}
+                    placeholder="Opcional"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -6, display: 'block' }}>
+                Se muestran solo si activas el selector de idioma en Ajustes → Idiomas del menú. Sin traducción, el comensal ve el español.
+              </span>
               <div>
                 <label htmlFor="tags" style={labelStyle}>Etiquetas</label>
                 <input
@@ -174,6 +207,43 @@ export default function ProductForm({ restaurantId, categories, product, default
                 </span>
               </div>
             </div>
+          </Glass>
+
+          {/* ── Alérgenos y dietas ── */}
+          <Glass variant="quiet" style={{ padding: 18 }}>
+            <SectionHead
+              title="Alérgenos y dietas"
+              hint="Se muestran con ícono en el menú del comensal — a diferencia de las etiquetas, no se pueden ocultar (es información de seguridad alimentaria)."
+            />
+            {(['diet', 'allergen'] as const).map((kind) => (
+              <div key={kind} style={{ marginBottom: kind === 'diet' ? 14 : 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                  {kind === 'diet' ? 'Apto para' : 'Contiene'}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {DIETARY_TAG_OPTIONS.filter((o) => o.kind === kind).map((o) => {
+                    const active = dietaryTags.includes(o.key);
+                    return (
+                      <button
+                        key={o.key}
+                        type="button"
+                        onClick={() => toggleDietaryTag(o.key)}
+                        className="press"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                          border: `1px solid ${active ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
+                          background: active ? 'color-mix(in srgb, var(--brand-accent) 16%, transparent)' : 'transparent',
+                          color: 'var(--u-text)', fontSize: 12.5, fontWeight: 500,
+                        }}
+                      >
+                        <span aria-hidden>{o.icon}</span> {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </Glass>
 
           {/* ── Costo y ganancia ── */}

@@ -17,6 +17,13 @@ export type HourInterval = [string, string];
 
 export type WeeklyHours = Partial<Record<DayKey, HourInterval[]>>;
 
+/**
+ * Excepciones puntuales al horario semanal, por fecha exacta "YYYY-MM-DD"
+ * (zona horaria del restaurante). Lista vacía = cerrado ese día completo
+ * (feriado); fecha ausente = usa el horario semanal normal sin cambios.
+ */
+export type HourExceptions = Record<string, HourInterval[]>;
+
 export const DAY_LABELS: Record<DayKey, string> = {
   '1': 'Lunes',
   '2': 'Martes',
@@ -77,16 +84,20 @@ function localNowParts(timezone: string, now: Date): { day: number; minutes: num
 /**
  * ¿Está abierto ahora según el horario semanal?
  * Revisa los intervalos de hoy y los de ayer que cruzan la medianoche.
+ * `exceptions` (feriados/excepciones puntuales) manda sobre el horario
+ * semanal normal para la fecha exacta que cubre — [] = cerrado ese día.
  */
 export function isOpenNow(
   hours: WeeklyHours | null | undefined,
   timezone: string,
   now: Date = new Date(),
+  exceptions?: HourExceptions | null,
 ): boolean {
-  if (!hours) return true; // sin horario configurado = siempre abierto
   const { day, minutes } = localNowParts(timezone, now);
+  const todayOverride = exceptions?.[localDateKey(now, timezone)];
+  if (!hours && !todayOverride) return true; // sin horario ni excepción hoy = siempre abierto
 
-  const today = hours[String(day) as DayKey] ?? [];
+  const today = todayOverride ?? hours?.[String(day) as DayKey] ?? [];
   for (const [open, close] of today) {
     const o = toMinutes(open);
     const c = toMinutes(close);
@@ -95,7 +106,10 @@ export function isOpenNow(
   }
 
   // Intervalos de AYER que cruzan medianoche (p.ej. viernes 20:00–02:00).
-  const yesterday = hours[String((day + 6) % 7) as DayKey] ?? [];
+  // La excepción de AYER (si existe) manda sobre el horario semanal de ayer.
+  const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayOverride = exceptions?.[localDateKey(yesterdayDate, timezone)];
+  const yesterday = yesterdayOverride ?? hours?.[String((day + 6) % 7) as DayKey] ?? [];
   for (const [open, close] of yesterday) {
     const o = toMinutes(open);
     const c = toMinutes(close);
@@ -115,13 +129,16 @@ export function nextOpenLabel(
   hours: WeeklyHours | null | undefined,
   timezone: string,
   now: Date = new Date(),
+  exceptions?: HourExceptions | null,
 ): string | null {
-  if (!hours) return null;
+  if (!hours && !exceptions) return null;
   const { day, minutes } = localNowParts(timezone, now);
 
   for (let offset = 0; offset < 8; offset++) {
     const d = (day + offset) % 7;
-    const list = hours[String(d) as DayKey] ?? [];
+    const offsetDate = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+    const override = exceptions?.[localDateKey(offsetDate, timezone)];
+    const list = override ?? hours?.[String(d) as DayKey] ?? [];
     let bestOpen = Infinity;
     for (const [open] of list) {
       const o = toMinutes(open);

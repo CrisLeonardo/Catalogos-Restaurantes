@@ -42,7 +42,7 @@ function hideStaticBackground() {
 }
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon'>;
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
 
 export interface ThemePreviewState {
   config: ThemeConfig;

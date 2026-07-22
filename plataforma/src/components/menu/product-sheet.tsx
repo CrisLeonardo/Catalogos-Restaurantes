@@ -13,9 +13,11 @@ import { Tag, QtyStepper, PrimaryButton, Price } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
+import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
+import { useLocale, useLocalized } from '@/lib/locale/context';
 import type { CartItemOption, Product, ProductOptionGroup } from '@/types';
 
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'>;
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
 
 /** Selección inicial: single requeridos arrancan con su primera opción; combo arranca con todas. */
 function initialSelection(groups: ProductOptionGroup[]): Record<string, string[]> {
@@ -58,6 +60,9 @@ export default function ProductSheet({
   const titleT = useText('heading', 'productTitle');
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
+  const { locale } = useLocale();
+  const name = useLocalized(product.name, product.name_en);
+  const description = useLocalized(product.description ?? '', product.description_en);
 
   const groups = useMemo(
     () => (Array.isArray(product.options) ? product.options.filter((g) => g.choices?.length > 0) : []),
@@ -149,7 +154,7 @@ export default function ProductSheet({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={product.name}
+      aria-label={name}
     >
       <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
       <div
@@ -169,7 +174,7 @@ export default function ProductSheet({
         {/* Hero */}
         <div style={{ borderRadius: 22, overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
           {usePhoto ? (
-            <Image src={product.image_url!} alt={product.name} fill style={{ objectFit: 'cover' }} sizes="460px" />
+            <Image src={product.image_url!} alt={name} fill style={{ objectFit: 'cover' }} sizes="460px" />
           ) : (
             <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
               <BrandPattern icon={icon} seed={seedFromString(product.id)} iconScale={1.5} faint={0.2} />
@@ -183,9 +188,28 @@ export default function ProductSheet({
         </div>
 
         <div style={{ padding: '18px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h2 className="t-display" style={{ ...titleT.vars, fontSize: 28 * titleT.size }}>{product.name}</h2>
-          {product.description && (
-            <p className="t-serif" style={{ fontSize: 17, lineHeight: 1.4 }}>{product.description}</p>
+          <h2 className="t-display" style={{ ...titleT.vars, fontSize: 28 * titleT.size }}>{name}</h2>
+          {description && (
+            <p className="t-serif" style={{ fontSize: 17, lineHeight: 1.4 }}>{description}</p>
+          )}
+          {product.dietary_tags && product.dietary_tags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {product.dietary_tags.map((k) => {
+                const t = DIETARY_TAG_MAP[k];
+                if (!t) return null;
+                return (
+                  <span
+                    key={k}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999,
+                      background: 'var(--surface-2)', border: '1px solid var(--u-hair)', fontSize: 12, color: 'var(--u-text-2)',
+                    }}
+                  >
+                    <span aria-hidden>{t.icon}</span> {locale === 'en' ? t.labelEn : t.label}
+                  </span>
+                );
+              })}
+            </div>
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
             {[{ i: 'clock', t: content.product.prepTime }, { i: 'flame', t: content.product.fresh }].map((x, k) => (

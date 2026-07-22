@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { listStaff, getActivityLog } from '@/lib/actions/staff';
@@ -64,11 +65,25 @@ export default async function AdminPersonalPage() {
     analitica: mod?.['analitica'] === true,
     finanzas: mod?.['finanzas'] === true,
     promociones: mod?.['promociones'] === true,
+    vales: ordersEnabled,
   };
   const enabledSections = ADMIN_SECTIONS.map((s) => s.key).filter((k) => GATES[k] ?? true);
 
   return (
     <div className="anim-fade-up">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <Link
+          href="/admin/personal/propinas"
+          className="press"
+          style={{
+            padding: '8px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+            border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+            color: 'var(--u-text)', textDecoration: 'none',
+          }}
+        >
+          Reparto de propinas →
+        </Link>
+      </div>
       <StaffPanel restaurantId={restaurantId} staff={staff} activity={activity} enabledSections={enabledSections} />
     </div>
   );

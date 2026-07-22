@@ -12,10 +12,12 @@ import { Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
+import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
+import { useLocale, useLocalized } from '@/lib/locale/context';
 import type { Category, Product } from '@/types';
 
-type CatItem = Pick<Category, 'id' | 'name' | 'icon'> & { availability?: WeeklyHours | null };
-type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'> & {
+type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
+type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
   is_available?: boolean | null;
   unavailable_at?: string | null;
 };
@@ -113,8 +115,13 @@ export default function Catalog({
   const content = useThemeContent();
   const kickerT = useText('kicker', 'catalogKicker');
   const headingT = useText('poster', 'catalogHeading');
+  const { locale, setLocale, available } = useLocale();
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+
+  /** Traducción con fallback automático al español (ver lib/locale). */
+  const localize = (base: string, translated?: string | null) =>
+    (locale === 'en' && translated?.trim()) ? translated : base;
 
   // Reloj vivo: los menús por franja (desayuno/almuerzo/cena) se reevalúan
   // cada minuto, así un menú "abre" o "cierra" sin que el comensal recargue.
@@ -170,11 +177,33 @@ export default function Catalog({
   return (
     <div>
       {/* Header */}
-      <div>
-        <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
-        <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, 44px))`, marginTop: 2 }}>
-          {content.catalog.heading}
-        </h2>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+        <div>
+          <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
+          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, 44px))`, marginTop: 2 }}>
+            {content.catalog.heading}
+          </h2>
+        </div>
+        {available.length > 1 && (
+          <div className="glass-quiet" style={{ display: 'inline-flex', padding: 3, borderRadius: 999, flexShrink: 0, marginTop: 4 }}>
+            {available.map((l) => (
+              <button
+                key={l}
+                onClick={() => setLocale(l)}
+                className="press"
+                aria-pressed={locale === l}
+                style={{
+                  padding: '5px 11px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontSize: 11.5, fontWeight: 700, letterSpacing: '0.02em',
+                  background: locale === l ? 'var(--u-text)' : 'transparent',
+                  color: locale === l ? 'var(--brand-bg)' : 'var(--u-text-3)',
+                }}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Búsqueda */}
@@ -199,7 +228,7 @@ export default function Catalog({
         {categories.map((c) => (
           <CategoryChip
             key={c.id}
-            label={c.name}
+            label={localize(c.name, c.name_en)}
             icon={config.showCategoryIcons ? catIcon.get(c.id) : undefined}
             active={activeCat === c.id}
             unavailable={catAvail.get(c.id) === false}
@@ -220,7 +249,7 @@ export default function Catalog({
         >
           <span style={{ color: 'var(--u-text-3)', flexShrink: 0 }}><Icon name="clock" size={17} /></span>
           <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
-            <strong style={{ color: 'var(--u-text)' }}>{activeCatItem.name}</strong>{' '}
+            <strong style={{ color: 'var(--u-text)' }}>{localize(activeCatItem.name, activeCatItem.name_en)}</strong>{' '}
             {(() => {
               const reopen = nextOpenLabel(activeCatItem.availability, timezone, now);
               const win = todayWindowLabel(activeCatItem.availability, timezone, now);
@@ -290,7 +319,7 @@ export default function Catalog({
                     <Icon name={config.showCategoryIcons ? (catIcon.get(c.id) ?? 'utensils') : 'clock'} size={17} />
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{localize(c.name, c.name_en)}</span>
                     <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
                       {reopen ? `Se sirve ${reopen}` : win ? `Horario: ${win}` : 'Fuera de horario'}
                     </span>
@@ -367,8 +396,31 @@ function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: Pr
   );
 }
 
+/** Fila compacta de íconos de alérgenos/dietas — no ocultable (info de seguridad
+    alimentaria), a diferencia de config.showTags que sí controla las etiquetas
+    de mercadeo libres del dueño. */
+function DietaryBadges({ keys, size = 13 }: { keys: string[] | null | undefined; size?: number }) {
+  const { locale } = useLocale();
+  if (!keys || keys.length === 0) return null;
+  const known = keys.map((k) => DIETARY_TAG_MAP[k]).filter(Boolean);
+  if (known.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {known.map((t) => {
+        const label = locale === 'en' ? t.labelEn : t.label;
+        return (
+          <span key={t.key} title={label} aria-label={label} style={{ fontSize: size, lineHeight: 1 }}>
+            {t.icon}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; forceUnavailable?: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
+  const name = useLocalized(p.name, p.name_en);
   const unavail = forceUnavailable || isUnavailable(p);
   return (
     <Glass
@@ -392,7 +444,8 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
         )}
       </div>
       <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
+        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{name}</div>
+        <DietaryBadges keys={p.dietary_tags} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Price amount={displayPrice(p)} size={15} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
@@ -407,6 +460,8 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
 function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; forceUnavailable?: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  const name = useLocalized(p.name, p.name_en);
+  const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
   return (
     <Glass
@@ -438,11 +493,11 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, o
               className="ct-product-name"
               style={{ fontSize: 19 * roleSize(config, 'productName'), color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', lineHeight: 1.15, textDecoration: unavail ? 'line-through' : 'none' }}
             >
-              {p.name}
+              {name}
             </div>
-            {p.description && (
+            {description && (
               <div className="line-clamp-2" style={{ fontSize: 12 * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                {p.description}
+                {description}
               </div>
             )}
             <Price amount={displayPrice(p)} size={17} style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: 5, display: 'inline-block' }} />
@@ -456,6 +511,8 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, o
 
 function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: { p: ProdItem; icon: string; qty: number; ordersEnabled: boolean; forceUnavailable?: boolean; onAdd: (p: ProdItem, el: HTMLElement) => void; onOpen: (p: ProdItem) => void }) {
   const config = useThemeConfig();
+  const name = useLocalized(p.name, p.name_en);
+  const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
   return (
     <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
@@ -464,13 +521,14 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="ct-product-name" style={{ fontSize: 15.5 * roleSize(config, 'productName'), textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{p.name}</div>
+          <div className="ct-product-name" style={{ fontSize: 15.5 * roleSize(config, 'productName'), textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{name}</div>
           {unavail && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>No disponible</span>}
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
         </div>
-        {p.description && (
-          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{p.description}</div>
+        {description && (
+          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{description}</div>
         )}
+        <DietaryBadges keys={p.dietary_tags} size={12} />
         <Price amount={displayPrice(p)} size={15} muted={unavail} />
       </div>
       {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}

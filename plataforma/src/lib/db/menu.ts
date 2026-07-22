@@ -13,7 +13,7 @@ export type MenuData = {
 // navegador del comensal (visibles en el payload de red). is_active lo filtra
 // la política RLS `products_select_available`, no hace falta pedirlo.
 export const PUBLIC_PRODUCT_COLUMNS =
-  'id, category_id, name, description, price, image_url, icon, tags, options, is_available, unavailable_at, sort_order';
+  'id, category_id, name, name_en, description, description_en, price, image_url, icon, tags, dietary_tags, options, is_available, unavailable_at, sort_order';
 
 /**
  * Carga categorías y productos activos de un restaurante en una sola request.
@@ -26,7 +26,7 @@ export const getMenuData = cache(
     const [{ data: categories }, { data: products }] = await Promise.all([
       supabase
         .from('categories')
-        .select('id, name, icon, sort_order, availability')
+        .select('id, name, name_en, icon, sort_order, availability')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('sort_order'),

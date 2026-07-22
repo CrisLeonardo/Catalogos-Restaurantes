@@ -7,7 +7,7 @@ import type { Category, Product } from '@/types';
 export type DemoCategory = Pick<Category, 'id' | 'name' | 'icon'>;
 export type DemoProduct = Pick<
   Product,
-  'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'options'
+  'id' | 'category_id' | 'name' | 'description' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'
 >;
 
 export const DEMO_CATEGORIES: DemoCategory[] = [

@@ -12,6 +12,7 @@ import {
 } from '@/lib/documents/excel';
 import { longDate } from '@/lib/documents/format';
 import type { DocumentBranding } from '@/lib/documents/types';
+import { sanitizeDietaryTags } from '@/lib/dietary-tags';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 
 export type ProductState = { error: string } | null;
@@ -51,6 +52,12 @@ async function resolveContext(formData: FormData) {
 function parseTags(raw: string | null): string[] | null {
   if (!raw?.trim()) return null;
   return raw.split(',').map((t) => t.trim()).filter(Boolean);
+}
+
+/** Alérgenos/dietas: lista separada por coma de claves del vocabulario fijo. */
+function parseDietaryTags(raw: string | null): string[] {
+  if (!raw?.trim()) return [];
+  return sanitizeDietaryTags(raw.split(',').map((t) => t.trim()));
 }
 
 /** Costo del producto: numérico ≥ 0, o null si viene vacío/ inválido. */
@@ -154,12 +161,15 @@ export async function createProduct(prevState: ProductState, formData: FormData)
     category_id: (formData.get('category_id') as string) || null,
     name,
     description: (formData.get('description') as string)?.trim() || null,
+    name_en: (formData.get('name_en') as string)?.trim() || null,
+    description_en: (formData.get('description_en') as string)?.trim() || null,
     price: parseFloat(priceRaw),
     cost: parseCost(formData.get('cost') as string),
     loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
+    dietary_tags: parseDietaryTags(formData.get('dietary_tags') as string),
     options,
     is_available: formData.get('is_available') === 'true',
     is_active: formData.get('is_active') !== 'false',
@@ -192,12 +202,15 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
       category_id: (formData.get('category_id') as string) || null,
       name,
       description: (formData.get('description') as string)?.trim() || null,
+    name_en: (formData.get('name_en') as string)?.trim() || null,
+    description_en: (formData.get('description_en') as string)?.trim() || null,
       price: parseFloat(priceRaw),
       cost: parseCost(formData.get('cost') as string),
     loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
+    dietary_tags: parseDietaryTags(formData.get('dietary_tags') as string),
       options,
       is_available: newAvailable,
       unavailable_at: newAvailable ? null : new Date().toISOString(),
@@ -355,12 +368,15 @@ export async function createProductModal(
     category_id: (formData.get('category_id') as string) || null,
     name,
     description: (formData.get('description') as string)?.trim() || null,
+    name_en: (formData.get('name_en') as string)?.trim() || null,
+    description_en: (formData.get('description_en') as string)?.trim() || null,
     price: parseFloat(priceRaw),
     cost: parseCost(formData.get('cost') as string),
     loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
     image_url: (formData.get('image_url') as string) || null,
     icon: (formData.get('icon') as string) || null,
     tags: parseTags(formData.get('tags') as string),
+    dietary_tags: parseDietaryTags(formData.get('dietary_tags') as string),
     options,
     is_available: formData.get('is_available') === 'true',
     is_active: formData.get('is_active') !== 'false',
@@ -396,12 +412,15 @@ export async function updateProductModal(
       category_id: (formData.get('category_id') as string) || null,
       name,
       description: (formData.get('description') as string)?.trim() || null,
+    name_en: (formData.get('name_en') as string)?.trim() || null,
+    description_en: (formData.get('description_en') as string)?.trim() || null,
       price: parseFloat(priceRaw),
       cost: parseCost(formData.get('cost') as string),
     loyalty_points: parseLoyaltyPoints(formData.get('loyalty_points') as string),
       image_url: (formData.get('image_url') as string) || null,
       icon: (formData.get('icon') as string) || null,
       tags: parseTags(formData.get('tags') as string),
+    dietary_tags: parseDietaryTags(formData.get('dietary_tags') as string),
       options,
       is_available: newAvailableModal,
       unavailable_at: newAvailableModal ? null : new Date().toISOString(),
