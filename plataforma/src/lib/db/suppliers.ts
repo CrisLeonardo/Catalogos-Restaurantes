@@ -20,6 +20,10 @@ export interface PurchaseOrderItem {
   unidad: string;
   costo_unitario: number;
   subtotal: number;
+  product_id: string | null;
+  ingredient_id: string | null;
+  product_name?: string | null;
+  ingredient_name?: string | null;
 }
 
 export interface PurchaseOrder {
@@ -51,15 +55,42 @@ export async function getPurchaseOrders(restaurantId: string, limit = 50): Promi
   const db = createServiceClient();
   const { data } = await db
     .from('purchase_orders')
-    .select('*, items:purchase_order_items(*), supplier:suppliers(name)')
+    .select('*, items:purchase_order_items(*, product:products(name), ingredient:ingredients(name)), supplier:suppliers(name)')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   return ((data ?? []) as Record<string, unknown>[]).map((row) => {
-    const { supplier, ...po } = row as Record<string, unknown> & { supplier?: { name: string } | null };
-    return { ...po, supplier_name: supplier?.name ?? null } as PurchaseOrder;
+    const { supplier, items, ...po } = row as Record<string, unknown> & {
+      supplier?: { name: string } | null;
+      items?: (Record<string, unknown> & { product?: { name: string } | null; ingredient?: { name: string } | null })[];
+    };
+    return {
+      ...po,
+      supplier_name: supplier?.name ?? null,
+      items: (items ?? []).map(({ product, ingredient, ...it }) => ({
+        ...it,
+        product_name: product?.name ?? null,
+        ingredient_name: ingredient?.name ?? null,
+      })),
+    } as PurchaseOrder;
   });
+}
+
+export interface PurchaseableProduct { id: string; name: string }
+export interface PurchaseableIngredient { id: string; name: string; unit: string }
+
+/** Productos e insumos del restaurante para vincular renglones de una orden de compra. */
+export async function getPurchaseables(restaurantId: string): Promise<{ products: PurchaseableProduct[]; ingredients: PurchaseableIngredient[] }> {
+  const db = createServiceClient();
+  const [{ data: products }, { data: ingredients }] = await Promise.all([
+    db.from('products').select('id, name').eq('restaurant_id', restaurantId).order('name'),
+    db.from('ingredients').select('id, name, unit').eq('restaurant_id', restaurantId).order('name'),
+  ]);
+  return {
+    products: (products ?? []) as PurchaseableProduct[],
+    ingredients: (ingredients ?? []) as PurchaseableIngredient[],
+  };
 }
 
 export interface SupplierSummary {

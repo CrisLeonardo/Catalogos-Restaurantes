@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { getProductRecipe, type RecipeItem } from '@/lib/db/recipes';
+import { getIngredientMovements as fetchIngredientMovements, type StockMovement } from '@/lib/db/kardex';
 
 export type ActionResult = { error?: string; ok?: boolean };
 type Resolved = { restaurantId: string } | { error: string };
@@ -94,6 +95,20 @@ export async function deleteIngredient(id: string, formRestaurantId: string): Pr
   if (error) return { error: error.message };
   revalidatePath('/admin/ingredientes');
   return { ok: true };
+}
+
+/** Historial de movimientos (Kardex) de un insumo — entradas por compra, cambios de costo promedio. */
+export async function getIngredientMovements(
+  ingredientId: string,
+  formRestaurantId: string,
+): Promise<{ movements?: StockMovement[]; error?: string }> {
+  const resolved = await resolveRestaurantId(formRestaurantId);
+  if ('error' in resolved) return { error: resolved.error };
+  const { restaurantId } = resolved;
+
+  if (!/^[0-9a-f-]{36}$/i.test(ingredientId)) return { error: 'Insumo inválido' };
+  const movements = await fetchIngredientMovements(restaurantId, ingredientId);
+  return { movements };
 }
 
 // ── Recetas ──────────────────────────────────────────────────

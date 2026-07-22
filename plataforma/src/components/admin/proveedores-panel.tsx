@@ -8,13 +8,15 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { Supplier, PurchaseOrder, SupplierSummary } from '@/lib/db/suppliers';
+import type { Supplier, PurchaseOrder, SupplierSummary, PurchaseableProduct, PurchaseableIngredient } from '@/lib/db/suppliers';
 
 interface Props {
   restaurantId: string;
   suppliers: Supplier[];
   orders: PurchaseOrder[];
   summary: SupplierSummary;
+  products: PurchaseableProduct[];
+  ingredients: PurchaseableIngredient[];
 }
 
 const inputStyle: React.CSSProperties = {
@@ -32,7 +34,7 @@ const ESTADO_COLOR: Record<string, string> = {
   BORRADOR: '#9aa3ad', ENVIADA: '#f59e0b', RECIBIDA: '#22c55e', CANCELADA: '#ef4444',
 };
 
-export default function ProveedoresPanel({ restaurantId, suppliers, orders, summary }: Props) {
+export default function ProveedoresPanel({ restaurantId, suppliers, orders, summary, products, ingredients }: Props) {
   const [tab, setTab] = useState<'ordenes' | 'proveedores'>('ordenes');
 
   return (
@@ -54,7 +56,7 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
 
       {tab === 'proveedores'
         ? <SuppliersTab restaurantId={restaurantId} suppliers={suppliers} />
-        : <OrdersTab restaurantId={restaurantId} suppliers={suppliers} orders={orders} />}
+        : <OrdersTab restaurantId={restaurantId} suppliers={suppliers} orders={orders} products={products} ingredients={ingredients} />}
     </div>
   );
 }
@@ -155,29 +157,64 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
 
 /* ── Órdenes de compra ──────────────────────────────────────── */
 
-type DraftLine = { descripcion: string; cantidad: string; unidad: string; costo_unitario: string };
+type DraftLine = { descripcion: string; cantidad: string; unidad: string; costo_unitario: string; linkValue: string };
+const EMPTY_LINE: DraftLine = { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '', linkValue: '' };
 
-function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; suppliers: Supplier[]; orders: PurchaseOrder[] }) {
+function OrdersTab({
+  restaurantId, suppliers, orders, products, ingredients,
+}: {
+  restaurantId: string; suppliers: Supplier[]; orders: PurchaseOrder[];
+  products: PurchaseableProduct[]; ingredients: PurchaseableIngredient[];
+}) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [supplierId, setSupplierId] = useState('');
   const [notes, setNotes] = useState('');
-  const [lines, setLines] = useState<DraftLine[]>([{ descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }]);
+  const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const linkOptions = [
+    { value: '', label: 'Sin vincular (solo texto)' },
+    ...products.map((p) => ({ value: `p:${p.id}`, label: `📦 ${p.name}` })),
+    ...ingredients.map((i) => ({ value: `i:${i.id}`, label: `🧂 ${i.name} (${i.unit})` })),
+  ];
 
   const total = lines.reduce((a, l) => a + (parseFloat(l.cantidad) || 0) * (parseFloat(l.costo_unitario) || 0), 0);
 
   function setLine(i: number, patch: Partial<DraftLine>) {
     setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   }
+  function setLink(i: number, value: string) {
+    setLines((ls) => ls.map((l, j) => {
+      if (j !== i) return l;
+      if (!value) return { ...l, linkValue: '' };
+      const [prefix, id] = value.split(':');
+      if (prefix === 'p') {
+        const prod = products.find((p) => p.id === id);
+        return { ...l, linkValue: value, descripcion: prod?.name ?? l.descripcion, unidad: 'unidad' };
+      }
+      const ing = ingredients.find((x) => x.id === id);
+      return { ...l, linkValue: value, descripcion: ing?.name ?? l.descripcion, unidad: ing?.unit ?? l.unidad };
+    }));
+  }
   function reset() {
     setCreating(false); setSupplierId(''); setNotes('');
-    setLines([{ descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }]);
+    setLines([{ ...EMPTY_LINE }]);
   }
   function create() {
     setError(null);
-    const payload: POLineInput[] = lines.map((l) => ({ descripcion: l.descripcion, cantidad: parseFloat(l.cantidad) || 0, unidad: l.unidad, costo_unitario: parseFloat(l.costo_unitario) || 0 }));
+    const payload: POLineInput[] = lines.map((l) => {
+      const [prefix, id] = l.linkValue ? l.linkValue.split(':') : [null, null];
+      return {
+        descripcion: l.descripcion,
+        cantidad: parseFloat(l.cantidad) || 0,
+        unidad: l.unidad,
+        costo_unitario: parseFloat(l.costo_unitario) || 0,
+        product_id: prefix === 'p' ? id : null,
+        ingredient_id: prefix === 'i' ? id : null,
+      };
+    });
     start(async () => {
       const res = await createPurchaseOrder(restaurantId, supplierId || null, notes, payload);
       if (res.error) { setError(res.error); return; }
@@ -186,6 +223,13 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
     });
   }
   function changeStatus(po: PurchaseOrder, estado: 'ENVIADA' | 'RECIBIDA' | 'CANCELADA') {
+    if (estado === 'RECIBIDA') {
+      const linked = (po.items ?? []).filter((it) => it.product_id || it.ingredient_id).length;
+      const msg = linked > 0
+        ? `Esta orden tiene ${linked} renglón(es) vinculado(s) a producto/insumo: al recibirla se sumará su stock y se recalculará el costo promedio ponderado. ¿Continuar?`
+        : '¿Marcar esta orden como recibida?';
+      if (!window.confirm(msg)) return;
+    }
     start(async () => {
       const res = await setPurchaseOrderStatus(restaurantId, po.id, estado);
       if (res.error) { setError(res.error); return; }
@@ -221,15 +265,25 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
                 la fila completa y cant/unidad/costo/✕ pasan debajo (antes las
                 columnas fijas dejaban la descripción en ~30px, inusable). */}
             {lines.map((l, i) => (
-              <div key={i} className="po-line">
-                <input style={inputStyle} placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
-                <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
-                <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
-                <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
-                <Button type="button" variant="outline" size="icon" className="size-8 border-[rgba(220,50,50,0.2)] text-[#f87171]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 9px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
+                <Select
+                  options={linkOptions}
+                  value={l.linkValue}
+                  onValueChange={(v) => setLink(i, v)}
+                />
+                <div className="po-line">
+                  <input style={inputStyle} placeholder="Descripción (insumo)" value={l.descripcion} onChange={(e) => setLine(i, { descripcion: e.target.value })} />
+                  <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
+                  <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
+                  <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
+                  <Button type="button" variant="outline" size="icon" className="size-8 border-[rgba(220,50,50,0.2)] text-[#f87171]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
+                </div>
               </div>
             ))}
-            <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, { descripcion: '', cantidad: '', unidad: 'unidad', costo_unitario: '' }])}>+ Renglón</Button>
+            <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setLines((ls) => [...ls, { ...EMPTY_LINE }])}>+ Renglón</Button>
+            <p style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+              Vincular un renglón a un producto o insumo real hace que, al marcar la orden como recibida, se sume su stock y se recalcule su costo promedio ponderado (Kardex). Sin vincular, el renglón queda solo como registro contable.
+            </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--u-hair)', paddingTop: 10 }}>
@@ -256,12 +310,15 @@ function OrdersTab({ restaurantId, suppliers, orders }: { restaurantId: string; 
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `${ESTADO_COLOR[po.estado]}22`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
-                {(po.items ?? []).map((it) => (
-                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--u-text-2)' }}>
-                    <span>{it.cantidad} {it.unidad} · {it.descripcion}</span>
-                    <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(Number(it.subtotal))}</span>
-                  </div>
-                ))}
+                {(po.items ?? []).map((it) => {
+                  const linkLabel = it.product_name ? `📦 ${it.product_name}` : it.ingredient_name ? `🧂 ${it.ingredient_name}` : null;
+                  return (
+                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--u-text-2)' }}>
+                      <span>{it.cantidad} {it.unidad} · {it.descripcion}{linkLabel && <span style={{ color: 'var(--brand-accent)' }}> · {linkLabel}</span>}</span>
+                      <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(Number(it.subtotal))}</span>
+                    </div>
+                  );
+                })}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{money(Number(po.total))}</span>

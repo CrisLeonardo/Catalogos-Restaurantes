@@ -14,6 +14,7 @@ import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/activity';
+import { getProductMovements as fetchProductMovements, type StockMovement } from '@/lib/db/kardex';
 
 type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
 
@@ -168,4 +169,12 @@ export async function getLowStock(restaurantId: string): Promise<LowStock> {
     else if (s <= Number(p.low_stock_threshold ?? 0)) low += 1;
   }
   return { low, out };
+}
+
+/** Historial de movimientos (Kardex) de un producto — entradas, ventas, ajustes. */
+export async function getProductMovements(restaurantId: string, productId: string): Promise<StockMovement[]> {
+  const ctx = await resolveContext(restaurantId);
+  if (!ctx) return [];
+  if (!/^[0-9a-f-]{36}$/i.test(productId)) return [];
+  return fetchProductMovements(ctx.restaurantId, productId);
 }

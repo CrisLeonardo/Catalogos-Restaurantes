@@ -72,6 +72,8 @@ export interface POLineInput {
   cantidad: number;
   unidad: string;
   costo_unitario: number;
+  product_id?: string | null;
+  ingredient_id?: string | null;
 }
 
 export async function createPurchaseOrder(
@@ -89,6 +91,9 @@ export async function createPurchaseOrder(
       cantidad: Number(l.cantidad),
       unidad: (l.unidad || 'unidad').trim(),
       costo_unitario: Number(l.costo_unitario) || 0,
+      // Vínculo mutuamente excluyente; product_id gana si por error llegan ambos.
+      product_id: l.product_id || null,
+      ingredient_id: l.product_id ? null : (l.ingredient_id || null),
     }))
     .filter((l) => l.descripcion && l.cantidad > 0);
 
@@ -116,6 +121,8 @@ export async function createPurchaseOrder(
       unidad: l.unidad,
       costo_unitario: l.costo_unitario,
       subtotal: Math.round(l.cantidad * l.costo_unitario * 100) / 100,
+      product_id: l.product_id,
+      ingredient_id: l.ingredient_id,
     })),
   );
   if (itemsErr) return { error: itemsErr.message };
@@ -129,13 +136,14 @@ export async function setPurchaseOrderStatus(
   poId: string,
   estado: 'BORRADOR' | 'ENVIADA' | 'RECIBIDA' | 'CANCELADA',
 ): Promise<SupplierActionResult> {
+  // Recibir tiene efectos reales (stock + costo promedio) — va por el RPC atómico.
+  if (estado === 'RECIBIDA') return receivePurchaseOrder(restaurantId, poId);
+
   const auth = await authorizeModuleAction(restaurantId, 'proveedores');
   if ('error' in auth) return auth;
 
   const stamp: Record<string, string> =
-    estado === 'ENVIADA'  ? { sent_at: new Date().toISOString() }
-    : estado === 'RECIBIDA' ? { received_at: new Date().toISOString() }
-    : {};
+    estado === 'ENVIADA' ? { sent_at: new Date().toISOString() } : {};
 
   const db = createServiceClient();
   const { error } = await db
@@ -146,5 +154,26 @@ export async function setPurchaseOrderStatus(
   if (error) return { error: error.message };
 
   revalidatePath('/admin/proveedores');
+  return { ok: true };
+}
+
+/**
+ * Marca una orden como RECIBIDA aplicando costo promedio ponderado (Kardex)
+ * a cada renglón vinculado a un producto o insumo real: suma stock, recalcula
+ * el costo, y audita el movimiento en stock_movements. Atómico e idempotente
+ * (leogin_receive_purchase_order, migración 088) — service_role únicamente.
+ */
+export async function receivePurchaseOrder(restaurantId: string, poId: string): Promise<SupplierActionResult> {
+  const auth = await authorizeModuleAction(restaurantId, 'proveedores');
+  if ('error' in auth) return auth;
+
+  const db = createServiceClient();
+  const { error } = await db.rpc('leogin_receive_purchase_order', { p_po_id: poId, p_restaurant_id: restaurantId });
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/proveedores');
+  revalidatePath('/admin/inventario');
+  revalidatePath('/admin/ingredientes');
+  revalidatePath('/admin/menu');
   return { ok: true };
 }

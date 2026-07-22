@@ -7,10 +7,37 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
-import { adjustStock, saveInventory } from '@/lib/actions/inventory';
+import { adjustStock, saveInventory, getProductMovements } from '@/lib/actions/inventory';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Category, Product } from '@/types';
+import type { StockMovement } from '@/lib/db/kardex';
+
+const REASON_LABEL: Record<string, string> = {
+  purchase: 'Compra a proveedor', sale: 'Venta', cancel: 'Cancelación', adjust: 'Ajuste manual', set: 'Stock fijado',
+};
+
+function MovementHistory({ movements }: { movements: StockMovement[] }) {
+  if (movements.length === 0) {
+    return <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía.</p>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
+      {movements.map((m) => (
+        <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 2px', borderBottom: '1px solid var(--u-hair)' }}>
+          <div>
+            <div style={{ color: 'var(--u-text-2)' }}>{REASON_LABEL[m.reason] ?? m.reason}</div>
+            <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
+            <div style={{ color: Number(m.delta) >= 0 ? '#4ade80' : '#f87171' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
+            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface Props {
   restaurantId: string;
@@ -95,6 +122,8 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
   const [stockVal, setStockVal] = useState(String(product.stock ?? 0));
   const [thresholdVal, setThresholdVal] = useState(String(product.low_stock_threshold ?? 0));
   const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<StockMovement[] | null>(null);
+  const [loadingHistory, startHistory] = useTransition();
 
   const stock = Number(product.stock ?? 0);
   const tracked = product.track_stock;
@@ -119,6 +148,11 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
     start(async () => { await saveInventory(null, fd); setOpen(false); onChanged(); });
   }
 
+  function toggleHistory() {
+    if (history !== null) { setHistory(null); return; }
+    startHistory(async () => { setHistory(await getProductMovements(restaurantId, product.id)); });
+  }
+
   return (
     <div style={{ padding: '12px 16px', borderBottom: last ? 'none' : '1px solid var(--u-hair)', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -141,6 +175,9 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
               {stock}
             </span>
             <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" />
+            <Button onClick={toggleHistory} disabled={loadingHistory} variant="secondary" size="icon" className="size-8.5" title="Historial (Kardex)">
+              <Icon name="clock" size={15} />
+            </Button>
             <Button onClick={() => setOpen((v) => !v)} variant="secondary" size="icon" className="size-8.5" title="Ajustes">
               <Icon name="settings" size={15} />
             </Button>
@@ -151,6 +188,13 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
           </Button>
         )}
       </div>
+
+      {/* Historial de movimientos (Kardex): entradas por compra, ventas, ajustes */}
+      {history !== null && (
+        <Card variant="flat" className="p-3">
+          {loadingHistory ? <p style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>Cargando…</p> : <MovementHistory movements={history} />}
+        </Card>
+      )}
 
       {/* Ajustes inline (activar control o editar stock/umbral) */}
       {open && (

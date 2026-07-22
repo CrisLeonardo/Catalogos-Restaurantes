@@ -22,6 +22,7 @@ export const ADMIN_SECTIONS = [
   { key: 'metricas',     label: 'Métricas' },
   { key: 'analitica',    label: 'Analítica' },
   { key: 'finanzas',     label: 'Finanzas' },
+  { key: 'respaldo',     label: 'Respaldo de datos' },
   { key: 'promociones',  label: 'Promociones' },
   { key: 'vales',        label: 'Tarjetas de regalo' },
   { key: 'fel',          label: 'Facturación (FEL)' },

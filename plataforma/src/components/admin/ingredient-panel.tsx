@@ -1,13 +1,38 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { Fragment, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
-import { saveIngredient, deleteIngredient } from '@/lib/actions/recipes';
+import { saveIngredient, deleteIngredient, getIngredientMovements } from '@/lib/actions/recipes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import type { Ingredient } from '@/lib/db/recipes';
+import type { StockMovement } from '@/lib/db/kardex';
+
+const REASON_LABEL: Record<string, string> = { purchase: 'Compra a proveedor', adjust: 'Ajuste manual' };
+
+function MovementHistory({ movements }: { movements: StockMovement[] }) {
+  if (movements.length === 0) {
+    return <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '6px 2px' }}>Sin movimientos registrados todavía — se llenará al recibir órdenes de compra vinculadas a este insumo.</p>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
+      {movements.map((m) => (
+        <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 2px', borderBottom: '1px solid var(--u-hair)' }}>
+          <div>
+            <div style={{ color: 'var(--u-text-2)' }}>{REASON_LABEL[m.reason] ?? m.reason}</div>
+            <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
+            <div style={{ color: Number(m.delta) >= 0 ? '#4ade80' : '#f87171' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
+            {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const UNITS = [
   // Peso
@@ -63,6 +88,19 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
   const [error, setError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [historyMap, setHistoryMap] = useState<Record<string, StockMovement[]>>({});
+  const [historyPending, startHistory] = useTransition();
+
+  function toggleHistory(ing: Ingredient) {
+    if (ing.id in historyMap) {
+      setHistoryMap((prev) => { const next = { ...prev }; delete next[ing.id]; return next; });
+      return;
+    }
+    startHistory(async () => {
+      const res = await getIngredientMovements(ing.id, restaurantId);
+      setHistoryMap((prev) => ({ ...prev, [ing.id]: res.movements ?? [] }));
+    });
+  }
 
   // Formulario nuevo
   const [newName, setNewName] = useState('');
@@ -239,7 +277,8 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
             }
 
             return (
-              <div key={ing.id} className="ing-row" style={{ padding: '12px 0', borderBottom }}>
+              <Fragment key={ing.id}>
+              <div className="ing-row" style={{ padding: '12px 0', borderBottom: ing.id in historyMap ? 'none' : borderBottom }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ing.name}</div>
                   {/* Línea meta — solo visible en móvil (las columnas se ocultan) */}
@@ -253,6 +292,18 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                 <div className="ing-col-desk" style={{ fontFamily: 'monospace' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</div>
                 <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{usageChip ?? '—'}</div>
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignSelf: 'start' }}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-9.5"
+                    onClick={() => toggleHistory(ing)}
+                    disabled={historyPending}
+                    title="Historial (Kardex)"
+                    aria-label={`Historial de ${ing.name}`}
+                  >
+                    <Icon name="clock" size={15} />
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -278,6 +329,14 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                   </Button>
                 </div>
               </div>
+              {ing.id in historyMap && (
+                <div style={{ padding: '0 0 12px', borderBottom }}>
+                  <Card variant="flat" className="p-3">
+                    <MovementHistory movements={historyMap[ing.id]} />
+                  </Card>
+                </div>
+              )}
+              </Fragment>
             );
           })}
         </Card>
