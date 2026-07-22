@@ -18,13 +18,17 @@ import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
-import { createWaiterOrder, updateOrderStatus, freeTable } from '@/lib/actions/orders';
+import { createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
-import type { Category, Product, ProductOptionGroup } from '@/types';
+import { computeComensalTotals, type BillAssignment } from '@/lib/bill-split';
+import VoidOrderDialog, { type VoidApprover } from '@/components/admin/void-order-dialog';
+import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
-import type { OrderWithItems, TableOccupancy } from '@/lib/db/orders';
+import { remainingQuantity, type OrderWithItems, type TableOccupancy } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /* ── Tipos locales ────────────────────────────────────────── */
 interface CartLine {
@@ -57,7 +61,17 @@ interface Props {
   hubToken: string | null;
   /** Sesión iniciada por PIN — el menú ⋮ ofrece "Cambiar de usuario" en vez de "Salir". */
   isOperatorSession?: boolean;
+  /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación. */
+  voidApprovers?: VoidApprover[];
 }
+
+/** Objetivo de un modal de anulación en curso: null = cerrado. */
+type VoidTarget = {
+  orderId: string;
+  orderStatus: OrderStatus;
+  /** null = anular el pedido completo. */
+  item: { id: string; name: string; remainingQty: number } | null;
+};
 
 /* ── Helpers ──────────────────────────────────────────────── */
 let _lineSeq = 0;
@@ -408,13 +422,13 @@ function WaiterHeader({
 }
 
 /* ── Panel principal ──────────────────────────────────────── */
-type View = 'tables' | 'menu' | 'review' | 'orders';
+type View = 'tables' | 'menu' | 'review' | 'orders' | 'bill';
 
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
-  hubUrl, hubToken, isOperatorSession = false,
+  hubUrl, hubToken, isOperatorSession = false, voidApprovers = [],
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -436,6 +450,62 @@ export default function WaiterPanel({
   // Pedidos sin sincronizar con la nube (fallback offline, ver handleSubmit).
   const [queuedCount, setQueuedCount] = useState(0);
   const retryingQueueRef = useRef(false);
+
+  /* ── Anulación (motivo + aprobación) ─────────────────────── */
+  const [voidTarget, setVoidTarget] = useState<VoidTarget | null>(null);
+
+  /* ── Cuenta de mesa / dividir cuenta ──────────────────────── */
+  const [billTable, setBillTable] = useState<number | null>(null);
+  const [billOrders, setBillOrders] = useState<OrderWithItems[] | null>(null);
+  const [billLoading, setBillLoading] = useState(false);
+  const [billError, setBillError] = useState<string | null>(null);
+  const [comensalIds, setComensalIds] = useState<string[]>(['1', '2']);
+  const [assignment, setAssignment] = useState<BillAssignment>({});
+
+  /* ── Archivar mesas abandonadas (>24h) ────────────────────── */
+  const [archiving, startArchive] = useTransition();
+  const [archiveMsg, setArchiveMsg] = useState<string | null>(null);
+
+  async function loadTableBill(n: number) {
+    setBillTable(n);
+    setBillLoading(true);
+    setBillError(null);
+    setComensalIds(['1', '2']);
+    setAssignment({});
+    const res = await getTableBill(restaurantId, n);
+    setBillLoading(false);
+    if ('error' in res) { setBillError(res.error); return; }
+    setBillOrders(res.orders);
+  }
+
+  function toggleAssignment(itemId: string, comensalId: string) {
+    setAssignment((prev) => {
+      const current = prev[itemId]?.length ? prev[itemId] : comensalIds;
+      const isOn = current.includes(comensalId);
+      if (isOn && current.length === 1) return prev; // no dejar el ítem sin nadie asignado
+      const next = isOn ? current.filter((c) => c !== comensalId) : [...current, comensalId];
+      return { ...prev, [itemId]: next };
+    });
+  }
+
+  function addComensal() {
+    setComensalIds((prev) => {
+      const nextNum = Math.max(0, ...prev.map((p) => Number(p) || 0)) + 1;
+      return [...prev, String(nextNum)];
+    });
+  }
+
+  function removeComensal(id: string) {
+    setComensalIds((prev) => (prev.length <= 1 ? prev : prev.filter((c) => c !== id)));
+    setAssignment((prev) => {
+      const next: BillAssignment = {};
+      for (const [itemId, ids] of Object.entries(prev)) {
+        const filtered = ids.filter((c) => c !== id);
+        if (filtered.length > 0) next[itemId] = filtered;
+      }
+      return next;
+    });
+  }
 
   // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
   // ráfaga de eventos Realtime (p. ej. la cola offline del hub sincronizando
@@ -556,6 +626,27 @@ export default function WaiterPanel({
   }, []);
 
   const occupiedSet = useMemo(() => new Set(Object.keys(occupiedSince).map(Number)), [occupiedSince]);
+
+  /** Mesas que llevan más de 24h ocupadas: casi seguro un pedido olvidado,
+      no operación real (ver auditoría Fase 1 — auto-archivo). */
+  const abandonedCount = useMemo(() => {
+    if (now == null) return 0;
+    return Object.values(occupiedSince).filter((occ) => now - new Date(occ.since).getTime() > DAY_MS).length;
+  }, [occupiedSince, now]);
+
+  function handleArchiveAbandoned() {
+    setArchiveMsg(null);
+    startArchive(async () => {
+      const res = await archiveAbandonedTables(restaurantId);
+      if (res.error) { setArchiveMsg(res.error); return; }
+      setArchiveMsg(
+        res.archived && res.archived > 0
+          ? `Se archivaron ${res.archived} mesa${res.archived === 1 ? '' : 's'} abandonada${res.archived === 1 ? '' : 's'}.`
+          : 'No había mesas abandonadas por archivar.',
+      );
+      router.refresh();
+    });
+  }
 
   /* ── Carrito ─────────────────────────────────────────── */
   function addToCart(line: CartLine) {
@@ -795,12 +886,37 @@ export default function WaiterPanel({
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {order.items.map((item) => (
-                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--u-text-2)' }}>
-                        <span>{item.quantity}× {item.name_snapshot}</span>
-                        <span style={{ fontWeight: 600 }}>{money(Number(item.subtotal), currency)}</span>
-                      </div>
-                    ))}
+                    {order.items.map((item) => {
+                      const remaining = remainingQuantity(item, order.voids ?? []);
+                      const voidedQty = item.quantity - remaining;
+                      const unitPrice = item.quantity > 0 ? Number(item.subtotal) / item.quantity : 0;
+                      return (
+                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--u-text-2)' }}>
+                          <span>
+                            {remaining}× {item.name_snapshot}
+                            {voidedQty > 0 && (
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600 }}>
+                                {voidedQty} anulada{voidedQty === 1 ? '' : 's'}
+                              </span>
+                            )}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            <span style={{ fontWeight: 600 }}>{money(unitPrice * remaining, currency)}</span>
+                            {!isTerminal && remaining > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setVoidTarget({ orderId: order.id, orderStatus: order.status, item: { id: item.id, name: item.name_snapshot, remainingQty: remaining } })}
+                                title="Anular"
+                                className="press"
+                                style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                              >
+                                <Icon name="x" size={11} />
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {!isTerminal && (
@@ -822,16 +938,7 @@ export default function WaiterPanel({
                       )}
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm('¿Cancelar este pedido?')) {
-                            startStatus(async () => {
-                              setStatusError(null);
-                              const res = await updateOrderStatus(order.id, 'CANCEL');
-                              if (res.error) { setStatusError(res.error); return; }
-                              router.refresh();
-                            });
-                          }
-                        }}
+                        onClick={() => setVoidTarget({ orderId: order.id, orderStatus: order.status, item: null })}
                         className="press"
                         style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
                       >
@@ -844,6 +951,17 @@ export default function WaiterPanel({
             })}
           </div>
         </div>
+
+        {voidTarget && (
+          <VoidOrderDialog
+            orderId={voidTarget.orderId}
+            orderStatus={voidTarget.orderStatus}
+            item={voidTarget.item}
+            voidApprovers={voidApprovers}
+            onClose={() => setVoidTarget(null)}
+            onDone={() => { setVoidTarget(null); router.refresh(); }}
+          />
+        )}
       </div>
     );
   }
@@ -874,6 +992,29 @@ export default function WaiterPanel({
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(251,191,36,0.25)', border: '1px solid rgba(251,191,36,0.5)' }} /> Con pedido activo
               </span>
             </div>
+
+            {abandonedCount > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, marginBottom: 14, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
+                <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger, #f87171)' }}>
+                  {abandonedCount} mesa{abandonedCount === 1 ? '' : 's'} con más de 24h ocupada{abandonedCount === 1 ? '' : 's'} — probablemente un pedido olvidado.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleArchiveAbandoned}
+                  disabled={archiving}
+                  className="press"
+                  style={{ padding: '7px 13px', borderRadius: 99, border: 'none', cursor: archiving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 12.5, background: 'var(--c-danger, #f87171)', color: '#fff', opacity: archiving ? 0.7 : 1, flexShrink: 0 }}
+                >
+                  {archiving ? 'Archivando…' : 'Archivar mesas abandonadas'}
+                </button>
+              </div>
+            )}
+            {archiveMsg && (
+              <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginBottom: 14, padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}>
+                {archiveMsg}
+              </div>
+            )}
 
             {planEnabled ? (
               <>
@@ -953,6 +1094,14 @@ export default function WaiterPanel({
                 </button>
                 <button
                   type="button"
+                  onClick={() => { const n = tableToFree!; setTableToFree(null); loadTableBill(n); setView('bill'); }}
+                  className="press glass-quiet"
+                  style={{ padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}
+                >
+                  <Icon name="list" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} /> Ver cuenta / dividir
+                </button>
+                <button
+                  type="button"
                   disabled={freeing}
                   onClick={() => {
                     const n = tableToFree!;
@@ -971,6 +1120,167 @@ export default function WaiterPanel({
               </div>
             </div>
           </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ════════════════ VISTA: CUENTA DE MESA / DIVIDIR ════════════════ */
+  if (view === 'bill') {
+    const billItems = (billOrders ?? []).flatMap((o) =>
+      o.items.map((it) => ({ item: it, orderId: o.id, orderStatus: o.status, voids: o.voids ?? [] })),
+    );
+    const totals = billOrders ? computeComensalTotals(billOrders, comensalIds, assignment) : [];
+    const grandTotal = (billOrders ?? []).reduce((s, o) => s + Number(o.total), 0);
+
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={`Cuenta · Mesa ${billTable}`} onBack={() => { setView('tables'); setBillTable(null); setBillOrders(null); }} />
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="waiter-wrap-narrow" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {billLoading && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Cargando cuenta…</div>
+            )}
+            {billError && (
+              <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)', padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)' }}>{billError}</div>
+            )}
+            {!billLoading && !billError && billOrders && billOrders.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Esta mesa no tiene pedidos activos.</div>
+            )}
+
+            {!billLoading && !billError && billOrders && billOrders.length > 0 && (
+              <>
+                {/* Comensales */}
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Comensales</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {comensalIds.map((cid) => (
+                      <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 8px 8px 14px', borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--u-text)', fontSize: 13.5, fontWeight: 600 }}>
+                        Comensal {cid}
+                        {comensalIds.length > 1 && (
+                          <button type="button" onClick={() => removeComensal(cid)} className="press" style={{ width: 20, height: 20, borderRadius: 99, border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                            <Icon name="x" size={11} />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    <button type="button" onClick={addComensal} className="press glass-quiet" style={{ padding: '8px 16px', borderRadius: 99, border: '1px dashed var(--u-hair)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13.5, fontWeight: 600 }}>
+                      + Comensal
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ítems */}
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                    Ítems — toca los comensales que comparten cada uno
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {billItems.map(({ item, orderId, orderStatus, voids }) => {
+                      const remaining = remainingQuantity(item, voids);
+                      const voidedQty = item.quantity - remaining;
+                      const unitPrice = item.quantity > 0 ? Number(item.subtotal) / item.quantity : 0;
+                      const effective = assignment[item.id]?.length ? assignment[item.id] : comensalIds;
+                      if (remaining === 0) {
+                        return (
+                          <div key={item.id} className="glass" style={{ borderRadius: 12, padding: '10px 12px', opacity: 0.5 }}>
+                            <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>{item.quantity}× {item.name_snapshot}</div>
+                            <div style={{ fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600, marginTop: 2 }}>Anulado</div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={item.id} className="glass" style={{ borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{remaining}× {item.name_snapshot}</div>
+                              {voidedQty > 0 && <div style={{ fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600 }}>{voidedQty} anulada{voidedQty === 1 ? '' : 's'}</div>}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{money(unitPrice * remaining, currency)}</span>
+                              <button
+                                type="button"
+                                onClick={() => setVoidTarget({ orderId, orderStatus, item: { id: item.id, name: item.name_snapshot, remainingQty: remaining } })}
+                                title="Anular"
+                                className="press"
+                                style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                              >
+                                <Icon name="x" size={11} />
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {comensalIds.map((cid) => {
+                              const on = effective.includes(cid);
+                              return (
+                                <button
+                                  key={cid}
+                                  type="button"
+                                  onClick={() => toggleAssignment(item.id, cid)}
+                                  className="press"
+                                  style={{ padding: '5px 12px', borderRadius: 99, border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-3)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                                >
+                                  {cid}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Totales por comensal */}
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                    Le toca a cada quien <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>(incluye propina/descuento repartidos en partes iguales)</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {totals.map((t) => (
+                      <div key={t.comensalId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)' }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>Comensal {t.comensalId}</span>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--u-text)' }}>{money(t.total, currency)}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderTop: '1px solid var(--u-hair)', marginTop: 4 }}>
+                      <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Total de la mesa</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text-2)' }}>{money(grandTotal, currency)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={freeing}
+                  onClick={() => {
+                    const n = billTable!;
+                    startFree(async () => {
+                      const res = await freeTable(restaurantId, n);
+                      if (res.error) { alert(res.error); return; }
+                      setView('tables'); setBillTable(null); setBillOrders(null);
+                      router.refresh();
+                    });
+                  }}
+                  className="press"
+                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
+                >
+                  {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar mesa como libre</>}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {voidTarget && (
+          <VoidOrderDialog
+            orderId={voidTarget.orderId}
+            orderStatus={voidTarget.orderStatus}
+            item={voidTarget.item}
+            voidApprovers={voidApprovers}
+            onClose={() => setVoidTarget(null)}
+            onDone={() => { setVoidTarget(null); if (billTable) loadTableBill(billTable); router.refresh(); }}
+          />
         )}
       </div>
     );

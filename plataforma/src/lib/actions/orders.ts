@@ -13,11 +13,13 @@ import { isOpenNow, type WeeklyHours } from '@/lib/hours';
 import { resolvePromo } from '@/lib/db/promos';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
+import { checkApproverPin } from '@/lib/actions/staff-pin';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
+import { getOrdersForTable, type OrderWithItems } from '@/lib/db/orders';
 import {
   createBrandedWorkbook, addBrandedHeader, writeStyledTable, freezeHeaderRow, autoFitColumns,
   workbookToBase64,
@@ -694,6 +696,13 @@ export async function updateOrderStatus(
   ];
   if (!validStatuses.includes(status)) return { error: 'Estado inválido.' };
 
+  // CANCEL ya no pasa por aquí: exige motivo + (si ya se envió a cocina)
+  // aprobación de encargado — ver voidOrder(). Sin este candado, cualquier
+  // botón nuevo podía reintroducir la cancelación silenciosa sin auditoría.
+  if (status === 'CANCEL') {
+    return { error: 'Para anular un pedido usa el flujo de anulación (requiere motivo).' };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autorizado.' };
@@ -713,20 +722,15 @@ export async function updateOrderStatus(
   // pedidos de sucursales de su grupo (con service no habría filtro por sucursal).
   const db = profile.role === 'SUPER_ADMIN' ? createServiceClient() : supabase;
 
-  // Al cancelar, devolver stock de productos con inventario (idempotente en BD:
-  // restock_order no hace nada si el pedido ya estaba CANCEL). Va ANTES del update.
-  if (status === 'CANCEL') {
-    await db.rpc('restock_order', { p_order_id: orderId });
-  }
-
-  // Sella la marca de tiempo de la transición (analítica: tiempos y cancelación).
+  // Sella la marca de tiempo de la transición (analítica de tiempos). CANCEL
+  // ya no pasa por aquí (ver guard arriba) — restock_order y cancelled_at los
+  // maneja voidOrder()/void_order() en su propia transacción.
   const now = new Date().toISOString();
   const stamp: Record<string, string> =
     status === 'PREP'      ? { accepted_at: now }
     : status === 'READY'     ? { ready_at: now }
     : status === 'SERVED'    ? { served_at: now }
     : status === 'DELIVERED' ? { delivered_at: now }
-    : status === 'CANCEL'    ? { cancelled_at: now }
     : {};
 
   const { error } = await db
@@ -790,6 +794,208 @@ export async function updateOrderStatus(
   revalidatePath('/admin/mesero');
   revalidatePath('/admin/cocina');
   return {};
+}
+
+export interface VoidOrderInput {
+  orderId: string;
+  /** null/omitido = anular el pedido COMPLETO; si no, el order_item puntual. */
+  itemId?: string | null;
+  /** Requerido junto con itemId: cuántas unidades de esa línea se anulan. */
+  quantity?: number | null;
+  reason: string;
+  /** profile_id de quien autoriza, si el solicitante no tiene el permiso él mismo. */
+  approverId?: string | null;
+  approverPin?: string | null;
+}
+
+/**
+ * Anula un pedido completo o N unidades de un ítem, con motivo obligatorio.
+ * Si el pedido ya salió de NEW (proxy de "ya se envió a cocina") y quien
+ * solicita no tiene el permiso 'aprobar_anulaciones', exige el PIN de
+ * alguien que sí lo tenga (ver checkApproverPin). Reemplaza el cancel
+ * directo sin auditoría que antes hacía updateOrderStatus(id, 'CANCEL').
+ */
+export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string; success?: boolean }> {
+  const reason = input.reason?.trim();
+  if (!reason) return { error: 'El motivo es obligatorio.' };
+  if (!input.orderId) return { error: 'Pedido inválido.' };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+  const { data: requester } = await db
+    .from('profiles')
+    .select('role, restaurant_id, permissions')
+    .eq('id', user.id)
+    .single();
+  if (!requester) return { error: 'No autorizado.' };
+
+  const { data: order } = await db
+    .from('orders')
+    .select('id, restaurant_id, status')
+    .eq('id', input.orderId)
+    .single();
+  if (!order) return { error: 'Pedido no encontrado.' };
+
+  const ownsBranch = requester.role === 'GROUP_OWNER'
+    ? (await resolveGroupBranchId()) === order.restaurant_id
+    : requester.restaurant_id === order.restaurant_id;
+  if (
+    !ownsBranch ||
+    !can(requester.role as string, requester.permissions as string[] | null, 'mesero')
+  ) {
+    return { error: 'No autorizado.' };
+  }
+  if (order.status === 'CANCEL' || order.status === 'DELIVERED') {
+    return { error: 'Este pedido ya está cerrado.' };
+  }
+
+  // "Ya se envió a cocina": proxy = cualquier estado más allá de NEW (ver
+  // nota en la sección 5 de la investigación — no hay un timestamp propio
+  // de "enviado a cocina", NEW→PREP es el evento más confiable).
+  const sentToKitchen = order.status !== 'NEW';
+  const requesterIsApprover = can(requester.role as string, requester.permissions as string[] | null, 'aprobar_anulaciones');
+
+  let approvedBy: string | null = null;
+  if (sentToKitchen) {
+    if (requesterIsApprover) {
+      approvedBy = user.id;
+    } else {
+      if (!input.approverId || !input.approverPin) {
+        return { error: 'Este pedido ya se envió a cocina: necesitas el PIN de un encargado para anularlo.' };
+      }
+      const { data: approver } = await db
+        .from('profiles')
+        .select('role, restaurant_id, permissions')
+        .eq('id', input.approverId)
+        .single();
+      if (
+        !approver ||
+        approver.restaurant_id !== order.restaurant_id ||
+        !can(approver.role as string, approver.permissions as string[] | null, 'aprobar_anulaciones')
+      ) {
+        return { error: 'Ese perfil no tiene permiso para aprobar anulaciones.' };
+      }
+      const ip = clientIp(await headers());
+      const check = await checkApproverPin(order.restaurant_id as string, input.approverId, input.approverPin, ip);
+      if (!check.ok) return { error: check.error };
+      approvedBy = input.approverId;
+    }
+  }
+
+  if (input.itemId) {
+    const qty = Math.trunc(input.quantity ?? 0);
+    if (qty < 1) return { error: 'Cantidad inválida.' };
+    const { error } = await db.rpc('void_order_item', {
+      p_order_item_id: input.itemId,
+      p_order_id: order.id,
+      p_quantity: qty,
+      p_reason: reason,
+      p_requested_by: user.id,
+      p_approved_by: approvedBy,
+    });
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await db.rpc('void_order', {
+      p_order_id: order.id,
+      p_reason: reason,
+      p_requested_by: user.id,
+      p_approved_by: approvedBy,
+    });
+    if (error) return { error: error.message };
+  }
+
+  logActivity({
+    restaurantId: order.restaurant_id as string,
+    actorId: user.id,
+    action: 'order_void',
+    entity: reason,
+    meta: { orderId: order.id, itemId: input.itemId ?? null, approvedBy },
+  });
+
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/cocina');
+  return { success: true };
+}
+
+/** Todos los pedidos activos de una mesa (todas las rondas acumuladas),
+ *  base de la "cuenta de mesa" / dividir cuenta en el panel de mesero. */
+export async function getTableBill(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<{ orders: OrderWithItems[] } | { error: string }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+  const { data: profile } = await db
+    .from('profiles')
+    .select('role, restaurant_id, permissions')
+    .eq('id', user.id)
+    .single();
+
+  const ownsBranch = profile?.role === 'GROUP_OWNER'
+    ? (await resolveGroupBranchId()) === restaurantId
+    : profile?.restaurant_id === restaurantId;
+  if (
+    !profile ||
+    !ownsBranch ||
+    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+  ) {
+    return { error: 'No autorizado.' };
+  }
+
+  return { orders: await getOrdersForTable(restaurantId, tableNumber) };
+}
+
+/**
+ * Cancela (con reposición de stock) los pedidos DINE_IN de ESTE restaurante
+ * con más de 24h sin cerrar — botón manual de respaldo del panel (el cron
+ * de la migración 080 ya lo hace solo cada hora si pg_cron está disponible).
+ */
+export async function archiveAbandonedTables(restaurantId: string): Promise<{ error?: string; archived?: number }> {
+  if (!restaurantId) return { error: 'Restaurante inválido.' };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+  const { data: profile } = await db
+    .from('profiles')
+    .select('role, restaurant_id, permissions')
+    .eq('id', user.id)
+    .single();
+
+  const ownsBranch = profile?.role === 'GROUP_OWNER'
+    ? (await resolveGroupBranchId()) === restaurantId
+    : profile?.restaurant_id === restaurantId;
+  if (
+    !profile ||
+    !ownsBranch ||
+    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+  ) {
+    return { error: 'No autorizado.' };
+  }
+
+  const { data, error } = await db.rpc('leogin_archive_abandoned_orders', { p_restaurant_id: restaurantId });
+  if (error) return { error: error.message };
+
+  const archived = (data as number) ?? 0;
+  if (archived > 0 && profile.restaurant_id) {
+    logActivity({ restaurantId: profile.restaurant_id, actorId: user.id, action: 'auto_archive', entity: `${archived} mesa(s)` });
+  }
+
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/cocina');
+  return { archived };
 }
 
 /**

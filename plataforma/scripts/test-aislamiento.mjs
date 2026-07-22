@@ -84,7 +84,10 @@ async function makeTenant(tag) {
   created.users.push(u.user.id);
   await admin.from('profiles').upsert({ id: u.user.id, restaurant_id: r.id, role: 'RESTAURANT_OWNER', full_name: `Dueño ${tag}` });
 
-  return { id: r.id, email, categoryId: cat.id, prodActive: prodActive.id, prodHidden: prodHidden.id, orderId: ord.id, customerId: cust.id, invoiceId: inv.id };
+  // order_voids (migración 079, Fase 1): auditoría de anulaciones, sin políticas RLS.
+  const voidRow = await ins('order_voids', { restaurant_id: r.id, order_id: ord.id, reason: `Prueba de aislamiento ${tag}`, requested_by: u.user.id });
+
+  return { id: r.id, email, categoryId: cat.id, prodActive: prodActive.id, prodHidden: prodHidden.id, orderId: ord.id, customerId: cust.id, invoiceId: inv.id, ownerId: u.user.id, voidId: voidRow.id };
 }
 
 async function cleanup() {
@@ -124,6 +127,14 @@ async function main() {
     const { data } = await asA.from('orders').select('restaurant_id');
     const otros = (data ?? []).filter((o) => o.restaurant_id !== A.id);
     check('SELECT pedidos sin filtro solo devuelve los de A', otros.length === 0, `${otros.length} de otros`);
+  }
+
+  console.log('\n── order_voids (anulaciones, migración 079): sin políticas RLS ──');
+  check('A no ve SUS PROPIOS order_voids por anon (tabla sin políticas, solo service_role)', (await rows(asA, 'order_voids', 'restaurant_id', A.id)) === 0);
+  check('A no ve order_voids de B por anon', (await rows(asA, 'order_voids', 'restaurant_id', B.id)) === 0);
+  {
+    const { data } = await asA.from('order_voids').insert({ restaurant_id: A.id, order_id: A.orderId, reason: 'Intento anon', requested_by: A.ownerId }).select('id');
+    check('A no puede insertar en order_voids por anon', (data?.length ?? 0) === 0, `insertó ${data?.length}`);
   }
 
   console.log('\n── Menú PÚBLICO de B: visible a propósito (no es fuga) ──');

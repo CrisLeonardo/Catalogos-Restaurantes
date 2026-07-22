@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { ToastProvider, Toaster, useToastManager } from '@/components/ui/toast';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
+import type { VoidApprover } from '@/components/admin/void-order-dialog';
 
 interface Props {
   initialOrders:  OrderWithItems[];
@@ -29,6 +30,8 @@ interface Props {
   agentReceipt?:      boolean;
   autoConfirmEnabled?: boolean;
   autoConfirmMinutes?: number;
+  /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación de OrderCard. */
+  voidApprovers?: VoidApprover[];
 }
 
 /** Sonido de pedido nuevo — el MISMO de sounds.ts a propósito: respeta el
@@ -65,7 +68,7 @@ export default function OrdersPanel(props: Props) {
   );
 }
 
-function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1 }: Props) {
+function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1, voidApprovers = [] }: Props) {
   const router = useRouter();
   const toastManager = useToastManager();
 
@@ -293,7 +296,7 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
             </Card>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 28 }}>
-              {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} />)}
+              {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} voidApprovers={voidApprovers} />)}
             </div>
           )}
           {completedToday.length > 0 && (

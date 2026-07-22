@@ -17,6 +17,7 @@ import { logActivity } from '@/lib/activity';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { touchOperatorSession } from '@/lib/actions/operator';
 import { ownerCtx, assertStaffOfRestaurant } from '@/lib/actions/staff';
+import { can } from '@/lib/permissions';
 import {
   isValidPin, newPinSalt, hashPin, verifyPin,
   PIN_LENGTH, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS,
@@ -171,4 +172,80 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
     '?welcome=1',
   );
   redirect(destination);
+}
+
+/**
+ * Valida el PIN de un "encargado" (permiso 'aprobar_anulaciones') SIN abrir
+ * sesión — a diferencia de verifyStaffPin, esto solo confirma identidad para
+ * autorizar una acción puntual (anular un pedido/ítem ya enviado a cocina)
+ * dentro de la sesión de quien la solicita. Mismo rate-limit/bloqueo que el
+ * login por PIN (ver verifyStaffPin arriba).
+ */
+export async function checkApproverPin(
+  restaurantId: string,
+  approverId: string,
+  pin: string,
+  ip: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID_RE.test(restaurantId) || !UUID_RE.test(approverId)) return { ok: false, error: 'Solicitud inválida.' };
+  if (!isValidPin(pin)) return { ok: false, error: 'PIN inválido.' };
+
+  if (
+    !rateLimit(`pin:${ip}`, 20, 5 * 60_000) ||
+    !rateLimit(`pin:${restaurantId}:${approverId}`, 8, 5 * 60_000)
+  ) {
+    return { ok: false, error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
+  }
+
+  const db = createServiceClient();
+  const { data: row } = await db
+    .from('staff_pins')
+    .select('pin_hash, pin_salt, failed_attempts, locked_until')
+    .eq('profile_id', approverId)
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (!row) return { ok: false, error: 'PIN incorrecto.' };
+
+  if (row.locked_until && new Date(row.locked_until as string) > new Date()) {
+    return { ok: false, error: 'Demasiados intentos fallidos. Espera unos minutos.' };
+  }
+
+  const ok = await verifyPin(pin, row.pin_salt as string, row.pin_hash as string);
+  if (!ok) {
+    const attempts = (row.failed_attempts as number) + 1;
+    const locked = attempts >= PIN_LOCK_AFTER_ATTEMPTS;
+    await db.from('staff_pins').update({
+      failed_attempts: locked ? 0 : attempts,
+      locked_until: locked ? new Date(Date.now() + PIN_LOCK_MS).toISOString() : null,
+    }).eq('profile_id', approverId);
+    return { ok: false, error: locked ? 'Demasiados intentos fallidos. Espera unos minutos.' : 'PIN incorrecto.' };
+  }
+
+  await db.from('staff_pins').update({ failed_attempts: 0, locked_until: null }).eq('profile_id', approverId);
+  return { ok: true };
+}
+
+/**
+ * Staff con PIN activo Y permiso 'aprobar_anulaciones' — la lista de
+ * "encargados" que puede autorizar una anulación ya enviada a cocina
+ * (ver voidOrder en lib/actions/orders.ts). El dueño mismo no necesita
+ * aparecer aquí: can() ya le da el permiso sin PIN (auto-aprobado).
+ */
+export async function listVoidApprovers(restaurantId: string): Promise<PinStaffMember[]> {
+  if (!UUID_RE.test(restaurantId)) return [];
+  const db = createServiceClient();
+  const { data } = await db
+    .from('staff_pins')
+    .select('profile_id, profiles(full_name, role, permissions)')
+    .eq('restaurant_id', restaurantId);
+
+  return (data ?? [])
+    .filter((r) => {
+      const p = r.profiles as unknown as { role: string; permissions: string[] | null } | null;
+      return !!p && can(p.role, p.permissions, 'aprobar_anulaciones');
+    })
+    .map((r) => ({
+      id: r.profile_id as string,
+      full_name: ((r.profiles as unknown as { full_name: string | null } | null))?.full_name ?? null,
+    }));
 }

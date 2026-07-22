@@ -72,10 +72,47 @@ Ajusta el tono a como hablas normalmente con un cliente — es solo para que la 
 ---
 
 ## Fase 1 — Anti-fraude y operación de mesero
-**Estado: no iniciada** — lo que un mesero real va a pedir en la primera semana.
-- [ ] Dividir cuenta entre comensales en una misma mesa
-- [ ] Anulación de pedido/ítem ya enviado a cocina, con motivo obligatorio + aprobación de encargado
-- [ ] Auto-archivar pedidos/mesas abandonados tras ~24h *(se movió aquí desde Fase 0: toca varios paneles — admin, mesero, KDS, plano de mesas — y la propia auditoría la marca "alta, no bloqueante"; merece su propia sesión y verificación end-to-end como el resto de esta fase, en vez de ir apurada al final de los bloqueantes)*
+**Estado: cerrada en código** (2026-07-21) — falta correr las migraciones 079-080 en producción (mismo mecanismo pendiente que Fase 0).
+- [x] **Anulación de pedido/ítem ya enviado a cocina, con motivo obligatorio + aprobación de encargado** — 2026-07-21, verificado en navegador (caso sin aprobación, con PIN correcto, con PIN incorrecto rechazado). Ver detalle abajo.
+- [x] **Dividir cuenta entre comensales en una misma mesa** — 2026-07-21, verificado en navegador con datos reales de la mesa 6 (matemática exacta, redondeo cuadra). Ver detalle abajo.
+- [x] **Auto-archivar pedidos/mesas abandonados tras ~24h** — 2026-07-21, verificado: el cron corrió SOLO en local y archivó 30 pedidos reales de más de 24h sin que yo lo disparara. Ver detalle abajo.
+
+### Anulación con motivo + aprobación — qué se construyó
+Nueva tabla `order_voids` (auditoría: motivo, quién pidió, quién aprobó) + dos funciones SQL: `void_order_item` (anula N unidades de un ítem sin cerrar el pedido, repone stock parcial, reduce subtotal/total) y `void_order` (anula el pedido completo). **`updateOrderStatus(id, 'CANCEL')` ya no existe como camino** — cualquier cancelación pasa por `voidOrder()`, que exige motivo siempre y, si el pedido ya salió de `NEW` (proxy de "ya se envió a cocina"), exige además el PIN de alguien con el nuevo permiso delegable **"Aprobar anulaciones"** (asignable a cualquier staff desde Personal, igual que "Pedidos" o "Finanzas") — el dueño/admin siempre puede auto-aprobar. Reutiliza el sistema de PIN de staff ya existente (sin abrir una sesión nueva, solo confirma identidad puntual).
+
+**Hallazgo real corregido en el camino:** `restock_order` (migración 021) no sabía de anulaciones parciales — si un ítem ya se había repuesto vía `void_order_item` y luego se cancelaba el resto del pedido, reponía esas unidades DOS VECES. Encontrado probando contra Postgres local real (no se veía con solo leer el SQL), corregido dentro de la misma migración 079.
+
+**Verificado en navegador (local, con "Mesero Test" sin el permiso y "Encargado Test" con él):**
+- Ítem de un pedido `NEW` → anula sin pedir aprobación, `order_voids.approved_by` queda NULL.
+- Pedido completo ya en `PREP` → exige PIN; con el PIN de "Encargado Test" anula y audita `requested_by`/`approved_by` correctos (dos personas distintas).
+- PIN incorrecto → rechazado con error visible, el pedido NO se toca (confirmado contra la BD).
+
+### Dividir cuenta — qué se construyó
+Nueva vista "Cuenta de mesa" en el panel de mesero (botón "Ver cuenta / dividir" junto a "Marcar como libre"): agrupa TODOS los pedidos activos de la mesa (antes no existía esta agregación — cada "ronda" es un `orders` separado), permite agregar/quitar comensales y asignar cada ítem a quien corresponda (por defecto todos comparten todo = partes iguales, sin que el mesero tenga que tocar nada). Los "extras" de cada pedido (propina, descuento, envío — lo que sea) se reparten siempre en partes iguales por diferencia (`total - suma de ítems`), sin necesidad de replicar la fórmula exacta de cada tipo de pedido. Es una calculadora — no persiste el split ni cambia el cobro manual actual (Fase 0). Cálculo en `plataforma/src/lib/bill-split.ts`.
+
+**Verificado con datos reales:** Mesa 6 (2 pedidos acumulados, Q196.50) dividido en 2 partes iguales (Q98.25/Q98.25); al reasignar un ítem a un solo comensal, recalculó a Q111.25/Q85.25 — exacto.
+
+### Auto-archivo de mesas abandonadas — qué se construyó
+`orders.auto_archived_at` (distingue cierre automático de uno manual) + función `leogin_archive_abandoned_orders(p_restaurant_id)` — cancela (repone stock) pedidos DINE_IN de más de 24h; `p_restaurant_id = null` para el cron global, con valor para el botón manual. Mismo patrón que la automatización de cobros (migración 035): `pg_cron` cada hora si está disponible + botón "Archivar mesas abandonadas" (banner rojo en el panel de mesero cuando hay mesas así) como respaldo si el plan de Supabase no lo soporta.
+
+**Verificado sin que yo lo disparara:** el cron corrió solo en Supabase local (`cron.job_run_details` confirma la corrida a la hora en punto) y archivó 30 pedidos reales de restaurantes de prueba con más de 24h — incluida la mesa 6 de Azúcar Negra que llevaba 10 días "ocupada". Las mesas recién creadas (minutos de antigüedad) no se tocaron.
+
+### Migraciones 079-080 en producción — qué hacer
+Mismo mecanismo que las pendientes de Fase 0: corre esto en el SQL Editor de producción (solo lectura):
+
+```sql
+select 'mig_079_order_voids_table' as check, (to_regclass('public.order_voids') is not null)::text as ok
+union all
+select 'mig_079_void_order_fn',      (to_regprocedure('public.void_order(uuid,text,uuid,uuid)') is not null)::text
+union all
+select 'mig_079_void_order_item_fn', (to_regprocedure('public.void_order_item(uuid,uuid,int,text,uuid,uuid)') is not null)::text
+union all
+select 'mig_080_auto_archived_col',  (exists (select 1 from information_schema.columns where table_name='orders' and column_name='auto_archived_at'))::text
+union all
+select 'mig_080_archive_fn',         (to_regprocedure('public.leogin_archive_abandoned_orders(uuid)') is not null)::text;
+```
+
+Si tu plan de Supabase no tiene `pg_cron` habilitado, la migración 080 avisa por `raise notice` y no falla — el botón manual del panel sigue funcionando igual; no hace falta activarlo para lanzar.
 
 ## Fase 2 — Retención y utilidades de personal
 **Estado: no iniciada**
@@ -116,3 +153,4 @@ Ajusta el tono a como hablas normalmente con un cliente — es solo para que la 
 
 ## Bitácora
 - **2026-07-21** — Leído `Leogin_Auditoria_Lanzamiento.docx`, creado este plan de 8 fases. Iniciada Fase 0: cerrada la fuga de teléfono/dirección (`loyalty.ts` + `account-sheet.tsx` + `rewards-section.tsx`, verificado en navegador local con datos de prueba), corregido y corrido el script de aislamiento multi-tenant (13/13 OK, estaba roto por un valor de plan obsoleto), redactada respuesta de venta FEL/cobro manual. Pendiente de tu parte: correr el diagnóstico SQL de migraciones 074-078 y revisar dominio/Realtime en Render+Supabase de producción (instrucciones arriba) — con eso cerrada, Fase 0 queda completa.
+- **2026-07-21** — Fase 1 completa en código (misma sesión, continuación): anulación con motivo+aprobación (migración 079, tablas `order_voids` + RPCs `void_order`/`void_order_item`, nuevo permiso delegable "Aprobar anulaciones"), dividir cuenta (`bill-split.ts` + vista "Cuenta de mesa" en el panel de mesero), auto-archivo de mesas >24h (migración 080, `pg_cron` + botón manual). Hallazgo real corregido: `restock_order` reponía stock dos veces si un pedido ya tenía una anulación parcial antes de cancelarse completo. Verificado exhaustivamente: `tsc --noEmit` limpio, `test-aislamiento.mjs` 16/16 (agregado `order_voids`), pruebas SQL directas de ambos RPCs contra Postgres local (con rollback), y de punta a punta en el navegador con dos perfiles de staff reales (uno sin permiso de aprobar, otro con él) cubriendo: anular sin aprobación, anular con aprobación y PIN correcto, PIN incorrecto rechazado, dividir cuenta con datos reales, y el cron de auto-archivo corriendo por su cuenta (archivó 30 pedidos reales de prueba sin que se disparara manualmente). Pendiente de tu parte: correr el diagnóstico SQL de migraciones 079-080 en producción (instrucciones arriba). Quedan 2 miembros de prueba ("Mesero Test", "Encargado Test") en el restaurante demo local — inofensivos, bórralos desde /admin/personal si quieres limpiar la demo.

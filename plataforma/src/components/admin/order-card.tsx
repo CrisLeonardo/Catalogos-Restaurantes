@@ -4,10 +4,11 @@ import { useTransition, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
 import { updateOrderStatus, printReceiptViaAgent } from '@/lib/actions/orders';
-import type { OrderWithItems } from '@/lib/db/orders';
+import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
 import { printTicket, isKitchenAutoPrintEnabled } from '@/lib/printing';
 import { buildKitchenEscPos, buildReceiptEscPos } from '@/lib/escpos';
+import VoidOrderDialog, { type VoidApprover } from '@/components/admin/void-order-dialog';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -300,6 +301,7 @@ export default function OrderCard({
   restaurantName,
   agentKitchen = false,
   agentReceipt = false,
+  voidApprovers = [],
 }: {
   order: OrderWithItems;
   currency: PanelCurrency;
@@ -308,10 +310,12 @@ export default function OrderCard({
   agentKitchen?: boolean;
   /** El Agente Leogin imprime el recibo (servidor) → el botón encola en vez de usar el navegador. */
   agentReceipt?: boolean;
+  /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación. */
+  voidApprovers?: VoidApprover[];
 }) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [voidTarget, setVoidTarget] = useState<'order' | { id: string; name: string; remainingQty: number } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const next = nextStatus(order);
 
@@ -336,15 +340,6 @@ export default function OrderCard({
     if (next === 'PREP' && !agentKitchen) printKitchenTicket(order, restaurantName);
     start(async () => {
       const res = await updateOrderStatus(order.id, next);
-      if (res.error) setActionError(res.error);
-    });
-  }
-
-  async function handleCancel() {
-    setConfirmCancel(false);
-    setActionError(null);
-    start(async () => {
-      const res = await updateOrderStatus(order.id, 'CANCEL');
       if (res.error) setActionError(res.error);
     });
   }
@@ -435,21 +430,45 @@ export default function OrderCard({
 
       {/* Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {order.items.map((item) => (
-          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
-              {item.quantity}× {item.name_snapshot}
-              {item.options_snapshot && item.options_snapshot.length > 0 && (
-                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                  {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
+        {order.items.map((item) => {
+          const remaining = remainingQuantity(item, order.voids ?? []);
+          const voidedQty = item.quantity - remaining;
+          const unitPrice = item.quantity > 0 ? Number(item.subtotal) / item.quantity : 0;
+          return (
+            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
+                {remaining}× {item.name_snapshot}
+                {voidedQty > 0 && (
+                  <span style={{ display: 'block', fontSize: 11, color: '#ef4444', marginTop: 1, fontWeight: 600 }}>
+                    {voidedQty} anulada{voidedQty === 1 ? '' : 's'}
+                  </span>
+                )}
+                {item.options_snapshot && item.options_snapshot.length > 0 && (
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                    {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
+                  </span>
+                )}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
+                  {money(unitPrice * remaining, currency)}
                 </span>
-              )}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)', flexShrink: 0 }}>
-              {money(Number(item.subtotal), currency)}
-            </span>
-          </div>
-        ))}
+                {!isTerminal && remaining > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setVoidTarget({ id: item.id, name: item.name_snapshot, remainingQty: remaining })}
+                    disabled={isPending}
+                    title="Anular"
+                    className="press"
+                    style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                  >
+                    <Icon name="x" size={11} />
+                  </button>
+                )}
+              </span>
+            </div>
+          );
+        })}
         {Number(order.delivery_fee) > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Envío</span>
@@ -580,80 +599,40 @@ export default function OrderCard({
       {/* Acciones */}
       {!isTerminal && (
         <div style={{ display: 'flex', gap: 8 }}>
-          {confirmCancel ? (
-            <>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#ef4444', display: 'flex', alignItems: 'center' }}>
-                ¿Cancelar este pedido?
-              </span>
-              <button
-                onClick={() => setConfirmCancel(false)}
-                disabled={isPending}
-                className="press"
-                style={{
-                  padding: '10px 14px', borderRadius: 'var(--radius-lg)',
-                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                  background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-                  border: '1px solid var(--u-hair)',
-                  color: 'var(--u-text-2)',
-                }}
-              >
-                No
-              </button>
-              <button
-                onClick={handleCancel}
-                disabled={isPending}
-                className="press"
-                style={{
-                  padding: '10px 14px', borderRadius: 'var(--radius-lg)',
-                  fontWeight: 700, fontSize: 13,
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                  background: 'rgba(239,68,68,0.18)',
-                  border: '1px solid rgba(239,68,68,0.40)',
-                  color: '#ef4444',
-                  opacity: isPending ? 0.7 : 1,
-                }}
-              >
-                Sí, cancelar
-              </button>
-            </>
-          ) : (
-            <>
-              {next && (
-                <button
-                  onClick={handleAdvance}
-                  disabled={isPending}
-                  className="press btn-accent"
-                  style={{
-                    flex: 1, padding: '10px 12px',
-                    borderRadius: 'var(--radius-lg)',
-                    fontWeight: 700, fontSize: 13,
-                    cursor: isPending ? 'not-allowed' : 'pointer',
-                    border: 'none',
-                    opacity: isPending ? 0.7 : 1,
-                  }}
-                >
-                  {nextLabel(order)}
-                </button>
-              )}
-              <button
-                onClick={() => setConfirmCancel(true)}
-                disabled={isPending}
-                className="press"
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-lg)',
-                  fontWeight: 600, fontSize: 13,
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                  background: 'rgba(239,68,68,0.10)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                  color: '#ef4444',
-                  opacity: isPending ? 0.7 : 1,
-                }}
-              >
-                Cancelar
-              </button>
-            </>
+          {next && (
+            <button
+              onClick={handleAdvance}
+              disabled={isPending}
+              className="press btn-accent"
+              style={{
+                flex: 1, padding: '10px 12px',
+                borderRadius: 'var(--radius-lg)',
+                fontWeight: 700, fontSize: 13,
+                cursor: isPending ? 'not-allowed' : 'pointer',
+                border: 'none',
+                opacity: isPending ? 0.7 : 1,
+              }}
+            >
+              {nextLabel(order)}
+            </button>
           )}
+          <button
+            onClick={() => setVoidTarget('order')}
+            disabled={isPending}
+            className="press"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-lg)',
+              fontWeight: 600, fontSize: 13,
+              cursor: isPending ? 'not-allowed' : 'pointer',
+              background: 'rgba(239,68,68,0.10)',
+              border: '1px solid rgba(239,68,68,0.25)',
+              color: '#ef4444',
+              opacity: isPending ? 0.7 : 1,
+            }}
+          >
+            Cancelar
+          </button>
         </div>
       )}
 
@@ -675,6 +654,17 @@ export default function OrderCard({
       >
         <Icon name="print" size={14} /> Imprimir recibo
       </button>
+
+      {voidTarget && (
+        <VoidOrderDialog
+          orderId={order.id}
+          orderStatus={order.status}
+          item={voidTarget === 'order' ? null : voidTarget}
+          voidApprovers={voidApprovers}
+          onClose={() => setVoidTarget(null)}
+          onDone={() => setVoidTarget(null)}
+        />
+      )}
     </div>
   );
 }

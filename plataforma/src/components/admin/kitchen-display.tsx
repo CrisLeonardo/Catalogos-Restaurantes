@@ -8,7 +8,7 @@ import { Icon } from '@/components/icons';
 import { updateOrderStatus } from '@/lib/actions/orders';
 import { changeOperatorUser } from '@/lib/actions/operator';
 import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
-import type { OrderWithItems } from '@/lib/db/orders';
+import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
 interface Props {
@@ -320,19 +320,33 @@ function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: O
 
       {/* Ítems */}
       <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
-        {order.items.map((item) => (
-          <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 18, fontWeight: 900, color: C.text, minWidth: 32, lineHeight: 1.2 }}>{item.quantity}×</span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.25 }}>{item.name_snapshot}</div>
-              {item.options_snapshot && item.options_snapshot.length > 0 && (
-                <div style={{ fontSize: 13, color: C.amber, marginTop: 2, fontWeight: 600 }}>
-                  {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
+        {order.items.map((item) => {
+          const remaining = remainingQuantity(item, order.voids ?? []);
+          const voidedQty = item.quantity - remaining;
+          const fullyVoided = remaining === 0;
+          return (
+            <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', opacity: fullyVoided ? 0.45 : 1 }}>
+              <span style={{ fontSize: 18, fontWeight: 900, color: C.text, minWidth: 32, lineHeight: 1.2, textDecoration: fullyVoided ? 'line-through' : 'none' }}>
+                {fullyVoided ? item.quantity : remaining}×
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.25, textDecoration: fullyVoided ? 'line-through' : 'none' }}>
+                  {item.name_snapshot}
                 </div>
-              )}
+                {voidedQty > 0 && (
+                  <div style={{ fontSize: 12, color: C.red, marginTop: 2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    {fullyVoided ? 'Anulado — no preparar' : `${voidedQty} anulada${voidedQty === 1 ? '' : 's'}`}
+                  </div>
+                )}
+                {item.options_snapshot && item.options_snapshot.length > 0 && (
+                  <div style={{ fontSize: 13, color: C.amber, marginTop: 2, fontWeight: 600 }}>
+                    {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {order.notes && (
           <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 8, background: `${C.amber}14`, border: `1px solid ${C.amber}40` }}>

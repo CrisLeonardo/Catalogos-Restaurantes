@@ -1,12 +1,24 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { localDateKey } from '@/lib/hours';
-import type { Order, OrderItem } from '@/types';
+import type { Order, OrderItem, OrderVoid } from '@/types';
 
 export type OrderWithItems = Order & {
   items: OrderItem[];
+  /** Anulaciones de este pedido/sus ítems (migración 079). [] si ninguna. */
+  voids: OrderVoid[];
   /** Nombre del mesero que tomó el pedido (migración 030). Solo DINE_IN por mesero. */
   waiter_name?: string | null;
 };
+
+/** Unidades de un ítem que ya se anularon (suma de order_voids con ese item_id). */
+export function voidedQuantity(item: OrderItem, voids: OrderVoid[]): number {
+  return voids.reduce((s, v) => (v.item_id === item.id ? s + (v.quantity ?? 0) : s), 0);
+}
+
+/** Unidades de un ítem que quedan en pie (nunca negativo). */
+export function remainingQuantity(item: OrderItem, voids: OrderVoid[]): number {
+  return Math.max(0, item.quantity - voidedQuantity(item, voids));
+}
 
 export async function getRestaurantOrders(
   restaurantId: string,
@@ -14,7 +26,7 @@ export async function getRestaurantOrders(
   const db = createServiceClient();
   const { data } = await db
     .from('orders')
-    .select('*, items:order_items(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
+    .select('*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -36,7 +48,7 @@ export async function getWaiterActiveOrders(
   const db = createServiceClient();
   const { data } = await db
     .from('orders')
-    .select('*, items:order_items(*)')
+    .select('*, items:order_items(*), voids:order_voids(*)')
     .eq('restaurant_id', restaurantId)
     .eq('waiter_id', waiterId)
     .not('status', 'in', '("DELIVERED","CANCEL")')
@@ -47,6 +59,30 @@ export async function getWaiterActiveOrders(
     ...row,
     waiter_name: null,
   } as OrderWithItems));
+}
+
+/** Pedidos activos (no entregados/cancelados) de UNA mesa — todas las
+ *  "rondas" acumuladas mientras la mesa sigue ocupada, con sus ítems y
+ *  anulaciones. Base de la "cuenta de mesa" (ver waiter-panel.tsx). */
+export async function getOrdersForTable(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<OrderWithItems[]> {
+  const db = createServiceClient();
+  const tableAddress = `Mesa ${tableNumber}`;
+  const { data } = await db
+    .from('orders')
+    .select('*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .eq('address', tableAddress)
+    .not('status', 'in', '("DELIVERED","CANCEL")')
+    .order('created_at', { ascending: true });
+
+  return ((data ?? []) as (Record<string, unknown>)[]).map((row) => {
+    const { waiter, ...order } = row as Record<string, unknown> & { waiter?: { full_name: string | null } | null };
+    return { ...order, waiter_name: waiter?.full_name ?? null } as OrderWithItems;
+  });
 }
 
 /**
@@ -63,7 +99,7 @@ export async function getKitchenOrders(
   const statuses = confirmFirst ? ['PREP'] : ['NEW', 'PREP'];
   const { data } = await db
     .from('orders')
-    .select('*, items:order_items(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
+    .select('*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
     .in('status', statuses)
     .order('created_at', { ascending: true })

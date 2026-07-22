@@ -6,6 +6,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getRestaurantOrders, getOrderStats } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { listVoidApprovers } from '@/lib/actions/staff-pin';
 import OrdersPanel from '@/components/admin/orders-panel';
 
 export default async function PedidosPage() {
@@ -46,9 +47,10 @@ export default async function PedidosPage() {
   const agentKitchen = !!(agent?.kitchen_target);
   const agentReceipt = !!(agent?.receipt_target);
 
-  const [orders, stats] = await Promise.all([
+  const [orders, stats, voidApprovers] = await Promise.all([
     getRestaurantOrders(restaurantId),
     getOrderStats(restaurantId, timezone),
+    listVoidApprovers(restaurantId),
   ]);
 
   return (
@@ -67,6 +69,7 @@ export default async function PedidosPage() {
       agentReceipt={agentReceipt}
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
+      voidApprovers={voidApprovers}
     />
   );
 }

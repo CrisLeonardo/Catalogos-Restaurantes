@@ -260,12 +260,33 @@ export interface Order {
   // Marcas de tiempo de estado (migración 020) — analítica de tiempos.
   accepted_at: string | null;
   ready_at: string | null;
+  /** Plato servido en mesa, sin cerrar la mesa todavía (migración 071). */
+  served_at: string | null;
   delivered_at: string | null;
   cancelled_at: string | null;
+  /** Cierre automático por abandono >24h, no manual (migración 080). */
+  auto_archived_at: string | null;
+  updated_at: string;
   /** Mesero que tomó el pedido (migración 030); null = pedido online del cliente. */
   waiter_id: string | null;
   /** Se tomó sin conexión (hub local) y se sincronizó después (migración 062). */
   synced_from_hub: boolean;
+}
+
+/** Auditoría de anulación de pedido/ítem (migración 079): motivo obligatorio
+ *  + aprobación de encargado si el pedido ya se envió a cocina. */
+export interface OrderVoid {
+  id: string;
+  order_id: string;
+  /** NULL = se anuló el pedido completo; si no, el order_item anulado. */
+  item_id: string | null;
+  /** Unidades anuladas de ese ítem; NULL cuando item_id es NULL. */
+  quantity: number | null;
+  reason: string;
+  requested_by: string;
+  /** NULL = el propio solicitante ya tenía permiso de encargado (auto-aprobado). */
+  approved_by: string | null;
+  created_at: string;
 }
 
 /** Opción elegida congelada en el pedido. */
