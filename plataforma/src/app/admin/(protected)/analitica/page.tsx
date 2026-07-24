@@ -64,7 +64,7 @@ export default async function AdminAnaliticaPage({
         <div className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Analítica</div>
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
           La analítica de operación se basa en los pedidos en línea. Activa el módulo
-          <strong> Pedidos</strong> (plan Premium) para ver horas pico, velocidad de
+          <strong> Pedidos</strong> (plan Estándar) para ver horas pico, velocidad de
           productos, cancelaciones y tiempos.
         </p>
       </Card>

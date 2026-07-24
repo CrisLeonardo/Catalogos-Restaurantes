@@ -190,6 +190,7 @@ export default function AdminShell({
   const planFeatures = PLANS[(planActual ?? 'BASICO') as PlanCode] ?? PLANS.BASICO;
   const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
   const hasAnalyticsPlan = planFeatures.hasAnalytics;
+  const hasFinancePlan = planFeatures.hasFinance;
   // Mesas (config de mesas/QR) también se habilita si el restaurante ya
   // tiene "comer en local" activo (ESTANDAR puede elegirlo entre sus 2 modos), no solo por plan.
   const mesasAccessible = hasWaiterPanel || dineInEnabled;
@@ -218,7 +219,7 @@ export default function AdminShell({
       items: [
         { href: '/admin/metricas', label: 'Métricas', icon: 'chart', key: 'metricas' },
         ...lockableNavItem(preview, analiticaEnabled, hasAnalyticsPlan, { href: '/admin/analitica',   label: 'Analítica', icon: 'dashboard', key: 'analitica'   }),
-        ...lockableNavItem(preview, finanzasEnabled, hasAnalyticsPlan, { href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }),
+        ...lockableNavItem(preview, finanzasEnabled, hasFinancePlan, { href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }),
         ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
         ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt',   key: 'fel'         }] : []),
         ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),

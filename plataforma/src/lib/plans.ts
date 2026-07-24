@@ -39,7 +39,9 @@ export interface PlanFeatures {
   hasWaiterPanel: boolean;
   /** Impresión de comandas a cocina (agente de impresión). */
   hasPrinting: boolean;
-  /** Finanzas + analítica + inventario + personal + promociones. */
+  /** Reportes financieros (ingreso/utilidad/margen) + corte de caja. */
+  hasFinance: boolean;
+  /** Analítica avanzada + inventario + personal + promociones (finanzas va aparte, ver hasFinance). */
   hasAnalytics: boolean;
   /** Participa del descuento "Plan a tu medida" por canal desactivado. */
   hasChannelDiscount: boolean;
@@ -72,6 +74,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: false,
     hasWaiterPanel: false,
     hasPrinting: false,
+    hasFinance: false,
     hasAnalytics: false,
     hasChannelDiscount: false,
     highlight: false,
@@ -79,7 +82,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   ESTANDAR: {
     code: 'ESTANDAR',
     name: 'Estándar',
-    tagline: 'Elige 2 de 3 modos de pedido, con avisos en tiempo real',
+    tagline: 'Elige 2 de 3 modos de pedido, con avisos en tiempo real y reportes financieros',
     priceMonthly: 299,
     priceLabel: 'Q299 / mes',
     setupFee: 300,
@@ -91,6 +94,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: false,
     hasWaiterPanel: false,
     hasPrinting: false,
+    hasFinance: true,
     hasAnalytics: false,
     hasChannelDiscount: false,
     highlight: false,
@@ -98,7 +102,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   PREMIUM: {
     code: 'PREMIUM',
     name: 'Premium',
-    tagline: 'Para llevar, comer en local y delivery — panel de mesero, finanzas e inventario',
+    tagline: 'Para llevar, comer en local y delivery — panel de mesero, analítica e inventario',
     badge: 'MÁS POPULAR',
     highlight: true,
     priceMonthly: 599,
@@ -112,6 +116,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: true,
     hasWaiterPanel: true,
     hasPrinting: true,
+    hasFinance: true,
     hasAnalytics: true,
     hasChannelDiscount: true,
   },
@@ -132,6 +137,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasFullTheme: true,
     hasWaiterPanel: true,
     hasPrinting: true,
+    hasFinance: true,
     hasAnalytics: true,
     hasChannelDiscount: true,
   },

@@ -39,7 +39,8 @@ const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
   { label: 'Personalización completa', key: 'hasFullTheme' },
   { label: 'Panel mesero (tablet)', key: 'hasWaiterPanel' },
   { label: 'Impresión de comandas', key: 'hasPrinting' },
-  { label: 'Finanzas, analítica e inventario', key: 'hasAnalytics' },
+  { label: 'Reportes financieros y corte de caja', key: 'hasFinance' },
+  { label: 'Analítica, inventario y personal', key: 'hasAnalytics' },
   { label: 'Descuento "plan a tu medida" por canal', key: 'hasChannelDiscount' },
 ];
 
@@ -59,7 +60,7 @@ function buildFaqs(pricing: PlanPricing) {
     },
     {
       q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
-      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, finanzas/analítica/inventario y todos los módulos disponibles sin costo extra.`,
+      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles sin costo extra.`,
     },
     {
       q: '¿Cómo funciona Multisucursal / Franquicias?',

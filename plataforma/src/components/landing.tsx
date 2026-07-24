@@ -56,8 +56,8 @@ const steps = (trialDays: number) => [
    fuente única de verdad — solo este texto descriptivo se cura a mano aquí). */
 const LANDING_PLAN_POINTS: Record<PlanCode, string[]> = {
   BASICO: ['Menú digital con código QR', 'Gratis para siempre, hasta 150 productos', 'Personalización con logo y color', 'Sin pedidos en línea'],
-  ESTANDAR: ['Todo lo del plan Básico', 'Pedidos para llevar o a domicilio', 'Alertas en tiempo real + WhatsApp', 'Nunca un % de tus ventas'],
-  PREMIUM: ['Para llevar, en local y a domicilio', 'Panel de mesero y mapa de mesas', 'Lealtad, cupones y reservaciones', 'Finanzas, inventario y analítica'],
+  ESTANDAR: ['Todo lo del plan Básico', 'Pedidos para llevar o a domicilio', 'Alertas en tiempo real + WhatsApp', 'Reportes financieros y corte de caja'],
+  PREMIUM: ['Para llevar, en local y a domicilio', 'Panel de mesero y mapa de mesas', 'Lealtad, cupones y reservaciones', 'Analítica, inventario y personal'],
   PRO: [],
 };
 

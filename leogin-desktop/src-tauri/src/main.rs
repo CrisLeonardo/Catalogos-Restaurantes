@@ -20,10 +20,12 @@ use tauri::{
     image::Image,
     menu::{MenuBuilder, MenuItem, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    webview::DownloadEvent,
     AppHandle, Emitter, Manager, State, Url, WebviewUrl, WebviewWindowBuilder, WindowEvent, Wry,
 };
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+use tauri_plugin_notification::NotificationExt as _;
 use tauri_plugin_updater::{Update, UpdaterExt};
 
 const HUB_HEALTH: &str = "http://127.0.0.1:47100/health";
@@ -207,6 +209,44 @@ fn admin_url(origin: &str) -> String {
 fn local_url(path_and_query: &str) -> Url {
     let base = if cfg!(windows) { "http://tauri.localhost" } else { "tauri://localhost" };
     Url::parse(&format!("{base}/{}", path_and_query.trim_start_matches('/'))).expect("url local")
+}
+
+/// Descargas de PDF/Excel del panel (`doc.save()` de jsPDF, blobs `xlsx` con
+/// `<a download>`): sin registrar un handler propio, WebView2 no dispara su
+/// UI de descargas por defecto en una ventana sin barra de navegación — el
+/// clic simplemente no hacía nada (bug real reportado 2026-07-23, confirmado
+/// contra el propio código de wry: `DownloadStarting` solo cancela o continúa
+/// si Tauri lo maneja explícitamente). Se deja pasar la descarga tal cual
+/// (misma carpeta de Descargas que ya trae `destination` por defecto) y se
+/// avisa con una notificación nativa al terminar, ya que el WebView no va a
+/// mostrar ningún indicio propio.
+fn handle_download(app: &AppHandle, event: DownloadEvent<'_>) -> bool {
+    match event {
+        DownloadEvent::Requested { url, .. } => {
+            log_line(app, &format!("descarga: solicitada {url}"));
+            true
+        }
+        DownloadEvent::Finished { url, path, success } => {
+            if success {
+                let name = path
+                    .as_ref()
+                    .and_then(|p| p.file_name())
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "archivo".to_string());
+                log_line(app, &format!("descarga: completa {name}"));
+                let _ = app
+                    .notification()
+                    .builder()
+                    .title("Descarga completa")
+                    .body(&name)
+                    .show();
+            } else {
+                log_line(app, &format!("descarga: falló {url}"));
+            }
+            true
+        }
+        _ => true,
+    }
 }
 
 fn navigate_main(app: &AppHandle, url: Url) {
@@ -1101,6 +1141,7 @@ fn main() {
             // Ventana principal: SIEMPRE arranca en la página local de arranque
             // (decide setup / panel / offline sin mostrar errores del WebView).
             let app_for_nav = app.handle().clone();
+            let app_for_download = app.handle().clone();
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Leogin")
                 .inner_size(1280.0, 800.0)
@@ -1115,6 +1156,7 @@ fn main() {
                     detect_resolved_panel(&app_for_nav, url);
                     true
                 })
+                .on_download(move |_webview, event| handle_download(&app_for_download, event))
                 .build()?;
             if !hidden {
                 let _ = main.maximize();

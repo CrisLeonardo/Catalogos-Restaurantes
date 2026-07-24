@@ -36,7 +36,7 @@ export default async function AdminPromocionesPage() {
     <div className="anim-fade-up">
       {!ordersEnabled && (
         <div className="glass-quiet" style={{ borderRadius: 13, padding: '12px 16px', fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, marginBottom: 14 }}>
-          Las promociones se aplican en los pedidos en línea. Actívalo (módulo <strong>Pedidos</strong>, plan Premium) para que tus cupones funcionen en el checkout.
+          Las promociones se aplican en los pedidos en línea. Actívalo (módulo <strong>Pedidos</strong>, plan Estándar) para que tus cupones funcionen en el checkout.
         </div>
       )}
       <PromotionsPanel restaurantId={restaurantId} promotions={promotions} />

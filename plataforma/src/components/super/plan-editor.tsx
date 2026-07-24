@@ -35,7 +35,7 @@ const FEATURE_KEYS: (keyof PlanFeatures)[] = [
 // el precio real ahora sale de plans.ts + módulos a la carta, no de aquí.
 const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
   BASICO:   { orders: false, whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
-  ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
+  ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, promociones: false, personal: false, finanzas: true,  multi_branch: false },
   PREMIUM:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
   PRO:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
 };

@@ -255,8 +255,8 @@ function LockedPlanCard({ icon, label, description, priceNote }: { icon: string;
 }
 
 /** Sección siempre visible con lo que el plan actual NO incluye: funciones exclusivas
-   de Premium que no se venden sueltas (mesero, finanzas/analítica) y módulos a la
-   carta que aún no están activos. Oculta solo si ya tienes Premium/Pro. */
+   de Premium que no se venden sueltas (mesero, analítica/inventario/personal) y módulos
+   a la carta que aún no están activos. Oculta solo si ya tienes Premium/Pro. */
 function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modules: ModulesMap; settings: ModuleSettings }) {
   const pricing = usePlanPricing();
   const premiumLabel = planPriceLabel(pricing, 'PREMIUM');
@@ -289,8 +289,8 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
         {missingAnalytics && (
           <LockedPlanCard
             icon="chart"
-            label="Finanzas, analítica e inventario"
-            description="Estadísticas de ventas, control de inventario y costos, personal con roles, y promociones automáticas."
+            label="Analítica, inventario y personal"
+            description="Estadísticas avanzadas, control de inventario y costos, personal con roles, y promociones automáticas."
             priceNote={`Incluido en Premium (${premiumLabel})`}
           />
         )}

@@ -60,7 +60,7 @@ const SIGNUP_MODULES_ESTANDAR = {
   inventario: false,
   promociones: false,
   personal: false,
-  finanzas: false,
+  finanzas: true,
   multi_branch: false,
 };
 

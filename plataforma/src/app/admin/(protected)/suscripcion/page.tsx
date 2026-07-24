@@ -108,6 +108,7 @@ export default async function SuscripcionPage() {
     { label: 'Alertas en tiempo real',   active: planInfo.hasRealtime },
     { label: 'Personalización completa', active: planInfo.hasFullTheme },
     { label: 'Llamar al mesero',         active: isModuleIncluded(currentPlan, 'llamada_mesero') },
+    { label: 'Reportes financieros',     active: planInfo.hasFinance },
     { label: 'Estadísticas y reportes',  active: planInfo.hasAnalytics },
     { label: 'Puntos de lealtad',        active: isModuleIncluded(currentPlan, 'loyalty') },
   ] : [];

@@ -67,7 +67,7 @@ export default async function AdminFinanzasPage({
         <div className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Finanzas</div>
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
           Los reportes financieros y el corte de caja se basan en los pedidos en línea.
-          Activa el módulo <strong>Pedidos</strong> (plan Premium) para empezar a medir
+          Activa el módulo <strong>Pedidos</strong> (plan Estándar) para empezar a medir
           ingresos, utilidad y margen.
         </p>
       </Card>
