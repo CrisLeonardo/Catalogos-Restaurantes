@@ -11,23 +11,19 @@ export default async function QRPage() {
   const tenantSlug = headersList.get('x-tenant-slug');
 
   // Resolve restaurant
-  let slug = tenantSlug ?? ctx?.restaurant?.slug ?? null;
+  let restaurantId: string | null = null;
   let restaurantName = 'Mi restaurante';
 
   if (tenantSlug) {
     const data = await getRestaurantBySlug(tenantSlug);
-    if (data) restaurantName = data.restaurant.name;
-    slug = tenantSlug;
+    if (data) {
+      restaurantName = data.restaurant.name;
+      restaurantId = data.restaurant.id;
+    }
   } else if (ctx?.restaurant) {
     restaurantName = ctx.restaurant.name;
-    slug = ctx.restaurant.slug;
+    restaurantId = ctx.restaurant.id;
   }
-
-  const rootDomain =
-    process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'localhost:3000';
-  const isLocal = rootDomain.includes('localhost');
-  const protocol = isLocal ? 'http' : 'https';
-  const menuUrl = slug ? `${protocol}://${slug}.${rootDomain}` : null;
 
   return (
     <div style={{ maxWidth: 400, margin: '0 auto' }}>
@@ -48,8 +44,8 @@ export default async function QRPage() {
         </p>
       </div>
 
-      {menuUrl ? (
-        <QRDisplay restaurantName={restaurantName} menuUrl={menuUrl} />
+      {restaurantId ? (
+        <QRDisplay restaurantName={restaurantName} restaurantId={restaurantId} />
       ) : (
         <p style={{ fontSize: 14, color: 'var(--u-text-3)' }}>
           No se pudo determinar la URL del menú. Verifica que el restaurante

@@ -54,6 +54,35 @@ export const getRestaurantBySlug = cache(
   }
 );
 
+/**
+ * Resuelve un restaurant id → { slug, status }, sin traer el theme.
+ * Usado por el redirector estable de mesas/QR (src/app/m/[restaurantId]/…):
+ * el link impreso en la mesa nunca cambia, pero el slug al que apunta sí
+ * puede cambiar con el tiempo — esta consulta siempre trae el slug VIGENTE.
+ * Cached por request igual que getRestaurantBySlug.
+ */
+export const getRestaurantSlugById = cache(
+  async (restaurantId: string): Promise<{ slug: string; status: Restaurant['status'] } | null> => {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) {
+      return null;
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('slug, status')
+      .eq('id', restaurantId)
+      .single();
+
+    if (error || !data) return null;
+    return data as { slug: string; status: Restaurant['status'] };
+  }
+);
+
 function defaultTheme(restaurantId: string): RestaurantTheme {
   return {
     restaurant_id: restaurantId,

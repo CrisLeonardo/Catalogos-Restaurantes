@@ -55,6 +55,37 @@ export function adminUrl(slug: string): string {
   return `https://${slug}-admin.${root}`;
 }
 
+/**
+ * URL pública y ESTABLE de una mesa, pensada para grabarse en el QR/NFC
+ * que se IMPRIME y se pega en la mesa física.
+ *
+ * A diferencia de subdomainUrl() + "?mesa=N" (lo que se grababa antes),
+ * esta URL nunca cambia aunque el restaurante cambie de slug o la
+ * plataforma cambie de NEXT_PUBLIC_ROOT_DOMAIN: siempre vive en /m/<id>/<mesa>
+ * del dominio raíz, y ese endpoint (src/app/m/[restaurantId]/[[...mesa]]/route.ts)
+ * resuelve el slug VIGENTE en cada escaneo y redirige (302) al menú real.
+ * Así una tarjeta ya impresa/laminada/grabada en NFC sigue funcionando para
+ * siempre sin reimprimir nada, pase lo que pase del lado de la plataforma.
+ *
+ *   prod:  https://leogin.online/m/<restaurantId>/<mesa>
+ *   local: http://localhost:3000/m/<restaurantId>/<mesa>
+ */
+export function stableTableUrl(restaurantId: string, mesa: number): string {
+  return `${stableRootUrl()}/m/${restaurantId}/${mesa}`;
+}
+
+/** Igual que stableTableUrl(), pero para el QR general del restaurante (sin mesa). */
+export function stableMenuUrl(restaurantId: string): string {
+  return `${stableRootUrl()}/m/${restaurantId}`;
+}
+
+function stableRootUrl(): string {
+  const root = rootDomainForUrls();
+  const isLocal = root.includes("localhost") || root.startsWith("127.");
+  const proto = isLocal ? "http" : "https";
+  return `${proto}://${root}`;
+}
+
 export function getTenantSlug(host: string | null | undefined): string | null {
   if (!host) return null;
   const hostname = host.toLowerCase().split(":")[0]; // quita el puerto

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
+import { stableTableUrl } from '@/lib/tenant';
 import FloorPlanEditor from '@/components/admin/floor-plan-editor';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,10 +29,13 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
   return arr;
 }
 
-function TableQRCard({ tableNumber, menuUrl }: { tableNumber: number; menuUrl: string }) {
+function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; restaurantId: string }) {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const tableUrl = `${menuUrl}?mesa=${tableNumber}`;
+  // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
+  // restaurante cambie de slug o la plataforma de dominio — ver
+  // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
+  const tableUrl = stableTableUrl(restaurantId, tableNumber);
   const qrSrc = `/api/qr?url=${encodeURIComponent(tableUrl)}`;
 
   async function copyLink() {
@@ -264,7 +268,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             gap: 10,
           }}>
             {Array.from({ length: patch.dineInTableCount }, (_, i) => i + 1).map((n) => (
-              <TableQRCard key={n} tableNumber={n} menuUrl={menuUrl} />
+              <TableQRCard key={n} tableNumber={n} restaurantId={restaurantId} />
             ))}
           </div>
         </div>

@@ -3,15 +3,20 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { stableMenuUrl } from '@/lib/tenant';
 
 interface Props {
   restaurantName: string;
-  menuUrl: string;
+  restaurantId: string;
 }
 
-export default function QRDisplay({ restaurantName, menuUrl }: Props) {
+export default function QRDisplay({ restaurantName, restaurantId }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
+  // restaurante cambie de slug o la plataforma de dominio — ver
+  // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
+  const menuUrl = stableMenuUrl(restaurantId);
 
   const qrSrc = `/api/qr?url=${encodeURIComponent(menuUrl)}`;
   const fileName = `qr-${restaurantName.toLowerCase().replace(/\s+/g, '-')}.png`;
