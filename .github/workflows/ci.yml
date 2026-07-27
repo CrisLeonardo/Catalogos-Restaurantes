@@ -1,0 +1,94 @@
+name: CI
+
+# Fase 0 de PLAN_CORRECCION_PREVENTA.md: la plataforma web no tenía NINGÚN
+# pipeline automático — el único workflow de este repo era el de publicar
+# Leogin Desktop. El único chequeo real de seguridad multi-tenant
+# (test-aislamiento.mjs) llevaba tiempo sin poder correr sin que nadie lo
+# notara (ver Bitácora del 2026-07-21 en PLAN_AUDITORIA_LANZAMIENTO.md), y la
+# auditoría de funciones `security definer` se hacía a mano, una vez, cuando
+# alguien se acordaba. Este workflow corre ambas en cada push/PR para que un
+# hueco de seguridad no vuelva a pasar desapercibido.
+#
+# Levanta un Supabase local efímero DENTRO del runner (mismo stack Docker que
+# usa cualquier dev en su máquina) y aplica TODAS las migraciones — no toca
+# ninguna base de datos real. Las claves que exporta scripts/ci-supabase-env.mjs
+# no son secretos: son la clave de demo fija que el CLI de Supabase genera
+# siempre para un stack local nuevo, igual en cualquier máquina.
+#
+# El paso de Playwright (tests/e2e/pedidos.spec.ts) arranca su PROPIO
+# `npm run dev` (playwright.config.ts, reuseExistingServer sólo fuera de CI) y
+# crea/borra sus propios 2 restaurantes de prueba contra el Supabase de arriba
+# — no depende de datos de demo ni dev servers de otra sesión.
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: plataforma
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: plataforma/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Tipos (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: CLI de Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Levantar Supabase local
+        run: supabase start
+
+      - name: Aplicar todas las migraciones (001…090) desde cero
+        run: supabase db reset --local --yes
+
+      - name: Exportar credenciales del Supabase local a variables de entorno
+        run: node scripts/ci-supabase-env.mjs
+
+      - name: Aislamiento multi-tenant (RLS) — test-aislamiento.mjs
+        run: node scripts/test-aislamiento.mjs
+
+      - name: Auditoría de funciones security definer — audit-security-definer.mjs
+        run: node scripts/audit-security-definer.mjs
+
+      - name: Instalar Chromium de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E — crear pedido, anular, aislamiento cross-tenant
+        run: npx playwright test
+
+      - name: Subir reporte de Playwright (si falló algo)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: plataforma/playwright-report/
+          retention-days: 7
