@@ -57,7 +57,6 @@ interface Props {
   analiticaEnabled?: boolean;
   inventarioEnabled?: boolean;
   ingredientesEnabled?: boolean;
-  promocionesEnabled?: boolean;
   personalEnabled?: boolean;
   finanzasEnabled?: boolean;
   /** Módulos activables en 2 niveles (activos = entitlement + on del restaurante). */
@@ -147,7 +146,7 @@ function writePersisted(key: string, value: string): void {
 export default function AdminShell({
   restaurantName, restaurantId, ordersEnabled = false,
   analiticaEnabled = false, inventarioEnabled = false, ingredientesEnabled = false,
-  promocionesEnabled = false, personalEnabled = false, finanzasEnabled = false,
+  personalEnabled = false, finanzasEnabled = false,
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, listaEsperaActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
@@ -225,7 +224,6 @@ export default function AdminShell({
         ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
         ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
         ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
-        ...lockableNavItem(preview, promocionesEnabled, hasAnalyticsPlan, { href: '/admin/promociones', label: 'Promociones', icon: 'percent',  key: 'promociones' }),
         ...(on(ordersEnabled)      ? [{ href: '/admin/vales',       label: 'Tarjetas de regalo', icon: 'gift', key: 'vales' }] : []),
         { href: '/admin/respaldo', label: 'Respaldo', icon: 'download', key: 'respaldo' },
       ],

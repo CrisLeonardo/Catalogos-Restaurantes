@@ -164,7 +164,6 @@ export async function updateRestaurantPlan(
     whatsapp_notify: feat('whatsapp_notify'),
     analitica:       feat('analitica'),
     inventario:      feat('inventario'),
-    promociones:     feat('promociones'),
     personal:        feat('personal'),
     finanzas:        feat('finanzas'),
     multi_branch:    feat('multi_branch'),

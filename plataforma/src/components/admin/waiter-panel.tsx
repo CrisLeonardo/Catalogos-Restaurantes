@@ -461,6 +461,15 @@ export default function WaiterPanel({
   const [billError, setBillError] = useState<string | null>(null);
   const [comensalIds, setComensalIds] = useState<string[]>(['1', '2']);
   const [assignment, setAssignment] = useState<BillAssignment>({});
+  /** 'equal' = reparto parejo del total (no requiere tocar ítems, es el caso
+      común); 'byItem' = "cada quien lo suyo", marcando ítem por ítem. */
+  const [splitMode, setSplitMode] = useState<'equal' | 'byItem'>('equal');
+  const [comensalNames, setComensalNames] = useState<Record<string, string>>({});
+  /** Comensal "activo": en modo byItem, tocar un ítem lo asigna/desasigna a
+      este comensal — evita la cuadrícula ítem×comensal de antes. */
+  const [activeComensal, setActiveComensal] = useState<string>('1');
+  const [editingComensal, setEditingComensal] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   /* ── Archivar mesas abandonadas (>24h) ────────────────────── */
   const [archiving, startArchive] = useTransition();
@@ -472,6 +481,10 @@ export default function WaiterPanel({
     setBillError(null);
     setComensalIds(['1', '2']);
     setAssignment({});
+    setComensalNames({});
+    setSplitMode('equal');
+    setActiveComensal('1');
+    setEditingComensal(null);
     const res = await getTableBill(restaurantId, n);
     setBillLoading(false);
     if ('error' in res) { setBillError(res.error); return; }
@@ -488,15 +501,39 @@ export default function WaiterPanel({
     });
   }
 
-  function addComensal() {
-    setComensalIds((prev) => {
-      const nextNum = Math.max(0, ...prev.map((p) => Number(p) || 0)) + 1;
-      return [...prev, String(nextNum)];
+  function comensalLabel(id: string) {
+    return comensalNames[id]?.trim() || `Comensal ${id}`;
+  }
+
+  function startRenameComensal(id: string) {
+    setEditingName(comensalNames[id] ?? '');
+    setEditingComensal(id);
+  }
+
+  function commitRenameComensal(id: string) {
+    const trimmed = editingName.trim();
+    setComensalNames((prev) => {
+      if (!trimmed) {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: trimmed.slice(0, 24) };
     });
+    setEditingComensal(null);
+  }
+
+  function addComensal() {
+    const nextNum = Math.max(0, ...comensalIds.map((p) => Number(p) || 0)) + 1;
+    const id = String(nextNum);
+    setComensalIds((prev) => [...prev, id]);
+    setActiveComensal(id); // pasa a ser el activo: sigue en el flujo natural de "ahora marca lo de esta persona"
   }
 
   function removeComensal(id: string) {
-    setComensalIds((prev) => (prev.length <= 1 ? prev : prev.filter((c) => c !== id)));
+    if (comensalIds.length <= 1) return;
+    setComensalIds((prev) => prev.filter((c) => c !== id));
     setAssignment((prev) => {
       const next: BillAssignment = {};
       for (const [itemId, ids] of Object.entries(prev)) {
@@ -505,6 +542,13 @@ export default function WaiterPanel({
       }
       return next;
     });
+    setComensalNames((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setActiveComensal((prev) => (prev === id ? (comensalIds.find((c) => c !== id) ?? prev) : prev));
   }
 
   // Coalescer de router.refresh() (mismo patrón que orders-panel.tsx): una
@@ -1130,8 +1174,12 @@ export default function WaiterPanel({
     const billItems = (billOrders ?? []).flatMap((o) =>
       o.items.map((it) => ({ item: it, orderId: o.id, orderStatus: o.status, voids: o.voids ?? [] })),
     );
-    const totals = billOrders ? computeComensalTotals(billOrders, comensalIds, assignment) : [];
+    // En modo "partes iguales" se ignora cualquier asignación por ítem que
+    // haya quedado de una vuelta previa por "Por consumo" — el reparto parejo
+    // siempre es 100% parejo, sin sorpresas al cambiar de modo.
+    const totals = billOrders ? computeComensalTotals(billOrders, comensalIds, splitMode === 'equal' ? {} : assignment) : [];
     const grandTotal = (billOrders ?? []).reduce((s, o) => s + Number(o.total), 0);
+    const safeActiveComensal = comensalIds.includes(activeComensal) ? activeComensal : comensalIds[0];
 
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
@@ -1150,20 +1198,81 @@ export default function WaiterPanel({
 
             {!billLoading && !billError && billOrders && billOrders.length > 0 && (
               <>
+                {/* Modo de reparto */}
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Cómo se reparte</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setSplitMode('equal')}
+                      className="press"
+                      style={{ flex: 1, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', border: `1px solid ${splitMode === 'equal' ? 'transparent' : 'var(--u-hair)'}`, background: splitMode === 'equal' ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: splitMode === 'equal' ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)', fontSize: 13.5, fontWeight: 700 }}
+                    >
+                      Partes iguales
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSplitMode('byItem')}
+                      className="press"
+                      style={{ flex: 1, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', border: `1px solid ${splitMode === 'byItem' ? 'transparent' : 'var(--u-hair)'}`, background: splitMode === 'byItem' ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: splitMode === 'byItem' ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)', fontSize: 13.5, fontWeight: 700 }}
+                    >
+                      Por consumo
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8 }}>
+                    {splitMode === 'equal'
+                      ? 'El total se reparte parejo entre todos los comensales.'
+                      : 'Toca un comensal abajo y luego los platos que le tocan a esa persona.'}
+                  </div>
+                </div>
+
                 {/* Comensales */}
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Comensales</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {comensalIds.map((cid) => (
-                      <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 8px 8px 14px', borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--u-text)', fontSize: 13.5, fontWeight: 600 }}>
-                        Comensal {cid}
-                        {comensalIds.length > 1 && (
-                          <button type="button" onClick={() => removeComensal(cid)} className="press" style={{ width: 20, height: 20, borderRadius: 99, border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                            <Icon name="x" size={11} />
-                          </button>
-                        )}
-                      </span>
-                    ))}
+                    {comensalIds.map((cid) => {
+                      const active = splitMode === 'byItem' && safeActiveComensal === cid;
+                      return (
+                        <span
+                          key={cid}
+                          onClick={() => { if (splitMode === 'byItem') setActiveComensal(cid); }}
+                          className="press"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 7px 7px 13px', borderRadius: 99,
+                            background: active ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+                            color: active ? 'var(--brand-on-accent, #fff)' : 'var(--u-text)',
+                            fontSize: 13.5, fontWeight: 600, cursor: splitMode === 'byItem' ? 'pointer' : 'default',
+                            border: active ? '1px solid var(--brand-accent)' : '1px solid transparent',
+                          }}
+                        >
+                          {editingComensal === cid ? (
+                            <input
+                              autoFocus
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') commitRenameComensal(cid);
+                                if (e.key === 'Escape') setEditingComensal(null);
+                              }}
+                              onBlur={() => commitRenameComensal(cid)}
+                              placeholder={`Comensal ${cid}`}
+                              style={{ width: 74, background: 'transparent', border: 'none', borderBottom: '1px solid currentColor', color: 'inherit', fontSize: 13.5, fontWeight: 600, outline: 'none', padding: 0 }}
+                            />
+                          ) : (
+                            <span onClick={(e) => { e.stopPropagation(); startRenameComensal(cid); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              {comensalLabel(cid)}
+                              <Icon name="edit" size={11} style={{ opacity: 0.6 }} />
+                            </span>
+                          )}
+                          {comensalIds.length > 1 && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); removeComensal(cid); }} className="press" style={{ width: 20, height: 20, borderRadius: 99, border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+                              <Icon name="x" size={11} />
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
                     <button type="button" onClick={addComensal} className="press glass-quiet" style={{ padding: '8px 16px', borderRadius: 99, border: '1px dashed var(--u-hair)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13.5, fontWeight: 600 }}>
                       + Comensal
                     </button>
@@ -1173,7 +1282,7 @@ export default function WaiterPanel({
                 {/* Ítems */}
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                    Ítems — toca los comensales que comparten cada uno
+                    {splitMode === 'byItem' ? `Platos de ${comensalLabel(safeActiveComensal)}` : 'Platos de la mesa'}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {billItems.map(({ item, orderId, orderStatus, voids }) => {
@@ -1189,41 +1298,47 @@ export default function WaiterPanel({
                           </div>
                         );
                       }
+                      const allShared = effective.length === comensalIds.length;
+                      const activeIncluded = splitMode === 'byItem' && effective.includes(safeActiveComensal);
                       return (
-                        <div key={item.id} className="glass" style={{ borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div
+                          key={item.id}
+                          onClick={splitMode === 'byItem' ? () => toggleAssignment(item.id, safeActiveComensal) : undefined}
+                          className={splitMode === 'byItem' ? 'glass press' : 'glass'}
+                          style={{
+                            borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+                            cursor: splitMode === 'byItem' ? 'pointer' : 'default',
+                            border: activeIncluded ? '1px solid var(--brand-accent)' : '1px solid transparent',
+                            background: activeIncluded ? 'color-mix(in srgb, var(--brand-accent) 8%, transparent)' : undefined,
+                          }}
+                        >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                             <div>
                               <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>{remaining}× {item.name_snapshot}</div>
                               {voidedQty > 0 && <div style={{ fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600 }}>{voidedQty} anulada{voidedQty === 1 ? '' : 's'}</div>}
+                              {splitMode === 'byItem' && (
+                                <div style={{ fontSize: 11.5, marginTop: 3, color: allShared ? 'var(--u-text-4)' : 'var(--brand-accent)', fontWeight: allShared ? 500 : 600 }}>
+                                  {allShared ? 'Para todos' : `Para: ${effective.map((id) => comensalLabel(id)).join(', ')}`}
+                                </div>
+                              )}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                               <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{money(unitPrice * remaining, currency)}</span>
                               <button
                                 type="button"
-                                onClick={() => setVoidTarget({ orderId, orderStatus, item: { id: item.id, name: item.name_snapshot, remainingQty: remaining } })}
+                                onClick={(e) => { e.stopPropagation(); setVoidTarget({ orderId, orderStatus, item: { id: item.id, name: item.name_snapshot, remainingQty: remaining } }); }}
                                 title="Anular"
                                 className="press"
                                 style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                               >
                                 <Icon name="x" size={11} />
                               </button>
+                              {splitMode === 'byItem' && (
+                                <span style={{ width: 22, height: 22, borderRadius: 99, border: `1px solid ${activeIncluded ? 'var(--brand-accent)' : 'var(--u-hair)'}`, background: activeIncluded ? 'var(--brand-accent)' : 'transparent', display: 'grid', placeItems: 'center', color: 'var(--brand-on-accent, #fff)', flexShrink: 0 }}>
+                                  {activeIncluded && <Icon name="check" size={12} strokeWidth={3} />}
+                                </span>
+                              )}
                             </div>
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {comensalIds.map((cid) => {
-                              const on = effective.includes(cid);
-                              return (
-                                <button
-                                  key={cid}
-                                  type="button"
-                                  onClick={() => toggleAssignment(item.id, cid)}
-                                  className="press"
-                                  style={{ padding: '5px 12px', borderRadius: 99, border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-3)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
-                                >
-                                  {cid}
-                                </button>
-                              );
-                            })}
                           </div>
                         </div>
                       );
@@ -1239,7 +1354,7 @@ export default function WaiterPanel({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {totals.map((t) => (
                       <div key={t.comensalId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)' }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>Comensal {t.comensalId}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>{comensalLabel(t.comensalId)}</span>
                         <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--u-text)' }}>{money(t.total, currency)}</span>
                       </div>
                     ))}

@@ -21,7 +21,6 @@ export default async function AyudaPage() {
     analitica:    mod?.analitica === true,
     inventario:   mod?.inventario === true,
     finanzas:     mod?.finanzas === true,
-    promociones:  mod?.promociones === true,
     personal:     mod?.personal === true,
     loyalty:      isModuleActive(mod, modSettings, 'loyalty'),
     fel:          isModuleActive(mod, modSettings, 'fel'),

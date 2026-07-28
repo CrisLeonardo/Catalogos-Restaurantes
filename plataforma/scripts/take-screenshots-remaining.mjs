@@ -1,6 +1,6 @@
 /**
  * take-screenshots-remaining.mjs
- * Solo las secciones que faltaron: promociones, personal, cocina, meseros, loyalty, recetas
+ * Solo las secciones que faltaron: personal, cocina, meseros, loyalty, recetas
  */
 
 import { chromium } from 'playwright';
@@ -70,28 +70,6 @@ async function run() {
   await page.evaluate(() => localStorage.setItem('leogin_tour_completed', 'true'));
   await page.keyboard.press('Escape');
   await delay(400);
-
-  // ── PROMOCIONES ──────────────────────────────────────────
-  console.log('\n[ promociones ]');
-  await goto(page, '/admin/promociones');
-  await shot(page, 'promociones-paso1.png');
-
-  // Abre modal de nueva promoción
-  const btnPromo = page.locator('button').filter({ hasText: /nueva promoci/i }).first();
-  if (await btnPromo.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await btnPromo.click();
-    await delay(1000);
-    await shot(page, 'promociones-paso2.png');
-    await page.evaluate(() => window.scrollBy(0, 300));
-    await delay(300);
-    await shot(page, 'promociones-paso3.png');
-    await page.keyboard.press('Escape');
-    await delay(400);
-  } else {
-    await shot(page, 'promociones-paso2.png');
-    await shot(page, 'promociones-paso3.png');
-  }
-  await shot(page, 'promociones-paso4.png');
 
   // ── PERSONAL ─────────────────────────────────────────────
   console.log('\n[ personal ]');

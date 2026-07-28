@@ -72,7 +72,7 @@ export const createOrderSchema = z
     customer: customerSchema,
     deliveryFee: z.number().min(0).max(10_000).default(0),
     /** Código de cupón opcional escrito en el checkout. */
-    promoCode: z.string().max(40).transform((v) => v.trim()).optional(),
+    couponCode: z.string().max(40).transform((v) => v.trim()).optional(),
     /** Método de pago elegido por el cliente. DINE_IN no lleva método (el mesero lo maneja). */
     paymentMethod: z.enum(['CASH', 'CARD']).default('CASH'),
     /** Monto en efectivo que el cliente dará (para que el repartidor lleve cambio). Solo DELIVERY+CASH. */

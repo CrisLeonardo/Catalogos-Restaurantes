@@ -17,7 +17,6 @@ interface PlanFeatures {
   whatsapp_notify: boolean;
   analitica: boolean;
   inventario: boolean;
-  promociones: boolean;
   personal: boolean;
   finanzas: boolean;
   multi_branch: boolean;
@@ -27,17 +26,17 @@ type ManagedModules = Record<string, boolean>;
 
 const FEATURE_KEYS: (keyof PlanFeatures)[] = [
   'orders', 'whatsapp_notify', 'analitica', 'inventario',
-  'promociones', 'personal', 'finanzas', 'multi_branch',
+  'personal', 'finanzas', 'multi_branch',
 ];
 
 // Flags legacy (restaurants.modules.{orders,whatsapp_notify,...}) — sin GMV
 // desde mig. 072. Se mantienen porque otras partes del código ya los leen;
 // el precio real ahora sale de plans.ts + módulos a la carta, no de aquí.
 const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
-  BASICO:   { orders: false, whatsapp_notify: false, analitica: false, inventario: false, promociones: false, personal: false, finanzas: false, multi_branch: false },
-  ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, promociones: false, personal: false, finanzas: true,  multi_branch: false },
-  PREMIUM:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
-  PRO:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  promociones: true,  personal: true,  finanzas: true,  multi_branch: false },
+  BASICO:   { orders: false, whatsapp_notify: false, analitica: false, inventario: false, personal: false, finanzas: false, multi_branch: false },
+  ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, personal: false, finanzas: true,  multi_branch: false },
+  PREMIUM:  { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  personal: true,  finanzas: true,  multi_branch: false },
+  PRO:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  personal: true,  finanzas: true,  multi_branch: false },
 };
 
 // Qué módulos activables vienen gratis con cada plan — misma fuente que la
@@ -81,7 +80,6 @@ const FEATURE_LIST: { key: keyof PlanFeatures; label: string; description: strin
   { key: 'analitica',       label: 'Analítica',             description: 'Horas pico, más vendidos, conversión' },
   { key: 'inventario',      label: 'Inventario',            description: 'Control de stock y anti-sobreventa' },
   { key: 'finanzas',        label: 'Finanzas',              description: 'Reportes, corte de caja, exportación' },
-  { key: 'promociones',     label: 'Promociones',           description: 'Cupones y descuentos en checkout' },
   { key: 'personal',        label: 'Personal',              description: 'Gestión de staff y permisos por sección' },
   { key: 'multi_branch',    label: 'Multi-sucursal',        description: 'Panel de grupo y selector de sucursal' },
 ];
@@ -112,7 +110,6 @@ export default function PlanEditor({
     whatsapp_notify: mod.whatsapp_notify === true,
     analitica:       mod.analitica === true,
     inventario:      mod.inventario === true,
-    promociones:     mod.promociones === true,
     personal:        mod.personal === true,
     finanzas:        mod.finanzas === true,
     multi_branch:    mod.multi_branch === true,

@@ -189,8 +189,8 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
   if (Number(order.tip) > 0)
     extraRows.push(`<tr class="sub"><td colspan="2">Propina</td><td class="amount">${fmt(Number(order.tip))}</td></tr>`);
   if (Number(order.discount) > 0) {
-    const promoLabel = order.promo_code ? ` (${order.promo_code})` : '';
-    extraRows.push(`<tr class="sub discount"><td colspan="2">Descuento${promoLabel}</td><td class="amount">−${fmt(Number(order.discount))}</td></tr>`);
+    const couponLabel = order.coupon_code ? ` (${order.coupon_code})` : '';
+    extraRows.push(`<tr class="sub discount"><td colspan="2">Descuento${couponLabel}</td><td class="amount">−${fmt(Number(order.discount))}</td></tr>`);
   }
   if (Number(order.loyalty_discount) > 0) {
     extraRows.push(`<tr class="sub discount"><td colspan="2">Puntos canjeados (${Number(order.loyalty_points_redeemed)})</td><td class="amount">−${fmt(Number(order.loyalty_discount))}</td></tr>`);
@@ -493,13 +493,13 @@ export default function OrderCard({
           }}>
             <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="tag" size={12} style={{ display: 'inline' }} /> Cupón
-              {order.promo_code && (
+              {order.coupon_code && (
                 <span style={{
                   fontFamily: 'var(--ui-font-mono)', fontSize: 10.5, fontWeight: 700,
                   padding: '2px 6px', borderRadius: 5,
                   background: 'rgba(34,197,94,0.15)', color: 'var(--c-ok, #4ade80)',
                 }}>
-                  {order.promo_code}
+                  {order.coupon_code}
                 </span>
               )}
             </span>

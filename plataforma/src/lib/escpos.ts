@@ -192,7 +192,7 @@ export function buildReceiptEscPos(
   if (Number(order.delivery_fee) > 0) b.row('Envio', fm(Number(order.delivery_fee)));
   if (Number(order.tip) > 0)         b.row('Propina', fm(Number(order.tip)));
   if (Number(order.discount) > 0) {
-    const label = `Descuento${order.promo_code ? ` (${order.promo_code})` : ''}`;
+    const label = `Descuento${order.coupon_code ? ` (${order.coupon_code})` : ''}`;
     b.row(label, `-${fm(Number(order.discount))}`);
   }
   if (Number(order.loyalty_discount) > 0) {

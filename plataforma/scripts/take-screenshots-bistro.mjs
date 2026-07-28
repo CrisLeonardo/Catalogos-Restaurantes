@@ -311,24 +311,6 @@ async function run() {
   await delay(300);
   await shot(page, 'clientes-paso3.png');         // barra de búsqueda
 
-  // ── PROMOCIONES ──────────────────────────────────────────────────────
-  console.log('\n[ promociones ]');
-  await goto(page, '/admin/promociones');
-  await shot(page, 'promociones-paso1.png');      // lista de promociones
-
-  const btnPromo = page.locator('button').filter({ hasText: /nueva promoci/i }).first();
-  if (await btnPromo.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await btnPromo.click(); await delay(1000);
-    await shot(page, 'promociones-paso2.png');    // formulario de nueva promoción
-    await page.evaluate(() => window.scrollBy(0, 300)); await delay(300);
-    await shot(page, 'promociones-paso3.png');    // código de cupón
-    await page.keyboard.press('Escape'); await delay(400);
-  } else {
-    await shot(page, 'promociones-paso2.png');
-    await shot(page, 'promociones-paso3.png');
-  }
-  await shot(page, 'promociones-paso4.png');      // toggle activar/pausar
-
   // ── PERSONAL ─────────────────────────────────────────────────────────
   console.log('\n[ personal ]');
   await goto(page, '/admin/personal');

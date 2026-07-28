@@ -6,8 +6,8 @@
 
    Body: { orders: unknown[] } — cada uno con la misma forma que
    createOrderSchema (lo que checkout-form.tsx ya arma para createOrder;
-   el hub reusa ese mismo payload). rewardLines/promoCode se ignoran
-   aquí: el hub no soporta promos ni lealtad sin conexión.
+   el hub reusa ese mismo payload). rewardLines/couponCode se ignoran
+   aquí: el hub no soporta cupones ni lealtad sin conexión.
 
    Cada pedido se re-valida contra la BD REAL (nunca se confía en el
    snapshot del hub, que puede estar desactualizado) y se crea vía

@@ -5,7 +5,7 @@ import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isOpenNow } from '@/lib/hours';
-import { hasActiveCodePromos } from '@/lib/db/promos';
+import { hasActiveCoupons } from '@/lib/db/cupones';
 import { isModuleActive } from '@/lib/modules';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
@@ -36,7 +36,7 @@ export default async function CheckoutPage() {
   // createOrder vuelve a validar en el servidor; esto es solo la UX.
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala', new Date(), restaurant.hour_exceptions);
-  const hasPromos = await hasActiveCodePromos(restaurant.id);
+  const hasCoupons = await hasActiveCoupons(restaurant.id);
   const { hubUrl, hubToken } = await getAgentHubInfo(restaurant.id);
   const mod = restaurant.modules as Record<string, boolean> | null;
   const modSettings = restaurant.module_settings ?? null;
@@ -64,7 +64,7 @@ export default async function CheckoutPage() {
           restaurantLat={restaurant.location_lat}
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
-          hasPromos={hasPromos}
+          hasCoupons={hasCoupons}
           encuestasActive={encuestasActive}
           hubUrl={hubUrl}
           hubToken={hubToken}

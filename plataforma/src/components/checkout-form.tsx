@@ -10,7 +10,7 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice, shadowCss, tipAppliesToType } from '@/lib/theme/resolve';
 import { createOrder, type CreateOrderResult } from '@/lib/actions/orders';
-import { validatePromo } from '@/lib/actions/promos';
+import { validateCoupon } from '@/lib/actions/cupones';
 import { getMyCheckoutProfile } from '@/lib/actions/loyalty';
 import { addLocalOrder, getLocalProfile, saveLocalProfile } from '@/lib/customer-local';
 import { getQueuedOrders, removeQueuedOrder, saveQueuedOrder } from '@/lib/order-queue';
@@ -54,7 +54,7 @@ interface Props {
   restaurantLat?: number | null;
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
-  hasPromos?: boolean;
+  hasCoupons?: boolean;
   encuestasActive?: boolean;
   /** URL LAN del hub local del restaurante (Fase 2 offline), si tiene uno
       vinculado. Se intenta ANTES de encolar el pedido en el dispositivo. */
@@ -91,7 +91,7 @@ export default function CheckoutForm({
   restaurantLat,
   restaurantLng,
   deliveryRadiusKm,
-  hasPromos = false,
+  hasCoupons = false,
   encuestasActive = false,
   hubUrl = null,
   hubToken = null,
@@ -210,11 +210,11 @@ export default function CheckoutForm({
   // antes de montarlo, o el pin guardado nunca se restauraría.
   const [profileChecked, setProfileChecked] = useState(false);
 
-  // Cupón / promoción
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState<{ discount: number; name: string; code: string } | null>(null);
-  const [promoMsg, setPromoMsg] = useState('');
-  const [promoChecking, setPromoChecking] = useState(false);
+  // Cupón
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ discount: number; code: string } | null>(null);
+  const [couponMsg, setCouponMsg] = useState('');
+  const [couponChecking, setCouponChecking] = useState(false);
 
   useEffect(() => {
     // Kiosko: JAMÁS autocompletar — serían los datos del cliente anterior.
@@ -319,7 +319,7 @@ export default function CheckoutForm({
   };
 
   const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
-  const discount     = appliedPromo ? Math.min(appliedPromo.discount, total + deliveryFee) : 0;
+  const discount     = appliedCoupon ? Math.min(appliedCoupon.discount, total) : 0;
 
   // Propina obligatoria — según los tipos de pedido que el restaurante habilitó (tipOrderTypes).
   const tipAvailable = tipAppliesToType(config, type);
@@ -341,22 +341,22 @@ export default function CheckoutForm({
 
   // Si cambia el carrito o el tipo de pedido, el cupón se revalida (se limpia).
   useEffect(() => {
-    if (appliedPromo) { setAppliedPromo(null); setPromoMsg(''); }
+    if (appliedCoupon) { setAppliedCoupon(null); setCouponMsg(''); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total, deliveryFee]);
 
-  async function applyPromo() {
-    if (!promoCode.trim()) return;
-    setPromoChecking(true);
-    setPromoMsg('');
-    const res = await validatePromo(restaurantId, promoCode.trim(), total, deliveryFee);
-    setPromoChecking(false);
+  async function applyCoupon() {
+    if (!couponCode.trim()) return;
+    setCouponChecking(true);
+    setCouponMsg('');
+    const res = await validateCoupon(restaurantId, couponCode.trim(), total);
+    setCouponChecking(false);
     if (res.ok) {
-      setAppliedPromo({ discount: res.discount, name: res.name, code: res.code });
-      setPromoMsg('');
+      setAppliedCoupon({ discount: res.discount, code: res.code });
+      setCouponMsg('');
     } else {
-      setAppliedPromo(null);
-      setPromoMsg(res.error);
+      setAppliedCoupon(null);
+      setCouponMsg(res.error);
     }
   }
 
@@ -586,7 +586,7 @@ export default function CheckoutForm({
           : {}),
       },
       deliveryFee: feeSnapshot,
-      ...(appliedPromo ? { promoCode: appliedPromo.code } : {}),
+      ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
       paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
       ...(needsCashAmount && cashAmountNum > 0 ? { cashAmount: cashAmountNum } : {}),
       tipAccepted: showTip,
@@ -968,7 +968,7 @@ export default function CheckoutForm({
             )}
             {discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>Descuento{appliedPromo ? ` · ${appliedPromo.name}` : ''}</span>
+                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>Descuento{appliedCoupon ? ` · ${appliedCoupon.code}` : ''}</span>
                 <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
@@ -991,30 +991,30 @@ export default function CheckoutForm({
           </div>
 
           {/* Cupón — solo si el restaurante tiene cupones activos */}
-          {hasPromos && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
-            {appliedPromo ? (
+          {hasCoupons && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
+            {appliedCoupon ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="checkCircle" size={15} /> Cupón {appliedPromo.code} aplicado
+                  <Icon name="checkCircle" size={15} /> Cupón {appliedCoupon.code} aplicado
                 </span>
-                <button type="button" onClick={() => { setAppliedPromo(null); setPromoCode(''); setPromoMsg(''); }} className="press t-mute" style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
+                <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponMsg(''); }} className="press t-mute" style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
                   Quitar
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   placeholder="¿Tienes un cupón?"
                   style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 13.5, outline: 'none', textTransform: 'uppercase' }}
                 />
-                <button type="button" onClick={applyPromo} disabled={promoChecking || !promoCode.trim()} className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', opacity: promoChecking || !promoCode.trim() ? 0.6 : 1 }}>
-                  {promoChecking ? '…' : 'Aplicar'}
+                <button type="button" onClick={applyCoupon} disabled={couponChecking || !couponCode.trim()} className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', opacity: couponChecking || !couponCode.trim() ? 0.6 : 1 }}>
+                  {couponChecking ? '…' : 'Aplicar'}
                 </button>
               </div>
             )}
-            {promoMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{promoMsg}</p>}
+            {couponMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{couponMsg}</p>}
           </div>}
 
           {/* Propina — obligatoria cuando el restaurante la habilita. */}

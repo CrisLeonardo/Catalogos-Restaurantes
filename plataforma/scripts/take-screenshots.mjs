@@ -5,7 +5,7 @@
  *
  * Secciones que NO se tocan (ya están bien):
  *   cocina, cupones, encuestas, fel, loyalty, meseros, personal,
- *   primeros-pasos, promociones, qr, recetas
+ *   primeros-pasos, qr, recetas
  *
  * Uso: node scripts/take-screenshots.mjs
  * Requiere: npm run dev corriendo en otra terminal (puerto 3000)
@@ -265,7 +265,7 @@ async function run() {
   await browser.close();
   console.log(`\n🎉 Listo! ${saved} capturas guardadas en public/tutorial/screenshots/`);
   console.log('   (Secciones NO modificadas: cocina, cupones, encuestas, fel, loyalty,');
-  console.log('    meseros, personal, primeros-pasos, promociones, qr, recetas)');
+  console.log('    meseros, personal, primeros-pasos, qr, recetas)');
 }
 
 run().catch(e => { console.error('\n❌', e.message); process.exit(1); });

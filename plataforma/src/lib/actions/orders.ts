@@ -10,7 +10,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
-import { resolvePromo } from '@/lib/db/promos';
+import { resolveCoupon } from '@/lib/db/cupones';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { checkApproverPin } from '@/lib/actions/staff-pin';
@@ -56,7 +56,7 @@ export async function createOrder(
 
   // Reintento idempotente (cola offline del catálogo, ver migración 061):
   // si este client_id ya generó un pedido, devuélvelo tal cual SIN
-  // repetir rate-limit, upsert_customer, promo, lealtad ni push — esos
+  // repetir rate-limit, upsert_customer, cupón, lealtad ni push — esos
   // efectos secundarios no son idempotentes y duplicarlos sería peor que
   // el problema que la cola intenta resolver.
   if (clientId) {
@@ -319,9 +319,9 @@ export async function createOrder(
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const fee = customer.type === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
 
-  // Promoción (cupón escrito o automática). Autoritativo en el servidor:
+  // Cupón (código escrito por el cliente). Autoritativo en el servidor:
   // el descuento NUNCA se toma del cliente, se recalcula contra la BD.
-  const applied = await resolvePromo(restaurantId, parsed.data.promoCode, subtotal, fee);
+  const applied = await resolveCoupon(restaurantId, parsed.data.couponCode, subtotal);
   const discount = applied ? applied.discount : 0;
 
   // Propina: solo para los tipos de pedido que el restaurante habilitó
@@ -405,14 +405,14 @@ export async function createOrder(
     return { error: orderError?.message ?? 'Error al crear el pedido.' };
   }
 
-  // Persistir la promo aplicada (metadata para recibos/reportes) y contar su uso.
+  // Persistir el cupón aplicado (metadata para recibos/reportes) y contar su uso.
   if (applied && discount > 0) {
     await db.from('orders').update({
       discount,
-      promo_id: applied.promo.id,
-      promo_code: applied.promo.code ?? null,
+      coupon_id: applied.coupon.id,
+      coupon_code: applied.coupon.code,
     }).eq('id', order.id);
-    await db.rpc('increment_promo_usage', { p_id: applied.promo.id });
+    await db.rpc('increment_coupon_usage', { p_id: applied.coupon.id });
   }
 
   // Canje de recompensas (productos): descuenta los puntos de cada una de forma

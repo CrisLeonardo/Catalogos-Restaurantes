@@ -64,7 +64,6 @@ export default async function AdminPersonalPage() {
     loyalty: isModuleActive(mod, modSettings, 'loyalty'),
     analitica: mod?.['analitica'] === true,
     finanzas: mod?.['finanzas'] === true,
-    promociones: mod?.['promociones'] === true,
     vales: ordersEnabled,
   };
   const enabledSections = ADMIN_SECTIONS.map((s) => s.key).filter((k) => GATES[k] ?? true);

@@ -23,7 +23,6 @@ export interface Restaurant {
     whatsapp_notify: boolean;
     analitica: boolean;
     inventario: boolean;
-    promociones: boolean;
     personal: boolean;
     finanzas: boolean;
     multi_branch: boolean;
@@ -220,23 +219,6 @@ export interface Profile {
   organization_id: string | null;
 }
 
-/** Promoción / cupón a nivel de pedido (migración 022). */
-export interface Promotion {
-  id: string;
-  restaurant_id: string;
-  name: string;
-  kind: 'PERCENT' | 'AMOUNT' | 'FREE_DELIVERY';
-  value: number;
-  code: string | null;
-  min_order: number;
-  starts_at: string | null;
-  ends_at: string | null;
-  active: boolean;
-  usage_limit: number | null;
-  used_count: number;
-  created_at: string;
-}
-
 export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'SERVED' | 'DELIVERED' | 'CANCEL';
 
 export interface Order {
@@ -256,10 +238,10 @@ export interface Order {
   status: OrderStatus;
   subtotal: number;
   delivery_fee: number;
-  /** Descuento aplicado (migración 022); total = subtotal + envío - descuento. */
+  /** Descuento aplicado (migración 022, cupón desde migración 093); total = subtotal + envío - descuento. */
   discount: number;
-  promo_id: string | null;
-  promo_code: string | null;
+  coupon_id: string | null;
+  coupon_code: string | null;
   /** Propina aplicada (migración 027); solo DINE_IN cuando el restaurante la habilita. */
   tip: number;
   /** Canje de puntos de lealtad (migración 042): puntos usados y su descuento. */

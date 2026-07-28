@@ -692,49 +692,6 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
   },
 
   {
-    id: 'promociones',
-    title: 'Promociones y descuentos',
-    description: 'Crea descuentos y cupones para atraer más clientes y premiar a los frecuentes.',
-    icon: 'percent',
-    planLevel: 'popular',
-    steps: [
-      {
-        id: 'crear-promo',
-        title: 'Crea una promoción',
-        description:
-          'Puedes crear descuentos de porcentaje (ej. 20% de descuento) o de monto fijo (ej. Q15 de descuento). Aplicable a todo el pedido.',
-        route: 'Barra lateral → Negocio → Promociones → "+ Nueva promoción"',
-        screenshotDesc: 'Formulario de nueva promoción con tipo de descuento',
-      },
-      {
-        id: 'cupon-codigo',
-        title: 'Cupón con código personalizado',
-        description:
-          'Crea un código que el cliente ingresa en el checkout para obtener su descuento (ej. BIENVENIDO, CUMPLE20, VERANO15). Ideal para campañas en redes sociales o para premiar clientes frecuentes.',
-        route: 'Promociones → "Tipo: Cupón con código" → Escribe el código → Define el descuento',
-        tip: 'Usa códigos cortos y fáciles de escribir en celular. Evita confundir 0 (cero) con O (letra) o 1 con l.',
-        screenshotDesc: 'Campo de código de cupón con ejemplo de código personalizado',
-      },
-      {
-        id: 'limites',
-        title: 'Configura límites del cupón',
-        description:
-          'Define cuántas veces en total se puede usar el cupón (ej. solo 100 personas), el monto mínimo de compra para que aplique (ej. mínimo Q80), y las fechas de vigencia.',
-        route: 'Formulario de promoción → Sección "Restricciones" → Máximo usos, Monto mínimo, Fechas',
-        screenshotDesc: 'Sección de restricciones del cupón con campos de límites',
-      },
-      {
-        id: 'activar-promo',
-        title: 'Activa o pausa una promoción',
-        description:
-          'El toggle a la derecha de cada promoción controla si está activa o pausada. Puedes pausarla y reactivarla sin borrarla. Las promociones vencidas o agotadas se marcan automáticamente.',
-        route: 'Promociones → Toggle de activación a la derecha de cada promo',
-        screenshotDesc: 'Lista de promociones con toggles de activación y estados',
-      },
-    ],
-  },
-
-  {
     id: 'personal',
     title: 'Personal y permisos',
     description: 'Da acceso al panel a tus empleados y define exactamente qué pueden ver y hacer.',

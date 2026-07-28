@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { createCoupon, toggleCoupon, deleteCoupon } from '@/lib/actions/cupones';
+import { createCoupon, updateCoupon, toggleCoupon, deleteCoupon } from '@/lib/actions/cupones';
 import type { Coupon } from '@/lib/db/cupones';
 
 interface Props {
@@ -40,6 +40,7 @@ function couponStatus(c: Coupon): { label: string; color: string } {
 export default function CuponesPanel({ restaurantId, coupons }: Props) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(coupons.length === 0);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -49,11 +50,32 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
     setForm((prev) => ({ ...prev, [k]: v }));
   }
 
-  function handleCreate(e: React.FormEvent) {
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
+  function startEdit(c: Coupon) {
+    setEditingId(c.id);
+    setForm({
+      code: c.code,
+      description: c.description ?? '',
+      discount_type: c.discount_type,
+      discount_value: String(c.discount_value),
+      min_order: c.min_order != null ? String(c.min_order) : '',
+      max_uses: c.max_uses != null ? String(c.max_uses) : '',
+      valid_until: c.valid_until ? c.valid_until.slice(0, 10) : '',
+    });
+    setError(null);
+    setShowForm(true);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await createCoupon(restaurantId, {
+      const payload = {
         code: form.code,
         description: form.description || undefined,
         discount_type: form.discount_type,
@@ -61,10 +83,12 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
         min_order: form.min_order ? parseFloat(form.min_order) : undefined,
         max_uses: form.max_uses ? parseInt(form.max_uses) : undefined,
         valid_until: form.valid_until || undefined,
-      });
+      };
+      const res = editingId
+        ? await updateCoupon(restaurantId, editingId, payload)
+        : await createCoupon(restaurantId, payload);
       if (res.error) { setError(res.error); return; }
-      setForm(emptyForm);
-      setShowForm(false);
+      closeForm();
       router.refresh();
     });
   }
@@ -109,7 +133,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>total</span>
           </Card>
         </div>
-        <Button type="button" onClick={() => setShowForm((v) => !v)} className="rounded-adm-full">
+        <Button type="button" onClick={() => { if (showForm) { closeForm(); } else { setEditingId(null); setForm(emptyForm); setShowForm(true); } }} className="rounded-adm-full">
           <Icon name="plus" size={15} /> Nuevo cupón
         </Button>
       </div>
@@ -120,11 +144,11 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
         </div>
       )}
 
-      {/* Formulario nuevo cupón */}
+      {/* Formulario de cupón (crear o editar) */}
       {showForm && (
         <Card className="p-5">
-          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', marginBottom: 14 }}>Crear cupón</div>
-          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', marginBottom: 14 }}>{editingId ? 'Editar cupón' : 'Crear cupón'}</div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Código *</label>
@@ -161,9 +185,9 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
               <Button type="submit" disabled={isPending}>
-                {isPending ? 'Guardando…' : 'Crear cupón'}
+                {isPending ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Crear cupón'}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button type="button" variant="outline" onClick={closeForm}>
                 Cancelar
               </Button>
             </div>
@@ -209,6 +233,9 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                     disabled={busy}
                     aria-label={c.is_active ? 'Desactivar cupón' : 'Activar cupón'}
                   />
+                  <Button type="button" onClick={() => startEdit(c)} disabled={busy} variant="ghost" size="icon" className="size-8">
+                    <Icon name="edit" size={14} />
+                  </Button>
                   <Button type="button" onClick={() => handleDelete(c.id)} disabled={busy} variant="ghost" size="icon" className="size-8">
                     <Icon name="trash" size={14} />
                   </Button>

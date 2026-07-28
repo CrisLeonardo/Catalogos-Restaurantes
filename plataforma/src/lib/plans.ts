@@ -41,7 +41,7 @@ export interface PlanFeatures {
   hasPrinting: boolean;
   /** Reportes financieros (ingreso/utilidad/margen) + corte de caja. */
   hasFinance: boolean;
-  /** Analítica avanzada + inventario + personal + promociones (finanzas va aparte, ver hasFinance). */
+  /** Analítica avanzada + inventario + personal (finanzas va aparte, ver hasFinance). */
   hasAnalytics: boolean;
   /** Participa del descuento "Plan a tu medida" por canal desactivado. */
   hasChannelDiscount: boolean;

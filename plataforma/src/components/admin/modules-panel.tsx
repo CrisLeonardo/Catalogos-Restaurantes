@@ -290,7 +290,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
           <LockedPlanCard
             icon="chart"
             label="Analítica, inventario y personal"
-            description="Estadísticas avanzadas, control de inventario y costos, personal con roles, y promociones automáticas."
+            description="Estadísticas avanzadas, control de inventario y costos, y personal con roles."
             priceNote={`Incluido en Premium (${premiumLabel})`}
           />
         )}

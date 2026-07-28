@@ -4,9 +4,25 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
-import type { DiscountType } from '@/lib/db/cupones';
+import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
 
 export type CouponResult = { error?: string; ok?: boolean };
+
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+/* ── Preview público (checkout) ─────────────────────────────── */
+export async function validateCoupon(
+  restaurantId: string,
+  code: string,
+  subtotal: number,
+): Promise<{ ok: true; discount: number; code: string } | { ok: false; error: string }> {
+  if (!UUID_RE.test(restaurantId)) return { ok: false, error: 'Restaurante inválido.' };
+  if (!code?.trim()) return { ok: false, error: 'Escribe un código.' };
+
+  const res = await resolveCoupon(restaurantId, code, Number(subtotal) || 0);
+  if (!res) return { ok: false, error: 'Cupón no válido o no aplica a tu pedido.' };
+  return { ok: true, discount: res.discount, code: res.coupon.code };
+}
 
 async function getAuthorized(restaurantId: string) {
   const supabase = await createClient();
@@ -68,6 +84,49 @@ export async function createCoupon(
     valid_until: data.valid_until || null,
     is_active: true,
   });
+  if (error) {
+    if (error.message.includes('unique')) return { error: 'Ya existe un cupón con ese código.' };
+    return { error: error.message };
+  }
+
+  revalidatePath('/admin/cupones');
+  return { ok: true };
+}
+
+export async function updateCoupon(
+  restaurantId: string,
+  couponId: string,
+  data: {
+    code: string;
+    description?: string;
+    discount_type: DiscountType;
+    discount_value: number;
+    min_order?: number;
+    max_uses?: number;
+    valid_from?: string;
+    valid_until?: string;
+  },
+): Promise<CouponResult> {
+  const auth = await getAuthorized(restaurantId);
+  if (!auth.ok) return { error: auth.error };
+
+  const code = data.code?.toUpperCase().trim().replace(/\s+/g, '');
+  if (!code) return { error: 'El código es requerido.' };
+  if (!/^[A-Z0-9_-]{3,20}$/.test(code)) return { error: 'Código inválido (3-20 caracteres, letras, números, guión o guión bajo).' };
+  if (!data.discount_value || data.discount_value <= 0) return { error: 'El valor del descuento debe ser mayor a 0.' };
+  if (data.discount_type === 'PERCENT' && data.discount_value > 100) return { error: 'El porcentaje no puede superar 100%.' };
+
+  const db = createServiceClient();
+  const { error } = await db.from('coupons').update({
+    code,
+    description: data.description?.trim() || null,
+    discount_type: data.discount_type,
+    discount_value: data.discount_value,
+    min_order: data.min_order || null,
+    max_uses: data.max_uses || null,
+    valid_from: data.valid_from || null,
+    valid_until: data.valid_until || null,
+  }).eq('id', couponId).eq('restaurant_id', restaurantId);
   if (error) {
     if (error.message.includes('unique')) return { error: 'Ya existe un cupón con ese código.' };
     return { error: error.message };
