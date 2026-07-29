@@ -14,7 +14,11 @@ import { resolveCoupon } from '@/lib/db/cupones';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { checkApproverPin } from '@/lib/actions/staff-pin';
-import { enqueueKitchenForOrder, enqueueReceiptForOrder } from '@/lib/print-agent';
+import { enqueueKitchenForOrder, enqueueReceiptForOrder, enqueueSplitBillTicket } from '@/lib/print-agent';
+import {
+  buildBillLines, computeSplit, UNASSIGNED_ID,
+  type BillAssignment, type SplitMode,
+} from '@/lib/bill-split';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
@@ -923,14 +927,9 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
   return { success: true };
 }
 
-/** Todos los pedidos activos de una mesa (todas las rondas acumuladas),
- *  base de la "cuenta de mesa" / dividir cuenta en el panel de mesero. */
-export async function getTableBill(
-  restaurantId: string,
-  tableNumber: number,
-): Promise<{ orders: OrderWithItems[] } | { error: string }> {
-  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
-
+/** Autorización compartida de la cuenta de mesa: sesión válida, del mismo
+ *  restaurante y con permiso de mesero. */
+async function assertTableAccess(restaurantId: string): Promise<{ error: string } | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autorizado.' };
@@ -952,8 +951,135 @@ export async function getTableBill(
   ) {
     return { error: 'No autorizado.' };
   }
+  return null;
+}
+
+/** Todos los pedidos activos de una mesa (todas las rondas acumuladas),
+ *  base de la "cuenta de mesa" / dividir cuenta en el panel de mesero. */
+export async function getTableBill(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<{ orders: OrderWithItems[] } | { error: string }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const denied = await assertTableAccess(restaurantId);
+  if (denied) return denied;
 
   return { orders: await getOrdersForTable(restaurantId, tableNumber) };
+}
+
+export interface PrintBillShareInput {
+  restaurantId: string;
+  tableNumber: number;
+  mode: SplitMode;
+  peopleIds: string[];
+  /** id de comensal → nombre escrito por el mesero (opcional). */
+  names: Record<string, string>;
+  assignment: BillAssignment;
+  /** null = la cuenta completa de la mesa; UNASSIGNED_ID = lo no reclamado. */
+  personId: string | null;
+}
+
+/**
+ * Imprime en la impresora de caja el ticket de un comensal (o de la mesa
+ * completa). El reparto se RECALCULA aquí desde los pedidos reales: el cliente
+ * manda la asignación, nunca los montos — así lo impreso siempre cuadra con lo
+ * que la mesa debe, aunque la pantalla se haya quedado con datos viejos.
+ */
+export async function printTableBillShare(
+  input: PrintBillShareInput,
+): Promise<{ error?: string; ok?: boolean }> {
+  const { restaurantId, tableNumber, mode, peopleIds, names, assignment, personId } = input;
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const denied = await assertTableAccess(restaurantId);
+  if (denied) return denied;
+
+  const orders = await getOrdersForTable(restaurantId, tableNumber);
+  if (orders.length === 0) return { error: 'Esta mesa no tiene pedidos activos.' };
+
+  const lines = buildBillLines(orders);
+  const split = computeSplit({ orders, mode, peopleIds, assignment });
+  const label = (id: string) =>
+    id === UNASSIGNED_ID ? 'Sin asignar' : (names[id]?.trim() || `Persona ${id}`);
+
+  // Cuenta completa de la mesa: un solo ticket con todo.
+  if (personId === null || mode === 'single') {
+    return finishTicket({
+      restaurantId, tableNumber, personLabel: null, positionLabel: null,
+      lines: lines.filter((l) => l.quantity > 0).map((l) => ({
+        quantity: l.quantity, name: l.name, options: l.options, amount: l.lineTotal,
+      })),
+      items: split.breakdown.items,
+      extras: split.breakdown.extras,
+      total: split.breakdown.grandTotal,
+    });
+  }
+
+  const share = personId === UNASSIGNED_ID
+    ? split.unassigned
+    : split.people.find((p) => p.personId === personId);
+  if (!share) return { error: 'Ese comensal ya no está en la cuenta.' };
+
+  // En partes iguales no hay platos "de" nadie: el ticket lleva el consumo de
+  // la mesa como referencia y el total ya dividido.
+  const ticketLines = mode === 'equal'
+    ? []
+    : lines
+      .filter((l) => {
+        if (l.quantity === 0) return false;
+        const claimed = (assignment[l.itemId] ?? []).filter((id) => peopleIds.includes(id));
+        return personId === UNASSIGNED_ID ? claimed.length === 0 : claimed.includes(personId);
+      })
+      .map((l) => {
+        const claimed = (assignment[l.itemId] ?? []).filter((id) => peopleIds.includes(id));
+        const sharedWith = Math.max(1, claimed.length);
+        return {
+          quantity: l.quantity,
+          name: l.name,
+          options: l.options,
+          amount: Math.round((l.lineTotal / sharedWith) * 100) / 100,
+          sharedWith,
+        };
+      });
+
+  const position = split.people.findIndex((p) => p.personId === personId);
+  return finishTicket({
+    restaurantId,
+    tableNumber,
+    personLabel: label(personId),
+    positionLabel: mode === 'equal'
+      ? `Parte ${position + 1} de ${peopleIds.length} · partes iguales`
+      : position >= 0 ? `Persona ${position + 1} de ${peopleIds.length}` : null,
+    lines: ticketLines,
+    items: share.items,
+    extras: share.extras,
+    total: share.total,
+  });
+}
+
+async function finishTicket(t: {
+  restaurantId: string;
+  tableNumber: number;
+  personLabel: string | null;
+  positionLabel: string | null;
+  lines: { quantity: number; name: string; options: string | null; amount: number; sharedWith?: number }[];
+  items: number;
+  extras: number;
+  total: number;
+}): Promise<{ error?: string; ok?: boolean }> {
+  const res = await enqueueSplitBillTicket({
+    ...t,
+    extrasLabel: t.extras < 0 ? 'Descuentos' : 'Propina y cargos',
+  });
+  if ('error' in res) {
+    return {
+      error: res.error.startsWith('No hay impresora')
+        ? 'No hay impresora de caja asignada. Configúrala en Mi PC del local.'
+        : res.error,
+    };
+  }
+  return { ok: true };
 }
 
 /**

@@ -88,29 +88,31 @@ export default async function AdminHomePage() {
       { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: '/admin/categorias', done: (catCount ?? 0) > 0 },
       { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: '/admin/menu/productos/new', done: (prodCount ?? 0) > 0 },
       { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: '/admin/qr', done: false },
-      { key: 'escritorio', label: 'Instala Leogin en tu PC', desc: 'Impresión automática y modo offline', icon: 'monitor', href: '/admin/escritorio', done: false },
+      { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: '/admin/mi-pc', done: false },
     ];
   }
 
   const allow = (key: string) => can(profile.role, profile.permissions, key);
 
-  // ── Agente Leogin (recomendación / salud) ───────────────────
-  // 'install': aún no hay agente funcionando → invitar a instalarlo.
-  // 'offline': existía y dejó de reportar >10 min → avisar (sin agente no hay
-  // impresión automática ni respaldo offline).
-  let agentBanner: 'install' | 'offline' | null = null;
+  // ── Salud de la PC principal ────────────────────────────────
+  // Solo 'offline': la PC estaba encendida y dejó de reportar >10 min, que es
+  // un PROBLEMA (se fue la luz, la apagaron sin querer). Los casos "no hay
+  // ninguna" y "la apagué yo" ya los cubre el aviso del layout
+  // (components/admin/main-pc-banner.tsx) en todas las pantallas — repetirlos
+  // aquí era decir dos veces lo mismo en la misma vista.
+  let agentBanner: 'offline' | null = null;
   if (ordersEnabled && restaurantId && allow('impresion')) {
     const db = createServiceClient();
     const { data: agent } = await db
       .from('print_agents')
-      .select('last_seen_at')
+      .select('last_seen_at, is_active')
       .eq('restaurant_id', restaurantId)
       .maybeSingle();
     const lastSeen = (agent?.last_seen_at as string | null) ?? null;
-    if (!lastSeen) agentBanner = 'install';
     // Frescura evaluada al momento del request a propósito (server component).
     // eslint-disable-next-line react-hooks/purity
-    else if (Date.now() - new Date(lastSeen).getTime() > 10 * 60_000) agentBanner = 'offline';
+    const stale = !!lastSeen && Date.now() - new Date(lastSeen).getTime() > 10 * 60_000;
+    if (stale && (agent?.is_active as boolean | null) !== false) agentBanner = 'offline';
   }
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
   const firstName = (profile.full_name || '').trim().split(' ')[0];
@@ -206,35 +208,22 @@ export default async function AdminHomePage() {
       {/* Agente Leogin: invitar a instalarlo / avisar si se desconectó */}
       {agentBanner && (
         <Link
-          href={agentBanner === 'offline' ? '/admin/impresion' : '/admin/escritorio'}
+          href="/admin/mi-pc"
           className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
-          style={{
-            border: agentBanner === 'offline'
-              ? '1px solid rgba(251,146,60,0.4)'
-              : '1px solid color-mix(in srgb, var(--adm-accent-500) 30%, transparent)',
-          }}
+          style={{ border: '1px solid rgba(251,146,60,0.4)' }}
         >
           <span
             className="grid size-9 shrink-0 place-items-center rounded-adm-md"
-            style={{
-              background: agentBanner === 'offline'
-                ? 'rgba(251,146,60,0.14)'
-                : 'color-mix(in srgb, var(--adm-accent-500) 16%, transparent)',
-              color: agentBanner === 'offline' ? '#fb923c' : 'var(--adm-accent-500)',
-            }}
+            style={{ background: 'rgba(251,146,60,0.14)', color: '#fb923c' }}
           >
-            <Icon name={agentBanner === 'offline' ? 'alertCircle' : 'monitor'} size={17} />
+            <Icon name="alertCircle" size={17} />
           </span>
           <div className="min-w-0 flex-1">
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
-              {agentBanner === 'offline'
-                ? 'Leogin en tu PC está desconectado'
-                : 'Recomendado: instala Leogin Desktop'}
+              Tu PC principal dejó de responder
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
-              {agentBanner === 'offline'
-                ? 'Revisa que la PC del local esté encendida — sin el servicio de Leogin no hay impresión automática ni respaldo sin internet.'
-                : 'La app de escritorio de Leogin: comandas que se imprimen solas y pedidos que no se detienen sin internet.'}
+              Revisa que esté encendida y con internet — mientras tanto no se imprimen comandas solas ni hay respaldo si se cae la señal.
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />

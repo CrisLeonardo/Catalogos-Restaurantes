@@ -204,8 +204,10 @@ export default function AdminShell({
         ...(on(ordersEnabled) ? lockableNavItem(preview, mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }) : []),
         { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
         { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
-        ...(on(ordersEnabled)    ? [{ href: '/admin/impresion', label: 'Impresión', icon: 'print', key: 'impresion' }] : []),
-        ...(on(ordersEnabled)    ? [{ href: '/admin/sin-internet', label: 'Sin internet', icon: 'plug', key: 'impresion' }] : []),
+        // Una sola entrada: "Impresión", "Sin internet" y "Leogin Desktop" eran
+        // tres secciones para una misma cosa (la PC del local) y el dueño tenía
+        // que recorrerlas todas para entenderla. Ver /admin/mi-pc.
+        ...(on(ordersEnabled)    ? [{ href: '/admin/mi-pc', label: 'Mi PC del local', icon: 'monitor', key: 'impresion' }] : []),
         ...lockableNavItem(preview, inventarioEnabled, hasAnalyticsPlan, { href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }),
         ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
         ...(on(reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', icon: 'calendar', key: 'reservaciones' }] : []),
@@ -237,7 +239,6 @@ export default function AdminShell({
         { href: '/admin/perfil',        label: 'Perfil',         icon: 'user',      key: 'perfil'      },
         { href: '/admin/ajustes',       label: 'Ajustes',        icon: 'settings',  key: 'ajustes'     },
         ...(showStaff ? lockableNavItem(preview, personalEnabled, hasAnalyticsPlan, { href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }) : []),
-        { href: '/admin/escritorio',    label: 'Leogin Desktop', icon: 'monitor',    key: 'escritorio'  },
         { href: '/admin/qr',            label: 'QR',             icon: 'image',      key: 'qr'          },
         { href: '/admin/ayuda',         label: 'Ayuda',          icon: 'helpCircle', key: 'ayuda'       },
       ],
@@ -264,9 +265,7 @@ export default function AdminShell({
     '/admin/menu': 'Catálogo',
     '/admin/perfil': 'Perfil',
     '/admin/ajustes': 'Ajustes',
-    '/admin/impresion': 'Impresión',
-    '/admin/sin-internet': 'Modo sin internet',
-    '/admin/escritorio': 'Leogin Desktop',
+    '/admin/mi-pc': 'Mi PC del local',
     '/admin/qr': 'Código QR',
     '/admin/ayuda': 'Centro de ayuda',
     '/admin/reservaciones': 'Reservaciones',

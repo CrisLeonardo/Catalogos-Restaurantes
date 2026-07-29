@@ -50,6 +50,11 @@ export interface PrintAgentConfig {
   shellVersion: string | null;
   /** Auto-pausa de pedidos en línea cuando el agente pierde conexión (mig. 069). */
   autoPauseEnabled: boolean;
+  /** Interruptor de "PC principal" (mig. 094). false = apagada a propósito. */
+  isActive: boolean;
+  /** Nombre de la PC principal, si su agente lo reportó (mig. 094). */
+  deviceName: string | null;
+  disabledAt: string | null;
 }
 
 const EMPTY: PrintAgentConfig = {
@@ -62,6 +67,9 @@ const EMPTY: PrintAgentConfig = {
   version: null,
   shellVersion: null,
   autoPauseEnabled: false,
+  isActive: false,
+  deviceName: null,
+  disabledAt: null,
 };
 
 /** Lee la configuración del agente del restaurante en sesión. */
@@ -74,7 +82,7 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
   const db = createServiceClient();
   const { data } = await db
     .from('print_agents')
-    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version, shell_version, auto_pause_enabled')
+    .select('name, last_seen_at, reported_printers, kitchen_target, receipt_target, agent_version, shell_version, auto_pause_enabled, is_active, device_name, disabled_at, hub_hostname')
     .eq('restaurant_id', restaurantId)
     .single();
 
@@ -91,7 +99,69 @@ export async function getPrintAgentConfig(): Promise<PrintAgentConfig | { error:
     version: (data.agent_version as string) ?? null,
     shellVersion: (data.shell_version as string) ?? null,
     autoPauseEnabled: (data.auto_pause_enabled as boolean) === true,
+    // Agentes anteriores a la 094 nunca escriben is_active: la columna trae
+    // default true, así que una instalación vieja sigue contando como activa.
+    isActive: (data.is_active as boolean) !== false,
+    deviceName: (data.device_name as string) ?? null,
+    disabledAt: (data.disabled_at as string) ?? null,
   };
+}
+
+/**
+ * El interruptor de "esta PC es la principal del local".
+ *
+ * Apagar NO borra nada: revoca el token (el agente deja de autenticar y se
+ * detiene solo, esté donde esté esa PC) pero conserva las impresoras
+ * asignadas, para que volver a encender no obligue a reconfigurar. Encender
+ * devuelve un token nuevo: quien lo llama lo usa para instalar el servicio en
+ * la PC donde esté parado.
+ */
+export async function setLocalServerActive(
+  enabled: boolean,
+): Promise<{ token?: string; error?: string }> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: 'No autorizado.' };
+  if (ctx.profile.role === 'RESTAURANT_STAFF') {
+    return { error: 'Solo el dueño puede cambiar la PC principal del local.' };
+  }
+  const restaurantId = await resolveRestaurantId(ctx);
+  if (!restaurantId) return { error: 'No autorizado.' };
+
+  const db = createServiceClient();
+
+  if (!enabled) {
+    const { data, error } = await db
+      .from('print_agents')
+      .update({
+        is_active: false,
+        disabled_at: new Date().toISOString(),
+        // Token imposible de presentar: corta al agente aunque siga corriendo.
+        token_hash: hashToken(generateToken()),
+      })
+      .eq('restaurant_id', restaurantId)
+      .select('id');
+    if (error) return { error: 'Esta opción requiere aplicar la migración 094 en la base de datos.' };
+    if (!data || data.length === 0) return { error: 'Este restaurante no tiene una PC principal configurada.' };
+    return {};
+  }
+
+  const token = generateToken();
+  const { error } = await db.from('print_agents').upsert(
+    {
+      restaurant_id: restaurantId,
+      name: 'Agente principal',
+      token_hash: hashToken(token),
+      is_active: true,
+      disabled_at: null,
+      // La PC que se enciende puede ser otra: lo que reporte el nuevo agente
+      // manda, y hasta entonces es mejor no mostrar el nombre de la anterior.
+      device_name: null,
+      last_seen_at: null,
+    },
+    { onConflict: 'restaurant_id' },
+  );
+  if (error) return { error: error.message };
+  return { token };
 }
 
 /**

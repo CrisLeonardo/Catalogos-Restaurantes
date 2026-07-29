@@ -38,6 +38,13 @@ const TOAST_H: f64 = 150.0;
 const AGENT_RELEASES_API: &str =
     "https://api.github.com/repos/CrisLeonardo/leogin-agente-releases/releases";
 
+/// El agente viaja DENTRO del instalador (scripts/fetch-agent.mjs lo baja
+/// antes de `tauri build` y `bundle.resources` lo empaqueta). Así "instalar
+/// Leogin" ya trae todo lo necesario para que esta PC pueda ser la principal
+/// del local, sin una segunda descarga en el momento más inoportuno.
+const BUNDLED_AGENT: &str = "resources/LeoginAgent.exe";
+const BUNDLED_AGENT_VERSION: &str = "resources/agent-version.txt";
+
 /// Login central (roadmap "reconocer el restaurante al iniciar sesión"): el
 /// primer arranque, en vez de pedir la dirección del panel a mano, puede abrir
 /// este login sin tenant — la propia web (login() en
@@ -617,6 +624,34 @@ fn agent_install_dir() -> Option<std::path::PathBuf> {
         .map(|base| std::path::PathBuf::from(base).join("Leogin").join("Agente"))
 }
 
+/// Ruta del agente EMPAQUETADO dentro de esta app, si el build lo incluyó
+/// (`bundle.resources` en tauri.conf.json ← scripts/fetch-agent.mjs).
+fn bundled_agent_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+    let path = app
+        .path()
+        .resolve(BUNDLED_AGENT, tauri::path::BaseDirectory::Resource)
+        .ok()?;
+    path.exists().then_some(path)
+}
+
+/// Bytes del agente empaquetado. `None` = este exe se construyó sin él (dev, o
+/// un build donde la descarga del release falló) y hay que ir a GitHub.
+fn bundled_agent_bytes(app: &AppHandle) -> Option<Vec<u8>> {
+    std::fs::read(bundled_agent_path(app)?).ok()
+}
+
+/// Versión del agente empaquetado, declarada por el build en un archivo al
+/// lado del exe. Sin ella no se puede comparar contra lo instalado.
+fn bundled_agent_version(app: &AppHandle) -> Option<String> {
+    let path = app
+        .path()
+        .resolve(BUNDLED_AGENT_VERSION, tauri::path::BaseDirectory::Resource)
+        .ok()?;
+    let raw = std::fs::read_to_string(path).ok()?;
+    let v = raw.trim().trim_start_matches('v').to_string();
+    (!v.is_empty()).then_some(v)
+}
+
 /// Mantiene el SERVICIO local al día junto con el desktop (pedido del usuario
 /// 2026-07-10: "si se llegara a actualizar, se actualiza junto al desktop").
 /// En el mismo ciclo horario en que el shell busca su propia actualización,
@@ -640,9 +675,22 @@ async fn maybe_update_agent(app: &AppHandle) {
         return; // sin hub en esta PC no hay nada que mantener al día
     }
     let Some(hub_ver) = hub.version else { return };
-    let Ok((latest, url)) = latest_agent_release(&state.http).await else { return };
+
+    // Dos orígenes posibles, y gana el más nuevo: el agente EMPAQUETADO con
+    // esta versión de Leogin Desktop (instalar el desktop actualiza también el
+    // servicio, sin red) y el último release publicado en GitHub. Si el
+    // empaquetado alcanza, ni se consulta GitHub.
+    let bundled = bundled_agent_version(app);
+    let remote = latest_agent_release(&state.http).await.ok();
+    let (latest, url) = match (bundled, remote) {
+        (Some(b), Some((r, u))) if parse_ver(&r) > parse_ver(&b) => (r, Some(u)),
+        (Some(b), _) => (b, None),
+        (None, Some((r, u))) => (r, Some(u)),
+        (None, None) => return,
+    };
+
     if parse_ver(&latest) < parse_ver("0.7.0") {
-        return; // el release publicado aún no trae el modo silencioso
+        return; // esa versión aún no trae el modo silencioso
     }
     if parse_ver(&latest) <= parse_ver(&hub_ver) {
         return; // ya está al día (o el propio auto-update del agente ganó)
@@ -662,25 +710,36 @@ async fn maybe_update_agent(app: &AppHandle) {
         return;
     };
 
-    log_line(app, &format!("agente: v{hub_ver} → v{latest}, descargando actualización…"));
-    let bytes = match state
-        .http
-        .get(&url)
-        .timeout(Duration::from_secs(180))
-        .send()
-        .await
-        .and_then(|r| r.error_for_status())
-    {
-        Ok(res) => match res.bytes().await {
-            Ok(b) => b,
-            Err(e) => {
-                log_line(app, &format!("agente: descarga incompleta: {e}"));
-                return;
+    let bytes = match url {
+        None => {
+            log_line(app, &format!("agente: v{hub_ver} → v{latest} (copia incluida en la app)"));
+            match bundled_agent_bytes(app) {
+                Some(b) => b,
+                None => return,
             }
-        },
-        Err(e) => {
-            log_line(app, &format!("agente: no se pudo descargar: {e}"));
-            return;
+        }
+        Some(url) => {
+            log_line(app, &format!("agente: v{hub_ver} → v{latest}, descargando actualización…"));
+            match state
+                .http
+                .get(&url)
+                .timeout(Duration::from_secs(180))
+                .send()
+                .await
+                .and_then(|r| r.error_for_status())
+            {
+                Ok(res) => match res.bytes().await {
+                    Ok(b) => b.to_vec(),
+                    Err(e) => {
+                        log_line(app, &format!("agente: descarga incompleta: {e}"));
+                        return;
+                    }
+                },
+                Err(e) => {
+                    log_line(app, &format!("agente: no se pudo descargar: {e}"));
+                    return;
+                }
+            }
         }
     };
 
@@ -928,20 +987,34 @@ async fn install_agent_as_server(
         return Err("Falta el token.".into());
     }
 
-    log_line(&app, "vinculación por sesión: buscando el último release del agente…");
-    let (_, download_url) = latest_agent_release(&state.http).await?;
-
-    log_line(&app, "vinculación por sesión: descargando el agente…");
-    let bytes = state
-        .http
-        .get(&download_url)
-        .timeout(Duration::from_secs(120))
-        .send()
-        .await
-        .map_err(|e| format!("No se pudo descargar el agente: {e}"))?
-        .bytes()
-        .await
-        .map_err(|e| format!("Descarga incompleta: {e}"))?;
+    // El agente viaja DENTRO del instalador de Leogin Desktop (ver
+    // `bundle.resources` en tauri.conf.json y scripts/fetch-agent.mjs): "se
+    // instala junto al desktop" sin depender de que GitHub responda ni de que
+    // el WiFi del local aguante 87 MB en ese momento. La descarga queda como
+    // respaldo para un exe construido sin el recurso (dev, o un build donde el
+    // fetch falló) y para el caso de que el release publicado sea más nuevo.
+    let bytes = match bundled_agent_bytes(&app) {
+        Some(b) => {
+            log_line(&app, "vinculación por sesión: usando el agente incluido en la app");
+            b
+        }
+        None => {
+            log_line(&app, "vinculación por sesión: sin agente incluido, buscando el último release…");
+            let (_, download_url) = latest_agent_release(&state.http).await?;
+            log_line(&app, "vinculación por sesión: descargando el agente…");
+            state
+                .http
+                .get(&download_url)
+                .timeout(Duration::from_secs(120))
+                .send()
+                .await
+                .map_err(|e| format!("No se pudo descargar el agente: {e}"))?
+                .bytes()
+                .await
+                .map_err(|e| format!("Descarga incompleta: {e}"))?
+                .to_vec()
+        }
+    };
 
     // Carpeta TEMPORAL a propósito (no la de instalación): el agente, al
     // arrancar fuera de su carpeta instalada con este nombre, se autoinstala
@@ -977,6 +1050,58 @@ async fn install_agent_as_server(
     cmd.spawn()
         .map_err(|e| format!("No se pudo iniciar el instalador: {e}"))?;
 
+    Ok(())
+}
+
+/// "Esta PC ya no es la principal": desinstala el servicio local de ESTA
+/// computadora. El corte de verdad lo da la nube (apagar el interruptor revoca
+/// el token y el agente deja de autenticar, ver migración 094); esto además
+/// quita la tarea programada, el autoarranque y la entrada de "Aplicaciones
+/// instaladas", para no dejar un servicio muerto consumiendo memoria.
+///
+/// Mismas garantías de origen que `install_agent_as_server`. No falla si el
+/// agente no está instalado: apagar una PC que nunca lo tuvo es un no-op.
+#[tauri::command]
+async fn uninstall_agent_server(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    webview: tauri::WebviewWindow<Wry>,
+) -> Result<(), String> {
+    let configured = state
+        .config
+        .lock()
+        .unwrap()
+        .panel_url
+        .clone()
+        .ok_or_else(|| "Configura primero la dirección del panel.".to_string())?;
+    let caller_origin = webview
+        .url()
+        .map_err(|e| e.to_string())?
+        .origin()
+        .ascii_serialization();
+    if caller_origin != configured {
+        return Err("Origen no autorizado.".into());
+    }
+
+    let Some(exe) = agent_install_dir().map(|d| d.join("LeoginAgent.exe")) else {
+        return Ok(());
+    };
+    if !exe.exists() {
+        log_line(&app, "apagar PC principal: el servicio no está instalado en esta PC");
+        return Ok(());
+    }
+
+    log_line(&app, "apagar PC principal: desinstalando el servicio local…");
+    let mut cmd = std::process::Command::new(&exe);
+    cmd.arg("uninstall");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.spawn()
+        .map_err(|e| format!("No se pudo desinstalar el servicio: {e}"))?;
     Ok(())
 }
 
@@ -1091,6 +1216,7 @@ fn main() {
             apply_update,
             dismiss_update,
             install_agent_as_server,
+            uninstall_agent_server,
             get_kds_url
         ])
         .setup(|app| {

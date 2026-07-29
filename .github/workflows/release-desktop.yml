@@ -64,10 +64,17 @@ jobs:
       - name: npm ci
         run: npm ci
 
+      # `npm run build` baja primero el último agent-v* al bundle
+      # (scripts/fetch-agent.mjs) para que el instalador ya traiga el servicio
+      # de impresión/offline. GITHUB_TOKEN aquí es solo para no chocar con el
+      # límite de peticiones anónimas de la API; si falta o falla, el script
+      # avisa y el build sigue SIN agente incluido (la app lo bajaría al
+      # vincular) — nunca rompe la publicación.
       - name: Compilar y firmar el instalador (llave del updater)
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
         run: npm run build
 
       - name: Subir artefactos del build (respaldo, por si falla la publicación)

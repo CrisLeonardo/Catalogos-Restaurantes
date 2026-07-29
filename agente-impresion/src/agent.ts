@@ -4,7 +4,7 @@
 //
 // El servidor genera los bytes ESC/POS; el agente solo obedece el destino.
 
-import { networkInterfaces } from 'node:os';
+import { hostname, networkInterfaces } from 'node:os';
 import { loadConfig, type AgentConfig } from './config.ts';
 import { discoverPrinters, parseTarget, printRaw } from './printer/index.ts';
 import type { DiscoveredPrinter } from './printer/types.ts';
@@ -68,6 +68,9 @@ async function poll(cfg: AgentConfig, printers: DiscoveredPrinter[]): Promise<{ 
       hubUrl: localLanUrl(),
       lanIp: localLanIp(),
       hubOrderToken: getHubOrderToken(),
+      // Nombre de esta computadora (migración 094): el panel lo muestra para
+      // que el dueño sepa CUÁL de sus PCs es la principal del local.
+      deviceName: hostname().slice(0, 80),
     }),
   });
   if (!res.ok) throw new Error(`poll respondió HTTP ${res.status}`);

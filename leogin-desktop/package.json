@@ -5,8 +5,10 @@
   "type": "module",
   "description": "Leogin para escritorio: la app instalable del restaurante. Ventana al panel alojado + bandeja del sistema con estado del hub + auto-update con toast. El motor de impresión/offline sigue siendo el servicio LeoginAgent (agente-impresion/).",
   "scripts": {
-    "dev": "tauri dev",
-    "build": "tauri build",
+    "dev": "node scripts/fetch-agent.mjs --skip && tauri dev",
+    "build": "node scripts/fetch-agent.mjs && tauri build",
+    "build:sin-agente": "node scripts/fetch-agent.mjs --skip && tauri build",
+    "agent": "node scripts/fetch-agent.mjs",
     "tauri": "tauri",
     "release": "node scripts/publish-release.mjs",
     "art": "node scripts/generate-installer-art.mjs"

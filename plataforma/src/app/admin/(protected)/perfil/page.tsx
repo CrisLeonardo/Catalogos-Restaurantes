@@ -106,16 +106,16 @@ export default async function AdminPerfilPage({
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', marginLeft: 'auto', flexShrink: 0 }} />
         </Link>
         <Link
-          href="/admin/impresion"
+          href="/admin/mi-pc"
           className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 p-3.5 no-underline text-inherit')}
         >
           <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
             <Icon name="print" size={19} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Impresión y modo offline</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>Mi PC del local</div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-              Leogin en tu PC (impresión automática + respaldo sin internet) tiene su propia sección.
+              La computadora que imprime sola y mantiene el local trabajando sin internet.
             </div>
           </div>
           <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', marginLeft: 'auto', flexShrink: 0 }} />

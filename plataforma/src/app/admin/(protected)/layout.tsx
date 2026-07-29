@@ -8,7 +8,7 @@ import AdminShell from '@/components/admin/shell';
 import { PlanPricingProvider } from '@/components/plan-pricing-context';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
-import DesktopServerNudge from '@/components/admin/desktop-server-nudge';
+import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
@@ -134,13 +134,13 @@ export default async function AdminProtectedLayout({
 
   const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
 
-  // ¿El restaurante ya tiene su PC servidor (agente/modo local vinculado)?
-  // Solo la nube lo sabe con certeza — ve TODO el local, no solo esta PC.
-  // Si NO lo tiene, el dueño verá (únicamente dentro de Leogin Desktop, el
-  // componente cliente comprueba window.__TAURI__) la invitación a activar
-  // esta PC como servidor del local. Dueños solamente: el personal no debe
-  // decidir la infraestructura del restaurante.
-  let offerLocalServer = false;
+  // ¿El restaurante tiene una PC principal encendida? Solo la nube lo sabe con
+  // certeza — ve TODO el local, no solo el dispositivo desde el que se mira.
+  // Si NO la tiene, el dueño ve el aviso en TODAS las pantallas del panel (no
+  // solo dentro de Leogin Desktop, como antes: quien abría el panel desde el
+  // navegador jamás se enteraba de que le faltaba). Dueños solamente: el
+  // personal no decide la infraestructura del restaurante.
+  let localServerState: 'missing' | 'off' | null = null;
   if (
     currentRestaurant?.id &&
     (profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN')
@@ -148,10 +148,11 @@ export default async function AdminProtectedLayout({
     const svc = createServiceClient();
     const { data: agentRow } = await svc
       .from('print_agents')
-      .select('id')
+      .select('id, is_active')
       .eq('restaurant_id', currentRestaurant.id)
       .maybeSingle();
-    offerLocalServer = !agentRow;
+    if (!agentRow) localServerState = 'missing';
+    else if ((agentRow.is_active as boolean | null) === false) localServerState = 'off';
   }
 
   const mod = currentRestaurant?.modules as Record<string, boolean> | null;
@@ -206,7 +207,7 @@ export default async function AdminProtectedLayout({
       {groupReturnUrl && (
         <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />
       )}
-      {offerLocalServer && <DesktopServerNudge />}
+      {localServerState && <MainPcBanner state={localServerState} />}
       {isOperatorSession && <OperatorHeartbeat profileId={ctx.userId} />}
       {children}
     </AdminShell>

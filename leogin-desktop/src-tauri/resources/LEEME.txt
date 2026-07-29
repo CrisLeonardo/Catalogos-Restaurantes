@@ -1,0 +1,12 @@
+Esta carpeta la llena `scripts/fetch-agent.mjs` antes de cada build:
+
+  LeoginAgent.exe      el servicio de impresión/offline (~87 MB), empaquetado
+                       DENTRO del instalador para que "instalar Leogin" traiga
+                       ya todo lo necesario para convertir esa PC en la
+                       principal del local.
+  agent-version.txt    la versión que se empaquetó, para poder compararla con
+                       la instalada y con la publicada en GitHub.
+
+Ninguno de los dos se versiona en git (ver .gitignore). Este archivo sí:
+`bundle.resources` usa un glob y necesita que la carpeta exista aunque el
+build salga sin agente (dev, o una descarga fallida).

@@ -33,8 +33,12 @@ export const ADMIN_SECTIONS = [
   { key: 'perfil',       label: 'Perfil' },
   { key: 'ajustes',      label: 'Ajustes' },
   { key: 'mesas',        label: 'Mesas' },
-  { key: 'impresion',    label: 'Impresión y Offline' },
-  { key: 'escritorio',   label: 'Leogin Desktop' },
+  // Una sola llave para la PC del local: "Impresión", "Sin internet" y
+  // "Leogin Desktop" se fusionaron en /admin/mi-pc, así que el dueño ya no
+  // reparte tres permisos para lo mismo. Los perfiles de staff que aún tengan
+  // 'escritorio' guardado simplemente dejan de encontrar sección: sobra, no
+  // rompe.
+  { key: 'impresion',    label: 'Mi PC del local' },
   { key: 'qr',           label: 'QR' },
   { key: 'ayuda',        label: 'Centro de ayuda' },
 ] as const;

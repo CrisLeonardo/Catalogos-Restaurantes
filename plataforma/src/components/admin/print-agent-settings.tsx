@@ -108,7 +108,7 @@ function PrinterPicker({
 
 // ── Sección de instalación (pasos) ────────────────────────────────────────────
 
-function InstallSteps({
+export function InstallSteps({
   token,
   origin,
   onCopied,
@@ -292,7 +292,6 @@ export default function PrintAgentSettings() {
   const [saving, setSaving] = useState(false);
   const [origin, setOrigin] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [inDesktopApp, setInDesktopApp] = useState(false);
   const [pauseToggling, setPauseToggling] = useState(false);
 
   async function handleAutoPauseToggle() {
@@ -324,9 +323,6 @@ export default function PrintAgentSettings() {
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    // window.__TAURI__ solo existe dentro de la app instalable Leogin
-    // Desktop (ver leogin-desktop/) — desde el navegador normal es undefined.
-    setInDesktopApp(typeof window !== 'undefined' && Boolean((window as unknown as { __TAURI__?: unknown }).__TAURI__));
     void load();
   }, [load]);
 
@@ -395,45 +391,21 @@ export default function PrintAgentSettings() {
   const printers = config?.reportedPrinters ?? [];
 
   return (
-    <Card className="flex flex-col gap-4 p-4.5">
-      {/* Encabezado */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
-            Leogin en tu PC
-          </span>
-          <span style={{
-            fontSize: 10.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
-            color: 'var(--brand-bg)', background: 'var(--u-text)', borderRadius: 6, padding: '2px 7px',
-          }}>
-            Nuevo
-          </span>
-        </div>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '6px 0 0' }}>
-          Imprime cocina y caja en silencio desde <strong style={{ color: 'var(--u-text-2)' }}>cualquier
-          dispositivo</strong> (celular, tablet o PC), sin abrir diálogos. Instala el servicio de Leogin
-          una sola vez en la PC del local; la configuración se guarda en la nube.
-        </p>
-      </div>
-
-      {/* Estado de conexión */}
+    <div className="flex flex-col gap-4">
+      {/* El estado de la PC y el interruptor de encenderla/apagarla los lleva
+          MainPcSwitch, arriba en la misma pantalla (/admin/mi-pc). Aquí solo
+          quedan las impresoras: qué se imprime y dónde. */}
       <div style={{ fontSize: 12.5, fontWeight: 600, color: conn.color }}>
         {conn.text}
         {config?.exists && (
           <span style={{ color: 'var(--u-text-4)', fontWeight: 500 }}>
             {' · '}{printers.length} impresora{printers.length === 1 ? '' : 's'} detectada{printers.length === 1 ? '' : 's'}
-            {config.version ? ` · v${config.version}` : ''}
-            {config.shellVersion ? ` · Leogin Desktop v${config.shellVersion}` : ''}
           </span>
         )}
         <Button type="button" onClick={load} variant="ghost" size="sm" className="ml-2.5 h-auto py-1">
           ↻ Actualizar
         </Button>
       </div>
-
-      {/* El toggle "hacer de esta PC el servidor" vive en Ajustes → Este
-          dispositivo (components/admin/desktop-server-settings.tsx): es una
-          decisión sobre el dispositivo, no sobre impresoras. */}
 
       {/* Auto-pausa de pedidos en línea sin agente (opcional, mig. 069) */}
       {config?.exists && (
@@ -460,40 +432,27 @@ export default function PrintAgentSettings() {
         </Card>
       )}
 
-      {/* Generar / rotar token (instalación manual — también sirve como respaldo dentro de la app) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {inDesktopApp && (
-          <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-            Instalación manual (alternativa a &quot;Hacer de esta PC el servidor del local&quot; en Ajustes):
-          </span>
-        )}
-        <Button type="button" onClick={handleGenerate} disabled={generating} variant="secondary" size="sm" className="self-start">
-          {generating
-            ? 'Generando…'
-            : config?.exists
-              ? <><Icon name="arrowRight" size={14} /> Regenerar token de instalación</>
-              : <><Icon name="key" size={14} /> Generar token de instalación</>}
-        </Button>
-
-        {token && (
-          <InstallSteps
-            token={token}
-            origin={origin}
-            onCopied={(m) => setMsg(m)}
-          />
-        )}
-      </div>
-
-      <div style={{ borderTop: '1px solid var(--u-hair)' }} />
-
       {/* Asignación de impresoras */}
       {loading ? (
         <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>Cargando…</div>
       ) : !config?.exists ? (
-        <div style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.55 }}>
-          Genera el token e instala el agente. Cuando conecte, sus impresoras aparecerán aquí
-          para asignarlas a Cocina y Caja.
-        </div>
+        <details>
+          <summary style={{ fontSize: 11.5, color: 'var(--u-text-4)', cursor: 'pointer', userSelect: 'none' }}>
+            Instalar el servicio a mano (avanzado)
+          </summary>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+            <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+              Lo normal es encender el interruptor de arriba desde la PC del local. Esto es el
+              camino largo: genera un token e instala el servicio tú mismo.
+            </span>
+            <Button type="button" onClick={handleGenerate} disabled={generating} variant="secondary" size="sm" className="self-start">
+              {generating
+                ? 'Generando…'
+                : <><Icon name="key" size={14} /> Generar token de instalación</>}
+            </Button>
+            {token && <InstallSteps token={token} origin={origin} onCopied={(m) => setMsg(m)} />}
+          </div>
+        </details>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {printers.length === 0 && (
@@ -549,6 +508,6 @@ export default function PrintAgentSettings() {
           {msg}
         </div>
       )}
-    </Card>
+    </div>
   );
 }

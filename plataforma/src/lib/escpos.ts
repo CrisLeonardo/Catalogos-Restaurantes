@@ -222,6 +222,88 @@ export function buildReceiptEscPos(
   return b.build();
 }
 
+// ── Cuenta de mesa / dividir cuenta ──────────────────────────────────────────
+
+export interface SplitTicketLine {
+  quantity: number;
+  name: string;
+  options: string | null;
+  amount: number;
+  /** Si la línea se comparte, entre cuántos (para imprimir "compartido /3"). */
+  sharedWith?: number;
+}
+
+/**
+ * Ticket de la cuenta de UNA persona de la mesa (o de la mesa completa cuando
+ * `personLabel` es null). No es un recibo fiscal ni cierra el pedido: es el
+ * papel que el mesero le deja a cada comensal para que sepa cuánto poner.
+ */
+export function buildSplitBillEscPos(input: {
+  restaurantName: string;
+  tableNumber: number;
+  personLabel: string | null;
+  /** "Persona 2 de 4" — contexto para que nadie pague dos veces lo mismo. */
+  positionLabel: string | null;
+  lines: SplitTicketLine[];
+  items: number;
+  extras: number;
+  total: number;
+  extrasLabel: string;
+  currency: EscPosCurrency;
+}): Uint8Array {
+  const b = new EscPosBuilder();
+  const fm = (n: number) => fmtMoney(n, input.currency);
+  const dateStr = new Date().toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+
+  b.init()
+   .align('center')
+   .bold(true).line(input.restaurantName || 'Restaurante').bold(false)
+   .line(`Mesa ${input.tableNumber}`)
+   .line(dateStr);
+
+  if (input.personLabel) {
+    b.lf()
+     .size(2).bold(true).line(input.personLabel).bold(false).size(1);
+    if (input.positionLabel) b.line(input.positionLabel);
+  } else {
+    b.lf().bold(true).line('CUENTA DE LA MESA').bold(false);
+  }
+
+  b.align('left').sep('-');
+
+  if (input.lines.length === 0) {
+    b.line('(sin platos asignados)');
+  }
+  for (const l of input.lines) {
+    b.row(`${l.quantity}x ${l.name}`, fm(l.amount));
+    if (l.options) b.line(`   ${l.options}`);
+    if (l.sharedWith && l.sharedWith > 1) b.line(`   compartido entre ${l.sharedWith}`);
+  }
+
+  b.sep('-')
+   .row('Consumo', fm(input.items));
+  // Un solo renglón para propina/envío/descuentos: en un ticket de 42 columnas
+  // desglosarlos por persona confunde más de lo que aclara — el desglose fino
+  // está en pantalla y en el recibo del pedido.
+  if (round2(input.extras) !== 0) b.row(input.extrasLabel, fm(input.extras));
+
+  b.sep('=')
+   .size(2).bold(true).row('TOTAL', fm(input.total), 21).bold(false).size(1)
+   .sep('-')
+   .align('center')
+   .line(input.personLabel ? 'Parte de la cuenta de la mesa' : 'Cuenta completa de la mesa')
+   .line('Gracias por su preferencia')
+   .cut();
+
+  return b.build();
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 // ── Tickets de prueba ────────────────────────────────────────────────────────
 
 export function buildTestKitchenEscPos(): Uint8Array {

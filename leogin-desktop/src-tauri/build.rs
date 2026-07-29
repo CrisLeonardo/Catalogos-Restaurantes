@@ -18,6 +18,7 @@ fn main() {
             "apply_update",
             "dismiss_update",
             "install_agent_as_server",
+            "uninstall_agent_server",
             "get_kds_url",
         ])),
     )

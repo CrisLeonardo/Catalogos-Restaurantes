@@ -5,7 +5,7 @@
 import crypto from 'node:crypto';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getActiveHubCert, HUB_TLS_PORT } from '@/lib/hub-tls';
-import { buildKitchenEscPos, buildReceiptEscPos, type EscPosCurrency } from '@/lib/escpos';
+import { buildKitchenEscPos, buildReceiptEscPos, buildSplitBillEscPos, type EscPosCurrency, type SplitTicketLine } from '@/lib/escpos';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { OrderWithItems } from '@/lib/db/orders';
 
@@ -39,6 +39,10 @@ export async function authenticateAgent(req: Request): Promise<AgentIdentity | n
     .from('print_agents')
     .select('id, restaurant_id')
     .eq('token_hash', hashToken(token))
+    // Interruptor de "PC principal" (migración 094): apagada la PC en el
+    // panel, su agente deja de autenticar y se detiene solo — así apagar
+    // funciona desde el celular del dueño, sin ir a desinstalar nada.
+    .eq('is_active', true)
     .single();
 
   if (!data) return null;
@@ -105,9 +109,14 @@ export async function enqueuePrintJob(opts: {
   if (!target) {
     const { data: agent } = await db
       .from('print_agents')
-      .select('kitchen_target, receipt_target')
+      .select('kitchen_target, receipt_target, is_active')
       .eq('restaurant_id', opts.restaurantId)
       .single();
+    // PC principal apagada (migración 094): encolar sería mentirle a quien
+    // pulsó "Imprimir" — nadie va a recoger el trabajo hasta que la enciendan.
+    if (agent && (agent.is_active as boolean | null) === false) {
+      return { error: 'La PC principal del local está apagada: enciéndela en «Mi PC del local» para poder imprimir.' };
+    }
     target = (opts.role === 'kitchen' ? agent?.kitchen_target : agent?.receipt_target) ?? null;
   }
   if (!target) {
@@ -168,10 +177,13 @@ export async function enqueueKitchenForOrder(restaurantId: string, orderId: stri
 
   const { data: agent } = await db
     .from('print_agents')
-    .select('kitchen_target')
+    .select('kitchen_target, is_active')
     .eq('restaurant_id', restaurantId)
     .single();
-  if (!agent?.kitchen_target) return; // sin agente/destino → no imprime por aquí
+  // Sin agente/destino, o con la PC principal apagada a propósito (mig. 094),
+  // no se encola: acumular comandas viejas que nadie va a imprimir es peor
+  // que no imprimir.
+  if (!agent?.kitchen_target || (agent.is_active as boolean | null) === false) return;
 
   const order = await loadOrderWithItems(db, restaurantId, orderId);
   if (!order) return;
@@ -196,10 +208,10 @@ export async function enqueueReceiptForOrder(restaurantId: string, orderId: stri
 
   const { data: agent } = await db
     .from('print_agents')
-    .select('receipt_target')
+    .select('receipt_target, is_active')
     .eq('restaurant_id', restaurantId)
     .single();
-  if (!agent?.receipt_target) return;
+  if (!agent?.receipt_target || (agent.is_active as boolean | null) === false) return;
 
   const order = await loadOrderWithItems(db, restaurantId, orderId);
   if (!order) return;
@@ -224,4 +236,41 @@ export async function enqueueReceiptForOrder(restaurantId: string, orderId: stri
     orderId,
     targetOverride: agent.receipt_target as string,
   });
+}
+
+/** Moneda del restaurante para tickets ESC/POS (misma fuente que el recibo). */
+export async function escPosCurrencyFor(restaurantId: string): Promise<EscPosCurrency> {
+  const db = createServiceClient();
+  const { data: themeRow } = await db
+    .from('restaurant_themes')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .single();
+  const cfg = resolveTheme((themeRow as ThemeRow) ?? null).config;
+  return { symbol: cfg.currencySymbol, position: cfg.currencyPosition, locale: cfg.locale };
+}
+
+/**
+ * Encola el ticket de la parte de un comensal (o de la mesa completa).
+ * A diferencia del recibo, aquí SÍ devuelve el error: el mesero pulsó
+ * "Imprimir" y tiene que enterarse si no hay impresora de caja asignada.
+ */
+export async function enqueueSplitBillTicket(input: {
+  restaurantId: string;
+  tableNumber: number;
+  personLabel: string | null;
+  positionLabel: string | null;
+  lines: SplitTicketLine[];
+  items: number;
+  extras: number;
+  total: number;
+  extrasLabel: string;
+}): Promise<EnqueueResult> {
+  const db = createServiceClient();
+  const bytes = buildSplitBillEscPos({
+    ...input,
+    restaurantName: await restaurantName(db, input.restaurantId),
+    currency: await escPosCurrencyFor(input.restaurantId),
+  });
+  return enqueuePrintJob({ restaurantId: input.restaurantId, role: 'receipt', bytes });
 }

@@ -2,6 +2,9 @@ node_modules/
 src-tauri/target/
 src-tauri/gen/
 dist/
+# El agente empaquetado lo baja scripts/fetch-agent.mjs en cada build (~87 MB).
+src-tauri/resources/LeoginAgent.exe
+src-tauri/resources/agent-version.txt
 *.local.json
 # Llave privada del updater (NUNCA se comitea; vive en %USERPROFILE%\.tauri\)
 *.key

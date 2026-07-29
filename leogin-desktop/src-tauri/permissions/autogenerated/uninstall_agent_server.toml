@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-uninstall-agent-server"
+description = "Enables the uninstall_agent_server command without any pre-configured scope."
+commands.allow = ["uninstall_agent_server"]
+
+[[permission]]
+identifier = "deny-uninstall-agent-server"
+description = "Denies the uninstall_agent_server command without any pre-configured scope."
+commands.deny = ["uninstall_agent_server"]

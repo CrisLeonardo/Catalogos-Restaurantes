@@ -33,6 +33,11 @@ export async function POST(req: Request) {
   // IP LAN pelada (migración 064) — mantiene el registro A del hostname HTTPS
   // del hub (<id>.hub.<dominio> → esta IP). Agentes v0.4.0+.
   if (typeof body.lanIp === 'string') patch.hub_lan_ip = body.lanIp;
+  // Nombre de la PC (migración 094) — para que el panel pueda decir CUÁL de
+  // las computadoras del local es la principal, no solo que "hay una".
+  if (typeof body.deviceName === 'string' && body.deviceName.length <= 80) {
+    patch.device_name = body.deviceName;
+  }
   const { data: agentRow } = await db
     .from('print_agents')
     .update(patch)

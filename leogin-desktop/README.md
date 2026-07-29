@@ -26,17 +26,28 @@ la ventana.
 - **Respaldo sin nube.** Si el panel no responde, la ventana cae a una página
   local que muestra el estado del hub (LeoginAgent) y regresa sola al panel
   cuando vuelve el internet.
-- **"Esta PC será el servidor del local", un clic.** Desde el panel (sección
-  Impresión), con la sesión ya iniciada dentro de la app, instala el servicio
-  de impresión/offline sin descargar nada a mano. Y si el restaurante aún no
-  tiene servidor, el propio panel lo OFRECE tras iniciar sesión dentro de la
-  app (banner del dueño) — no hay que descubrir la sección Impresión.
+- **El servicio VIENE DENTRO del instalador.** `scripts/fetch-agent.mjs` baja
+  el último `agent-v*` a `src-tauri/resources/` antes de `tauri build` y
+  `bundle.resources` lo empaqueta: instalar Leogin ya trae todo lo necesario
+  para que esa PC pueda ser la principal del local, sin una segunda descarga
+  en el peor momento (WiFi del local, primer día). El instalador pasa de
+  ~10 MB a ~95 MB; a cambio, la vinculación es instantánea y funciona aunque
+  GitHub no responda. Si un build sale sin el recurso (dev, o descarga
+  fallida), la app cae sola al camino anterior: bajarlo de GitHub al vincular.
+- **Un interruptor de "PC principal", encendido y apagado.** En el panel,
+  sección **Mi PC del local** (y también en Ajustes → Este dispositivo).
+  Encender instala el servicio; apagar revoca el token en la nube — el agente
+  se detiene solo, se apague desde donde se apague, incluso desde el celular
+  del dueño — y, si estás en esa PC, además desinstala el servicio local.
+  Las impresoras asignadas se conservan para que volver a encender no
+  obligue a reconfigurar. Ver migración 094.
 - **El servicio se actualiza junto con la app.** El mismo ciclo horario que
   busca actualizaciones del shell compara la versión del servicio local de
-  esta PC con el último release `agent-v*` y, si está viejo, lo reinstala en
-  silencio conservando su configuración (agente ≥0.7.0). Respaldo del
-  auto-update de nube del propio servicio: aunque ese canal falle, la PC
-  queda al día con solo tener Leogin abierto.
+  esta PC contra la MÁS NUEVA de dos fuentes: la copia empaquetada en este
+  exe y el último release `agent-v*`. Si gana la empaquetada, ni se consulta
+  GitHub. Se reinstala en silencio conservando su configuración (agente
+  ≥0.7.0). Respaldo del auto-update de nube del propio servicio: aunque ese
+  canal falle, la PC queda al día con solo tener Leogin abierto.
 - **Modo kiosco para cocina.** `leogin-desktop.exe --kds` abre fullscreen
   directo al KDS de respaldo del hub local — sin bandeja, sin setup.
 
@@ -102,6 +113,18 @@ npm run build
 # → src-tauri/target/release/bundle/nsis/Leogin_<version>_x64-setup.exe (+ .sig)
 ```
 
+`npm run build` baja primero el agente al bundle (`scripts/fetch-agent.mjs`),
+por eso el instalador pesa ~95 MB. Variantes:
+
+```powershell
+npm run agent                # solo refrescar el agente empaquetado
+npm run agent -- --local     # usar ../agente-impresion/dist (agente sin publicar)
+npm run build:sin-agente     # instalador liviano; la app lo bajará al vincular
+```
+
+`npm run dev` NO empaqueta el agente (sería absurdo en cada recompilación):
+en `tauri dev` la vinculación usa el camino de descarga de siempre.
+
 La llave firma los PAQUETES DE UPDATE (minisign del updater de Tauri — gratis).
 **Respalda `leogin-desktop.key` y `leogin-desktop.key.pass` juntos** (ej. en tu
 gestor de contraseñas): si se pierden, las apps ya instaladas no aceptarán más
@@ -141,8 +164,10 @@ venir firmados con la llave minisign).
    escribir a mano — se quitó esa opción (2026-07-10): sin dominios propios
    soportados hoy, no resolvía ningún caso real y solo confundía.
 3. Si esa PC va a imprimir / operar sin internet: en el panel, sección
-   **Impresión**, botón **"Hacer de esta PC el servidor del local"** — solo
-   una PC por local.
+   **Mi PC del local**, enciende el interruptor **"Esta computadora es la
+   principal del local"** — solo una PC por local. El servicio ya viene
+   dentro del instalador, así que no hay nada más que descargar. El mismo
+   interruptor la apaga cuando haga falta.
 4. ¿Necesitas conectar esta PC con otra cuenta o restaurante después? Basta
    **cerrar sesión en el panel y entrar con la otra cuenta** — la app sigue
    sola al restaurante que resuelva el login (v0.3.0). También está el atajo
