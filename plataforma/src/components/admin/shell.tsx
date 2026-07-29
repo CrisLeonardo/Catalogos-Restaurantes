@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
 import WaiterCallsAlert from '@/components/admin/waiter-calls-alert';
+import NewOrdersAlert from '@/components/admin/new-orders-alert';
 import OfflineSupport from '@/components/offline-support';
 import AdminThemeToggle from '@/components/admin/theme-toggle';
 import WelcomeTour from '@/components/admin/welcome-tour';
@@ -484,7 +485,6 @@ export default function AdminShell({
           {!preview && restaurantId && ordersEnabled ? (
             <AdminNotifications
               restaurantId={restaurantId}
-              muteChime={isLive || isKitchen}
               kitchenMode={isKitchen}
             />
           ) : (
@@ -495,6 +495,15 @@ export default function AdminShell({
         </div>
         <div className="admin-content">{children}</div>
       </div>
+      {!preview && restaurantId && ordersEnabled && (
+        // Alerta de pedido nuevo, visible en TODO el panel (no solo en
+        // /admin/pedidos) y persistente hasta que alguien la atienda. Es
+        // además la ÚNICA fuente del sonido de pedido: orders-panel y
+        // notifications.tsx ya no suenan por su cuenta, así que no pueden
+        // encimarse dos chimes por el mismo pedido. Solo se mutea en cocina,
+        // que tiene su propio aviso (kitchen-display.tsx).
+        <NewOrdersAlert restaurantId={restaurantId} muteChime={isKitchen} />
+      )}
       {!preview && restaurantId && llamadaMeseroActive && (
         // OJO: a diferencia de AdminNotifications, ninguna pantalla (orders-panel,
         // kitchen-display) reproduce sonido de llamada al mesero por su cuenta —

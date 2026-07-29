@@ -71,7 +71,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Menú en línea',
     description: 'Menús interactivos para restaurantes',
-    manifest: '/api/manifest',
+    // Nota: NO se fija `manifest` aquí — src/app/manifest.ts (archivo de
+    // convención, mismo segmento raíz) siempre gana sobre este campo cuando
+    // ambos compiten por el mismo segmento (confirmado en el navegador: el
+    // <link rel=manifest> real es /manifest.webmanifest, nunca lo que diga
+    // este objeto). Mismo motivo por el que se sacó apple-icon.tsx arriba,
+    // pero al revés: ahí la convención daba un ícono genérico y había que
+    // evitarla; aquí la convención YA hace lo correcto (lee x-tenant-slug),
+    // así que un `manifest: '/algo'` aquí sería código muerto.
     appleWebApp: {
       capable: true,
       statusBarStyle: 'black-translucent',

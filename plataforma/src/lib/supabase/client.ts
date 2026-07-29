@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { DINER_COOKIE_NAME } from "@/lib/supabase/cookies";
+import { getStableLinkPrefix } from "@/lib/tenant-client";
 
 /**
  * Clientes Supabase para el NAVEGADOR (Client Components, Realtime).
@@ -31,9 +32,16 @@ const COOKIE_DOMAIN = isLocalEnv ? undefined : `.${rootDomainRaw.split(":")[0]}`
 function createWithCookieName(cookieName?: string) {
   // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
   const domain = cookieName ? undefined : COOKIE_DOMAIN;
+  // Bajo el link estable de mesa (dominio raíz), la cookie del COMENSAL debe
+  // quedar atada a `/m/<restaurantId>/` — si no, la sesión de invitado de un
+  // restaurante se vería en /m/<otro-id>/ del mismo host (ver proxy.ts, que
+  // hace lo mismo del lado servidor para esta misma cookie).
+  const stablePrefix = cookieName ? getStableLinkPrefix() : null;
   const baseOptions = domain
     ? { domain, path: "/", sameSite: "lax" as const }
-    : {};
+    : stablePrefix
+      ? { path: `${stablePrefix}/` }
+      : {};
   const cookieOptions = {
     ...baseOptions,
     ...(cookieName ? { name: cookieName } : {}),

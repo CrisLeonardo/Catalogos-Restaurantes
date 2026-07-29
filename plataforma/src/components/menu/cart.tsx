@@ -10,6 +10,7 @@ import { Price, QtyStepper, PrimaryButton, ctaClass } from '@/components/menu/ui
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
+import { useTenantPrefix } from '@/lib/tenant-client';
 
 /* Barra inferior fija con el resumen del carrito. */
 export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIconHidden?: boolean }) {
@@ -44,6 +45,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
   const content = useThemeContent();
   const config = useThemeConfig();
   const titleT = useText('heading', 'cartTitle');
+  const checkoutHref = useTenantPrefix('/checkout');
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -132,7 +134,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                 <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--u-text)' }}>{content.cart.total}</span>
                 <Price amount={total} size={22} />
               </div>
-              <PrimaryButton href="/checkout" onClick={onClose} size="lg" full iconRight="arrowRight">{content.cart.checkout}</PrimaryButton>
+              <PrimaryButton href={checkoutHref} onClick={onClose} size="lg" full iconRight="arrowRight">{content.cart.checkout}</PrimaryButton>
             </div>
           </>
         )}

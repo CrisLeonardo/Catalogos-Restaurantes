@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { DINER_COOKIE_NAME } from "@/lib/supabase/cookies";
 
 export { DINER_COOKIE_NAME };
@@ -37,6 +37,13 @@ async function createWithCookieName(cookieName?: string) {
   const cookieStore = await cookies();
   // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
   const domain = cookieName ? undefined : COOKIE_DOMAIN;
+  // Bajo el link estable de mesa (dominio raíz, ver proxy.ts §1b), la cookie
+  // del COMENSAL necesita quedar atada a `/m/<restaurantId>/` — si no, la
+  // sesión de invitado de un restaurante (p.ej. tras el login de Google en
+  // /auth/callback) se filtraría a /m/<otro-id>/ del mismo host. Mismo ajuste
+  // que ya hacen proxy.ts y lib/supabase/client.ts para esta misma cookie.
+  const stableId = cookieName ? (await headers()).get("x-tenant-stable-id") : null;
+  const path = stableId ? `/m/${stableId}/` : undefined;
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,6 +60,7 @@ async function createWithCookieName(cookieName?: string) {
               cookieStore.set(name, value, {
                 ...options,
                 ...(domain ? { domain } : {}),
+                ...(path ? { path } : {}),
               }),
             );
           } catch {

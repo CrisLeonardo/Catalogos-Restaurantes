@@ -17,6 +17,7 @@ import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { getPublicOrder, cancelPublicOrder, type PublicOrder } from '@/lib/actions/orders';
+import { useTenantPrefix } from '@/lib/tenant-client';
 import type { OrderStatus } from '@/types';
 
 const POLL_MS = 8000;
@@ -51,6 +52,7 @@ export default function OrderTracker({
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
+  const backHref = useTenantPrefix('/');
   const trackTitleT = useText('heading', 'trackingTitle');
   const [order, setOrder] = useState<PublicOrder>(initialOrder);
   const orderRef = useRef(initialOrder);
@@ -173,7 +175,7 @@ export default function OrderTracker({
     <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <Link href={backHref} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <Icon name="chevronLeft" size={16} /> {content.tracking.back}
         </Link>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
@@ -373,7 +375,7 @@ export default function OrderTracker({
         </div>
       </Glass>
 
-      <PrimaryButton href="/" full>{content.tracking.back}</PrimaryButton>
+      <PrimaryButton href={backHref} full>{content.tracking.back}</PrimaryButton>
     </main>
   );
 }

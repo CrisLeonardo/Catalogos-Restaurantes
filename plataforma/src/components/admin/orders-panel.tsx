@@ -9,7 +9,6 @@ import { Icon } from '@/components/icons';
 import { getOrdersPdfData, exportOrdersXlsx, updateOrderStatus } from '@/lib/actions/orders';
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
-import { playOrderSound, loadSoundSettings } from '@/lib/sounds';
 import { localDateKey } from '@/lib/hours';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,16 +33,13 @@ interface Props {
   voidApprovers?: VoidApprover[];
 }
 
-/** Sonido de pedido nuevo — el MISMO de sounds.ts a propósito: respeta el
-    volumen/repetición que el usuario configuró en la campana, reutiliza el
-    AudioContext compartido (la versión anterior creaba un contexto NUEVO por
-    cada pedido — fuga de recursos y sonidos encimados en ráfagas) y trae el
-    freno de ráfagas incorporado (15 pedidos sincronizando de golpe suenan
-    UNA vez, no 15). */
-function chime() {
-  const s = loadSoundSettings();
-  playOrderSound(s.orderVolume, s.orderRepeat);
-}
+/* El sonido y el aviso visual de "pedido nuevo" ya NO viven aquí: los maneja
+   NewOrdersAlert (components/admin/new-orders-alert.tsx), montado en el
+   AdminShell y por tanto presente en todo el panel. Este componente sonaba en
+   /admin/pedidos y notifications.tsx en el resto de pantallas, cada uno con su
+   propio freno de ráfagas — dos dueños del mismo evento que podían encimarse.
+   Ahora hay un solo dueño, con dedup por id de pedido y entre pestañas. Aquí
+   solo queda refrescar los datos y programar la auto-confirmación. */
 
 /** Formatea un monto con la moneda REAL del restaurante (no "Q" fijo). */
 export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
@@ -168,8 +164,8 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
           (payload) => {
             const newOrder = payload.new as Order;
             if (newOrder.restaurant_id !== restaurantId) return;
-            chime();
-            showToast(`Nuevo pedido ${newOrder.order_number} — ${newOrder.customer_name}`);
+            // Sin chime ni toast: NewOrdersAlert ya muestra una tarjeta
+            // persistente y suena una sola vez por pedido.
             if (newOrder.status === 'NEW') scheduleAutoConfirm(newOrder.id, newOrder.created_at);
             refreshSoon();
           },
@@ -213,7 +209,7 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
       if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
-  }, [restaurantId, refreshSoon, scheduleAutoConfirm, cancelAutoConfirm, showToast]);
+  }, [restaurantId, refreshSoon, scheduleAutoConfirm, cancelAutoConfirm]);
 
   function downloadExcel() {
     startExportXls(async () => {

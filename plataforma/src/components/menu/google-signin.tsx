@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createDinerClient } from '@/lib/supabase/client';
+import { getStableLinkPrefix } from '@/lib/tenant-client';
 
 /** Logo "G" oficial de Google (multicolor). */
 function GoogleG({ size = 18 }: { size?: number }) {
@@ -38,7 +39,12 @@ export default function GoogleSignInButton({ label = 'Continuar con Google', ful
       const url = new URL(window.location.pathname + window.location.search, window.location.origin);
       if (returnTab) url.searchParams.set('openTab', returnTab);
       const next = url.pathname + url.search;
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      // getStableLinkPrefix: bajo el link estable de mesa, el callback tiene
+      // que volver a /m/<restaurantId>/auth/callback — si no, el proxy no
+      // puede resolver a qué restaurante pertenece esta vuelta del OAuth (ver
+      // proxy.ts §1b). Seguro llamarlo aquí (solo corre al hacer clic, nunca
+      // durante el render). `next` ya trae el prefijo (viene de window.location.pathname).
+      const redirectTo = `${window.location.origin}${getStableLinkPrefix() ?? ''}/auth/callback?next=${encodeURIComponent(next)}`;
       // `prompt: 'select_account'` fuerza el selector de cuenta de Google en
       // CADA inicio de sesión, incluso si el navegador ya tiene una sesión de
       // Google activa. Sin esto, Google reautentica en silencio con la última

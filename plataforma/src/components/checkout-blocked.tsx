@@ -8,6 +8,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeContent } from '@/lib/theme/context';
+import { useTenantPrefix } from '@/lib/tenant-client';
 
 export default function CheckoutBlocked({
   reason,
@@ -17,6 +18,7 @@ export default function CheckoutBlocked({
   pauseMessage: string | null;
 }) {
   const content = useThemeContent();
+  const backHref = useTenantPrefix('/');
   const title = reason === 'paused' ? content.checkout.pausedTitle : content.checkout.closedTitle;
   const msg =
     reason === 'paused'
@@ -33,7 +35,7 @@ export default function CheckoutBlocked({
         <p className="t-serif" style={{ fontSize: 16, lineHeight: 1.45, marginBottom: 22 }}>
           {msg}
         </p>
-        <PrimaryButton href="/" full>{content.tracking.back}</PrimaryButton>
+        <PrimaryButton href={backHref} full>{content.tracking.back}</PrimaryButton>
       </Glass>
     </main>
   );

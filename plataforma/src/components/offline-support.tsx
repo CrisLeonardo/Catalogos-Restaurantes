@@ -14,13 +14,22 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { getStableLinkPrefix } from '@/lib/tenant-client';
 
 export default function OfflineSupport() {
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      // Bajo el link estable de mesa (dominio raíz), el scope tiene que
+      // quedar acotado a `/m/<restaurantId>/` — si no, el SW de un
+      // restaurante interceptaría fetches de otro restaurante (o de la
+      // landing) bajo el mismo dominio raíz. En el caso normal (subdominio
+      // propio del tenant, o panel admin) el prefijo es null y el scope por
+      // defecto ('/') sigue igual que siempre.
+      const prefix = getStableLinkPrefix();
+      const options = prefix ? { scope: `${prefix}/` } : undefined;
+      navigator.serviceWorker.register('/sw.js', options).catch(() => {});
     }
 
     setOnline(navigator.onLine);

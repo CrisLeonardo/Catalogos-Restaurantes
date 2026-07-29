@@ -16,6 +16,7 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeContent } from '@/lib/theme/context';
 import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/actions/orders';
 import { getLocalOrders, addLocalOrder } from '@/lib/customer-local';
+import { useStableLinkPrefix } from '@/lib/tenant-client';
 import type { OrderStatus } from '@/types';
 
 const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'];
@@ -26,6 +27,7 @@ const FRESH_MS = 12 * 60 * 60 * 1000;
 export default function ActiveOrderChip({ restaurantId }: { restaurantId: string }) {
   const content = useThemeContent();
   const { count } = useCart();
+  const stablePrefix = useStableLinkPrefix();
   const [active, setActive] = useState<{ token: string; orderNumber: string; status: OrderStatus } | null>(null);
   const stopped = useRef(false);
 
@@ -112,7 +114,7 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
 
   return (
     <Link
-      href={`/pedido/${active.token}`}
+      href={stablePrefix ? `${stablePrefix}/pedido/${active.token}` : `/pedido/${active.token}`}
       className="glass-solid press anim-slide-up"
       style={{
         // Si la barra del carrito está visible, el chip flota encima de ella.

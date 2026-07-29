@@ -444,6 +444,13 @@ export async function createOrder(
     body:  `${order.order_number} · ${customer.name} · ${typeLabel}`,
     tag:   order.id,
     url:   '/admin/pedidos',
+    // El service worker reenvía este `type` por postMessage a las pestañas
+    // abiertas del panel (ver public/sw.js). Sin él el push llegaba a la barra
+    // del sistema pero la pestaña no se enteraba: el aviso dentro del panel
+    // dependía únicamente del socket de Realtime, y si ese socket estaba caído
+    // (red inestable, laptop que despertó de suspensión, JWT vencido) no sonaba
+    // NADA ni aparecía nada. Las llamadas al mesero ya usaban esta vía.
+    type:  'new_order',
   }).catch(() => {});
 
   return {
@@ -628,6 +635,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     body: `${order.order_number} · ${customer.name} · Mesa ${customer.tableNumber ?? '?'}`,
     tag: order.id,
     url: '/admin/pedidos',
+    type: 'new_order',
   }).catch(() => {});
 
   // Auto-disparo a cocina: la comanda se imprime al instante vía el Agente de
@@ -1287,6 +1295,70 @@ async function buildOrdersExportData(
     restaurantName: (restaurant?.name as string) ?? 'Restaurante',
     filename: `pedidos-${restaurant?.slug ?? 'restaurante'}-${today}`,
   };
+}
+
+/* ── Alerta de pedidos sin atender (respaldo del Realtime) ───────────── */
+
+/** Lo mínimo que necesita la tarjeta de aviso — nada de items ni totales. */
+export interface PendingNewOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  order_type: 'PICKUP' | 'DELIVERY' | 'DINE_IN';
+  /** "Mesa 4" en DINE_IN, dirección en DELIVERY, null en PICKUP (no hay
+   *  columna de mesa: se guarda en `address`, ver createOrder). */
+  address: string | null;
+  created_at: string;
+}
+
+/**
+ * Pedidos recién llegados que nadie ha confirmado todavía (status NEW).
+ *
+ * Es la vía de respaldo de la alerta del panel: el aviso de pedido nuevo
+ * dependía SOLO de un INSERT de Realtime, así que un socket caído lo dejaba
+ * en silencio absoluto y sin rastro visual. Con esto la alerta llega igual por
+ * sondeo, como ya hacían las llamadas al mesero (getPendingWaiterCalls).
+ *
+ * Ventana de 30 minutos: al abrir el panel interesa saber qué entró y sigue sin
+ * atender, no arrastrar un pedido NEW olvidado de ayer.
+ */
+export async function getPendingNewOrders(restaurantId: string): Promise<PendingNewOrder[]> {
+  if (!restaurantId) return [];
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const db = createServiceClient();
+  const { data: profile } = await db
+    .from('profiles')
+    .select('role, restaurant_id')
+    .eq('id', user.id)
+    .single();
+  if (!profile) return [];
+
+  // Cualquier miembro del restaurante puede ver el aviso (dueño, caja, mesero):
+  // el objetivo es justamente que no dependa de que una persona concreta esté
+  // mirando la pantalla de pedidos.
+  const ownsBranch = profile.role === 'SUPER_ADMIN'
+    ? true
+    : profile.role === 'GROUP_OWNER'
+      ? (await resolveGroupBranchId()) === restaurantId
+      : profile.restaurant_id === restaurantId;
+  if (!ownsBranch) return [];
+
+  const since = new Date(Date.now() - 30 * 60_000).toISOString();
+  const { data, error } = await db
+    .from('orders')
+    .select('id, order_number, customer_name, order_type, address, created_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('status', 'NEW')
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+    .limit(30);
+
+  if (error) return [];
+  return (data ?? []) as PendingNewOrder[];
 }
 
 /** Datos ya armados (numéricos + marca) para dibujar el PDF de pedidos en el cliente. */

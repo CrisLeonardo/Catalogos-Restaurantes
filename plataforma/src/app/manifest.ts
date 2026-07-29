@@ -10,7 +10,13 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
  *  - En la demo o el dominio raíz → "Leogin" (la plataforma).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const slug = (await headers()).get('x-tenant-slug');
+  const headersList = await headers();
+  const slug = headersList.get('x-tenant-slug');
+  // Presente cuando esta página se sirve por el link ESTABLE de mesa
+  // (dominio raíz, ver proxy.ts §1b) — cada restaurante necesita su propio
+  // scope DENTRO de ese dominio compartido (`/m/<id>/`), si no Android
+  // instalaría una sola PWA con scope '/' que chocaría entre restaurantes.
+  const stableId = headersList.get('x-tenant-stable-id');
 
   let name = 'Leogin';
   let logoUrl: string | null = null;
@@ -57,16 +63,21 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       ];
 
+  // id explícito: Chrome 97+ lo usa para distinguir PWAs del mismo origen.
+  // El catálogo tiene id='/' y el admin tiene id='/admin/', así pueden
+  // instalarse como apps separadas aunque compartan el mismo dominio. Bajo
+  // el link estable de mesa (dominio raíz), cada restaurante usa `/m/<id>/`
+  // en su lugar — mismo truco, un nivel más: distintos restaurantes en el
+  // mismo dominio raíz, cada uno con su propio scope no-superpuesto.
+  const scope = stableId ? `/m/${stableId}/` : '/';
+
   return {
     name,
     short_name: name,
     description: 'Menús interactivos para restaurantes',
-    // id explícito: Chrome 97+ lo usa para distinguir PWAs del mismo origen.
-    // El catálogo tiene id='/' y el admin tiene id='/admin/', así pueden
-    // instalarse como apps separadas aunque compartan el mismo dominio.
-    id: '/',
-    start_url: '/',
-    scope: '/',
+    id: scope,
+    start_url: scope,
+    scope,
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#0b0b0c',

@@ -17,6 +17,7 @@ import { Price, PrimaryButton } from '@/components/menu/ui';
 import { useThemeContent } from '@/lib/theme/context';
 import { getPublicOrder, getMyOrderRefs, getOrderRefByClientId } from '@/lib/actions/orders';
 import { getLocalOrders, addLocalOrder, type LocalOrderRef } from '@/lib/customer-local';
+import { useStableLinkPrefix } from '@/lib/tenant-client';
 import type { OrderStatus } from '@/types';
 
 const ACTIVE: OrderStatus[] = ['NEW', 'PREP', 'READY', 'TRANSIT', 'SERVED'];
@@ -28,6 +29,8 @@ const PENDING_POLL_MS = 8_000;
 
 export default function MyOrders({ restaurantId, onBack }: { restaurantId: string; onBack?: () => void }) {
   const content = useThemeContent();
+  const stablePrefix = useStableLinkPrefix();
+  const tp = (path: string) => (stablePrefix ? `${stablePrefix}${path}` : path);
   const [orders, setOrders] = useState<LocalOrderRef[]>([]);
   const [statuses, setStatuses] = useState<Record<string, OrderStatus>>({});
   const [loaded, setLoaded] = useState(false);
@@ -134,7 +137,7 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
             <Icon name="chevronLeft" size={20} />
           </button>
         ) : (
-          <Link href="/" className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, display: 'grid', placeItems: 'center', color: 'var(--u-text)', textDecoration: 'none', flexShrink: 0 }} aria-label="Volver al menú">
+          <Link href={tp('/')} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, display: 'grid', placeItems: 'center', color: 'var(--u-text)', textDecoration: 'none', flexShrink: 0 }} aria-label="Volver al menú">
             <Icon name="chevronLeft" size={20} />
           </Link>
         )}
@@ -151,7 +154,7 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
           <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginBottom: 18 }}>
             Cuando hagas un pedido, aquí lo encontrarás con su seguimiento en vivo.
           </p>
-          <PrimaryButton href="/">{content.cart.emptyCta}</PrimaryButton>
+          <PrimaryButton href={tp('/')}>{content.cart.emptyCta}</PrimaryButton>
         </Glass>
       )}
 
@@ -213,7 +216,7 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
           return pending ? (
             <div key={o.clientId || o.token}>{card}</div>
           ) : (
-            <Link key={o.clientId || o.token} href={`/pedido/${o.token}`} className="press" style={{ textDecoration: 'none' }}>
+            <Link key={o.clientId || o.token} href={tp(`/pedido/${o.token}`)} className="press" style={{ textDecoration: 'none' }}>
               {card}
             </Link>
           );

@@ -6,8 +6,9 @@
    Se monta en el AdminShell (lo ven dueño, staff y meseros) cuando
    el módulo "Llamar al mesero" está activo. Muestra una lista fija
    de llamadas pendientes con botón "Atendido". Se entera de llamadas
-   nuevas por TRES vías (evento DOM de notifications.tsx, su propio
-   canal Realtime de respaldo, y polling cada 6 s) — y este componente
+   nuevas por CUATRO vías (evento DOM de notifications.tsx, su propio
+   canal Realtime de respaldo, el puente del push del service worker y
+   polling cada 6 s) — y este componente
    es la ÚNICA fuente de verdad del SONIDO: lo dispara una sola vez
    por llamada (dedup vía `seenIds`) sin importar cuál de las tres vías
    la detectó primero. Así el chime suena incluso si el canal Realtime
@@ -20,7 +21,7 @@ import { useEffect, useRef, useState, useTransition, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
-import { primeAudio, playWaiterSound, loadSoundSettings } from '@/lib/sounds';
+import { primeAudio, playWaiterSound, loadSoundSettings, claimSoundEvent } from '@/lib/sounds';
 import {
   getPendingWaiterCalls,
   resolveWaiterCall,
@@ -67,6 +68,12 @@ export default function WaiterCallsAlert({
     if (seenIds.current === null || seenIds.current.has(id)) return;
     seenIds.current.add(id);
     if (muteRef.current) return;
+    // Dedup ENTRE pestañas: tener el panel abierto en dos pestañas (resumen +
+    // pedidos, o el navegador restaurando la sesión) hacía que cada una sonara
+    // por su cuenta con unos milisegundos de diferencia — dos campanillas
+    // desfasadas se oyen exactamente como "llegaron varias llamadas a la vez".
+    // La tarjeta sí se muestra en todas; solo el audio se reparte.
+    if (!claimSoundEvent('waiter', id)) return;
     primeAudio();
     const s = loadSoundSettings();
     playWaiterSound(s.waiterVolume, s.waiterRepeat);

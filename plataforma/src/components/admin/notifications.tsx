@@ -15,13 +15,19 @@
    · 'blocked'  → bloqueado por el navegador → rojo
    · 'busy'     → procesando → azul
 
-   Sonidos (ver src/lib/sounds.ts):
-   · Pedido nuevo  → playOrderSound   (sine ascendente, do-mi-sol)
-   · Llamar mesero → playWaiterSound  (campanilla aguda sol5-do6, 3 ráfagas)
-   · Cocina        → playKitchenSound (campana cálida y grave fa5-do5)
+   Sonidos (ver src/lib/sounds.ts): este componente NO reproduce ninguno.
+   Solo aloja el panel de ajustes (volumen / repetición / probar). Cada
+   sonido tiene un dueño único, para que dos componentes no puedan sonar
+   encimados por el mismo evento:
+   · Pedido nuevo  → new-orders-alert.tsx  (playOrderSound)
+   · Llamar mesero → waiter-calls-alert.tsx (playWaiterSound)
+   · Cocina        → kitchen-display.tsx    (playKitchenSound)
+   Aquí solo se traducen los INSERT de Realtime a eventos DOM
+   (`order-new`, `waiter-call-new`) que esos dueños escuchan, más la
+   notificación del sistema (push / Tauri).
 
-   kitchenMode=true → silencia pedidos y llamadas de mesero en la
-   pantalla de cocina; kitchen-display.tsx maneja su propio sonido.
+   kitchenMode=true → sin toast de llamada al mesero en la pantalla de
+   cocina (por diseño: la cocina no atiende mesas).
    ============================================================ */
 
 import { useEffect, useRef, useState } from 'react';
@@ -133,11 +139,9 @@ const DESKTOP_NOTIF_KEY = 'leogin-desktop-notif-enabled';
 /* ── Componente principal ────────────────────────────────────────────── */
 export default function AdminNotifications({
   restaurantId,
-  muteChime   = false,
   kitchenMode = false,
 }: {
   restaurantId: string;
-  muteChime?:   boolean;
   kitchenMode?: boolean;
 }) {
   const router = useRouter();
@@ -155,32 +159,15 @@ export default function AdminNotifications({
 
   const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popupTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const muteRef     = useRef(muteChime);
   const kitchenRef  = useRef(kitchenMode);
-  const settingsRef = useRef<SoundSettings>(DEFAULT_SOUND_SETTINGS);
   const swRegRef    = useRef<ServiceWorkerRegistration | null>(null);
-  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastRefresh  = useRef(0);
 
-  /* Coalescer de router.refresh(): una ráfaga de INSERTs (p. ej. 15 pedidos
-     encolados offline que sincronizan de golpe al volver la señal) disparaba
-     un refresh POR PEDIDO — 15 re-renders completos del server component en
-     segundos, con el panel congelado justo cuando más se necesita. Máximo un
-     refresh cada 2.5 s; el último evento de la ráfaga siempre queda cubierto
-     (trailing). */
-  function refreshSoon() {
-    if (refreshTimer.current) return;
-    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
-    refreshTimer.current = setTimeout(() => {
-      refreshTimer.current = null;
-      lastRefresh.current = Date.now();
-      router.refresh();
-    }, wait);
-  }
+  /* El coalescer de router.refresh() que vivía aquí se fue a NewOrdersAlert,
+     que ahora es el dueño único del evento "pedido nuevo" (sonido, tarjeta y
+     refresco). Tener dos coalescers separados reaccionando al mismo INSERT
+     disparaba dos re-renders del server component por pedido. */
 
-  useEffect(() => { muteRef.current    = muteChime;    }, [muteChime]);
   useEffect(() => { kitchenRef.current = kitchenMode;  }, [kitchenMode]);
-  useEffect(() => { settingsRef.current = soundSettings; }, [soundSettings]);
 
   /* Cargar ajustes de sonido desde localStorage */
   useEffect(() => { setSoundSettings(loadSoundSettings()); }, []);
@@ -314,17 +301,15 @@ export default function AdminNotifications({
           const order = payload.new as Order;
           if (order.restaurant_id !== restaurantId) return;
 
-          // En modo cocina y en modo pedidos-en-vivo el sonido/toast lo
-          // maneja el componente específico (kitchen-display / orders-panel).
-          if (!muteRef.current && !kitchenRef.current) {
-            const s = settingsRef.current;
-            // El propio playOrderSound frena ráfagas (ver sounds.ts).
-            playOrderSound(s.orderVolume, s.orderRepeat);
-            if (toastTimer.current) clearTimeout(toastTimer.current);
-            setToast(`🛎 Pedido ${order.order_number} — ${order.customer_name}`);
-            toastTimer.current = setTimeout(() => setToast(null), 5000);
-            refreshSoon();
-          }
+          // Avisa a NewOrdersAlert en el mismo tick (sin esperar su propio
+          // canal). NewOrdersAlert es la única fuente de verdad del SONIDO y
+          // de la tarjeta de pedido nuevo: combina este evento con su canal de
+          // respaldo, el sondeo de 12 s y el puente del push, y dispara el
+          // audio una sola vez sin importar por cuál vía se enteró. Antes este
+          // componente sonaba por su cuenta y mostraba un toast de 5 s: si el
+          // socket se caía no pasaba nada, y si nadie miraba en esos 5 s el
+          // pedido quedaba invisible.
+          window.dispatchEvent(new CustomEvent('order-new', { detail: order }));
 
           // Notificación de fondo (en navegador, refuerza el push que ya
           // disparó el servidor; en Leogin Desktop es la única vía real).
@@ -395,10 +380,6 @@ export default function AdminNotifications({
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      if (refreshTimer.current) {
-        clearTimeout(refreshTimer.current);
-        refreshTimer.current = null;
-      }
       if (channel) supabase.removeChannel(channel);
       stopAuthSync();
     };
@@ -634,6 +615,27 @@ export default function AdminNotifications({
             onRepeat={r  => updateSound({ orderRepeat:  r })}
             onTest={() => { primeAudio(); setAudioBlocked(!isAudioUnlocked()); playOrderSound(soundSettings.orderVolume, soundSettings.orderRepeat, { force: true }); }}
           />
+
+          {/* Recordatorio insistente: un solo chime se pierde con facilidad
+              (encargado en la bodega, cobrando, local ruidoso). Con esto el
+              aviso se repite cada ~22 s mientras el pedido siga sin atender. */}
+          <label style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer',
+            marginTop: 9, marginBottom: 2,
+          }}>
+            <input
+              type="checkbox"
+              checked={soundSettings.orderNag}
+              onChange={e => { primeAudio(); updateSound({ orderNag: e.target.checked }); }}
+              style={{ marginTop: 2, accentColor: 'var(--brand-accent, #6366f1)', cursor: 'pointer', flexShrink: 0 }}
+            />
+            <span style={{ fontSize: 11, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
+              Repetir el aviso hasta que alguien atienda el pedido
+              <span style={{ display: 'block', color: 'var(--u-text-3)', fontSize: 10.5 }}>
+                Se repite cada 22 s (máximo 10 veces) mientras la alerta siga en pantalla.
+              </span>
+            </span>
+          </label>
 
           <div style={{ height: 1, background: 'var(--glass-stroke)', margin: '10px 0' }} />
 

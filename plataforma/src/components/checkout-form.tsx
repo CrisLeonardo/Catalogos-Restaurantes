@@ -19,6 +19,7 @@ import { isValidGuatemalaPhone } from '@/lib/schemas';
 import { submitRating } from '@/lib/actions/encuestas';
 import { getScannedTable, clearScannedTable, watchScannedTable } from '@/lib/table-session';
 import { isKioskMode } from '@/lib/kiosk';
+import { useStableLinkPrefix } from '@/lib/tenant-client';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -101,6 +102,9 @@ export default function CheckoutForm({
   const checkoutTitleT = useText('heading', 'checkoutTitle');
   const confirmTitleT  = useText('heading', 'confirmationTitle');
   const { items, total, clearCart, pointsToRedeem } = useCart();
+  // Prefijo del link estable de mesa (null hasta montar — ver useStableLinkPrefix).
+  const stablePrefix = useStableLinkPrefix();
+  const tp = (path: string) => (stablePrefix ? `${stablePrefix}${path}` : path);
 
   // "Comer en local" solo se ofrece si el comensal escaneó el QR de su mesa.
   const [hasScannedTable, setHasScannedTable] = useState(false);
@@ -187,7 +191,7 @@ export default function CheckoutForm({
   // tiempo a leer el número de pedido y dejar una calificación.
   useEffect(() => {
     if (!kiosk || step !== 'success') return;
-    const t = setTimeout(() => { window.location.href = '/'; }, 45_000);
+    const t = setTimeout(() => { window.location.href = tp('/'); }, 45_000);
     return () => clearTimeout(t);
   }, [kiosk, step]);
 
@@ -718,7 +722,7 @@ export default function CheckoutForm({
         <Glass style={{ padding: '32px 24px', textAlign: 'center', maxWidth: 380, width: '100%' }}>
           <Icon name="bag" size={44} strokeWidth={1.3} style={{ color: 'var(--u-text-4)', margin: '0 auto 16px' }} />
           <h2 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 10 }}>{content.cart.empty}</h2>
-          <PrimaryButton href="/">{content.cart.emptyCta}</PrimaryButton>
+          <PrimaryButton href={tp('/')}>{content.cart.emptyCta}</PrimaryButton>
         </Glass>
       </main>
     );
@@ -805,7 +809,7 @@ export default function CheckoutForm({
             </div>
           )}
           {trackToken && !kiosk && (
-            <PrimaryButton href={`/pedido/${trackToken}`} full iconRight="arrowRight">
+            <PrimaryButton href={tp(`/pedido/${trackToken}`)} full iconRight="arrowRight">
               {content.confirmation.track}
             </PrimaryButton>
           )}
@@ -912,7 +916,7 @@ export default function CheckoutForm({
 
           {kiosk ? (
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-              <PrimaryButton href="/" full iconRight="arrowRight">
+              <PrimaryButton href={tp('/')} full iconRight="arrowRight">
                 Hacer otro pedido
               </PrimaryButton>
               <p className="t-mute" style={{ fontSize: 11.5, margin: 0 }}>
@@ -921,10 +925,10 @@ export default function CheckoutForm({
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <Link href="/mis-pedidos" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+              <Link href={tp('/mis-pedidos')} className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
                 Mis pedidos
               </Link>
-              <Link href="/" className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+              <Link href={tp('/')} className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
                 {content.confirmation.again}
               </Link>
             </div>
@@ -938,7 +942,7 @@ export default function CheckoutForm({
   return (
     <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       <div style={{ marginBottom: 20 }}>
-        <Link href="/" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <Link href={tp('/')} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <Icon name="chevronLeft" size={16} /> {restaurantName}
         </Link>
         <h1 className="t-display" style={{ ...checkoutTitleT.vars, fontSize: 28 * checkoutTitleT.size }}>{content.checkout.title}</h1>
