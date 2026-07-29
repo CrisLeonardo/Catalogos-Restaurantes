@@ -1,16 +1,26 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export type CouponResult = { error?: string; ok?: boolean };
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 /* ── Preview público (checkout) ─────────────────────────────── */
+/**
+ * Comprueba un código de cupón desde el checkout (público, sin sesión).
+ *
+ * Al ser un oráculo de "existe / no existe" abierto a internet, sin freno se
+ * podían adivinar los códigos de cualquier restaurante a fuerza bruta (los
+ * códigos suelen ser cortos y legibles). El límite por IP+restaurante deja
+ * pasar de sobra los intentos honestos de un comensal.
+ */
 export async function validateCoupon(
   restaurantId: string,
   code: string,
@@ -18,6 +28,12 @@ export async function validateCoupon(
 ): Promise<{ ok: true; discount: number; code: string } | { ok: false; error: string }> {
   if (!UUID_RE.test(restaurantId)) return { ok: false, error: 'Restaurante inválido.' };
   if (!code?.trim()) return { ok: false, error: 'Escribe un código.' };
+  if (code.length > 64) return { ok: false, error: 'Cupón no válido o no aplica a tu pedido.' };
+
+  const ip = clientIp(await headers());
+  if (!rateLimit(`coupon:${ip}:${restaurantId}`, 15, 10 * 60_000)) {
+    return { ok: false, error: 'Demasiados intentos. Espera unos minutos.' };
+  }
 
   const res = await resolveCoupon(restaurantId, code, Number(subtotal) || 0);
   if (!res) return { ok: false, error: 'Cupón no válido o no aplica a tu pedido.' };

@@ -1,8 +1,13 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendPushToRestaurant } from '@/lib/push';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+
+const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 export type WaiterCall = {
   id: string;
@@ -25,22 +30,57 @@ async function authorizedFor(restaurantId: string): Promise<boolean> {
   return profile.role === 'SUPER_ADMIN' || profile.restaurant_id === restaurantId;
 }
 
-/** El comensal llama al mesero (público, anónimo). */
+/**
+ * El comensal llama al mesero (público, anónimo).
+ *
+ * Es una de las poquísimas acciones que cualquiera en internet puede invocar
+ * sin sesión, y dispara una notificación push a los dispositivos del personal.
+ * Sin los controles de abajo, cualquiera podía inundar de alertas a un
+ * restaurante con solo repetir la llamada (basta su restaurantId, que es
+ * público en el menú). De ahí: límite por IP, techo por restaurante —para que
+ * un atacante con muchas IPs tampoco lo logre—, y comprobar que el módulo
+ * "Llamar al mesero" esté realmente activo.
+ */
 export async function callWaiter(
   restaurantId: string,
   tableNumber: number | null,
 ): Promise<{ ok?: boolean; error?: string }> {
-  if (!restaurantId) return { error: 'Restaurante no especificado.' };
+  if (!UUID_RE.test(restaurantId ?? '')) return { error: 'Restaurante no especificado.' };
+
+  // Mesa: entero razonable o nada (evita guardar basura del cliente).
+  const table =
+    tableNumber == null || !Number.isFinite(tableNumber)
+      ? null
+      : Math.trunc(tableNumber) >= 1 && Math.trunc(tableNumber) <= 9999
+        ? Math.trunc(tableNumber)
+        : null;
+
+  const ip = clientIp(await headers());
+  if (!rateLimit(`waiter:${ip}:${restaurantId}`, 5, 5 * 60_000) ||
+      !rateLimit(`waiter:${restaurantId}`, 60, 5 * 60_000)) {
+    return { error: 'Ya avisamos al mesero. Espera un momento.' };
+  }
 
   const db = createServiceClient();
+
+  const { data: rest } = await db
+    .from('restaurants')
+    .select('modules, module_settings, status')
+    .eq('id', restaurantId)
+    .maybeSingle();
+  if (!rest || rest.status !== 'active') return { error: 'Restaurante no disponible.' };
+  if (!isModuleActive(rest.modules as ModulesMap, rest.module_settings as ModuleSettings, 'llamada_mesero')) {
+    return { error: 'Este restaurante no tiene activada la llamada al mesero.' };
+  }
+
   const { error } = await db.from('waiter_calls').insert({
     restaurant_id: restaurantId,
-    table_number: tableNumber ?? null,
+    table_number: table,
   });
 
   if (error) return { error: error.message };
 
-  const tableLabel = tableNumber ? ` · Mesa ${tableNumber}` : '';
+  const tableLabel = table ? ` · Mesa ${table}` : '';
   sendPushToRestaurant(restaurantId, {
     title: '🔔 Llamada al mesero',
     body: `Un cliente${tableLabel} necesita atención.`,

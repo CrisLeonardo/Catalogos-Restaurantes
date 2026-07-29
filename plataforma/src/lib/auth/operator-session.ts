@@ -1,4 +1,5 @@
 import 'server-only';
+import { cookies } from 'next/headers';
 
 /** Marca de "sesión de operador" (login por PIN) — ver src/lib/actions/staff-pin.ts. */
 export const OPERATOR_COOKIE = 'leogin_op_seen';
@@ -32,4 +33,30 @@ export function isOperatorSessionStale(
 
   const seenAt = Number(seenAtRaw);
   return !Number.isFinite(seenAt) || Date.now() - seenAt > OPERATOR_WINDOW_MS;
+}
+
+/**
+ * Escribe/renueva la marca de sesión de operador para `profileId`.
+ *
+ * Escribe cookies → solo puede llamarse desde una Server Action o un Route
+ * Handler, nunca desde un Server Component.
+ *
+ * El `profileId` es el sujeto real de la sesión y quien llama responde por él:
+ * · `touchOperatorSession()` (actions/operator.ts) lo saca de `auth.getUser()`.
+ * · el login por PIN (actions/staff-pin.ts) lo usa tras validar el PIN y
+ *   confirmar que el perfil pertenece a ese restaurante.
+ * Nunca se debe pasar aquí un id que venga del cliente sin verificar: la
+ * caducidad por inactividad solo se evalúa cuando el id de la cookie coincide
+ * con el del perfil de la sesión, así que un id ajeno la desactivaría.
+ */
+export async function writeOperatorCookie(profileId: string): Promise<void> {
+  const store = await cookies();
+  store.set(OPERATOR_COOKIE, `${profileId}:${Date.now()}`, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: !!OPERATOR_COOKIE_DOMAIN,
+    path: '/',
+    maxAge: OPERATOR_WINDOW_MS / 1000,
+    ...(OPERATOR_COOKIE_DOMAIN ? { domain: OPERATOR_COOKIE_DOMAIN } : {}),
+  });
 }

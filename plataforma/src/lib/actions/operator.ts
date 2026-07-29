@@ -10,18 +10,24 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { OPERATOR_COOKIE, OPERATOR_WINDOW_MS, OPERATOR_COOKIE_DOMAIN } from '@/lib/auth/operator-session';
+import { OPERATOR_COOKIE, writeOperatorCookie } from '@/lib/auth/operator-session';
 
-export async function touchOperatorSession(profileId: string): Promise<void> {
-  const store = await cookies();
-  store.set(OPERATOR_COOKIE, `${profileId}:${Date.now()}`, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: !!OPERATOR_COOKIE_DOMAIN,
-    path: '/',
-    maxAge: OPERATOR_WINDOW_MS / 1000,
-    ...(OPERATOR_COOKIE_DOMAIN ? { domain: OPERATOR_COOKIE_DOMAIN } : {}),
-  });
+/**
+ * Renueva la marca de actividad de la sesión de operador.
+ *
+ * SEGURIDAD: el id SIEMPRE sale de la sesión del servidor, nunca del cliente.
+ * Antes esta acción escribía la cookie con el `profileId` que le mandaran, sin
+ * comprobar sesión: bastaba llamarla con un uuid cualquiera para que
+ * `isOperatorSessionStale` (que solo caduca cuando el id de la cookie COINCIDE
+ * con el del perfil) devolviera false para siempre y el cierre por
+ * inactividad de 30 min del PIN dejara de existir. Sin sesión válida no se
+ * escribe nada.
+ */
+export async function touchOperatorSession(): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await writeOperatorCookie(user.id);
 }
 
 /** "Cambiar de usuario": cierra la sesión de operador. Capa A (el dispositivo

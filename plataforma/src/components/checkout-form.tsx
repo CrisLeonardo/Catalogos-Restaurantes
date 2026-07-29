@@ -148,6 +148,7 @@ export default function CheckoutForm({
   const [ratingHover, setRatingHover] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingSent, setRatingSent] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
   const [ratingPending, startRating] = useTransition();
 
   const [snapshot, setSnapshot] = useState<{ name: string; opts: string; qty: number; sub: number }[]>([]);
@@ -870,13 +871,19 @@ export default function CheckoutForm({
                   className="press"
                   onClick={() => {
                     startRating(async () => {
-                      await submitRating({
+                      // El resultado sí importa: la acción puede rechazar
+                      // (pedido ya calificado, módulo apagado, exceso de
+                      // envíos). Antes se daba por enviada siempre y el
+                      // comensal veía "gracias" aunque no se guardara nada.
+                      const res = await submitRating({
                         restaurantId,
                         rating: ratingValue,
                         comment: ratingComment || undefined,
                         orderId: orderId || undefined,
                         customerName: name || undefined,
                       });
+                      if (res?.error) { setRatingError(res.error); return; }
+                      setRatingError(null);
                       setRatingSent(true);
                     });
                   }}
@@ -889,6 +896,11 @@ export default function CheckoutForm({
                 >
                   {ratingPending ? 'Enviando…' : 'Enviar calificación'}
                 </button>
+              )}
+              {ratingError && (
+                <p role="alert" style={{ fontSize: 12.5, color: 'var(--c-danger, #f87171)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
+                  {ratingError}
+                </p>
               )}
             </Glass>
           )}

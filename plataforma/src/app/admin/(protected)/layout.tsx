@@ -12,6 +12,7 @@ import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
+import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import type { Restaurant } from '@/types';
@@ -84,10 +85,23 @@ export default async function AdminProtectedLayout({
     }
   } else if (profile.role === 'GROUP_OWNER') {
     // El dueño de grupo entra al admin de una sucursal de su organización sin
-    // re-login. getRestaurantBySlug usa el cliente RLS: la migración 053 solo
-    // devuelve la sucursal si pertenece a su grupo (candado de seguridad).
+    // re-login.
+    //
+    // SEGURIDAD: `tenantData` NO prueba pertenencia. getRestaurantBySlug usa el
+    // cliente RLS, pero las políticas se combinan con OR y
+    // `restaurants_select_active` (PUBLIC, USING status = 'active') deja leer
+    // cualquier restaurante activo — el menú público lo necesita. Por eso la
+    // sucursal se compara explícitamente contra el organization_id del perfil;
+    // sin esto, un dueño de grupo entraba al panel de un restaurante ajeno.
+    // Mismo candado que en getAdminContext (lib/db/admin.ts).
     if (!tenantSlug) redirect('/central');
-    if (!tenantData) redirect('/central'); // no es una sucursal de su grupo
+    if (!tenantData) redirect('/central');
+    if (
+      !profile.organization_id ||
+      tenantData.restaurant.organization_id !== profile.organization_id
+    ) {
+      redirect('/central'); // no es una sucursal de su grupo
+    }
     restaurantName    = tenantData.restaurant.name;
     currentRestaurant = tenantData.restaurant;
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
@@ -155,8 +169,18 @@ export default async function AdminProtectedLayout({
     else if ((agentRow.is_active as boolean | null) === false) localServerState = 'off';
   }
 
-  const mod = currentRestaurant?.modules as Record<string, boolean> | null;
-  const m = (k: string) => mod?.[k] === true;
+  // El PLAN manda sobre restaurants.modules: si el plan lo incluye, se entrega,
+  // aunque la bandera del jsonb se haya quedado atrás. La migración 095 ya
+  // garantiza este piso en la base; aquí se vuelve a aplicar para que el panel
+  // sea correcto aunque corra contra una base donde aún no se haya ejecutado.
+  // Sin esto, una sección incluida en el plan con la bandera en false
+  // desaparecía del nav por completo — lockableNavItem devuelve [], ni candado
+  // ni acceso — y el cliente pagaba por algo que nunca veía.
+  const mod = withPlanFloor(
+    ((PLAN_ORDER as string[]).includes(planActual ?? '') ? planActual : 'BASICO') as PlanCode,
+    (currentRestaurant?.modules as Record<string, boolean> | null) ?? {},
+  );
+  const m = (k: string) => mod[k] === true;
 
   // Módulos activables: activos solo si Leogin los habilitó Y el restaurante los prendió.
   const modSettings = currentRestaurant?.module_settings ?? null;

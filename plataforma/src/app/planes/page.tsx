@@ -77,16 +77,38 @@ function fmtQ(n: number) {
   return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
 }
 
+/**
+ * Celda de la comparativa de planes.
+ *
+ * Los iconos de Icon salen con aria-hidden, así que una celda de sí/no era
+ * literalmente una celda VACÍA para un lector de pantalla: la tabla que decide
+ * la compra no se podía leer. El texto oculto le da a cada celda su valor real
+ * sin cambiar nada de lo que se ve.
+ */
 function PlanFeatureRow({ value }: { value: boolean | number | string }) {
   if (typeof value === 'boolean') {
-    return value ? (
-      <Icon name="check" size={16} style={{ color: '#4ade80' }} />
-    ) : (
-      <Icon name="x" size={16} style={{ color: 'var(--u-text-4)' }} />
+    return (
+      <>
+        {value
+          ? <Icon name="check" size={16} style={{ color: '#4ade80' }} />
+          : <Icon name="x" size={16} style={{ color: 'var(--u-text-4)' }} />}
+        <span className="sr-only">{value ? 'Incluido' : 'No incluido'}</span>
+      </>
     );
   }
-  return <span style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>{value === 'unlimited' ? '∞' : String(value)}</span>;
+  if (value === 'unlimited') {
+    return (
+      <span style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>
+        <span aria-hidden>∞</span>
+        <span className="sr-only">Ilimitados</span>
+      </span>
+    );
+  }
+  return <span style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>{String(value)}</span>;
 }
+
+/** Módulos realmente a la venta hoy (los comingSoon no se cuentan ni se ofrecen). */
+const sellableModuleCount = ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).length;
 
 export default async function PlanesPage() {
   const pricing = await getEffectivePlanPricing();
@@ -317,9 +339,13 @@ export default async function PlanesPage() {
               </tr>
               <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
                 <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Módulos incluidos gratis</td>
+                {/* El denominador era un 8 fijo, contando también los módulos
+                   que todavía no se ofrecen (comingSoon). Premium salía como
+                   "7 de 8" y parecía que faltaba uno por comprar cuando en
+                   realidad los trae TODOS los que hay a la venta. */}
                 {PUBLIC_PLANS.map((code) => (
                   <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-                    {INCLUDED_MODULES[code].length} de 8
+                    {INCLUDED_MODULES[code].filter((k) => isAddonAvailable(k)).length} de {sellableModuleCount}
                   </td>
                 ))}
               </tr>
@@ -329,7 +355,9 @@ export default async function PlanesPage() {
                   const p = PLANS[code];
                   return (
                     <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-                      {p.users === 'unlimited' ? '∞' : String(p.users)}
+                      {p.users === 'unlimited'
+                        ? <><span aria-hidden>∞</span><span className="sr-only">Ilimitados</span></>
+                        : String(p.users)}
                     </td>
                   );
                 })}

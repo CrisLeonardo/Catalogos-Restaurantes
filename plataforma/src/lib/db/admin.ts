@@ -93,13 +93,25 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
     theme = t as RestaurantTheme ?? null;
   } else if (profile.role === 'GROUP_OWNER') {
     // Dueño de grupo "entrando" a una sucursal: se resuelve por el subdominio
-    // (x-tenant-slug). El cliente RLS + migración 053 solo devuelven la fila si
-    // la sucursal pertenece a su organización (candado de seguridad). Se fija
-    // `profile.restaurant_id` en memoria para que TODAS las páginas admin (que
-    // usan ctx.profile.restaurant_id / ctx.restaurant) operen sobre esa
-    // sucursal sin cambios página por página.
+    // (x-tenant-slug). Se fija `profile.restaurant_id` en memoria para que
+    // TODAS las páginas admin (que usan ctx.profile.restaurant_id /
+    // ctx.restaurant) operen sobre esa sucursal sin cambios página por página.
+    //
+    // SEGURIDAD: getRestaurantBySlug NO alcanza como candado. Las políticas de
+    // RLS se combinan con OR y `restaurants_select_active` (PUBLIC, USING
+    // status = 'active') deja leer CUALQUIER restaurante activo — el menú
+    // público lo necesita. Sin la comparación explícita de organization_id de
+    // abajo, un dueño de grupo que navegara al subdominio admin de otro
+    // restaurante entraba a su panel, y como casi todas las consultas del
+    // panel usan el cliente de servicio (que salta RLS), veía pedidos,
+    // clientes y finanzas ajenos. La pertenencia se verifica aquí, en el
+    // servidor, contra el organization_id de su propio perfil.
     const branch = await getRestaurantBySlug((await headers()).get('x-tenant-slug') ?? '');
-    if (branch) {
+    const sameOrg =
+      !!branch &&
+      !!profile.organization_id &&
+      branch.restaurant.organization_id === profile.organization_id;
+    if (sameOrg) {
       restaurant = branch.restaurant;
       theme = branch.theme;
       (profile as Profile).restaurant_id = branch.restaurant.id;

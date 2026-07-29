@@ -12,6 +12,14 @@ import LoginClient from '@/app/login/login-client';
  * Es también el LOGIN CENTRAL de Leogin Desktop (sin tenant): si ya hay una
  * sesión de personal viva en el dominio, ofrece "Continuar como {nombre}".
  */
+/* Sin metadata propia, esta pantalla heredaba el título del menú público del
+   tenant y la pestaña del navegador decía "Menú en línea" mientras el dueño
+   estaba escribiendo su contraseña. */
+export const metadata = {
+  title: 'Acceso al panel — Leogin',
+  robots: { index: false, follow: false },
+};
+
 export default async function AdminLoginPage() {
   const slug = (await headers()).get('x-tenant-slug');
 

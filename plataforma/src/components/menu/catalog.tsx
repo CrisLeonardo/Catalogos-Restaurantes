@@ -426,6 +426,7 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
     <Glass
       interactive={!unavail}
       onClick={() => !unavail && onOpen(p)}
+      ariaLabel={`Ver ${name}`}
       style={{ borderRadius: 18, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', height: '100%', opacity: unavail ? 0.72 : 1 }}
     >
       <div style={{ position: 'relative', aspectRatio: '1.25', background: 'var(--surface-1)', overflow: 'hidden' }}>
@@ -467,6 +468,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, o
     <Glass
       interactive={!unavail}
       onClick={() => !unavail && onOpen(p)}
+      ariaLabel={`Ver ${name}`}
       style={{ borderRadius: 22, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}
     >
       <div style={{ position: 'relative', aspectRatio: '1.85', background: 'var(--surface-1)', overflow: 'hidden' }}>
@@ -515,7 +517,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
   return (
-    <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
+    <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} ariaLabel={`Ver ${name}`} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
       <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-1)', position: 'relative' }}>
         <ProductArt p={p} icon={icon} scale={0.9} />
       </div>

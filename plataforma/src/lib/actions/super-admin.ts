@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { withPlanFloor, type PlanCode } from '@/lib/plans';
 import { logChannelChanges } from '@/lib/db/channel-history';
 import { slugify, validateSlug, crossSlugCollision } from '@/lib/slug';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
@@ -158,7 +159,12 @@ export async function updateRestaurantPlan(
   const managedFlags = Object.fromEntries(
     ACTIVATABLE_MODULES.map((m) => [m.key, formData.get(`managed_${m.key}`) === 'true']),
   );
-  const modules = {
+  // withPlanFloor garantiza que el jsonb nunca quede por DEBAJO de lo que el
+  // plan promete. El formulario puede añadir (vender un módulo a la carta que
+  // el plan no trae) pero no quitar: guardar un Premium sin Analítica dejaba
+  // al cliente pagando Q599 con la sección desaparecida del panel — ni
+  // accesible ni bloqueada, sin rastro de que faltaba.
+  const modules = withPlanFloor(plan_actual as PlanCode, {
     catalog: true,
     orders:          feat('orders'),
     whatsapp_notify: feat('whatsapp_notify'),
@@ -168,7 +174,7 @@ export async function updateRestaurantPlan(
     finanzas:        feat('finanzas'),
     multi_branch:    feat('multi_branch'),
     ...managedFlags,
-  };
+  });
 
   const { error } = await db
     .from('restaurants')

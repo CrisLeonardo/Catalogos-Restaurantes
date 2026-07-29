@@ -11,6 +11,7 @@ import {
 import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { moduleMeta, type ActivatableModuleKey } from '@/lib/modules';
+import { whenChangeApplies, chargeLabel } from '@/lib/billing-timing';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
@@ -207,7 +208,7 @@ export default async function SuscripcionPage() {
 
       {/* ── Plan a tu medida (lo que pagarás este mes, con desglose) ── */}
       {feeBreakdown && (
-        <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
+        <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} maxOff={pricing.channelDiscountMax} />
       )}
 
       {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
@@ -468,7 +469,8 @@ const CHANNEL_LABEL: Record<string, string> = {
   delivery: 'A domicilio',
 };
 
-function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
+function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; currency: string; autoPrice: boolean; maxOff: number }) {
+  const timing = whenChangeApplies();
   const saving = b.discount > 0 || b.branchDiscountPct > 0;
   // Un método recién apagado no baja el cobro de inmediato (mig. 073/078):
   // debe seguir apagado la mayor parte del ciclo actual antes de que el
@@ -486,16 +488,21 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Tu mensualidad refleja exactamente lo que usas: cada método de pedido que desactives
-        {b.discountApplies ? ` descuenta ${fmtMoney(b.discountPer, currency)}` : ' puede descontar'} (hasta 2 de los 3),
+        {b.discountApplies ? ` descuenta ${fmtMoney(b.discountPer, currency)}` : ' puede descontar'}
+        {' '}(hasta {maxOff} de los {b.channelsTotal}),
         y los módulos apagados que no vienen en tu plan dejan de cobrarse.
       </div>
       {pendingDiscount && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
           <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+          {/* Antes prometía "tu próximo cobro" sin más. Es falso pasada la
+             primera semana del mes: hay que estar apagado el 75% del ciclo, y
+             quien apaga el día 20 lo ve DOS cobros después. Ahora se dice el
+             mes concreto que resulta de la regla. */}
           <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
-            Tienes un método de pedido apagado ahora, pero el descuento entra hasta tu <strong>próximo cobro</strong> —
-            debe permanecer apagado al menos el 75% de los días de este ciclo. Este desglose ya
-            refleja lo que se te cobrará, no el estado de tu menú en este instante.
+            Tienes un método de pedido apagado ahora, pero este cobro todavía no lo refleja.
+            Si lo dejas apagado, el descuento entra en <strong>{chargeLabel(timing)}</strong>.
+            Este desglose muestra lo que se te cobrará, no el estado de tu menú en este instante.
           </p>
         </div>
       )}
@@ -504,7 +511,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
           <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
           <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
             Este cobro todavía incluye el descuento de un método que ya reactivaste. Si lo dejas
-            encendido, tu <strong>siguiente</strong> cobro (el que viene después de este) ya no lo traerá.
+            encendido, el descuento desaparece a partir de <strong>{chargeLabel(timing)}</strong>.
           </p>
         </div>
       )}

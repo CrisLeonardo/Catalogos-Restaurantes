@@ -246,6 +246,30 @@ export async function computeSuggestedFee(restaurantId: string): Promise<number>
   return Number(data);
 }
 
+/**
+ * Lo que se facturará el mes que viene si el restaurante deja su configuración
+ * como está ahora.
+ *
+ * No es una estimación: se le pregunta al MISMO motor que factura
+ * (leogin_compute_monthly_fee) por el periodo siguiente. Su ventana de
+ * evaluación es el mes en curso, y el último tramo del historial se extiende
+ * hasta el final del mes — o sea, "si lo dejas así". Cualquier cálculo hecho
+ * aparte en la app acabaría desviándose de la factura real; esto no puede.
+ */
+export async function computeNextPeriodFee(restaurantId: string): Promise<number | null> {
+  const db = createServiceClient();
+  const now = new Date();
+  const nextPeriodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+    .toISOString()
+    .slice(0, 10);
+  const { data, error } = await db.rpc('leogin_compute_monthly_fee', {
+    p_restaurant_id: restaurantId,
+    p_period_start: nextPeriodStart,
+  });
+  if (error || data == null) return null;
+  return Number(data);
+}
+
 /** Desglose "Plan a tu medida" para mostrar al dueño / super admin. */
 export interface FeeBreakdown {
   plan: string | null;

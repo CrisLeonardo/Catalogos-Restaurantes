@@ -23,51 +23,28 @@ import { getPricingSettings } from '@/lib/db/billing';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { findTemplate } from '@/lib/theme/templates';
-import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
+import { ESTANDAR_MAX_ORDER_TYPES, withPlanFloor, type PlanCode } from '@/lib/plans';
 import type { OrderType } from '@/lib/theme/defaults';
 
 export type SignupState = { error: string } | null;
 
-const SIGNUP_MODULES_PREMIUM = {
-  catalog: true,
-  orders: true,
-  whatsapp_notify: true,
-  analitica: true,
-  inventario: true,
-  personal: true,
-  finanzas: true,
-  multi_branch: false,
-  // Módulos activables incluidos en Premium y superiores.
-  // reservaciones, loyalty, proveedores y fel se activan manualmente
-  // desde el super admin cuando el módulo esté listo para el restaurante.
-  llamada_mesero: true,
-  encuestas: true,
-  cupones: true,
-  recetas: true,
-  reservaciones: false,
-  lista_espera: false,
-  loyalty: false,
-  proveedores: false,
-  fel: false,
-};
-
-const SIGNUP_MODULES_ESTANDAR = {
-  catalog: true,
-  orders: true,
-  whatsapp_notify: true,
-  analitica: false,
-  inventario: false,
-  personal: false,
-  finanzas: true,
-  multi_branch: false,
-};
-
-const SIGNUP_MODULES_BASICO = {
-  catalog: true,
-  orders: false,
-  analitica: false,
-  multi_branch: false,
-};
+/**
+ * Módulos con los que nace un restaurante, DERIVADOS del plan.
+ *
+ * Antes había una lista escrita a mano por plan y se había desincronizado de
+ * plans.ts: SIGNUP_MODULES_PREMIUM ponía reservaciones, lista_espera y loyalty
+ * en false, mientras /planes vendía Premium con "7 módulos incluidos gratis"
+ * y INCLUDED_MODULES.PREMIUM los daba por incluidos. Resultado: quien se daba
+ * de alta solo en Premium pagaba Q599 y esos tres módulos no le aparecían por
+ * ningún lado — ni activos ni bloqueados. Ahora sale todo de withPlanFloor(),
+ * así que la única forma de cambiar lo que incluye un plan es cambiar plans.ts.
+ *
+ * multi_branch queda fuera a propósito: no lo da ningún plan, se habilita al
+ * armar un grupo.
+ */
+function signupModulesFor(plan: PlanCode): Record<string, boolean> {
+  return withPlanFloor(plan, { multi_branch: false });
+}
 
 function validEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -158,7 +135,7 @@ export async function signupRestaurant(
       name,
       slug,
       plan_actual: planCode,
-      modules: planCode === 'BASICO' ? SIGNUP_MODULES_BASICO : planCode === 'ESTANDAR' ? SIGNUP_MODULES_ESTANDAR : SIGNUP_MODULES_PREMIUM,
+      modules: signupModulesFor(planCode),
       status: 'active',
       onboarding_done: false,
       whatsapp_number: whatsapp,

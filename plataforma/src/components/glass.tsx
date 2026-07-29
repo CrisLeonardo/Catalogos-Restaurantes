@@ -15,6 +15,17 @@ interface GlassProps {
   style?: CSSProperties;
   children?: ReactNode;
   onClick?: () => void;
+  /**
+   * Nombre accesible del panel cuando es clicable.
+   *
+   * Sin esto, el nombre se calcula concatenando TODO el texto de dentro: una
+   * tarjeta de producto se anunciaba como "Favorito Mocha Negra Espresso
+   * doble, cacao 70%… 26.00 Agregar Mocha Negra". Además, si dentro hay otro
+   * control (el botón "Agregar"), quedaban controles anidados — HTML inválido
+   * y navegación por teclado confusa. Pasa siempre un aria-label corto cuando
+   * el panel contenga botones.
+   */
+  ariaLabel?: string;
   /** Ancla para los tours guiados del centro de ayuda (spotlight). */
   "data-tour-step"?: string;
 }
@@ -31,6 +42,7 @@ export function Glass({
   style,
   children,
   onClick,
+  ariaLabel,
   "data-tour-step": tourStep,
 }: GlassProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -66,6 +78,7 @@ export function Glass({
       onKeyDown={clickable ? handleKey : undefined}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? ariaLabel : undefined}
       data-tour-step={tourStep}
       style={style}
     >

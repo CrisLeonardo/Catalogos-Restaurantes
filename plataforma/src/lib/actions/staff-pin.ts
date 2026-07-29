@@ -15,7 +15,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 import { resolveStaffDestination } from '@/lib/auth/destination';
-import { touchOperatorSession } from '@/lib/actions/operator';
+import { writeOperatorCookie } from '@/lib/auth/operator-session';
 import { ownerCtx, assertStaffOfRestaurant } from '@/lib/actions/staff';
 import { can } from '@/lib/permissions';
 import {
@@ -155,7 +155,11 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
   });
   if (otpErr) return { error: 'No se pudo iniciar sesión.' };
 
-  await touchOperatorSession(profileId);
+  // El PIN ya quedó validado y el perfil confirmado como staff de ESTE
+  // restaurante (arriba), así que este id es de fiar. Se escribe la cookie
+  // directamente en vez de pasar por touchOperatorSession(), que la deriva de
+  // auth.getUser() — la sesión acaba de crearse en este mismo request.
+  await writeOperatorCookie(profile.id as string);
 
   await logActivity({
     restaurantId,

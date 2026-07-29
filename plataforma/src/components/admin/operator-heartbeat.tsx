@@ -19,7 +19,10 @@ export default function OperatorHeartbeat({ profileId }: { profileId: string }) 
       const now = Date.now();
       if (now - lastTouch.current < THROTTLE_MS) return;
       lastTouch.current = now;
-      startTransition(() => { void touchOperatorSession(profileId); });
+      // Sin argumento a propósito: la acción deriva el perfil de la sesión del
+      // servidor. Mandarlo desde aquí permitía falsear la marca y anular el
+      // cierre por inactividad.
+      startTransition(() => { void touchOperatorSession(); });
     }
 
     touch();

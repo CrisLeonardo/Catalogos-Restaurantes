@@ -277,6 +277,82 @@ export function isModuleIncluded(plan: PlanCode, key: ActivatableModuleKey): boo
   return INCLUDED_MODULES[plan]?.includes(key) ?? false;
 }
 
+/* ── Titularidad efectiva: el PLAN manda ───────────────────────
+   Durante mucho tiempo hubo dos verdades sobre "qué tiene este
+   restaurante" y no coincidían:
+
+     1. el plan (plans.ts) — lo que se vende en /planes y se cobra;
+     2. restaurants.modules (jsonb) — banderas que se escriben a mano
+        desde el super admin y en el alta self-serve, y que es lo que
+        el panel leía de verdad.
+
+   Cuando (2) se quedaba corto respecto de (1), el cliente pagaba por
+   algo que su panel nunca le mostraba, sin candado ni aviso: la
+   función simplemente no existía para él. Ese hueco es exactamente lo
+   que pasaba en Premium con Reservaciones, Lista de espera y Lealtad.
+
+   Regla única a partir de aquí: el jsonb solo puede AÑADIR sobre lo
+   que el plan ya incluye, nunca quitarlo. Lo que el plan incluye se
+   entrega siempre; lo que no, se entrega si Leogin lo habilitó
+   (compra a la carta) — y eso es justo lo que se factura. */
+
+/** ¿Este restaurante tiene derecho al módulo? (incluido en su plan O habilitado a mano). */
+export function hasModuleEntitlement(
+  plan: PlanCode | string | null | undefined,
+  modules: Record<string, boolean> | null | undefined,
+  key: ActivatableModuleKey,
+): boolean {
+  const p = (plan ?? 'BASICO') as PlanCode;
+  return isModuleIncluded(p, key) || modules?.[key] === true;
+}
+
+/** Banderas de plan "legacy" que viven en restaurants.modules pero las define el plan. */
+export type PlanFeatureFlag = 'orders' | 'whatsapp_notify' | 'analitica' | 'inventario' | 'personal' | 'finanzas';
+
+/** Mínimo que cada plan garantiza para esas banderas — derivado de PLANS, sin listas paralelas. */
+export function planFeatureFloor(plan: PlanCode): Record<PlanFeatureFlag, boolean> {
+  const f = PLANS[plan];
+  return {
+    orders:          f.hasOrders,
+    whatsapp_notify: f.hasWhatsapp,
+    finanzas:        f.hasFinance,
+    analitica:       f.hasAnalytics,
+    inventario:      f.hasAnalytics,
+    personal:        f.hasAnalytics,
+  };
+}
+
+/** ¿La función está disponible? El plan la garantiza, o se habilitó a mano. */
+export function hasPlanFeature(
+  plan: PlanCode | string | null | undefined,
+  modules: Record<string, boolean> | null | undefined,
+  flag: PlanFeatureFlag,
+): boolean {
+  const p = (PLAN_ORDER as string[]).includes(plan ?? '') ? (plan as PlanCode) : 'BASICO';
+  return planFeatureFloor(p)[flag] || modules?.[flag] === true;
+}
+
+/**
+ * Aplica el piso del plan sobre un mapa de módulos: nunca quita lo que ya
+ * estaba encendido, solo garantiza lo que el plan promete. Se usa al crear
+ * un restaurante y al guardar plan desde el super admin, para que el jsonb
+ * no pueda volver a quedarse por debajo de lo vendido.
+ */
+export function withPlanFloor(
+  plan: PlanCode,
+  modules: Record<string, boolean> = {},
+): Record<string, boolean> {
+  const out: Record<string, boolean> = { ...modules, catalog: true };
+  const floor = planFeatureFloor(plan);
+  for (const [flag, on] of Object.entries(floor)) {
+    if (on) out[flag] = true;
+  }
+  for (const key of INCLUDED_MODULES[plan]) {
+    out[key] = true;
+  }
+  return out;
+}
+
 export function addonPrice(key: ActivatableModuleKey): number {
   return ADDON_MODULES[key]?.price ?? 0;
 }
