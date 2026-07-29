@@ -26,14 +26,24 @@ la ventana.
 - **Respaldo sin nube.** Si el panel no responde, la ventana cae a una página
   local que muestra el estado del hub (LeoginAgent) y regresa sola al panel
   cuando vuelve el internet.
-- **El servicio VIENE DENTRO del instalador.** `scripts/fetch-agent.mjs` baja
-  el último `agent-v*` a `src-tauri/resources/` antes de `tauri build` y
-  `bundle.resources` lo empaqueta: instalar Leogin ya trae todo lo necesario
-  para que esa PC pueda ser la principal del local, sin una segunda descarga
-  en el peor momento (WiFi del local, primer día). El instalador pasa de
-  ~10 MB a ~95 MB; a cambio, la vinculación es instantánea y funciona aunque
-  GitHub no responda. Si un build sale sin el recurso (dev, o descarga
-  fallida), la app cae sola al camino anterior: bajarlo de GitHub al vincular.
+- **El servicio se descarga al activar "PC principal", no al instalar.**
+  (Cambió el 2026-07-29 — antes viajaba dentro del instalador.) El instalador
+  vuelve a pesar ~10 MB y no carga ningún segundo ejecutable; los 87 MB del
+  agente se bajan del release en el momento en que el dueño enciende el
+  interruptor, que es cuando de verdad hacen falta.
+
+  **Por qué se revirtió:** un instalador sin firmar que suelta y ejecuta otro
+  binario es de las señales más fuertes para los modelos de Windows Defender.
+  El 2026-07-29 marcó el instalador como `Trojan:Win32/Bearfoos.B!ml` y la app
+  ya instalada como `Behavior:Win32/Execution.A!ml`, y borró el ejecutable
+  junto con su entrada de desinstalación en una PC real — se veía como si la
+  app se hubiera desinstalado sola.
+
+  Si necesitas el instalador con todo incluido (local con internet malo),
+  `npm run build:con-agente` sigue produciéndolo: la app usa esos bytes si
+  están y si no, descarga. **Ojo:** ese build reintroduce la señal de
+  antivirus, así que no conviene publicarlo como descarga general mientras no
+  haya firma de código.
 - **Un interruptor de "PC principal", encendido y apagado.** En el panel,
   sección **Mi PC del local** (y también en Ajustes → Este dispositivo).
   Encender instala el servicio; apagar revoca el token en la nube — el agente
@@ -113,13 +123,13 @@ npm run build
 # → src-tauri/target/release/bundle/nsis/Leogin_<version>_x64-setup.exe (+ .sig)
 ```
 
-`npm run build` baja primero el agente al bundle (`scripts/fetch-agent.mjs`),
-por eso el instalador pesa ~95 MB. Variantes:
+`npm run build` produce el instalador liviano (~10 MB): NO empaqueta el agente,
+la app lo descarga cuando el dueño enciende "PC principal". Variantes:
 
 ```powershell
 npm run agent                # solo refrescar el agente empaquetado
 npm run agent -- --local     # usar ../agente-impresion/dist (agente sin publicar)
-npm run build:sin-agente     # instalador liviano; la app lo bajará al vincular
+npm run build:con-agente     # instalador con todo incluido (~95 MB) — ver el aviso de antivirus arriba
 ```
 
 `npm run dev` NO empaqueta el agente (sería absurdo en cada recompilación):
@@ -165,9 +175,9 @@ venir firmados con la llave minisign).
    soportados hoy, no resolvía ningún caso real y solo confundía.
 3. Si esa PC va a imprimir / operar sin internet: en el panel, sección
    **Mi PC del local**, enciende el interruptor **"Esta computadora es la
-   principal del local"** — solo una PC por local. El servicio ya viene
-   dentro del instalador, así que no hay nada más que descargar. El mismo
-   interruptor la apaga cuando haga falta.
+   principal del local"** — solo una PC por local. Ahí es cuando se descarga
+   e instala el servicio (~87 MB, una sola vez). El mismo interruptor lo
+   apaga cuando haga falta.
 4. ¿Necesitas conectar esta PC con otra cuenta o restaurante después? Basta
    **cerrar sesión en el panel y entrar con la otra cuenta** — la app sigue
    sola al restaurante que resuelva el login (v0.3.0). También está el atajo

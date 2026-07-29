@@ -42,17 +42,22 @@ elseif (-not (Test-Path $cfgPath)) {
     Write-Warning "(Lo obtienes en el panel: Perfil -> Agente Leogin -> Generar token.)"
 }
 
-# ── Lanzador oculto (sin ventana de consola) ────────────────────
+# ── Autoarranque directo al exe ─────────────────────────────────
+# Ya no se escribe ningún VBScript. LeoginAgent.exe se compila como binario de
+# ventana (build-exe.mjs cambia el subsistema en la cabecera PE), así que
+# arranca sin consola por sí solo. El esquema anterior —un .vbs con
+# WScript.Shell.Run(..., 0) lanzado por wscript.exe— es el patrón que Windows
+# Defender marca como Behavior:Win32/Execution.A!ml.
 $exePath = Join-Path $dest 'LeoginAgent.exe'
-$vbs = Join-Path $dest 'launch-hidden.vbs'
-@"
-Set s = CreateObject("WScript.Shell")
-s.Run """$exePath""", 0, False
-"@ | Set-Content -Path $vbs -Encoding ascii
+
+# Restos del esquema viejo: si esta PC venía de una versión anterior, hay que
+# borrarlos o el archivo que dispara al antivirus se queda ahí.
+Remove-Item (Join-Path $dest 'launch-hidden.vbs') -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup\LeoginAgente.vbs') -Force -ErrorAction SilentlyContinue
 
 # ── Tarea Programada: arranca al iniciar sesión + reintento periódico ──────
 $taskName = 'LeoginAgenteImpresion'
-$action = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument """$vbs""" -WorkingDirectory $dest
+$action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $dest
 $trigger = New-ScheduledTaskTrigger -AtLogOn
 
 # Reintento cada 3 min: si el agente se cayó, vuelve a arrancar. El candado de

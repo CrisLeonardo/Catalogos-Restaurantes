@@ -38,10 +38,25 @@ const TOAST_H: f64 = 150.0;
 const AGENT_RELEASES_API: &str =
     "https://api.github.com/repos/CrisLeonardo/leogin-agente-releases/releases";
 
-/// El agente viaja DENTRO del instalador (scripts/fetch-agent.mjs lo baja
-/// antes de `tauri build` y `bundle.resources` lo empaqueta). Así "instalar
-/// Leogin" ya trae todo lo necesario para que esta PC pueda ser la principal
-/// del local, sin una segunda descarga en el momento más inoportuno.
+/// Agente EMPAQUETADO dentro del instalador. Desde 2026-07-29 está APAGADO por
+/// defecto: `bundle.resources` salió de tauri.conf.json y el build normal
+/// (`npm run build`) ya no lo incluye.
+///
+/// Por qué: el instalador cargaba un segundo ejecutable de 87 MB, y "instalador
+/// sin firmar que suelta y ejecuta otro binario" es de las señales más fuertes
+/// para los modelos de Windows Defender. El 2026-07-29 marcó el instalador como
+/// `Trojan:Win32/Bearfoos.B!ml` y la app instalada como
+/// `Behavior:Win32/Execution.A!ml`, y borró el ejecutable junto con su entrada
+/// de desinstalación en una PC real.
+///
+/// El agente NUNCA se instaló solo, ni antes ni ahora: solo llega cuando el
+/// dueño activa "PC principal" desde el panel (ver `install_agent_as_server`).
+/// Lo único que cambia es de dónde salen los bytes en ese momento — ahora se
+/// descargan del release en vez de viajar dentro del instalador.
+///
+/// El código se conserva porque `npm run build:con-agente` sigue produciendo un
+/// instalador con todo incluido, útil para un local con internet malo. En un
+/// build normal `bundled_agent_bytes()` devuelve None y se usa la descarga.
 const BUNDLED_AGENT: &str = "resources/LeoginAgent.exe";
 const BUNDLED_AGENT_VERSION: &str = "resources/agent-version.txt";
 
@@ -987,19 +1002,17 @@ async fn install_agent_as_server(
         return Err("Falta el token.".into());
     }
 
-    // El agente viaja DENTRO del instalador de Leogin Desktop (ver
-    // `bundle.resources` en tauri.conf.json y scripts/fetch-agent.mjs): "se
-    // instala junto al desktop" sin depender de que GitHub responda ni de que
-    // el WiFi del local aguante 87 MB en ese momento. La descarga queda como
-    // respaldo para un exe construido sin el recurso (dev, o un build donde el
-    // fetch falló) y para el caso de que el release publicado sea más nuevo.
+    // En un build normal el agente NO viaja dentro del instalador (ver la nota
+    // de BUNDLED_AGENT): se descarga aquí, que es justo el momento en que el
+    // dueño pidió que esta PC sea la principal. Si el instalador se construyó
+    // con `build:con-agente`, se usan esos bytes y no hay descarga.
     let bytes = match bundled_agent_bytes(&app) {
         Some(b) => {
             log_line(&app, "vinculación por sesión: usando el agente incluido en la app");
             b
         }
         None => {
-            log_line(&app, "vinculación por sesión: sin agente incluido, buscando el último release…");
+            log_line(&app, "vinculación por sesión: descargando el último release del agente…");
             let (_, download_url) = latest_agent_release(&state.http).await?;
             log_line(&app, "vinculación por sesión: descargando el agente…");
             state

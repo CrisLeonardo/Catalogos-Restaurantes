@@ -17,7 +17,6 @@
     "active": true,
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
-    "resources": ["resources/*"],
     "publisher": "Leogin",
     "shortDescription": "Leogin — el panel de tu restaurante",
     "icon": [

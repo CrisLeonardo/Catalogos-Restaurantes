@@ -98,13 +98,32 @@ async function resolveParams(): Promise<InstallParams | null> {
   return null;
 }
 
-function hiddenLauncherVbs(exePath: string): string {
-  return [
-    'Set s = CreateObject("WScript.Shell")',
-    `s.Run """${exePath}""", 0, False`,
-    '',
-  ].join('\r\n');
-}
+/* ── Autoarranque sin VBScript ─────────────────────────────────────────────
+   Hasta la v0.7.x el arranque pasaba por un archivo `launch-hidden.vbs`:
+
+     Set s = CreateObject("WScript.Shell")
+     s.Run "...\LeoginAgent.exe", 0, False     ' 0 = ventana oculta
+
+   …y una tarea programada que lo ejecutaba con `wscript.exe`. Existía por una
+   razón real: LeoginAgent.exe es un Node SEA (una copia de node.exe), que es
+   un binario de CONSOLA, y sin ese truco salía una ventana negra en cada
+   arranque de la PC del restaurante.
+
+   El problema es que "script que lanza un ejecutable sin firmar con la ventana
+   oculta, registrado para arrancar solo" es casi la definición de libro de lo
+   que Windows Defender marca como `Behavior:Win32/Execution.A!ml`. El
+   2026-07-29 se llevó por delante la app de escritorio en una PC real.
+
+   Desde build-exe.mjs el exe se compila como binario de VENTANA (se cambia el
+   subsistema en la cabecera PE), así que ya nace sin consola y el truco sobra.
+   Ahora el arranque apunta DIRECTO al ejecutable, por dos vías:
+     · la Tarea Programada (principal — reintenta cada 3 min);
+     · la clave Run del usuario (respaldo, si registrar la tarea falla).
+   Ninguna de las dos necesita wscript. */
+
+/** Clave de autoarranque del usuario — respaldo si la tarea no se puede crear. */
+const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+const RUN_VALUE = 'LeoginAgente';
 
 /** Detiene cualquier instancia previa para poder sobrescribir el exe. */
 function stopExisting(): void {
@@ -121,7 +140,7 @@ function stopExisting(): void {
 }
 
 /** Registra la Tarea Programada (arranque al iniciar sesión + reintento c/3 min). */
-function registerScheduledTask(vbsPath: string): void {
+function registerScheduledTask(exePath: string): void {
   const xml = `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
@@ -152,8 +171,7 @@ function registerScheduledTask(vbsPath: string): void {
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>wscript.exe</Command>
-      <Arguments>"${vbsPath}"</Arguments>
+      <Command>${exePath}</Command>
     </Exec>
   </Actions>
 </Task>`;
@@ -231,16 +249,53 @@ function ensureFirewallRule(): void {
   }
 }
 
-/** Copia el lanzador oculto a la carpeta Inicio del usuario (arranque sin admin). */
-function installStartupEntry(vbsContent: string): void {
-  const appData = process.env.APPDATA;
-  if (!appData) return;
-  const startup = join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
+/** Respaldo de autoarranque: clave Run del usuario, apuntando al exe. Sin admin. */
+function installRunKeyFallback(exePath: string): void {
   try {
-    mkdirSync(startup, { recursive: true });
-    writeFileSync(join(startup, 'LeoginAgente.vbs'), vbsContent, 'ascii');
+    execFileSync('reg', ['add', RUN_KEY, '/v', RUN_VALUE, '/t', 'REG_SZ', '/d', `"${exePath}"`, '/f'], {
+      stdio: 'ignore',
+      windowsHide: true,
+      timeout: 15_000,
+    });
   } catch (err) {
-    logger.warn('No se pudo escribir en la carpeta Inicio:', (err as Error).message);
+    logger.warn('No se pudo registrar el autoarranque de respaldo:', (err as Error).message);
+  }
+}
+
+/** Quita el autoarranque de respaldo. */
+function removeRunKeyFallback(): void {
+  try {
+    execFileSync('reg', ['delete', RUN_KEY, '/v', RUN_VALUE, '/f'], {
+      stdio: 'ignore',
+      windowsHide: true,
+      timeout: 15_000,
+    });
+  } catch {
+    /* puede no existir */
+  }
+}
+
+/**
+ * Borra los restos del arranque por VBScript de versiones anteriores.
+ *
+ * Se llama en CADA instalación, no solo al desinstalar: quien actualiza desde
+ * una versión vieja se quedaría con el .vbs en la carpeta Inicio, que es
+ * precisamente el archivo que dispara al antivirus. Sin esto, actualizar no
+ * resolvería nada.
+ */
+function removeLegacyVbsLauncher(): void {
+  const appData = process.env.APPDATA;
+  const candidates = [
+    appData && join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'LeoginAgente.vbs'),
+    join(installDir(), 'launch-hidden.vbs'),
+  ].filter((p): p is string => !!p);
+
+  for (const file of candidates) {
+    try {
+      rmSync(file, { force: true });
+    } catch {
+      /* ignora */
+    }
   }
 }
 
@@ -335,13 +390,10 @@ export async function runUninstall(): Promise<void> {
     }
   }
 
-  // 2. Autoarranque, acceso del menú Inicio y entrada del registro.
-  const appData = process.env.APPDATA;
-  if (appData) {
-    try {
-      rmSync(join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'LeoginAgente.vbs'), { force: true });
-    } catch { /* ignora */ }
-  }
+  // 2. Autoarranque (clave Run + restos del VBScript viejo), acceso del menú
+  //    Inicio y entrada del registro.
+  removeRunKeyFallback();
+  removeLegacyVbsLauncher();
   removeStartMenuShortcut();
   removeUninstallEntry();
 
@@ -446,12 +498,13 @@ export async function runSetup(opts: { silent?: boolean } = {}): Promise<void> {
     'utf8',
   );
 
-  // 4. Lanzador oculto + autoarranque (carpeta Inicio + Tarea Programada).
-  const vbs = hiddenLauncherVbs(destExe);
-  const vbsPath = join(dir, 'launch-hidden.vbs');
-  writeFileSync(vbsPath, vbs, 'ascii');
-  installStartupEntry(vbs);
-  registerScheduledTask(vbsPath);
+  // 4. Autoarranque: Tarea Programada (principal) + clave Run (respaldo), las
+  //    dos apuntando DIRECTO al exe. Antes esto pasaba por un VBScript oculto;
+  //    ver el bloque de comentarios junto a RUN_KEY. Primero se barren los
+  //    restos de ese esquema para que actualizar sí limpie la máquina.
+  removeLegacyVbsLauncher();
+  registerScheduledTask(destExe);
+  installRunKeyFallback(destExe);
 
   // 5. Abrir el puerto del hub en el firewall (respaldo LAN sin internet).
   ensureFirewallRule();
@@ -460,9 +513,10 @@ export async function runSetup(opts: { silent?: boolean } = {}): Promise<void> {
   registerUninstallEntry(destExe);
   writeStartMenuShortcut(destExe);
 
-  // 6. Lanzar el agente ya instalado, en silencio.
+  // 6. Lanzar el agente ya instalado, en silencio. Directo al exe: al ser
+  //    binario de ventana no abre consola, y `windowsHide` cubre el resto.
   try {
-    const child = spawn('wscript.exe', [vbsPath], { detached: true, stdio: 'ignore', windowsHide: true });
+    const child = spawn(destExe, { detached: true, stdio: 'ignore', windowsHide: true });
     child.unref();
   } catch (err) {
     logger.warn('No se pudo lanzar el agente automaticamente:', (err as Error).message);
