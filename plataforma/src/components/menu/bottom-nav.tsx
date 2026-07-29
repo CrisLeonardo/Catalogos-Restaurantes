@@ -49,7 +49,19 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
         {tabs.map((tab) => {
           const isActive = active === tab.key;
           return (
-            <button key={tab.key} type="button" onClick={tab.action} className="press" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+            <button
+              key={tab.key}
+              type="button"
+              onClick={tab.action}
+              className="press"
+              // La pestaña activa solo se distinguía por el color de fondo.
+              // aria-current es lo que hace que una lectura asistida diga "Menú,
+              // página actual" en vez de leer las cuatro pestañas igual y dejar
+              // al comensal sin saber dónde está.
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={isActive ? `${tab.label}, sección actual` : `Ir a ${tab.label}`}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
               <span
                 style={{
                   display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3,
@@ -61,7 +73,9 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
                 }}
               >
                 <Icon name={tab.icon} size={18} />
-                <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.02em' }}>{tab.label}</span>
+                {/* 9,5px es demasiado pequeño para leerse de un vistazo con el
+                   teléfono en la mano y el brazo estirado. */}
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em' }}>{tab.label}</span>
               </span>
             </button>
           );

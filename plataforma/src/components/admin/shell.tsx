@@ -5,7 +5,7 @@
    El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
@@ -48,6 +48,30 @@ function lockableNavItem(preview: boolean, enabled: boolean, planHasFeature: boo
   if (preview || enabled) return [item];
   if (!planHasFeature) return [{ ...item, locked: true }];
   return [];
+}
+
+/**
+ * Puntito que aparece en el enlace del menú mientras esa pantalla se está
+ * cargando.
+ *
+ * El esqueleto (loading.tsx) ya rellena el área de contenido, pero eso está
+ * al otro lado de la pantalla: quien acaba de tocar "Finanzas" mira el
+ * ítem que tocó, no el panel. Este indicador confirma en el sitio exacto
+ * del dedo que sí se registró el toque, que es lo que evita el doble clic
+ * de quien no está seguro de si funcionó.
+ *
+ * Ocupa siempre el mismo espacio y solo cambia la opacidad, para que no
+ * desplace el texto del menú al aparecer.
+ */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className="admin-navlink-pending"
+      data-pending={pending ? '1' : '0'}
+    />
+  );
 }
 
 interface Props {
@@ -351,6 +375,7 @@ export default function AdminShell({
       <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={n.key}>
         <Icon name={n.icon} size={18} />
         <span className="nav-label">{n.label}</span>
+        <NavPending />
       </Link>
     );
   }

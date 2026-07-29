@@ -1074,8 +1074,24 @@ export default function CheckoutForm({
           </div>
         )}
 
-        <Field label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name} icon="user" value={name} onChange={setName} placeholder={content.checkout.namePh} error={tried && errs.name} />
-        <Field label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone} icon="phone" type="tel" value={phone} onChange={setPhone} placeholder={content.checkout.phonePh} error={(tried || phone.trim().length > 0) && errs.phone} />
+        {/* autoComplete: deja que el teléfono rellene nombre y número de una
+           vez. Para quien teclea con un dedo es la diferencia entre terminar
+           el pedido y dejarlo a medias. */}
+        <Field
+          label={type === 'DINE_IN' ? `${content.checkout.name} (opcional)` : content.checkout.name}
+          icon="user" value={name} onChange={setName}
+          placeholder={content.checkout.namePh}
+          autoComplete="name"
+          error={tried && errs.name}
+        />
+        <Field
+          label={type === 'DINE_IN' ? `${content.checkout.phone} (opcional)` : content.checkout.phone}
+          icon="phone" type="tel" inputMode="tel" value={phone} onChange={setPhone}
+          placeholder={content.checkout.phonePh}
+          autoComplete="tel"
+          hint={type === 'DINE_IN' ? undefined : 'Lo usamos solo para avisarte sobre este pedido.'}
+          error={(tried || phone.trim().length > 0) && errs.phone}
+        />
         {phone.trim().length > 0 && !errs.phone && (
           <p style={{ fontSize: 11.5, color: 'var(--c-ok, #4ade80)', marginTop: -12 }}>
             Número válido ✓
@@ -1266,6 +1282,8 @@ export default function CheckoutForm({
             icon="mapPin"
             value={address}
             onChange={setAddress}
+            autoComplete={geoActive ? undefined : 'street-address'}
+            hint={geoActive ? 'Algo que ayude al repartidor a encontrarte.' : undefined}
             placeholder={geoActive ? 'Ej. Portón azul, frente al parque…' : content.checkout.addressPh}
             error={tried && errs.address}
           />

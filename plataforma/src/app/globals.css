@@ -917,6 +917,29 @@ html[data-scheme="light"] .btn-white {
   box-shadow: inset 2.5px 0 0 var(--admin-panel-accent);
 }
 
+/* Indicador de "ya te oí, está cargando" en el propio ítem del menú.
+   Reserva su espacio siempre (no desplaza el texto al aparecer) y solo
+   cambia de opacidad. Ver NavPending en components/admin/shell.tsx. */
+.admin-navlink-pending {
+  width: 14px; height: 14px; flex: 0 0 14px;
+  border-radius: 99px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+.admin-navlink-pending[data-pending="1"] {
+  opacity: 0.85;
+  animation: adm-nav-spin 620ms linear infinite;
+}
+@keyframes adm-nav-spin { to { transform: rotate(360deg); } }
+
+/* Sin animación: el aro se queda fijo pero visible, que sigue comunicando
+   "esto está en marcha" sin movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .admin-navlink-pending[data-pending="1"] { animation: none; border-top-color: currentColor; opacity: 0.6; }
+}
+
 /* Tabla de catálogo: grid en escritorio, tarjeta de 2 filas en móvil */
 .catalog-head, .catalog-row {
   display: grid; grid-template-columns: 1fr 110px 150px 90px;
@@ -1185,4 +1208,33 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
    usuario no pidió reducir movimiento. */
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+}
+
+/* ── Esqueleto de carga ─────────────────────────────────────────
+   Bloque gris con un brillo que recorre de izquierda a derecha. El
+   movimiento importa: un rectángulo quieto se lee como "algo se
+   rompió", uno que se mueve se lee como "está viniendo". Con
+   prefers-reduced-motion queda estático (la regla de arriba ya
+   neutraliza la animación) y aun así se ve como hueco de contenido. */
+.adm-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--u-text, #fff) 9%, transparent);
+}
+.adm-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--u-text, #fff) 11%, transparent),
+    transparent
+  );
+  animation: adm-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes adm-shimmer {
+  100% { transform: translateX(100%); }
 }

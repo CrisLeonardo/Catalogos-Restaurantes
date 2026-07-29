@@ -421,9 +421,143 @@ prueba **sin cambios** tras el piso (Q599 → Q599); simulador probado en navega
 (Q648 y Q598 según lo esperado); `/planes` sirviendo 27 celdas accesibles; datos de
 prueba del ensayo de IDOR eliminados (0 organizaciones, 0 dueños de grupo).
 
-## 7. Antes de subir a producción
+## 7. Segunda pasada — velocidad al cambiar de sección, y claridad para todos
+
+Encargo: que moverse entre áreas (Pedidos → Finanzas) se sienta más rápido, que
+el panel y el menú se vean mejor, y que **todo sea usable por gente que apenas
+maneja teclado y ratón**.
+
+### 7.1 Por qué se sentía lento (y no era la base de datos)
+
+Lo primero que revisé fue si el menú lateral hacía recargas completas. No: usa
+`<Link>`, la navegación ya es del lado del cliente. El problema era otro y más
+simple:
+
+> **No había ni un solo `loading.tsx` en toda la aplicación.**
+
+Al tocar "Finanzas" desde "Pedidos", esto era lo que pasaba: se dispara la
+petición al servidor, este ejecuta el reporte de ventas completo… y **la pantalla
+se queda exactamente igual**. Mismo contenido, sin indicador, sin nada. Segundos
+después aparece la página nueva de golpe.
+
+Para cualquiera es incómodo. Para alguien poco acostumbrado a la computadora es
+peor: lee "no pasó nada", vuelve a tocar, y **cada toque extra lanza otra
+petición** y lo hace todavía más lento. Es el bucle clásico del doble clic.
+
+**Lo que hice:**
+
+- Un esqueleto de contenido ([page-skeleton.tsx](plataforma/src/components/admin/page-skeleton.tsx))
+  con `loading.tsx` en todo el panel admin, en el super admin y específicos para
+  las tres pantallas más pesadas (Finanzas, Analítica, Métricas). El menú lateral
+  no se redibuja: se queda fijo y solo cambia el contenido, que es la sensación
+  de aplicación que se buscaba.
+- Un **indicador en el propio ítem del menú** (`useLinkStatus` de Next 16). El
+  esqueleto rellena el panel, pero eso está al otro lado de la pantalla: quien
+  acaba de tocar "Finanzas" mira el sitio donde puso el dedo. Ese puntito
+  confirma el toque justo ahí.
+- Aviso `role="status"` para lectura asistida: antes el cambio de página era
+  completamente mudo.
+
+**Medido en el navegador**: a los **120 ms** ya hay esqueleto en pantalla y el
+indicador encendido. Antes, a los 120 ms —y durante varios segundos más— la
+pantalla seguía idéntica.
+
+Como efecto secundario, tener un límite de carga es lo que permite que el
+prefetch de `<Link>` sirva de algo en rutas dinámicas: sin él, Next no tiene una
+cáscara que precargar.
+
+### 7.2 Consultas pesadas — medido con volumen real
+
+Cargué **1.537 pedidos con 4.567 ítems** (un mes de un restaurante que despacha
+~50 al día) y medí la consulta exacta de Finanzas:
+
+```
+0,51 MB de JSON · ~70 ms en local (3 pasadas)
+```
+
+`getSalesReport` trae hasta 20.000 pedidos **con todos sus ítems** a Node y agrega
+en JavaScript. En local no duele; en producción hay que sumarle la ida y vuelta a
+Supabase y la transferencia de ese medio mega en cada visita a la pantalla.
+
+Comprobé que **el índice correcto ya existe** (`orders_restaurant_created_idx`
+sobre `restaurant_id, created_at`), así que no es un problema de plan de consulta
+sino de volumen. **No lo reescribí**: mover esa agregación a SQL cambia números de
+dinero y quiero que eso se haga con calma y comparando resultados antes y después.
+Queda como la siguiente optimización natural, ya cuantificada.
+
+### 7.3 Accesibilidad — lo que encontré midiendo, no opinando
+
+**Panel admin (pantalla de Finanzas):**
+
+| Antes | Después |
+|-------|---------|
+| 16 campos sin etiqueta asociada | 0 |
+| 11 casillas de dinero de 31 px de alto | 40 px |
+
+El peor caso era el **corte de caja**: once casillas idénticas para contar
+billetes y monedas, cada una con un "0" de marcador y **ninguna etiqueta**. El
+"Q200" de al lado era un `<span>` suelto, no un `<label>`, así que ni se podía
+tocar para enfocar el campo ni lo leía nada. Y quien cuenta la caja de noche es
+justo el perfil menos técnico del local. Ahora cada casilla dice *"cuántos
+billetes de Q200"*, el fondo inicial explica para qué sirve, y el resultado del
+cuadre se anuncia solo al teclear (`aria-live`).
+
+También cambié los atajos de fecha de `7d / 30d / 90d` a **"7 días / 30 días /
+90 días"**: la abreviatura es jerga.
+
+**Menú del cliente (medido en móvil de 375 px, que es el uso real):**
+
+| Antes | Después |
+|-------|---------|
+| Botón "Agregar" de **32×32 px** | **44×44** |
+| Buscador con letra de 14 px | 16 px |
+| Campos del checkout sin etiqueta unida | Todos unidos |
+| Sin `autocomplete` | Nombre, teléfono y dirección se autorrellenan |
+| Barra inferior sin indicar sección actual | `aria-current` |
+
+Dos de estos merecen explicación porque no son cosméticos:
+
+- **El botón "Agregar" a 32 px** es la acción principal de todo el producto, en un
+  teléfono, con el dedo. Por debajo del mínimo de 44×44 se falla y se abre la
+  ficha del producto en vez de agregarlo — el tropiezo que nadie reporta pero que
+  hace abandonar el pedido.
+- **Letra de 16 px en los campos**: Safari en iPhone **amplía la página entera**
+  al enfocar un campo con letra menor de 16 px. El menú se quedaba ampliado y
+  descuadrado en cuanto el comensal tocaba el buscador o empezaba el checkout.
+
+Y `autocomplete` en el checkout no es un detalle: para quien teclea con un dedo,
+que el teléfono ofrezca su nombre y número ya guardados es la diferencia entre
+terminar el pedido y dejarlo a medias.
+
+### 7.4 Lo que le faltaba al menú
+
+**Estado vacío de la búsqueda.** Antes, buscar algo mal escrito daba un texto gris
+genérico. Quien escribe "pizza con pinia" veía "no hay platillos" y no ataba cabos
+con que su propia búsqueda era la que filtraba: se iba creyendo que el restaurante
+no tenía nada. Ahora dice qué se buscó y ofrece la salida en un botón:
+
+> **No encontramos nada con "pizza con pinia".**
+> Revisa cómo se escribe o mira el menú completo.
+> [ Ver todo el menú ]
+
+Probado: el botón limpia la búsqueda, restaura los 6 productos y vuelve a "Todo".
+
+**Otros arreglos del menú**: `aria-pressed` en las categorías (el resaltado era
+solo visual, no se sabía qué se estaba filtrando), la cantidad en el carrito se
+anuncia al agregar en vez de cambiar en silencio, los botones ES/EN dicen "Ver el
+menú en inglés" en lugar de dos letras, y las categorías con horario avisan
+"disponible en otro horario" por texto y no solo por transparencia.
+
+**Verificación final del menú**: 0 controles sin nombre accesible, 0 campos sin
+etiqueta, botón principal 44×44, buscador a 16 px.
+
+## 8. Antes de subir a producción
 
 1. **Corre la migración 095** y después la consulta que deja al final: te dice a
    quién empieza a facturársele Lista de espera. Es el único importe que se mueve.
 2. **Cuenta los `GROUP_OWNER` en producción** para saber si C-2 tuvo exposición real.
 3. Decide sobre la simplificación de la regla del 75% (sección 3.4).
+4. **Prueba el menú en un teléfono real**, no en el simulador: el botón "Agregar"
+   a 44 px y el fin del zoom de Safari son cambios que solo se aprecian con el
+   dedo. Si tienes a mano a alguien poco acostumbrado al teléfono, que pida algo
+   mientras lo miras — es la mejor prueba que existe para todo lo de la sección 7.

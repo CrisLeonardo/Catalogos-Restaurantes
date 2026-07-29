@@ -192,9 +192,11 @@ export default function Catalog({
                 onClick={() => setLocale(l)}
                 className="press"
                 aria-pressed={locale === l}
+                // "ES"/"EN" a secas no dice nada a quien no ve el contexto.
+                aria-label={l === 'en' ? 'Ver el menú en inglés' : 'Ver el menú en español'}
                 style={{
-                  padding: '5px 11px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                  fontSize: 11.5, fontWeight: 700, letterSpacing: '0.02em',
+                  padding: '8px 14px', minHeight: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
                   background: locale === l ? 'var(--u-text)' : 'transparent',
                   color: locale === l ? 'var(--brand-bg)' : 'var(--u-text-3)',
                 }}
@@ -212,12 +214,22 @@ export default function Catalog({
           <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
             <Icon name="search" size={17} />
           </span>
+          {/* Dos cosas aquí:
+             · El marcador de posición no es una etiqueta: desaparece al
+               escribir y no lo anuncia ninguna lectura asistida.
+             · fontSize 16 no es capricho. Safari en iPhone hace zoom
+               automático al enfocar un campo con letra menor de 16px, y el
+               menú se quedaba ampliado y descuadrado en cuanto el comensal
+               tocaba el buscador. */}
+          <label htmlFor="menu-buscar" className="sr-only">Buscar en el menú</label>
           <input
+            id="menu-buscar"
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={content.catalog.searchPlaceholder}
             className="glass-quiet ct-body"
-            style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 14, outline: 'none', background: 'var(--surface-2)' }}
+            style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 16, outline: 'none', background: 'var(--surface-2)' }}
           />
         </div>
       )}
@@ -264,7 +276,31 @@ export default function Catalog({
 
       {/* Grid / List */}
       {list.length === 0 ? (
-        <p className="t-mute" style={{ textAlign: 'center', padding: '50px 0', fontSize: 14 }}>{content.catalog.empty}</p>
+        /* Antes: un único texto gris igual para todos los casos. Quien escribía
+           "cafe con lehce" veía "no hay platillos" y no ataba cabos con que su
+           propia búsqueda era la que estaba filtrando — se iba creyendo que el
+           restaurante no tenía nada. Ahora se dice qué se buscó y se ofrece la
+           salida en un botón, sin obligar a borrar el texto a mano. */
+        <div role="status" style={{ textAlign: 'center', padding: '46px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <Icon name={query.trim() ? 'search' : 'utensils'} size={26} style={{ color: 'var(--u-text-4)' }} />
+          {query.trim() ? (
+            <>
+              <p className="t-mute" style={{ fontSize: 14.5, margin: 0, lineHeight: 1.5 }}>
+                No encontramos nada con <strong style={{ color: 'var(--u-text-2)' }}>“{query.trim()}”</strong>.
+              </p>
+              <p className="t-mute" style={{ fontSize: 12.5, margin: 0 }}>Revisa cómo se escribe o mira el menú completo.</p>
+              <button
+                onClick={() => { setQuery(''); setActiveCat(null); }}
+                className={`press ${ctaClass(config.ctaStyle)}`}
+                style={{ marginTop: 4, padding: '12px 20px', minHeight: 44, borderRadius: 99, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+              >
+                Ver todo el menú
+              </button>
+            </>
+          ) : (
+            <p className="t-mute" style={{ fontSize: 14, margin: 0 }}>{content.catalog.empty}</p>
+          )}
+        </div>
       ) : config.catalogView === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, marginTop: 12 }}>
           {list.map((p, i) => {
@@ -343,9 +379,13 @@ function CategoryChip({ label, icon, active, unavailable = false, onClick }: { l
     <button
       onClick={onClick}
       className="press"
+      // aria-pressed: sin esto, quien navega con lectura asistida no sabe qué
+      // categoría está filtrando — el resaltado es solo visual.
+      aria-pressed={active}
       title={unavailable ? 'Disponible en otro horario' : undefined}
       style={{
-        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 15px', borderRadius: 99, cursor: 'pointer',
+        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
+        padding: '11px 16px', minHeight: 44, borderRadius: 99, cursor: 'pointer',
         background: active ? 'var(--u-text)' : 'var(--surface-2)',
         color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
         border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
@@ -355,6 +395,7 @@ function CategoryChip({ label, icon, active, unavailable = false, onClick }: { l
     >
       {dim ? <Icon name="clock" size={14} /> : icon && <Icon name={icon} size={15} />}
       {label}
+      {dim && <span className="sr-only"> — disponible en otro horario</span>}
     </button>
   );
 }
@@ -373,12 +414,31 @@ function ProductArt({ p, icon, scale = 1 }: { p: ProdItem; icon: string; scale?:
   );
 }
 
+/**
+ * Botón de agregar al carrito.
+ *
+ * Medía 32×32 px, y es la acción principal de todo el menú. En un teléfono
+ * —que es donde se usa esto, escaneando un QR en la mesa— eso queda por debajo
+ * del mínimo recomendado de 44×44 (WCAG 2.5.5; Apple pide 44pt y Android 48dp).
+ * Con dedos grandes, prisa o pulso poco firme se falla y se abre la ficha del
+ * producto en vez de agregarlo, que es exactamente el tropiezo que nadie
+ * reporta pero que hace abandonar el pedido.
+ *
+ * 44×44 reales. El icono no crece: solo el área que recibe el toque.
+ */
 function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: ProdItem, el: HTMLElement) => void }) {
   const config = useThemeConfig();
   if (qty > 0) {
     return (
-      <span className="t-mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 12 }}>
-        <Icon name="check" size={11} strokeWidth={3} />{qty}
+      <span
+        className="t-mono"
+        // role="status" para que al agregar se anuncie "2 en tu pedido" en vez
+        // de cambiar en silencio.
+        role="status"
+        aria-label={`${qty} ${qty === 1 ? 'unidad' : 'unidades'} de ${p.name} en tu pedido`}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 44, minHeight: 44, padding: '5px 12px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 13 }}
+      >
+        <Icon name="check" size={12} strokeWidth={3} />{qty}
       </span>
     );
   }
@@ -388,10 +448,10 @@ function AddControl({ p, qty, onAdd }: { p: ProdItem; qty: number; onAdd: (p: Pr
       // que se lavaba con paletas claras e ignoraba la opción del editor).
       className={`press ${ctaClass(config.ctaStyle)}`}
       onClick={(e) => { e.stopPropagation(); onAdd(p, e.currentTarget); }}
-      style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center' }}
-      aria-label={`Agregar ${p.name}`}
+      style={{ width: 44, height: 44, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+      aria-label={`Agregar ${p.name} a tu pedido`}
     >
-      <Icon name="plus" size={17} strokeWidth={2.4} />
+      <Icon name="plus" size={19} strokeWidth={2.4} />
     </button>
   );
 }

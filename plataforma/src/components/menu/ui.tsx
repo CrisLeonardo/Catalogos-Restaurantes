@@ -4,7 +4,7 @@
    Portado del prototipo (Glass.jsx / ClientScreens.jsx). */
 
 import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { usePrice, useThemeConfig, useText } from '@/lib/theme/context';
@@ -159,8 +159,26 @@ export function QtyStepper({
 
 /* ── Campo de formulario (checkout) ──────────────────────── */
 
+/**
+ * Campo del checkout — nombre, teléfono, dirección.
+ *
+ * Es el formulario donde se gana o se pierde el pedido, y donde más ayuda
+ * necesita quien no se maneja bien con un teléfono. Lo que se corrigió:
+ *
+ *  · La etiqueta era un <label> suelto, sin unir a su casilla. Además de
+ *    dejarla muda para cualquier lectura asistida, tocar el texto no
+ *    enfocaba el campo — un gesto que la gente da por hecho.
+ *  · Letra de 14,5px: Safari en iPhone amplía la página entera al enfocar
+ *    un campo por debajo de 16px, y el checkout se descuadraba justo al
+ *    empezar a escribir.
+ *  · `autocomplete` no existía, así que el teléfono no ofrecía el nombre y
+ *    el número ya guardados. Rellenar solo es la diferencia entre pedir y
+ *    abandonar para quien teclea con un dedo.
+ *  · El error salía en pantalla pero no estaba enlazado al campo: nadie
+ *    sabía a cuál de ellos se refería.
+ */
 export function Field({
-  label, value, onChange, placeholder, icon, error, type = 'text',
+  label, value, onChange, placeholder, icon, error, type = 'text', autoComplete, inputMode, hint,
 }: {
   label: string;
   value: string;
@@ -169,29 +187,46 @@ export function Field({
   icon?: string;
   error?: string | false;
   type?: string;
+  autoComplete?: string;
+  inputMode?: 'text' | 'tel' | 'email' | 'numeric' | 'decimal' | 'search';
+  /** Aclaración breve bajo la etiqueta (ej. "para avisarte cuando esté listo"). */
+  hint?: string;
 }) {
   const [focused, setFocused] = useState(false);
+  const id = useId();
+  const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
   const border = error ? 'color-mix(in srgb, var(--c-danger, #f87171) 75%, transparent)' : focused ? 'var(--u-text-3)' : 'var(--u-hair)';
+  const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label className="t-kicker" style={{ fontSize: 10.5 }}>{label}</label>
+      <label htmlFor={id} className="t-kicker" style={{ fontSize: 11.5, cursor: 'pointer' }}>{label}</label>
+      {hint && (
+        <p id={hintId} style={{ fontSize: 11.5, color: 'var(--u-text-3)', margin: '-2px 0 0', lineHeight: 1.4 }}>{hint}</p>
+      )}
       <div style={{ position: 'relative' }}>
         {icon && (
-          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
+          <span aria-hidden style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
             <Icon name={icon} size={16} />
           </span>
         )}
         <input
+          id={id}
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           className="ct-body"
           style={{
-            width: '100%', padding: icon ? '13px 14px 13px 40px' : '13px 14px',
-            borderRadius: 'var(--radius-lg)', color: 'var(--u-text)', fontSize: 14.5, outline: 'none',
+            width: '100%', padding: icon ? '14px 14px 14px 40px' : '14px 14px',
+            minHeight: 48,
+            borderRadius: 'var(--radius-lg)', color: 'var(--u-text)', fontSize: 16, outline: 'none',
             background: 'var(--surface-2)', border: `1px solid ${border}`,
             transition: 'border-color 150ms',
             boxShadow: focused ? '0 0 0 4px var(--surface-2)' : 'none',
@@ -199,8 +234,8 @@ export function Field({
         />
       </div>
       {error && (
-        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--c-danger, #f87171)' }}>
-          <Icon name="alertCircle" size={12} />{error}
+        <div id={errorId} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--c-danger, #f87171)' }}>
+          <Icon name="alertCircle" size={13} />{error}
         </div>
       )}
     </div>
