@@ -51,6 +51,8 @@ export interface Restaurant {
   pause_message: string | null;
   // Pedidos por WhatsApp + cobertura de delivery (migración 010)
   orders_whatsapp: string | null;
+  /** Si es false, el checkout no ofrece enviar el pedido por WhatsApp aunque haya número configurado (migración 096). */
+  orders_whatsapp_enabled: boolean;
   delivery_zones: string[] | null;
   // Geolocalización de delivery (migración 011)
   location_lat: number | null;

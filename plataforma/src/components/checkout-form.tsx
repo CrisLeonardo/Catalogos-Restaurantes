@@ -681,25 +681,29 @@ export default function CheckoutForm({
 
     let where: string;
     if (type === 'DINE_IN') {
-      where = `🍽 Mesa ${tableNumber ?? '?'}${coursePreference ? ` · Servicio: ${coursePreference}` : ''}`;
+      where = `🍴 Mesa ${tableNumber ?? '?'}${coursePreference ? ` · Servicio: ${coursePreference}` : ''}`;
     } else if (type === 'PICKUP') {
       where = content.checkout.pickup;
     } else {
       where = `${content.checkout.delivery}: ${address}${zone && zone !== NO_ZONE ? ` (${zone})` : ''}${mapsLink}`;
     }
 
+    // Nota: emojis del set Unicode 6.0 (2010) — el más compatible entre
+    // versiones viejas de WhatsApp/fuentes de emoji. Se evitan adiciones más
+    // recientes (🛒 es Unicode 9.0, 🏷/🍽 son Unicode 7.0) que en teléfonos
+    // con fuente de emoji desactualizada salen como el cuadro "�".
     const lines: string[] = [
-      `🍽 Nuevo pedido *${num}*`, '',
+      `🍴 Nuevo pedido *${num}*`, '',
       `👤 ${name}`, `📱 ${phone}`,
       `📦 ${where}`, '',
-      '🛒 Pedido:',
+      '📋 Pedido:',
       ...lineItems.map((i) => `• ${i.qty}x ${i.name}${i.opts ? ` (${i.opts})` : ''} — ${formatPrice(i.sub, config)}`), '',
     ];
     if (fee > 0) {
       lines.push(`📦 ${content.cart.shipping}: ${formatPrice(fee, config)}`);
     }
     if (disc > 0) {
-      lines.push(`🏷 Descuento: -${formatPrice(disc, config)}`);
+      lines.push(`➖ Descuento: -${formatPrice(disc, config)}`);
     }
     if (tipAmt > 0) {
       lines.push(`🙏 Propina (${config.tipPercent}%): ${formatPrice(tipAmt, config)}`);

@@ -81,6 +81,7 @@ export async function updateRestaurantInfo(
       address: (formData.get('address') as string)?.trim() || null,
       whatsapp_number: waResult.value,
       orders_whatsapp: ordersWaResult.value,
+      orders_whatsapp_enabled: formData.get('orders_whatsapp_enabled') === 'true',
       contact_email: (formData.get('contact_email') as string)?.trim() || null,
     })
     .eq('id', ctx.restaurantId);

@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { updateRestaurantInfo, type RestaurantState } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
 
@@ -16,6 +17,7 @@ const empty: RestaurantState = null;
 export default function ProfileForm({ restaurantId, restaurant }: ProfileFormProps) {
   const [infoState, infoAction, infoIsPending] = useActionState(updateRestaurantInfo, empty);
   const [whatsappVal, setWhatsappVal] = useState(restaurant.whatsapp_number ?? '');
+  const [ordersWaEnabled, setOrdersWaEnabled] = useState(restaurant.orders_whatsapp_enabled !== false);
 
   function validateWhatsApp(v: string): string {
     if (!v.trim()) return '';
@@ -126,6 +128,21 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
                 Acepta: 12345678 · 1234-5678 · 1234 5678 · +502 1234 5678
               </p>
             )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair-2)' }}>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 600 }}>Recibir pedidos por WhatsApp</div>
+                <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
+                  Al confirmar, el comensal ve el botón para enviarte el pedido por WhatsApp a este número.
+                </p>
+              </div>
+              <input type="hidden" name="orders_whatsapp_enabled" value={ordersWaEnabled ? 'true' : 'false'} />
+              <Switch
+                checked={ordersWaEnabled}
+                onCheckedChange={setOrdersWaEnabled}
+                aria-label="Recibir pedidos por WhatsApp"
+              />
+            </div>
           </Card>
 
           <Card className="p-4">

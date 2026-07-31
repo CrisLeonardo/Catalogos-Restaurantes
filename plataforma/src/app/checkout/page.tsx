@@ -59,7 +59,7 @@ export default async function CheckoutPage() {
         <CheckoutForm
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
-          whatsappNumber={restaurant.orders_whatsapp || restaurant.whatsapp_number}
+          whatsappNumber={restaurant.orders_whatsapp_enabled === false ? null : (restaurant.orders_whatsapp || restaurant.whatsapp_number)}
           deliveryZones={restaurant.delivery_zones ?? []}
           restaurantLat={restaurant.location_lat}
           restaurantLng={restaurant.location_lng}

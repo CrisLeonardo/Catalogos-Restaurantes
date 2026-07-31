@@ -437,6 +437,31 @@ export default function AccountSheet({
           </p>
         </Glass>
 
+        {/* Cómo llegar: ubicación exacta del restaurante en Google Maps */}
+        {restaurantLat != null && restaurantLng != null && (
+          <a
+            href={`https://www.google.com/maps?q=${restaurantLat.toFixed(6)},${restaurantLng.toFixed(6)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="press"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 13,
+              padding: '14px 16px', borderRadius: 16,
+              background: 'var(--surface-1)', border: '1px solid var(--u-hair)',
+              textDecoration: 'none', color: 'var(--u-text)',
+            }}
+          >
+            <span style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--surface-2)', color: 'var(--u-text-2)' }}>
+              <Icon name="mapPin" size={20} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Cómo llegar</div>
+              <div className="t-mute" style={{ fontSize: 12 }}>Ver ubicación en el mapa</div>
+            </div>
+            <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+          </a>
+        )}
+
         {/* Contacto por WhatsApp */}
         {whatsappNumber && (
           <a
