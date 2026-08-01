@@ -115,7 +115,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
         <div style={{
           width: 40, height: 40, borderRadius: 12, flexShrink: 0,
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)',
-          display: 'grid', placeItems: 'center', color: 'var(--brand-accent)',
+          display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)',
         }}>
           <Icon name="sparkle" size={18} />
         </div>
@@ -161,12 +161,12 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
               position: 'absolute', top: 8, right: 8,
               fontSize: 8.5, fontWeight: 800, padding: '2px 7px', borderRadius: 99,
               background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)',
-              color: 'var(--brand-accent)', letterSpacing: '0.05em',
+              color: 'var(--brand-accent-ink)', letterSpacing: '0.05em',
             }}>
               PREMIUM
             </span>
 
-            <Icon name={feat.icon} size={20} style={{ color: 'var(--brand-accent)', opacity: 0.8 }} />
+            <Icon name={feat.icon} size={20} style={{ color: 'var(--brand-accent-ink)', opacity: 0.8 }} />
 
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2, paddingRight: 44 }}>
@@ -199,7 +199,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
         <a
           href="/admin/suscripcion"
           style={{
-            fontSize: 13, color: 'var(--brand-accent)', textDecoration: 'none',
+            fontSize: 13, color: 'var(--brand-accent-ink)', textDecoration: 'none',
             fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5,
           }}
         >
@@ -228,7 +228,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                 <div style={{
                   width: 44, height: 44, borderRadius: 13, flexShrink: 0,
                   background: 'rgba(var(--brand-accent-rgb,99,102,241),0.13)',
-                  display: 'grid', placeItems: 'center', color: 'var(--brand-accent)',
+                  display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)',
                 }}>
                   <Icon name={selected.icon} size={22} />
                 </div>
@@ -236,7 +236,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                   <div style={{ fontSize: 17, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--u-text)', lineHeight: 1.1 }}>
                     {selected.name}
                   </div>
-                  <div style={{ fontSize: 11.5, color: 'var(--brand-accent)', fontWeight: 700, marginTop: 3 }}>
+                  <div style={{ fontSize: 11.5, color: 'var(--brand-accent-ink)', fontWeight: 700, marginTop: 3 }}>
                     Incluido en Premium
                   </div>
                 </div>
@@ -278,14 +278,14 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                 border: '2px solid var(--brand-accent)', borderRadius: '0 12px 12px 0',
                 background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
               }}>
-                <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--brand-accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--brand-accent-ink)', textTransform: 'uppercase', marginBottom: 8 }}>
                   Premium
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.4 }}>
-                  <Icon name="check" size={13} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0, marginTop: 1 }} />
+                  <Icon name="check" size={13} style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 1 }} />
                   <span>{selected.premiumLabel}</span>
                 </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', marginTop: 12, lineHeight: 1 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--brand-accent-ink)', marginTop: 12, lineHeight: 1 }}>
                   {planPriceQ(pricing, 'PREMIUM')}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 2 }}>/mes · sin límite de ventas</div>

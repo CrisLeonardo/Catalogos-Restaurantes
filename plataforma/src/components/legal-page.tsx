@@ -56,7 +56,7 @@ export function LegalSection({ n, title, children }: { n: number; title: string;
   return (
     <section style={{ marginTop: 30 }}>
       <h2 className="t-display" style={{ fontSize: 18, fontWeight: 700, display: 'flex', gap: 10, alignItems: 'baseline' }}>
-        <span className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)' }}>{String(n).padStart(2, '0')}</span>
+        <span className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)' }}>{String(n).padStart(2, '0')}</span>
         {title}
       </h2>
       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
@@ -73,7 +73,7 @@ export function LegalList({ items }: { items: React.ReactNode[] }) {
     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((it, i) => (
         <li key={i} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 14.5, lineHeight: 1.6, color: 'var(--u-text-2)' }}>
-          <span style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }}>•</span>
+          <span style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }}>•</span>
           <span>{it}</span>
         </li>
       ))}

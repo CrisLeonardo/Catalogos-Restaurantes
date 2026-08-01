@@ -145,7 +145,7 @@ export default async function AdminHomePage() {
           className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3.5 px-4.5 py-4 no-underline')}
           style={{
             border: trialLeft <= 3
-              ? '1px solid rgba(248,113,113,0.4)'
+              ? '1px solid var(--c-danger-line)'
               : trialLeft <= 7
               ? '1px solid rgba(251,146,60,0.4)'
               : '1px solid color-mix(in srgb, var(--adm-accent-500) 30%, transparent)',
@@ -155,11 +155,11 @@ export default async function AdminHomePage() {
             className="grid size-9 shrink-0 place-items-center rounded-adm-md"
             style={{
               background: trialLeft <= 3
-                ? 'rgba(248,113,113,0.14)'
+                ? 'var(--c-danger-bg)'
                 : trialLeft <= 7
                 ? 'rgba(251,146,60,0.14)'
                 : 'color-mix(in srgb, var(--adm-accent-500) 16%, transparent)',
-              color: trialLeft <= 3 ? '#f87171' : trialLeft <= 7 ? '#fb923c' : 'var(--adm-accent-500)',
+              color: trialLeft <= 3 ? 'var(--c-danger)' : trialLeft <= 7 ? '#fb923c' : 'var(--adm-accent-500)',
             }}
           >
             <Icon name={trialLeft <= 7 ? 'alertCircle' : 'sparkle'} size={17} />

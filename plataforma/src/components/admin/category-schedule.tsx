@@ -179,7 +179,7 @@ export default function CategorySchedule({ defaultValue }: { defaultValue: Weekl
                     color: d.on ? 'var(--u-text)' : 'var(--u-text-4)', fontSize: 12.5, fontWeight: 600,
                   }}
                 >
-                  <span style={{ width: 7, height: 7, borderRadius: 99, flexShrink: 0, background: d.on ? '#4ade80' : 'var(--u-hair-2)' }} />
+                  <span style={{ width: 7, height: 7, borderRadius: 99, flexShrink: 0, background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)' }} />
                   {DAY_LABELS[day]}
                 </button>
                 {d.on ? (

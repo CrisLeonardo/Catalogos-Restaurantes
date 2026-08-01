@@ -37,7 +37,7 @@ export default async function RestaurantMetricsPage({ params }: { params: Promis
         backHref="/super/metricas"
         backLabel="Métricas"
         actions={
-          <Link href={`/super/restaurantes/${row.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-accent)', textDecoration: 'none' }}>
+          <Link href={`/super/restaurantes/${row.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
             Gestionar cobro →
           </Link>
         }
@@ -83,7 +83,7 @@ export default async function RestaurantMetricsPage({ params }: { params: Promis
           ) : (
             <div style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
               Este restaurante aún no tiene mensualidad configurada.{' '}
-              <Link href={`/super/restaurantes/${row.id}`} style={{ color: 'var(--brand-accent)' }}>
+              <Link href={`/super/restaurantes/${row.id}`} style={{ color: 'var(--brand-accent-ink)' }}>
                 Configúrala en su ficha
               </Link>{' '}
               para evaluar el cobro contra su afluencia.

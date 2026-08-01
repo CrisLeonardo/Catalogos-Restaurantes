@@ -34,7 +34,7 @@ function money(n: number) {
 
 const PROVIDERS: FelProvider[] = ['MANUAL', 'INFILE', 'G4S', 'DIGIFACT', 'OTRO'];
 const ESTADO_COLOR: Record<string, string> = {
-  CERTIFICADO: '#22c55e', PENDIENTE: '#f59e0b', ANULADO: '#6b7280', ERROR: '#ef4444',
+  CERTIFICADO: 'var(--c-ok)', PENDIENTE: 'var(--c-warn)', ANULADO: '#6b7280', ERROR: 'var(--c-danger)',
 };
 
 export default function FacturacionPanel({ restaurantId, settings, documents, summary, invoiceable, hasSettingsRow }: Props) {
@@ -52,7 +52,7 @@ export default function FacturacionPanel({ restaurantId, settings, documents, su
       </div>
 
       {!hasSettingsRow && (
-        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
           <Icon name="alertCircle" size={16} /> Configura tus datos fiscales para empezar a emitir facturas.
         </div>
       )}
@@ -181,7 +181,7 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
         <Button onClick={save} disabled={isPending} className="rounded-adm-full">
           {isPending ? 'Guardando…' : 'Guardar configuración'}
         </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
+        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
       </div>
     </Card>
   );
@@ -274,7 +274,7 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
         <Button onClick={emit} disabled={isPending || (mode === 'pedido' && !orderId)} className="rounded-adm-full">
           {isPending ? 'Emitiendo…' : 'Emitir factura'}
         </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
+        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
       </div>
     </Card>
   );
@@ -330,7 +330,7 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
               </td>
               <td style={{ padding: '10px 12px', fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>{money(Number(d.monto_total))}</td>
               <td style={{ padding: '10px 12px' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `${ESTADO_COLOR[d.estado] ?? '#888'}22`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[d.estado] ?? '#888'} 13%, transparent)`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
                   {d.estado}
                 </span>
               </td>
@@ -340,7 +340,7 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
               <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                 {d.estado !== 'ANULADO' && (
                   <Button onClick={() => anular(d.id)} disabled={isPending && busy === d.id} variant="outline" size="sm"
-                    className="border-[rgba(239,68,68,0.25)] text-[#f87171]">
+                    className="border-[var(--c-danger-line)] text-[var(--c-danger)]">
                     {busy === d.id ? '…' : 'Anular'}
                   </Button>
                 )}

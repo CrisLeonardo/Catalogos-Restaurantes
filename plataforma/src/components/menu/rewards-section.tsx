@@ -289,12 +289,12 @@ function RewardsMenu({
               <div>
                 <div className="t-kicker" style={{ fontSize: 10 }}>Tus puntos{loyalty?.name ? ` · ${loyalty.name.split(' ')[0]}` : ''}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 42, fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 0.9 }}>{fmtPts(balance ?? 0)}</span>
+                  <span style={{ fontSize: 42, fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.9 }}>{fmtPts(balance ?? 0)}</span>
                   <span className="t-mute" style={{ fontSize: 15 }}>{(balance ?? 0) === 1 ? 'punto' : 'puntos'}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <Icon name="gift" size={30} style={{ color: 'var(--brand-accent)' }} />
+                <Icon name="gift" size={30} style={{ color: 'var(--brand-accent-ink)' }} />
                 {loggedIn && <button onClick={signOut} disabled={busy} className="press" style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>}
               </div>
             </div>

@@ -27,6 +27,10 @@ import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types
 import type { FloorPlan } from '@/lib/theme/defaults';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
+import {
+  STATUS_LABEL_SHORT, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
+  stageClock, fmtElapsed, clockChipClass,
+} from '@/lib/order-status';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -63,6 +67,8 @@ interface Props {
   isOperatorSession?: boolean;
   /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación. */
   voidApprovers?: VoidApprover[];
+  /** El usuario de esta sesión ya puede autorizar anulaciones (no pide PIN). */
+  canSelfApprove?: boolean;
 }
 
 /** Objetivo de un modal de anulación en curso: null = cerrado. */
@@ -88,27 +94,6 @@ function money(n: number, c: PanelCurrency): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', SERVED: 'Servido', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
-};
-const STATUS_COLOR: Record<string, string> = {
-  NEW: '#3b82f6', PREP: '#f59e0b', READY: '#8b5cf6', TRANSIT: '#f97316', SERVED: '#06b6d4', DELIVERED: '#22c55e', CANCEL: '#6b7280',
-};
-
-/** Para DINE_IN, "servir" no cierra la mesa: READY→SERVED (intermedio) y ahí
-    se detiene el avance automático — solo "Marcar como libre" llega a DELIVERED. */
-function nextStatus(status: string, type: string): string | null {
-  if (status === 'NEW') return 'PREP';
-  if (status === 'PREP') return 'READY';
-  if (status === 'READY') return type === 'DINE_IN' ? 'SERVED' : 'DELIVERED';
-  return null;
-}
-function nextLabel(status: string, type: string): string {
-  if (status === 'NEW') return 'Confirmar';
-  if (status === 'PREP') return 'Marcar listo';
-  if (status === 'READY') return type === 'DINE_IN' ? 'Marcar servido' : 'Servir en mesa';
-  return '';
-}
 
 /* ── Modal de opciones del producto (diseño igual al cliente) ── */
 function initModalSelection(groups: ProductOptionGroup[]): Record<string, string[]> {
@@ -154,8 +139,13 @@ function ProductOptionsModal({
   /** choiceId -> variantId elegida (solo choices de combo con variantes). */
   const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initModalVariants(groups));
   const [qty, setQty] = useState(1);
+  /** Grupo obligatorio sin elegir, señalado en la propia hoja. Antes esto era
+      un alert() del navegador: una caja gris del sistema operativo encima de
+      la app, sin decir cuál de los grupos faltaba. */
+  const [missingGroupId, setMissingGroupId] = useState<string | null>(null);
 
   function toggleChoice(group: ProductOptionGroup, choiceId: string) {
+    setMissingGroupId((m) => (m === group.id ? null : m));
     setSelected((prev) => {
       const current = prev[group.id] ?? [];
       if (group.type === 'single') {
@@ -197,18 +187,21 @@ function ProductOptionsModal({
     return opts;
   }
 
-  function validate(): string | null {
+  /** Primer grupo obligatorio sin respuesta, o null si está todo listo. */
+  function firstMissingGroup(): ProductOptionGroup | null {
     for (const group of groups) {
-      if (group.type === 'single' && group.required && !(selected[group.id]?.length)) {
-        return `Elige "${group.name}"`;
-      }
+      if (group.type === 'single' && group.required && !(selected[group.id]?.length)) return group;
     }
     return null;
   }
 
   function handleAdd() {
-    const err = validate();
-    if (err) { alert(err); return; }
+    const missing = firstMissingGroup();
+    if (missing) {
+      setMissingGroupId(missing.id);
+      document.getElementById(`optgrp-${missing.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const opts = buildOptions();
     const delta = opts.reduce((s, o) => s + o.priceDelta, 0);
     for (let i = 0; i < qty; i++) {
@@ -224,92 +217,101 @@ function ProductOptionsModal({
     <div onClick={onClose} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
       <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{ padding: '18px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
+        <div style={{ padding: '18px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--u-hair)' }}>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>{product.name}</div>
-            <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>{money(finalPrice, currency)} por unidad</div>
+            <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
+              {money(finalPrice, currency)} por unidad
+            </div>
           </div>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0, marginLeft: 10 }}>
+          <button onClick={onClose} aria-label="Cerrar" className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0, marginLeft: 10 }}>
             <Icon name="x" size={18} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', padding: '4px 20px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ overflowY: 'auto', padding: '16px 20px' }}>
           {groups.map((group) => {
             const picked = selected[group.id] ?? [];
             const isCombo = group.type === 'combo';
-            const hint = isCombo ? 'Personaliza tu combo'
-              : group.type === 'single' ? (group.required ? 'Elige uno' : 'Opcional')
+            const required = group.type === 'single' && !!group.required;
+            const hint = isCombo ? 'Personaliza el combo'
+              : required ? 'Elige uno'
               : group.max && group.max > 0 ? `Opcional · máx ${group.max}` : 'Opcional';
+            const missing = missingGroupId === group.id;
 
             return (
-              <div key={group.id}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{group.name}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{hint}</span>
+              <div key={group.id} id={`optgrp-${group.id}`} className="opt-group">
+                <div className="opt-head">
+                  <span className="opt-title">{group.name}</span>
+                  <span className="opt-hint" data-required={required ? '1' : '0'}>{hint}</span>
                 </div>
+
+                {missing && (
+                  <div className="note note-warn" style={{ marginBottom: 10 }}>
+                    <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                    Falta elegir {group.name.toLowerCase()}.
+                  </div>
+                )}
 
                 {isCombo ? (
                   /* Combo: filas con checkmark, precio visible como ahorro al quitar */
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                     {group.choices.map((choice) => {
                       const included = picked.includes(choice.id);
                       const d = Number(choice.priceDelta) || 0;
                       return (
-                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <button type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 10%, transparent)' : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-                            border: `1px solid ${included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 35%, transparent)' : 'var(--u-hair)'}` }}>
-                          <span style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'grid', placeItems: 'center',
-                            background: included ? 'var(--c-ok-solid, #22c55e)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', border: `1.5px solid ${included ? 'var(--c-ok-solid, #22c55e)' : 'var(--u-hair)'}` }}>
-                            {included && <Icon name="check" size={12} style={{ color: '#fff' }} />}
-                          </span>
-                          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: included ? 'var(--u-text)' : 'var(--u-text-3)', textDecoration: included ? 'none' : 'line-through' }}>
-                            {choice.name}
-                          </span>
-                          {d > 0 && (
-                            <span style={{ fontSize: 12, flexShrink: 0, color: included ? 'var(--u-text-2)' : 'var(--c-danger, #f87171)' }}>
-                              {included ? `+${money(d, currency)}` : `−${money(d, currency)}`}
+                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          <button type="button" onClick={() => toggleChoice(group, choice.id)} aria-pressed={included} className="press opt-row">
+                            <span className="opt-check">
+                              {included && <Icon name="check" size={12} strokeWidth={3} />}
                             </span>
+                            <span className="opt-row-name">{choice.name}</span>
+                            {d > 0 && (
+                              <span className="opt-row-delta">
+                                {included ? `+${money(d, currency)}` : `−${money(d, currency)}`}
+                              </span>
+                            )}
+                          </button>
+                          {included && choice.variants && choice.variants.length > 0 && (
+                            <div className="opt-variants">
+                              {choice.variants.map((variant) => {
+                                const on = variantSelected[choice.id] === variant.id;
+                                const vDelta = Number(variant.priceDelta) || 0;
+                                return (
+                                  <button
+                                    key={variant.id}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }}
+                                    aria-pressed={on}
+                                    className="press opt-pill opt-pill-sm"
+                                  >
+                                    {variant.name}
+                                    {vDelta !== 0 && (
+                                      <span className="opt-delta">{vDelta > 0 ? '+' : '−'}{money(Math.abs(vDelta), currency)}</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
-                        </button>
-                        {included && choice.variants && choice.variants.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 30 }}>
-                            {choice.variants.map((variant) => {
-                              const on = variantSelected[choice.id] === variant.id;
-                              const vDelta = Number(variant.priceDelta) || 0;
-                              return (
-                                <button key={variant.id} type="button" onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }} className="press"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 99, cursor: 'pointer',
-                                    background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 12 }}>
-                                  {variant.name}
-                                  {vDelta !== 0 && <span style={{ fontSize: 10.5, opacity: 0.8, color: 'inherit' }}>{vDelta > 0 ? '+' : '−'}{money(Math.abs(vDelta), currency)}</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
                         </div>
                       );
                     })}
                   </div>
                 ) : (
                   /* Single / Multi: píldoras */
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="opt-pills">
                     {group.choices.map((choice) => {
                       const on = picked.includes(choice.id);
                       const d = Number(choice.priceDelta) || 0;
                       return (
-                        <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} className="press"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
-                            background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                            border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, fontWeight: 600, fontSize: 13 }}>
-                          {on && <Icon name="check" size={13} />}
+                        <button key={choice.id} type="button" onClick={() => toggleChoice(group, choice.id)} aria-pressed={on} className="press opt-pill">
+                          {on && <Icon name="check" size={13} strokeWidth={3} />}
                           {choice.name}
-                          {d !== 0 && <span style={{ fontSize: 11.5, opacity: 0.75 }}>{d > 0 ? '+' : '−'}{money(Math.abs(d), currency)}</span>}
+                          {d !== 0 && (
+                            <span className="opt-delta">{d > 0 ? '+' : '−'}{money(Math.abs(d), currency)}</span>
+                          )}
                         </button>
                       );
                     })}
@@ -320,19 +322,21 @@ function ProductOptionsModal({
           })}
 
           {/* Cantidad */}
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', marginBottom: 10 }}>Cantidad</div>
+          <div className="opt-group">
+            <div className="opt-head"><span className="opt-title">Cantidad</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="press glass-quiet" style={{ width: 42, height: 42, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>−</button>
-              <span style={{ fontSize: 20, fontWeight: 700, minWidth: 32, textAlign: 'center' }}>{qty}</span>
-              <button type="button" onClick={() => setQty((q) => Math.min(20, q + 1))} className="press glass-quiet" style={{ width: 42, height: 42, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>+</button>
+              <button type="button" aria-label="Quitar una" onClick={() => setQty((q) => Math.max(1, q - 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>−</button>
+              <span style={{ fontSize: 20, fontWeight: 700, minWidth: 32, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{qty}</span>
+              <button type="button" aria-label="Agregar una" onClick={() => setQty((q) => Math.min(20, q + 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>+</button>
             </div>
           </div>
         </div>
 
         <div style={{ padding: '14px 20px', borderTop: '1px solid var(--u-hair)' }}>
-          <button type="button" onClick={handleAdd} className="press btn-accent" style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
-            Agregar — {money(finalPrice * qty, currency)}
+          <button type="button" onClick={handleAdd} className="press btn-accent" style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span>Agregar {qty > 1 ? `${qty} ×` : ''}</span>
+            <span style={{ opacity: 0.55 }}>·</span>
+            <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(finalPrice * qty, currency)}</span>
           </button>
         </div>
       </div>
@@ -436,7 +440,7 @@ export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
-  hubUrl, hubToken, isOperatorSession = false, voidApprovers = [],
+  hubUrl, hubToken, isOperatorSession = false, voidApprovers = [], canSelfApprove = false,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -817,13 +821,13 @@ export default function WaiterPanel({
               ＋ Nuevo pedido
             </button>
             {queuedCount > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-warn, #f59e0b) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 30%, transparent)', color: 'var(--c-warn, #f59e0b)', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-warn, #f59e0b) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 30%, transparent)', color: 'var(--c-warn)', fontSize: 13, fontWeight: 600 }}>
                 <Icon name="clock" size={15} />
                 {queuedCount === 1 ? '1 pedido sin sincronizar — se enviará solo al volver la señal.' : `${queuedCount} pedidos sin sincronizar — se enviarán solos al volver la señal.`}
               </div>
             )}
             {statusError && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', color: 'var(--c-danger, #f87171)', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', color: 'var(--c-danger)', fontSize: 13, fontWeight: 600 }}>
                 <Icon name="alertCircle" size={15} />
                 {statusError}
               </div>
@@ -838,16 +842,24 @@ export default function WaiterPanel({
               // tarjeta del pedido — cerrar la mesa es solo vía "Marcar como libre" en
               // el diálogo de la mesa), aunque para las queries de ocupación no cuenta
               // como cerrado (la mesa sigue viéndose ocupada).
-              const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCEL' || order.status === 'SERVED';
+              const isTerminal = isCardTerminal(order.status);
+              // Mismo cronómetro por etapa que el panel de pedidos: el mesero es
+              // quien tiene que darse cuenta de que un plato lleva 12 minutos
+              // listo en la barra sin que nadie lo haya llevado a la mesa.
+              const clk = stageClock(order, 10, 20);
+              const elapsedMs = clk && now != null ? now - new Date(clk.since).getTime() : 0;
               return (
                 <div key={order.id} className="glass" style={{ borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, opacity: isTerminal ? 0.6 : 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{order.order_number}</span>
-                        <span style={{ padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: `${STATUS_COLOR[order.status]}22`, color: STATUS_COLOR[order.status], border: `1px solid ${STATUS_COLOR[order.status]}44` }}>
-                          {STATUS_LABEL[order.status]}
-                        </span>
+                        <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL_SHORT[order.status]}</span>
+                        {clk && now != null && (
+                          <span className={`chip ${clockChipClass(elapsedMs / 60000, clk)}`} title={clk.label}>
+                            <Icon name="clock" size={11} /> {fmtElapsed(elapsedMs)}
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginTop: 3 }}>{order.customer_name}</div>
                       {order.address && <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="grid" size={12} /> {order.address}</div>}
@@ -855,9 +867,6 @@ export default function WaiterPanel({
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--u-text)' }}>
                         {money(Number(order.total), currency)}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
-                        {new Date(order.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
@@ -872,7 +881,7 @@ export default function WaiterPanel({
                           <span>
                             {remaining}× {item.name_snapshot}
                             {voidedQty > 0 && (
-                              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600 }}>
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger)', fontWeight: 600 }}>
                                 {voidedQty} anulada{voidedQty === 1 ? '' : 's'}
                               </span>
                             )}
@@ -885,7 +894,7 @@ export default function WaiterPanel({
                                 onClick={() => setVoidTarget({ orderId: order.id, orderStatus: order.status, item: { id: item.id, name: item.name_snapshot, remainingQty: remaining } })}
                                 title="Anular"
                                 className="press"
-                                style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                               >
                                 <Icon name="x" size={11} />
                               </button>
@@ -917,7 +926,7 @@ export default function WaiterPanel({
                         type="button"
                         onClick={() => setVoidTarget({ orderId: order.id, orderStatus: order.status, item: null })}
                         className="press"
-                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
                       >
                         Cancelar
                       </button>
@@ -935,6 +944,7 @@ export default function WaiterPanel({
             orderStatus={voidTarget.orderStatus}
             item={voidTarget.item}
             voidApprovers={voidApprovers}
+            canSelfApprove={canSelfApprove}
             onClose={() => setVoidTarget(null)}
             onDone={() => { setVoidTarget(null); router.refresh(); }}
           />
@@ -966,14 +976,14 @@ export default function WaiterPanel({
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', border: '1px solid var(--u-hair)' }} /> Libre
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(251,191,36,0.25)', border: '1px solid rgba(251,191,36,0.5)' }} /> Con pedido activo
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--c-warn-line)', border: '1px solid var(--c-warn-line)' }} /> Con pedido activo
               </span>
             </div>
 
             {abandonedCount > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, marginBottom: 14, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
-                <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0 }} />
-                <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger, #f87171)' }}>
+                <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)', flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger)' }}>
                   {abandonedCount} mesa{abandonedCount === 1 ? '' : 's'} con más de 24h ocupada{abandonedCount === 1 ? '' : 's'} — probablemente un pedido olvidado.
                 </span>
                 <button
@@ -1090,7 +1100,7 @@ export default function WaiterPanel({
                     });
                   }}
                   className="press"
-                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
+                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
                 >
                   {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar como libre</>}
                 </button>
@@ -1113,7 +1123,7 @@ export default function WaiterPanel({
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Cargando cuenta…</div>
             )}
             {billError && (
-              <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)', padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)' }}>{billError}</div>
+              <div style={{ fontSize: 13, color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)' }}>{billError}</div>
             )}
             {!billLoading && !billError && billOrders && billTable != null && (
               <WaiterBill
@@ -1147,6 +1157,7 @@ export default function WaiterPanel({
             orderStatus={voidTarget.orderStatus}
             item={voidTarget.item}
             voidApprovers={voidApprovers}
+            canSelfApprove={canSelfApprove}
             onClose={() => setVoidTarget(null)}
             onDone={() => { setVoidTarget(null); if (billTable) loadTableBill(billTable); router.refresh(); }}
           />
@@ -1166,7 +1177,7 @@ export default function WaiterPanel({
               <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Orden ({cartCount})</div>
               {cart.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
-                  Aún no agregaste platos. <button type="button" onClick={() => setView('menu')} style={{ color: 'var(--brand-accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Volver al menú</button>
+                  Aún no agregaste platos. <button type="button" onClick={() => setView('menu')} style={{ color: 'var(--brand-accent-ink)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Volver al menú</button>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1227,8 +1238,8 @@ export default function WaiterPanel({
               <span style={{ fontSize: 15, color: 'var(--u-text-2)', fontWeight: 600 }}>Total</span>
               <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)' }}>{money(total, currency)}</span>
             </div>
-            {submitError && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 20%, transparent)' }}>{submitError}</div>}
-            {submitOk && <div style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ok, #4ade80) 20%, transparent)' }}>{submitOk}</div>}
+            {submitError && <div style={{ fontSize: 13, color: 'var(--c-danger)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 20%, transparent)' }}>{submitError}</div>}
+            {submitOk && <div style={{ fontSize: 13, color: 'var(--c-ok)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-ok, #4ade80) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-ok, #4ade80) 20%, transparent)' }}>{submitOk}</div>}
             <button
               type="button"
               onClick={handleSubmit}
@@ -1351,7 +1362,7 @@ export default function WaiterPanel({
                           : <span style={{ fontSize: 22 }}>{p.icon}</span>
                       )}
                       <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, paddingRight: qty > 0 ? 22 : 0 }}>{p.name}</span>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brand-accent)' }}>{money(p.price, currency)}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{money(p.price, currency)}</span>
                     </button>
 
                     {/* Controles rápidos: +/- para productos sin opciones; "+ Agregar" para los que tienen */}
@@ -1365,7 +1376,7 @@ export default function WaiterPanel({
                         <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 }}>
+                      <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 }}>
                         + Agregar
                       </button>
                     )}

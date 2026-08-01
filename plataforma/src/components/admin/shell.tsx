@@ -123,7 +123,7 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  BASICO: '#94a3b8', ESTANDAR: '#10b981', PREMIUM: '#6366f1', PRO: '#a855f7',
+  BASICO: '#94a3b8', ESTANDAR: 'var(--c-ok)', PREMIUM: 'var(--c-alt)', PRO: '#a855f7',
 };
 const PLAN_NAMES: Record<string, string> = {
   BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro',

@@ -31,7 +31,7 @@ function money(n: number) {
   return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 const ESTADO_COLOR: Record<string, string> = {
-  BORRADOR: '#9aa3ad', ENVIADA: '#f59e0b', RECIBIDA: '#22c55e', CANCELADA: '#ef4444',
+  BORRADOR: '#9aa3ad', ENVIADA: 'var(--c-warn)', RECIBIDA: 'var(--c-ok)', CANCELADA: 'var(--c-danger)',
 };
 
 export default function ProveedoresPanel({ restaurantId, suppliers, orders, summary, products, ingredients }: Props) {
@@ -104,7 +104,7 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full">+ Nuevo proveedor</Button>
       </div>
-      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>{error}</div>}
 
       {edit && (
         <Card className="p-4">
@@ -142,7 +142,7 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                       <Button onClick={() => setEdit({ id: s.id, name: s.name, contact_name: s.contact_name, phone: s.phone, email: s.email, notes: s.notes })} variant="outline" size="icon" className="size-9" title="Editar" aria-label={`Editar ${s.name}`}><Icon name="edit" size={14} /></Button>
-                      <Button onClick={() => remove(s)} disabled={isPending} variant="outline" size="icon" className="size-9 border-[rgba(220,50,50,0.2)] text-[#f87171]" title="Eliminar" aria-label={`Eliminar ${s.name}`}><Icon name="trash" size={14} /></Button>
+                      <Button onClick={() => remove(s)} disabled={isPending} variant="outline" size="icon" className="size-9 border-[var(--c-danger-line)] text-[var(--c-danger)]" title="Eliminar" aria-label={`Eliminar ${s.name}`}><Icon name="trash" size={14} /></Button>
                     </div>
                   </td>
                 </tr>
@@ -242,7 +242,7 @@ function OrdersTab({
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full">+ Nueva orden</Button>}
       </div>
-      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>{error}</div>}
 
       {creating && (
         <Card className="flex flex-col gap-3 p-4">
@@ -276,7 +276,7 @@ function OrdersTab({
                   <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.001" placeholder="Cant." value={l.cantidad} onChange={(e) => setLine(i, { cantidad: e.target.value })} />
                   <input style={inputStyle} placeholder="Unidad" value={l.unidad} onChange={(e) => setLine(i, { unidad: e.target.value })} />
                   <input style={{ ...inputStyle, textAlign: 'right' }} type="number" inputMode="decimal" min="0" step="0.0001" placeholder="Costo Q" value={l.costo_unitario} onChange={(e) => setLine(i, { costo_unitario: e.target.value })} />
-                  <Button type="button" variant="outline" size="icon" className="size-8 border-[rgba(220,50,50,0.2)] text-[#f87171]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
+                  <Button type="button" variant="outline" size="icon" className="size-8 border-[var(--c-danger-line)] text-[var(--c-danger)]" aria-label="Quitar renglón" onClick={() => setLines((ls) => ls.length > 1 ? ls.filter((_, j) => j !== i) : ls)}><Icon name="x" size={13} /></Button>
                 </div>
               </div>
             ))}
@@ -287,7 +287,7 @@ function OrdersTab({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--u-hair)', paddingTop: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Total: <span style={{ color: 'var(--brand-accent)', fontFamily: 'var(--ui-font-mono)' }}>{money(total)}</span></span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Total: <span style={{ color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)' }}>{money(total)}</span></span>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button onClick={create} disabled={isPending} size="sm" className="rounded-adm-full">{isPending ? 'Creando…' : 'Crear orden'}</Button>
               <Button onClick={reset} variant="outline" size="sm" className="rounded-adm-full">Cancelar</Button>
@@ -307,14 +307,14 @@ function OrdersTab({
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Orden #{String(po.folio).padStart(4, '0')}</div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{po.supplier_name || 'Sin proveedor'} · {new Date(po.created_at).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })}</div>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `${ESTADO_COLOR[po.estado]}22`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[po.estado]} 13%, transparent)`, color: ESTADO_COLOR[po.estado] }}>{po.estado}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
                 {(po.items ?? []).map((it) => {
                   const linkLabel = it.product_name ? `📦 ${it.product_name}` : it.ingredient_name ? `🧂 ${it.ingredient_name}` : null;
                   return (
                     <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--u-text-2)' }}>
-                      <span>{it.cantidad} {it.unidad} · {it.descripcion}{linkLabel && <span style={{ color: 'var(--brand-accent)' }}> · {linkLabel}</span>}</span>
+                      <span>{it.cantidad} {it.unidad} · {it.descripcion}{linkLabel && <span style={{ color: 'var(--brand-accent-ink)' }}> · {linkLabel}</span>}</span>
                       <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(Number(it.subtotal))}</span>
                     </div>
                   );
@@ -343,7 +343,7 @@ function ActionBtn({ label, onClick, disabled, accent, danger }: { label: string
       disabled={disabled}
       size="sm"
       variant={accent ? 'primary' : danger ? 'outline' : 'secondary'}
-      className={cn('rounded-adm-full', danger && 'border-[rgba(239,68,68,0.3)] text-[#f87171]')}
+      className={cn('rounded-adm-full', danger && 'border-[var(--c-danger-line)] text-[var(--c-danger)]')}
     >
       {label}
     </Button>

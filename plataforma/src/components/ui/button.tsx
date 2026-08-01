@@ -20,7 +20,7 @@ const buttonVariants = cva(
         destructive:
           'bg-adm-danger/10 text-adm-danger hover:bg-adm-danger/20',
         link:
-          'bg-transparent text-adm-accent-500 underline-offset-4 hover:underline p-0 h-auto',
+          'bg-transparent text-adm-accent-ink underline-offset-4 hover:underline p-0 h-auto',
       },
       size: {
         sm: 'h-8 px-3 text-[12.5px]',

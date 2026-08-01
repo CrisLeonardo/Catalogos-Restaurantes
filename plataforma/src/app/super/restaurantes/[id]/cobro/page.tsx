@@ -29,7 +29,7 @@ export default async function FichaCobroPage({
         Define cuánto paga este restaurante, genera sus cobros y registra cuándo te paga.
         El dueño lo ve en su panel en «Mi suscripción». El panorama completo de todos tus
         cobros está en{' '}
-        <Link href="/super/finanzas" style={{ color: 'var(--brand-accent)' }}>Finanzas →</Link>
+        <Link href="/super/finanzas" style={{ color: 'var(--brand-accent-ink)' }}>Finanzas →</Link>
       </p>
       <BillingManager
         key={row.id}

@@ -906,14 +906,14 @@ export default function CheckoutForm({
                 </button>
               )}
               {ratingError && (
-                <p role="alert" style={{ fontSize: 12.5, color: 'var(--c-danger, #f87171)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
+                <p role="alert" style={{ fontSize: 12.5, color: 'var(--c-danger)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
                   {ratingError}
                 </p>
               )}
             </Glass>
           )}
           {encuestasActive && ratingSent && (
-            <p style={{ fontSize: 14, color: 'var(--c-ok, #4ade80)', fontWeight: 600, textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: 'var(--c-ok)', fontWeight: 600, textAlign: 'center' }}>
               ¡Gracias por tu calificación! ⭐
             </p>
           )}
@@ -958,7 +958,7 @@ export default function CheckoutForm({
           {items.map((item) => (
             <div key={item.lineId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
               <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                {item.rewardId && <Icon name="gift" size={13} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />}
+                {item.rewardId && <Icon name="gift" size={13} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />}
                 <span>
                   {item.quantity}× {item.name}
                   {item.options && item.options.length > 0 && (
@@ -969,7 +969,7 @@ export default function CheckoutForm({
                 </span>
               </span>
               {item.rewardId
-                ? <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', whiteSpace: 'nowrap' }}>{(item.pointsCost ?? 0).toLocaleString('es-GT')} pts</span>
+                ? <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', whiteSpace: 'nowrap' }}>{(item.pointsCost ?? 0).toLocaleString('es-GT')} pts</span>
                 : <Price amount={item.price * item.quantity} size={13.5} muted />}
             </div>
           ))}
@@ -988,8 +988,8 @@ export default function CheckoutForm({
             )}
             {discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>Descuento{appliedCoupon ? ` · ${appliedCoupon.code}` : ''}</span>
-                <span style={{ fontSize: 13.5, color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
+                <span style={{ fontSize: 13, color: 'var(--c-ok)' }}>Descuento{appliedCoupon ? ` · ${appliedCoupon.code}` : ''}</span>
+                <span style={{ fontSize: 13.5, color: 'var(--c-ok)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
             {tipAmount > 0 && (
@@ -1000,8 +1000,8 @@ export default function CheckoutForm({
             )}
             {pointsToRedeem > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--brand-accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={13} /> Recompensas (puntos a usar)</span>
-                <span style={{ fontSize: 13.5, color: 'var(--brand-accent)', fontWeight: 600 }}>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
+                <span style={{ fontSize: 13, color: 'var(--brand-accent-ink)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={13} /> Recompensas (puntos a usar)</span>
+                <span style={{ fontSize: 13.5, color: 'var(--brand-accent-ink)', fontWeight: 600 }}>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -1014,7 +1014,7 @@ export default function CheckoutForm({
           {hasCoupons && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
             {appliedCoupon ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12.5, color: 'var(--c-ok)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="checkCircle" size={15} /> Cupón {appliedCoupon.code} aplicado
                 </span>
                 <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponMsg(''); }} className="press t-mute" style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
@@ -1034,7 +1034,7 @@ export default function CheckoutForm({
                 </button>
               </div>
             )}
-            {couponMsg && <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 7 }}>{couponMsg}</p>}
+            {couponMsg && <p style={{ fontSize: 12, color: 'var(--c-danger)', marginTop: 7 }}>{couponMsg}</p>}
           </div>}
 
           {/* Propina — obligatoria cuando el restaurante la habilita. */}
@@ -1042,7 +1042,7 @@ export default function CheckoutForm({
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
+                  <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent-ink)' }} />
                   Propina ({config.tipPercent}%)
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
@@ -1101,7 +1101,7 @@ export default function CheckoutForm({
           error={(tried || phone.trim().length > 0) && errs.phone}
         />
         {phone.trim().length > 0 && !errs.phone && (
-          <p style={{ fontSize: 11.5, color: 'var(--c-ok, #4ade80)', marginTop: -12 }}>
+          <p style={{ fontSize: 11.5, color: 'var(--c-ok)', marginTop: -12 }}>
             Número válido ✓
           </p>
         )}
@@ -1133,7 +1133,7 @@ export default function CheckoutForm({
             ) : (
               <div style={{
                 marginTop: 8, padding: '12px 14px', borderRadius: 14,
-                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.20)',
+                background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
                 fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5,
               }}>
                 {content.checkout.mesaNotFound}
@@ -1207,8 +1207,8 @@ export default function CheckoutForm({
               <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.zone}</p>
             )}
             {outOfZone && (
-              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-                <Icon name="mapPin" size={16} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+                <Icon name="mapPin" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
                 <span>Por ahora el delivery no llega a tu zona.
                 {typeOptions.some((o) => o.id === 'PICKUP') && (
                   <>
@@ -1370,7 +1370,7 @@ export default function CheckoutForm({
                   <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{cashAmountErr}</p>
                 )}
                 {cashAmount.trim() !== '' && cashAmountNum >= finalTotal && (
-                  <p style={{ fontSize: 12.5, color: 'var(--c-ok, #4ade80)', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <p style={{ fontSize: 12.5, color: 'var(--c-ok)', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Icon name="check" size={13} strokeWidth={3} />
                     Cambio que recibirás: <strong>{formatPrice(cashAmountNum - finalTotal, config)}</strong>
                   </p>

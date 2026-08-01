@@ -350,7 +350,7 @@ export default function WaiterBill({
           </div>
           <div style={{ textAlign: 'center', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
             <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Le toca a cada quien</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--brand-accent)', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--brand-accent-ink)', letterSpacing: '-0.02em' }}>
               {money(split.people[0]?.total ?? 0, currency)}
             </div>
           </div>
@@ -428,7 +428,7 @@ export default function WaiterBill({
               background: 'color-mix(in srgb, var(--c-warn, #f59e0b) 9%, transparent)',
               border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 28%, transparent)',
             }}>
-              <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn, #f59e0b)', flexShrink: 0 }} />
+              <Icon name="alertCircle" size={15} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 170, fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
                 <b>{unassignedCount} plato{unassignedCount === 1 ? '' : 's'} sin asignar</b> ·{' '}
                 {money(split.unassigned?.total ?? 0, currency)} que nadie está pagando.
@@ -437,7 +437,7 @@ export default function WaiterBill({
                 type="button"
                 onClick={() => assignRestTo(safeActive)}
                 className="press"
-                style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 99, border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 40%, transparent)', background: 'transparent', color: 'var(--c-warn, #f59e0b)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 99, border: '1px solid color-mix(in srgb, var(--c-warn, #f59e0b) 40%, transparent)', background: 'transparent', color: 'var(--c-warn)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
               >
                 Dárselos a {label(safeActive)}
               </button>
@@ -474,7 +474,7 @@ export default function WaiterBill({
               <div style={{ fontSize: 13, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
                 {line.voidedQuantity}× {line.name}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600, marginTop: 2 }}>Anulado · no se cobra</div>
+              <div style={{ fontSize: 11, color: 'var(--c-danger)', fontWeight: 600, marginTop: 2 }}>Anulado · no se cobra</div>
             </div>
           ))}
         </div>
@@ -542,9 +542,9 @@ export default function WaiterBill({
 
           {split.unassigned && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, border: '1px dashed color-mix(in srgb, var(--c-warn, #f59e0b) 40%, transparent)' }}>
-              <Icon name="alertCircle" size={16} style={{ color: 'var(--c-warn, #f59e0b)', flexShrink: 0 }} />
+              <Icon name="alertCircle" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)' }}>Sin asignar</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-warn, #f59e0b)' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-warn)' }}>
                 {money(split.unassigned.total, currency)}
               </span>
             </div>
@@ -590,7 +590,7 @@ export default function WaiterBill({
           className={allPaid ? 'press btn-accent' : 'press'}
           style={allPaid
             ? { padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }
-            : { padding: '14px', borderRadius: 14, cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger, #f87171)' }}
+            : { padding: '14px', borderRadius: 14, cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)' }}
         >
           {freeing ? 'Liberando…' : (
             <>
@@ -667,7 +667,7 @@ function LineCard({
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{line.options}</div>
         )}
         {line.voidedQuantity > 0 && (
-          <div style={{ fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600, marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--c-danger)', fontWeight: 600, marginTop: 2 }}>
             {line.voidedQuantity} anulada{line.voidedQuantity === 1 ? '' : 's'}
           </div>
         )}
@@ -694,7 +694,7 @@ function LineCard({
           title="Anular este plato"
           aria-label={`Anular ${line.name}`}
           className="press"
-          style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: 'var(--c-danger, #f87171)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+          style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
         >
           <Icon name="x" size={11} />
         </button>

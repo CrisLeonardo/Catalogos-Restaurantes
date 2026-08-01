@@ -204,7 +204,7 @@ export default function OrderTracker({
         {order.status === 'NEW' && (
           <div style={{ marginTop: 14 }}>
             {cancelError && (
-              <p style={{ fontSize: 12.5, color: '#f87171', marginBottom: 8 }}>{cancelError}</p>
+              <p style={{ fontSize: 12.5, color: 'var(--c-danger)', marginBottom: 8 }}>{cancelError}</p>
             )}
             {showCancelConfirm ? (
               <Glass variant="quiet" style={{ borderRadius: 14, padding: '14px 16px' }}>
@@ -239,9 +239,9 @@ export default function OrderTracker({
                       flex: 1, padding: '10px 12px', borderRadius: 12,
                       fontWeight: 700, fontSize: 13,
                       cursor: isCancelling ? 'not-allowed' : 'pointer',
-                      background: 'rgba(239,68,68,0.18)',
-                      border: '1px solid rgba(239,68,68,0.40)',
-                      color: '#f87171',
+                      background: 'var(--c-danger-bg)',
+                      border: '1px solid var(--c-danger-line)',
+                      color: 'var(--c-danger)',
                       opacity: isCancelling ? 0.6 : 1,
                     }}
                   >
@@ -258,9 +258,9 @@ export default function OrderTracker({
                   display: 'inline-flex', alignItems: 'center', gap: 7,
                   padding: '8px 14px', borderRadius: 99,
                   fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-                  background: 'rgba(239,68,68,0.10)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                  color: '#f87171',
+                  background: 'var(--c-danger-bg)',
+                  border: '1px solid var(--c-danger-line)',
+                  color: 'var(--c-danger)',
                 }}
               >
                 <Icon name="x" size={13} strokeWidth={2.5} /> Cancelar pedido
@@ -273,7 +273,7 @@ export default function OrderTracker({
       {/* Cancelado */}
       {cancelled ? (
         <Glass style={{ padding: '22px 20px', textAlign: 'center', marginBottom: 18 }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px', display: 'grid', placeItems: 'center', background: 'rgba(239,68,68,0.14)', color: '#f87171' }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px', display: 'grid', placeItems: 'center', background: 'var(--c-danger-bg)', color: 'var(--c-danger)' }}>
             <Icon name="x" size={26} strokeWidth={2.4} />
           </div>
           <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--u-text)' }}>{content.tracking.statusCancel}</div>
@@ -357,14 +357,14 @@ export default function OrderTracker({
             )}
             {order.discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: '#4ade80' }}>Descuento</span>
-                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(order.discount, config)}</span>
+                <span style={{ fontSize: 13, color: 'var(--c-ok)' }}>Descuento</span>
+                <span style={{ fontSize: 13.5, color: 'var(--c-ok)', fontWeight: 600 }}>−{formatPrice(order.discount, config)}</span>
               </div>
             )}
             {order.loyaltyDiscount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: '#4ade80' }}>⭐ {order.loyaltyPoints} puntos canjeados</span>
-                <span style={{ fontSize: 13.5, color: '#4ade80', fontWeight: 600 }}>−{formatPrice(order.loyaltyDiscount, config)}</span>
+                <span style={{ fontSize: 13, color: 'var(--c-ok)' }}>⭐ {order.loyaltyPoints} puntos canjeados</span>
+                <span style={{ fontSize: 13.5, color: 'var(--c-ok)', fontWeight: 600 }}>−{formatPrice(order.loyaltyDiscount, config)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>

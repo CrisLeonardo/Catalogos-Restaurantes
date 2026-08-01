@@ -202,7 +202,7 @@ export default async function LeoginLanding() {
             La plataforma de menús digitales para restaurantes
           </div>
           <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)', maxWidth: 680, margin: '0 auto', lineHeight: 1.05 }}>
-            El menú de tu restaurante, <span style={{ color: 'var(--brand-accent)' }}>vivo</span>.
+            El menú de tu restaurante, <span style={{ color: 'var(--brand-accent-ink)' }}>vivo</span>.
           </h1>
           <p className="t-mute" style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 560, margin: '20px auto 0' }}>
             Cambia el QR que lleva a un PDF lento por un menú web rápido y espectacular —
@@ -246,7 +246,7 @@ export default async function LeoginLanding() {
               { icon: 'sparkle',label: 'Con tu propia marca' },
             ].map((c) => (
               <span key={c.label} className="glass-quiet" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 99, fontSize: 12.5, color: 'var(--u-text-2)' }}>
-                <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent)' }} /> {c.label}
+                <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent-ink)' }} /> {c.label}
               </span>
             ))}
           </div>
@@ -256,7 +256,7 @@ export default async function LeoginLanding() {
         <section style={{ marginTop: 44 }}>
           <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', alignItems: 'center' }}>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 10 }}>Un vistazo</div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 10 }}>Un vistazo</div>
               <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
                 Así de bien se ve tu menú
               </h2>
@@ -291,7 +291,7 @@ export default async function LeoginLanding() {
               </ul>
             </Glass>
             <Glass style={{ padding: '22px 20px', border: '1.5px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)' }}>
-              <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Leogin</div>
+              <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent-ink)' }}>Con Leogin</div>
               <h3 className="t-display" style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Un menú vivo que vende</h3>
               <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {['Abre al toque, con fotos que dan hambre', 'Pedidos en línea que llegan en tiempo real', 'Tú editas precios y fotos cuando quieras'].map((t) => (
@@ -315,13 +315,13 @@ export default async function LeoginLanding() {
 
           <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 12 }}>Para tus clientes</div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 12 }}>Para tus clientes</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {FOR_DINER.map((f) => <FeatureRow key={f.title} {...f} />)}
               </div>
             </div>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 12 }}>Para ti, el dueño</div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 12 }}>Para ti, el dueño</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {FOR_OWNER.map((f) => <FeatureRow key={f.title} {...f} />)}
               </div>
@@ -336,7 +336,7 @@ export default async function LeoginLanding() {
               <PanelMockup />
             </div>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 10 }}>Tu centro de control</div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 10 }}>Tu centro de control</div>
               <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
                 Un panel que trabaja contigo
               </h2>
@@ -365,7 +365,7 @@ export default async function LeoginLanding() {
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
             {CAPABILITIES.map((c) => (
               <div key={c.label} className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 13 }}>
-                <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent)' }}>
+                <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent-ink)' }}>
                   <Icon name={c.icon} size={16} />
                 </span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', lineHeight: 1.25 }}>{c.label}</span>
@@ -385,7 +385,7 @@ export default async function LeoginLanding() {
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             {steps(pricing.trialDays).map((s) => (
               <Glass key={s.n} variant="quiet" style={{ padding: '24px 20px' }}>
-                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)', fontWeight: 700 }}>{s.n}</div>
+                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', fontWeight: 700 }}>{s.n}</div>
                 <h3 className="t-display" style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
                 <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8 }}>{s.body}</p>
               </Glass>
@@ -413,20 +413,20 @@ export default async function LeoginLanding() {
                 }}
               >
                 {'badge' in p && p.badge && (
-                  <div className="t-kicker" style={{ fontSize: 9, color: 'var(--brand-accent)', marginBottom: 10, letterSpacing: '0.08em' }}>
+                  <div className="t-kicker" style={{ fontSize: 9, color: 'var(--brand-accent-ink)', marginBottom: 10, letterSpacing: '0.08em' }}>
                     {p.badge}
                   </div>
                 )}
                 <h3 className="t-display" style={{ fontSize: 21, fontWeight: 800 }}>{p.name}</h3>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
-                  <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--brand-accent)' }}>{p.price}</span>
+                  <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--brand-accent-ink)' }}>{p.price}</span>
                   {!p.isFree && <span className="t-mute" style={{ fontSize: 13 }}>/ mes</span>}
                 </div>
                 <p className="t-mute" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{p.tagline}</p>
                 <ul style={{ listStyle: 'none', margin: '16px 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {p.points.map((pt) => (
                     <li key={pt} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
-                      <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 2 }} />
+                      <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 2 }} />
                       <span style={{ color: 'var(--u-text-2)', lineHeight: 1.45 }}>{pt}</span>
                     </li>
                   ))}
@@ -482,7 +482,7 @@ export default async function LeoginLanding() {
             {FAQS.map((f) => (
               <Glass key={f.q} variant="quiet" style={{ padding: '18px 18px' }}>
                 <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
                   {f.q}
                 </h3>
                 <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8, paddingLeft: 24 }}>{f.a}</p>
@@ -578,7 +578,7 @@ export default async function LeoginLanding() {
 function FeatureRow({ icon, title, body }: { icon: string; title: string; body: string }) {
   return (
     <Glass variant="quiet" style={{ padding: '16px 16px', display: 'flex', gap: 13, alignItems: 'flex-start' }}>
-      <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent)' }}>
+      <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent-ink)' }}>
         <Icon name={icon} size={19} />
       </span>
       <div>
@@ -629,7 +629,7 @@ function PanelMockup() {
               2× Tacos al pastor · 1× Burrito de res<br />1× Agua de horchata
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent)', fontFamily: 'var(--ui-font-mono)' }}>Q142</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)' }}>Q142</span>
               <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: '#0b0b0c', background: '#F5F3EF', padding: '5px 11px', borderRadius: 99 }}>Aceptar</span>
               <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(245,243,239,0.75)', border: '1px solid rgba(255,255,255,0.18)', padding: '5px 11px', borderRadius: 99 }}>Imprimir</span>
             </div>
@@ -673,7 +673,7 @@ function PhoneMockup() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text, #fff)' }}>{it.name}</div>
                   <div style={{ fontSize: 9.5, color: 'var(--u-text-3, #999)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent)', marginTop: 3 }}>{it.price}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent-ink)', marginTop: 3 }}>{it.price}</div>
                 </div>
                 <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, display: 'grid', placeItems: 'center', background: 'var(--brand-accent)', color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
               </div>

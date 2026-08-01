@@ -46,7 +46,7 @@ export default async function SuperGruposPage() {
                   aria-hidden
                   style={{
                     width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
-                    background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent)',
+                    background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)',
                   }}
                 >
                   <Icon name="dashboard" size={18} />

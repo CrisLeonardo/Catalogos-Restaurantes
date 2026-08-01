@@ -21,7 +21,7 @@ export function ServicePreferencesCtl({ items, onChange }: { items: string[]; on
             type="button"
             onClick={() => onChange(items.filter((_, j) => j !== i))}
             className="press"
-            style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'transparent', color: 'var(--c-danger, #f87171)', flexShrink: 0 }}
+            style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)', flexShrink: 0 }}
           >
             Quitar
           </button>

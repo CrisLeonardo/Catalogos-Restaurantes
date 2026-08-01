@@ -89,7 +89,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
 
       {/* Aviso de alcance: esto ES el precio publicado */}
       <Card style={{ padding: '13px 16px', display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)' }}>
-        <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+        <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
         <p style={{ fontSize: 12.5, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.55 }}>
           Estos precios son la <strong>única fuente de verdad</strong>: al guardar se actualizan la página
           pública de planes, el registro, los upsells del panel de cada restaurante y la mensualidad

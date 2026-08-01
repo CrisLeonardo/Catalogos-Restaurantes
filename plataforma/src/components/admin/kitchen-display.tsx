@@ -43,17 +43,21 @@ const C_DARK = {
   blue: '#3b82f6',
 };
 
+/* Tonos -700 a propósito: estos colores se usan como TINTA sobre panel blanco
+   (contador "en cocina", opciones del plato, etiqueta de nota). Con los -600
+   de antes, texto de 13 px quedaba en ~3:1 — por debajo del mínimo legible, y
+   en una cocina se mira la pantalla de lejos y de reojo. */
 const C_LIGHT = {
   bg: '#eef0f3',
   panel: '#ffffff',
   panelHi: '#f4f5f7',
   text: '#14181f',
-  dim: '#5b6472',
+  dim: '#525c6b',
   hair: 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-  green: '#16a34a',
-  amber: '#d97706',
-  red: '#dc2626',
-  blue: '#2563eb',
+  green: '#15803d',
+  amber: '#b45309',
+  red: '#b91c1c',
+  blue: '#1d4ed8',
 };
 
 type Palette = typeof C_DARK;
@@ -134,7 +138,31 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     return () => events.forEach((ev) => document.removeEventListener(ev, handler));
   }, []);
 
-  // Realtime: pedido nuevo → sonido de cocina + refresco; cambio de estado → refresco.
+  /* ── Aviso sonoro: UNA vez por pedido, cuando entra a ESTA pantalla ──
+     La regla es la misma que ya usa la alerta de pedidos del panel: dedup por
+     id. Antes se decidía por el tipo de evento (INSERT suena, UPDATE suena
+     solo si confirmFirst) y eso se rompía en cuanto un pedido nacía ya
+     confirmado —el del mesero, que llega como INSERT en estado PREP— o cuando
+     un UPDATE cualquiera (una anulación, un cupón) tocaba una fila que ya
+     estaba en PREP y hacía sonar la campana otra vez. */
+  const announced = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    // Lo que ya estaba en pantalla al abrirla es historial: no suena.
+    initialOrders.forEach((o) => announced.current.add(o.id));
+    // Solo al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const announce = useCallback((order: Order) => {
+    const visibleHere = confirmFirst ? order.status === 'PREP' : (order.status === 'NEW' || order.status === 'PREP');
+    if (!visibleHere) return;
+    if (announced.current.has(order.id)) return;
+    announced.current.add(order.id);
+    const s = soundSettingsRef.current;
+    playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
+  }, [confirmFirst]);
+
+  // Realtime: pedido que entra a cocina → sonido + refresco; resto → refresco.
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return;
 
@@ -153,14 +181,9 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'orders' },
           (payload) => {
-            if ((payload.new as Order).restaurant_id !== restaurantId) return;
-            // Con confirmFirst este pedido todavía no entra a la lista del KDS
-            // (sigue NEW, solo se muestra PREP) — sonar aquí sería un aviso
-            // prematuro y falso. Ese caso lo cubre el handler de UPDATE abajo.
-            if (!confirmFirst) {
-              const s = soundSettingsRef.current;
-              playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
-            }
+            const order = payload.new as Order;
+            if (order.restaurant_id !== restaurantId) return;
+            announce(order);
             refreshSoon();
           },
         )
@@ -170,14 +193,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           (payload) => {
             const updated = payload.new as Order;
             if (updated.restaurant_id !== restaurantId) return;
-            // Con "Confirmar antes de enviar a cocina" (confirmFirst) un pedido
-            // llega a esta pantalla recién cuando pasa de NEW a PREP, es decir
-            // por un UPDATE, no un INSERT. Sin esto, el KDS quedaba mudo para
-            // TODO restaurante con ese modo activado.
-            if (confirmFirst && updated.status === 'PREP') {
-              const s = soundSettingsRef.current;
-              playKitchenSound(s.kitchenVolume, s.kitchenRepeat);
-            }
+            announce(updated);
             refreshSoon();
           },
         )
@@ -185,7 +201,7 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     })();
 
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
-  }, [restaurantId, confirmFirst, refreshSoon]);
+  }, [restaurantId, announce, refreshSoon]);
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {

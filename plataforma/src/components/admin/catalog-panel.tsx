@@ -138,7 +138,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
             className="shrink-0"
             style={{
               fontSize: 11.5, fontWeight: 600,
-              color: atProductLimit ? '#f87171' : nearProductLimit ? '#fb923c' : 'var(--u-text-4)',
+              color: atProductLimit ? 'var(--c-danger)' : nearProductLimit ? '#fb923c' : 'var(--u-text-4)',
             }}
           >
             {products.length}/{maxProducts} productos
@@ -242,7 +242,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                     </div>
                     {hasBadges && (
                       <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
-                        {hasCombo  && <RowBadge label="Combo"   color="#16a34a" bg="rgba(22,163,74,0.12)" />}
+                        {hasCombo  && <RowBadge label="Combo"   color="#16a34a" bg="var(--c-ok-bg)" />}
                         {hasSizes  && <RowBadge label="Tamaños" color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />}
                         {hasExtras && <RowBadge label="Extras"  color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />}
                         {tags.map((t) => <RowBadge key={t} label={t} color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />)}
@@ -274,7 +274,7 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                 {/* Toggle disponibilidad */}
                 <div className="catalog-cell-avail" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {!p.is_active ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger, #f87171)', padding: '3px 8px', borderRadius: 99, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 99, background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
                       Desactivado
                     </span>
                   ) : (
@@ -665,7 +665,7 @@ function ProductModal({
                   <label className="t-kicker" style={{ fontSize: 10.5, display: 'block', marginBottom: 6 }}>
                     Costo (Q)
                     {hasRecipe && (
-                      <span style={{ color: 'var(--brand-accent)', marginLeft: 6, fontSize: 9, fontWeight: 600 }}>
+                      <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 9, fontWeight: 600 }}>
                         DESDE RECETA
                       </span>
                     )}
@@ -725,21 +725,21 @@ function ProductModal({
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 9 }}>
                     {comboDelta > 0 && (
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', borderRadius: 10, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.2)' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', borderRadius: 10, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
                         <span style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>Precio base</span>
                         <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{isNaN(p) ? '—' : p.toFixed(2)}</span>
                         <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>+ combo</span>
                         <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 12, color: 'var(--u-text-2)' }}>Q{comboDelta.toFixed(2)}</span>
-                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--c-ok, #4ade80)' }}>= Q{totalPrice.toFixed(2)}</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--c-ok)' }}>= Q{totalPrice.toFixed(2)}</span>
                       </div>
                     )}
                     {!isNaN(p) && costKnown && (
                       <div style={{ display: 'flex', gap: 16, fontSize: 12.5 }}>
                         <span style={{ color: 'var(--u-text-3)' }}>
-                          Utilidad: <strong style={{ color: p - c >= 0 ? 'var(--u-text)' : '#f87171' }}>Q{(p - c).toFixed(2)}</strong>
+                          Utilidad: <strong style={{ color: p - c >= 0 ? 'var(--u-text)' : 'var(--c-danger)' }}>Q{(p - c).toFixed(2)}</strong>
                         </span>
                         <span style={{ color: 'var(--u-text-3)' }}>
-                          Margen: <strong style={{ color: p - c >= 0 ? '#4ade80' : '#f87171' }}>{p > 0 ? (((p - c) / p) * 100).toFixed(0) : 0}%</strong>
+                          Margen: <strong style={{ color: p - c >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{p > 0 ? (((p - c) / p) * 100).toFixed(0) : 0}%</strong>
                         </span>
                       </div>
                     )}
@@ -987,10 +987,10 @@ function ProductModal({
             <Card
               variant="flat"
               className="flex items-center gap-3 p-3.5"
-              style={{ borderColor: !isActive ? 'rgba(248,113,113,0.2)' : undefined }}
+              style={{ borderColor: !isActive ? 'var(--c-danger-line)' : undefined }}
             >
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: isActive ? 'var(--u-text)' : '#f87171' }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>
                   {isActive ? 'Platillo activo' : 'Platillo desactivado'}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>
@@ -1005,9 +1005,9 @@ function ProductModal({
               <div
                 style={{
                   padding: '10px 14px', borderRadius: 13,
-                  background: 'rgba(220,50,50,0.12)',
-                  border: '1px solid rgba(220,50,50,0.25)',
-                  color: 'var(--c-danger, #f87171)', fontSize: 13,
+                  background: 'var(--c-danger-bg)',
+                  border: '1px solid var(--c-danger-line)',
+                  color: 'var(--c-danger)', fontSize: 13,
                 }}
               >
                 {state.error}

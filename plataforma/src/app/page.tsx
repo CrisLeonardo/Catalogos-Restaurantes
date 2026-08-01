@@ -206,7 +206,7 @@ function DemoBar() {
       }}
     >
       <span className="t-mute">Demo de Leogin · así se vería tu restaurante</span>
-      <a href={rootUrl} className="press" style={{ color: 'var(--brand-accent)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+      <a href={rootUrl} className="press" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
         Crea el tuyo →
       </a>
     </div>

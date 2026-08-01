@@ -128,7 +128,7 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
           variant="outline"
           size="sm"
           className="h-auto rounded-adm-full px-2.5 py-1 text-[11px]"
-          style={copied ? { background: 'rgba(74,222,128,0.15)', color: 'var(--c-ok, #4ade80)', borderColor: 'transparent' } : undefined}
+          style={copied ? { background: 'var(--c-ok-bg)', color: 'var(--c-ok)', borderColor: 'transparent' } : undefined}
         >
           {copied ? '✓ Copiado' : 'Copiar'}
         </Button>
@@ -242,7 +242,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             {isPending ? 'Guardando…' : 'Guardar cambios'}
           </Button>
           {msg && (
-            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>
+            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>
               {msg}
             </span>
           )}

@@ -153,7 +153,7 @@ export default async function SuperHomePage() {
             ))}
             {alerts.length > 6 && (
               <div style={{ padding: '10px 16px', borderTop: '1px solid var(--adm-border, var(--u-hair))', textAlign: 'center' }}>
-                <Link href="/super/finanzas" style={{ fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                <Link href="/super/finanzas" style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   Ver {alerts.length - 6} más en Finanzas →
                 </Link>
               </div>
@@ -278,7 +278,7 @@ export default async function SuperHomePage() {
 function SectionTitle({ icon, title, count }: { icon: string; title: string; count?: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
-      <Icon name={icon} size={16} style={{ color: 'var(--brand-accent)' }} />
+      <Icon name={icon} size={16} style={{ color: 'var(--brand-accent-ink)' }} />
       <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0 }}>{title}</h2>
       {count != null && count > 0 && (
         <Badge variant="danger" style={{ fontSize: 10.5 }}>{count}</Badge>

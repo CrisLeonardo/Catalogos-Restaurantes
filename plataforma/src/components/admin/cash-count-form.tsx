@@ -217,9 +217,9 @@ export default function CashCountForm({
         <div style={{
           borderRadius: 12, padding: '11px 14px', fontSize: 13.5, fontWeight: 600,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: Math.abs(diff) < 0.005 ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-          border: `1px solid ${Math.abs(diff) < 0.005 ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
-          color: Math.abs(diff) < 0.005 ? '#4ade80' : '#f87171',
+          background: Math.abs(diff) < 0.005 ? 'var(--c-ok-bg)' : 'var(--c-danger-bg)',
+          border: `1px solid ${Math.abs(diff) < 0.005 ? 'var(--c-ok-line)' : 'var(--c-danger-line)'}`,
+          color: Math.abs(diff) < 0.005 ? 'var(--c-ok)' : 'var(--c-danger)',
         }}>
           {/* aria-live: el cuadre cambia solo al teclear, sin recargar nada. Sin
              esto, quien no ve la pantalla nunca se entera de que ya cuadró. */}
@@ -242,7 +242,7 @@ export default function CashCountForm({
       </div>
 
       {state && 'error' in state && (
-        <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>
+        <div style={{ fontSize: 13, color: 'var(--c-danger)' }}>{state.error}</div>
       )}
 
       <button

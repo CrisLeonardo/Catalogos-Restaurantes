@@ -5,7 +5,11 @@
 import crypto from 'node:crypto';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getActiveHubCert, HUB_TLS_PORT } from '@/lib/hub-tls';
-import { buildKitchenEscPos, buildReceiptEscPos, buildSplitBillEscPos, type EscPosCurrency, type SplitTicketLine } from '@/lib/escpos';
+import {
+  buildKitchenEscPos, buildReceiptEscPos, buildSplitBillEscPos,
+  DEFAULT_TICKET_FORMAT,
+  type EscPosCurrency, type SplitTicketLine, type TicketFormat,
+} from '@/lib/escpos';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { OrderWithItems } from '@/lib/db/orders';
 
@@ -158,21 +162,75 @@ async function loadOrderWithItems(
   return { ...order, waiter_name: waiter?.full_name ?? null } as OrderWithItems;
 }
 
-async function restaurantName(
+/** Nombre + formato de fecha/hora del ticket, en UNA consulta.
+ *  La zona horaria es imprescindible: este código corre en el servidor (UTC) y
+ *  sin ella el ticket sale con la hora equivocada (ver escpos.ts). */
+async function ticketHeader(
   db: ReturnType<typeof createServiceClient>,
   restaurantId: string,
-): Promise<string> {
-  const { data } = await db.from('restaurants').select('name').eq('id', restaurantId).single();
-  return (data?.name as string) ?? 'Restaurante';
+): Promise<{ name: string; format: TicketFormat }> {
+  const { data } = await db
+    .from('restaurants')
+    .select('name, timezone')
+    .eq('id', restaurantId)
+    .single();
+  const tz = (data?.timezone as string | null)?.trim();
+  return {
+    name: (data?.name as string) ?? 'Restaurante',
+    format: {
+      timezone: tz || DEFAULT_TICKET_FORMAT.timezone,
+      locale: DEFAULT_TICKET_FORMAT.locale,
+    },
+  };
 }
 
 /**
- * Encola la comanda de cocina de un pedido al agente del restaurante.
- * No-op silencioso si el restaurante no tiene agente con destino de cocina
- * configurado (así convive con la impresión por QZ/USB del navegador).
- * Best-effort: nunca debe romper el cambio de estado del pedido.
+ * ¿Ya se encoló (y por tanto se imprimió, o está por imprimirse) la comanda de
+ * cocina de este pedido?
+ *
+ * Es el candado central contra la DOBLE COMANDA: un mismo pedido pasaba por
+ * aquí hasta tres veces —al crearlo el mesero, al confirmarlo en el panel y al
+ * pulsar "Comenzar" en la pantalla de cocina— y la cocina recibía dos o tres
+ * papeles del mismo plato. Los trabajos fallidos NO cuentan: si la impresora
+ * se quedó sin papel, ese ticket nunca salió y hay que reintentarlo.
  */
-export async function enqueueKitchenForOrder(restaurantId: string, orderId: string): Promise<void> {
+async function kitchenTicketAlreadyQueued(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+  orderId: string,
+): Promise<boolean> {
+  const { data } = await db
+    .from('print_jobs')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .eq('order_id', orderId)
+    .eq('role', 'kitchen')
+    .in('status', ['pending', 'printing', 'done'])
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
+export type KitchenEnqueueOutcome =
+  | { queued: true }
+  /** No se encoló, con el motivo — quien lo pidió a mano merece saberlo. */
+  | { queued: false; reason: 'already-printed' | 'no-printer' | 'pc-off' | 'not-found' | 'error'; message?: string };
+
+/**
+ * Encola la comanda de cocina de un pedido al agente del restaurante.
+ * No-op si el restaurante no tiene agente con destino de cocina configurado
+ * (así convive con la impresión por QZ/USB del navegador) y — salvo `force` —
+ * si ese pedido YA tiene su comanda encolada.
+ * Best-effort: nunca debe romper el cambio de estado del pedido.
+ *
+ * @param opts.force  Reimpresión pedida a mano: salta el candado anti-duplicado
+ *                    y marca el papel como COPIA para que la cocina no lo
+ *                    prepare dos veces.
+ */
+export async function enqueueKitchenForOrder(
+  restaurantId: string,
+  orderId: string,
+  opts: { force?: boolean } = {},
+): Promise<KitchenEnqueueOutcome> {
   const db = createServiceClient();
 
   const { data: agent } = await db
@@ -183,27 +241,42 @@ export async function enqueueKitchenForOrder(restaurantId: string, orderId: stri
   // Sin agente/destino, o con la PC principal apagada a propósito (mig. 094),
   // no se encola: acumular comandas viejas que nadie va a imprimir es peor
   // que no imprimir.
-  if (!agent?.kitchen_target || (agent.is_active as boolean | null) === false) return;
+  if (!agent?.kitchen_target) return { queued: false, reason: 'no-printer' };
+  if ((agent.is_active as boolean | null) === false) return { queued: false, reason: 'pc-off' };
+
+  if (!opts.force && await kitchenTicketAlreadyQueued(db, restaurantId, orderId)) {
+    return { queued: false, reason: 'already-printed' };
+  }
 
   const order = await loadOrderWithItems(db, restaurantId, orderId);
-  if (!order) return;
+  if (!order) return { queued: false, reason: 'not-found' };
 
-  const bytes = buildKitchenEscPos(order, await restaurantName(db, restaurantId));
-  await enqueuePrintJob({
+  const { name, format } = await ticketHeader(db, restaurantId);
+  const bytes = buildKitchenEscPos(order, name, { format, reprint: !!opts.force });
+  const res = await enqueuePrintJob({
     restaurantId,
     role: 'kitchen',
     bytes,
     orderId,
     targetOverride: agent.kitchen_target as string,
   });
+  if ('error' in res) return { queued: false, reason: 'error', message: res.error };
+  return { queued: true };
 }
 
 /**
  * Encola el recibo de caja de un pedido al agente del restaurante.
- * La moneda se resuelve del tema del restaurante (server-side). No-op si no
- * hay agente con destino de caja configurado.
+ * La moneda se resuelve del tema del restaurante (server-side).
+ *
+ * A diferencia de la comanda, el recibo SÍ se puede repetir a voluntad (el
+ * cliente pide otra copia) — aquí no hay candado anti-duplicado. Lo que sí
+ * cambió: devuelve el motivo cuando no se pudo encolar, porque quien pulsó
+ * "Imprimir recibo" se quedaba mirando una pantalla que no hacía nada.
  */
-export async function enqueueReceiptForOrder(restaurantId: string, orderId: string): Promise<void> {
+export async function enqueueReceiptForOrder(
+  restaurantId: string,
+  orderId: string,
+): Promise<{ queued: true } | { queued: false; reason: 'no-printer' | 'pc-off' | 'not-found' | 'error'; message?: string }> {
   const db = createServiceClient();
 
   const { data: agent } = await db
@@ -211,10 +284,11 @@ export async function enqueueReceiptForOrder(restaurantId: string, orderId: stri
     .select('receipt_target, is_active')
     .eq('restaurant_id', restaurantId)
     .single();
-  if (!agent?.receipt_target || (agent.is_active as boolean | null) === false) return;
+  if (!agent?.receipt_target) return { queued: false, reason: 'no-printer' };
+  if ((agent.is_active as boolean | null) === false) return { queued: false, reason: 'pc-off' };
 
   const order = await loadOrderWithItems(db, restaurantId, orderId);
-  if (!order) return;
+  if (!order) return { queued: false, reason: 'not-found' };
 
   const { data: themeRow } = await db
     .from('restaurant_themes')
@@ -228,14 +302,17 @@ export async function enqueueReceiptForOrder(restaurantId: string, orderId: stri
     locale: cfg.locale,
   };
 
-  const bytes = buildReceiptEscPos(order, currency, await restaurantName(db, restaurantId));
-  await enqueuePrintJob({
+  const { name, format } = await ticketHeader(db, restaurantId);
+  const bytes = buildReceiptEscPos(order, currency, name, { ...format, locale: cfg.locale || format.locale });
+  const res = await enqueuePrintJob({
     restaurantId,
     role: 'receipt',
     bytes,
     orderId,
     targetOverride: agent.receipt_target as string,
   });
+  if ('error' in res) return { queued: false, reason: 'error', message: res.error };
+  return { queued: true };
 }
 
 /** Moneda del restaurante para tickets ESC/POS (misma fuente que el recibo). */
@@ -248,6 +325,13 @@ export async function escPosCurrencyFor(restaurantId: string): Promise<EscPosCur
     .single();
   const cfg = resolveTheme((themeRow as ThemeRow) ?? null).config;
   return { symbol: cfg.currencySymbol, position: cfg.currencyPosition, locale: cfg.locale };
+}
+
+/** Zona horaria + locale del restaurante para fechar tickets desde el servidor. */
+export async function ticketFormatFor(restaurantId: string): Promise<TicketFormat> {
+  const db = createServiceClient();
+  const { format } = await ticketHeader(db, restaurantId);
+  return format;
 }
 
 /**
@@ -267,10 +351,12 @@ export async function enqueueSplitBillTicket(input: {
   extrasLabel: string;
 }): Promise<EnqueueResult> {
   const db = createServiceClient();
+  const { name, format } = await ticketHeader(db, input.restaurantId);
   const bytes = buildSplitBillEscPos({
     ...input,
-    restaurantName: await restaurantName(db, input.restaurantId),
+    restaurantName: name,
     currency: await escPosCurrencyFor(input.restaurantId),
+    format,
   });
   return enqueuePrintJob({ restaurantId: input.restaurantId, role: 'receipt', bytes });
 }

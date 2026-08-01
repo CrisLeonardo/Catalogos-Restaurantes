@@ -239,7 +239,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 width: 34, height: 34, borderRadius: 10, flexShrink: 0,
                 display: 'grid', placeItems: 'center',
                 background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)',
-                color: 'var(--brand-accent)',
+                color: 'var(--brand-accent-ink)',
               }}
             >
               <Icon name="key" size={17} />

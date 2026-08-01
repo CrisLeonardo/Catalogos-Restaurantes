@@ -141,7 +141,7 @@ export default function TipsPanel({
                     aria-label="Quitar"
                     style={{
                       width: 24, height: 24, borderRadius: 99, border: 'none',
-                      background: 'rgba(239,68,68,0.14)', color: 'var(--c-danger, #f87171)',
+                      background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                       cursor: 'pointer', fontSize: 14, lineHeight: 1,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
@@ -187,8 +187,8 @@ export default function TipsPanel({
                 rows={2}
                 style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: 'var(--ui-font-sans)' }}
               />
-              {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>}
-              {state && 'ok' in state && <div style={{ fontSize: 13, color: '#4ade80' }}>Reparto confirmado y registrado.</div>}
+              {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger)' }}>{state.error}</div>}
+              {state && 'ok' in state && <div style={{ fontSize: 13, color: 'var(--c-ok)' }}>Reparto confirmado y registrado.</div>}
               <Button type="submit" disabled={!canSubmit || isPending} size="lg" className="rounded-adm-full">
                 {isPending ? 'Confirmando…' : 'Confirmar reparto'}
               </Button>

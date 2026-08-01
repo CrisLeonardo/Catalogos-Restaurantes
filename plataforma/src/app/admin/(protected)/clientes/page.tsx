@@ -168,8 +168,8 @@ export default async function AdminClientesPage({
                           <span
                             style={{
                               fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                              background: o.status === 'CANCEL' ? 'rgba(239,68,68,0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-                              color: o.status === 'CANCEL' ? '#f87171' : 'var(--u-text-3)',
+                              background: o.status === 'CANCEL' ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+                              color: o.status === 'CANCEL' ? 'var(--c-danger)' : 'var(--u-text-3)',
                             }}
                           >
                             {STATUS_ES[o.status] ?? o.status}

@@ -6,6 +6,7 @@ import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { listVoidApprovers } from '@/lib/actions/staff-pin';
+import { can } from '@/lib/permissions';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
@@ -24,7 +25,7 @@ export default async function MeseroPage() {
 
   const { data: profile } = await db
     .from('profiles')
-    .select('id, role, restaurant_id, full_name')
+    .select('id, role, restaurant_id, full_name, permissions')
     .eq('id', user.id)
     .single();
 
@@ -86,6 +87,11 @@ export default async function MeseroPage() {
       hubToken={hubInfo.hubToken}
       isOperatorSession={!!(await cookies()).get(OPERATOR_COOKIE)?.value}
       voidApprovers={voidApprovers}
+      canSelfApprove={can(
+        profile?.role as string | null,
+        profile?.permissions as string[] | null,
+        'aprobar_anulaciones',
+      )}
     />
   );
 }

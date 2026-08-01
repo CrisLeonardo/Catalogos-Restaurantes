@@ -143,7 +143,7 @@ export default async function AdminMiPcPage() {
               border: '1px solid var(--u-hair)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent, var(--u-text))' }} />
+                <Icon name={b.icon} size={16} style={{ color: 'var(--brand-accent-ink, var(--u-text))' }} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{b.title}</span>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', lineHeight: 1.55 }}>{b.desc}</div>

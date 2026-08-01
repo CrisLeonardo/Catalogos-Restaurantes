@@ -58,16 +58,16 @@ export default function WaiterCallButton({
               'Llamar al mesero';
 
   const bg =
-    done   ? 'rgba(74,222,128,0.16)' :
-    failed ? 'rgba(248,113,113,0.16)' :
+    done   ? 'var(--c-ok-bg)' :
+    failed ? 'var(--c-danger-bg)' :
              'var(--surface-2, rgba(22,22,24,0.94))';
   const borderColor =
-    done   ? 'rgba(74,222,128,0.45)' :
-    failed ? 'rgba(248,113,113,0.45)' :
+    done   ? 'var(--c-ok-line)' :
+    failed ? 'var(--c-danger-line)' :
              'var(--u-hair-2)';
   const color =
-    done   ? '#4ade80' :
-    failed ? '#f87171' :
+    done   ? 'var(--c-ok)' :
+    failed ? 'var(--c-danger)' :
              'var(--u-text)';
   const iconName = done ? 'check' : failed ? 'x' : 'bell';
 

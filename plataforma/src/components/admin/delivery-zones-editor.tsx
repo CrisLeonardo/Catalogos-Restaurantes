@@ -119,8 +119,8 @@ export default function DeliveryZonesEditor({ restaurant }: { restaurant: Restau
         <div
           style={{
             padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)',
-            color: 'var(--c-danger, #f87171)', fontSize: 14,
+            background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
+            color: 'var(--c-danger)', fontSize: 14,
           }}
         >
           {state.error}

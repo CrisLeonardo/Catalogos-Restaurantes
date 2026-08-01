@@ -162,15 +162,15 @@ export function InstallSteps({
 
   return (
     <div style={{
-      background: 'rgba(74,222,128,0.06)',
-      border: '1px solid rgba(74,222,128,0.22)',
+      background: 'var(--c-ok-bg)',
+      border: '1px solid var(--c-ok-line)',
       borderRadius: 10,
       padding: '16px',
       display: 'flex',
       flexDirection: 'column',
       gap: 16,
     }}>
-      <div style={{ fontSize: 12, color: 'var(--c-ok, #4ade80)', fontWeight: 700 }}>
+      <div style={{ fontSize: 12, color: 'var(--c-ok)', fontWeight: 700 }}>
         ✓ Listo para instalar — solo descarga y haz doble clic en la PC del local
       </div>
 
@@ -205,8 +205,8 @@ export function InstallSteps({
           <div style={{
             fontSize: 11,
             color: 'var(--u-text-4)',
-            background: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.15)',
+            background: 'var(--c-warn-bg)',
+            border: '1px solid var(--c-warn-line)',
             borderRadius: 6,
             padding: '6px 9px',
             lineHeight: 1.5,
@@ -226,7 +226,7 @@ export function InstallSteps({
           </span>
           <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
             En unos segundos el estado cambiará a{' '}
-            <span style={{ color: 'var(--c-ok, #4ade80)', fontWeight: 600 }}>● Conectado</span>
+            <span style={{ color: 'var(--c-ok)', fontWeight: 600 }}>● Conectado</span>
             {' '}y verás las impresoras detectadas.
           </span>
         </div>
@@ -376,15 +376,15 @@ export default function PrintAgentSettings() {
 
   function connectionLabel(): { text: string; color: string } {
     if (!config?.exists) return { text: 'Sin vincular', color: 'var(--u-text-4)' };
-    if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: '#f59e0b' };
+    if (!config.lastSeenAt) return { text: 'Token generado · esperando primera conexión', color: 'var(--c-warn)' };
     // Etiqueta de "última conexión": el tiempo relativo se calcula al render a
     // propósito (es texto informativo del panel admin, no estado persistente).
     // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
-    if (ageMs < 90_000) return { text: '● Conectado', color: 'var(--c-ok, #4ade80)' };
+    if (ageMs < 90_000) return { text: '● Conectado', color: 'var(--c-ok)' };
     const mins = Math.round(ageMs / 60_000);
     const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
-    return { text: `Última conexión ${ago}`, color: '#f59e0b' };
+    return { text: `Última conexión ${ago}`, color: 'var(--c-warn)' };
   }
 
   const conn = connectionLabel();
@@ -457,8 +457,8 @@ export default function PrintAgentSettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {printers.length === 0 && (
             <div style={{
-              fontSize: 11.5, color: 'var(--u-text-4)', background: 'rgba(245,158,11,0.06)',
-              border: '1px solid rgba(245,158,11,0.15)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
+              fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-warn-bg)',
+              border: '1px solid var(--c-warn-line)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
             }}>
               El agente aún no ha reportado impresoras. Asegúrate de que esté corriendo en la PC del
               local y pulsa «Actualizar». También puedes probar con el simulador en pantalla.
@@ -466,8 +466,8 @@ export default function PrintAgentSettings() {
           )}
 
           <div style={{
-            fontSize: 11.5, color: 'var(--u-text-4)', background: 'rgba(96,165,250,0.06)',
-            border: '1px solid rgba(96,165,250,0.16)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
+            fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-info-bg)',
+            border: '1px solid var(--c-info-line)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
           }}>
             ¿Aún sin impresora térmica? Elige la opción <strong style={{ color: 'var(--u-text-2)' }}>«documento»</strong>
             {' '}de tu impresora normal: imprime el ticket en una hoja para que pruebes todo el flujo. O usa
@@ -499,9 +499,9 @@ export default function PrintAgentSettings() {
         <div style={{
           fontSize: 12,
           fontWeight: msg.startsWith('Error') ? 600 : 400,
-          color: msg.startsWith('✓') ? '#4ade80' : msg.startsWith('Error') ? '#f87171' : 'var(--u-text-3)',
-          background: msg.startsWith('Error') ? 'rgba(248,113,113,0.08)' : 'transparent',
-          border: msg.startsWith('Error') ? '1px solid rgba(248,113,113,0.2)' : 'none',
+          color: msg.startsWith('✓') ? 'var(--c-ok)' : msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--u-text-3)',
+          background: msg.startsWith('Error') ? 'var(--c-danger-bg)' : 'transparent',
+          border: msg.startsWith('Error') ? '1px solid var(--c-danger-line)' : 'none',
           borderRadius: msg.startsWith('Error') ? 6 : 0,
           padding: msg.startsWith('Error') ? '7px 10px' : 0,
         }}>

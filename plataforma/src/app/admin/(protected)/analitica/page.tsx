@@ -181,7 +181,7 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
             <span style={{ color: 'var(--u-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '75%' }}>{r.name}</span>
-            <span style={{ color: r.qty === 0 ? '#f87171' : 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.qty}</span>
+            <span style={{ color: r.qty === 0 ? 'var(--c-danger)' : 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{r.qty}</span>
           </div>
           <div style={{ height: 5, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
             <div style={{ width: `${(r.qty / max) * 100}%`, height: '100%', background: accent ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 25%, transparent)', borderRadius: 99 }} />

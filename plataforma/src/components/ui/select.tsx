@@ -79,12 +79,12 @@ function Select({
                 disabled={opt.disabled}
                 className={cn(
                   'flex cursor-pointer items-center justify-between gap-2 rounded-adm-md px-3 py-2 text-[13px] text-adm-text outline-none scroll-my-1',
-                  'data-[highlighted]:bg-adm-accent-500/12 data-[highlighted]:text-adm-accent-500',
+                  'data-[highlighted]:bg-adm-accent-500/12 data-[highlighted]:text-adm-accent-ink',
                   'data-[disabled]:pointer-events-none data-[disabled]:opacity-40'
                 )}
               >
                 <BaseSelect.ItemText>{opt.label}</BaseSelect.ItemText>
-                <BaseSelect.ItemIndicator className="text-adm-accent-500">
+                <BaseSelect.ItemIndicator className="text-adm-accent-ink">
                   <Icon name="check" size={14} />
                 </BaseSelect.ItemIndicator>
               </BaseSelect.Item>

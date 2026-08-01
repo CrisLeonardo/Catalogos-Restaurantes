@@ -49,7 +49,7 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
       </div>
 
       {!hasSettings && (
-        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', fontSize: 13 }}>
+        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 13 }}>
           Configura las tasas del programa para empezar a acumular puntos.
         </div>
       )}
@@ -128,7 +128,7 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
         <Button onClick={save} disabled={isPending} className="rounded-adm-full">
           {isPending ? 'Guardando…' : 'Guardar configuración'}
         </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
+        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
       </div>
     </Card>
   );
@@ -218,7 +218,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
             {isPending ? '…' : editingId ? 'Guardar cambios' : 'Agregar recompensa'}
           </Button>
           {editingId && <Button onClick={reset} variant="outline" size="sm" className="rounded-adm-full">Cancelar</Button>}
-          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
+          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
         </div>
       </Card>
 
@@ -242,11 +242,11 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
                   {r.per_customer_limit != null && ` · máx ${r.per_customer_limit}/cliente`}
                 </div>
               </div>
-              <div style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent)', fontSize: 14, whiteSpace: 'nowrap' }}>{r.points_cost.toLocaleString('es-GT')} pts</div>
+              <div style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)', fontSize: 14, whiteSpace: 'nowrap' }}>{r.points_cost.toLocaleString('es-GT')} pts</div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 <Button onClick={() => toggle(r.id, !r.active)} disabled={isPending} variant="outline" size="sm" title={r.active ? 'Desactivar' : 'Activar'}>{r.active ? 'Ocultar' : 'Mostrar'}</Button>
                 <Button onClick={() => startEdit(r)} variant="outline" size="sm">Editar</Button>
-                <Button onClick={() => remove(r.id)} disabled={isPending} variant="outline" size="sm" className="border-[rgba(248,113,113,0.3)] text-[#f87171]">Borrar</Button>
+                <Button onClick={() => remove(r.id)} disabled={isPending} variant="outline" size="sm" className="border-[var(--c-danger-line)] text-[var(--c-danger)]">Borrar</Button>
               </div>
             </Card>
           ))}
@@ -307,7 +307,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
             {isPending ? '…' : tipo === 'REDEEM' ? 'Restar puntos' : 'Sumar puntos'}
           </Button>
           {tipo === 'REDEEM' && points && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>≈ Q{((parseInt(points, 10) || 0) * settings.redeem_value).toFixed(2)} de descuento</span>}
-          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
+          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
         </div>
       </Card>
 
@@ -325,7 +325,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
               {accounts.map((a) => (
                 <tr key={a.id} style={{ borderBottom: '1px solid var(--u-hair)' }}>
                   <td style={{ padding: '10px 12px' }}><div style={{ fontWeight: 500 }}>{a.customer_name}</div><div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{a.customer_phone}</div></td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent)' }}>{a.points_balance.toLocaleString('es-GT')}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontFamily: 'var(--ui-font-mono)', color: 'var(--brand-accent-ink)' }}>{a.points_balance.toLocaleString('es-GT')}</td>
                   <td className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{a.lifetime_points.toLocaleString('es-GT')}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>Q{(a.points_balance * settings.redeem_value).toFixed(2)}</td>
                 </tr>

@@ -1,29 +1,38 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
-import OrderCard, { type PanelCurrency } from '@/components/admin/order-card';
+import OrderCard, { printKitchenTicket, type PanelCurrency } from '@/components/admin/order-card';
+import { isKitchenAutoPrintEnabled, markKitchenPrinted } from '@/lib/printing';
 import { Icon } from '@/components/icons';
 import { getOrdersPdfData, exportOrdersXlsx, updateOrderStatus } from '@/lib/actions/orders';
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
-import { localDateKey } from '@/lib/hours';
+import type { TicketFormat } from '@/lib/escpos';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ToastProvider, Toaster, useToastManager } from '@/components/ui/toast';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
+
+/** Tipo de servicio tal como lo guarda la tabla `orders` (no confundir con el
+ *  `OrderType` en minúsculas de la configuración del tema). */
+type ServiceType = Order['order_type'];
 import type { VoidApprover } from '@/components/admin/void-order-dialog';
 
 interface Props {
-  initialOrders:  OrderWithItems[];
+  activeOrders:   OrderWithItems[];
+  closedToday:    OrderWithItems[];
   restaurantId:   string;
   restaurantName: string;
   stats:          OrderStats;
   currency:       PanelCurrency;
   timezone:       string;
+  /** Umbrales del semáforo de cocina (Personalización → Cocina). */
+  kitchenYellowMin?: number;
+  kitchenRedMin?:    number;
   /** El restaurante usa el Agente Leogin para cocina / caja (evita doble impresión). */
   agentKitchen?:      boolean;
   agentReceipt?:      boolean;
@@ -31,6 +40,8 @@ interface Props {
   autoConfirmMinutes?: number;
   /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación de OrderCard. */
   voidApprovers?: VoidApprover[];
+  /** El usuario de esta sesión ya puede autorizar anulaciones (no pide PIN). */
+  canSelfApprove?: boolean;
 }
 
 /* El sonido y el aviso visual de "pedido nuevo" ya NO viven aquí: los maneja
@@ -64,9 +75,53 @@ export default function OrdersPanel(props: Props) {
   );
 }
 
-function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, currency, timezone, agentKitchen = false, agentReceipt = false, autoConfirmEnabled = false, autoConfirmMinutes = 1, voidApprovers = [] }: Props) {
+/* ── Etapas del tablero ───────────────────────────────────────
+   El tablero se lee de izquierda a derecha como avanza el servicio, y cada
+   etapa dice qué hay que HACER con lo que tiene dentro. Antes era una sola
+   rejilla de "En curso" mezclando pedidos recién entrados con pedidos ya
+   listos esperando a que alguien los llevara: para saber qué atender había
+   que leer tarjeta por tarjeta. */
+
+type StageId = 'nuevos' | 'cocina' | 'listos';
+
+const STAGES: { id: StageId; title: string; hint: string; statuses: string[] }[] = [
+  { id: 'nuevos', title: 'Por enviar a cocina', hint: 'Revísalos y mándalos a cocina', statuses: ['NEW'] },
+  { id: 'cocina', title: 'En cocina',           hint: 'Preparándose ahora',            statuses: ['PREP'] },
+  { id: 'listos', title: 'Listos para entregar', hint: 'Sácalos ya: se enfrían',       statuses: ['READY', 'TRANSIT'] },
+];
+
+const TYPE_FILTERS: { id: 'ALL' | ServiceType; label: string; icon: string }[] = [
+  { id: 'ALL',      label: 'Todos',       icon: 'list' },
+  { id: 'DINE_IN',  label: 'En local',    icon: 'utensils' },
+  { id: 'PICKUP',   label: 'Para llevar', icon: 'bag' },
+  { id: 'DELIVERY', label: 'Domicilio',   icon: 'truck' },
+];
+
+function OrdersPanelInner({
+  activeOrders, closedToday, restaurantId, restaurantName, stats, currency, timezone,
+  kitchenYellowMin = 10, kitchenRedMin = 20,
+  agentKitchen = false, agentReceipt = false,
+  autoConfirmEnabled = false, autoConfirmMinutes = 1, voidApprovers = [], canSelfApprove = false,
+}: Props) {
   const router = useRouter();
   const toastManager = useToastManager();
+
+  const ticketFormat: TicketFormat = useMemo(
+    () => ({ timezone, locale: currency.locale || 'es-GT' }),
+    [timezone, currency.locale],
+  );
+
+  // Reloj compartido: UN intervalo para todas las tarjetas (no uno por tarjeta).
+  // Arranca en null para que servidor y primer render pinten lo mismo.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const t0 = setTimeout(() => setNow(Date.now()), 0);
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => { clearTimeout(t0); clearInterval(id); };
+  }, []);
+
+  const [typeFilter, setTypeFilter] = useState<'ALL' | ServiceType>('ALL');
+  const [showClosed, setShowClosed] = useState(false);
 
   // Coalescer de router.refresh() (mismo patrón que admin/notifications.tsx):
   // en una ráfaga (15 pedidos sincronizando de golpe al volver la señal, o
@@ -116,18 +171,46 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
   // Programar para pedidos NEW que ya llegaron al montar el panel.
   useEffect(() => {
     if (autoConfirmEnabled) {
-      initialOrders.filter((o) => o.status === 'NEW').forEach((o) => {
+      activeOrders.filter((o) => o.status === 'NEW').forEach((o) => {
         scheduleAutoConfirm(o.id, o.created_at);
       });
     }
     const timers = autoTimers.current;
     return () => { timers.forEach(clearTimeout); timers.clear(); };
-  // Solo al montar: initialOrders y autoConfirm* son props de servidor, estables.
+  // Solo al montar: activeOrders y autoConfirm* son props de servidor, estables.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  /* ── Comanda por navegador (QZ / USB), para locales sin Agente ──────────
+     Antes la disparaba el botón "Confirmar" de la tarjeta. Eso dejaba fuera
+     todo pedido que entrara a cocina por otra vía: el que toma un mesero (que
+     ya nace enviado a cocina), el que confirma la pantalla de cocina y el que
+     sincroniza la cola offline. Ahora el disparador es el HECHO —"este pedido
+     está en cocina"— y no un botón concreto. Una sola vez por pedido y por
+     dispositivo (markKitchenPrinted). */
+  const printedSweep = useRef(false);
+  useEffect(() => {
+    if (agentKitchen) return;              // lo imprime el Agente en el servidor
+    if (!isKitchenAutoPrintEnabled()) return; // este dispositivo no imprime cocina
+    const inKitchen = activeOrders.filter((o) => o.status === 'PREP');
+
+    if (!printedSweep.current) {
+      // Primera pasada tras abrir/recargar la pantalla: lo que ya llevaba rato
+      // en cocina es historial y su papel ya salió — se marca como impreso sin
+      // imprimir, o abrir el panel escupiría una pila de comandas viejas. Solo
+      // se imprime lo que acaba de entrar (menos de 2 minutos).
+      printedSweep.current = true;
+      const RECIENTE_MS = 2 * 60_000;
+      inKitchen.forEach((o) => {
+        const firedAt = new Date(o.accepted_at ?? o.created_at).getTime();
+        if (Date.now() - firedAt > RECIENTE_MS) markKitchenPrinted(o.id);
+      });
+    }
+
+    inKitchen.forEach((o) => printKitchenTicket(o, restaurantName, ticketFormat));
+  }, [activeOrders, agentKitchen, restaurantName, ticketFormat]);
+
   const [isExportingXls, startExportXls] = useTransition();
   const [isExportingPdf, startExportPdf] = useTransition();
-  const orders = initialOrders;
 
   const showToast = useCallback((msg: string) => {
     toastManager.add({ title: msg, type: 'info' });
@@ -257,51 +340,138 @@ function OrdersPanelInner({ initialOrders, restaurantId, restaurantName, stats, 
     });
   }
 
-  const todayKey  = localDateKey(new Date(), timezone);
-  const active    = orders.filter((o) => !['DELIVERED', 'CANCEL'].includes(o.status));
-  // "Cerrados hoy" de verdad: solo los terminados HOY (hora del restaurante).
-  const completedToday = orders.filter(
-    (o) =>
-      ['DELIVERED', 'CANCEL'].includes(o.status) &&
-      localDateKey(new Date(o.created_at), timezone) === todayKey,
-  );
+  const visibleActive = typeFilter === 'ALL'
+    ? activeOrders
+    : activeOrders.filter((o) => o.order_type === typeFilter);
+  const visibleClosed = typeFilter === 'ALL'
+    ? closedToday
+    : closedToday.filter((o) => o.order_type === typeFilter);
 
-  const enPrep = orders.filter((o) => o.status === 'NEW' || o.status === 'PREP').length;
+  // SERVED es un limbo útil: el plato ya está en la mesa pero la cuenta sigue
+  // abierta. No estorba en el tablero de etapas (no hay nada que hacer con él
+  // hasta que el mesero cierre la mesa), pero tampoco está cerrado.
+  const servedOpen = visibleActive.filter((o) => o.status === 'SERVED');
+
+  const cardProps = {
+    currency, restaurantName, ticketFormat, now,
+    kitchenYellowMin, kitchenRedMin,
+    agentKitchen, agentReceipt, voidApprovers, canSelfApprove,
+  };
+
+  const countByType = (t: 'ALL' | ServiceType) =>
+    t === 'ALL' ? activeOrders.length : activeOrders.filter((o) => o.order_type === t).length;
 
   return (
     <>
       {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 18 }}>
         <Kpi label="Ventas hoy" value={fmtMoney(stats.todaySales, currency)} sub={`${stats.todayOrders} pedidos`} hero />
-        <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} sub={`${active.length} activos`} />
+        <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} sub={`${activeOrders.length} en curso`} />
         <Kpi label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} sub="por pedido" />
-        <Kpi label="En preparación" value={String(enPrep)} sub="en la barra" />
+        <Kpi label="En cocina" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} sub="preparándose ahora" />
       </div>
 
       {/* Board + sidebar */}
       <div className="orders-grid">
-        {/* Left: tablero de pedidos */}
+        {/* Left: tablero de pedidos por etapa */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 className="t-poster" style={{ fontSize: 20 }}>En curso</h2>
-            <span className="t-kicker" style={{ fontSize: 10 }}>{active.length} pedidos</span>
+          {/* Filtro por tipo de servicio: un local con mucho domicilio necesita
+              poder mirar SOLO domicilio sin que el resto le estorbe. */}
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 16 }}>
+            {TYPE_FILTERS.map((f) => {
+              const on = typeFilter === f.id;
+              const n = countByType(f.id);
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setTypeFilter(f.id)}
+                  className="press"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
+                    fontSize: 12.5, fontWeight: 600,
+                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
+                    background: on ? 'var(--adm-accent-500, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                    color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+                  }}
+                >
+                  <Icon name={f.icon} size={13} />
+                  {f.label}
+                  <span style={{ opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                </button>
+              );
+            })}
           </div>
-          {active.length === 0 ? (
+
+          {visibleActive.length === 0 ? (
             <Card className="mb-7 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
-              Todo al día. No hay pedidos en curso.
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text-2)', marginBottom: 4 }}>Todo al día</div>
+              No hay pedidos en curso{typeFilter !== 'ALL' ? ' de este tipo' : ''}.
             </Card>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 28 }}>
-              {active.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} voidApprovers={voidApprovers} />)}
-            </div>
+            STAGES.map((stage) => {
+              const orders = visibleActive.filter((o) => stage.statuses.includes(o.status));
+              if (orders.length === 0) return null;
+              return (
+                <section key={stage.id} style={{ marginBottom: 26 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                    <h2 className="t-poster" style={{ fontSize: 18 }}>
+                      {stage.title}
+                      <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
+                        {orders.length}
+                      </span>
+                    </h2>
+                    <span className="t-kicker" style={{ fontSize: 10 }}>{stage.hint}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12 }}>
+                    {orders.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
+                  </div>
+                </section>
+              );
+            })
           )}
-          {completedToday.length > 0 && (
-            <>
-              <h2 className="t-poster" style={{ fontSize: 20, marginBottom: 12 }}>Cerrados hoy</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, opacity: 0.62 }}>
-                {completedToday.map((order) => <OrderCard key={order.id} order={order} currency={currency} restaurantName={restaurantName} agentKitchen={agentKitchen} agentReceipt={agentReceipt} />)}
+
+          {servedOpen.length > 0 && (
+            <section style={{ marginBottom: 26 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                <h2 className="t-poster" style={{ fontSize: 18 }}>
+                  Servidos, mesa abierta
+                  <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
+                    {servedOpen.length}
+                  </span>
+                </h2>
+                <span className="t-kicker" style={{ fontSize: 10 }}>Se cierran al liberar la mesa</span>
               </div>
-            </>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.8 }}>
+                {servedOpen.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
+              </div>
+            </section>
+          )}
+
+          {visibleClosed.length > 0 && (
+            <section>
+              <button
+                type="button"
+                onClick={() => setShowClosed((v) => !v)}
+                className="press"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '10px 14px', marginBottom: 12, borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+                  color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                }}
+              >
+                <Icon name={showClosed ? 'chevronDown' : 'chevronRight'} size={14} />
+                Cerrados hoy
+                <span className="t-mono" style={{ color: 'var(--u-text-3)' }}>{visibleClosed.length}</span>
+              </button>
+              {showClosed && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.7 }}>
+                  {visibleClosed.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
+                </div>
+              )}
+            </section>
           )}
         </div>
 

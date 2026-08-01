@@ -116,13 +116,13 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               placeholder="12345678 · 1234-5678 · 1234 5678 · +502 12345678"
               style={{
                 ...inputStyle,
-                borderColor: whatsappErr ? 'rgba(248,113,113,0.6)' : undefined,
+                borderColor: whatsappErr ? 'var(--c-danger-line)' : undefined,
               }}
             />
             {whatsappErr ? (
-              <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', marginTop: 6 }}>{whatsappErr}</p>
+              <p style={{ fontSize: 12, color: 'var(--c-danger)', marginTop: 6 }}>{whatsappErr}</p>
             ) : whatsappVal.trim() ? (
-              <p style={{ fontSize: 12, color: 'var(--c-ok, #4ade80)', marginTop: 6 }}>Número válido ✓</p>
+              <p style={{ fontSize: 12, color: 'var(--c-ok)', marginTop: 6 }}>Número válido ✓</p>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
                 Acepta: 12345678 · 1234-5678 · 1234 5678 · +502 1234 5678
@@ -176,9 +176,9 @@ function ErrorMsg({ msg }: { msg: string }) {
       style={{
         padding: '10px 14px',
         borderRadius: 'var(--radius-md)',
-        background: 'rgba(220,50,50,0.12)',
-        border: '1px solid rgba(220,50,50,0.25)',
-        color: 'var(--c-danger, #f87171)',
+        background: 'var(--c-danger-bg)',
+        border: '1px solid var(--c-danger-line)',
+        color: 'var(--c-danger)',
         fontSize: 14,
       }}
     >

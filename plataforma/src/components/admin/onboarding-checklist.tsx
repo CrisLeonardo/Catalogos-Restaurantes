@@ -54,7 +54,7 @@ export default function OnboardingChecklist({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="sparkle" size={18} style={{ color: 'var(--brand-accent)' }} />
+            <Icon name="sparkle" size={18} style={{ color: 'var(--brand-accent-ink)' }} />
             <h3 className="t-display" style={{ fontSize: 18 }}>
               {allDone ? '¡Tu restaurante está listo!' : `Pongamos a punto tu restaurante${firstName ? `, ${firstName}` : ''}`}
             </h3>
@@ -95,14 +95,14 @@ export default function OnboardingChecklist({
             style={{
               display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px',
               borderRadius: 13, textDecoration: 'none',
-              background: s.done ? 'rgba(74,222,128,0.08)' : 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
-              border: `1px solid ${s.done ? 'rgba(74,222,128,0.25)' : 'var(--u-hair)'}`,
+              background: s.done ? 'var(--c-ok-bg)' : 'var(--surface-3, color-mix(in srgb, var(--u-text) 4%, transparent))',
+              border: `1px solid ${s.done ? 'var(--c-ok-line)' : 'var(--u-hair)'}`,
             }}
           >
             <span style={{
               width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center',
-              background: s.done ? 'rgba(74,222,128,0.15)' : 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)',
-              color: s.done ? '#4ade80' : 'var(--brand-accent)',
+              background: s.done ? 'var(--c-ok-bg)' : 'rgba(var(--brand-accent-rgb, 99,102,241),0.12)',
+              color: s.done ? 'var(--c-ok)' : 'var(--brand-accent)',
             }}>
               <Icon name={s.done ? 'check' : s.icon} size={16} strokeWidth={s.done ? 2.6 : 2} />
             </span>

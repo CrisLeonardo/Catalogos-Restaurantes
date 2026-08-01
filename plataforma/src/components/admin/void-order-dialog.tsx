@@ -23,6 +23,7 @@ export default function VoidOrderDialog({
   orderStatus,
   item = null,
   voidApprovers,
+  canSelfApprove = false,
   onClose,
   onDone,
 }: {
@@ -31,6 +32,8 @@ export default function VoidOrderDialog({
   /** null = anular el pedido completo; con valor = solo ese ítem. */
   item?: { id: string; name: string; remainingQty: number } | null;
   voidApprovers: VoidApprover[];
+  /** El usuario de esta sesión ya tiene 'aprobar_anulaciones' — autoriza solo. */
+  canSelfApprove?: boolean;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -41,7 +44,15 @@ export default function VoidOrderDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const needsApproval = orderStatus !== 'NEW';
+  /* Solo se pide PIN si el pedido ya salió a cocina Y quien está anulando NO
+     puede autorizar por sí mismo.
+
+     Sin la segunda condición había un callejón sin salida real: el dueño abría
+     este diálogo, veía "no hay ningún encargado con permiso para aprobar
+     anulaciones" y el botón salía deshabilitado — o sea, el restaurante no
+     podía anular NADA — cuando el servidor (voidOrder) siempre lo dejó
+     autorizarse a sí mismo. El diálogo simplemente nunca preguntó quién era. */
+  const needsApproval = orderStatus !== 'NEW' && !canSelfApprove;
 
   async function handleSubmit() {
     setError(null);
@@ -93,7 +104,11 @@ export default function VoidOrderDialog({
               {item ? `Anular ${item.name}` : 'Anular pedido'}
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>
-              {needsApproval ? 'Este pedido ya se envió a cocina — necesita aprobación.' : 'Aún no se ha enviado a cocina.'}
+              {orderStatus === 'NEW'
+                ? 'Todavía no se ha enviado a cocina.'
+                : needsApproval
+                  ? 'Ya se envió a cocina — necesita que un encargado lo autorice.'
+                  : 'Ya se envió a cocina. Tu usuario puede autorizarlo.'}
             </div>
           </div>
           <button
@@ -145,8 +160,13 @@ export default function VoidOrderDialog({
 
         {needsApproval && (
           voidApprovers.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '8px 12px' }}>
-              No hay ningún encargado con permiso para aprobar anulaciones. Pide al dueño que asigne &quot;Aprobar anulaciones&quot; a alguien en Personal.
+            <div className="note note-warn">
+              <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>
+                Nadie con permiso para autorizar anulaciones tiene un PIN registrado. En
+                <strong> Personal</strong>, dale a un encargado el permiso &quot;Aprobar anulaciones&quot;
+                y un PIN de 4 dígitos — o pídele al dueño que anule este pedido desde su usuario.
+              </span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -174,8 +194,9 @@ export default function VoidOrderDialog({
         )}
 
         {error && (
-          <div style={{ fontSize: 12.5, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '8px 12px' }}>
-            {error}
+          <div className="note note-danger">
+            <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{error}</span>
           </div>
         )}
 
@@ -183,12 +204,8 @@ export default function VoidOrderDialog({
           type="button"
           onClick={handleSubmit}
           disabled={submitting || (needsApproval && voidApprovers.length === 0)}
-          className="press"
-          style={{
-            width: '100%', padding: '13px', borderRadius: 14, border: 'none',
-            cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14.5,
-            background: 'rgba(239,68,68,0.85)', color: '#fff', opacity: submitting ? 0.7 : 1,
-          }}
+          className="press btn-tinted chip-solid chip-danger"
+          style={{ width: '100%', padding: '13px', fontSize: 14.5, fontWeight: 700 }}
         >
           {submitting ? 'Anulando…' : item ? `Anular ${qty}× ${item.name}` : 'Anular pedido completo'}
         </button>

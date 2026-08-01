@@ -105,7 +105,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -160,7 +160,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
             const busy = busyId === w.id && isPending;
             return (
               <Card key={w.id} className="flex flex-wrap items-center gap-3 p-3.5">
-                <div style={{ width: 8, height: 8, borderRadius: 99, background: w.status === 'NOTIFIED' ? '#4ade80' : '#fbbf24', flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: 99, background: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{w.customer_name}</div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
@@ -170,7 +170,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
                   {w.notes && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{w.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: w.status === 'NOTIFIED' ? '#4ade80' : '#fbbf24' }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: w.status === 'NOTIFIED' ? 'var(--c-ok)' : 'var(--c-warn)' }}>
                     {w.status === 'NOTIFIED' ? 'Avisado' : 'Esperando'}
                   </span>
                   {w.status === 'WAITING' && w.phone && (
@@ -194,7 +194,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
                     Sentar
                   </Button>
                   <Button type="button" onClick={() => handleAction(w.id, cancelWaitlistEntry)} disabled={busy} variant="outline" size="sm"
-                    className="rounded-adm-full border-[rgba(248,113,113,0.3)] text-[#f87171]">
+                    className="rounded-adm-full border-[var(--c-danger-line)] text-[var(--c-danger)]">
                     Cancelar
                   </Button>
                 </div>
@@ -210,7 +210,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recent.slice(0, 8).map((w) => (
               <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12.5, color: 'var(--u-text-3)' }}>
-                <span style={{ width: 6, height: 6, borderRadius: 99, background: w.status === 'SEATED' ? '#4ade80' : '#f87171', flexShrink: 0 }} />
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{w.customer_name}</span>
                 <span>{w.party_size} {w.party_size === 1 ? 'persona' : 'personas'}</span>
                 <span>· {w.status === 'SEATED' ? 'sentados' : 'cancelado'}</span>

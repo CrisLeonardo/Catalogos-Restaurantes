@@ -71,7 +71,7 @@ function CashCountCard({
   const [isPending, startTransition] = useTransition();
 
   const diff = Number(entry.difference);
-  const diffColor = Math.abs(diff) < 0.005 ? '#4ade80' : '#f87171';
+  const diffColor = Math.abs(diff) < 0.005 ? 'var(--c-ok)' : 'var(--c-danger)';
   const diffLabel = Math.abs(diff) < 0.005 ? 'Cuadrada' : diff > 0 ? 'Sobrante' : 'Faltante';
   const canDelete = isWithin24h(entry.created_at);
   const hasBreakdown = !!entry.denomination_breakdown;
@@ -165,8 +165,8 @@ function CashCountCard({
             type="button"
             onClick={() => { setConfirmDelete(true); setDeleteError(null); }}
             style={{
-              background: 'none', border: '1px solid rgba(248,113,113,0.3)', padding: '3px 9px',
-              borderRadius: 7, cursor: 'pointer', fontSize: 11, color: 'var(--c-danger, #f87171)',
+              background: 'none', border: '1px solid var(--c-danger-line)', padding: '3px 9px',
+              borderRadius: 7, cursor: 'pointer', fontSize: 11, color: 'var(--c-danger)',
               display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
@@ -184,9 +184,9 @@ function CashCountCard({
               type="button" disabled={isPending}
               onClick={handleDelete}
               style={{
-                background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.4)',
+                background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
                 padding: '3px 10px', borderRadius: 7, cursor: isPending ? 'not-allowed' : 'pointer',
-                fontSize: 11, color: 'var(--c-danger, #f87171)', fontWeight: 600,
+                fontSize: 11, color: 'var(--c-danger)', fontWeight: 600,
               }}
             >
               {isPending ? '…' : 'Sí, eliminar'}
@@ -205,7 +205,7 @@ function CashCountCard({
         )}
       </div>
       {deleteError && (
-        <div style={{ fontSize: 11.5, color: 'var(--c-danger, #f87171)', marginTop: 4 }}>{deleteError}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--c-danger)', marginTop: 4 }}>{deleteError}</div>
       )}
     </div>
   );

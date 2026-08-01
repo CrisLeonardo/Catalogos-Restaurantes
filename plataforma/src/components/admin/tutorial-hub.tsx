@@ -38,8 +38,8 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  'Plan Popular': '#f59e0b',
-  'Plan Premium': '#6366f1',
+  'Plan Popular': 'var(--c-warn)',
+  'Plan Premium': 'var(--c-alt)',
   'Módulo': '#14b8a6',
 };
 
@@ -144,7 +144,7 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
         <Card className="px-5 py-8 text-center" style={{ color: 'var(--u-text-3)' }}>
           <Icon name="helpCircle" size={28} style={{ marginBottom: 10 }} />
           <p style={{ fontSize: 14 }}>No encontramos resultados para <strong>&quot;{query}&quot;</strong>.</p>
-          <p style={{ fontSize: 12, marginTop: 4 }}>Intenta con otra palabra o <button type="button" onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: 'var(--brand-accent)', cursor: 'pointer', fontSize: 12 }}>limpia la búsqueda</button>.</p>
+          <p style={{ fontSize: 12, marginTop: 4 }}>Intenta con otra palabra o <button type="button" onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 12 }}>limpia la búsqueda</button>.</p>
         </Card>
       )}
 
@@ -189,7 +189,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
           width: 38, height: 38, borderRadius: 10, flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)',
-          color: 'var(--brand-accent)',
+          color: 'var(--brand-accent-ink)',
         }}>
           <Icon name="helpCircle" size={18} />
         </span>
@@ -207,9 +207,9 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
             size="lg"
             className="justify-start h-auto py-3 whitespace-normal"
             style={{
-              background: 'rgba(34,197,94,0.12)',
-              border: '1px solid rgba(34,197,94,0.30)',
-              color: 'var(--c-ok, #4ade80)',
+              background: 'var(--c-ok-bg)',
+              border: '1px solid var(--c-ok-line)',
+              color: 'var(--c-ok)',
             }}
           >
             <Icon name="whatsapp" size={18} />
@@ -244,9 +244,9 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
             size="lg"
             className="justify-start h-auto py-3 whitespace-normal"
             style={{
-              background: 'rgba(59,130,246,0.12)',
-              border: '1px solid rgba(59,130,246,0.30)',
-              color: '#60a5fa',
+              background: 'var(--c-info-bg)',
+              border: '1px solid var(--c-info-line)',
+              color: 'var(--c-info)',
             }}
           >
             <Icon name="mail" size={18} />
@@ -337,8 +337,8 @@ function TutorialSection({
             {planLabel && (
               <span style={{
                 fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                background: `${labelColor}20`, color: labelColor ?? '#94a3b8',
-                border: `1px solid ${labelColor}40`,
+                background: `color-mix(in srgb, ${labelColor} 13%, transparent)`, color: labelColor ?? '#94a3b8',
+                border: `1px solid color-mix(in srgb, ${labelColor} 25%, transparent)`,
                 textTransform: 'uppercase', letterSpacing: '0.04em',
               }}>
                 {planLabel}
@@ -436,7 +436,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-              background: 'rgba(99,102,241,0.12)', color: '#6366f1', textDecoration: 'none',
+              background: 'var(--c-alt-bg)', color: 'var(--c-alt)', textDecoration: 'none',
             }}
           >
             Ver mi suscripción →
@@ -484,7 +484,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
           width: 26, height: 26, borderRadius: 99, flexShrink: 0,
           display: 'grid', placeItems: 'center',
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)',
-          color: 'var(--brand-accent)',
+          color: 'var(--brand-accent-ink)',
           fontSize: 12, fontWeight: 800, marginTop: 1,
         }}>
           {number}
@@ -522,7 +522,7 @@ function StepItem({ step, number }: { step: TutorialStep; number: number }) {
           background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)',
           border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.2)',
         }}>
-          <Icon name="sparkle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+          <Icon name="sparkle" size={14} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
           <span style={{ fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.55 }}>
             <strong>Tip:</strong> {step.tip}
           </span>

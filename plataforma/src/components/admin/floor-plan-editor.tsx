@@ -483,7 +483,7 @@ export default function FloorPlanEditor({
               Mesas sin ubicar {tray.length > 0 ? `(${tray.length})` : ''}
             </div>
             {tray.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="checkCircle" size={14} style={{ color: 'var(--c-ok, #4ade80)' }} /> Todas las mesas están colocadas.</div>
+              <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="checkCircle" size={14} style={{ color: 'var(--c-ok)' }} /> Todas las mesas están colocadas.</div>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {tray.map((n) => (

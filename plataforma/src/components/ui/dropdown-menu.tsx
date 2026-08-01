@@ -48,7 +48,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       className={cn(
         'flex cursor-pointer items-center gap-2 rounded-adm-md px-3 py-2 text-[13px] font-medium text-adm-text outline-none transition-colors',
-        'data-[highlighted]:bg-adm-accent-500/12 data-[highlighted]:text-adm-accent-500',
+        'data-[highlighted]:bg-adm-accent-500/12 data-[highlighted]:text-adm-accent-ink',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
         variant === 'destructive' && 'text-adm-danger data-[highlighted]:bg-adm-danger/12 data-[highlighted]:text-adm-danger',
         className

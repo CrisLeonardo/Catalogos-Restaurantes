@@ -69,7 +69,7 @@ export default async function FinanzasResumenPage() {
       {/* Cuentas por cobrar + recordatorios */}
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
-          <Icon name="bellRing" size={16} style={{ color: 'var(--brand-accent)' }} />
+          <Icon name="bellRing" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0 }}>
             Cuentas por cobrar
           </h2>

@@ -179,7 +179,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       <Card
         data-tour-step="perfil-pausa"
         className="p-4"
-        style={{ border: paused ? '1px solid rgba(245,158,11,0.4)' : undefined }}
+        style={{ border: paused ? '1px solid var(--c-warn-line)' : undefined }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <div>
@@ -196,7 +196,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
             checked={paused}
             onCheckedChange={setPaused}
             aria-label="Pausar pedidos"
-            className="data-[checked]:bg-[#f59e0b] data-[checked]:border-[#f59e0b]"
+            className="data-[checked]:bg-[var(--c-warn-solid)] data-[checked]:border-[var(--c-warn-solid)]"
           />
         </div>
         {paused && (
@@ -249,7 +249,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                   <span
                     style={{
                       width: 8, height: 8, borderRadius: 99, flexShrink: 0,
-                      background: d.on ? '#4ade80' : 'var(--u-hair-2)',
+                      background: d.on ? 'var(--c-ok)' : 'var(--u-hair-2)',
                     }}
                   />
                   {DAY_LABELS[day]}
@@ -283,7 +283,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                             aria-label="Eliminar turno"
                             style={{
                               width: 26, height: 26, borderRadius: 99, border: 'none',
-                              background: 'rgba(239,68,68,0.14)', color: 'var(--c-danger, #f87171)',
+                              background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                               cursor: 'pointer', fontSize: 15, lineHeight: 1,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
@@ -350,8 +350,8 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 className="press"
                 style={{
                   padding: '8px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                  background: row.closed ? 'rgba(239,68,68,0.14)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
-                  border: `1px solid ${row.closed ? 'rgba(239,68,68,0.3)' : 'var(--u-hair-2)'}`,
+                  background: row.closed ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
+                  border: `1px solid ${row.closed ? 'var(--c-danger-line)' : 'var(--u-hair-2)'}`,
                   color: row.closed ? 'var(--c-danger, #f87171)' : 'var(--u-text)',
                   fontSize: 13, fontWeight: 600,
                 }}
@@ -390,7 +390,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                 aria-label="Eliminar excepción"
                 style={{
                   width: 26, height: 26, borderRadius: 99, border: 'none',
-                  background: 'rgba(239,68,68,0.14)', color: 'var(--c-danger, #f87171)',
+                  background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                   cursor: 'pointer', fontSize: 15, lineHeight: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto',
                 }}
@@ -431,9 +431,9 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
           style={{
             padding: '10px 14px',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(220,50,50,0.12)',
-            border: '1px solid rgba(220,50,50,0.25)',
-            color: 'var(--c-danger, #f87171)',
+            background: 'var(--c-danger-bg)',
+            border: '1px solid var(--c-danger-line)',
+            color: 'var(--c-danger)',
             fontSize: 14,
           }}
         >

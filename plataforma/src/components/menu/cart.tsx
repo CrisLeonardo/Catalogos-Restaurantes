@@ -87,7 +87,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                 <Glass key={item.lineId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="ct-product-name" style={{ fontSize: 14 * roleSize(config, 'productName'), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {item.rewardId && <Icon name="gift" size={14} style={{ color: 'var(--brand-accent)' }} />}
+                      {item.rewardId && <Icon name="gift" size={14} style={{ color: 'var(--brand-accent-ink)' }} />}
                       {item.name}
                     </div>
                     {item.options && item.options.length > 0 && (
@@ -96,7 +96,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                       </div>
                     )}
                     {item.rewardId ? (
-                      <div style={{ marginTop: 3, fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)' }}>
+                      <div style={{ marginTop: 3, fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>
                         Gratis · {(item.pointsCost ?? 0).toLocaleString('es-GT')} pts
                       </div>
                     ) : (
@@ -125,7 +125,7 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
 
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 14 }}>
               {pointsToRedeem > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: 'var(--brand-accent)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: 'var(--brand-accent-ink)', fontWeight: 600 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={14} /> Puntos a canjear</span>
                   <span>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
                 </div>

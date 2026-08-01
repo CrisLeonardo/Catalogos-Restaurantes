@@ -16,7 +16,7 @@ export default function DesktopServerSettings() {
       <MainPcSwitch />
       <Link
         href="/admin/mi-pc"
-        style={{ fontSize: 12.5, color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}
+        style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', fontWeight: 700, textDecoration: 'none' }}
       >
         Ver impresoras y respaldo sin internet →
       </Link>

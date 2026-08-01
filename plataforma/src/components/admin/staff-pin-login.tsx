@@ -183,7 +183,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
         <button type="button" onClick={backToGrid} style={{ ...linkStyle, marginBottom: 10 }}>
           <Icon name="chevronLeft" size={14} /> Atrás
         </button>
-        <Icon name="alertCircle" size={22} style={{ color: '#f59e0b', marginBottom: 10 }} />
+        <Icon name="alertCircle" size={22} style={{ color: 'var(--c-warn)', marginBottom: 10 }} />
         <p className="t-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
           {selected.full_name || 'Identificado'} — sin conexión
         </p>
@@ -217,7 +217,7 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
       </div>
 
       <div style={{ minHeight: 18, marginBottom: 10 }}>
-        {error && <span style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{error}</span>}
+        {error && <span style={{ fontSize: 13, color: 'var(--c-danger)' }}>{error}</span>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 64px)', gap: 12, justifyContent: 'center' }}>

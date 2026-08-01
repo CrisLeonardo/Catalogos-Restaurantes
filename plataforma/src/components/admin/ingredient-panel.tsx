@@ -25,7 +25,7 @@ function MovementHistory({ movements }: { movements: StockMovement[] }) {
             <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
-            <div style={{ color: Number(m.delta) >= 0 ? '#4ade80' : '#f87171' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
+            <div style={{ color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
             {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
 
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -319,7 +319,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="size-9.5 border-[rgba(220,50,50,0.2)] text-[#f87171]"
+                    className="size-9.5 border-[var(--c-danger-line)] text-[var(--c-danger)]"
                     onClick={() => handleDelete(ing)}
                     disabled={isPending}
                     title="Eliminar"

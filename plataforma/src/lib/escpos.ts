@@ -3,6 +3,52 @@
 
 import type { OrderWithItems } from '@/lib/db/orders';
 
+// ── Fecha y hora del ticket ──────────────────────────────────────────────────
+/* Estos builders corren en DOS sitios con relojes distintos:
+     · el navegador del local  → zona horaria del dispositivo (normalmente bien)
+     · el servidor (Render)    → UTC, al encolar para el Agente de impresión
+   Sin `timeZone` explícito, todo ticket encolado desde el servidor salía con la
+   hora de UTC: en Guatemala, 6 horas adelantadas ("bug de la hora del ticket").
+   Por eso la zona horaria del restaurante viaja SIEMPRE con el ticket. */
+
+export interface TicketFormat {
+  /** Zona IANA del restaurante, p. ej. 'America/Guatemala'. */
+  timezone: string;
+  /** Locale para nombres de mes/día, p. ej. 'es-GT'. */
+  locale: string;
+}
+
+export const DEFAULT_TICKET_FORMAT: TicketFormat = {
+  timezone: 'America/Guatemala',
+  locale: 'es-GT',
+};
+
+/** "14:35" en la hora del restaurante. */
+export function ticketTime(iso: string | Date, f: TicketFormat = DEFAULT_TICKET_FORMAT): string {
+  const d = iso instanceof Date ? iso : new Date(iso);
+  try {
+    return d.toLocaleTimeString(f.locale, { timeZone: f.timezone, hour: '2-digit', minute: '2-digit' });
+  } catch {
+    // Locale o zona inválidos (config a mano en la BD): mejor la hora del
+    // sistema que un ticket sin hora.
+    return d.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+/** "05 ago 2026, 14:35" en la hora del restaurante. */
+export function ticketDateTime(iso: string | Date, f: TicketFormat = DEFAULT_TICKET_FORMAT): string {
+  const d = iso instanceof Date ? iso : new Date(iso);
+  const opts: Intl.DateTimeFormatOptions = {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  };
+  try {
+    return d.toLocaleString(f.locale, { ...opts, timeZone: f.timezone });
+  } catch {
+    return d.toLocaleString('es-GT', opts);
+  }
+}
+
 // PC850 (Multilingual) — cubre español completo en impresoras térmicas
 const PC850: Record<string, number> = {
   á: 0xa0, é: 0x82, í: 0xa1, ó: 0xa2, ú: 0xa3,
@@ -86,18 +132,33 @@ class EscPosBuilder {
 
 // ── Comanda de cocina ────────────────────────────────────────────────────────
 
-export function buildKitchenEscPos(order: OrderWithItems, restaurantName: string): Uint8Array {
+export interface KitchenTicketOptions {
+  format?: TicketFormat;
+  /** Copia pedida a mano ("Reimprimir comanda"): la cocina NO debe cocinarlo
+      otra vez. Sin este aviso, un papel repetido es un plato repetido. */
+  reprint?: boolean;
+}
+
+export function buildKitchenEscPos(
+  order: OrderWithItems,
+  restaurantName: string,
+  opts: KitchenTicketOptions = {},
+): Uint8Array {
+  const { format = DEFAULT_TICKET_FORMAT, reprint = false } = opts;
   const b = new EscPosBuilder();
-  const timeStr = new Date(order.created_at).toLocaleTimeString('es-MX', {
-    hour: '2-digit', minute: '2-digit',
-  });
+  const timeStr = ticketTime(order.created_at, format);
   const typeLabel =
     order.order_type === 'PICKUP'  ? 'PARA LLEVAR' :
     order.order_type === 'DINE_IN' ? 'EN LOCAL'    : 'DOMICILIO';
 
   b.init()
-   .align('center')
-   .bold(true).size(2).line('COCINA').size(1).bold(false)
+   .align('center');
+
+  if (reprint) {
+    b.bold(true).line('** COPIA - NO COCINAR **').bold(false);
+  }
+
+  b.bold(true).size(2).line('COCINA').size(1).bold(false)
    .bold(true).size(2).line(`#${order.order_number}`).size(1).bold(false)
    .line(`${timeStr}  ${typeLabel}`)
    .align('left')
@@ -125,8 +186,13 @@ export function buildKitchenEscPos(order: OrderWithItems, restaurantName: string
   }
 
   b.sep('=')
-   .align('center')
-   .line(restaurantName || 'Restaurante')
+   .align('center');
+
+  if (reprint) {
+    b.bold(true).line(`COPIA - impresa ${ticketTime(new Date(), format)}`).bold(false);
+  }
+
+  b.line(restaurantName || 'Restaurante')
    .cut();
 
   return b.build();
@@ -154,13 +220,11 @@ export function buildReceiptEscPos(
   order: OrderWithItems,
   currency: EscPosCurrency,
   restaurantName: string,
+  format: TicketFormat = DEFAULT_TICKET_FORMAT,
 ): Uint8Array {
   const b = new EscPosBuilder();
   const fm = (n: number) => fmtMoney(n, currency);
-  const dateStr = new Date(order.created_at).toLocaleString('es-MX', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  const dateStr = ticketDateTime(order.created_at, format);
   const typeLabel =
     order.order_type === 'PICKUP'  ? 'Para llevar' :
     order.order_type === 'DINE_IN' ? 'En local'    : 'Domicilio';
@@ -250,12 +314,11 @@ export function buildSplitBillEscPos(input: {
   total: number;
   extrasLabel: string;
   currency: EscPosCurrency;
+  format?: TicketFormat;
 }): Uint8Array {
   const b = new EscPosBuilder();
   const fm = (n: number) => fmtMoney(n, input.currency);
-  const dateStr = new Date().toLocaleString('es-MX', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
+  const dateStr = ticketDateTime(new Date(), input.format ?? DEFAULT_TICKET_FORMAT);
 
   b.init()
    .align('center')
@@ -306,9 +369,9 @@ function round2(n: number): number {
 
 // ── Tickets de prueba ────────────────────────────────────────────────────────
 
-export function buildTestKitchenEscPos(): Uint8Array {
+export function buildTestKitchenEscPos(format: TicketFormat = DEFAULT_TICKET_FORMAT): Uint8Array {
   const b = new EscPosBuilder();
-  const now = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const now = ticketTime(new Date(), format);
 
   b.init()
    .align('center')
@@ -332,12 +395,9 @@ export function buildTestKitchenEscPos(): Uint8Array {
   return b.build();
 }
 
-export function buildTestReceiptEscPos(): Uint8Array {
+export function buildTestReceiptEscPos(format: TicketFormat = DEFAULT_TICKET_FORMAT): Uint8Array {
   const b = new EscPosBuilder();
-  const now = new Date().toLocaleString('es-MX', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  const now = ticketDateTime(new Date(), format);
 
   b.init()
    .align('center')

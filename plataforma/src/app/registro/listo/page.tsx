@@ -156,7 +156,7 @@ export default async function RegistroListoPage({
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {info.features.map((f) => (
                 <li key={f} style={{ fontSize: 13, color: 'var(--u-text-2)', display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Icon name="check" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
+                  <Icon name="check" size={14} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
                   {f}
                 </li>
               ))}
@@ -174,7 +174,7 @@ export default async function RegistroListoPage({
             <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8, counterReset: 'steps' }}>
               {info.nextSteps.map((step, i) => (
                 <li key={step} style={{ fontSize: 13, color: 'var(--u-text-3)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ width: 20, height: 20, borderRadius: 99, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent)', fontSize: 10.5, fontWeight: 700, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <span style={{ width: 20, height: 20, borderRadius: 99, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent-ink)', fontSize: 10.5, fontWeight: 700, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     {i + 1}
                   </span>
                   {step}
@@ -198,7 +198,7 @@ export default async function RegistroListoPage({
               textAlign: 'left', textDecoration: 'none', borderRadius: 'var(--radius-md, 14px)',
             }}
           >
-            <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent)' }}>
+            <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.12)', color: 'var(--brand-accent-ink)' }}>
               <Icon name="monitor" size={17} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>

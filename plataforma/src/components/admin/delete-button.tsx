@@ -27,9 +27,9 @@ export default function DeleteButton({
         type="submit"
         className="press"
         style={{
-          background: 'rgba(220,50,50,0.12)',
-          border: '1px solid rgba(220,50,50,0.25)',
-          color: 'var(--c-danger, #f87171)',
+          background: 'var(--c-danger-bg)',
+          border: '1px solid var(--c-danger-line)',
+          color: 'var(--c-danger)',
           padding: '5px 12px',
           borderRadius: 'var(--radius-full)',
           fontSize: 12,

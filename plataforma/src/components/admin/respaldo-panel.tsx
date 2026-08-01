@@ -55,8 +55,8 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
             : <><Icon name="download" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} /> Descargar respaldo completo (.xlsx)</>}
         </Button>
 
-        {done && !error && <p style={{ fontSize: 12.5, color: '#4ade80' }}>Listo — revisa tus descargas.</p>}
-        {error && <p style={{ fontSize: 12.5, color: 'var(--c-danger, #f87171)' }}>{error}</p>}
+        {done && !error && <p style={{ fontSize: 12.5, color: 'var(--c-ok)' }}>Listo — revisa tus descargas.</p>}
+        {error && <p style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{error}</p>}
       </Card>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>

@@ -131,7 +131,7 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
       <span
         style={{
           width: 9, height: 9, borderRadius: 99, flexShrink: 0,
-          background: '#4ade80', boxShadow: '0 0 8px #4ade80',
+          background: 'var(--c-ok)', boxShadow: '0 0 8px #4ade80',
           animation: 'pulse-ring 2.2s infinite',
         }}
       />

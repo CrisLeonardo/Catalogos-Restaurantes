@@ -360,7 +360,7 @@ export default function SignupWizard({
           </div>
         </Field>
         <Glass variant="quiet" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, color: 'var(--u-text-3)' }}>
-          <Icon name="eye" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
+          <Icon name="eye" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
           <span>Tu menú vivirá en <strong style={{ color: 'var(--u-text)' }}>{previewHost}</strong></span>
         </Glass>
       </div>
@@ -401,7 +401,7 @@ export default function SignupWizard({
         </Glass>
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
-            <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent)' }} />
+            <Icon name="sparkle" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
             {selectedPlan === 'BASICO' ? 'Gratis para siempre' : `${trialDays} días de prueba gratis`}
           </div>
           <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
@@ -416,9 +416,9 @@ export default function SignupWizard({
           <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--brand-accent)' }} />
           <span>
             Acepto los{' '}
-            <Link href="/terminos" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent)', fontWeight: 600, textDecoration: 'none' }}>términos del servicio</Link>
+            <Link href="/terminos" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>términos del servicio</Link>
             {' '}y la{' '}
-            <Link href="/privacidad" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent)', fontWeight: 600, textDecoration: 'none' }}>política de privacidad</Link>
+            <Link href="/privacidad" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>política de privacidad</Link>
             {' '}de Leogin.
           </span>
         </label>
@@ -466,7 +466,7 @@ export default function SignupWizard({
 
       <p style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--u-text-4)', margin: 0 }}>
         ¿Ya tienes cuenta?{' '}
-        <Link href="/login" style={{ color: 'var(--brand-accent)', fontWeight: 600, textDecoration: 'none' }}>
+        <Link href="/login" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
           Inicia sesión
         </Link>
       </p>

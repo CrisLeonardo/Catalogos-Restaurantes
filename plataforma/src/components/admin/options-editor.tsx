@@ -137,7 +137,7 @@ export default function OptionsEditor({
                     style={{
                       padding: '7px 11px', borderRadius: 99, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                      background: on ? (t === 'combo' ? '#16a34a' : 'var(--u-text)') : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                      background: on ? (t === 'combo' ? 'var(--c-ok)' : 'var(--u-text)') : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                       color: on ? (t === 'combo' ? '#fff' : 'var(--brand-bg, #0b0b0c)') : 'var(--u-text-3)',
                     }}
                   >
@@ -153,7 +153,7 @@ export default function OptionsEditor({
               aria-label="Quitar grupo"
               style={{
                 width: 30, height: 30, borderRadius: 9, border: 'none', cursor: 'pointer',
-                background: 'rgba(239,68,68,0.10)', color: 'var(--c-danger, #f87171)',
+                background: 'var(--c-danger-bg)', color: 'var(--c-danger)',
                 display: 'grid', placeItems: 'center', flexShrink: 0,
               }}
             >
@@ -224,8 +224,8 @@ export default function OptionsEditor({
                       aria-label="Variantes del componente"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 9px', height: 28, borderRadius: 8,
-                        border: `1px solid ${variantCount > 0 ? 'rgba(34,197,94,0.35)' : 'var(--u-hair)'}`, cursor: 'pointer',
-                        background: variantCount > 0 ? 'rgba(34,197,94,0.08)' : 'transparent',
+                        border: `1px solid ${variantCount > 0 ? 'var(--c-ok-line)' : 'var(--u-hair)'}`, cursor: 'pointer',
+                        background: variantCount > 0 ? 'var(--c-ok-bg)' : 'transparent',
                         color: variantCount > 0 ? 'var(--brand-accent, #22c55e)' : 'var(--u-text-4)',
                         fontSize: 11, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap',
                       }}
@@ -373,7 +373,7 @@ export default function OptionsEditor({
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
             borderRadius: 10, border: '1px dashed var(--brand-accent, #22c55e)',
-            background: 'rgba(34,197,94,0.06)', color: 'var(--brand-accent, #22c55e)',
+            background: 'var(--c-ok-bg)', color: 'var(--brand-accent-ink, #22c55e)',
             cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >

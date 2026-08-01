@@ -37,7 +37,7 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
             width: 52, height: 52, borderRadius: 16, display: 'grid', placeItems: 'center',
             background: 'color-mix(in srgb, var(--brand-accent) 18%, transparent)', marginBottom: 14,
           }}>
-            <Icon name="star" size={26} style={{ color: 'var(--brand-accent)' }} />
+            <Icon name="star" size={26} style={{ color: 'var(--brand-accent-ink)' }} />
           </div>
           <h2 className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Gana puntos con cada pedido</h2>
           <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginBottom: 20 }}>

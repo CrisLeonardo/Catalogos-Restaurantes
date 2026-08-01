@@ -163,7 +163,7 @@ export default async function CobranzaPage() {
                     <Link href={`/super/metricas/${r.restaurantId}`} style={{ fontSize: 12.5, color: 'var(--u-text-3)', textDecoration: 'none', marginRight: 12 }}>
                       Métricas
                     </Link>
-                    <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                    <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                       Gestionar
                     </Link>
                   </TableCell>

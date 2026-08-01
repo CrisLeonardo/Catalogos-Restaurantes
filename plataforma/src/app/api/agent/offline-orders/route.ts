@@ -181,7 +181,19 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
 
   // Marca de reconciliación: este pedido se tomó sin conexión. NO se
   // encola comanda de cocina — el hub ya la imprimió al aceptarlo.
-  await db.from('orders').update({ synced_from_hub: true }).eq('id', order.id);
+  //
+  // Y por eso mismo entra ya como PREP, no como NEW: si quedara "sin
+  // confirmar", el panel ofrecería un botón "Confirmar" que mandaría la
+  // comanda por SEGUNDA vez (el candado anti-duplicado no puede saberlo: esa
+  // primera impresión la hizo el hub, nunca pasó por la cola de la nube).
+  await db
+    .from('orders')
+    .update({
+      synced_from_hub: true,
+      status: 'PREP',
+      accepted_at: new Date().toISOString(),
+    })
+    .eq('id', order.id);
 
   sendPushToRestaurant(restaurantId, {
     title: '📶 Pedido sincronizado',

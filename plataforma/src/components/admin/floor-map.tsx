@@ -36,17 +36,19 @@ export function fmtOccupied(ms: number): string {
   return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}m`;
 }
 
-/** Umbrales fijos de antigüedad: recién ocupada / tardando / hay que revisarla. */
-const OCCUPIED_WARN_MIN = 30;
+/** A partir de aquí la mesa lleva demasiado tiempo ocupada y hay que ir a verla. */
 const OCCUPIED_ALERT_MIN = 60;
 
-/** Color de la mesa según cuánto lleva ocupada (más tiempo = más urgente). */
+/** Color de la mesa según cuánto lleva ocupada (más tiempo = más urgente).
+ *  Dos niveles a propósito: ámbar "ocupada, todo normal" y rojo "esta mesa
+ *  lleva demasiado, ve a verla". Antes había un tercer tono naranja entre los
+ *  dos que en la práctica no se distinguía de un vistazo — que es justo para
+ *  lo que sirve el color aquí. El minutero de la mesa da el detalle fino. */
 function occupiedColor(elapsedMs: number | null): string {
-  if (elapsedMs == null) return '#fbbf24'; // sin dato aún: ámbar por defecto
+  if (elapsedMs == null) return 'var(--c-warn)';
   const min = elapsedMs / 60000;
-  if (min >= OCCUPIED_ALERT_MIN) return '#f87171'; // roja: revisar la mesa
-  if (min >= OCCUPIED_WARN_MIN) return '#f97316';  // naranja: se está tardando
-  return '#fbbf24';                                 // ámbar: recién ocupada
+  if (min >= OCCUPIED_ALERT_MIN) return 'var(--c-danger)';
+  return 'var(--c-warn)';
 }
 
 /* Token de mesa (también lo usa la cuadrícula y "Otras mesas"). */

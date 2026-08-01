@@ -32,9 +32,9 @@ const emptyForm = {
 function couponStatus(c: Coupon): { label: string; color: string } {
   if (!c.is_active) return { label: 'Pausado', color: 'var(--u-text-4)' };
   const now = new Date();
-  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: 'var(--c-danger, #f87171)' };
-  if (c.max_uses && c.uses >= c.max_uses) return { label: 'Agotado', color: '#fbbf24' };
-  return { label: 'Activo', color: 'var(--c-ok, #4ade80)' };
+  if (c.valid_until && new Date(c.valid_until) < now) return { label: 'Vencido', color: 'var(--c-danger)' };
+  if (c.max_uses && c.uses >= c.max_uses) return { label: 'Agotado', color: 'var(--c-warn)' };
+  return { label: 'Activo', color: 'var(--c-ok)' };
 }
 
 export default function CuponesPanel({ restaurantId, coupons }: Props) {
@@ -125,7 +125,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12 }}>
           <Card className="flex items-center gap-2 px-4.5 py-2.5">
-            <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--brand-accent)', fontFamily: 'var(--font-display)' }}>{active}</span>
+            <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--brand-accent-ink)', fontFamily: 'var(--font-display)' }}>{active}</span>
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>activos</span>
           </Card>
           <Card className="flex items-center gap-2 px-4.5 py-2.5">
@@ -139,7 +139,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
           {error}
         </div>
       )}

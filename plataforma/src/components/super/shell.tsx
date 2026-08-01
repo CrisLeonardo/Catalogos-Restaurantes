@@ -67,7 +67,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap' }}>
               Leogin
             </div>
-            <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3, color: 'var(--brand-accent)' }}>
+            <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3, color: 'var(--brand-accent-ink)' }}>
               Super Admin
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
         </nav>
 
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent)', flexShrink: 0 }}>
+          <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)', flexShrink: 0 }}>
             <Icon name="key" size={16} />
           </div>
           <div className="admin-usermeta" style={{ flex: 1, minWidth: 0 }}>

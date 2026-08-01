@@ -320,7 +320,7 @@ function NewCategoryForm({
         />
         <CategorySchedule defaultValue={null} />
         {state && 'error' in state && (
-          <span style={{ fontSize: 12, color: 'var(--c-danger, #f87171)' }}>{state.error}</span>
+          <span style={{ fontSize: 12, color: 'var(--c-danger)' }}>{state.error}</span>
         )}
         <div style={{ display: 'flex', gap: 8 }}>
           <Button type="submit" disabled={isPending} size="sm" className="rounded-adm-full">
@@ -396,7 +396,7 @@ function InlineEditForm({
       />
       <CategorySchedule defaultValue={category.availability} />
       {state && 'error' in state && (
-        <span style={{ fontSize: 11, color: 'var(--c-danger, #f87171)' }}>{state.error}</span>
+        <span style={{ fontSize: 11, color: 'var(--c-danger)' }}>{state.error}</span>
       )}
     </form>
   );

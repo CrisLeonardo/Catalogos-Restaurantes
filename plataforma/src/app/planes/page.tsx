@@ -294,11 +294,11 @@ export default async function PlanesPage() {
             return (
               <Glass key={m.key} variant="quiet" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <Icon name={m.icon} size={17} style={{ color: 'var(--brand-accent)' }} />
+                  <Icon name={m.icon} size={17} style={{ color: 'var(--brand-accent-ink)' }} />
                   <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{m.label}</span>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0, minHeight: 36 }}>{m.description}</p>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--brand-accent)', fontFamily: 'var(--font-display)' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--brand-accent-ink)', fontFamily: 'var(--font-display)' }}>
                   {fmtQ(price)}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)' }}> /mes</span>
                   {setupFee ? <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-4)' }}> + {fmtQ(setupFee)} activación</span> : null}
                 </div>

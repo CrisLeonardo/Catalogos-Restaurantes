@@ -115,7 +115,7 @@ export default function TerminosPage() {
       <LegalSection n={12} title="Ley aplicable y contacto">
         <LegalP>
           Estos términos se rigen por las leyes de la República de Guatemala. Para cualquier consulta,
-          escríbenos a <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--brand-accent)' }}>{CONTACT_EMAIL}</a>.
+          escríbenos a <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--brand-accent-ink)' }}>{CONTACT_EMAIL}</a>.
         </LegalP>
       </LegalSection>
     </LegalShell>

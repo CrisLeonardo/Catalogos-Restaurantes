@@ -82,7 +82,7 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
       <button onClick={downloadPdf} disabled={pendingPdf} className="press" style={btnStyle(pendingPdf)}>
         {pendingPdf ? '…' : <><Icon name="download" size={11} style={{ display: 'inline', verticalAlign: '-1px' }} /> PDF</>}
       </button>
-      {err && <span style={{ fontSize: 11, color: 'var(--c-danger, #f87171)' }}>{err}</span>}
+      {err && <span style={{ fontSize: 11, color: 'var(--c-danger)' }}>{err}</span>}
     </div>
   );
 }

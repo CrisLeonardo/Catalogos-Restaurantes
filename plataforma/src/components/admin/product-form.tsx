@@ -252,7 +252,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label htmlFor="cost" style={labelStyle}>
-                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
+                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
                 </label>
                 <input
                   id="cost"
@@ -345,7 +345,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
               <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
                 Activa el módulo <strong style={{ color: 'var(--u-text-2)' }}>Recetas e ingredientes</strong> desde tu{' '}
-                <a href="/admin/modulos" style={{ color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                <a href="/admin/modulos" style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   panel de Módulos
                 </a>{' '}
                 para gestionar el food cost de tus platillos.
@@ -447,7 +447,7 @@ export default function ProductForm({ restaurantId, categories, product, default
               borderRadius: 'var(--radius-md)',
               background: 'color-mix(in srgb, var(--c-danger, #f87171) 12%, transparent)',
               border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)',
-              color: 'var(--c-danger, #f87171)',
+              color: 'var(--c-danger)',
               fontSize: 14,
             }}
           >

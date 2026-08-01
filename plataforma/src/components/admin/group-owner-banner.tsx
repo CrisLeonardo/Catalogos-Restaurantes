@@ -22,7 +22,7 @@ export default function GroupOwnerBanner({
         background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
       }}
     >
-      <span style={{ color: 'var(--brand-accent)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+      <span style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         <Icon name="box" size={17} />
       </span>
       <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>

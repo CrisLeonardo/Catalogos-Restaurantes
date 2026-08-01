@@ -41,6 +41,53 @@ export function setKitchenAutoPrintEnabled(on: boolean): void {
   store()?.setItem(PRINT_KEYS.kitchenEnabled, on ? '1' : '0');
 }
 
+/** ¿Este dispositivo tiene REALMENTE a dónde imprimir este rol?
+ *
+ *  Importa para la impresión automática: sin impresora asignada, printTicket
+ *  cae al último recurso, que es abrir una ventana del navegador con el
+ *  diálogo de imprimir. Como acción manual tiene sentido; disparada sola por
+ *  cada pedido que entra a cocina, sería una ventana emergente tras otra toda
+ *  la noche. Con esta comprobación, un dispositivo sin impresora simplemente
+ *  no participa. */
+export function hasPrinterConfigured(role: PrintRole): boolean {
+  return !!getPrinter(role) || !!getUsbPrinterInfo(role);
+}
+
+/* ── Comandas ya impresas POR ESTE DISPOSITIVO ────────────────────────────
+   Cuando el local imprime por el navegador (QZ / USB) en vez de con el Agente,
+   el candado del servidor no sirve: ahí no hay cola de trabajos que consultar.
+   El registro es local porque el hecho que describe también lo es —"de esta
+   computadora ya salió este papel"— y sobrevive a recargas de la página, que
+   es cuando antes se repetía la comanda. */
+
+const KITCHEN_PRINTED_KEY = 'leogin_kitchen_printed_v1';
+const KITCHEN_PRINTED_MAX = 300;
+
+function readPrintedIds(): string[] {
+  try {
+    const raw = store()?.getItem(KITCHEN_PRINTED_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch { return []; }
+}
+
+export function wasKitchenPrinted(orderId: string): boolean {
+  return readPrintedIds().includes(orderId);
+}
+
+/** Marca la comanda como impresa aquí. Devuelve false si ya lo estaba —
+ *  úsalo como candado: `if (!markKitchenPrinted(id)) return;`. */
+export function markKitchenPrinted(orderId: string): boolean {
+  const s = store();
+  if (!s) return true;
+  const ids = readPrintedIds();
+  if (ids.includes(orderId)) return false;
+  ids.push(orderId);
+  try {
+    s.setItem(KITCHEN_PRINTED_KEY, JSON.stringify(ids.slice(-KITCHEN_PRINTED_MAX)));
+  } catch { /* almacenamiento lleno o bloqueado: peor sería no imprimir */ }
+  return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Nivel 1: QZ Tray
 // ─────────────────────────────────────────────────────────────────────────────

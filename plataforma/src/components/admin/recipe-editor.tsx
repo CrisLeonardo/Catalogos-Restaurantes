@@ -121,7 +121,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
         <Icon name="flask" size={16} />
         <span>
           Aún no tienes insumos registrados.{' '}
-          <a href="/admin/ingredientes" style={{ color: 'var(--brand-accent)', textDecoration: 'none' }}>
+          <a href="/admin/ingredientes" style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
             Crea tus insumos
           </a>{' '}
           para armar la receta de este platillo.
@@ -177,7 +177,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               <span
                 style={{
                   fontSize: 12.5,
-                  color: l.ingredient_cost <= 0 ? '#fbbf24' : 'var(--u-text-2)',
+                  color: l.ingredient_cost <= 0 ? 'var(--c-warn)' : 'var(--u-text-2)',
                   textAlign: 'right',
                   fontFamily: 'monospace',
                   fontWeight: 500,
@@ -192,11 +192,11 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 className="press"
                 style={{
                   width: 28, height: 28, borderRadius: 8,
-                  border: '1px solid rgba(220,50,50,0.15)',
-                  background: 'rgba(220,50,50,0.05)',
+                  border: '1px solid var(--c-danger-bg)',
+                  background: 'var(--c-danger-bg)',
                   cursor: 'pointer',
                   display: 'grid', placeItems: 'center',
-                  color: 'var(--c-danger, #f87171)',
+                  color: 'var(--c-danger)',
                 }}
               >
                 <Icon name="x" size={12} />
@@ -215,12 +215,12 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             borderTop: '1px solid var(--u-hair)',
           }}>
             {hasZeroCost && (
-              <span style={{ fontSize: 11, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4, marginRight: 'auto' }}>
+              <span style={{ fontSize: 11, color: 'var(--c-warn)', display: 'flex', alignItems: 'center', gap: 4, marginRight: 'auto' }}>
                 <Icon name="alertCircle" size={11} /> Insumos con costo Q0
               </span>
             )}
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Costo total:</span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent)', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent-ink)', fontFamily: 'monospace' }}>
               Q {totalCost.toFixed(2)}
             </span>
           </div>
@@ -311,7 +311,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
       </div>
 
       {error && (
-        <p style={{ fontSize: 12, color: 'var(--c-danger, #f87171)', margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <p style={{ fontSize: 12, color: 'var(--c-danger)', margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
           <Icon name="alertCircle" size={12} /> {error}
         </p>
       )}
@@ -328,7 +328,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
           {isPending ? 'Guardando…' : 'Guardar receta'}
         </button>
         {saved && (
-          <span style={{ fontSize: 12, color: 'var(--brand-accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12, color: 'var(--brand-accent-ink)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Icon name="check" size={13} /> Guardado
           </span>
         )}
@@ -346,7 +346,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 });
               }
             }}
-            style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--c-danger, #f87171)', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--c-danger)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             Borrar receta
           </button>

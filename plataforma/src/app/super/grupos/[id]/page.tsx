@@ -22,7 +22,7 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
       <Link href="/super/grupos" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>← Grupos</Link>
       <div>
         <h1 className="t-display" style={{ fontSize: 26 }}>{org.name}</h1>
-        <a href={panelUrl} target="_blank" rel="noopener noreferrer" className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)', textDecoration: 'none' }}>
+        <a href={panelUrl} target="_blank" rel="noopener noreferrer" className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
           {org.slug}-central · abrir panel →
         </a>
       </div>

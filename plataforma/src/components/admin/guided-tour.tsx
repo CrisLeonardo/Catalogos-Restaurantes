@@ -312,7 +312,7 @@ export default function GuidedTourHost() {
 
         <div style={{
           fontSize: 10, fontWeight: 700, letterSpacing: '0.07em',
-          textTransform: 'uppercase', color: 'var(--brand-accent, #6366f1)',
+          textTransform: 'uppercase', color: 'var(--brand-accent-ink, #6366f1)',
           marginBottom: 7,
         }}>
           {tour.label} · paso {step + 1} de {tour.steps.length}

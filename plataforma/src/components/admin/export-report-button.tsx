@@ -135,7 +135,7 @@ export default function ExportReportButton({
       >
         {pendingPdf ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> PDF</>}
       </button>
-      {err && <span style={{ fontSize: 12, color: 'var(--c-danger, #f87171)' }}>{err}</span>}
+      {err && <span style={{ fontSize: 12, color: 'var(--c-danger)' }}>{err}</span>}
     </div>
   );
 }

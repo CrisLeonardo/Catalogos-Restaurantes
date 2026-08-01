@@ -234,7 +234,7 @@ export function Field({
         />
       </div>
       {error && (
-        <div id={errorId} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--c-danger, #f87171)' }}>
+        <div id={errorId} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--c-danger)' }}>
           <Icon name="alertCircle" size={13} />{error}
         </div>
       )}

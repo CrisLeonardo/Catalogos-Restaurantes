@@ -630,6 +630,20 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     return { error: orderError?.message ?? 'Error al crear el pedido.' };
   }
 
+  // El pedido del mesero NACE ya enviado a cocina.
+  //
+  // Antes nacía en NEW como los pedidos en línea, pero la comanda se imprimía
+  // igual aquí mismo: el pedido quedaba en el panel con un botón "Confirmar"
+  // que, al pulsarlo, VOLVÍA a mandar la comanda — dos papeles del mismo plato
+  // (el bug de la doble impresión). Y no tenía sentido pedirle a nadie que
+  // "confirmara" un pedido que un mesero del local ya tomó y ya mandó.
+  // Ahora el estado dice la verdad desde el primer segundo: en preparación.
+  const firedAt = new Date().toISOString();
+  await db
+    .from('orders')
+    .update({ status: 'PREP', accepted_at: firedAt })
+    .eq('id', order.id);
+
   sendPushToRestaurant(restaurantId, {
     title: '🛎 Nuevo pedido (mesero)',
     body: `${order.order_number} · ${customer.name} · Mesa ${customer.tableNumber ?? '?'}`,
@@ -638,9 +652,9 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     type: 'new_order',
   }).catch(() => {});
 
-  // Auto-disparo a cocina: la comanda se imprime al instante vía el Agente de
-  // impresión del local (no espera a que alguien confirme NEW→PREP). Best-effort:
-  // no-op si el restaurante no tiene agente/destino de cocina configurado.
+  // Comanda a cocina vía el Agente de impresión del local. Best-effort: no-op
+  // si el restaurante no tiene agente/destino de cocina configurado, y con
+  // candado anti-duplicado (ver enqueueKitchenForOrder).
   try {
     await enqueueKitchenForOrder(restaurantId, order.id);
   } catch {
@@ -648,6 +662,8 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   }
 
   revalidatePath('/admin/mesero');
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/cocina');
   return { success: true, orderId: order.id, orderNumber: order.order_number };
 }
 
@@ -747,19 +763,30 @@ export async function updateOrderStatus(
     : status === 'DELIVERED' ? { delivered_at: now }
     : {};
 
-  const { error } = await db
+  // Transición ATÓMICA: el `.neq('status', status)` hace que un pedido que YA
+  // está en ese estado no se toque y devuelva 0 filas. Es lo que evita que dos
+  // personas pulsando a la vez ("Confirmar" en el panel y "Comenzar" en la
+  // pantalla de cocina) disparen dos veces los efectos de la transición — en
+  // particular, dos comandas del mismo pedido.
+  const { data: changedRows, error } = await db
     .from('orders')
     .update({ status, ...stamp })
-    .eq('id', orderId);
+    .eq('id', orderId)
+    .neq('status', status)
+    .select('id, restaurant_id');
 
   if (error) return { error: error.message };
 
-  // Al confirmar (NEW→PREP): encola la comanda de cocina al agente de impresión
-  // del restaurante (funciona desde cualquier dispositivo, incl. móvil). No-op
-  // si no hay agente configurado; best-effort, no debe romper el cambio de estado.
-  if (status === 'PREP') {
+  const changed = (changedRows?.length ?? 0) > 0;
+  const rowRestaurantId = (changedRows?.[0]?.restaurant_id as string | undefined) ?? null;
+
+  // Al enviar a cocina (→PREP): encola la comanda al agente de impresión del
+  // restaurante (funciona desde cualquier dispositivo, incl. móvil). Solo si la
+  // fila REALMENTE cambió de estado en esta llamada. No-op si no hay agente
+  // configurado; best-effort, no debe romper el cambio de estado.
+  if (status === 'PREP' && changed) {
     // profile.restaurant_id es null para SUPER_ADMIN: resolver del pedido mismo.
-    let kitchenRid = profile.restaurant_id as string | null;
+    let kitchenRid = (profile.restaurant_id as string | null) ?? rowRestaurantId;
     if (!kitchenRid) {
       const { data: orderRow } = await createServiceClient()
         .from('orders').select('restaurant_id').eq('id', orderId).single();
@@ -778,8 +805,8 @@ export async function updateOrderStatus(
   // inactivo o el pedido no tiene cliente). No debe romper el cambio de estado.
   // SERVED cuenta aquí porque freeTable() (cierre manual de mesa DINE_IN) bypasea
   // esta función y nunca llega a otorgar puntos vía DELIVERED.
-  if (status === 'DELIVERED' || status === 'SERVED') {
-    let rid = profile.restaurant_id as string | null;
+  if ((status === 'DELIVERED' || status === 'SERVED') && changed) {
+    let rid = (profile.restaurant_id as string | null) ?? rowRestaurantId;
     if (!rid) {
       const { data: orderRow } = await createServiceClient()
         .from('orders').select('restaurant_id').eq('id', orderId).single();
@@ -794,7 +821,7 @@ export async function updateOrderStatus(
     }
   }
 
-  if (profile.restaurant_id) {
+  if (profile.restaurant_id && changed) {
     logActivity({
       restaurantId: profile.restaurant_id,
       actorId: user.id,
@@ -1134,12 +1161,11 @@ export async function archiveAbandonedTables(restaurantId: string): Promise<{ er
   return { archived };
 }
 
-/**
- * Encola el recibo de caja de un pedido al agente de impresión del restaurante.
- * Lo llama el botón "Imprimir recibo" cuando el restaurante usa el Agente Leogin
- * (en vez de la impresión por navegador/QZ). Best-effort.
- */
-export async function printReceiptViaAgent(orderId: string): Promise<{ error?: string }> {
+/** Comprueba que quien llama puede operar sobre este pedido; devuelve su
+ *  restaurant_id. Compartido por las acciones de impresión del panel. */
+async function authorizeOrderAccess(
+  orderId: string,
+): Promise<{ restaurantId: string } | { error: string }> {
   if (!orderId) return { error: 'ID de pedido requerido.' };
 
   const supabase = await createClient();
@@ -1168,12 +1194,68 @@ export async function printReceiptViaAgent(orderId: string): Promise<{ error?: s
     (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === order.restaurant_id);
   if (!allowed) return { error: 'No autorizado.' };
 
+  return { restaurantId: order.restaurant_id as string };
+}
+
+/** Mensaje humano para un intento de impresión que no llegó a la cola. */
+function printFailureMessage(
+  reason: 'no-printer' | 'pc-off' | 'not-found' | 'error' | 'already-printed',
+  role: 'cocina' | 'caja',
+  message?: string,
+): string {
+  switch (reason) {
+    case 'no-printer':
+      return `No hay impresora de ${role} asignada. Configúrala en «Impresión».`;
+    case 'pc-off':
+      return 'La PC principal del local está apagada: enciéndela en «Mi PC del local» para poder imprimir.';
+    case 'not-found':
+      return 'El pedido ya no existe.';
+    case 'already-printed':
+      return 'Esa comanda ya se envió a cocina.';
+    default:
+      return message ?? 'No se pudo enviar a la impresora.';
+  }
+}
+
+/**
+ * Encola el recibo de caja de un pedido al agente de impresión del restaurante.
+ * Lo llama el botón "Imprimir recibo" cuando el restaurante usa el Agente Leogin
+ * (en vez de la impresión por navegador/QZ).
+ *
+ * Devuelve el error real: antes, sin impresora de caja asignada o con la PC
+ * principal apagada, esto era un no-op silencioso — se pulsaba "Imprimir" y no
+ * pasaba absolutamente nada, sin ninguna explicación.
+ */
+export async function printReceiptViaAgent(orderId: string): Promise<{ error?: string; ok?: boolean }> {
+  const auth = await authorizeOrderAccess(orderId);
+  if ('error' in auth) return { error: auth.error };
+
   try {
-    await enqueueReceiptForOrder(order.restaurant_id as string, orderId);
+    const res = await enqueueReceiptForOrder(auth.restaurantId, orderId);
+    if (!res.queued) return { error: printFailureMessage(res.reason, 'caja', res.message) };
   } catch (e) {
     return { error: (e as Error).message };
   }
-  return {};
+  return { ok: true };
+}
+
+/**
+ * Reimprime la comanda de cocina de un pedido, a petición expresa (se atascó la
+ * impresora, se perdió el papel). Salta el candado anti-duplicado y el ticket
+ * sale marcado como "COPIA - NO COCINAR" para que la cocina no prepare el
+ * pedido dos veces.
+ */
+export async function reprintKitchenTicket(orderId: string): Promise<{ error?: string; ok?: boolean }> {
+  const auth = await authorizeOrderAccess(orderId);
+  if ('error' in auth) return { error: auth.error };
+
+  try {
+    const res = await enqueueKitchenForOrder(auth.restaurantId, orderId, { force: true });
+    if (!res.queued) return { error: printFailureMessage(res.reason, 'cocina', res.message) };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  return { ok: true };
 }
 
 /* ── Export de pedidos — PDF (cliente) + Excel (servidor) ────── */

@@ -20,24 +20,74 @@ export function remainingQuantity(item: OrderItem, voids: OrderVoid[]): number {
   return Math.max(0, item.quantity - voidedQuantity(item, voids));
 }
 
-export async function getRestaurantOrders(
-  restaurantId: string,
-): Promise<OrderWithItems[]> {
-  const db = createServiceClient();
-  const { data } = await db
-    .from('orders')
-    .select('*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: false })
-    .limit(100);
+const ORDER_SELECT =
+  '*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)';
 
+function mapOrderRows(data: unknown): OrderWithItems[] {
   return ((data ?? []) as (Record<string, unknown>)[]).map((row) => {
     const { waiter, ...order } = row as Record<string, unknown> & { waiter?: { full_name: string | null } | null };
-    return {
-      ...order,
-      waiter_name: waiter?.full_name ?? null,
-    } as OrderWithItems;
+    return { ...order, waiter_name: waiter?.full_name ?? null } as OrderWithItems;
   });
+}
+
+/** Cuándo se cerró un pedido: entregado, servido o anulado. Sin marca de
+ *  tiempo (pedidos viejos, cierres por SQL) se cae a created_at. */
+export function orderClosedAt(o: Pick<Order, 'delivered_at' | 'cancelled_at' | 'served_at' | 'created_at'>): string {
+  return o.delivered_at ?? o.cancelled_at ?? o.served_at ?? o.created_at;
+}
+
+export interface PanelOrders {
+  /** Todo lo que sigue en curso, del más viejo al más nuevo (FIFO). */
+  active: OrderWithItems[];
+  /** Cerrados HOY según la hora del restaurante, del cierre más reciente atrás. */
+  closedToday: OrderWithItems[];
+}
+
+/**
+ * Pedidos del panel, en DOS consultas separadas a propósito.
+ *
+ * Antes era una sola: "los últimos 100 por fecha de creación", y de ahí se
+ * separaba en memoria. En un local con movimiento eso escondía pedidos: una
+ * mesa abierta desde el mediodía se caía de la ventana de 100 en cuanto
+ * entraban 100 pedidos más nuevos, y desaparecía del tablero sin cerrarse.
+ * Los activos ahora se piden aparte y sin competir con el historial.
+ */
+export async function getPanelOrders(
+  restaurantId: string,
+  timezone: string = 'America/Guatemala',
+): Promise<PanelOrders> {
+  const db = createServiceClient();
+
+  // Ventana amplia para el corte del día: se filtra con precisión abajo, en la
+  // zona horaria real del restaurante (SQL no conoce esa zona aquí).
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+  const [activeRes, closedRes] = await Promise.all([
+    db
+      .from('orders')
+      .select(ORDER_SELECT)
+      .eq('restaurant_id', restaurantId)
+      .not('status', 'in', '("DELIVERED","CANCEL")')
+      // FIFO: el que lleva más esperando, primero. En un restaurante el orden
+      // de atención es la antigüedad, no la novedad.
+      .order('created_at', { ascending: true })
+      .limit(200),
+    db
+      .from('orders')
+      .select(ORDER_SELECT)
+      .eq('restaurant_id', restaurantId)
+      .in('status', ['DELIVERED', 'CANCEL'])
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(150),
+  ]);
+
+  const todayKey = localDateKey(new Date(), timezone);
+  const closedToday = mapOrderRows(closedRes.data)
+    .filter((o) => localDateKey(new Date(orderClosedAt(o)), timezone) === todayKey)
+    .sort((a, b) => orderClosedAt(b).localeCompare(orderClosedAt(a)));
+
+  return { active: mapOrderRows(activeRes.data), closedToday };
 }
 
 /** Pedidos activos del mesero (para la interfaz /admin/mesero). */

@@ -107,8 +107,8 @@ interface Props {
 }
 
 const BADGE_COLOR: Record<string, { bg: string; color: string }> = {
-  POPULAR: { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
-  NUEVO: { bg: 'rgba(99,102,241,0.15)', color: '#818cf8' },
+  POPULAR: { bg: 'var(--c-warn-bg)', color: 'var(--c-warn)' },
+  NUEVO: { bg: 'var(--c-alt-bg)', color: 'var(--c-alt)' },
 };
 
 function Badge({ label }: { label: string }) {
@@ -132,7 +132,7 @@ function Toggle({ on, busy, disabled, onClick, label }: { on: boolean; busy: boo
 }
 
 function StatusDot({ on, label, color }: { on: boolean; label: string; color?: string }) {
-  const c = on ? (color ?? '#4ade80') : 'var(--u-text-4)';
+  const c = on ? (color ?? 'var(--c-ok)') : 'var(--u-text-4)';
   return (
     <div style={{ fontSize: 11, color: c, fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
       <span style={{ width: 6, height: 6, borderRadius: 99, background: on ? c : 'color-mix(in srgb, var(--u-text) 20%, transparent)', display: 'inline-block' }} />
@@ -195,7 +195,7 @@ function SelfServiceCard({ m, on, busy, onToggle, priceNote }: { m: ModuleMeta; 
         <Toggle on={on} busy={busy} onClick={() => onToggle(!on)} label={`${on ? 'Desactivar' : 'Activar'} ${m.label}`} />
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
-      <div style={{ fontSize: 11, fontWeight: 700, color: priceNote.free ? '#4ade80' : 'var(--brand-accent)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: priceNote.free ? 'var(--c-ok)' : 'var(--brand-accent)' }}>
         {priceNote.title}
         <span style={{ display: 'block', fontWeight: 400, color: 'var(--u-text-4)', marginTop: 2 }}>
           {priceNote.detail}
@@ -207,7 +207,7 @@ function SelfServiceCard({ m, on, busy, onToggle, priceNote }: { m: ModuleMeta; 
         </div>
       )}
       {on && m.href && (
-        <a href={m.href} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        <a href={m.href} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           Abrir {m.navLabel ?? m.label} <Icon name="arrowRight" size={13} />
         </a>
       )}
@@ -225,8 +225,8 @@ function ManagedCard({ m, active, supportHref, priceNote }: { m: ModuleMeta; act
         <span style={{
           fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
           padding: '4px 9px', borderRadius: 99,
-          background: active ? 'rgba(74,222,128,0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-          color: active ? '#4ade80' : 'var(--u-text-4)',
+          background: active ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+          color: active ? 'var(--c-ok)' : 'var(--u-text-4)',
         }}>
           {active ? 'Activo' : 'Gestionado'}
         </span>
@@ -235,17 +235,17 @@ function ManagedCard({ m, active, supportHref, priceNote }: { m: ModuleMeta; act
       {active
         ? <StatusDot on label="Activo · lo administra Leogin" />
         : <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, marginTop: 2 }}>Lo activa el equipo de Leogin</div>}
-      <div style={{ fontSize: 11, fontWeight: 700, color: priceNote.free ? '#4ade80' : 'var(--brand-accent)', marginTop: 4 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: priceNote.free ? 'var(--c-ok)' : 'var(--brand-accent)', marginTop: 4 }}>
         {priceNote.title}
       </div>
       <div style={{ marginTop: 10 }}>
         {active && m.href ? (
-          <a href={m.href} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <a href={m.href} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             Abrir {m.navLabel ?? m.label} <Icon name="arrowRight" size={13} />
           </a>
         ) : (
           <a href={supportHref} target={supportHref.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="press"
-            style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 13px', border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.3)', borderRadius: 99 }}>
+            style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 13px', border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.3)', borderRadius: 99 }}>
             <Icon name="sparkle" size={13} /> Solicitar activación
           </a>
         )}
@@ -265,7 +265,7 @@ function LockedPlanCard({ icon, label, description, priceNote, badge = 'PREMIUM'
       <div style={{
         position: 'absolute', top: 10, right: 10,
         fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
-        background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent)',
+        background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent-ink)',
         letterSpacing: '0.06em',
       }}>
         {badge}
@@ -283,7 +283,7 @@ function LockedPlanCard({ icon, label, description, priceNote, badge = 'PREMIUM'
         </div>
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>{description}</p>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-accent)' }}>{priceNote}</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{priceNote}</div>
     </Card>
   );
 }
@@ -343,7 +343,7 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
         ))}
       </div>
       <a href="/admin/suscripcion" className="press"
-        style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
         Ver comparativa de planes <Icon name="arrowRight" size={13} />
       </a>
     </div>
@@ -396,7 +396,7 @@ function LiveBillCard({
   const cheaper = changes && projected < (billedNow ?? 0);
 
   return (
-    <Card className="p-4.5" style={{ border: changes ? '1px solid rgba(251,191,36,0.35)' : '1px solid var(--u-hair-2)' }}>
+    <Card className="p-4.5" style={{ border: changes ? '1px solid var(--c-warn-line)' : '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.09em', textTransform: 'uppercase' }}>
@@ -408,7 +408,7 @@ function LiveBillCard({
           </div>
         </div>
         <a href="/admin/suscripcion" className="press"
-          style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+          style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
           Ver mi suscripción <Icon name="arrowRight" size={12} />
         </a>
       </div>
@@ -417,15 +417,15 @@ function LiveBillCard({
       {changes && (
         <div style={{
           marginTop: 12, padding: '10px 12px', borderRadius: 'var(--radius-md)',
-          background: cheaper ? 'rgba(74,222,128,0.10)' : 'rgba(251,191,36,0.10)',
-          border: `1px solid ${cheaper ? 'rgba(74,222,128,0.25)' : 'rgba(251,191,36,0.25)'}`,
+          background: cheaper ? 'var(--c-ok-bg)' : 'var(--c-warn-bg)',
+          border: `1px solid ${cheaper ? 'var(--c-ok-line)' : 'var(--c-warn-line)'}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <Icon name={cheaper ? 'sparkle' : 'clock'} size={13} style={{ color: cheaper ? '#4ade80' : '#fbbf24' }} />
+            <Icon name={cheaper ? 'sparkle' : 'clock'} size={13} style={{ color: cheaper ? 'var(--c-ok)' : 'var(--c-warn)' }} />
             <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>
               {simulating ? 'Con lo que acabas de cambiar pagarías' : 'Tu próximo cobro será'}
             </span>
-            <strong style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 17, fontWeight: 800, color: cheaper ? '#4ade80' : 'var(--u-text)' }}>
+            <strong style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 17, fontWeight: 800, color: cheaper ? 'var(--c-ok)' : 'var(--u-text)' }}>
               {q(simulating ? total : projected)}
             </strong>
           </div>
@@ -439,7 +439,7 @@ function LiveBillCard({
         {lines.map((l, i) => (
           <div key={`${l.label}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5 }}>
             <span style={{ color: 'var(--u-text-3)' }}>{l.label}</span>
-            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, color: l.kind === 'discount' ? '#4ade80' : 'var(--u-text-2)' }}>
+            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, color: l.kind === 'discount' ? 'var(--c-ok)' : 'var(--u-text-2)' }}>
               {l.kind === 'discount' ? `− ${q(Math.abs(l.amount))}` : l.kind === 'addon' ? `+ ${q(l.amount)}` : q(l.amount)}
             </span>
           </div>
@@ -637,11 +637,11 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         </p>
         {planActual === 'BASICO' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
-            <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
+            <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               El plan <strong style={{ color: 'var(--u-text-2)' }}>Básico</strong> es solo menú digital — no incluye pedidos en línea.
-              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent)' }}>Estándar ({planPriceLabel(pricing, 'ESTANDAR')})</strong>.{' '}
-              <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
+              Activa pedidos para llevar desde <strong style={{ color: 'var(--brand-accent-ink)' }}>Estándar ({planPriceLabel(pricing, 'ESTANDAR')})</strong>.{' '}
+              <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent-ink)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
         )}
@@ -649,20 +649,20 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
            "elige 2 de 3" — sin mezclarlo con el ahorro de Premium. */}
         {isEstandar && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(var(--brand-accent-rgb,99,102,241),0.07)', border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.18)', marginBottom: 12 }}>
-            <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent)', flexShrink: 0 }} />
+            <Icon name="alertCircle" size={14} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               Tu plan Estándar incluye <strong style={{ color: 'var(--u-text-2)' }}>{ESTANDAR_MAX_ORDER_TYPES} de los 3 modos</strong> — tú eliges cuáles,
               y cambiarlos no altera tu precio de {planPriceLabel(pricing, 'ESTANDAR')}. Para tener los tres a la vez,
-              cambia a <strong style={{ color: 'var(--brand-accent)' }}>Premium ({planPriceLabel(pricing, 'PREMIUM')})</strong>.{' '}
-              <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
+              cambia a <strong style={{ color: 'var(--brand-accent-ink)' }}>Premium ({planPriceLabel(pricing, 'PREMIUM')})</strong>.{' '}
+              <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent-ink)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
             </p>
           </div>
         )}
         {/* Premium/Pro: aquí SÍ hay ahorro. Una frase; el detalle lo lleva la
            tarjeta de mensualidad y cada tarjeta dice su propio efecto. */}
         {hasChannelDiscount && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', marginBottom: 12 }}>
-            <Icon name="sparkle" size={14} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)', marginBottom: 12 }}>
+            <Icon name="sparkle" size={14} style={{ color: 'var(--c-ok)', flexShrink: 0 }} />
             <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
               <strong style={{ color: 'var(--u-text-2)' }}>Pagas solo por lo que usas:</strong> si no ofreces alguno de estos
               modos, apágalo y tu mensualidad baja {q(channelDiscountPer)}. Puedes ahorrar hasta{' '}
@@ -693,7 +693,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                   <div style={{
                     position: 'absolute', top: 10, right: 10,
                     fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
-                    background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent)',
+                    background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)', color: 'var(--brand-accent-ink)',
                     letterSpacing: '0.06em',
                   }}>
                     {lockBadge}
@@ -752,7 +752,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                   if (!delta) return null;
                   const saves = delta.startsWith('Apagarlo: −');
                   return (
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: saves ? '#4ade80' : 'var(--u-text-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: saves ? 'var(--c-ok)' : 'var(--u-text-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
                       <Icon name={saves ? 'sparkle' : 'helpCircle'} size={12} />
                       {delta}
                     </div>
@@ -764,7 +764,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                   </div>
                 )}
                 {on && m.configHref && (
-                  <a href={m.configHref} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                  <a href={m.configHref} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                     Configurar <Icon name="arrowRight" size={13} />
                   </a>
                 )}
@@ -790,7 +790,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -844,7 +844,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           <span>¿Tienes varias sucursales? Únelas en un panel de grupo con métricas consolidadas.</span>
         </div>
         <a href="/admin/ayuda" className="press"
-          style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.3)', borderRadius: 99, flexShrink: 0 }}>
+          style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', border: '1px solid rgba(var(--brand-accent-rgb, 99,102,241),0.3)', borderRadius: 99, flexShrink: 0 }}>
           Hablar con Leogin <Icon name="arrowRight" size={13} />
         </a>
       </Card>

@@ -212,7 +212,7 @@ export default function WaiterCallsAlert({
           style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 14px', borderRadius: 16,
-            border: '1px solid rgba(245,158,11,0.45)',
+            border: '1px solid var(--c-warn-line)',
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
         >
@@ -221,14 +221,14 @@ export default function WaiterCallsAlert({
             <div style={{
               width: 40, height: 40, borderRadius: 12,
               display: 'grid', placeItems: 'center',
-              background: 'rgba(245,158,11,0.18)', color: '#fbbf24',
+              background: 'var(--c-warn-bg)', color: 'var(--c-warn)',
             }}>
               <Icon name="bell" size={19} />
             </div>
             {/* Anillo de pulso */}
             <span style={{
               position: 'absolute', inset: -3, borderRadius: 15,
-              border: '2px solid rgba(251,191,36,0.5)',
+              border: '2px solid var(--c-warn-line)',
               animation: 'waiter-ping 1.6s ease-out infinite',
               pointerEvents: 'none',
             }} />
@@ -238,7 +238,7 @@ export default function WaiterCallsAlert({
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1.2 }}>
               {c.table_number ? `Mesa ${c.table_number}` : 'Llamada al mesero'}
             </div>
-            <div style={{ fontSize: 11.5, color: '#fbbf24', marginTop: 2 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--c-warn)', marginTop: 2 }}>
               Solicita atención · {timeAgo(c.created_at)}
             </div>
           </div>
@@ -269,8 +269,8 @@ export default function WaiterCallsAlert({
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '10px 14px', borderRadius: 14, cursor: 'pointer',
-            border: '1px solid rgba(245,158,11,0.45)',
-            color: '#fbbf24', fontSize: 13, fontWeight: 700,
+            border: '1px solid var(--c-warn-line)',
+            color: 'var(--c-warn)', fontSize: 13, fontWeight: 700,
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
         >

@@ -13,7 +13,7 @@ function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
     <span style={{ display: 'inline-flex', gap: 2 }}>
       {[1, 2, 3, 4, 5].map((s) => (
-        <svg key={s} width={size} height={size} viewBox="0 0 24 24" fill={s <= Math.round(value) ? '#fbbf24' : 'none'} stroke="#fbbf24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <svg key={s} width={size} height={size} viewBox="0 0 24 24" fill={s <= Math.round(value) ? 'var(--c-warn)' : 'none'} stroke="#fbbf24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       ))}
@@ -27,7 +27,7 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{label}</span>
       <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}>
-        <div style={{ height: '100%', borderRadius: 99, background: '#fbbf24', width: `${pct}%`, transition: 'width 400ms' }} />
+        <div style={{ height: '100%', borderRadius: 99, background: 'var(--c-warn)', width: `${pct}%`, transition: 'width 400ms' }} />
       </div>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</span>
     </div>
@@ -48,7 +48,7 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
           { label: 'Total reseñas', value: String(summary.total) },
         ].map(({ label, value, sub, accent }) => (
           <Card key={label} className="p-3.5">
-            <div style={{ fontSize: 26, fontWeight: 800, color: accent ? '#fbbf24' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: accent ? 'var(--c-warn)' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
             {sub && <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1 }}>{sub}</div>}
             <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 4 }}>{label}</div>
           </Card>
@@ -105,8 +105,8 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
         </Card>
       </div>
 
-      <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 13, color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Icon name="helpCircle" size={16} style={{ color: '#818cf8', flexShrink: 0 }} />
+      <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--c-alt-bg)', border: '1px solid var(--c-alt-line)', fontSize: 13, color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Icon name="helpCircle" size={16} style={{ color: 'var(--c-alt)', flexShrink: 0 }} />
         Los clientes reciben un enlace de calificación al finalizar su pedido. La encuesta es anónima y toma menos de 30 segundos.
       </div>
     </div>

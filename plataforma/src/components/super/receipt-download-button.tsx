@@ -23,7 +23,7 @@ export default function ReceiptDownloadButton({ data }: { data: ReceiptData }) {
         padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600,
         border: '1px solid var(--adm-border, var(--u-hair-2))',
         background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-        color: 'var(--brand-accent)', cursor: busy ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+        color: 'var(--brand-accent-ink)', cursor: busy ? 'wait' : 'pointer', whiteSpace: 'nowrap',
       }}
     >
       <Icon name="download" size={13} />

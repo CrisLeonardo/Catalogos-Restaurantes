@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getRestaurantOrders, getOrderStats } from '@/lib/db/orders';
+import { getPanelOrders, getOrderStats } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { listVoidApprovers } from '@/lib/actions/staff-pin';
+import { can } from '@/lib/permissions';
 import OrdersPanel from '@/components/admin/orders-panel';
 
 export default async function PedidosPage() {
@@ -47,15 +48,16 @@ export default async function PedidosPage() {
   const agentKitchen = !!(agent?.kitchen_target);
   const agentReceipt = !!(agent?.receipt_target);
 
-  const [orders, stats, voidApprovers] = await Promise.all([
-    getRestaurantOrders(restaurantId),
+  const [panelOrders, stats, voidApprovers] = await Promise.all([
+    getPanelOrders(restaurantId, timezone),
     getOrderStats(restaurantId, timezone),
     listVoidApprovers(restaurantId),
   ]);
 
   return (
     <OrdersPanel
-      initialOrders={orders}
+      activeOrders={panelOrders.active}
+      closedToday={panelOrders.closedToday}
       restaurantId={restaurantId}
       restaurantName={restaurantName}
       stats={stats}
@@ -65,11 +67,14 @@ export default async function PedidosPage() {
         position: themeConfig.currencyPosition,
         locale: themeConfig.locale,
       }}
+      kitchenYellowMin={themeConfig.kdsYellowMin}
+      kitchenRedMin={themeConfig.kdsRedMin}
       agentKitchen={agentKitchen}
       agentReceipt={agentReceipt}
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
       voidApprovers={voidApprovers}
+      canSelfApprove={can(profile.role, profile.permissions, 'aprobar_anulaciones')}
     />
   );
 }

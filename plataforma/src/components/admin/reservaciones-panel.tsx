@@ -29,11 +29,11 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
 };
 
 const STATUS_COLOR: Record<ReservationStatus, string> = {
-  PENDING: '#fbbf24',
-  CONFIRMED: '#60a5fa',
-  SEATED: '#4ade80',
+  PENDING: 'var(--c-warn)',
+  CONFIRMED: 'var(--c-info)',
+  SEATED: 'var(--c-ok)',
   COMPLETED: 'var(--u-text-3)',
-  CANCELLED: '#f87171',
+  CANCELLED: 'var(--c-danger)',
 };
 
 const NEXT_STATUS: Partial<Record<ReservationStatus, ReservationStatus>> = {
@@ -149,7 +149,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
       </div>
 
       {error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: 'var(--c-danger, #f87171)', fontSize: 13 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -239,7 +239,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                         )}
                         {r.status !== 'CANCELLED' && (
                           <Button type="button" onClick={() => handleStatus(r.id, 'CANCELLED')} disabled={busy} variant="outline" size="sm"
-                            className="rounded-adm-full border-[rgba(248,113,113,0.3)] text-[#f87171]">
+                            className="rounded-adm-full border-[var(--c-danger-line)] text-[var(--c-danger)]">
                             Cancelar
                           </Button>
                         )}

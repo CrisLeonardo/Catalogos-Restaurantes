@@ -235,7 +235,7 @@ export default function AccountSheet({
           <Glass style={{ borderRadius: 18, padding: '16px 18px', background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 75%)' }}>
             <div className="t-kicker" style={{ fontSize: 10 }}>Tus puntos de fidelidad</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-              <span style={{ fontSize: 36, fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 0.95 }}>{fmtPts(balance)}</span>
+              <span style={{ fontSize: 36, fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.95 }}>{fmtPts(balance)}</span>
               <span className="t-mute" style={{ fontSize: 14 }}>{balance === 1 ? 'punto' : 'puntos'}</span>
             </div>
           </Glass>
@@ -417,7 +417,7 @@ export default function AccountSheet({
             )}
           </div>
 
-          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: 'var(--c-danger, #f87171)', lineHeight: 1.4 }}>{msg}</p>}
+          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: 'var(--c-danger)', lineHeight: 1.4 }}>{msg}</p>}
 
           <button
             onClick={handleSave}

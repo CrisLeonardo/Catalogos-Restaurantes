@@ -143,7 +143,7 @@ export default function QRDisplay({ restaurantName, restaurantId }: Props) {
             variant={copied ? 'primary' : 'secondary'}
             size="sm"
             className="shrink-0 whitespace-nowrap"
-            style={copied ? { background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderColor: 'rgba(34,197,94,0.28)' } : undefined}
+            style={copied ? { background: 'var(--c-ok-bg)', color: 'var(--c-ok)', borderColor: 'var(--c-ok-line)' } : undefined}
           >
             {copied ? '✓ Copiado' : 'Copiar'}
           </Button>

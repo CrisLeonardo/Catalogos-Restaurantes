@@ -170,7 +170,7 @@ export default function KitchenPrintSettings() {
               </label>
               {usbKitchen ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13, color: 'var(--c-ok)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     ● {usbDeviceLabel(usbKitchen)}
                   </span>
                   <Button type="button" onClick={() => configureUsb('kitchen')} variant="secondary" size="sm">
@@ -197,7 +197,7 @@ export default function KitchenPrintSettings() {
               </label>
               {usbReceipt ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: 'var(--c-ok, #4ade80)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13, color: 'var(--c-ok)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     ● {usbDeviceLabel(usbReceipt)}
                   </span>
                   <Button type="button" onClick={() => configureUsb('receipt')} variant="secondary" size="sm">
@@ -218,15 +218,15 @@ export default function KitchenPrintSettings() {
             </div>
 
             {usbMsg && (
-              <div style={{ fontSize: 12, color: usbMsg.startsWith('✓') ? '#4ade80' : 'var(--u-text-3)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: usbMsg.startsWith('✓') ? 'var(--c-ok)' : 'var(--u-text-3)', lineHeight: 1.5 }}>
                 {usbMsg}
               </div>
             )}
 
             <div style={{
               fontSize: 11.5, color: 'var(--u-text-4)',
-              background: 'rgba(245,158,11,0.06)',
-              border: '1px solid rgba(245,158,11,0.15)',
+              background: 'var(--c-warn-bg)',
+              border: '1px solid var(--c-warn-line)',
               borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
             }}>
               En Windows, si el sistema ya tiene instalado un driver para la impresora,

@@ -143,7 +143,7 @@ function QuickLink({ href, icon, title, body }: { href: string; icon: string; ti
   return (
     <Card variant="interactive" style={{ padding: 0 }}>
       <Link href={href} style={{ display: 'flex', gap: 12, padding: '14px 16px', textDecoration: 'none', alignItems: 'flex-start' }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent)' }}>
+        <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
           <Icon name={icon} size={16} />
         </span>
         <span style={{ minWidth: 0 }}>

@@ -30,7 +30,7 @@ function MovementHistory({ movements }: { movements: StockMovement[] }) {
             <div style={{ color: 'var(--u-text-4)', fontSize: 10.5 }}>{new Date(m.created_at).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ textAlign: 'right', fontFamily: 'var(--ui-font-mono)' }}>
-            <div style={{ color: Number(m.delta) >= 0 ? '#4ade80' : '#f87171' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
+            <div style={{ color: Number(m.delta) >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>{Number(m.delta) >= 0 ? '+' : ''}{m.delta}</div>
             {m.unit_cost != null && <div style={{ color: 'var(--u-text-3)', fontSize: 10.5 }}>costo Q{Number(m.unit_cost).toFixed(4)} · prom. Q{Number(m.avg_cost_after).toFixed(4)}</div>}
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
 }
 
 function Summary({ label, value, tone }: { label: string; value: string; tone?: 'warn' | 'bad' }) {
-  const color = tone === 'bad' ? '#f87171' : tone === 'warn' ? '#fbbf24' : 'var(--u-text)';
+  const color = tone === 'bad' ? 'var(--c-danger)' : tone === 'warn' ? 'var(--c-warn)' : 'var(--u-text)';
   return (
     <Card className="flex flex-col gap-1.5 p-4.5">
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
@@ -171,7 +171,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
         {tracked ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Stepper onClick={() => quick(-1)} disabled={pending || stock <= 0} icon="minus" />
-            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 17, minWidth: 34, textAlign: 'center', color: isOut ? '#f87171' : 'var(--u-text)' }}>
+            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 17, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
               {stock}
             </span>
             <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" />
@@ -248,9 +248,9 @@ function Stepper({ onClick, disabled, icon }: { onClick: () => void; disabled?: 
 
 function Tag({ text, tone }: { text: string; tone?: 'bad' | 'warn' | 'ok' }) {
   const map = {
-    bad: { c: '#f87171', b: 'rgba(248,113,113,0.12)', br: 'rgba(248,113,113,0.25)' },
-    warn: { c: '#fbbf24', b: 'rgba(251,191,36,0.12)', br: 'rgba(251,191,36,0.25)' },
-    ok: { c: '#4ade80', b: 'rgba(74,222,128,0.1)', br: 'rgba(74,222,128,0.22)' },
+    bad: { c: 'var(--c-danger)', b: 'var(--c-danger-bg)', br: 'var(--c-danger-line)' },
+    warn: { c: 'var(--c-warn)', b: 'var(--c-warn-bg)', br: 'var(--c-warn-line)' },
+    ok: { c: 'var(--c-ok)', b: 'var(--c-ok-bg)', br: 'var(--c-ok-line)' },
     none: { c: 'var(--u-text-4)', b: 'color-mix(in srgb, var(--u-text) 5%, transparent)', br: 'var(--u-hair)' },
   };
   const s = map[tone ?? 'none'];

@@ -112,7 +112,7 @@ export default async function MetricasPage() {
                       {new Date(r.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' })}
                     </TableCell>
                     <TableCell className="text-right" style={{ whiteSpace: 'nowrap' }}>
-                      <Link href={`/super/metricas/${r.id}`} style={{ fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}>
+                      <Link href={`/super/metricas/${r.id}`} style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                         Detalle →
                       </Link>
                     </TableCell>

@@ -7,7 +7,7 @@ import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
-import { generateToken, hashToken, enqueuePrintJob } from '@/lib/print-agent';
+import { generateToken, hashToken, enqueuePrintJob, ticketFormatFor } from '@/lib/print-agent';
 import { buildTestKitchenEscPos, buildTestReceiptEscPos } from '@/lib/escpos';
 
 /**
@@ -251,7 +251,10 @@ export async function sendTestPrint(input: {
   if (!restaurantId) return { error: 'No autorizado.' };
 
   const role = input.role === 'receipt' ? 'receipt' : 'kitchen';
-  const bytes = role === 'kitchen' ? buildTestKitchenEscPos() : buildTestReceiptEscPos();
+  // Con la zona horaria del restaurante: si el ticket de prueba sale con la
+  // hora equivocada, el dueño lo ve ANTES de que el error llegue a un pedido.
+  const format = await ticketFormatFor(restaurantId);
+  const bytes = role === 'kitchen' ? buildTestKitchenEscPos(format) : buildTestReceiptEscPos(format);
   const res = await enqueuePrintJob({
     restaurantId,
     role,

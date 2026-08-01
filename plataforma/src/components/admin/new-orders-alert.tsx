@@ -193,6 +193,8 @@ export default function NewOrdersAlert({
     function onNew(e: Event) {
       const o = (e as CustomEvent).detail as Order;
       if (o.restaurant_id !== restaurantId) return;
+      // Igual que en el canal propio: solo lo que nadie ha atendido todavía.
+      if (o.status !== 'NEW') return;
       addOrder({
         id: o.id,
         order_number:  o.order_number,
@@ -236,6 +238,15 @@ export default function NewOrdersAlert({
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
           const o = payload.new as Order;
           if (o.restaurant_id !== restaurantId) return;
+          // Solo lo que de verdad está SIN ATENDER. Un pedido que nace ya
+          // enviado a cocina (lo tomó un mesero en el local, o llegó del hub
+          // offline ya impreso) no necesita que suene una campana pidiendo que
+          // alguien lo mire: ya lo miró una persona. Esta alerta es para los
+          // pedidos que entran solos —en línea o por el QR de la mesa— y que
+          // nadie ha visto todavía. Es la misma condición que usa el sondeo
+          // (getPendingNewOrders filtra status = 'NEW'), que antes no coincidía
+          // con lo que aceptaba este canal.
+          if (o.status !== 'NEW') return;
           addOrder({
             id: o.id,
             order_number:  o.order_number,
@@ -350,7 +361,9 @@ export default function NewOrdersAlert({
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 14px', borderRadius: 16,
             // Verde: inconfundible frente al ámbar de "llamada al mesero".
-            border: '1px solid rgba(16,185,129,0.5)',
+            // Vía tokens --c-*: el verde claro de antes era ilegible sobre la
+            // tarjeta casi blanca del modo claro.
+            border: '1px solid color-mix(in srgb, var(--c-ok-solid) 45%, transparent)',
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
         >
@@ -358,13 +371,13 @@ export default function NewOrdersAlert({
             <div style={{
               width: 40, height: 40, borderRadius: 12,
               display: 'grid', placeItems: 'center',
-              background: 'rgba(16,185,129,0.18)', color: '#34d399',
+              background: 'var(--c-ok-bg)', color: 'var(--c-ok)',
             }}>
               <Icon name="bell" size={19} />
             </div>
             <span style={{
               position: 'absolute', inset: -3, borderRadius: 15,
-              border: '2px solid rgba(52,211,153,0.5)',
+              border: '2px solid color-mix(in srgb, var(--c-ok-solid) 50%, transparent)',
               animation: 'new-order-ping 1.6s ease-out infinite',
               pointerEvents: 'none',
             }} />
@@ -375,7 +388,7 @@ export default function NewOrdersAlert({
               Pedido nuevo · {o.order_number}
             </div>
             <div style={{
-              fontSize: 11.5, color: '#34d399', marginTop: 2,
+              fontSize: 11.5, color: 'var(--c-ok)', marginTop: 2,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {o.customer_name} · {typeLabel(o.order_type, o.address)} · {timeAgo(o.created_at)}
@@ -420,8 +433,8 @@ export default function NewOrdersAlert({
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '10px 14px', borderRadius: 14, cursor: 'pointer',
-            border: '1px solid rgba(16,185,129,0.5)',
-            color: '#34d399', fontSize: 13, fontWeight: 700,
+            border: '1px solid color-mix(in srgb, var(--c-ok-solid) 45%, transparent)',
+            color: 'var(--c-ok)', fontSize: 13, fontWeight: 700,
             boxShadow: '0 12px 36px rgba(0,0,0,0.45)',
           }}
         >

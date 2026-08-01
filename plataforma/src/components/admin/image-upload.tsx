@@ -230,7 +230,7 @@ export default function ImageUpload({
       </span>
 
       {error && (
-        <span style={{ fontSize: 12, color: 'var(--c-danger, #f87171)' }}>{error}</span>
+        <span style={{ fontSize: 12, color: 'var(--c-danger)' }}>{error}</span>
       )}
     </div>
   );

@@ -197,8 +197,8 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
                     <span
                       style={{
                         fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                        background: isActive ? 'rgba(74,222,128,0.14)' : 'var(--surface-2)',
-                        color: isActive ? '#4ade80' : status === 'CANCEL' ? '#f87171' : 'var(--u-text-3)',
+                        background: isActive ? 'var(--c-ok-bg)' : 'var(--surface-2)',
+                        color: isActive ? 'var(--c-ok)' : status === 'CANCEL' ? 'var(--c-danger)' : 'var(--u-text-3)',
                       }}
                     >
                       {statusLabel(status)}

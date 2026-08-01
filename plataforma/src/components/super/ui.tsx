@@ -164,7 +164,7 @@ export function EmptyState({
 }) {
   return (
     <Card style={{ padding: '44px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-      <span style={{ width: 46, height: 46, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent)' }}>
+      <span style={{ width: 46, height: 46, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
         <Icon name={icon} size={22} />
       </span>
       <div style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{title}</div>

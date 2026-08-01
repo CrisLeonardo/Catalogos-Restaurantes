@@ -183,7 +183,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} />
             {appliedTpl && (
               <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Icon name="checkCircle" size={16} style={{ color: 'var(--c-ok, #4ade80)', flexShrink: 0 }} />
+                <Icon name="checkCircle" size={16} style={{ color: 'var(--c-ok)', flexShrink: 0 }} />
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
                   Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
                   o sigue personalizando en las otras pestañas.
@@ -679,7 +679,7 @@ function ContrastHint({ text, actionLabel, onFix }: { text: string; actionLabel:
         border: '1px solid color-mix(in srgb, var(--c-warn, #fbbf24) 35%, transparent)',
       }}
     >
-      <span style={{ color: 'var(--c-warn, #fbbf24)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+      <span style={{ color: 'var(--c-warn)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         <Icon name="alertCircle" size={16} />
       </span>
       <span style={{ flex: 1, fontSize: 12, color: 'var(--u-text-2)', lineHeight: 1.45 }}>{text}</span>

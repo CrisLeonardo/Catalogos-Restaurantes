@@ -127,7 +127,7 @@ export default async function SuscripcionPage() {
           className="p-5"
           style={{
             border: trialLeft <= 3
-              ? '1px solid rgba(248,113,113,0.4)'
+              ? '1px solid var(--c-danger-line)'
               : trialLeft <= 7
               ? '1px solid rgba(251,146,60,0.4)'
               : '1px solid color-mix(in srgb, var(--brand-accent) 32%, transparent)',
@@ -135,7 +135,7 @@ export default async function SuscripcionPage() {
         >
           <div className="t-kicker" style={{
             fontSize: 9.5,
-            color: trialLeft <= 3 ? '#f87171' : trialLeft <= 7 ? '#fb923c' : 'var(--brand-accent)',
+            color: trialLeft <= 3 ? 'var(--c-danger)' : trialLeft <= 7 ? '#fb923c' : 'var(--brand-accent)',
           }}>
             Prueba gratis
           </div>
@@ -189,7 +189,7 @@ export default async function SuscripcionPage() {
               <Icon
                 name={active ? 'check' : 'x'}
                 size={14}
-                style={{ color: active ? '#4ade80' : 'var(--u-text-4)', flexShrink: 0 }}
+                style={{ color: active ? 'var(--c-ok)' : 'var(--u-text-4)', flexShrink: 0 }}
               />
               <span style={{ color: active ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>{label}</span>
             </div>
@@ -200,7 +200,7 @@ export default async function SuscripcionPage() {
           href={planesUrl}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 600 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
@@ -217,7 +217,7 @@ export default async function SuscripcionPage() {
           className="p-5"
           style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent-ink)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
@@ -247,7 +247,7 @@ export default async function SuscripcionPage() {
                 background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
                 border: '1px solid rgba(var(--brand-accent-rgb,99,102,241),0.12)',
               }}>
-                <Icon name={icon} size={15} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+                <Icon name={icon} size={15} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-2)', lineHeight: 1.2 }}>{label}</div>
                   <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.35 }}>{desc}</div>
@@ -271,7 +271,7 @@ export default async function SuscripcionPage() {
       {/* ── Actualizar plan (Estándar/Premium en adelante) ───── */}
       {nextPlanInfo && currentPlan !== 'BASICO' && (
         <Card className="p-5">
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent)' }}>
+          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent-ink)' }}>
             Siguiente plan disponible
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)', marginTop: 4 }}>
@@ -322,7 +322,7 @@ export default async function SuscripcionPage() {
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
                       {p.tagline}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--brand-accent)', fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--brand-accent-ink)', fontWeight: 700, marginTop: 4 }}>
                       Solicitar →
                     </div>
                   </a>
@@ -346,7 +346,7 @@ export default async function SuscripcionPage() {
           href={upgradeHref(restaurantName, 'Grupo / Franquicia')}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ fontSize: 12.5, color: 'var(--brand-accent)', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+          style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
         >
           Hablar con Leogin →
         </a>
@@ -357,12 +357,12 @@ export default async function SuscripcionPage() {
         <>
           <Card
             className="p-5"
-            style={{ border: hasOverdue ? '1px solid rgba(248,113,113,0.3)' : pendingTotal > 0 ? '1px solid rgba(251,191,36,0.25)' : '1px solid rgba(74,222,128,0.25)' }}
+            style={{ border: hasOverdue ? '1px solid var(--c-danger-line)' : pendingTotal > 0 ? '1px solid var(--c-warn-line)' : '1px solid var(--c-ok-line)' }}
           >
             <div className="t-kicker" style={{ fontSize: 9.5 }}>Estado de cuenta</div>
             {pendingTotal > 0 ? (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: hasOverdue ? '#f87171' : '#fbbf24', lineHeight: 1, marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
                   {fmtMoney(pendingTotal, currency)}
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>
@@ -371,7 +371,7 @@ export default async function SuscripcionPage() {
               </>
             ) : (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--c-ok, #4ade80)', lineHeight: 1.1, marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--c-ok)', lineHeight: 1.1, marginTop: 4 }}>
                   Estás al día ✓
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>No tienes cobros pendientes. ¡Gracias!</div>
@@ -389,7 +389,7 @@ export default async function SuscripcionPage() {
 
           <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
-            aparecerá como <strong style={{ color: 'var(--c-ok, #4ade80)' }}>Pagado</strong> aquí mismo.
+            aparecerá como <strong style={{ color: 'var(--c-ok)' }}>Pagado</strong> aquí mismo.
           </Card>
 
           {/* Historial */}
@@ -418,12 +418,12 @@ export default async function SuscripcionPage() {
 function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency: string; restaurantName: string }) {
   const overdue = isOverdue(inv);
   const meta = overdue
-    ? { label: 'Vencido', color: 'var(--c-danger, #f87171)', bg: 'rgba(248,113,113,0.13)' }
+    ? { label: 'Vencido', color: 'var(--c-danger)', bg: 'var(--c-danger-bg)' }
     : inv.status === 'PAID'
-    ? { label: 'Pagado', color: 'var(--c-ok, #4ade80)', bg: 'rgba(74,222,128,0.12)' }
+    ? { label: 'Pagado', color: 'var(--c-ok)', bg: 'var(--c-ok-bg)' }
     : inv.status === 'CANCELLED'
     ? { label: 'Cancelado', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' }
-    : { label: 'Pendiente', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' };
+    : { label: 'Pendiente', color: 'var(--c-warn)', bg: 'var(--c-warn-bg)' };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--u-hair)' }}>
@@ -481,9 +481,9 @@ function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; curr
   // Métodos que sí descuentan este ciclo, con nombre (respetando el tope).
   const discountedKeys = b.channelsOffKeys.slice(0, b.channelsOff);
   return (
-    <Card className="p-5" style={{ border: saving ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--u-hair-2)' }}>
+    <Card className="p-5" style={{ border: saving ? '1px solid var(--c-ok-line)' : '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Icon name="sparkle" size={15} style={{ color: saving ? '#4ade80' : 'var(--brand-accent)' }} />
+        <Icon name="sparkle" size={15} style={{ color: saving ? 'var(--c-ok)' : 'var(--brand-accent)' }} />
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Lo que pagarás este mes</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
@@ -493,8 +493,8 @@ function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; curr
         y los módulos apagados que no vienen en tu plan dejan de cobrarse.
       </div>
       {pendingDiscount && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
-          <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)' }}>
+          <Icon name="clock" size={14} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
           {/* Antes prometía "tu próximo cobro" sin más. Es falso pasada la
              primera semana del mes: hay que estar apagado el 75% del ciclo, y
              quien apaga el día 20 lo ve DOS cobros después. Ahora se dice el
@@ -507,8 +507,8 @@ function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; curr
         </div>
       )}
       {pendingLoss && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)' }}>
-          <Icon name="clock" size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)' }}>
+          <Icon name="clock" size={14} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
           <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
             Este cobro todavía incluye el descuento de un método que ya reactivaste. Si lo dejas
             encendido, el descuento desaparece a partir de <strong>{chargeLabel(timing)}</strong>.
@@ -544,7 +544,7 @@ function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; curr
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
             {autoPrice ? 'Tu mensualidad' : 'Mensualidad sugerida'}
           </span>
-          <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: saving ? '#4ade80' : 'var(--u-text)' }}>
+          <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: saving ? 'var(--c-ok)' : 'var(--u-text)' }}>
             {fmtMoney(b.final, currency)}
           </span>
         </div>
@@ -556,7 +556,7 @@ function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; curr
         </div>
       )}
 
-      <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent)', textDecoration: 'none', fontWeight: 700 }}>
+      <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 700 }}>
         Gestionar mis métodos de pedido y módulos <Icon name="arrowRight" size={13} />
       </a>
     </Card>

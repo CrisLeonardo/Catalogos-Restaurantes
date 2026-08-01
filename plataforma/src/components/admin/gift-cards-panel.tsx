@@ -46,8 +46,8 @@ export default function GiftCardsPanel({ restaurantId, giftCards }: { restaurant
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span className="t-mono" style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{g.code}</span>
-                    {g.status === 'CANCELLED' && <span style={{ fontSize: 10.5, color: 'var(--c-danger, #f87171)' }}>cancelado</span>}
-                    {g.status === 'ACTIVE' && expired && <span style={{ fontSize: 10.5, color: 'var(--c-danger, #f87171)' }}>vencido</span>}
+                    {g.status === 'CANCELLED' && <span style={{ fontSize: 10.5, color: 'var(--c-danger)' }}>cancelado</span>}
+                    {g.status === 'ACTIVE' && expired && <span style={{ fontSize: 10.5, color: 'var(--c-danger)' }}>vencido</span>}
                     {g.status === 'ACTIVE' && !expired && g.balance <= 0 && <span style={{ fontSize: 10.5, color: 'var(--u-text-4)' }}>agotado</span>}
                     {g.recipient_name && <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>· {g.recipient_name}</span>}
                   </div>
@@ -65,7 +65,7 @@ export default function GiftCardsPanel({ restaurantId, giftCards }: { restaurant
                   <form action={cancelGiftCard} onSubmit={(e) => { if (!confirm('¿Cancelar este vale? Ya no podrá redimirse.')) e.preventDefault(); }}>
                     <input type="hidden" name="restaurantId" value={restaurantId} />
                     <input type="hidden" name="id" value={g.id} />
-                    <button type="submit" className="press glass-quiet" title="Cancelar vale" style={{ width: 34, height: 34, borderRadius: 9, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--c-danger, #f87171)', cursor: 'pointer' }}>
+                    <button type="submit" className="press glass-quiet" title="Cancelar vale" style={{ width: 34, height: 34, borderRadius: 9, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--c-danger)', cursor: 'pointer' }}>
                       <Icon name="trash" size={14} />
                     </button>
                   </form>
@@ -124,7 +124,7 @@ function IssueModal({ restaurantId, onClose, onSaved }: { restaurantId: string; 
               <label style={label}>Vence (opcional)</label>
               <input name="expires_at" type="date" style={input} />
             </div>
-            {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>}
+            {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger)' }}>{state.error}</div>}
             <button type="submit" disabled={isPending} className="press btn-accent" style={{ width: '100%', padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}>
               {isPending ? 'Emitiendo…' : 'Emitir vale'}
             </button>
@@ -227,8 +227,8 @@ function RedeemModal({ restaurantId, onClose, onSaved }: { restaurantId: string;
             </>
           )}
 
-          {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger, #f87171)' }}>{state.error}</div>}
-          {state && 'ok' in state && <div style={{ fontSize: 13, color: '#4ade80' }}>Vale aplicado. Saldo restante: {money(state.newBalance)}</div>}
+          {state && 'error' in state && <div style={{ fontSize: 13, color: 'var(--c-danger)' }}>{state.error}</div>}
+          {state && 'ok' in state && <div style={{ fontSize: 13, color: 'var(--c-ok)' }}>Vale aplicado. Saldo restante: {money(state.newBalance)}</div>}
 
           <button type="submit" disabled={!order || isPending} className="press btn-accent" style={{ width: '100%', padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 15, border: 'none', cursor: !order || isPending ? 'not-allowed' : 'pointer', opacity: !order || isPending ? 0.6 : 1 }}>
             {isPending ? 'Aplicando…' : 'Aplicar vale'}

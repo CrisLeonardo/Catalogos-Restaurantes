@@ -418,7 +418,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
           return (
             <details key={t.key} style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
               <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: on ? 'var(--brand-accent)' : 'var(--u-text-2)' }}>
-                {t.label}{on && <Icon name="sparkle" size={11} style={{ display: 'inline', verticalAlign: '-1px', marginLeft: 6, color: 'var(--brand-accent)' }} />}
+                {t.label}{on && <Icon name="sparkle" size={11} style={{ display: 'inline', verticalAlign: '-1px', marginLeft: 6, color: 'var(--brand-accent-ink)' }} />}
               </summary>
               <div style={{ paddingTop: 8 }}>
                 <Toggle label="Estilo propio para este texto" value={on} onChange={(v) => toggleEl(t.key, v)} />

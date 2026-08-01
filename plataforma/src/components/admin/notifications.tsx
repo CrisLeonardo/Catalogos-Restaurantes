@@ -517,10 +517,10 @@ export default function AdminNotifications({
 
   /* ── Estilos según estado ────────────────────────────────────────── */
   const dotColor =
-    state === 'on'      ? '#4ade80' :
+    state === 'on'      ? 'var(--c-ok)' :
     state === 'basic'   ? '#facc15' :
-    state === 'blocked' ? '#f87171' :
-    state === 'busy'    ? '#60a5fa' :
+    state === 'blocked' ? 'var(--c-danger)' :
+    state === 'busy'    ? 'var(--c-info)' :
     'color-mix(in srgb, var(--u-text) 25%, transparent)';
 
   const tooltip =
@@ -574,7 +574,7 @@ export default function AdminNotifications({
         {audioBlocked && (
           <span style={{
             position: 'absolute', top: 9, right: 9, width: 8, height: 8,
-            borderRadius: 99, background: '#f87171', border: '2px solid var(--brand-bg)',
+            borderRadius: 99, background: 'var(--c-danger)', border: '2px solid var(--brand-bg)',
           }} />
         )}
       </button>
@@ -671,7 +671,7 @@ export default function AdminNotifications({
           />
 
           {audioBlocked && (
-            <p style={{ fontSize: 11, color: '#fca5a5', marginTop: 10, marginBottom: 4, lineHeight: 1.5, fontWeight: 600 }}>
+            <p style={{ fontSize: 11, color: 'var(--c-danger)', marginTop: 10, marginBottom: 4, lineHeight: 1.5, fontWeight: 600 }}>
               🔇 El sonido está bloqueado por el navegador en esta pestaña. Toca cualquier botón (por ejemplo &quot;Probar&quot;) para activarlo.
             </p>
           )}
@@ -689,8 +689,8 @@ export default function AdminNotifications({
             position: 'fixed', top: 70, right: showSoundPanel ? 322 : 16,
             zIndex: 9998, maxWidth: 320,
             padding: '12px 15px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.55,
-            color: popup.type === 'error' ? '#fca5a5' : 'var(--u-text-2)',
-            border: `1px solid ${popup.type === 'error' ? 'rgba(248,113,113,0.25)' : 'var(--glass-stroke)'}`,
+            color: popup.type === 'error' ? 'var(--c-danger)' : 'var(--u-text-2)',
+            border: `1px solid ${popup.type === 'error' ? 'var(--c-danger-line)' : 'var(--glass-stroke)'}`,
             transition: 'right 200ms',
           }}
         >
@@ -759,9 +759,9 @@ function SoundRow({
             onClick={() => onRepeat(n)}
             style={{
               padding: '2px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-              background: repeat === n ? 'rgba(99,102,241,0.25)' : 'transparent',
+              background: repeat === n ? 'var(--c-alt-line)' : 'transparent',
               color:      repeat === n ? 'var(--u-text)' : 'var(--u-text-3)',
-              border:     `1px solid ${repeat === n ? 'rgba(99,102,241,0.5)' : 'var(--glass-stroke)'}`,
+              border:     `1px solid ${repeat === n ? 'var(--c-alt-line)' : 'var(--glass-stroke)'}`,
               fontWeight: repeat === n ? 700 : 400,
             }}
           >

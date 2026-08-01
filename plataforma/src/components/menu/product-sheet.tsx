@@ -71,6 +71,10 @@ export default function ProductSheet({
   const [selected, setSelected] = useState<Record<string, string[]>>(() => initialSelection(groups));
   /** choiceId -> variantId elegida (solo choices de combo con variantes). */
   const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initialVariants(groups));
+  /** Grupo obligatorio sin responder que hay que señalar. Antes el botón
+      "Agregar" simplemente no hacía nada (solo bajaba de opacidad) y el
+      comensal se quedaba tocándolo sin saber qué le faltaba. */
+  const [missingGroupId, setMissingGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -79,6 +83,7 @@ export default function ProductSheet({
   }, []);
 
   function toggleChoice(group: ProductOptionGroup, choiceId: string) {
+    setMissingGroupId((m) => (m === group.id ? null : m));
     setSelected((prev) => {
       const current = prev[group.id] ?? [];
       if (group.type === 'single') {
@@ -127,12 +132,18 @@ export default function ProductSheet({
   }, [groups, selected, variantSelected]);
 
   const unitPrice = product.price + chosenOptions.reduce((s, o) => s + o.priceDelta, 0);
-  const missingRequired = groups.some(
+  const firstMissing = groups.find(
     (g) => g.type === 'single' && g.required && (selected[g.id] ?? []).length === 0,
-  );
+  ) ?? null;
+  const missingRequired = firstMissing !== null;
 
   function add() {
-    if (missingRequired) return;
+    if (firstMissing) {
+      // Señala EL grupo que falta y lo trae a la vista, en vez de no hacer nada.
+      setMissingGroupId(firstMissing.id);
+      document.getElementById(`optgrp-${firstMissing.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     addItem(
       {
         productId: product.id,
@@ -231,102 +242,84 @@ export default function ProductSheet({
                 : group.max && group.max > 0
                   ? `${content.product.optional} · máx ${group.max}`
                   : content.product.optional;
+            const required = group.type === 'single' && !!group.required;
+            const missing = missingGroupId === group.id;
             return (
-              <div key={group.id} style={{ marginTop: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{group.name}</span>
-                  <span className="t-kicker" style={{ fontSize: 9.5 }}>{hint}</span>
+              /* Mismas clases que el modal del mesero (ver .opt-* en globals.css):
+                 una sola definición del selector de opciones para las dos caras
+                 del producto. El estado "elegido" usa el acento del restaurante,
+                 no un verde suelto ni una píldora negra. */
+              <div key={group.id} id={`optgrp-${group.id}`} className="opt-group" style={{ marginTop: 4 }}>
+                <div className="opt-head">
+                  <span className="opt-title">{group.name}</span>
+                  <span className="opt-hint" data-required={required ? '1' : '0'}>{hint}</span>
                 </div>
+
+                {missing && (
+                  <div className="note note-warn" style={{ marginBottom: 10 }}>
+                    <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                    {content.product.chooseOne}: {group.name}
+                  </div>
+                )}
 
                 {isCombo ? (
                   /* ── Combo: filas con checkmark, precio visible como ahorro al quitar ── */
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                     {group.choices.map((choice) => {
                       const included = picked.includes(choice.id);
                       const delta = Number(choice.priceDelta) || 0;
                       return (
-                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <button
-                          type="button"
-                          onClick={() => toggleChoice(group, choice.id)}
-                          className="press"
-                          aria-pressed={included}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                            borderRadius: 13, cursor: 'pointer', textAlign: 'left',
-                            background: included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 10%, transparent)' : 'var(--surface-1)',
-                            border: `1px solid ${included ? 'color-mix(in srgb, var(--c-ok-solid, #22c55e) 35%, transparent)' : 'var(--u-hair-2)'}`,
-                            transition: 'all 140ms',
-                          }}
-                        >
-                          {/* checkbox visual */}
-                          <span style={{
-                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                            display: 'grid', placeItems: 'center',
-                            background: included ? 'var(--c-ok-solid, #22c55e)' : 'var(--surface-3)',
-                            border: `1.5px solid ${included ? 'var(--c-ok-solid, #22c55e)' : 'var(--u-hair-2)'}`,
-                            transition: 'all 140ms',
-                          }}>
-                            {included && <Icon name="check" size={12} strokeWidth={3} style={{ color: '#fff' }} />}
-                          </span>
-                          <span style={{
-                            flex: 1, fontSize: 13.5, fontWeight: 600,
-                            color: included ? 'var(--u-text)' : 'var(--u-text-3)',
-                            textDecoration: included ? 'none' : 'line-through',
-                          }}>
-                            {choice.name}
-                          </span>
-                          {delta > 0 && (
-                            <span className="t-mono" style={{
-                              fontSize: 12, flexShrink: 0,
-                              color: included ? 'var(--u-text-2)' : 'var(--c-danger, #f87171)',
-                              opacity: included ? 0.7 : 1,
-                            }}>
-                              {included ? `+${formatPrice(delta, config)}` : `−${formatPrice(delta, config)}`}
+                        <div key={choice.id} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleChoice(group, choice.id)}
+                            className="press opt-row"
+                            aria-pressed={included}
+                          >
+                            <span className="opt-check">
+                              {included && <Icon name="check" size={12} strokeWidth={3} />}
                             </span>
+                            <span className="opt-row-name">{choice.name}</span>
+                            {delta > 0 && (
+                              <span className="opt-row-delta">
+                                {included ? `+${formatPrice(delta, config)}` : `−${formatPrice(delta, config)}`}
+                              </span>
+                            )}
+                          </button>
+                          {included && choice.variants && choice.variants.length > 0 && (
+                            <div className="opt-variants">
+                              {choice.variants.map((variant) => {
+                                const on = variantSelected[choice.id] === variant.id;
+                                const vDelta = Number(variant.priceDelta) || 0;
+                                return (
+                                  <button
+                                    key={variant.id}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }}
+                                    className="press opt-pill opt-pill-sm"
+                                    aria-pressed={on}
+                                  >
+                                    {variant.name}
+                                    {vDelta !== 0 && (
+                                      // .opt-delta hereda el color de la píldora a propósito: con
+                                      // la clase `t-mono`, la regla `.themed-type .t-mono` forzaba
+                                      // color = --u-text y el precio desaparecía al elegirla.
+                                      <span className="opt-delta">
+                                        {vDelta > 0 ? '+' : '−'}{formatPrice(Math.abs(vDelta), config)}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
-                        </button>
-                        {included && choice.variants && choice.variants.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 30 }}>
-                            {choice.variants.map((variant) => {
-                              const on = variantSelected[choice.id] === variant.id;
-                              const vDelta = Number(variant.priceDelta) || 0;
-                              return (
-                                <button
-                                  key={variant.id}
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); chooseVariant(choice.id, variant.id); }}
-                                  className="press"
-                                  aria-pressed={on}
-                                  style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 99, cursor: 'pointer',
-                                    background: on ? 'var(--u-text)' : 'var(--surface-2)',
-                                    color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                                    border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                                    fontWeight: 600, fontSize: 12, transition: 'all 140ms',
-                                  }}
-                                >
-                                  {variant.name}
-                                  {vDelta !== 0 && (
-                                    // color:'inherit' explícito: la regla `.themed-type .t-mono`
-                                    // fija color = --u-text, que es EL MISMO color del fondo de la
-                                    // píldora seleccionada — el precio desaparecía justo al elegirla.
-                                    <span className="t-mono" style={{ fontSize: 10.5, opacity: 0.8, color: 'inherit' }}>
-                                      {vDelta > 0 ? '+' : '−'}{formatPrice(Math.abs(vDelta), config)}
-                                    </span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
                         </div>
                       );
                     })}
                   </div>
                 ) : (
                   /* ── Single / Multi: píldoras ── */
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="opt-pills">
                     {group.choices.map((choice) => {
                       const on = picked.includes(choice.id);
                       const delta = Number(choice.priceDelta) || 0;
@@ -335,21 +328,13 @@ export default function ProductSheet({
                           key={choice.id}
                           type="button"
                           onClick={() => toggleChoice(group, choice.id)}
-                          className="press"
+                          className="press opt-pill"
                           aria-pressed={on}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
-                            background: on ? 'var(--u-text)' : 'var(--surface-2)',
-                            color: on ? 'var(--brand-bg)' : 'var(--u-text-2)',
-                            border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
-                            fontWeight: 600, fontSize: 13, transition: 'all 140ms',
-                          }}
                         >
                           {on && <Icon name="check" size={13} strokeWidth={3} />}
                           {choice.name}
                           {delta !== 0 && (
-                            // color:'inherit' explícito — ver nota en las píldoras de variantes.
-                            <span className="t-mono" style={{ fontSize: 11.5, opacity: 0.8, color: 'inherit' }}>
+                            <span className="opt-delta">
                               {delta > 0 ? '+' : '−'}{formatPrice(Math.abs(delta), config)}
                             </span>
                           )}

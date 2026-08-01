@@ -60,7 +60,7 @@ export default function LoginWelcomeToast({
     >
       <span style={{
         width: 36, height: 36, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
-        background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)', color: 'var(--brand-accent)',
+        background: 'rgba(var(--brand-accent-rgb,99,102,241),0.14)', color: 'var(--brand-accent-ink)',
       }}>
         <Icon name="sparkle" size={18} />
       </span>

@@ -115,7 +115,7 @@ export default function DescargasPage() {
             Leogin Desktop
           </div>
           <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)', maxWidth: 640, margin: '0 auto', lineHeight: 1.05 }}>
-            Tu restaurante, <span style={{ color: 'var(--brand-accent)' }}>instalado</span> en tu PC.
+            Tu restaurante, <span style={{ color: 'var(--brand-accent-ink)' }}>instalado</span> en tu PC.
           </h1>
           <p className="t-mute" style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 540, margin: '20px auto 0' }}>
             El mismo panel que ya conoces, pero como una app de verdad: ícono propio, siempre a la mano
@@ -151,7 +151,7 @@ export default function DescargasPage() {
               { icon: 'print', label: 'Impresión en un clic' },
             ].map((c) => (
               <span key={c.label} className="glass-quiet" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 99, fontSize: 12.5, color: 'var(--u-text-2)' }}>
-                <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent)' }} /> {c.label}
+                <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent-ink)' }} /> {c.label}
               </span>
             ))}
           </div>
@@ -161,7 +161,7 @@ export default function DescargasPage() {
         <section style={{ marginTop: 44 }}>
           <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', alignItems: 'center' }}>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent)', marginBottom: 10 }}>Un vistazo</div>
+              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 10 }}>Un vistazo</div>
               <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
                 Con ventana, bandeja y estado en vivo
               </h2>
@@ -193,7 +193,7 @@ export default function DescargasPage() {
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             {STEPS.map((s) => (
               <Glass key={s.n} variant="quiet" style={{ padding: '24px 20px' }}>
-                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent)', fontWeight: 700 }}>{s.n}</div>
+                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', fontWeight: 700 }}>{s.n}</div>
                 <h3 className="t-display" style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
                 <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8 }}>{s.body}</p>
               </Glass>
@@ -223,7 +223,7 @@ export default function DescargasPage() {
           <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
             {BENEFITS.map((f) => (
               <Glass key={f.title} variant="quiet" style={{ padding: '16px 16px', display: 'flex', gap: 13, alignItems: 'flex-start' }}>
-                <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent)' }}>
+                <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent-ink)' }}>
                   <Icon name={f.icon} size={19} />
                 </span>
                 <div>
@@ -244,7 +244,7 @@ export default function DescargasPage() {
             {FAQS.map((f) => (
               <Glass key={f.q} variant="quiet" style={{ padding: '18px 18px' }}>
                 <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent)', flexShrink: 0, marginTop: 1 }} />
+                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
                   {f.q}
                 </h3>
                 <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8, paddingLeft: 24 }}>{f.a}</p>
