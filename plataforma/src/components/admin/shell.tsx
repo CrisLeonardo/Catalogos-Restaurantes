@@ -251,7 +251,6 @@ export default function AdminShell({
         ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
         ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
         ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
-        ...(on(ordersEnabled)      ? [{ href: '/admin/vales',       label: 'Tarjetas de regalo', icon: 'gift', key: 'vales' }] : []),
         { href: '/admin/respaldo', label: 'Respaldo', icon: 'download', key: 'respaldo' },
       ],
     },
@@ -299,7 +298,6 @@ export default function AdminShell({
     '/admin/cupones': 'Cupones',
     '/admin/lealtad': 'Lealtad',
     '/admin/modulos': 'Módulos',
-    '/admin/vales': 'Tarjetas de regalo',
     '/admin/respaldo': 'Respaldo de datos',
   };
   const title = pathname === '/admin'

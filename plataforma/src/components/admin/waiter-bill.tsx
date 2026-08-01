@@ -393,13 +393,25 @@ export default function WaiterBill({
                         style={{ width: 82, background: 'transparent', border: 'none', borderBottom: '1px solid currentColor', color: 'inherit', fontSize: 13.5, fontWeight: 600, outline: 'none', padding: 0 }}
                       />
                     ) : (
-                      <span
-                        onClick={(e) => { e.stopPropagation(); setDraftName(names[id] ?? ''); setRenaming(id); }}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                      >
+                      // El nombre NO tiene onClick propio: el toque cae al span
+                      // exterior y selecciona a la persona. Editar es aparte
+                      // (botón lápiz), igual que quitar es aparte (botón X) —
+                      // antes el nombre absorbía casi todo el chip y tocar
+                      // "seleccionar" terminaba abriendo la edición.
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
                         {label(id)}
-                        <Icon name="edit" size={11} style={{ opacity: 0.6 }} />
                       </span>
+                    )}
+                    {renaming !== id && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDraftName(names[id] ?? ''); setRenaming(id); }}
+                        aria-label={`Editar nombre de ${label(id)}`}
+                        className="press"
+                        style={{ width: 20, height: 20, borderRadius: 99, border: 'none', background: 'rgba(0,0,0,0.15)', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+                      >
+                        <Icon name="edit" size={11} />
+                      </button>
                     )}
                     {peopleIds.length > 1 && (
                       <button
