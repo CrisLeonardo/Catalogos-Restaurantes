@@ -14,6 +14,8 @@ export const orderItemSchema = z.object({
   price: z.number().positive().max(100_000),
   quantity: z.number().int().positive().max(99),
   options: z.array(orderItemOptionSchema).max(30).optional(),
+  /** Nota libre para este plato (ej. "sin cebolla"), distinta de la nota del pedido completo. */
+  note: z.string().max(140).transform((v) => v.trim()).optional(),
 });
 
 /** Strips spaces, dashes, dots, parens from a phone string. */

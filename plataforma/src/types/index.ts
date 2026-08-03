@@ -305,6 +305,8 @@ export interface OrderItem {
   quantity: number;
   subtotal: number;
   options_snapshot: OrderItemOption[] | null;
+  /** Nota libre del mesero/comensal para este plato (ej. "sin cebolla"). */
+  note: string | null;
 }
 
 /* ── Carrito ──────────────────────────────────────────────── */

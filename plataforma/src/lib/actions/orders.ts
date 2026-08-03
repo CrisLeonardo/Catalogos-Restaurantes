@@ -221,6 +221,7 @@ export async function createOrder(
     cost: number | null;
     quantity: number;
     options: OrderItemOption[];
+    note?: string;
     is_reward?: boolean;
     reward_id?: string | null;
   }[] = [];
@@ -247,6 +248,7 @@ export async function createOrder(
       cost: product.cost != null ? Number(product.cost) : null,
       quantity: item.quantity,
       options: resolvedOpts.snapshot,
+      note: item.note,
     });
   }
 
@@ -400,6 +402,7 @@ export async function createOrder(
       quantity:         i.quantity,
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
+      note:             i.note || null,
       ...(i.is_reward ? { is_reward: true, reward_id: i.reward_id } : {}),
     })),
   });
@@ -553,6 +556,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     cost: number | null;
     quantity: number;
     options: OrderItemOption[];
+    note?: string;
   }[] = [];
 
   for (const item of items) {
@@ -575,6 +579,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
       cost: product.cost != null ? Number(product.cost) : null,
       quantity: item.quantity,
       options: resolvedOpts.snapshot,
+      note: item.note,
     });
   }
 
@@ -622,6 +627,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
       quantity:         i.quantity,
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
+      note:             i.note || null,
     })),
   });
 

@@ -179,6 +179,8 @@ export function buildKitchenEscPos(
     b.bold(true).size(2).line(`${item.quantity}x ${item.name_snapshot}`).size(1).bold(false);
     if (item.options_snapshot?.length)
       b.line(`   > ${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(', ')}`);
+    if (item.note)
+      b.bold(true).line(`   ⚠ ${item.note}`).bold(false);
   }
 
   if (order.notes) {
@@ -249,6 +251,8 @@ export function buildReceiptEscPos(
     b.row(`${item.quantity}x ${item.name_snapshot}`, fm(Number(item.subtotal)));
     if (item.options_snapshot?.length)
       b.line(`   ${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(', ')}`);
+    if (item.note)
+      b.line(`   Nota: ${item.note}`);
   }
 
   b.sep('-');

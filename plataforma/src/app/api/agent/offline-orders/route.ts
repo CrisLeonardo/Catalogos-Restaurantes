@@ -98,7 +98,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
   const productById = new Map((dbProducts ?? []).map((p) => [p.id as string, p]));
   const verifiedItems: {
     productId: string; name: string; price: number; cost: number | null;
-    quantity: number; options: OrderItemOption[];
+    quantity: number; options: OrderItemOption[]; note?: string;
   }[] = [];
 
   for (const item of items) {
@@ -120,6 +120,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
       cost: product.cost != null ? Number(product.cost) : null,
       quantity: item.quantity,
       options: resolvedOpts.snapshot,
+      note: item.note,
     });
   }
 
@@ -171,6 +172,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
       quantity:         i.quantity,
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
+      note:             i.note || null,
     })),
   });
 

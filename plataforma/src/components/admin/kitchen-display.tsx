@@ -359,6 +359,11 @@ function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: O
                     {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
                   </div>
                 )}
+                {item.note && (
+                  <div style={{ fontSize: 13, color: C.red, marginTop: 2, fontWeight: 800 }}>
+                    ⚠ {item.note}
+                  </div>
+                )}
               </div>
             </div>
           );

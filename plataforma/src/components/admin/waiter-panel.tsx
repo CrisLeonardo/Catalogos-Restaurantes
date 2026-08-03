@@ -42,6 +42,8 @@ interface CartLine {
   price: number;
   quantity: number;
   options: { groupId: string; groupName: string; choiceId: string; choiceName: string; priceDelta: number; variantId?: string; variantName?: string }[];
+  /** Nota libre para este plato (ej. "sin cebolla"), distinta de la nota general del pedido. */
+  note?: string;
 }
 
 interface Props {
@@ -96,9 +98,16 @@ function money(n: number, c: PanelCurrency): string {
 
 
 /* ── Modal de opciones del producto (diseño igual al cliente) ── */
-function initModalSelection(groups: ProductOptionGroup[]): Record<string, string[]> {
+/** Sin `line`: valores por defecto (single/required → primera opción, combo →
+    todo incluido). Con `line` (editar una línea ya agregada): reconstruye la
+    selección exacta que tenía, incluyendo combos con componentes quitados. */
+function initModalSelection(groups: ProductOptionGroup[], line?: CartLine): Record<string, string[]> {
   const sel: Record<string, string[]> = {};
   for (const g of groups) {
+    if (line) {
+      sel[g.id] = line.options.filter((o) => o.groupId === g.id).map((o) => o.choiceId);
+      continue;
+    }
     if (g.type === 'combo') {
       sel[g.id] = g.choices.map((c) => c.id);
     } else if (g.type === 'single' && g.required && g.choices.length > 0) {
@@ -110,14 +119,16 @@ function initModalSelection(groups: ProductOptionGroup[]): Record<string, string
   return sel;
 }
 
-/** Variante inicial de cada componente con variantes: la primera (igual que la
-    hoja del comensal) — el precio ya la usaba como fallback, la píldora debe
-    verse marcada desde el inicio. */
-function initModalVariants(groups: ProductOptionGroup[]): Record<string, string> {
+/** Variante inicial de cada componente con variantes: la de `line` si se está
+    editando; si no, la primera (igual que la hoja del comensal) — el precio
+    ya la usaba como fallback, la píldora debe verse marcada desde el inicio. */
+function initModalVariants(groups: ProductOptionGroup[], line?: CartLine): Record<string, string> {
   const sel: Record<string, string> = {};
   for (const g of groups) {
     for (const c of g.choices) {
-      if (c.variants?.length) sel[c.id] = c.variants[0].id;
+      const savedVariantId = line?.options.find((o) => o.choiceId === c.id)?.variantId;
+      if (savedVariantId) { sel[c.id] = savedVariantId; continue; }
+      if (!line && c.variants?.length) sel[c.id] = c.variants[0].id;
     }
   }
   return sel;
@@ -126,19 +137,25 @@ function initModalVariants(groups: ProductOptionGroup[]): Record<string, string>
 function ProductOptionsModal({
   product,
   currency,
+  initialLine,
   onAdd,
+  onSave,
   onClose,
 }: {
   product: Product;
   currency: PanelCurrency;
+  /** Si viene, la hoja edita esta línea del carrito en vez de agregar una nueva. */
+  initialLine?: CartLine;
   onAdd: (line: CartLine) => void;
+  onSave?: (lineId: string, line: Omit<CartLine, 'lineId'>) => void;
   onClose: () => void;
 }) {
   const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
-  const [selected, setSelected] = useState<Record<string, string[]>>(() => initModalSelection(groups));
+  const [selected, setSelected] = useState<Record<string, string[]>>(() => initModalSelection(groups, initialLine));
   /** choiceId -> variantId elegida (solo choices de combo con variantes). */
-  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initModalVariants(groups));
-  const [qty, setQty] = useState(1);
+  const [variantSelected, setVariantSelected] = useState<Record<string, string>>(() => initModalVariants(groups, initialLine));
+  const [qty, setQty] = useState(initialLine?.quantity ?? 1);
+  const [note, setNote] = useState(initialLine?.note ?? '');
   /** Grupo obligatorio sin elegir, señalado en la propia hoja. Antes esto era
       un alert() del navegador: una caja gris del sistema operativo encima de
       la app, sin decir cuál de los grupos faltaba. */
@@ -204,8 +221,16 @@ function ProductOptionsModal({
     }
     const opts = buildOptions();
     const delta = opts.reduce((s, o) => s + o.priceDelta, 0);
-    for (let i = 0; i < qty; i++) {
-      onAdd({ lineId: newLineId(product.id), productId: product.id, name: product.name, price: product.price + delta, quantity: 1, options: opts });
+    const trimmedNote = note.trim() || undefined;
+    if (initialLine && onSave) {
+      onSave(initialLine.lineId, {
+        productId: product.id, name: product.name, price: product.price + delta,
+        quantity: qty, options: opts, note: trimmedNote,
+      });
+    } else {
+      for (let i = 0; i < qty; i++) {
+        onAdd({ lineId: newLineId(product.id), productId: product.id, name: product.name, price: product.price + delta, quantity: 1, options: opts, note: trimmedNote });
+      }
     }
     onClose();
   }
@@ -330,11 +355,24 @@ function ProductOptionsModal({
               <button type="button" aria-label="Agregar una" onClick={() => setQty((q) => Math.min(20, q + 1))} className="press glass-quiet" style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--u-text)' }}>+</button>
             </div>
           </div>
+
+          {/* Nota para cocina — por plato, no se confunde con la nota general
+              del pedido (ej. "sin cebolla" en esta hamburguesa pero no en la
+              otra que va en el mismo pedido). */}
+          <div className="opt-group">
+            <div className="opt-head"><span className="opt-title">Nota para cocina</span><span className="opt-hint" data-required="0">Opcional</span></div>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value.slice(0, 140))}
+              placeholder="Sin cebolla, término medio…"
+              style={{ background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 12, padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%' }}
+            />
+          </div>
         </div>
 
         <div style={{ padding: '14px 20px', borderTop: '1px solid var(--u-hair)' }}>
           <button type="button" onClick={handleAdd} className="press btn-accent" style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <span>Agregar {qty > 1 ? `${qty} ×` : ''}</span>
+            <span>{initialLine ? 'Guardar cambios' : `Agregar ${qty > 1 ? `${qty} ×` : ''}`}</span>
             <span style={{ opacity: 0.55 }}>·</span>
             <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{money(finalPrice * qty, currency)}</span>
           </button>
@@ -453,6 +491,9 @@ export default function WaiterPanel({
   const [tableToFree, setTableToFree] = useState<number | null>(null);
   const [freeing, startFree] = useTransition();
   const [productModal, setProductModal] = useState<Product | null>(null);
+  /** Línea del carrito que se está editando (null = la hoja está agregando una nueva). */
+  const [editingLine, setEditingLine] = useState<CartLine | null>(null);
+  const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [submitting, startSubmit] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitOk, setSubmitOk] = useState<string | null>(null);
@@ -632,9 +673,13 @@ export default function WaiterPanel({
   /* ── Carrito ─────────────────────────────────────────── */
   function addToCart(line: CartLine) {
     setCart((prev) => {
+      // La nota entra en la clave de fusión: dos líneas con las mismas
+      // opciones pero notas distintas ("sin sal" vs. sin nota) son platos
+      // distintos para cocina y no deben mezclarse en una sola cantidad.
       const idx = prev.findIndex(
         (l) => l.productId === line.productId &&
-          JSON.stringify(l.options) === JSON.stringify(line.options),
+          JSON.stringify(l.options) === JSON.stringify(line.options) &&
+          (l.note ?? '') === (line.note ?? ''),
       );
       if (idx >= 0) {
         const next = [...prev];
@@ -643,6 +688,25 @@ export default function WaiterPanel({
       }
       return [...prev, line];
     });
+  }
+
+  /** Reemplaza una línea existente del carrito (editar opciones/nota/cantidad
+      de un plato ya agregado, ver ProductOptionsModal en modo edición). */
+  function saveLine(lineId: string, updated: Omit<CartLine, 'lineId'>) {
+    setCart((prev) => prev.map((l) => (l.lineId === lineId ? { ...updated, lineId } : l)));
+  }
+
+  /** Abre la hoja de opciones para editar una línea ya agregada al carrito. */
+  function openEditLine(line: CartLine) {
+    const product = products.find((p) => p.id === line.productId);
+    if (!product) return;
+    setEditingLine(line);
+    setProductModal(product);
+  }
+
+  function closeProductModal() {
+    setProductModal(null);
+    setEditingLine(null);
   }
 
   function decLine(lineId: string) {
@@ -694,6 +758,7 @@ export default function WaiterPanel({
     setNotes('');
     setTableNumber(null);
     setSubmitError(null);
+    setMiniCartOpen(false);
   }
 
   /* Selecciona una mesa: ocupada → diálogo; libre → al menú. */
@@ -725,6 +790,7 @@ export default function WaiterPanel({
         // tiene variantes (resolveItemOptions lo exige) — sin él, TODO pedido
         // de mesero con combo+variantes era rechazado con "Elige una variante".
         options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
+        ...(l.note ? { note: l.note } : {}),
       })),
       customer: {
         name: finalName,
@@ -883,6 +949,11 @@ export default function WaiterPanel({
                             {voidedQty > 0 && (
                               <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger)', fontWeight: 600 }}>
                                 {voidedQty} anulada{voidedQty === 1 ? '' : 's'}
+                              </span>
+                            )}
+                            {item.note && (
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-warn)', fontWeight: 600 }}>
+                                ⚠ {item.note}
                               </span>
                             )}
                           </span>
@@ -1192,9 +1263,17 @@ export default function WaiterPanel({
                             {line.options.map((o) => (o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName)).join(', ')}
                           </div>
                         )}
+                        {line.note && (
+                          <div style={{ fontSize: 11.5, color: 'var(--c-warn)', fontWeight: 600, marginTop: 1 }}>
+                            ⚠ {line.note}
+                          </div>
+                        )}
                         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>{money(line.price, currency)} c/u</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <button type="button" onClick={() => openEditLine(line)} aria-label={`Editar ${line.name}`} title="Editar opciones o nota" className="press glass-quiet" style={{ width: 30, height: 30, borderRadius: 9, border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                          <Icon name="edit" size={14} />
+                        </button>
                         <button type="button" onClick={() => decLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
                         <span style={{ minWidth: 22, textAlign: 'center', fontWeight: 700, fontSize: 15 }}>{line.quantity}</span>
                         <button type="button" onClick={() => incLine(line)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
@@ -1253,7 +1332,7 @@ export default function WaiterPanel({
         </div>
 
         {productModal && (
-          <ProductOptionsModal product={productModal} currency={currency} onAdd={addToCart} onClose={() => setProductModal(null)} />
+          <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
         )}
       </div>
     );
@@ -1331,52 +1410,53 @@ export default function WaiterPanel({
               {query ? 'Ningún plato coincide con tu búsqueda.' : 'Sin productos disponibles en esta categoría.'}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(172px, 1fr))', gap: 14 }}>
               {visibleProducts.map((p) => {
                 const qty = cartQtyOf(p.id);
                 const hasOptions = ((p.options as ProductOptionGroup[] | null) ?? []).length > 0;
                 return (
                   <div
                     key={p.id}
-                    className="glass"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleProductTap(p)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProductTap(p); } }}
+                    className="press glass"
                     style={{
-                      borderRadius: 14, padding: '12px 12px 10px', position: 'relative',
-                      display: 'flex', flexDirection: 'column', gap: 6,
+                      borderRadius: 14, padding: '14px 14px 12px', position: 'relative', cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', gap: 7,
                       border: qty > 0 ? '1.5px solid var(--brand-accent)' : '1.5px solid transparent',
                     }}
                   >
                     {qty > 0 && (
-                      <span style={{ position: 'absolute', top: 8, right: 8, minWidth: 22, height: 22, padding: '0 6px', borderRadius: 99, background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)', fontSize: 12.5, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
+                      <span style={{ position: 'absolute', top: 8, right: 8, minWidth: 24, height: 24, padding: '0 6px', borderRadius: 99, background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)', fontSize: 13, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
                         {qty}
                       </span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleProductTap(p)}
-                      className="press"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--u-text)' }}
-                    >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--u-text)' }}>
                       {p.icon && (
                         ICON_PATHS[p.icon]
-                          ? <Icon name={p.icon} size={22} />
-                          : <span style={{ fontSize: 22 }}>{p.icon}</span>
+                          ? <Icon name={p.icon} size={23} />
+                          : <span style={{ fontSize: 23 }}>{p.icon}</span>
                       )}
-                      <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, paddingRight: qty > 0 ? 22 : 0 }}>{p.name}</span>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{money(p.price, currency)}</span>
-                    </button>
+                      <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, paddingRight: qty > 0 ? 24 : 0 }}>{p.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{money(p.price, currency)}</span>
+                    </div>
 
-                    {/* Controles rápidos: +/- para productos sin opciones; "+ Agregar" para los que tienen */}
+                    {/* Controles rápidos: +/- para productos sin opciones; "+ Agregar" para los que tienen.
+                        stopPropagation en todos: si no, el tap también dispara el onClick de la tarjeta
+                        entera y el plato se agrega dos veces. */}
                     {hasOptions ? (
-                      <button type="button" onClick={() => setProductModal(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setProductModal(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                         {qty > 0 ? 'Agregar otro' : '+ Elegir opciones'}
                       </button>
                     ) : qty > 0 ? (
                       <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button type="button" onClick={() => decProduct(p.id)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
-                        <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ flex: 1, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); decProduct(p.id); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleProductTap(p); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => handleProductTap(p)} className="press" style={{ marginTop: 2, padding: '8px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleProductTap(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
                         + Agregar
                       </button>
                     )}
@@ -1388,10 +1468,37 @@ export default function WaiterPanel({
         </div>
       </div>
 
-      {/* Barra flotante del carrito → Revisar */}
+      {/* Barra flotante del carrito → Revisar, con mini-carrito desplegable
+          para ver/ajustar lo ya agregado sin salir del menú. */}
       {cartCount > 0 && (
         <div style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
-          <div className="waiter-wrap" style={{ padding: '12px 16px' }}>
+          <div className="waiter-wrap" style={{ padding: '0 16px 12px' }}>
+            {miniCartOpen && (
+              <div className="glass anim-slide-up" style={{ borderRadius: 16, padding: '8px 10px', marginBottom: 8, maxHeight: '34vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {cart.map((line) => (
+                  <div key={line.lineId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{line.name}</div>
+                      {line.note && (
+                        <div style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 600 }}>⚠ {line.note}</div>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => decLine(line.lineId)} className="press glass-quiet" style={{ width: 28, height: 28, borderRadius: 8, border: 'none', color: 'var(--u-text)', cursor: 'pointer', fontSize: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}>−</button>
+                    <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{line.quantity}</span>
+                    <button type="button" onClick={() => incLine(line)} className="press glass-quiet" style={{ width: 28, height: 28, borderRadius: 8, border: 'none', color: 'var(--u-text)', cursor: 'pointer', fontSize: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}>+</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setMiniCartOpen((v) => !v)}
+              className="press"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '5px', marginBottom: 6, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--u-text-3)', fontSize: 11.5, fontWeight: 600 }}
+            >
+              <Icon name="chevronDown" size={12} style={{ transform: miniCartOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              {miniCartOpen ? 'Ocultar pedido' : 'Ver pedido actual'}
+            </button>
             <button
               type="button"
               onClick={() => setView('review')}
@@ -1409,7 +1516,7 @@ export default function WaiterPanel({
       )}
 
       {productModal && (
-        <ProductOptionsModal product={productModal} currency={currency} onAdd={addToCart} onClose={() => setProductModal(null)} />
+        <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
       )}
     </div>
   );

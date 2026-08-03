@@ -58,11 +58,14 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string, format:
     const opts = item.options_snapshot?.length
       ? `<div class="opts">– ${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}</div>`
       : '';
+    const itemNote = item.note
+      ? `<div class="item-note">⚠ ${item.note}</div>`
+      : '';
     return `
       <div class="row">
         <span class="qty">${item.quantity}×</span>
         <span class="item">${item.name_snapshot}</span>
-      </div>${opts}`;
+      </div>${opts}${itemNote}`;
   }).join('');
 
   const addressHtml = (() => {
@@ -96,6 +99,7 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string, format:
   .qty { font-size: 24px; font-weight: 900; min-width: 40px; }
   .item { font-size: 20px; font-weight: 700; line-height: 1.25; }
   .opts { font-size: 13px; font-weight: 600; color: #333; padding-left: 46px; margin-bottom: 4px; line-height: 1.4; }
+  .item-note { font-size: 13px; font-weight: 800; color: #000; padding-left: 46px; margin-bottom: 6px; line-height: 1.4; }
   .notes { border: 2px solid #000; padding: 7px 9px; margin-top: 10px; font-size: 15px; font-weight: 700; line-height: 1.4; }
   .notes-label { font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
   .footer { text-align: center; font-size: 11px; color: #888; margin-top: 12px; }
@@ -154,10 +158,11 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
     const opts = item.options_snapshot?.length
       ? `<div class="opts">${item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(', ')}</div>`
       : '';
+    const itemNote = item.note ? `<div class="opts">Nota: ${item.note}</div>` : '';
     return `
       <tr>
         <td class="qty">${item.quantity}×</td>
-        <td class="desc">${item.name_snapshot}${opts}</td>
+        <td class="desc">${item.name_snapshot}${opts}${itemNote}</td>
         <td class="amount">${fmt(Number(item.subtotal))}</td>
       </tr>`;
   }).join('');
@@ -473,6 +478,11 @@ export default function OrderCard({
                 {item.options_snapshot && item.options_snapshot.length > 0 && (
                   <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
                     {item.options_snapshot.map((o) => o.variant ? `${o.choice} (${o.variant})` : o.choice).join(' · ')}
+                  </span>
+                )}
+                {item.note && (
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-warn)', marginTop: 1, fontWeight: 700 }}>
+                    ⚠ {item.note}
                   </span>
                 )}
               </span>
