@@ -7,7 +7,7 @@ import { updateOrderStatus, printReceiptViaAgent, reprintKitchenTicket } from '@
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import { printTicket, isKitchenAutoPrintEnabled, markKitchenPrinted, hasPrinterConfigured } from '@/lib/printing';
 import { buildKitchenEscPos, buildReceiptEscPos, ticketTime, ticketDateTime, type TicketFormat } from '@/lib/escpos';
-import VoidOrderDialog, { type VoidApprover } from '@/components/admin/void-order-dialog';
+import VoidOrderDialog from '@/components/admin/void-order-dialog';
 import {
   STATUS_LABEL, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
   stageClock, fmtElapsed, clockChipClass,
@@ -289,8 +289,6 @@ export default function OrderCard({
   kitchenRedMin = 20,
   agentKitchen = false,
   agentReceipt = false,
-  voidApprovers = [],
-  canSelfApprove = false,
 }: {
   order: OrderWithItems;
   currency: PanelCurrency;
@@ -305,10 +303,6 @@ export default function OrderCard({
   agentKitchen?: boolean;
   /** El Agente Leogin imprime el recibo (servidor) → el botón encola en vez de usar el navegador. */
   agentReceipt?: boolean;
-  /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación. */
-  voidApprovers?: VoidApprover[];
-  /** El usuario de esta sesión ya puede autorizar anulaciones (no pide PIN). */
-  canSelfApprove?: boolean;
 }) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
@@ -695,8 +689,6 @@ export default function OrderCard({
           orderId={order.id}
           orderStatus={order.status}
           item={voidTarget === 'order' ? null : voidTarget}
-          voidApprovers={voidApprovers}
-          canSelfApprove={canSelfApprove}
           onClose={() => setVoidTarget(null)}
           onDone={() => setVoidTarget(null)}
         />

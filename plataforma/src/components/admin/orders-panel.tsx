@@ -20,7 +20,6 @@ import type { Order } from '@/types';
 /** Tipo de servicio tal como lo guarda la tabla `orders` (no confundir con el
  *  `OrderType` en minúsculas de la configuración del tema). */
 type ServiceType = Order['order_type'];
-import type { VoidApprover } from '@/components/admin/void-order-dialog';
 
 interface Props {
   activeOrders:   OrderWithItems[];
@@ -38,10 +37,6 @@ interface Props {
   agentReceipt?:      boolean;
   autoConfirmEnabled?: boolean;
   autoConfirmMinutes?: number;
-  /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación de OrderCard. */
-  voidApprovers?: VoidApprover[];
-  /** El usuario de esta sesión ya puede autorizar anulaciones (no pide PIN). */
-  canSelfApprove?: boolean;
 }
 
 /* El sonido y el aviso visual de "pedido nuevo" ya NO viven aquí: los maneja
@@ -101,7 +96,7 @@ function OrdersPanelInner({
   activeOrders, closedToday, restaurantId, restaurantName, stats, currency, timezone,
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
-  autoConfirmEnabled = false, autoConfirmMinutes = 1, voidApprovers = [], canSelfApprove = false,
+  autoConfirmEnabled = false, autoConfirmMinutes = 1,
 }: Props) {
   const router = useRouter();
   const toastManager = useToastManager();
@@ -355,7 +350,7 @@ function OrdersPanelInner({
   const cardProps = {
     currency, restaurantName, ticketFormat, now,
     kitchenYellowMin, kitchenRedMin,
-    agentKitchen, agentReceipt, voidApprovers, canSelfApprove,
+    agentKitchen, agentReceipt,
   };
 
   const countByType = (t: 'ALL' | ServiceType) =>

@@ -6,8 +6,6 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getPanelOrders, getOrderStats } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
-import { listVoidApprovers } from '@/lib/actions/staff-pin';
-import { can } from '@/lib/permissions';
 import OrdersPanel from '@/components/admin/orders-panel';
 
 export default async function PedidosPage() {
@@ -48,10 +46,9 @@ export default async function PedidosPage() {
   const agentKitchen = !!(agent?.kitchen_target);
   const agentReceipt = !!(agent?.receipt_target);
 
-  const [panelOrders, stats, voidApprovers] = await Promise.all([
+  const [panelOrders, stats] = await Promise.all([
     getPanelOrders(restaurantId, timezone),
     getOrderStats(restaurantId, timezone),
-    listVoidApprovers(restaurantId),
   ]);
 
   return (
@@ -73,8 +70,6 @@ export default async function PedidosPage() {
       agentReceipt={agentReceipt}
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
-      voidApprovers={voidApprovers}
-      canSelfApprove={can(profile.role, profile.permissions, 'aprobar_anulaciones')}
     />
   );
 }
