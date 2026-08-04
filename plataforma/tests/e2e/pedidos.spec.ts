@@ -115,6 +115,17 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
       await verMenu.click();
     }
 
+    // Primera visita a este restaurante en este navegador: puede aparecer el
+    // aviso de lealtad con Google (una sola vez, ver google-loyalty-intro.tsx).
+    // Tarda un round-trip a la BD (getMyAccount) en decidir si se muestra, así
+    // que hay que ESPERARLO (no solo mirar si ya está visible en este instante)
+    // — igual que un visitante real, que lo cerraría antes de seguir.
+    const skipIntro = page.getByRole('button', { name: 'Ahora no' });
+    await skipIntro.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {});
+    if (await skipIntro.isVisible().catch(() => false)) {
+      await skipIntro.click();
+    }
+
     await page.getByRole('button', { name: `Agregar ${tenantA.productName}`, exact: true }).click();
     await page.goto(tenantUrl(tenantA.slug, '/checkout'));
 

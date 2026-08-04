@@ -8,25 +8,31 @@ import GoogleSignInButton from '@/components/menu/google-signin';
  * Aviso de una sola vez (primera visita) explicando que los puntos de
  * fidelidad requieren sesión de Google. No bloquea el pedido — es
  * informativo y se puede cerrar sin iniciar sesión.
+ *
+ * El fondo oscurecido cubre toda la pantalla PERO con pointer-events: none,
+ * así que solo es visual — nunca intercepta el toque. Antes el fondo (con
+ * inset:0 + onClick) sí capturaba cualquier tap fuera de la tarjeta,
+ * incluido un "Agregar" de un producto justo debajo: ese primer toque solo
+ * cerraba el aviso en vez de agregar el platillo, y el comensal tenía que
+ * tocar dos veces sin entender por qué — contradecía el propio comentario
+ * de arriba, que ya decía que esto NO debía bloquear el pedido.
  */
 export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void }) {
   return (
     <div
       role="dialog"
-      aria-modal="true"
       aria-label="Gana puntos de fidelidad"
       style={{
-        // Por encima de la barra de navegación (zIndex 90): es un modal con
-        // fondo oscurecido; antes (zIndex 80) la barra se dibujaba ENCIMA de
-        // la tarjeta y la tapaba.
-        position: 'fixed', inset: 0, zIndex: 100,
+        // Por encima de la barra de navegación (zIndex 90): el fondo
+        // oscurecido debe dibujarse sobre ella; antes (zIndex 80) la barra
+        // se dibujaba ENCIMA de la tarjeta y la tapaba.
+        position: 'fixed', inset: 0, zIndex: 100, pointerEvents: 'none',
         background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         padding: 16,
       }}
-      onClick={onClose}
     >
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 420 }}>
+      <div style={{ width: '100%', maxWidth: 420, pointerEvents: 'auto' }}>
         <Glass
           style={{
             borderRadius: 22, padding: '26px 22px', width: '100%',
