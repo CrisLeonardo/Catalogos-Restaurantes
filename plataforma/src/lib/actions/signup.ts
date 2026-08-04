@@ -56,7 +56,7 @@ export async function signupRestaurant(
 ): Promise<SignupState> {
   // ── Rate limit por IP (anti-abuso) ──────────────────────────
   const ip = clientIp(await headers());
-  if (!rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000)) {
+  if (!(await rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 

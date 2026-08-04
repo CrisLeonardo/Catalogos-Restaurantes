@@ -48,7 +48,7 @@ export function computeCouponDiscount(coupon: Coupon, subtotal: number): number 
   return Math.max(0, Math.min(d, subtotal));
 }
 
-function isCouponLive(c: Coupon, subtotal: number): boolean {
+export function isCouponLive(c: Coupon, subtotal: number): boolean {
   if (!c.is_active) return false;
   const now = Date.now();
   if (c.valid_from && now < new Date(c.valid_from).getTime()) return false;

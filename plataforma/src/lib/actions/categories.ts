@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import type { DayKey, WeeklyHours } from '@/lib/hours';
 
 async function resolveContext(formData: FormData) {
@@ -39,9 +39,10 @@ async function resolveContext(formData: FormData) {
   return { db, restaurantId, role: profile.role };
 }
 
-function revalidateAll() {
+function revalidateAll(restaurantId: string) {
   revalidatePath('/admin/menu');
   revalidatePath('/admin/categorias');
+  updateTag(`menu:${restaurantId}`);
 }
 
 /** "HH:MM" 24h válido (00:00–23:59). */
@@ -89,7 +90,7 @@ export async function toggleCategoryActive(formData: FormData) {
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
-  revalidateAll();
+  revalidateAll(ctx.restaurantId);
 }
 
 export async function moveCategoryUp(formData: FormData) {
@@ -115,7 +116,7 @@ export async function moveCategoryUp(formData: FormData) {
     ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', prev.id),
   ]);
 
-  revalidateAll();
+  revalidateAll(ctx.restaurantId);
 }
 
 export async function moveCategoryDown(formData: FormData) {
@@ -141,7 +142,7 @@ export async function moveCategoryDown(formData: FormData) {
     ctx.db.from('categories').update({ sort_order: currentOrder }).eq('id', next.id),
   ]);
 
-  revalidateAll();
+  revalidateAll(ctx.restaurantId);
 }
 
 /* ── Modal actions (sin redirect, para CategoriesPanel en /admin/categorias) ─ */
@@ -178,7 +179,7 @@ export async function createCategoryModal(
 
   if (error) return { error: error.message };
 
-  revalidateAll();
+  revalidateAll(ctx.restaurantId);
   return { success: true };
 }
 
@@ -206,7 +207,7 @@ export async function updateCategoryModal(
 
   if (error) return { error: error.message };
 
-  revalidateAll();
+  revalidateAll(ctx.restaurantId);
   return { success: true };
 }
 
@@ -222,5 +223,5 @@ export async function deleteCategoryModal(formData: FormData) {
     .eq('id', id)
     .eq('restaurant_id', ctx.restaurantId);
 
-  revalidateAll();
+  revalidateAll(ctx.restaurantId);
 }

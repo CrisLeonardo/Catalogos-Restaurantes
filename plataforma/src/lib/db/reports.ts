@@ -1,5 +1,4 @@
 import { createServiceClient } from '@/lib/supabase/service';
-import { localDateKey } from '@/lib/hours';
 
 /* ============================================================
    REPORTES FINANCIEROS — Fase A (Admin Pro)
@@ -8,6 +7,11 @@ import { localDateKey } from '@/lib/hours';
    Capa de datos pura (service role); la página/acción que llama
    ya validó la sesión y el restaurante (mismo modelo que
    db/orders.ts · getOrderStats).
+
+   La agregación (día local/canal/pago/zona/producto) corre en SQL vía
+   la función leogin_sales_report (migración 098) — antes traía hasta
+   20,000 pedidos con sus ítems y los agregaba en Maps de JS en cada
+   request. Esta capa solo llama al RPC y da forma al resultado.
    ============================================================ */
 
 export type DayRevenue = { date: string; label: string; revenue: number; orders: number };
@@ -60,32 +64,89 @@ const EMPTY = (from: string, to: string): SalesReport => ({
   series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [],
 });
 
-type OrderRow = {
-  created_at: string;
-  order_type: string;
-  payment_method: string | null;
-  delivery_zone: string | null;
-  subtotal: number;
-  delivery_fee: number;
-  total: number;
-  items: {
-    name_snapshot: string;
-    price_snapshot: number;
-    cost_snapshot: number | null;
-    quantity: number;
-    subtotal: number;
-  }[] | null;
-};
+/** jsonb crudo que devuelve leogin_sales_report (mig. 098). */
+export type RawSplit = { key: string; orders: number; revenue: number };
+export type RawDay = { date: string; orders: number; revenue: number };
+export type RawProduct = { name: string; qty: number; revenue: number; cost: number; profit: number; hasCost: boolean };
+export interface RawSalesReport {
+  orders: number;
+  revenue: number;
+  productRevenue: number;
+  deliveryRevenue: number;
+  cost: number;
+  costedRevenue: number;
+  series: RawDay[];
+  byChannel: RawSplit[];
+  byPayment: RawSplit[];
+  byZone: RawSplit[];
+  topByRevenue: RawProduct[];
+  topByProfit: RawProduct[];
+}
 
-/** Lista de claves YYYY-MM-DD entre `from` y `to` (inclusive) en orden. */
-function dateKeysBetween(from: string, to: string): string[] {
-  const keys: string[] = [];
-  const start = new Date(`${from}T12:00:00Z`);
-  const end = new Date(`${to}T12:00:00Z`);
-  for (let d = start; d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-    keys.push(d.toISOString().slice(0, 10));
+/** "YYYY-MM-DD" → "dd mmm" en español (fallback "MM-DD" si el locale falla). */
+function dayLabel(dateKey: string): string {
+  try {
+    return new Date(`${dateKey}T12:00:00Z`).toLocaleDateString('es', {
+      day: '2-digit', month: 'short', timeZone: 'UTC',
+    });
+  } catch {
+    return dateKey.slice(5);
   }
-  return keys;
+}
+
+function mapSplit(rows: RawSplit[] | null | undefined, label: (key: string) => string): Split[] {
+  return (rows ?? []).map((r) => ({
+    key: r.key, label: label(r.key), orders: Number(r.orders), revenue: Number(r.revenue),
+  }));
+}
+
+function mapProducts(rows: RawProduct[] | null | undefined): ReportProduct[] {
+  return (rows ?? []).map((r) => ({
+    name: r.name, qty: Number(r.qty), revenue: Number(r.revenue), cost: Number(r.cost),
+    profit: Number(r.profit), hasCost: Boolean(r.hasCost),
+  }));
+}
+
+/** IANA válido o no: mismo criterio que updateRestaurantOps al guardar. Evita que un
+ *  timezone corrupto/viejo tumbe el RPC (Postgres lanza error en AT TIME ZONE inválido). */
+function safeTimezone(tz: string): string {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return tz;
+  } catch {
+    return 'America/Guatemala';
+  }
+}
+
+/**
+ * Da forma al jsonb crudo de leogin_sales_report: números (jsonb no distingue
+ * int/numeric), formatea etiquetas y deriva profit/marginPct/avgTicket.
+ * Función pura — separada de getSalesReport para poder probarla sin mockear
+ * Supabase (ver reports.test.ts).
+ */
+export function buildSalesReport(from: string, to: string, d: RawSalesReport): SalesReport {
+  const orders = Number(d.orders ?? 0);
+  const revenue = Number(d.revenue ?? 0);
+  const cost = Number(d.cost ?? 0);
+  const costedRevenue = Number(d.costedRevenue ?? 0);
+  const profit = costedRevenue - cost;
+
+  return {
+    from, to, orders, revenue,
+    productRevenue: Number(d.productRevenue ?? 0),
+    deliveryRevenue: Number(d.deliveryRevenue ?? 0),
+    cost, profit, costedRevenue,
+    marginPct: costedRevenue > 0 ? (profit / costedRevenue) * 100 : null,
+    avgTicket: orders > 0 ? revenue / orders : 0,
+    series: (d.series ?? []).map((r) => ({
+      date: r.date, label: dayLabel(r.date), revenue: Number(r.revenue), orders: Number(r.orders),
+    })),
+    byChannel: mapSplit(d.byChannel, (key) => CHANNEL_LABEL[key] ?? key),
+    byPayment: mapSplit(d.byPayment, (key) => (key === 'CASH' ? 'Efectivo' : key)),
+    byZone: mapSplit(d.byZone, (key) => key),
+    topByRevenue: mapProducts(d.topByRevenue),
+    topByProfit: mapProducts(d.topByProfit),
+  };
 }
 
 /**
@@ -104,120 +165,14 @@ export async function getSalesReport(
   }
 
   const db = createServiceClient();
-
-  // Margen de ±1 día en UTC para cubrir el desfase con la hora local; luego
-  // filtramos por la clave de día local exacta.
-  const sinceUtc = new Date(`${from}T00:00:00Z`);
-  sinceUtc.setUTCDate(sinceUtc.getUTCDate() - 1);
-  const untilUtc = new Date(`${to}T00:00:00Z`);
-  untilUtc.setUTCDate(untilUtc.getUTCDate() + 2);
-
-  const { data } = await db
-    .from('orders')
-    .select('created_at, order_type, payment_method, delivery_zone, subtotal, delivery_fee, total, items:order_items(name_snapshot, price_snapshot, cost_snapshot, quantity, subtotal)')
-    .eq('restaurant_id', restaurantId)
-    .neq('status', 'CANCEL')
-    .gte('created_at', sinceUtc.toISOString())
-    .lte('created_at', untilUtc.toISOString())
-    .limit(20000);
-
-  const rows = (data ?? []) as OrderRow[];
-  const keys = dateKeysBetween(from, to);
-  const inRange = new Set(keys);
-
-  // Acumuladores
-  const byDay = new Map<string, { revenue: number; orders: number }>();
-  const byChannel = new Map<string, { orders: number; revenue: number }>();
-  const byPayment = new Map<string, { orders: number; revenue: number }>();
-  const byZone = new Map<string, { orders: number; revenue: number }>();
-  const byProduct = new Map<string, ReportProduct>();
-
-  let orders = 0, revenue = 0, productRevenue = 0, deliveryRevenue = 0;
-  let cost = 0, costedRevenue = 0;
-
-  for (const o of rows) {
-    const key = localDateKey(new Date(o.created_at), timezone);
-    if (!inRange.has(key)) continue;
-
-    orders += 1;
-    revenue += Number(o.total);
-    productRevenue += Number(o.subtotal);
-    deliveryRevenue += Number(o.delivery_fee);
-
-    const day = byDay.get(key) ?? { revenue: 0, orders: 0 };
-    day.revenue += Number(o.total);
-    day.orders += 1;
-    byDay.set(key, day);
-
-    const ch = byChannel.get(o.order_type) ?? { orders: 0, revenue: 0 };
-    ch.orders += 1; ch.revenue += Number(o.total);
-    byChannel.set(o.order_type, ch);
-
-    const pm = (o.payment_method || 'CASH').toUpperCase();
-    const pay = byPayment.get(pm) ?? { orders: 0, revenue: 0 };
-    pay.orders += 1; pay.revenue += Number(o.total);
-    byPayment.set(pm, pay);
-
-    if (o.delivery_zone) {
-      const z = byZone.get(o.delivery_zone) ?? { orders: 0, revenue: 0 };
-      z.orders += 1; z.revenue += Number(o.total);
-      byZone.set(o.delivery_zone, z);
-    }
-
-    for (const it of o.items ?? []) {
-      const lineRevenue = Number(it.subtotal);
-      const qty = Number(it.quantity);
-      const hasCost = it.cost_snapshot != null;
-      const lineCost = hasCost ? Number(it.cost_snapshot) * qty : 0;
-
-      const p = byProduct.get(it.name_snapshot) ?? {
-        name: it.name_snapshot, qty: 0, revenue: 0, cost: 0, profit: 0, hasCost: false,
-      };
-      p.qty += qty;
-      p.revenue += lineRevenue;
-      p.cost += lineCost;
-      p.hasCost = p.hasCost || hasCost;
-      p.profit = p.revenue - p.cost;
-      byProduct.set(it.name_snapshot, p);
-
-      if (hasCost) {
-        cost += lineCost;
-        costedRevenue += lineRevenue;
-      }
-    }
-  }
-
-  const profit = costedRevenue - cost;
-  const marginPct = costedRevenue > 0 ? (profit / costedRevenue) * 100 : null;
-
-  const series: DayRevenue[] = keys.map((k) => {
-    let label = k.slice(5); // MM-DD
-    try {
-      label = new Date(`${k}T12:00:00Z`).toLocaleDateString('es', {
-        day: '2-digit', month: 'short', timeZone: 'UTC',
-      });
-    } catch {}
-    const d = byDay.get(k);
-    return { date: k, label, revenue: d?.revenue ?? 0, orders: d?.orders ?? 0 };
+  const { data, error } = await db.rpc('leogin_sales_report', {
+    p_restaurant_id: restaurantId,
+    p_from: from,
+    p_to: to,
+    p_timezone: safeTimezone(timezone),
   });
 
-  const products = [...byProduct.values()];
+  if (error || !data) return EMPTY(from, to);
 
-  return {
-    from, to, orders, revenue, productRevenue, deliveryRevenue,
-    cost, profit, marginPct, costedRevenue,
-    avgTicket: orders > 0 ? revenue / orders : 0,
-    series,
-    byChannel: [...byChannel.entries()]
-      .map(([key, v]) => ({ key, label: CHANNEL_LABEL[key] ?? key, ...v }))
-      .sort((a, b) => b.revenue - a.revenue),
-    byPayment: [...byPayment.entries()]
-      .map(([key, v]) => ({ key, label: key === 'CASH' ? 'Efectivo' : key, ...v }))
-      .sort((a, b) => b.revenue - a.revenue),
-    byZone: [...byZone.entries()]
-      .map(([key, v]) => ({ key, label: key, ...v }))
-      .sort((a, b) => b.revenue - a.revenue),
-    topByRevenue: [...products].sort((a, b) => b.revenue - a.revenue).slice(0, 12),
-    topByProfit: products.filter((p) => p.hasCost).sort((a, b) => b.profit - a.profit).slice(0, 12),
-  };
+  return buildSalesReport(from, to, data as RawSalesReport);
 }

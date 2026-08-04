@@ -98,8 +98,8 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
 
   // Anti fuerza bruta: por IP y por restaurante+persona (mismo patrón que login()).
   const ip = clientIp(await headers());
-  if (!rateLimit(`pin:${ip}`, 20, 5 * 60_000) ||
-      !rateLimit(`pin:${restaurantId}:${profileId}`, 8, 5 * 60_000)) {
+  if (!(await rateLimit(`pin:${ip}`, 20, 5 * 60_000)) ||
+      !(await rateLimit(`pin:${restaurantId}:${profileId}`, 8, 5 * 60_000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 
@@ -195,8 +195,8 @@ export async function checkApproverPin(
   if (!isValidPin(pin)) return { ok: false, error: 'PIN inválido.' };
 
   if (
-    !rateLimit(`pin:${ip}`, 20, 5 * 60_000) ||
-    !rateLimit(`pin:${restaurantId}:${approverId}`, 8, 5 * 60_000)
+    !(await rateLimit(`pin:${ip}`, 20, 5 * 60_000)) ||
+    !(await rateLimit(`pin:${restaurantId}:${approverId}`, 8, 5 * 60_000))
   ) {
     return { ok: false, error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }

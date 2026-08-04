@@ -71,7 +71,10 @@ export async function getPanelOrders(
       // FIFO: el que lleva más esperando, primero. En un restaurante el orden
       // de atención es la antigüedad, no la novedad.
       .order('created_at', { ascending: true })
-      .limit(200),
+      // Techo de seguridad, no un límite operativo real: con el auto-archivo
+      // de DINE_IN (24h, mig. 080) y de DELIVERY/PICKUP (6h, mig. 099) los
+      // activos genuinos deberían quedar muy por debajo de esto.
+      .limit(500),
     db
       .from('orders')
       .select(ORDER_SELECT)

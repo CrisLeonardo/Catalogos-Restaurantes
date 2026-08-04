@@ -1,5 +1,7 @@
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { resolveTheme, type ResolvedTheme } from '@/lib/theme/resolve';
 import type { Restaurant, RestaurantTheme } from '@/types';
 
@@ -82,6 +84,72 @@ export const getRestaurantSlugById = cache(
     return data as { slug: string; status: Restaurant['status'] };
   }
 );
+
+/**
+ * Variante cacheada ENTRE requests de getRestaurantBySlug, solo para el menú
+ * PÚBLICO sin sesión (src/app/page.tsx). El resto del panel (admin, mesero,
+ * checkout, etc.) sigue usando getRestaurantBySlug: necesita la sesión del
+ * usuario y su estado siempre al día.
+ *
+ * Dos niveles a propósito:
+ *  1. slug → id, EN VIVO (no cacheado): lookup barato e indexado que además
+ *     exige status='active'. Así una suspensión (Super Admin) se refleja de
+ *     inmediato aunque la fila de abajo siga cacheada.
+ *  2. fila completa (restaurant + theme) por id, cacheada 60s y con tag
+ *     `restaurant:${id}` — invalidar ahí en toda acción que edite el
+ *     restaurante o su tema (ver actions/restaurant.ts, actions/modules.ts).
+ */
+export async function getRestaurantBySlugCached(slug: string): Promise<RestaurantWithTheme | null> {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return null;
+  }
+
+  const liveDb = createServiceClient();
+  const { data: idRow } = await liveDb
+    .from('restaurants')
+    .select('id')
+    .eq('slug', slug)
+    .eq('status', 'active')
+    .single();
+
+  if (!idRow) return null;
+
+  const row = await fetchRestaurantByIdCached(idRow.id as string);
+  if (!row) return null;
+
+  const themeRow = row.theme ?? defaultTheme(row.restaurant.id);
+  return {
+    restaurant: row.restaurant,
+    theme: themeRow,
+    resolved: resolveTheme(themeRow, slug, {
+      brandName: row.restaurant.name,
+      tagline: row.restaurant.tagline,
+    }),
+  };
+}
+
+function fetchRestaurantByIdCached(restaurantId: string) {
+  return unstable_cache(
+    async (): Promise<{ restaurant: Restaurant; theme: RestaurantTheme | null } | null> => {
+      const db = createServiceClient();
+      const { data: restaurant } = await db.from('restaurants').select('*').eq('id', restaurantId).single();
+      if (!restaurant) return null;
+
+      const { data: theme } = await db
+        .from('restaurant_themes')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .single();
+
+      return { restaurant: restaurant as Restaurant, theme: (theme as RestaurantTheme) ?? null };
+    },
+    ['public-restaurant-by-id', restaurantId],
+    { revalidate: 60, tags: [`restaurant:${restaurantId}`] },
+  )();
+}
 
 function defaultTheme(restaurantId: string): RestaurantTheme {
   return {

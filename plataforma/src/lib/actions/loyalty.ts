@@ -242,8 +242,8 @@ export async function linkMyAccountByPhone(restaurantId: string, phone: string, 
   // Anti fuerza bruta: sin esto, el total de 2 dígitos decimales sigue siendo
   // adivinable a punta de intentos repetidos.
   const ip = clientIp(await headers());
-  if (!rateLimit(`link-phone:${ip}`, 8, 15 * 60_000) ||
-      !rateLimit(`link-phone:${restaurantId}:${phoneKey}`, 5, 15 * 60_000)) {
+  if (!(await rateLimit(`link-phone:${ip}`, 8, 15 * 60_000)) ||
+      !(await rateLimit(`link-phone:${restaurantId}:${phoneKey}`, 5, 15 * 60_000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 

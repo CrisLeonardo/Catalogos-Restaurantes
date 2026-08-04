@@ -31,7 +31,7 @@ export async function validateCoupon(
   if (code.length > 64) return { ok: false, error: 'Cupón no válido o no aplica a tu pedido.' };
 
   const ip = clientIp(await headers());
-  if (!rateLimit(`coupon:${ip}:${restaurantId}`, 15, 10 * 60_000)) {
+  if (!(await rateLimit(`coupon:${ip}:${restaurantId}`, 15, 10 * 60_000))) {
     return { ok: false, error: 'Demasiados intentos. Espera unos minutos.' };
   }
 

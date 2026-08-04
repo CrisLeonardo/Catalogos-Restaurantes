@@ -28,7 +28,7 @@ export async function trackVisit(
 
   // Rate-limit: evita inflar métricas / llenar la tabla desde una misma IP.
   const ip = clientIp(await headers());
-  if (!rateLimit(`visit:${ip}:${restaurantId}`, 40, 60_000)) return;
+  if (!(await rateLimit(`visit:${ip}:${restaurantId}`, 40, 60_000))) return;
 
   try {
     const db = createServiceClient();

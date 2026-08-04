@@ -56,8 +56,8 @@ export async function callWaiter(
         : null;
 
   const ip = clientIp(await headers());
-  if (!rateLimit(`waiter:${ip}:${restaurantId}`, 5, 5 * 60_000) ||
-      !rateLimit(`waiter:${restaurantId}`, 60, 5 * 60_000)) {
+  if (!(await rateLimit(`waiter:${ip}:${restaurantId}`, 5, 5 * 60_000)) ||
+      !(await rateLimit(`waiter:${restaurantId}`, 60, 5 * 60_000))) {
     return { error: 'Ya avisamos al mesero. Espera un momento.' };
   }
 

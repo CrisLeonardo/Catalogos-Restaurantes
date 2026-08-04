@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { logChannelChanges } from '@/lib/db/channel-history';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { HourInterval, WeeklyHours, HourExceptions } from '@/lib/hours';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
@@ -90,6 +90,7 @@ export async function updateRestaurantInfo(
 
   revalidatePath('/admin/perfil');
   revalidatePath('/');
+  updateTag(`restaurant:${ctx.restaurantId}`);
   redirect('/admin/perfil?saved=1');
 }
 
@@ -148,6 +149,7 @@ export async function updateRestaurantTheme(
 
   revalidatePath('/admin/perfil');
   revalidatePath('/');
+  updateTag(`restaurant:${ctx.restaurantId}`);
   redirect('/admin/perfil?saved=1');
 }
 
@@ -255,6 +257,7 @@ export async function updateDeliveryZones(
 
   revalidatePath('/admin/perfil');
   revalidatePath('/');
+  updateTag(`restaurant:${ctx.restaurantId}`);
   redirect('/admin/perfil?saved=1');
 }
 
@@ -297,6 +300,7 @@ export async function updateRestaurantLocation(
 
   if (error) return { error: error.message };
 
+  updateTag(`restaurant:${ctx.restaurantId}`);
   if (ctx.isSuperAdmin) {
     revalidatePath(`/super/restaurantes/${ctx.restaurantId}`, 'layout');
     redirect(`/super/restaurantes/${ctx.restaurantId}/informacion?saved=location`);
@@ -341,6 +345,7 @@ export async function updateRestaurantOps(
 
   revalidatePath('/admin/perfil');
   revalidatePath('/');
+  updateTag(`restaurant:${ctx.restaurantId}`);
   redirect('/admin/perfil?saved=1');
 }
 
@@ -369,6 +374,7 @@ export async function updateMenuLanguages(formData: FormData): Promise<void> {
 
   revalidatePath('/admin/ajustes');
   revalidatePath('/');
+  updateTag(`restaurant:${ctx.restaurantId}`);
 }
 
 export type SaveThemeResult = { error?: string; ok?: boolean };
@@ -443,6 +449,7 @@ export async function saveOrdersAndCurrency(input: {
   revalidatePath('/admin/mesas');
   revalidatePath('/admin/mesero');
   revalidatePath('/');
+  updateTag(`restaurant:${input.restaurantId}`);
   return { ok: true };
 }
 
@@ -518,6 +525,7 @@ export async function updateOwnOrderTypes(
   revalidatePath('/admin/mesas');
   revalidatePath('/admin/suscripcion');
   revalidatePath('/');
+  updateTag(`restaurant:${restaurantId}`);
   return { ok: true };
 }
 
@@ -636,6 +644,7 @@ export async function saveAdminRestaurantTheme(input: {
   revalidatePath('/admin/personalizacion');
   revalidatePath('/admin/perfil');
   revalidatePath('/');
+  updateTag(`restaurant:${restaurantId}`);
   return { ok: true };
 }
 

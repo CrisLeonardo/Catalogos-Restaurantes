@@ -36,8 +36,8 @@ export async function submitRating(input: {
   if (orderId && !UUID_RE.test(orderId)) return { error: 'Pedido inválido.' };
 
   const ip = clientIp(await headers());
-  if (!rateLimit(`rating:${ip}`, 10, 10 * 60_000) ||
-      !rateLimit(`rating:${restaurantId}`, 120, 10 * 60_000)) {
+  if (!(await rateLimit(`rating:${ip}`, 10, 10 * 60_000)) ||
+      !(await rateLimit(`rating:${restaurantId}`, 120, 10 * 60_000))) {
     return { error: 'Recibimos demasiadas calificaciones seguidas. Intenta en unos minutos.' };
   }
 

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId, getAdminMenu } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import {
@@ -213,6 +213,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
   if (error) return { error: error.message };
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
   redirect(`/admin/menu/productos/${created.id}`);
 }
 
@@ -256,6 +257,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
   if (error) return { error: error.message };
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
   redirect('/admin/menu');
 }
 
@@ -272,6 +274,7 @@ export async function deleteProduct(formData: FormData) {
     .eq('restaurant_id', ctx.restaurantId);
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
 }
 
 export async function toggleProductAvailability(formData: FormData) {
@@ -291,6 +294,7 @@ export async function toggleProductAvailability(formData: FormData) {
     .eq('restaurant_id', ctx.restaurantId);
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
 }
 
 export async function toggleProductActive(formData: FormData) {
@@ -307,6 +311,7 @@ export async function toggleProductActive(formData: FormData) {
     .eq('restaurant_id', ctx.restaurantId);
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
 }
 
 export async function moveProductUp(formData: FormData) {
@@ -337,6 +342,7 @@ export async function moveProductUp(formData: FormData) {
   ]);
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
 }
 
 export async function moveProductDown(formData: FormData) {
@@ -367,6 +373,7 @@ export async function moveProductDown(formData: FormData) {
   ]);
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
 }
 
 /* ── Modal actions (sin redirect, retornan { success } para uso en modales) ── */
@@ -423,6 +430,7 @@ export async function createProductModal(
   if (error) return { error: error.message };
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
   return { success: true };
 }
 
@@ -469,6 +477,7 @@ export async function updateProductModal(
   if (error) return { error: error.message };
 
   revalidatePath('/admin/menu');
+  updateTag(`menu:${ctx.restaurantId}`);
   return { success: true };
 }
 

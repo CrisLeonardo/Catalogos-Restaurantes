@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   // Rate limit por IP (anti fuerza bruta sobre llaves).
   const ip = clientIp(request.headers);
-  if (!rateLimit(`apikey:${ip}`, 30, 60_000)) {
+  if (!(await rateLimit(`apikey:${ip}`, 30, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 

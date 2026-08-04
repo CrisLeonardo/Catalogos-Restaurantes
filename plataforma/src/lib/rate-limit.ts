@@ -1,49 +1,42 @@
+import { createServiceClient } from '@/lib/supabase/service';
+
 /* ============================================================
-   RATE LIMIT — limitador de tasa en memoria (por instancia)
+   RATE LIMIT — limitador de tasa compartido (Postgres, mig. 100)
    ------------------------------------------------------------
    Ventana fija por clave (p.ej. "order:<ip>:<restaurante>").
    Pensado para frenar abuso/inundación en endpoints públicos sin
-   login (createOrder, trackVisit) sin añadir dependencias.
+   login (createOrder, trackVisit).
 
-   Límites:
-   · Vive en el proceso → con varias instancias (escalado horizontal)
-     cada una cuenta por separado. Para un límite global y robusto,
-     migrar a Redis/Upstash con la MISMA interfaz `rateLimit()`.
-   · En serverless se reinicia en cada cold start. En un server
-     persistente (Render) se mantiene entre requests, que es el caso.
+   Antes vivía en un Map del proceso: inofensivo con 1 sola instancia
+   de Render, pero cada instancia contaba por separado en cuanto se
+   escalara horizontalmente. leogin_rate_limit() (mig. 100) hace el
+   mismo conteo por ventana fija, pero en una tabla compartida — el
+   límite es real sin importar cuántas instancias sirvan el tráfico.
+
+   Fail-open a propósito: si la consulta a Postgres falla (blip de red,
+   DB caída), se PERMITE la acción en vez de bloquearla. El rate limit es
+   una defensa contra abuso, no el único candado (RLS + validaciones de
+   negocio siguen aplicando) — tumbar checkout/login enteros por un
+   problema de infraestructura del limitador sería un daño mayor que
+   dejar pasar algunas acciones de más durante el blip.
    ============================================================ */
-
-type Bucket = { count: number; resetAt: number };
-
-const buckets = new Map<string, Bucket>();
-const MAX_KEYS = 50_000; // techo de memoria; si se supera, purga lo vencido
 
 /**
  * Devuelve `true` si la acción se permite, `false` si excede el límite.
- * @param key     Identificador del cubo (incluye IP y/o restaurante).
- * @param max     Máximo de acciones permitidas en la ventana.
+ * @param key      Identificador del cubo (incluye IP y/o restaurante).
+ * @param max      Máximo de acciones permitidas en la ventana.
  * @param windowMs Tamaño de la ventana en milisegundos.
  */
-export function rateLimit(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now();
-  const b = buckets.get(key);
+export async function rateLimit(key: string, max: number, windowMs: number): Promise<boolean> {
+  const db = createServiceClient();
+  const { data, error } = await db.rpc('leogin_rate_limit', {
+    p_key: key,
+    p_max: max,
+    p_window_ms: windowMs,
+  });
 
-  if (!b || now > b.resetAt) {
-    if (buckets.size > MAX_KEYS) prune(now);
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-
-  if (b.count >= max) return false;
-  b.count += 1;
-  return true;
-}
-
-/** Quita los cubos ya vencidos para que el Map no crezca sin límite. */
-function prune(now: number): void {
-  for (const [k, b] of buckets) {
-    if (now > b.resetAt) buckets.delete(k);
-  }
+  if (error) return true; // fail-open, ver nota arriba
+  return data === true;
 }
 
 /** Extrae la IP del cliente de los headers (Render/Vercel ponen x-forwarded-for). */

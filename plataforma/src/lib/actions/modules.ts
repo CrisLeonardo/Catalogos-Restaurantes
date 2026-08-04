@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import {
@@ -94,5 +94,8 @@ export async function setModuleEnabled(
   // de suscripción debe reflejar el cambio sin esperar a otro request.
   revalidatePath('/admin/suscripcion');
   revalidatePath('/admin', 'layout');
+  // module_settings también decide qué ve el menú público (lealtad, llamar
+  // mesero...) — sin esto el cache de 60s del menú lo serviría apagado.
+  updateTag(`restaurant:${restaurantId}`);
   return { ok: true };
 }

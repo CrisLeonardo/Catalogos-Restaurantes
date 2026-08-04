@@ -18,8 +18,8 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
 
   // Anti fuerza bruta: límite por IP (10 intentos / 5 min) y por IP+email.
   const ip = clientIp(await headers());
-  if (!rateLimit(`login:${ip}`, 10, 5 * 60_000) ||
-      !rateLimit(`login:${ip}:${email.toLowerCase()}`, 6, 5 * 60_000)) {
+  if (!(await rateLimit(`login:${ip}`, 10, 5 * 60_000)) ||
+      !(await rateLimit(`login:${ip}:${email.toLowerCase()}`, 6, 5 * 60_000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 

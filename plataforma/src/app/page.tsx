@@ -4,9 +4,9 @@ import { notFound } from 'next/navigation';
 import MenuShell from '@/components/menu-shell';
 import LeoginLanding from '@/components/landing';
 import BranchSelector from '@/components/branch-selector';
-import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import { getGroupBranches } from '@/lib/db/org-public';
-import { getMenuData } from '@/lib/db/menu';
+import { getMenuDataCached } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
@@ -51,7 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'Demo — Leogin', description: 'Así se ve un restaurante con Leogin.' };
   }
 
-  const data = await getRestaurantBySlug(slug);
+  const data = await getRestaurantBySlugCached(slug);
   if (!data) {
     // ¿Es el link público de un grupo? (grupo-slug.dominio → selector)
     const group = await getGroupBranches(slug);
@@ -132,7 +132,7 @@ export default async function Home({
   }
 
   // Tenant real
-  const data = await getRestaurantBySlug(slug);
+  const data = await getRestaurantBySlugCached(slug);
   if (!data) {
     // Fallback: ¿es el link público de un grupo? → selector de sucursal.
     const group = await getGroupBranches(slug);
@@ -140,7 +140,7 @@ export default async function Home({
     notFound();
   }
 
-  const menu = await getMenuData(data.restaurant.id);
+  const menu = await getMenuDataCached(data.restaurant.id);
   const ordersEnabled = data.restaurant.modules?.orders === true;
   const tz = data.restaurant.timezone || 'America/Guatemala';
   const isOpen = isOpenNow(data.restaurant.hours, tz, new Date(), data.restaurant.hour_exceptions);

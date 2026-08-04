@@ -5,10 +5,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
-import { createOrderSchema } from '@/lib/schemas';
+import { createOrderSchema, type CreateOrderInput } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
+import type { ThemeConfig } from '@/lib/theme/defaults';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import { resolveCoupon } from '@/lib/db/cupones';
 import { logActivity } from '@/lib/activity';
@@ -43,6 +44,141 @@ export interface CreateOrderResult {
   /** Token de la página pública de seguimiento (/pedido/[token]). */
   publicToken?: string;
   error?: string;
+}
+
+export type VerifiedOrderItem = {
+  productId: string | null;
+  name: string;
+  price: number;
+  cost: number | null;
+  quantity: number;
+  options: OrderItemOption[];
+  note?: string;
+  /** Solo lo usa createOrder (canje de recompensas); createWaiterOrder nunca los fija. */
+  is_reward?: boolean;
+  reward_id?: string | null;
+};
+
+/**
+ * Valida y fija precio de los ítems del carrito contra la BD — nunca del
+ * cliente, sería falsificable. Compartida por createOrder (cliente) y
+ * createWaiterOrder (mesero): antes vivía duplicada en las dos, con el
+ * riesgo de que un fix de seguridad se aplicara a una y se quedara sin
+ * aplicar en la otra.
+ * @param notAvailableSuffix Texto extra en el mensaje de error (cada
+ *   llamador le habla distinto a su público — cliente vs. mesero).
+ */
+async function verifyAndPriceItems(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+  items: CreateOrderInput['items'],
+  notAvailableSuffix = '',
+): Promise<{ error: string } | { items: VerifiedOrderItem[] }> {
+  const productIds = [...new Set(items.map((i) => i.productId))];
+  const { data: dbProducts, error: productsError } = await db
+    .from('products')
+    .select('id, name, price, cost, is_available, options')
+    .eq('restaurant_id', restaurantId)
+    .in('id', productIds);
+
+  if (productsError) return { error: productsError.message };
+
+  const productById = new Map(
+    (dbProducts ?? []).map((p) => [p.id as string, p]),
+  );
+
+  const verifiedItems: VerifiedOrderItem[] = [];
+
+  for (const item of items) {
+    const product = productById.get(item.productId);
+    if (!product || !product.is_available) {
+      return { error: `"${item.name}" ya no está disponible.${notAvailableSuffix}` };
+    }
+
+    const resolvedOpts = resolveItemOptions(
+      product.options as ProductOptionGroup[] | null,
+      item.options,
+      product.name as string,
+    );
+    if ('error' in resolvedOpts) return { error: resolvedOpts.error };
+
+    verifiedItems.push({
+      productId: product.id as string,
+      name: product.name as string,
+      price: Number(product.price) + resolvedOpts.delta,
+      // Costo congelado al vender (margen histórico). El costo es del producto
+      // base; las variantes/extras no llevan costo propio por ahora.
+      cost: product.cost != null ? Number(product.cost) : null,
+      quantity: item.quantity,
+      options: resolvedOpts.snapshot,
+      note: item.note,
+    });
+  }
+
+  return { items: verifiedItems };
+}
+
+/** Notificación push server-side al restaurante: llega a la barra del
+ *  sistema aunque la app esté cerrada o en segundo plano (requiere VAPID
+ *  configurado). Best-effort a propósito — nunca debe tumbar la creación
+ *  del pedido si el push falla. */
+function notifyNewOrder(
+  restaurantId: string,
+  order: { id: string; order_number: string },
+  body: string,
+  title = '🛎 Nuevo pedido',
+): void {
+  sendPushToRestaurant(restaurantId, {
+    title,
+    body,
+    tag: order.id,
+    url: '/admin/pedidos',
+    // El service worker reenvía este `type` por postMessage a las pestañas
+    // abiertas del panel (ver public/sw.js). Sin él el push llegaba a la barra
+    // del sistema pero la pestaña no se enteraba: el aviso dentro del panel
+    // dependía únicamente del socket de Realtime, y si ese socket estaba caído
+    // (red inestable, laptop que despertó de suspensión, JWT vencido) no sonaba
+    // NADA ni aparecía nada. Las llamadas al mesero ya usaban esta vía.
+    type: 'new_order',
+  }).catch(() => {});
+}
+
+/**
+ * Subtotal + envío + cupón + propina = total. Autoritativo en el servidor:
+ * el cliente nunca manda montos, solo el código de cupón y si acepta la
+ * propina — todo lo demás se recalcula aquí contra la BD/el tema vigente.
+ */
+async function computeOrderPricing(
+  restaurantId: string,
+  themeConfig: ThemeConfig,
+  orderType: CreateOrderInput['customer']['type'],
+  tipAccepted: boolean,
+  couponCode: string | undefined,
+  verifiedItems: VerifiedOrderItem[],
+): Promise<{
+  subtotal: number;
+  fee: number;
+  discount: number;
+  tip: number;
+  total: number;
+  applied: Awaited<ReturnType<typeof resolveCoupon>>;
+}> {
+  const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const fee = orderType === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
+
+  // Cupón (código escrito por el cliente). Autoritativo en el servidor:
+  // el descuento NUNCA se toma del cliente, se recalcula contra la BD.
+  const applied = await resolveCoupon(restaurantId, couponCode, subtotal);
+  const discount = applied ? applied.discount : 0;
+
+  // Propina: solo para los tipos de pedido que el restaurante habilitó
+  // (tipOrderTypes). Se calcula server-side sobre el subtotal (antes de
+  // descuento); el cliente solo indica si la acepta (boolean), nunca el monto.
+  const tip = computeTip(themeConfig, orderType, tipAccepted, subtotal);
+
+  const total = Math.max(0, subtotal + fee - discount + tip);
+
+  return { subtotal, fee, discount, tip, total, applied };
 }
 
 export async function createOrder(
@@ -83,7 +219,7 @@ export async function createOrder(
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
   // (spam de push/sonido al restaurante + crecimiento de tabla). 6/min por IP.
   const ip = clientIp(await headers());
-  if (!rateLimit(`order:${ip}:${restaurantId}`, 6, 60_000)) {
+  if (!(await rateLimit(`order:${ip}:${restaurantId}`, 6, 60_000))) {
     return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
   }
 
@@ -201,56 +337,9 @@ export async function createOrder(
   // SEGURIDAD: los precios NUNCA se toman del cliente (serían falsificables).
   // Se leen de la BD (base + deltas de opciones), validando que cada producto
   // pertenezca a ESTE restaurante y siga disponible. Los snapshots se congelan.
-  const productIds = [...new Set(items.map((i) => i.productId))];
-  const { data: dbProducts, error: productsError } = await db
-    .from('products')
-    .select('id, name, price, cost, is_available, options')
-    .eq('restaurant_id', restaurantId)
-    .in('id', productIds);
-
-  if (productsError) return { error: productsError.message };
-
-  const productById = new Map(
-    (dbProducts ?? []).map((p) => [p.id as string, p]),
-  );
-
-  const verifiedItems: {
-    productId: string | null;
-    name: string;
-    price: number;
-    cost: number | null;
-    quantity: number;
-    options: OrderItemOption[];
-    note?: string;
-    is_reward?: boolean;
-    reward_id?: string | null;
-  }[] = [];
-
-  for (const item of items) {
-    const product = productById.get(item.productId);
-    if (!product || !product.is_available) {
-      return { error: `"${item.name}" ya no está disponible. Actualiza tu carrito.` };
-    }
-
-    const resolvedOpts = resolveItemOptions(
-      product.options as ProductOptionGroup[] | null,
-      item.options,
-      product.name as string,
-    );
-    if ('error' in resolvedOpts) return { error: resolvedOpts.error };
-
-    verifiedItems.push({
-      productId: product.id as string,
-      name: product.name as string,
-      price: Number(product.price) + resolvedOpts.delta,
-      // Costo congelado al vender (margen histórico). El costo es del producto
-      // base; las variantes/extras no llevan costo propio por ahora.
-      cost: product.cost != null ? Number(product.cost) : null,
-      quantity: item.quantity,
-      options: resolvedOpts.snapshot,
-      note: item.note,
-    });
-  }
+  const priced = await verifyAndPriceItems(db, restaurantId, items, ' Actualiza tu carrito.');
+  if ('error' in priced) return { error: priced.error };
+  const verifiedItems: VerifiedOrderItem[] = priced.items;
 
   // ── Recompensas de lealtad canjeadas (migración 058) ──────────
   // El cliente solo manda ids; aquí verificamos que el saldo alcance. Si algo
@@ -322,20 +411,9 @@ export async function createOrder(
     .single();
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
-  const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const fee = customer.type === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
-
-  // Cupón (código escrito por el cliente). Autoritativo en el servidor:
-  // el descuento NUNCA se toma del cliente, se recalcula contra la BD.
-  const applied = await resolveCoupon(restaurantId, parsed.data.couponCode, subtotal);
-  const discount = applied ? applied.discount : 0;
-
-  // Propina: solo para los tipos de pedido que el restaurante habilitó
-  // (tipOrderTypes). Se calcula server-side sobre el subtotal (antes de
-  // descuento); el cliente solo indica si la acepta (boolean), nunca el monto.
-  const tip = computeTip(themeConfig, customer.type, tipAccepted, subtotal);
-
-  const total = Math.max(0, subtotal + fee - discount + tip);
+  const { subtotal, fee, discount, tip, total, applied } = await computeOrderPricing(
+    restaurantId, themeConfig, customer.type, tipAccepted, parsed.data.couponCode, verifiedItems,
+  );
 
   // Registro automático del cliente (clave: teléfono normalizado por
   // restaurante). Si la migración 010 no corrió aún, el pedido sigue sin
@@ -435,26 +513,11 @@ export async function createOrder(
     }
   }
 
-  // Notificación push server-side: llega a la barra del sistema aunque la
-  // app esté cerrada o en segundo plano (requiere VAPID configurado).
   const typeLabel =
     customer.type === 'DELIVERY' ? 'A domicilio' :
     customer.type === 'DINE_IN'  ? 'Comer aquí'  :
     'Para llevar';
-
-  sendPushToRestaurant(restaurantId, {
-    title: '🛎 Nuevo pedido',
-    body:  `${order.order_number} · ${customer.name} · ${typeLabel}`,
-    tag:   order.id,
-    url:   '/admin/pedidos',
-    // El service worker reenvía este `type` por postMessage a las pestañas
-    // abiertas del panel (ver public/sw.js). Sin él el push llegaba a la barra
-    // del sistema pero la pestaña no se enteraba: el aviso dentro del panel
-    // dependía únicamente del socket de Realtime, y si ese socket estaba caído
-    // (red inestable, laptop que despertó de suspensión, JWT vencido) no sonaba
-    // NADA ni aparecía nada. Las llamadas al mesero ya usaban esta vía.
-    type:  'new_order',
-  }).catch(() => {});
+  notifyNewOrder(restaurantId, order, `${order.order_number} · ${customer.name} · ${typeLabel}`);
 
   return {
     success: true,
@@ -536,52 +599,9 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   if (!modules?.orders) return { error: 'Este restaurante no acepta pedidos.' };
 
   // Validar productos desde BD (precio autoritativo).
-  const productIds = [...new Set(items.map((i) => i.productId))];
-  const { data: dbProducts, error: productsError } = await db
-    .from('products')
-    .select('id, name, price, cost, is_available, options')
-    .eq('restaurant_id', restaurantId)
-    .in('id', productIds);
-
-  if (productsError) return { error: productsError.message };
-
-  const productById = new Map(
-    (dbProducts ?? []).map((p) => [p.id as string, p]),
-  );
-
-  const verifiedItems: {
-    productId: string;
-    name: string;
-    price: number;
-    cost: number | null;
-    quantity: number;
-    options: OrderItemOption[];
-    note?: string;
-  }[] = [];
-
-  for (const item of items) {
-    const product = productById.get(item.productId);
-    if (!product || !product.is_available) {
-      return { error: `"${item.name}" ya no está disponible.` };
-    }
-
-    const resolvedOpts = resolveItemOptions(
-      product.options as ProductOptionGroup[] | null,
-      item.options,
-      product.name as string,
-    );
-    if ('error' in resolvedOpts) return { error: resolvedOpts.error };
-
-    verifiedItems.push({
-      productId: product.id as string,
-      name: product.name as string,
-      price: Number(product.price) + resolvedOpts.delta,
-      cost: product.cost != null ? Number(product.cost) : null,
-      quantity: item.quantity,
-      options: resolvedOpts.snapshot,
-      note: item.note,
-    });
-  }
+  const priced = await verifyAndPriceItems(db, restaurantId, items);
+  if ('error' in priced) return { error: priced.error };
+  const verifiedItems: VerifiedOrderItem[] = priced.items;
 
   // Propina (si el restaurante la habilita para este tipo de pedido).
   const { data: themeRow } = await db
@@ -650,13 +670,12 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     .update({ status: 'PREP', accepted_at: firedAt })
     .eq('id', order.id);
 
-  sendPushToRestaurant(restaurantId, {
-    title: '🛎 Nuevo pedido (mesero)',
-    body: `${order.order_number} · ${customer.name} · Mesa ${customer.tableNumber ?? '?'}`,
-    tag: order.id,
-    url: '/admin/pedidos',
-    type: 'new_order',
-  }).catch(() => {});
+  notifyNewOrder(
+    restaurantId,
+    order,
+    `${order.order_number} · ${customer.name} · Mesa ${customer.tableNumber ?? '?'}`,
+    '🛎 Nuevo pedido (mesero)',
+  );
 
   // Comanda a cocina vía el Agente de impresión del local. Best-effort: no-op
   // si el restaurante no tiene agente/destino de cocina configurado, y con
