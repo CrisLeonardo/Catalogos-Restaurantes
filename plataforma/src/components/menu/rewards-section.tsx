@@ -334,7 +334,9 @@ function RewardsMenu({
           <Glass variant="quiet" style={{ borderRadius: 16, padding: '36px 20px', textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
             Aún no hay recompensas disponibles. ¡Sigue acumulando puntos en cada pedido!
           </Glass>
-        ) : config.catalogView === 'grid' ? (
+        /* Sigue la forma del catálogo: las formas "de lista" (fila y carta
+           impresa) se leen mejor apiladas; el resto va en rejilla. */
+        ) : config.cardStyle !== 'fila' && config.cardStyle !== 'texto' ? (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
             {rewards.map((r, i) => (
               <div key={r.id} className={config.animations ? 'anim-fade-up' : ''} style={{ animationDelay: config.animations ? `${Math.min(i, 8) * 35}ms` : undefined }}>

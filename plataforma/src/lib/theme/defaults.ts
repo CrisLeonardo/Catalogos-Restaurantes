@@ -23,10 +23,52 @@ export type BackgroundType = 'asphalt' | 'solid' | 'gradient' | 'image';
 export type GrainStyle = 'fino' | 'grueso' | 'papel';
 export type CtaStyle = 'white' | 'accent' | 'outline';
 export type CheckoutActiveColor = 'text' | 'accent';
-export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'none';
+export type PortadaVariant = 'spotlight' | 'poster' | 'stack' | 'fullbleed' | 'ticket' | 'directo' | 'none';
 export type CatalogView = 'grid' | 'list';
 export type ProductArt = 'auto' | 'pattern' | 'photo';
 export type OrderType = 'delivery' | 'pickup' | 'dine_in';
+
+/* ── Ejes de ESTRUCTURA ───────────────────────────────────────
+   Hasta aquí una plantilla solo podía cambiar la PIEL: color, tipografía,
+   forma, fondo. El esqueleto era siempre el mismo (portada a pantalla
+   completa → píldoras de categoría → rejilla), así que 16 plantillas se
+   sentían primas entre sí. Estas tres claves cambian el ESQUELETO. */
+
+/** Cómo se recorre el catálogo. */
+export type CatalogNav =
+  | 'chips'      // filtra UNA categoría con píldoras horizontales (el clásico)
+  | 'secciones'  // todas las categorías apiladas, scroll continuo + índice pegajoso
+  | 'acordeon'   // categorías plegadas, se abren de una en una (cartas enormes)
+  | 'portadas';  // se elige categoría en tarjetas grandes y se entra a su menú
+
+/** Forma de cada platillo dentro de su sección. */
+export type CardStyle =
+  | 'tarjeta'   // rejilla con arte arriba (equivale al viejo catalogView 'grid')
+  | 'fila'      // fila horizontal con miniatura (equivale a catalogView 'list')
+  | 'texto'     // SIN imagen: nombre · línea de puntos · precio (carta impresa)
+  | 'mosaico'   // alturas alternas y arte dominante (editorial)
+  | 'carrusel'; // fila horizontal desplazable por categoría
+
+/** Ancho del lienzo. El menú se comparte por link y se abre en cualquier
+    pantalla: 'movil' es la columna de siempre (460 px), los otros dos
+    aprovechan tablet y escritorio en vez de dejar dos franjas vacías. */
+export type LayoutWidth = 'movil' | 'ancho' | 'revista';
+
+/** Ancho máximo del <main> del menú por lienzo. */
+export const LAYOUT_MAX_WIDTH: Record<LayoutWidth, number> = {
+  movil: 460,
+  ancho: 760,
+  revista: 1120,
+};
+
+/** Ancho mínimo de columna para las rejillas que se auto-ajustan.
+    En 'movil' se respetan las 2/3 columnas explícitas del dueño; en lienzos
+    anchos se reparte por ancho disponible, o una tarjeta quedaría de 500 px. */
+export const LAYOUT_MIN_COL: Record<LayoutWidth, number> = {
+  movil: 0,
+  ancho: 210,
+  revista: 230,
+};
 
 /* ── Tipografía granular ──────────────────────────────────────
    TextStyle describe TODO de un texto: tamaño (multiplicador),
@@ -166,7 +208,15 @@ export interface ThemeConfig {
   portadaShowBadge: boolean;    // "Abierto ahora · Zona X"
   portadaShowStatus: boolean;   // el puntito que "respira"
 
+  // ── Lienzo ──
+  layoutWidth: LayoutWidth;     // ancho máximo del menú (móvil / ancho / revista)
+
   // ── Catálogo ──
+  catalogNav: CatalogNav;       // estructura de navegación del menú
+  cardStyle: CardStyle;         // forma de cada platillo
+  /** @deprecated Lo sustituye `cardStyle`. Se conserva porque hay temas ya
+      guardados (y la columna legacy `catalog_view`) que solo traen esto; el
+      resolver lo traduce a `cardStyle` cuando el tema no define el nuevo. */
   catalogView: CatalogView;
   catalogColumns: 2 | 3;
   showSearch: boolean;
@@ -286,6 +336,7 @@ export const ELEMENT_TARGETS: { key: string; label: string; role: TypographyRole
   { key: 'portadaCta',          label: 'Portada · Botón',         role: 'button' },
   { key: 'catalogKicker',       label: 'Menú · Kicker',           role: 'kicker' },
   { key: 'catalogHeading',      label: 'Menú · Título',           role: 'poster' },
+  { key: 'catalogSection',      label: 'Menú · Encabezado de sección', role: 'poster' },
   { key: 'cartTitle',           label: 'Carrito · Título',        role: 'heading' },
   { key: 'checkoutTitle',       label: 'Checkout · Título',       role: 'heading' },
   { key: 'productTitle',        label: 'Producto · Título',       role: 'heading' },
@@ -339,6 +390,10 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   portadaShowBadge: true,
   portadaShowStatus: true,
 
+  layoutWidth: 'movil',
+
+  catalogNav: 'chips',
+  cardStyle: 'tarjeta',
   catalogView: 'grid',
   catalogColumns: 2,
   showSearch: true,

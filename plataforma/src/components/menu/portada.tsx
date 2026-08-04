@@ -43,19 +43,23 @@ function BrandMark({ size = 96 }: { size?: number }) {
   );
 }
 
-function OpenBadge({ isOpen }: { isOpen: boolean }) {
+/** `onDark`: sobre una foto a sangre el velo es siempre oscuro, así que los
+    tokens del tema (que se invierten con la paleta clara) dejarían el badge
+    ilegible. Ahí se fuerza blanco sobre translúcido. */
+function OpenBadge({ isOpen, onDark = false }: { isOpen: boolean; onDark?: boolean }) {
   const config = useThemeConfig();
   const content = useThemeContent();
   const label = isOpen ? content.portada.badgeOpen : content.portada.badgeClosed;
   const text = [label, config.zone].filter(Boolean).join(' · ');
-  const dotColor = isOpen ? 'var(--u-text)' : 'var(--c-danger, #f87171)';
+  const dotColor = isOpen ? (onDark ? '#fff' : 'var(--u-text)') : 'var(--c-danger, #f87171)';
   return (
     <span
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 13px', borderRadius: 999,
-        background: 'var(--surface-3)', border: '1px solid var(--u-hair-2)',
+        background: onDark ? 'rgba(255,255,255,0.16)' : 'var(--surface-3)',
+        border: `1px solid ${onDark ? 'rgba(255,255,255,0.26)' : 'var(--u-hair-2)'}`,
         backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-        fontSize: 12, fontWeight: 600, color: 'var(--u-text-2)',
+        fontSize: 12, fontWeight: 600, color: onDark ? 'rgba(255,255,255,0.92)' : 'var(--u-text-2)',
       }}
     >
       {config.portadaShowStatus && (
@@ -131,6 +135,162 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           )}
         </div>
         <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
+      </section>
+    );
+  }
+
+  /* ── Fullbleed ──
+     Foto a sangre ocupando la pantalla entera, con el nombre abajo sobre un
+     degradado. Es la portada de quien vende con la imagen del plato: la carta
+     no empieza hasta que el comensal decide bajar. Si no hay imagen de fondo
+     cargada, el arte lo pone un degradado con el color de acento. */
+  if (config.portadaVariant === 'fullbleed') {
+    return (
+      <section
+        style={{
+          position: 'relative', minHeight: '100svh', display: 'flex', flexDirection: 'column',
+          justifyContent: 'flex-end', overflow: 'hidden',
+          // Se sale del padding lateral del <main>: "a sangre" quiere decir
+          // hasta el borde del vidrio, no hasta el borde del contenedor.
+          margin: '0 -16px', padding: '0 0 36px',
+        }}
+      >
+        <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
+          {config.backgroundImage ? (
+            <Image src={config.backgroundImage} alt="" fill priority sizes="100vw" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div
+              style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(130% 80% at 50% 18%, color-mix(in srgb, var(--brand-accent) 55%, transparent), transparent 68%), linear-gradient(180deg, var(--brand-bg-2), var(--brand-bg))',
+              }}
+            />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.34) 46%, rgba(0,0,0,0.10) 100%)' }} />
+        </div>
+
+        <div style={{ position: 'relative', padding: '0 22px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 13 }}>
+          {config.portadaShowLogo && (
+            <div className={anim ? 'anim-pop' : ''}><BrandMark size={74} /></div>
+          )}
+          <div className={anim ? 'anim-fade-up' : ''}>
+            <h1
+              className="t-display"
+              style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(42px, 13vw, 68px))`, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.55)' }}
+            >
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="t-serif" style={{ ...subT.vars, fontSize: 18 * subT.size, color: 'rgba(255,255,255,0.88)', marginTop: 10, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {config.portadaShowBadge && <OpenBadge isOpen={isOpen} onDark />}
+          <div style={{ width: '100%', maxWidth: 340, marginTop: 4 }}>
+            <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">
+              {content.portada.cta}
+            </PrimaryButton>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ── Ticket ──
+     La portada como una comanda: papel angosto, bordes dentados, mono y
+     filetes punteados. Encaja con cafeterías, food trucks y bares donde el
+     recibo ES parte de la identidad. */
+  if (config.portadaVariant === 'ticket') {
+    // El dentado se dibuja con círculos del color del fondo mordiendo el borde.
+    const notch = (edge: 'top' | 'bottom'): CSSProperties => ({
+      position: 'absolute', left: 0, right: 0, height: 14,
+      top: edge === 'top' ? -7 : undefined,
+      bottom: edge === 'bottom' ? -7 : undefined,
+      background: 'radial-gradient(circle at 7px 7px, var(--brand-bg) 7px, transparent 7.5px)',
+      backgroundSize: '16px 14px', backgroundRepeat: 'repeat-x',
+      pointerEvents: 'none',
+    });
+    const rule: CSSProperties = { borderTop: '1px dashed var(--u-hair-2)', margin: '14px 0' };
+    return (
+      <section style={{ ...heroWrap, gap: 0 }}>
+        <div
+          className={anim ? 'anim-pop' : ''}
+          style={{
+            position: 'relative', width: '100%', maxWidth: 330,
+            background: 'var(--surface-2)', border: '1px solid var(--u-hair)',
+            padding: '26px 22px 24px', borderRadius: 3,
+            boxShadow: '0 20px 44px rgba(0,0,0,0.26)',
+          }}
+        >
+          <div aria-hidden style={notch('top')} />
+          <div aria-hidden style={notch('bottom')} />
+
+          <div className="t-mono" style={{ fontSize: 10.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
+            {content.portada.posterKicker}
+          </div>
+
+          <div style={rule} />
+
+          {config.portadaShowLogo && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <BrandMark size={56} />
+            </div>
+          )}
+          <h1
+            className="t-display"
+            style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(26px, 8vw, 34px))`, textAlign: 'center' }}
+          >
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="t-serif" style={{ ...subT.vars, fontSize: 15 * subT.size, textAlign: 'center', marginTop: 8 }}>
+              {subtitle}
+            </p>
+          )}
+
+          <div style={rule} />
+
+          {config.portadaShowBadge && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+              <OpenBadge isOpen={isOpen} />
+            </div>
+          )}
+          <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">
+            {content.portada.cta}
+          </PrimaryButton>
+
+          {/* Guiño de código de barras: puro adorno, sin significado. */}
+          <div
+            aria-hidden
+            style={{
+              height: 26, marginTop: 18, opacity: 0.55,
+              background: 'repeating-linear-gradient(90deg, var(--u-text) 0 2px, transparent 2px 4px, var(--u-text) 4px 5px, transparent 5px 9px)',
+            }}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  /* ── Directo ──
+     Sin héroe: un encabezado compacto y el menú empieza de inmediato. Es lo
+     que quiere quien pone el QR en la mesa y no soporta que el comensal tenga
+     que deslizar una pantalla entera antes de ver un solo platillo.
+     Distinto de 'none', que deja la carta huérfana y sin ninguna identidad. */
+  if (config.portadaVariant === 'directo') {
+    return (
+      <section style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '24px 0 2px' }}>
+        {config.portadaShowLogo && <BrandMark size={54} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(22px, 6.5vw, 30px))` }}>{title}</h1>
+          {subtitle && (
+            <p className="t-serif" style={{ ...subT.vars, fontSize: 14 * subT.size, marginTop: 3 }}>{subtitle}</p>
+          )}
+          {config.portadaShowBadge && (
+            <div style={{ marginTop: 9 }}><OpenBadge isOpen={isOpen} /></div>
+          )}
+        </div>
       </section>
     );
   }

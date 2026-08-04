@@ -317,7 +317,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
       {/* ── Portada ── */}
       <Section title="Portada">
-        <Segmented label="Variante" value={config.portadaVariant} options={[['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'], ['none', 'Ninguna']]} onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])} />
+        <Segmented label="Variante" value={config.portadaVariant} options={[['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'], ['fullbleed', 'A sangre'], ['ticket', 'Comanda'], ['directo', 'Directo'], ['none', 'Ninguna']]} onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])} />
         <Toggle label="Mostrar logo" value={config.portadaShowLogo} onChange={(v) => setC('portadaShowLogo', v)} />
         <Toggle label="Mostrar badge 'Abierto'" value={config.portadaShowBadge} onChange={(v) => setC('portadaShowBadge', v)} />
         <Toggle label="Punto de estado (respira)" value={config.portadaShowStatus} onChange={(v) => setC('portadaShowStatus', v)} />
@@ -329,8 +329,13 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
       {/* ── Catálogo ── */}
       <Section title="Catálogo">
-        <Segmented label="Vista" value={config.catalogView} options={[['grid', 'Cuadrícula'], ['list', 'Lista']]} onChange={(v) => setC('catalogView', v as ThemeConfig['catalogView'])} />
-        <Segmented label="Columnas" value={String(config.catalogColumns)} options={[['2', '2'], ['3', '3']]} onChange={(v) => setC('catalogColumns', Number(v) as 2 | 3)} />
+        <Segmented label="Navegación" value={config.catalogNav} options={[['chips', 'Píldoras'], ['secciones', 'Secciones'], ['acordeon', 'Acordeón'], ['portadas', 'Portadas']]} onChange={(v) => setC('catalogNav', v as ThemeConfig['catalogNav'])} />
+        <Segmented label="Forma del platillo" value={config.cardStyle} options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel']]} onChange={(v) => setC('cardStyle', v as ThemeConfig['cardStyle'])} />
+        <Segmented label="Ancho" value={config.layoutWidth} options={[['movil', 'Móvil'], ['ancho', 'Ancho'], ['revista', 'Revista']]} onChange={(v) => setC('layoutWidth', v as ThemeConfig['layoutWidth'])} />
+        {/* Las columnas solo aplican a rejilla/mosaico en la columna de móvil. */}
+        {(config.cardStyle === 'tarjeta' || config.cardStyle === 'mosaico') && config.layoutWidth === 'movil' && (
+          <Segmented label="Columnas" value={String(config.catalogColumns)} options={[['2', '2'], ['3', '3']]} onChange={(v) => setC('catalogColumns', Number(v) as 2 | 3)} />
+        )}
         <Segmented label="Arte del producto" value={config.productArt} options={[['auto', 'Auto'], ['pattern', 'Patrón'], ['photo', 'Foto']]} onChange={(v) => setC('productArt', v as ThemeConfig['productArt'])} />
         <Toggle label="Buscador" value={config.showSearch} onChange={(v) => setC('showSearch', v)} />
         <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />

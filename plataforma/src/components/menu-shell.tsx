@@ -12,7 +12,7 @@ import InstallBanner from '@/components/install-banner';
 import OfflineSupport from '@/components/offline-support';
 import { Icon } from '@/components/icons';
 import type { MenuReward } from '@/components/menu/rewards-section';
-import type { ThemeConfig, ThemeContent } from '@/lib/theme/defaults';
+import { LAYOUT_MAX_WIDTH, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
@@ -77,7 +77,10 @@ export default function MenuShell({ config, content, categories, products, resta
       <CartProvider restaurantId={restaurantId}>
         <OfflineSupport />
         <VisitTracker restaurantId={restaurantId} />
-        <main className="themed-type" style={{ width: '100%', maxWidth: 460, margin: '0 auto', padding: `0 16px calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}>
+        {/* El lienzo ya no es una columna de 460 px para todos: el menú se
+            comparte por link y se abre en tablet y escritorio, donde esa
+            columna dejaba dos franjas vacías a los lados. */}
+        <main className="themed-type" style={{ width: '100%', maxWidth: LAYOUT_MAX_WIDTH[config.layoutWidth] ?? LAYOUT_MAX_WIDTH.movil, margin: '0 auto', padding: `0 16px calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}>
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (

@@ -1,11 +1,14 @@
 /* ============================================================
    PLANTILLAS PREDISEÑADAS DE TEMA
    ------------------------------------------------------------
-   Galería integrada de puntos de partida visuales: paletas claras
-   y oscuras, portadas distintas (spotlight / poster / stack / sin
-   portada), vistas de catálogo (cuadrícula 2-3 columnas / lista),
-   estilos de botón y niveles de glass. Muestran hasta dónde llega
-   la personalización y sirven de base para seguir moldeando.
+   Galería integrada de puntos de partida. Dos familias:
+
+   · ESTILO (16) — misma estructura, distinta piel: paletas claras y
+     oscuras, portadas, estilos de botón, niveles de glass.
+   · ESTRUCTURA (6, `structural: true`) — mueven el esqueleto: cómo se
+     navega la carta (catalogNav), qué forma tiene cada platillo
+     (cardStyle) y cuánto ancho ocupa la página (layoutWidth). Son las
+     que impiden que todos los menús de la plataforma se sientan primos.
 
    REGLAS:
    · Una plantilla SOLO define claves visuales (VISUAL_KEYS).
@@ -54,6 +57,8 @@ export const TEMPLATE_VISUAL_KEYS = [
   'ctaStyle', 'checkoutActiveColor', 'checkoutFormGlass', 'checkoutPayGlass', 'checkoutTextShadow',
   // Portada
   'portadaVariant', 'portadaShowLogo', 'portadaShowBadge', 'portadaShowStatus',
+  // Estructura (lo que hace que dos plantillas no se sientan primas)
+  'layoutWidth', 'catalogNav', 'cardStyle',
   // Catálogo (solo lo visual)
   'catalogView', 'catalogColumns', 'showSearch', 'showCategoryIcons', 'productArt', 'showTags', 'featuredFavorites',
   // Superficies
@@ -70,6 +75,13 @@ export interface BuiltinTemplate {
   desc: string;
   /** Etiqueta corta para filtrar/mostrar: 'Oscuro' | 'Claro'. */
   mode: 'Oscuro' | 'Claro';
+  /**
+   * Cambia el ESQUELETO del menú, no solo su paleta (navegación, forma del
+   * platillo, ancho del lienzo). Se marca aparte porque con 22 plantillas en
+   * la galería el dueño necesita poder ir directo a las que se ven distintas
+   * de verdad, y no ir abriendo paletas hasta topar con una.
+   */
+  structural?: boolean;
   config: TemplateConfig;
 }
 
@@ -127,7 +139,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'gradient', backgroundGradient: 'linear-gradient(170deg, #140d0a, #241109)',
       grain: true, ambientGlow: true,
       portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'list', cornerRadius: 0.8, featuredFavorites: true,
+      cardStyle: 'fila', cornerRadius: 0.8, featuredFavorites: true,
     },
   },
   {
@@ -142,7 +154,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'IBM Plex Mono',
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'outline',
-      catalogView: 'list', cornerRadius: 0.7, cardShadow: 0.6,
+      cardStyle: 'fila', cornerRadius: 0.7, cardShadow: 0.6,
       // Alta cocina = menos peso, más tracking (grito grueso ≠ elegancia).
       typography: typo({ heading: { weight: 600 }, kicker: { tracking: 0.22, weight: 500 } }),
     },
@@ -160,7 +172,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'gradient', backgroundGradient: 'linear-gradient(160deg, #0a0714, #1b0b33)',
       ambientGlow: true,
       portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 3, cornerRadius: 1.1, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 3, cornerRadius: 1.1, featuredFavorites: true,
     },
   },
   {
@@ -175,7 +187,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.3, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 1.3, featuredFavorites: true,
       // "Aire tranquilo" = título menos macizo y con algo más de respiro.
       typography: typo({ heading: { weight: 700, lineHeight: 1.05 } }),
     },
@@ -192,7 +204,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
       backgroundType: 'asphalt', ambientGlow: true,
       portadaVariant: 'stack', ctaStyle: 'white',
-      catalogView: 'grid', catalogColumns: 2, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 2, featuredFavorites: true,
       // "Eléctrico moderno" era solo una promesa del texto: el título de
       // portada ahora sí lleva un brillo neón real con el acento azul.
       typography: typo({ heading: { shadow: 'neon' } }),
@@ -210,7 +222,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.5, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 1.5, featuredFavorites: true,
       // Menos "GRITO EN MAYÚSCULAS" y más dulzura en los kickers.
       typography: typo({ kicker: { tracking: 0.08 } }),
     },
@@ -228,7 +240,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'gradient', backgroundGradient: 'linear-gradient(160deg, #06201d, #0d3a2e)',
       ambientGlow: true,
       portadaVariant: 'stack', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.2, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 1.2, featuredFavorites: true,
     },
   },
   {
@@ -243,7 +255,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'Space Mono',
       backgroundType: 'solid', grain: true, grainStyle: 'grueso',
       portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 3, cornerRadius: 0.9, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 3, cornerRadius: 0.9, featuredFavorites: true,
       typography: typo({ poster: { tracking: -0.02 } }),
     },
   },
@@ -259,7 +271,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'none',
-      catalogView: 'list', showCategoryIcons: false, ctaStyle: 'accent',
+      cardStyle: 'fila', showCategoryIcons: false, ctaStyle: 'accent',
       checkoutActiveColor: 'accent', cornerRadius: 0.9, cardShadow: 0.5,
       // Sin portada (`heading`/.t-display NUNCA se pinta aquí), el kicker +
       // el .t-poster del catálogo SON la primera impresión: menos peso y
@@ -279,7 +291,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Cormorant Garamond', fontMono: 'IBM Plex Mono',
       backgroundType: 'solid', ambientGlow: false, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent',
-      catalogView: 'list', cornerRadius: 1.1, featuredFavorites: true,
+      cardStyle: 'fila', cornerRadius: 1.1, featuredFavorites: true,
       typography: typo({ heading: { weight: 700 } }),
     },
   },
@@ -296,7 +308,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'solid', ambientGlow: false, sheen: false, grain: false,
       glassIntensity: 'solido',
       portadaVariant: 'spotlight', ctaStyle: 'outline',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 0.6, showCategoryIcons: false,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 0.6, showCategoryIcons: false,
     },
   },
   {
@@ -311,7 +323,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'IBM Plex Mono',
       backgroundType: 'solid', grain: true, grainStyle: 'papel', ambientGlow: false, sheen: false,
       portadaVariant: 'stack', ctaStyle: 'outline',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.2,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 1.2,
       typography: typo({ kicker: { tracking: 0.1 } }),
     },
   },
@@ -327,7 +339,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'Space Mono',
       backgroundType: 'asphalt', grain: true, grainStyle: 'grueso',
       portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 3, cornerRadius: 0.8, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 3, cornerRadius: 0.8, featuredFavorites: true,
       // Poster gráfico "que grita" = brillo neón amarillo, no un t-poster plano.
       typography: typo({ poster: { shadow: 'neon' } }),
     },
@@ -344,7 +356,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
       backgroundType: 'solid', ambientGlow: true, sheen: false,
       portadaVariant: 'spotlight', ctaStyle: 'accent', checkoutActiveColor: 'accent',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.4, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 1.4, featuredFavorites: true,
       typography: typo({ heading: { weight: 700 } }),
     },
   },
@@ -361,7 +373,133 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       backgroundType: 'gradient', backgroundGradient: 'linear-gradient(165deg, #100c1e, #191233)',
       ambientGlow: true, sheen: true,
       portadaVariant: 'stack', ctaStyle: 'white',
-      catalogView: 'grid', catalogColumns: 2, cornerRadius: 1.2, featuredFavorites: true,
+      cardStyle: 'tarjeta', catalogColumns: 2, cornerRadius: 1.2, featuredFavorites: true,
+    },
+  },
+
+  /* ── Arquetipos: cambian el esqueleto, no la pintura ─────────
+     Las 16 de arriba comparten estructura (portada a pantalla completa →
+     píldoras de categoría → rejilla de tarjetas) y solo se distinguen por
+     paleta y tipografía. Estas seis mueven los ejes nuevos —navegación,
+     forma del platillo y ancho del lienzo— y por eso se sienten de otro
+     planeta aunque se les cambie el color después. */
+
+  {
+    id: 'carta-autor',
+    name: 'Carta de Autor',
+    desc: 'Sin una sola foto: secciones, serifas y precio al final de una línea de puntos.',
+    mode: 'Claro',
+    structural: true,
+    config: {
+      colorBg: '#faf7f2', colorBg2: '#f1ebe1', colorText: '#1f1a14',
+      colorAccent: '#7a6a4f', onAccent: '#ffffff', scheme: 'light',
+      fontDisplay: 'Cormorant Garamond', fontPoster: 'Bebas Neue', fontBody: 'DM Sans',
+      fontSerif: 'Cormorant Garamond', fontMono: 'IBM Plex Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false, grain: true, grainStyle: 'papel',
+      glassIntensity: 'solido', glassAmount: 0, cornerRadius: 0.5, cardShadow: 0,
+      portadaVariant: 'ticket', ctaStyle: 'outline',
+      layoutWidth: 'ancho', catalogNav: 'secciones', cardStyle: 'texto',
+      showCategoryIcons: false, showTags: false,
+      // El encabezado de sección y el nombre del platillo van en la serif: es
+      // una carta impresa, y ahí la tipografía hace todo el trabajo que en las
+      // demás plantillas hace la foto.
+      typography: typo({
+        poster: { font: 'serif', transform: 'none', weight: 500, tracking: 0 },
+        productName: { font: 'serif', weight: 600, size: 1.05, tracking: 0 },
+        price: { font: 'serif', weight: 500 },
+      }),
+    },
+  },
+  {
+    id: 'revista',
+    name: 'Revista',
+    desc: 'Mosaico editorial a página completa: fotos grandes de alturas desiguales.',
+    mode: 'Oscuro',
+    structural: true,
+    config: {
+      colorBg: '#0c0c0e', colorBg2: '#17171b', colorText: '#f4f2ef',
+      colorAccent: '#e0533d', onAccent: '#ffffff', scheme: 'dark',
+      fontDisplay: 'Syne', fontPoster: 'Archivo Black', fontBody: 'Inter',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: true,
+      portadaVariant: 'fullbleed', ctaStyle: 'white',
+      layoutWidth: 'revista', catalogNav: 'secciones', cardStyle: 'mosaico',
+      cornerRadius: 0.8, featuredFavorites: true,
+      typography: typo({ poster: { tracking: -0.02 }, heading: { weight: 700 } }),
+    },
+  },
+  {
+    id: 'kiosco',
+    name: 'Kiosco',
+    desc: 'Se entra eligiendo sección en portadas grandes, como una app de comida.',
+    mode: 'Claro',
+    structural: true,
+    config: {
+      colorBg: '#fdfdfc', colorBg2: '#f1f0ec', colorText: '#18181b',
+      colorAccent: '#dc2626', onAccent: '#ffffff', scheme: 'light',
+      fontDisplay: 'Space Grotesk', fontPoster: 'Anton', fontBody: 'Inter',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false,
+      glassIntensity: 'solido', glassAmount: 25, cornerRadius: 1.3, cardShadow: 0.8,
+      portadaVariant: 'directo', ctaStyle: 'accent', checkoutActiveColor: 'accent',
+      layoutWidth: 'ancho', catalogNav: 'portadas', cardStyle: 'tarjeta', catalogColumns: 2,
+      featuredFavorites: true,
+    },
+  },
+  {
+    id: 'pizarra',
+    name: 'Pizarra',
+    desc: 'Bar de barrio: pizarra, tiza amarilla y categorías que se despliegan una a una.',
+    mode: 'Oscuro',
+    structural: true,
+    config: {
+      colorBg: '#14171a', colorBg2: '#1b1f23', colorText: '#f2efe6',
+      colorAccent: '#e8c547', onAccent: '#14171a', scheme: 'dark',
+      fontDisplay: 'Bebas Neue', fontPoster: 'Bebas Neue', fontBody: 'Inter',
+      fontSerif: 'Instrument Serif', fontMono: 'Space Mono',
+      backgroundType: 'solid', grain: true, grainStyle: 'grueso', ambientGlow: false, sheen: false,
+      glassIntensity: 'solido', glassAmount: 20, cornerRadius: 0.5, cardShadow: 0.3,
+      portadaVariant: 'poster', ctaStyle: 'accent', checkoutActiveColor: 'accent',
+      layoutWidth: 'movil', catalogNav: 'acordeon', cardStyle: 'texto',
+      showCategoryIcons: false,
+      typography: typo({
+        poster: { tracking: 0.06 },
+        productName: { transform: 'uppercase', tracking: 0.03, weight: 500 },
+      }),
+    },
+  },
+  {
+    id: 'estantes',
+    name: 'Estantes',
+    desc: 'Una fila deslizable por categoría, al estilo de las apps de domicilio.',
+    mode: 'Claro',
+    structural: true,
+    config: {
+      colorBg: '#ffffff', colorBg2: '#f3f5f7', colorText: '#0f172a',
+      colorAccent: '#ea580c', onAccent: '#ffffff', scheme: 'light',
+      fontDisplay: 'Space Grotesk', fontPoster: 'Archivo Black', fontBody: 'Plus Jakarta Sans',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false,
+      glassIntensity: 'solido', glassAmount: 30, cornerRadius: 1.2, cardShadow: 0.7,
+      portadaVariant: 'directo', ctaStyle: 'accent', checkoutActiveColor: 'accent',
+      layoutWidth: 'ancho', catalogNav: 'secciones', cardStyle: 'carrusel',
+    },
+  },
+  {
+    id: 'compacto',
+    name: 'Compacto',
+    desc: 'Para cartas enormes: todo plegado, filas densas y sin desplazamiento infinito.',
+    mode: 'Oscuro',
+    structural: true,
+    config: {
+      colorBg: '#0f1115', colorBg2: '#171a20', colorText: '#e8eaed',
+      colorAccent: '#38bdf8', onAccent: '#06121a', scheme: 'dark',
+      fontDisplay: 'Space Grotesk', fontPoster: 'Bebas Neue', fontBody: 'Inter',
+      fontSerif: 'Instrument Serif', fontMono: 'JetBrains Mono',
+      backgroundType: 'solid', ambientGlow: false, sheen: false,
+      glassIntensity: 'solido', glassAmount: 40, cornerRadius: 0.8, cardShadow: 0.4,
+      portadaVariant: 'directo', ctaStyle: 'accent', checkoutActiveColor: 'accent',
+      layoutWidth: 'movil', catalogNav: 'acordeon', cardStyle: 'fila',
     },
   },
 ];
