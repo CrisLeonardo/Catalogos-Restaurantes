@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeTip, tipAppliesToType } from './resolve';
+import { computeTip, resolveTheme, tipAppliesToType } from './resolve';
 import { DEFAULT_CONFIG } from './defaults';
 import type { ThemeConfig } from './defaults';
 
@@ -51,5 +51,34 @@ describe('computeTip', () => {
 
   it('nunca calcula propina sobre subtotal 0', () => {
     expect(computeTip(TIP_CONFIG, 'DINE_IN', true, 0)).toBe(0);
+  });
+});
+
+/* La forma del platillo se migró de `catalogView` ('grid'|'list') a `cardStyle`.
+   Todo restaurante que ya opera tiene guardado el eje viejo, así que el
+   resolver debe traducirlo: si se limitara al default, cada menú en vista
+   lista amanecería en rejilla el día del despliegue. */
+describe('resolveTheme · compatibilidad catalogView → cardStyle', () => {
+  it('traduce la columna legacy catalog_view=list a filas', () => {
+    expect(resolveTheme({ catalog_view: 'list' }).config.cardStyle).toBe('fila');
+  });
+
+  it('traduce un tema guardado con catalogView=list y sin cardStyle', () => {
+    expect(resolveTheme({ config: { catalogView: 'list' } }).config.cardStyle).toBe('fila');
+  });
+
+  it('el eje nuevo le gana al viejo dentro de la misma capa', () => {
+    const row = { config: { catalogView: 'list' as const, cardStyle: 'texto' as const } };
+    expect(resolveTheme(row).config.cardStyle).toBe('texto');
+  });
+
+  it('una capa más específica con cardStyle gana sobre la columna legacy', () => {
+    const row = { catalog_view: 'list', config: { cardStyle: 'mosaico' as const } };
+    expect(resolveTheme(row).config.cardStyle).toBe('mosaico');
+  });
+
+  it('sin nada guardado usa el default (tarjeta)', () => {
+    expect(resolveTheme(null).config.cardStyle).toBe('tarjeta');
+    expect(resolveTheme({}).config.cardStyle).toBe('tarjeta');
   });
 });

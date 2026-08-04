@@ -372,9 +372,16 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Segmented
                 label="Estilo de portada"
                 value={config.portadaVariant}
-                options={[['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'], ['none', 'Sin portada']]}
+                options={[
+                  ['spotlight', 'Spotlight'], ['poster', 'Poster'], ['stack', 'Stack'],
+                  ['fullbleed', 'Foto a sangre'], ['ticket', 'Comanda'],
+                  ['directo', 'Directo al menú'], ['none', 'Sin portada'],
+                ]}
                 onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])}
               />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                {PORTADA_HINT[config.portadaVariant] ?? ''}
+              </p>
               {config.portadaVariant !== 'none' && (
                 <>
                   <Toggle label="Mostrar logo" value={config.portadaShowLogo} onChange={(v) => setC('portadaShowLogo', v)} />
@@ -403,25 +410,68 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         {/* ── Tab: Catálogo ── */}
         {tab === 'catalogo' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Section title="Vista del menú">
+            <Section title="Estructura del menú">
+              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2, lineHeight: 1.5 }}>
+                Esto no toca los colores: cambia cómo está <em>armado</em> el menú. Es lo que
+                hace que tu carta no se parezca a la del restaurante de al lado.
+              </p>
+
               <Segmented
-                label="Diseño"
-                value={config.catalogView}
-                options={[['grid', 'Cuadrícula'], ['list', 'Lista']]}
-                onChange={(v) => setC('catalogView', v as ThemeConfig['catalogView'])}
+                label="Cómo se recorre la carta"
+                value={config.catalogNav}
+                options={[['chips', 'Píldoras'], ['secciones', 'Secciones'], ['acordeon', 'Acordeón'], ['portadas', 'Portadas']]}
+                onChange={(v) => setC('catalogNav', v as ThemeConfig['catalogNav'])}
               />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                {NAV_HINT[config.catalogNav] ?? ''}
+              </p>
+
               <Segmented
-                label="Columnas en cuadrícula"
-                value={String(config.catalogColumns)}
-                options={[['2', '2 columnas'], ['3', '3 columnas']]}
-                onChange={(v) => setC('catalogColumns', Number(v) as 2 | 3)}
+                label="Forma de cada platillo"
+                value={config.cardStyle}
+                options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel']]}
+                onChange={(v) => setC('cardStyle', v as ThemeConfig['cardStyle'])}
               />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                {CARD_HINT[config.cardStyle] ?? ''}
+              </p>
+
               <Segmented
-                label="Arte de productos"
-                value={config.productArt}
-                options={[['auto', 'Auto (foto o patrón)'], ['pattern', 'Solo patrón'], ['photo', 'Solo foto']]}
-                onChange={(v) => setC('productArt', v as ThemeConfig['productArt'])}
+                label="Ancho de la página"
+                value={config.layoutWidth}
+                options={[['movil', 'Columna de móvil'], ['ancho', 'Ancho'], ['revista', 'Revista']]}
+                onChange={(v) => setC('layoutWidth', v as ThemeConfig['layoutWidth'])}
               />
+              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+                Cuando compartes el menú por link se abre también en tablet y computadora.
+                «Columna de móvil» lo deja en 460 px siempre; las otras dos aprovechan la
+                pantalla en vez de dejar dos franjas vacías a los lados.
+              </p>
+
+              {/* Las columnas solo mandan en la columna de móvil: en lienzos anchos
+                  se reparten por ancho disponible o cada tarjeta saldría enorme. */}
+              {(config.cardStyle === 'tarjeta' || config.cardStyle === 'mosaico') && config.layoutWidth === 'movil' && (
+                <Segmented
+                  label="Columnas"
+                  value={String(config.catalogColumns)}
+                  options={[['2', '2 columnas'], ['3', '3 columnas']]}
+                  onChange={(v) => setC('catalogColumns', Number(v) as 2 | 3)}
+                />
+              )}
+
+              {config.cardStyle === 'texto' ? (
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>
+                  La forma «Texto» no muestra ninguna imagen, así que el arte de productos no
+                  aplica aquí.
+                </p>
+              ) : (
+                <Segmented
+                  label="Arte de productos"
+                  value={config.productArt}
+                  options={[['auto', 'Auto (foto o patrón)'], ['pattern', 'Solo patrón'], ['photo', 'Solo foto']]}
+                  onChange={(v) => setC('productArt', v as ThemeConfig['productArt'])}
+                />
+              )}
             </Section>
 
             <Section title="Elementos visibles">
@@ -628,6 +678,35 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 /* Panel colapsable: reduce el ruido visual del editor. El estado (abierto/
    cerrado) se recuerda por título en localStorage para que cada quien deje
    abierto solo lo que usa. */
+/* Ayudas de los ejes de estructura. "Acordeón" o "mosaico" no le dicen nada a
+   un dueño de restaurante leyendo solo la etiqueta de un botón, y estas tres
+   decisiones son las que más cambian el menú — conviene que se elijan sabiendo
+   qué se está eligiendo, no probando a ver qué sale. */
+const NAV_HINT: Record<string, string> = {
+  chips: 'Píldoras arriba que filtran una categoría a la vez. Es la vista de siempre.',
+  secciones: 'Toda la carta de corrido, una sección por categoría, con un índice que se queda pegado arriba.',
+  acordeon: 'Categorías plegadas: se abre una a la vez. Para cartas con muchísimos productos.',
+  portadas: 'El menú arranca eligiendo sección en tarjetas grandes, como una app de comida.',
+};
+
+const CARD_HINT: Record<string, string> = {
+  tarjeta: 'Rejilla de tarjetas con la imagen arriba.',
+  fila: 'Una fila por platillo, con miniatura a la izquierda.',
+  texto: 'Carta impresa: sin imágenes, nombre y precio unidos por una línea de puntos.',
+  mosaico: 'Tarjetas de alturas desiguales que encajan como una revista.',
+  carrusel: 'Cada categoría es una fila que se desliza de lado.',
+};
+
+const PORTADA_HINT: Record<string, string> = {
+  spotlight: 'Logo y nombre centrados, con un halo detrás.',
+  poster: 'El nombre enorme alineado a la izquierda, como un cartel.',
+  stack: 'Logo arriba y tres tarjetas con lo que te distingue.',
+  fullbleed: 'Tu imagen de fondo a pantalla completa con el nombre encima (súbela en «Fondo»).',
+  ticket: 'Una comanda de papel, con bordes dentados y letra de máquina.',
+  directo: 'Solo un encabezado pequeño: el menú empieza de inmediato, sin pantalla de bienvenida.',
+  none: 'Sin ninguna cabecera: el menú arranca en seco.',
+};
+
 function Section({ title, children, defaultOpen = true }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   const storageKey = `admin-theme-sec:${title}`;
   const [open, setOpen] = useState(defaultOpen);

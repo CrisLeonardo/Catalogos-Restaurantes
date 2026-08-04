@@ -28,6 +28,7 @@ import {
   type TextStyle,
   type GlassIntensity,
   type OrderType,
+  type CardStyle,
 } from './defaults';
 import { getTenantOverride } from '@/tenants/registry';
 
@@ -73,6 +74,27 @@ function legacyToConfig(row: ThemeRow): Partial<ThemeConfig> {
     out.backgroundType = 'image';
   }
   return out;
+}
+
+/**
+ * `cardStyle` efectivo a partir de las capas de personalización.
+ *
+ * Antes de que existieran los ejes de estructura, la forma del platillo vivía
+ * en `catalogView` ('grid' | 'list') — y así quedó guardada en los temas de
+ * todos los restaurantes que ya están operando, además de en la columna legacy
+ * `catalog_view`. Si el resolver se limitara a tomar el default de `cardStyle`,
+ * el día del despliegue TODO menú en vista lista amanecería en rejilla.
+ *
+ * Regla: gana la capa más específica que diga algo; dentro de una capa, el eje
+ * nuevo le gana al viejo. Si ninguna capa opina, manda el default.
+ */
+function resolveCardStyle(layers: Array<Partial<ThemeConfig>>): CardStyle {
+  for (let i = layers.length - 1; i >= 0; i--) {
+    const layer = layers[i];
+    if (layer.cardStyle) return layer.cardStyle;
+    if (layer.catalogView) return layer.catalogView === 'list' ? 'fila' : 'tarjeta';
+  }
+  return DEFAULT_CONFIG.cardStyle;
 }
 
 /** Merge de 2 niveles para content (sección → claves). */
@@ -123,13 +145,21 @@ export function resolveTheme(
   if (fallback?.brandName) seed.brandName = fallback.brandName;
   if (fallback?.tagline) seed.tagline = fallback.tagline;
 
+  const legacy = legacyToConfig(row ?? {});
+  const stored = row?.config ?? {};
+  const forced = override?.config ?? {};
+
   const config: ThemeConfig = {
     ...DEFAULT_CONFIG,
     ...seed,
-    ...legacyToConfig(row ?? {}),
-    ...(row?.config ?? {}),
-    ...(override?.config ?? {}),
+    ...legacy,
+    ...stored,
+    ...forced,
   };
+
+  // La forma del platillo se migró de `catalogView` a `cardStyle`: hay que
+  // traducir lo que ya está guardado en vez de pisarlo con el default.
+  config.cardStyle = resolveCardStyle([legacy, stored, forced]);
 
   // Los objetos anidados (typography/elementStyles) se mergean en profundidad
   // contra los defaults: un override parcial nunca borra los roles no tocados.
