@@ -22,7 +22,7 @@ import { createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveA
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import WaiterBill, { clearSavedSplit } from '@/components/admin/waiter-bill';
-import VoidOrderDialog, { type VoidApprover } from '@/components/admin/void-order-dialog';
+import VoidOrderDialog from '@/components/admin/void-order-dialog';
 import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy } from '@/lib/db/orders';
@@ -67,10 +67,6 @@ interface Props {
   hubToken: string | null;
   /** Sesión iniciada por PIN — el menú ⋮ ofrece "Cambiar de usuario" en vez de "Salir". */
   isOperatorSession?: boolean;
-  /** Staff con permiso 'aprobar_anulaciones' — para el modal de anulación. */
-  voidApprovers?: VoidApprover[];
-  /** El usuario de esta sesión ya puede autorizar anulaciones (no pide PIN). */
-  canSelfApprove?: boolean;
 }
 
 /** Objetivo de un modal de anulación en curso: null = cerrado. */
@@ -478,7 +474,7 @@ export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
-  hubUrl, hubToken, isOperatorSession = false, voidApprovers = [], canSelfApprove = false,
+  hubUrl, hubToken, isOperatorSession = false,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -1014,8 +1010,6 @@ export default function WaiterPanel({
             orderId={voidTarget.orderId}
             orderStatus={voidTarget.orderStatus}
             item={voidTarget.item}
-            voidApprovers={voidApprovers}
-            canSelfApprove={canSelfApprove}
             onClose={() => setVoidTarget(null)}
             onDone={() => { setVoidTarget(null); router.refresh(); }}
           />
@@ -1227,8 +1221,6 @@ export default function WaiterPanel({
             orderId={voidTarget.orderId}
             orderStatus={voidTarget.orderStatus}
             item={voidTarget.item}
-            voidApprovers={voidApprovers}
-            canSelfApprove={canSelfApprove}
             onClose={() => setVoidTarget(null)}
             onDone={() => { setVoidTarget(null); if (billTable) loadTableBill(billTable); router.refresh(); }}
           />

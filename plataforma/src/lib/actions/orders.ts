@@ -14,7 +14,6 @@ import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import { resolveCoupon } from '@/lib/db/cupones';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
-import { checkApproverPin } from '@/lib/actions/staff-pin';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder, enqueueSplitBillTicket } from '@/lib/print-agent';
 import {
   buildBillLines, computeSplit, UNASSIGNED_ID,
@@ -869,17 +868,12 @@ export interface VoidOrderInput {
   /** Requerido junto con itemId: cuántas unidades de esa línea se anulan. */
   quantity?: number | null;
   reason: string;
-  /** profile_id de quien autoriza, si el solicitante no tiene el permiso él mismo. */
-  approverId?: string | null;
-  approverPin?: string | null;
 }
 
 /**
  * Anula un pedido completo o N unidades de un ítem, con motivo obligatorio.
- * Si el pedido ya salió de NEW (proxy de "ya se envió a cocina") y quien
- * solicita no tiene el permiso 'aprobar_anulaciones', exige el PIN de
- * alguien que sí lo tenga (ver checkApproverPin). Reemplaza el cancel
- * directo sin auditoría que antes hacía updateOrderStatus(id, 'CANCEL').
+ * Reemplaza el cancel directo sin auditoría que antes hacía
+ * updateOrderStatus(id, 'CANCEL').
  */
 export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string; success?: boolean }> {
   const reason = input.reason?.trim();
@@ -918,38 +912,7 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     return { error: 'Este pedido ya está cerrado.' };
   }
 
-  // "Ya se envió a cocina": proxy = cualquier estado más allá de NEW (ver
-  // nota en la sección 5 de la investigación — no hay un timestamp propio
-  // de "enviado a cocina", NEW→PREP es el evento más confiable).
-  const sentToKitchen = order.status !== 'NEW';
-  const requesterIsApprover = can(requester.role as string, requester.permissions as string[] | null, 'aprobar_anulaciones');
-
-  let approvedBy: string | null = null;
-  if (sentToKitchen) {
-    if (requesterIsApprover) {
-      approvedBy = user.id;
-    } else {
-      if (!input.approverId || !input.approverPin) {
-        return { error: 'Este pedido ya se envió a cocina: necesitas el PIN de un encargado para anularlo.' };
-      }
-      const { data: approver } = await db
-        .from('profiles')
-        .select('role, restaurant_id, permissions')
-        .eq('id', input.approverId)
-        .single();
-      if (
-        !approver ||
-        approver.restaurant_id !== order.restaurant_id ||
-        !can(approver.role as string, approver.permissions as string[] | null, 'aprobar_anulaciones')
-      ) {
-        return { error: 'Ese perfil no tiene permiso para aprobar anulaciones.' };
-      }
-      const ip = clientIp(await headers());
-      const check = await checkApproverPin(order.restaurant_id as string, input.approverId, input.approverPin, ip);
-      if (!check.ok) return { error: check.error };
-      approvedBy = input.approverId;
-    }
-  }
+  const approvedBy: string | null = null;
 
   if (input.itemId) {
     const qty = Math.trunc(input.quantity ?? 0);

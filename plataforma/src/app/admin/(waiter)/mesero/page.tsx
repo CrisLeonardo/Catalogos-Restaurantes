@@ -5,8 +5,6 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
-import { listVoidApprovers } from '@/lib/actions/staff-pin';
-import { can } from '@/lib/permissions';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
@@ -52,13 +50,12 @@ export default async function MeseroPage() {
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedSince, hubInfo, voidApprovers] = await Promise.all([
+  const [categoriesRes, productsRes, activeOrders, occupiedSince, hubInfo] = await Promise.all([
     db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     getWaiterActiveOrders(restaurantId, user.id),
     getActiveTableNumbers(restaurantId),
     getAgentHubInfo(restaurantId),
-    listVoidApprovers(restaurantId),
   ]);
 
   const categories = (categoriesRes.data ?? []) as Category[];
@@ -86,12 +83,6 @@ export default async function MeseroPage() {
       hubUrl={hubInfo.hubUrl}
       hubToken={hubInfo.hubToken}
       isOperatorSession={!!(await cookies()).get(OPERATOR_COOKIE)?.value}
-      voidApprovers={voidApprovers}
-      canSelfApprove={can(
-        profile?.role as string | null,
-        profile?.permissions as string[] | null,
-        'aprobar_anulaciones',
-      )}
     />
   );
 }
