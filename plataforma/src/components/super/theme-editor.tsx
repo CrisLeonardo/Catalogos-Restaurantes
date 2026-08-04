@@ -159,7 +159,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         {/* Galería integrada (prediseñadas): la misma que ve el dueño. */}
         <details open>
           <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-            Galería prediseñada ({'>'}15 estilos)
+            Galería prediseñada (7 estructuras × 22 estilos)
           </summary>
           <div style={{ paddingTop: 10 }}>
             <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedBuiltin} />

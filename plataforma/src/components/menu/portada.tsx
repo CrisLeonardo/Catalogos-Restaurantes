@@ -10,6 +10,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
+import { LAYOUT_MAX_WIDTH } from '@/lib/theme/defaults';
 
 function scrollToMenu() {
   document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -85,6 +86,11 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   const title = content.portada.title || config.brandName;
   const subtitle = content.portada.subtitle || config.tagline;
   const anim = config.animations;
+  // El lienzo ancho (tablet/escritorio/revista) pide un titular mayor; el
+  // ancho de la columna de texto sigue al del <main> para que la portada y la
+  // carta arranquen en la misma vertical.
+  const wideCanvas = config.layoutWidth !== 'movil';
+  const heroTextMax = LAYOUT_MAX_WIDTH[config.layoutWidth] ?? LAYOUT_MAX_WIDTH.movil;
 
   /* ── Spotlight ── */
   if (config.portadaVariant === 'spotlight') {
@@ -147,12 +153,14 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   if (config.portadaVariant === 'fullbleed') {
     return (
       <section
+        // `menu-bleed` la lleva hasta el borde de la VENTANA. Antes solo se
+        // salía del padding del <main>, así que en un lienzo ancho (revista) la
+        // foto "a sangre" era una franja centrada con el fondo de la página
+        // asomando a los lados: justo lo contrario de lo que promete.
+        className="menu-bleed"
         style={{
           position: 'relative', minHeight: '100svh', display: 'flex', flexDirection: 'column',
-          justifyContent: 'flex-end', overflow: 'hidden',
-          // Se sale del padding lateral del <main>: "a sangre" quiere decir
-          // hasta el borde del vidrio, no hasta el borde del contenedor.
-          margin: '0 -16px', padding: '0 0 36px',
+          justifyContent: 'flex-end', overflow: 'hidden', padding: '0 0 36px',
         }}
       >
         <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
@@ -169,19 +177,21 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.34) 46%, rgba(0,0,0,0.10) 100%)' }} />
         </div>
 
-        <div style={{ position: 'relative', padding: '0 22px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 13 }}>
+        {/* El texto sí respeta la columna de lectura: a sangre va la imagen, no
+            el titular — si no, el nombre acaba pegado al canto de la pantalla. */}
+        <div style={{ position: 'relative', width: '100%', maxWidth: heroTextMax, margin: '0 auto', padding: '0 22px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 13 }}>
           {config.portadaShowLogo && (
             <div className={anim ? 'anim-pop' : ''}><BrandMark size={74} /></div>
           )}
           <div className={anim ? 'anim-fade-up' : ''}>
             <h1
               className="t-display"
-              style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(42px, 13vw, 68px))`, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.55)' }}
+              style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(42px, 13vw, ${wideCanvas ? 96 : 68}px))`, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.55)' }}
             >
               {title}
             </h1>
             {subtitle && (
-              <p className="t-serif" style={{ ...subT.vars, fontSize: 18 * subT.size, color: 'rgba(255,255,255,0.88)', marginTop: 10, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
+              <p className="t-serif" style={{ ...subT.vars, fontSize: (wideCanvas ? 22 : 18) * subT.size, color: 'rgba(255,255,255,0.88)', marginTop: 10, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
                 {subtitle}
               </p>
             )}

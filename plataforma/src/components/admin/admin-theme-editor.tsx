@@ -15,7 +15,7 @@ import OwnerTemplates from '@/components/admin/owner-templates';
 import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/actions/restaurant';
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
-import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
+import { applyTemplateToConfig, structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
 
 /* ── Contraste WCAG (asistente de legibilidad) ─────────────
    El dueño no sabe de ratios: si elige colores que no se leen,
@@ -180,7 +180,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               appliedId={appliedTpl}
             />
             <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} aria-hidden />
-            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} />
+            {/* Abre en la estructura que el menú ya está usando: si este
+                restaurante lleva meses con la carta en acordeón, empezar en
+                "Clásico" le enseñaría 22 diseños que no son el suyo. */}
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} />
             {appliedTpl && (
               <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Icon name="checkCircle" size={16} style={{ color: 'var(--c-ok)', flexShrink: 0 }} />

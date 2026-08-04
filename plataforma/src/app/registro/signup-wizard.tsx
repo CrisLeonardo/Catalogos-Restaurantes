@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
-import { findTemplate } from '@/lib/theme/templates';
+import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { signupRestaurant, type SignupState } from '@/lib/actions/signup';
 import { defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 
@@ -150,6 +150,14 @@ export default function SignupWizard({
   const [stepError, setStepError] = useState<string | null>(null);
 
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
+
+  // El estilo elegido son dos decisiones (estructura + paleta): el resumen las
+  // nombra las dos, o el dueño no ve por ningún lado la que más cambia su menú.
+  const chosenTemplate = findTemplate(templateId);
+  const chosenStructure = chosenTemplate?.structure ? findStructure(chosenTemplate.structure) : undefined;
+  const styleSummary = chosenTemplate
+    ? [chosenStructure?.name, chosenTemplate.name].filter(Boolean).join(' · ')
+    : 'Clásico';
 
   function toggleEstandarType(id: OrderTypeOption) {
     setEstandarTypes((prev) => {
@@ -368,8 +376,9 @@ export default function SignupWizard({
       {/* ── Paso 2: Tu estilo (plantilla visual de inicio) ── */}
       <div style={{ display: step === 2 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
         <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          Elige el estilo con el que nace tu menú. Es solo el punto de partida:
-          después podrás cambiar colores, tipografías y cada detalle en «Personalizar».
+          Elige primero cómo se recorre tu carta y después con qué colores nace.
+          Es solo el punto de partida: podrás cambiar estructura, colores, tipografías
+          y cada detalle en «Personalizar».
         </p>
         <TemplateGallery mode="pick" appliedId={templateId} onApply={(tpl) => setTemplateId(tpl.id)} />
       </div>
@@ -396,7 +405,7 @@ export default function SignupWizard({
           <Summary label="Plan" value={selectedPlan === 'PREMIUM' ? `Premium · ${trialDays} días gratis, luego ${planPriceLabel(pricing, 'PREMIUM')}` : selectedPlan === 'ESTANDAR' ? `Estándar · ${estandarSummary} · ${planPriceLabel(pricing, 'ESTANDAR')} (${trialDays} días gratis)` : `Básico · ${planPriceLabel(pricing, 'BASICO')} para siempre`} />
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
-          <Summary label="Estilo" value={findTemplate(templateId)?.name ?? 'Clásico'} />
+          <Summary label="Estilo" value={styleSummary} />
           <Summary label="Tu cuenta" value={email || '—'} />
         </Glass>
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>

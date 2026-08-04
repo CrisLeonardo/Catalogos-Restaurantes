@@ -1,20 +1,31 @@
 'use client';
 
 /* Galería de plantillas prediseñadas — usada por el editor del dueño
-   (/admin/personalizacion) y el del Super Admin. Cada tarjeta es un mock
-   CSS en miniatura del menú (portada + catálogo) pintado con la paleta,
-   forma y ESTRUCTURA reales de la plantilla, para que se entienda de un
-   vistazo hasta dónde llega la personalización. Las fuentes se aproximan
-   con el stack de respaldo de cada familia (no cargamos 22 familias de
-   Google solo para miniaturas).
+   (/admin/personalizacion) y el del Super Admin.
+
+   Se elige en dos pasos, y ese es el punto: primero la ESTRUCTURA (cómo se
+   recorre la carta, qué forma tiene el platillo, cuánto ancho ocupa) y después
+   el ESTILO dentro de esa estructura. Antes había 16 estilos que compartían un
+   solo esqueleto más 6 arquetipos sueltos con un único color cada uno: quien
+   quería la estructura de "Revista" se tenía que quedar con su negro y su rojo.
+   Ahora las 22 paletas están en las 7 estructuras.
+
+   Cada tarjeta es un mock CSS en miniatura del menú (portada + catálogo)
+   pintado con la paleta, forma y estructura reales de la plantilla, para que se
+   entienda de un vistazo hasta dónde llega la personalización. Las fuentes se
+   aproximan con el stack de respaldo de cada familia (no cargamos 22 familias
+   de Google solo para miniaturas).
 
    La miniatura tiene que dibujar de verdad la navegación y la forma del
    platillo: si todas se vieran como una rejilla de tarjetas, la galería
-   mentiría justo sobre lo único que distingue a las plantillas nuevas. */
+   mentiría justo sobre lo único que distingue a las estructuras. */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon } from '@/components/icons';
-import { BUILTIN_TEMPLATES, type BuiltinTemplate } from '@/lib/theme/templates';
+import {
+  MENU_STRUCTURES, templatesForStructure,
+  type BuiltinTemplate, type StructureId,
+} from '@/lib/theme/templates';
 import { DEFAULT_CONFIG, findFont, type ThemeConfig } from '@/lib/theme/defaults';
 
 function rgbaOf(hex: string, a: number): string {
@@ -47,6 +58,13 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
   const tileBg = light ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.07)';
   const text2 = rgbaOf(c.colorText, 0.62);
   const r = (px: number) => Math.round(px * c.cornerRadius);
+
+  /* El lienzo del menú también se dibuja: una estructura de página ancha en una
+     miniatura vertical de teléfono no se distingue de una de móvil, que es
+     justo lo que el dueño está eligiendo aquí. */
+  const canvas = c.layoutWidth ?? 'movil';
+  const wide = canvas !== 'movil';
+  const ratio = canvas === 'revista' ? '10 / 10' : canvas === 'ancho' ? '10 / 11' : '10 / 13';
 
   const bg =
     c.backgroundType === 'gradient' && c.backgroundGradient
@@ -99,44 +117,73 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
     </div>
   );
 
+  // Destacado: la pieza de ancho completo que abre la sección.
+  const featured = () => (
+    <div style={{ position: 'relative', height: wide ? 15 : 24, borderRadius: r(8), overflow: 'hidden', border: `1px solid ${hair}`, background: `linear-gradient(135deg, ${rgbaOf(c.colorAccent, 0.5)}, ${rgbaOf(c.colorAccent, 0.14)})` }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 76%)' }} />
+      <div style={{ position: 'absolute', left: 4, top: 3, padding: '1px 4px', borderRadius: 99, fontSize: 4, fontWeight: 800, background: c.colorAccent, color: c.onAccent }}>FAV</div>
+      <div style={{ position: 'absolute', left: 4, bottom: 3, height: 3.5, width: '44%', borderRadius: 2, background: 'rgba(255,255,255,0.9)' }} />
+    </div>
+  );
+
   const items = () => {
     if (c.cardStyle === 'texto') {
+      const lines = [1, 0.78, 0.62, 0.88, 0.7, 0.94];
+      // A dos columnas solo en la página de revista: es lo que hace el menú de
+      // verdad, y la miniatura no puede prometer una composición que no sale.
+      const twoCol = canvas === 'revista';
       return (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {[1, 0.78, 0.62, 0.88].map((w, i) => <div key={i}>{textLine(w)}</div>)}
+        <div style={{ columnCount: twoCol ? 2 : 1, columnGap: 8 }}>
+          {lines.slice(0, twoCol ? 6 : wide ? 3 : 4).map((w, i) => (
+            <div key={i} style={{ breakInside: 'avoid' }}>{textLine(w)}</div>
+          ))}
         </div>
       );
     }
     if (c.cardStyle === 'fila') {
+      const rows = wide ? [0.9, 0.7, 0.8, 0.75] : [0.9, 0.7, 0.8];
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {[0.9, 0.7, 0.8].map((w, i) => <div key={i}>{row(w)}</div>)}
+        <div style={{ display: 'grid', gridTemplateColumns: wide ? '1fr 1fr' : '1fr', gap: 4 }}>
+          {rows.map((w, i) => <div key={i}>{row(w)}</div>)}
         </div>
       );
     }
     if (c.cardStyle === 'carrusel') {
       // La última pieza se corta a propósito: eso es lo que dice "esto se desliza".
+      const widths = wide ? [30, 30, 30, 30, 16] : [30, 30, 30, 16];
       return (
         <div style={{ display: 'flex', gap: 4, overflow: 'hidden' }}>
-          {[30, 30, 30, 16].map((w, i) => (
-            <div key={i} style={{ width: w, flexShrink: 0, opacity: i === 3 ? 0.5 : 1 }}>{tile(18)}</div>
+          {widths.map((w, i) => (
+            <div key={i} style={{ width: w, flexShrink: 0, opacity: i === widths.length - 1 ? 0.5 : 1 }}>{tile(18)}</div>
           ))}
         </div>
       );
     }
     if (c.cardStyle === 'mosaico') {
+      /* Mosaico real: el destacado abre a todo lo ancho y debajo van columnas
+         de alturas distintas. Dibujarlo como una rejilla pareja escondería
+         exactamente lo que hace distinta a esta estructura. */
+      const cols = wide ? [[12, 8], [9, 10], [10, 8]] : [[20, 12], [13, 18]];
       return (
-        <div style={{ columnCount: 2, columnGap: 4 }}>
-          {[22, 13, 16, 11].map((h, i) => (
-            <div key={i} style={{ breakInside: 'avoid', marginBottom: 4 }}>{tile(h)}</div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {c.featuredFavorites && featured()}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols.length}, 1fr)`, gap: 4, alignItems: 'start' }}>
+            {cols.map((col, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {col.map((h, j) => <div key={j}>{tile(h)}</div>)}
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
-    const cols = c.catalogColumns === 3 ? 3 : 2;
+    const cols = wide ? 3 : c.catalogColumns === 3 ? 3 : 2;
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4 }}>
-        {Array.from({ length: cols }, (_, i) => <div key={i}>{tile(cols === 3 ? 16 : 22)}</div>)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {c.featuredFavorites && featured()}
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4 }}>
+          {Array.from({ length: wide ? cols * 2 : cols }, (_, i) => <div key={i}>{tile(cols === 3 ? 16 : 22)}</div>)}
+        </div>
       </div>
     );
   };
@@ -156,7 +203,7 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
 
   const sectionHead = (label: string, dim = false) => (
     <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 2, borderBottom: `1px solid ${hair}`, marginBottom: 3 }}>
-      <div style={{ fontSize: 6.5, color: dim ? text2 : c.colorText, textTransform: 'uppercase', ...approxFont(c.fontPoster, true) }}>{label}</div>
+      <div style={{ fontSize: wide ? 8 : 6.5, color: dim ? text2 : c.colorText, textTransform: 'uppercase', ...approxFont(c.fontPoster, true) }}>{label}</div>
     </div>
   );
 
@@ -170,8 +217,8 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
   const catalogBody = () => {
     if (c.catalogNav === 'portadas') {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {['Tacos', 'Bebidas'].map((t) => (
+        <div style={{ display: 'grid', gridTemplateColumns: wide ? '1fr 1fr' : '1fr', gap: 4 }}>
+          {(wide ? ['Tacos', 'Bebidas', 'Postres', 'Extras'] : ['Tacos', 'Bebidas']).map((t) => (
             <div key={t} style={{ position: 'relative', height: 26, borderRadius: r(8), overflow: 'hidden', border: `1px solid ${hair}`, background: `linear-gradient(135deg, ${rgbaOf(c.colorAccent, 0.42)}, ${rgbaOf(c.colorAccent, 0.12)})` }}>
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.58), transparent 72%)' }} />
               <div style={{ position: 'absolute', left: 5, bottom: 3, fontSize: 7.5, color: '#fff', ...approxFont(c.fontPoster, true) }}>{t}</div>
@@ -191,11 +238,18 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
       );
     }
     if (c.catalogNav === 'secciones') {
+      /* La segunda sección: entera cuando la pieza es baja (una repisa que se
+         desliza), y solo asomando su rótulo cuando no cabe. En lienzo ancho ni
+         se asoma: el mock se pasaba de alto y la miniatura recortaba una
+         tarjeta por la mitad. */
+      const secondFull = c.cardStyle === 'carrusel';
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {chipRow(true)}
           <div>{sectionHead('Tacos')}{items()}</div>
-          <div>{sectionHead('Bebidas', true)}</div>
+          {secondFull
+            ? <div>{sectionHead('Bebidas')}{items()}</div>
+            : !wide && <div>{sectionHead('Bebidas', true)}</div>}
         </div>
       );
     }
@@ -214,7 +268,11 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
     <div
       aria-hidden
       style={{
-        position: 'relative', width: '100%', aspectRatio: '10 / 13', overflow: 'hidden',
+        /* La proporción dice de un vistazo qué lienzo es: alta = teléfono,
+           cuadrada = página ancha o de revista. El mock que va dentro está
+           dibujado en píxeles fijos, así que por debajo de ~183 px de ancho
+           dejaría de caber — de ahí el mínimo de la rejilla de la galería. */
+        position: 'relative', width: '100%', aspectRatio: ratio, overflow: 'hidden',
         borderRadius: 12, border: `1px solid ${hair}`, background: bg,
         display: 'flex', flexDirection: 'column', gap: 6, padding: 8,
       }}
@@ -254,21 +312,21 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
         </div>
       )}
       {c.portadaVariant === 'fullbleed' && (
-        <div style={{ position: 'relative', height: 82, margin: '-8px -8px 0', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: wide ? 35 : 82, margin: '-8px -8px 0', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(130% 80% at 50% 18%, ${rgbaOf(c.colorAccent, 0.62)}, transparent 68%), linear-gradient(180deg, ${c.colorBg2}, ${c.colorBg})` }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0.16) 58%, transparent)' }} />
-          <div style={{ position: 'absolute', left: 8, right: 8, bottom: 6 }}>
-            <div style={{ fontSize: 15, lineHeight: 0.95, color: '#fff', ...approxFont(c.fontDisplay, true) }}>Tu Resto</div>
-            <div style={{ ...cta(), width: '72%', margin: '5px 0 0' }}>Ver el menú</div>
+          <div style={{ position: 'absolute', left: 8, right: 8, bottom: wide ? 4 : 6 }}>
+            <div style={{ fontSize: wide ? 12 : 15, lineHeight: 0.95, color: '#fff', ...approxFont(c.fontDisplay, true) }}>Tu Resto</div>
+            <div style={{ ...cta(), width: wide ? '40%' : '48%', margin: wide ? '3px 0 0' : '5px 0 0' }}>Ver el menú</div>
           </div>
         </div>
       )}
       {c.portadaVariant === 'ticket' && (
-        <div style={{ width: '80%', margin: '3px auto 0', background: tileBg, border: `1px solid ${hair}`, borderRadius: 2, padding: '7px 8px', textAlign: 'center', position: 'relative' }}>
+        <div style={{ width: wide ? '58%' : '80%', margin: wide ? '1px auto 0' : '3px auto 0', background: tileBg, border: `1px solid ${hair}`, borderRadius: 2, padding: wide ? '5px 7px' : '7px 8px', textAlign: 'center', position: 'relative' }}>
           <div style={{ fontSize: 4.5, letterSpacing: '0.2em', color: text2, textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace' }}>EST · 2024</div>
-          <div style={{ borderTop: `1px dashed ${rgbaOf(c.colorText, 0.3)}`, margin: '5px 0' }} />
+          <div style={{ borderTop: `1px dashed ${rgbaOf(c.colorText, 0.3)}`, margin: wide ? '3px 0' : '5px 0' }} />
           <div style={{ fontSize: 10.5, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>Tu Resto</div>
-          <div style={{ borderTop: `1px dashed ${rgbaOf(c.colorText, 0.3)}`, margin: '5px 0' }} />
+          <div style={{ borderTop: `1px dashed ${rgbaOf(c.colorText, 0.3)}`, margin: wide ? '3px 0' : '5px 0' }} />
           <div style={{ ...cta(), width: '90%' }}>Ver el menú</div>
         </div>
       )}
@@ -291,21 +349,60 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
   );
 }
 
+/* ── Glifos de estructura ────────────────────────────────────
+   El nombre solo ("Estantes", "Compacto") no dice nada la primera vez. Cada
+   glifo dibuja el esqueleto en cuatro trazos: es lo que hace que el filtro se
+   entienda sin tener que ir abriéndolos uno por uno. */
+function StructureGlyph({ id }: { id: StructureId }) {
+  const s = { width: 18, height: 18, flexShrink: 0 };
+  const bar = (x: number, y: number, w: number, h: number, o = 1, rx = 1) => (
+    <rect key={`${x}-${y}-${w}`} x={x} y={y} width={w} height={h} rx={rx} fill="currentColor" opacity={o} />
+  );
+  const paths: Record<StructureId, React.ReactNode> = {
+    clasico: <>{bar(2, 2, 14, 4, 0.35, 1.4)}{bar(2, 8, 6.5, 8, 1, 1.4)}{bar(9.5, 8, 6.5, 8, 1, 1.4)}</>,
+    carta: <>{bar(2, 3, 9, 1.6, 1)}{bar(13, 3, 3, 1.6, 0.55)}{bar(2, 8, 7, 1.6, 1)}{bar(13, 8, 3, 1.6, 0.55)}{bar(2, 13, 8, 1.6, 1)}{bar(13, 13, 3, 1.6, 0.55)}</>,
+    revista: <>{bar(2, 2, 14, 4, 1, 1.4)}{bar(2, 8, 4, 8, 0.6, 1.2)}{bar(7, 8, 4, 5.5, 0.6, 1.2)}{bar(12, 8, 4, 7, 0.6, 1.2)}</>,
+    kiosco: <>{bar(2, 2.5, 14, 6, 1, 1.6)}{bar(2, 10.5, 14, 5.5, 0.45, 1.6)}</>,
+    estantes: <>{bar(2, 3, 3, 5, 0.5, 1.2)}{bar(2, 11, 3, 5, 0.5, 1.2)}{bar(6, 3, 5.5, 5, 1, 1.2)}{bar(6, 11, 5.5, 5, 1, 1.2)}{bar(12.5, 3, 5.5, 5, 0.5, 1.2)}{bar(12.5, 11, 5.5, 5, 0.5, 1.2)}</>,
+    pizarra: <>{bar(2, 2, 14, 3, 1, 1.2)}{bar(3.5, 6.5, 8, 1.4, 0.55)}{bar(3.5, 9.5, 6, 1.4, 0.55)}{bar(2, 13, 14, 3, 0.45, 1.2)}</>,
+    compacto: <>{bar(2, 2, 14, 3, 1, 1.2)}{bar(2, 6.5, 14, 2.4, 0.5, 1)}{bar(2, 10, 14, 2.4, 0.5, 1)}{bar(2, 13.5, 14, 2.4, 0.5, 1)}</>,
+  };
+  return <svg viewBox="0 0 18 18" style={s} aria-hidden>{paths[id]}</svg>;
+}
+
 /* ── Galería ────────────────────────────────────────────────── */
 
-type Filter = 'Todas' | 'Estructura' | 'Oscuro' | 'Claro';
+type Mode = 'Todas' | 'Oscuro' | 'Claro';
 
-const FILTER_LABEL: Record<Filter, string> = {
-  Todas: 'Todas',
-  Estructura: 'Otra estructura',
-  Oscuro: 'Oscuras',
-  Claro: 'Claras',
-};
+const MODE_LABEL: Record<Mode, string> = { Todas: 'Todos los tonos', Oscuro: 'Oscuros', Claro: 'Claros' };
+
+function Chip({ on, onClick, title, children }: { on: boolean; onClick: () => void; title?: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={on}
+      className="press"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 7,
+        padding: '7px 13px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
+        background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+        color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)',
+        transition: 'background 150ms, color 150ms',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function TemplateGallery({
   onApply,
   appliedId,
   mode = 'apply',
+  initialStructure = 'clasico',
 }: {
   /** Se llama con la plantilla elegida; el editor hace el merge y avisa. */
   onApply: (tpl: BuiltinTemplate) => void;
@@ -313,93 +410,105 @@ export default function TemplateGallery({
   appliedId?: string | null;
   /** 'apply' = editor de tema (Aplicada) · 'pick' = registro (Elegida). */
   mode?: 'apply' | 'pick';
+  /** Estructura con la que abre la galería (la que el menú ya usa). */
+  initialStructure?: StructureId;
 }) {
-  const [filter, setFilter] = useState<Filter>('Todas');
-  // "Otra estructura" es el filtro que de verdad hacía falta: con 22 plantillas,
-  // buscar las que cambian el esqueleto abriendo paletas una por una no es viable.
-  const shown = BUILTIN_TEMPLATES.filter((t) =>
-    filter === 'Todas' ? true : filter === 'Estructura' ? t.structural === true : t.mode === filter,
-  );
+  const [structureId, setStructureId] = useState<StructureId>(initialStructure);
+  const [tone, setTone] = useState<Mode>('Todas');
+
+  const structure = MENU_STRUCTURES.find((s) => s.id === structureId) ?? MENU_STRUCTURES[0];
+  const all = useMemo(() => templatesForStructure(structure.id), [structure.id]);
+  const shown = tone === 'Todas' ? all : all.filter((t) => t.mode === tone);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {(['Todas', 'Estructura', 'Oscuro', 'Claro'] as const).map((f) => {
-          const on = filter === f;
-          return (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFilter(f)}
-              className="press"
-              style={{
-                padding: '6px 13px', borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-                color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)',
-              }}
-            >
-              {FILTER_LABEL[f]}
-            </button>
-          );
-        })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      {/* ── Paso 1 · la estructura ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>1 · La estructura</span>
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>cómo se recorre tu carta</span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {MENU_STRUCTURES.map((s) => (
+            <Chip key={s.id} on={s.id === structureId} onClick={() => setStructureId(s.id)} title={s.desc}>
+              <StructureGlyph id={s.id} />
+              {s.name}
+            </Chip>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: 0 }}>
+          <strong style={{ color: 'var(--u-text-2)' }}>{structure.desc}</strong>{' '}
+          <span style={{ color: 'var(--u-text-4)' }}>{structure.hint}</span>
+        </p>
       </div>
 
-      {filter === 'Estructura' && (
-        <p style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>
-          Estas no cambian solo el color: cambian cómo se recorre la carta, qué forma tiene cada
-          platillo y cuánto ancho ocupa la página. Puedes aplicar una y luego repintarla con tus
-          colores.
-        </p>
-      )}
+      {/* ── Paso 2 · el estilo ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>2 · El estilo</span>
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+            {shown.length} paletas con la estructura «{structure.name}»
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {(['Todas', 'Oscuro', 'Claro'] as const).map((m) => (
+            <Chip key={m} on={tone === m} onClick={() => setTone(m)}>{MODE_LABEL[m]}</Chip>
+          ))}
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>
-        {shown.map((tpl) => {
-          const applied = appliedId === tpl.id;
-          return (
-            <button
-              key={tpl.id}
-              type="button"
-              onClick={() => onApply(tpl)}
-              className="press"
-              title={mode === 'pick'
-                ? `Empezar con el estilo "${tpl.name}" (podrás personalizarlo después)`
-                : `Aplicar "${tpl.name}" (tu logo, textos y configuración de pedidos se conservan)`}
-              style={{
-                display: 'flex', flexDirection: 'column', gap: 7, textAlign: 'left',
-                padding: 7, borderRadius: 15, cursor: 'pointer',
-                border: `1.5px solid ${applied ? 'var(--brand-accent, #D97757)' : 'var(--u-hair)'}`,
-                background: applied
-                  ? 'color-mix(in srgb, var(--brand-accent, #D97757) 8%, transparent)'
-                  : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-                transition: 'border-color 150ms, background 150ms',
-              }}
-            >
-              <Thumb tpl={tpl} />
-              <div style={{ padding: '0 3px 3px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0 }}>{tpl.name}</span>
-                  {applied ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--brand-accent-ink, #D97757)', flexShrink: 0 }}>
-                      <Icon name="checkCircle" size={11} /> {mode === 'pick' ? 'Elegida' : 'Aplicada'}
-                    </span>
-                  ) : (
-                    <span
-                      style={{
-                        fontSize: 9.5, fontWeight: 700, borderRadius: 99, padding: '1.5px 7px', flexShrink: 0,
-                        color: tpl.structural ? 'var(--brand-accent-ink, #D97757)' : 'var(--u-text-4)',
-                        border: `1px solid ${tpl.structural ? 'color-mix(in srgb, var(--brand-accent, #D97757) 45%, transparent)' : 'var(--u-hair)'}`,
-                      }}
-                    >
-                      {tpl.structural ? 'Estructura' : tpl.mode}
-                    </span>
-                  )}
+        {/* 190 px de ancho mínimo por tarjeta y no 148: descontando el padding
+            del botón deja la miniatura en 176 px, que es el ancho a partir del
+            cual el mock (dibujado en píxeles fijos) cabe entero. Con 148, en
+            una columna de ancho intermedio salían tres tarjetas por fila y la
+            miniatura recortaba la última fila de platillos contra el borde. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
+          {shown.map((tpl) => {
+            const applied = appliedId === tpl.id;
+            return (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => onApply(tpl)}
+                className="press"
+                title={mode === 'pick'
+                  ? `Empezar con «${tpl.name}» en estructura ${structure.name} (podrás personalizarlo después)`
+                  : `Aplicar «${tpl.name}» en estructura ${structure.name} (tu logo, textos y configuración de pedidos se conservan)`}
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: 7, textAlign: 'left',
+                  padding: 7, borderRadius: 15, cursor: 'pointer',
+                  border: `1.5px solid ${applied ? 'var(--brand-accent, #D97757)' : 'var(--u-hair)'}`,
+                  background: applied
+                    ? 'color-mix(in srgb, var(--brand-accent, #D97757) 8%, transparent)'
+                    : 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+                  transition: 'border-color 150ms, background 150ms',
+                }}
+              >
+                <Thumb tpl={tpl} />
+                <div style={{ padding: '0 3px 3px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0 }}>{tpl.name}</span>
+                    {applied ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--brand-accent-ink, #D97757)', flexShrink: 0 }}>
+                        <Icon name="checkCircle" size={11} /> {mode === 'pick' ? 'Elegida' : 'Aplicada'}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: 9.5, fontWeight: 700, borderRadius: 99, padding: '1.5px 7px', flexShrink: 0,
+                          color: 'var(--u-text-4)', border: '1px solid var(--u-hair)',
+                        }}
+                      >
+                        {tpl.mode}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.4, marginTop: 3 }}>{tpl.desc}</p>
                 </div>
-                <p style={{ fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.4, marginTop: 3 }}>{tpl.desc}</p>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

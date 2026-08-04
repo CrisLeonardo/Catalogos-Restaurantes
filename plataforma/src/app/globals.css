@@ -1312,6 +1312,12 @@ html[data-scheme="light"] .btn-white {
    (no crea contenedor de scroll, solo recorta). */
 html { overflow-x: clip; }
 
+/* Sección del MENÚ del comensal que rompe el max-width del <main> y llega
+   hasta el borde de la ventana: la portada a sangre y el índice pegajoso de
+   secciones. Sin esto, en tablet y escritorio la portada "a sangre" era una
+   franja centrada con el fondo de la página asomando a los lados. */
+.menu-bleed { width: 100vw; max-width: 100vw; margin-left: calc(50% - 50vw); }
+
 /* Sección que rompe el max-width del layout (centrado de 800px) */
 .bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
 .bleed-inner { max-width: 1240px; margin: 0 auto; }

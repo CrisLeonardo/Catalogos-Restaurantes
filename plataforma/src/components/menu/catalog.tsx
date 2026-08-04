@@ -18,14 +18,14 @@
    cambiaban de ropa, no de cuerpo. */
 
 import Image from 'next/image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
-import { LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { LAYOUT_MAX_WIDTH, LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
@@ -95,6 +95,54 @@ function supportsFeatured(card: CardStyle): boolean {
   return card === 'tarjeta' || card === 'fila' || card === 'mosaico';
 }
 
+/* ── Lienzo EFECTIVO ──────────────────────────────────────────
+   `layoutWidth` dice hasta dónde PUEDE crecer la página, no cuánta pantalla
+   hay. El menú se abre casi siempre desde el QR de la mesa, o sea en un
+   teléfono: ahí una plantilla de "revista" tiene 343 px reales, y decidir la
+   maqueta solo con la config daba resultados absurdos — un mosaico de tres
+   columnas de 106 px con los nombres cortados, y una tarjeta destacada de
+   proporción 3.1 que, al chocar contra su alto mínimo, se estiraba a 645 px de
+   ancho y se salía de la pantalla.
+
+   El máximo lo pone la plantilla; el mínimo, la pantalla. */
+const CANVAS_ORDER: LayoutWidth[] = ['movil', 'ancho', 'revista'];
+
+/** Ancho de ventana a partir del cual cada lienzo tiene sentido de verdad. */
+const CANVAS_MIN_VW: Record<LayoutWidth, number> = { movil: 0, ancho: 620, revista: 1000 };
+
+function useEffectiveWidth(configured: LayoutWidth): LayoutWidth {
+  const queries = useMemo(
+    () =>
+      CANVAS_ORDER.filter((w) => CANVAS_MIN_VW[w] > 0).map((w) => ({
+        w,
+        mq: typeof window === 'undefined' ? null : window.matchMedia(`(min-width: ${CANVAS_MIN_VW[w]}px)`),
+      })),
+    [],
+  );
+
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const offs = queries.map(({ mq }) => {
+        mq?.addEventListener('change', onChange);
+        return () => mq?.removeEventListener('change', onChange);
+      });
+      return () => offs.forEach((off) => off());
+    },
+    [queries],
+  );
+
+  const get = useCallback(() => {
+    let allowed: LayoutWidth = 'movil';
+    for (const { w, mq } of queries) if (mq?.matches) allowed = w;
+    const i = Math.min(CANVAS_ORDER.indexOf(configured), CANVAS_ORDER.indexOf(allowed));
+    return CANVAS_ORDER[i < 0 ? 0 : i];
+  }, [queries, configured]);
+
+  // En el servidor no hay pantalla que medir: se asume teléfono. Es de donde
+  // entra casi todo el mundo y, además, el único caso que nunca desborda.
+  return useSyncExternalStore(subscribe, get, () => 'movil' as LayoutWidth);
+}
+
 /** Reloj que avanza cada `ms` para reevaluar los menús por franja sin recargar. */
 function useNowTick(ms: number): Date {
   const [now, setNow] = useState(() => new Date());
@@ -156,7 +204,8 @@ export default function Catalog({
 
   const nav = config.catalogNav ?? 'chips';
   const card = config.cardStyle ?? 'tarjeta';
-  const width = config.layoutWidth ?? 'movil';
+  const canvas = config.layoutWidth ?? 'movil';
+  const width = useEffectiveWidth(canvas);
 
   /** Traducción con fallback automático al español (ver lib/locale). */
   const localize = (base: string, translated?: string | null) =>
@@ -287,6 +336,36 @@ export default function Catalog({
 
   const kicker = content.catalog.kicker || [config.brandName, config.zone].filter(Boolean).join(' · ');
 
+  /* En tablet/escritorio el buscador sube a la misma línea del título: un campo
+     de 1.000 px de ancho bajo el encabezado es lo que delata a un menú pensado
+     solo para el teléfono y estirado a la fuerza. */
+  const wide = width !== 'movil';
+
+  const searchBox = config.showSearch ? (
+    <div style={{ position: 'relative', width: '100%', maxWidth: wide ? 320 : undefined }}>
+      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
+        <Icon name="search" size={17} />
+      </span>
+      {/* Dos cosas aquí:
+         · El marcador de posición no es una etiqueta: desaparece al
+           escribir y no lo anuncia ninguna lectura asistida.
+         · fontSize 16 no es capricho. Safari en iPhone hace zoom
+           automático al enfocar un campo con letra menor de 16px, y el
+           menú se quedaba ampliado y descuadrado en cuanto el comensal
+           tocaba el buscador. */}
+      <label htmlFor="menu-buscar" className="sr-only">Buscar en el menú</label>
+      <input
+        id="menu-buscar"
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={content.catalog.searchPlaceholder}
+        className="glass-quiet ct-body"
+        style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 16, outline: 'none', background: 'var(--surface-2)' }}
+      />
+    </div>
+  ) : null;
+
   // Ids que se dibujan como tarjeta destacada (primeros N favoritos disponibles
   // de toda la vista, no por sección: "destacado" debe seguir siendo escaso).
   const featuredIds = new Set<string>();
@@ -308,62 +387,44 @@ export default function Catalog({
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-        <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
           <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
-          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, 44px))`, marginTop: 2 }}>
+          {/* El titular crece con el lienzo: 44 px que mandan en un teléfono se
+              quedan cortos en una página de revista de 1.120 px. */}
+          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
             {content.catalog.heading}
           </h2>
         </div>
-        {available.length > 1 && (
-          <div className="glass-quiet" style={{ display: 'inline-flex', padding: 3, borderRadius: 999, flexShrink: 0, marginTop: 4 }}>
-            {available.map((l) => (
-              <button
-                key={l}
-                onClick={() => setLocale(l)}
-                className="press"
-                aria-pressed={locale === l}
-                // "ES"/"EN" a secas no dice nada a quien no ve el contexto.
-                aria-label={l === 'en' ? 'Ver el menú en inglés' : 'Ver el menú en español'}
-                style={{
-                  padding: '8px 14px', minHeight: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
-                  fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
-                  background: locale === l ? 'var(--u-text)' : 'transparent',
-                  color: locale === l ? 'var(--brand-bg)' : 'var(--u-text-3)',
-                }}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flex: wide ? '1 1 260px' : '0 0 auto' }}>
+          {wide && searchBox}
+          {available.length > 1 && (
+            <div className="glass-quiet" style={{ display: 'inline-flex', padding: 3, borderRadius: 999, flexShrink: 0 }}>
+              {available.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className="press"
+                  aria-pressed={locale === l}
+                  // "ES"/"EN" a secas no dice nada a quien no ve el contexto.
+                  aria-label={l === 'en' ? 'Ver el menú en inglés' : 'Ver el menú en español'}
+                  style={{
+                    padding: '8px 14px', minHeight: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
+                    fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
+                    background: locale === l ? 'var(--u-text)' : 'transparent',
+                    color: locale === l ? 'var(--brand-bg)' : 'var(--u-text-3)',
+                  }}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Búsqueda */}
-      {config.showSearch && (
-        <div style={{ position: 'relative', marginTop: 14 }}>
-          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-3)' }}>
-            <Icon name="search" size={17} />
-          </span>
-          {/* Dos cosas aquí:
-             · El marcador de posición no es una etiqueta: desaparece al
-               escribir y no lo anuncia ninguna lectura asistida.
-             · fontSize 16 no es capricho. Safari en iPhone hace zoom
-               automático al enfocar un campo con letra menor de 16px, y el
-               menú se quedaba ampliado y descuadrado en cuanto el comensal
-               tocaba el buscador. */}
-          <label htmlFor="menu-buscar" className="sr-only">Buscar en el menú</label>
-          <input
-            id="menu-buscar"
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={content.catalog.searchPlaceholder}
-            className="glass-quiet ct-body"
-            style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 16, outline: 'none', background: 'var(--surface-2)' }}
-          />
-        </div>
-      )}
+      {/* Búsqueda (en lienzos anchos ya viaja en el encabezado) */}
+      {!wide && searchBox && <div style={{ marginTop: 14 }}>{searchBox}</div>}
 
       {/* ── Navegación de la carta ── */}
 
@@ -384,29 +445,39 @@ export default function Catalog({
         </div>
       )}
 
-      {/* Índice pegajoso: la carta se lee de corrido y este se queda arriba. */}
+      {/* Índice pegajoso: la carta se lee de corrido y este se queda arriba.
+          El velo difuminado se sale hasta el borde de la ventana (menu-bleed):
+          quedándose en el ancho del <main>, en tablet y escritorio se veía una
+          barra flotando con el contenido pasando descubierto por los costados. */}
       {nav === 'secciones' && !searching && groups.length > 1 && (
         <div
-          className="u-noscroll"
+          className="menu-bleed"
           style={{
-            position: 'sticky', top: 0, zIndex: 5, display: 'flex', gap: 8, overflowX: 'auto',
-            // Se sale del padding del <main> para que el velo difuminado cubra
-            // el ancho completo y las píldoras no se corten contra el borde.
-            padding: '12px 16px 10px', margin: '4px -16px 0',
+            position: 'sticky', top: 0, zIndex: 5, marginTop: 4,
             background: 'color-mix(in srgb, var(--brand-bg) 88%, transparent)',
             backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            borderBottom: '1px solid var(--u-hair)',
           }}
         >
-          {groups.map((g) => (
-            <CategoryChip
-              key={g.key}
-              label={localize(g.cat?.name ?? '', g.cat?.name_en)}
-              icon={config.showCategoryIcons ? catIcon.get(g.key) : undefined}
-              active={spySection === g.key}
-              unavailable={g.locked}
-              onClick={() => goToSection(g.key)}
-            />
-          ))}
+          <div
+            className="u-noscroll"
+            style={{
+              display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px 10px',
+              // Se alinea con el <main>, que usa el lienzo CONFIGURADO.
+              maxWidth: LAYOUT_MAX_WIDTH[canvas] ?? LAYOUT_MAX_WIDTH.movil, margin: '0 auto',
+            }}
+          >
+            {groups.map((g) => (
+              <CategoryChip
+                key={g.key}
+                label={localize(g.cat?.name ?? '', g.cat?.name_en)}
+                icon={config.showCategoryIcons ? catIcon.get(g.key) : undefined}
+                active={spySection === g.key}
+                unavailable={g.locked}
+                onClick={() => goToSection(g.key)}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -465,7 +536,7 @@ export default function Catalog({
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: nav === 'acordeon' ? 8 : 26, marginTop: groupByCategory ? 16 : 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: nav === 'acordeon' ? 8 : width === 'revista' ? 44 : width === 'ancho' ? 34 : 26, marginTop: groupByCategory ? 16 : 0 }}>
           {groups.map((g) => {
             const headed = groupByCategory && g.cat !== null;
             const collapsed = nav === 'acordeon' && openCatId !== g.key;
@@ -487,6 +558,7 @@ export default function Catalog({
                     locked={g.locked}
                     collapsible={nav === 'acordeon'}
                     open={!collapsed}
+                    width={width}
                     onToggle={() => setOpenCat(collapsed ? g.key : null)}
                   />
                 )}
@@ -585,12 +657,16 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   });
 
   if (card === 'texto') {
-    // Carta impresa: sin una sola imagen. El contraste entre nombre y precio lo
-    // hace la línea de puntos, no una foto.
+    /* Carta impresa: sin una sola imagen. El contraste entre nombre y precio lo
+       hace la línea de puntos, no una foto.
+       En una página de revista se parte en dos columnas: una sola línea de
+       puntos de 1.100 px separa tanto el nombre del precio que deja de leerse
+       como un par — y así es como se compone una carta impresa de verdad. */
+    const cols = width === 'revista' ? 2 : 1;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+      <div style={{ columnCount: cols, columnGap: 54, marginTop: 4 }}>
         {items.map((p, i) => (
-          <div key={p.id} {...fade(i)}>
+          <div key={p.id} {...fade(i)} style={{ ...fade(i).style, breakInside: 'avoid' }}>
             <TextRow {...common(p)} />
           </div>
         ))}
@@ -599,7 +675,7 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   }
 
   if (card === 'carrusel') {
-    const tileW = width === 'revista' ? 196 : width === 'ancho' ? 176 : 148;
+    const tileW = width === 'revista' ? 232 : width === 'ancho' ? 204 : 152;
     return (
       <div
         className="u-noscroll"
@@ -620,28 +696,62 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   }
 
   if (card === 'mosaico') {
-    // Multi-columna real: las piezas tienen alturas distintas y encajan como
-    // una revista. `breakInside: avoid` impide que una tarjeta se parta.
-    const n = width === 'revista' ? 4 : width === 'ancho' ? 3 : config.catalogColumns;
+    const lead = items.filter((p) => featuredIds.has(p.id));
+    const rest = items.filter((p) => !featuredIds.has(p.id));
+    /* Tres columnas en la página de revista, no cuatro: a 263 px la pieza se
+       parecía más a un tablero de recortes que a una doble página, y con
+       secciones de 4-7 platillos el reparto quedaba mucho más desigual (una
+       columna con dos piezas junto a otra con una salta a la vista).
+       Y nunca más columnas que piezas: una sección de tres platillos en una
+       rejilla de cuatro dejaba una columna entera en blanco a la derecha. */
+    const base = width === 'revista' ? 3 : width === 'ancho' ? 2 : config.catalogColumns;
+    const n = Math.max(2, Math.min(base, rest.length || 1));
+    const columns = packColumns(rest, n);
     return (
-      <div style={{ columnCount: n, columnGap: 12, marginTop: 12 }}>
-        {items.map((p, i) => (
-          <div key={p.id} {...fade(i)} style={{ ...fade(i).style, breakInside: 'avoid', marginBottom: 12 }}>
-            {featuredIds.has(p.id) ? <FeaturedTile {...common(p)} /> : <MosaicTile {...common(p)} />}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+        {/* El destacado abre la sección a todo lo ancho, como la foto de
+            apertura de un reportaje. Metido dentro de una columna medía lo
+            mismo que las demás y su rótulo "FAVORITO" se montaba encima del
+            nombre del platillo. */}
+        {lead.map((p, i) => (
+          <div key={p.id} {...fade(i)}>
+            <FeaturedTile {...common(p)} width={width} />
           </div>
         ))}
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gap: 12, alignItems: 'start' }}>
+          {columns.map((col, ci) => (
+            <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {col.map(({ p, i }) => (
+                <div key={p.id} {...fade(i)}>
+                  <MosaicTile {...common(p)} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (card === 'fila') {
+    /* Una fila por platillo en el teléfono; en pantallas anchas se reparten en
+       dos o tres para que la miniatura de 74 px no quede flotando al principio
+       de una línea de un metro. */
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
-        {items.map((p, i) => (
-          <div key={p.id} {...fade(i)}>
-            {featuredIds.has(p.id) ? <FeaturedTile {...common(p)} /> : <ProductRow {...common(p)} />}
-          </div>
-        ))}
+      <div
+        style={{
+          display: 'grid', gap: 10, marginTop: 12,
+          gridTemplateColumns: wide ? `repeat(auto-fill, minmax(${width === 'revista' ? 330 : 340}px, 1fr))` : '1fr',
+        }}
+      >
+        {items.map((p, i) => {
+          const featured = featuredIds.has(p.id);
+          return (
+            <div key={p.id} {...fade(i)} style={{ ...fade(i).style, gridColumn: featured && wide ? '1 / -1' : undefined }}>
+              {featured ? <FeaturedTile {...common(p)} width={width} /> : <ProductRow {...common(p)} />}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -652,12 +762,37 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
         const featured = featuredIds.has(p.id);
         return (
           <div key={p.id} {...fade(i)} style={{ ...fade(i).style, gridColumn: featured ? '1 / -1' : undefined }}>
-            {featured ? <FeaturedTile {...common(p)} /> : <ProductTile {...common(p)} />}
+            {featured ? <FeaturedTile {...common(p)} width={width} /> : <ProductTile {...common(p)} />}
           </div>
         );
       })}
     </div>
   );
+}
+
+/* ── Mosaico: reparto en columnas ─────────────────────────────
+   `column-count` de CSS parecía la solución obvia, pero equilibra las columnas
+   a ojo del navegador y con piezas de altura desigual dejaba huecos de 800 px:
+   una sección de siete tacos salía con tres piezas en una columna y una sola en
+   la de al lado. Aquí se reparte a mano: cada platillo cae en la columna más
+   corta de momento, que es como se arma cualquier mosaico editorial. Los
+   primeros N ocupan la primera fila en orden, así que la carta se sigue leyendo
+   de izquierda a derecha.
+
+   La altura se ESTIMA (no se mide): el arte es 1/proporción del ancho de la
+   columna y el bloque de texto ronda 0,7 anchos. Basta para equilibrar, y al no
+   depender del DOM el reparto es idéntico en el servidor y en el navegador — sin
+   parpadeo de recolocación al hidratar. */
+function packColumns(items: ProdItem[], n: number): Array<Array<{ p: ProdItem; i: number }>> {
+  const cols: Array<Array<{ p: ProdItem; i: number }>> = Array.from({ length: Math.max(1, n) }, () => []);
+  const heights = new Array(cols.length).fill(0);
+  items.forEach((p, i) => {
+    let target = 0;
+    for (let c = 1; c < cols.length; c++) if (heights[c] < heights[target] - 0.001) target = c;
+    cols[target].push({ p, i });
+    heights[target] += 1 / mosaicRatio(p) + (p.description ? 0.74 : 0.52);
+  });
+  return cols;
 }
 
 /* ── Piezas de navegación ─────────────────────────────────── */
@@ -694,16 +829,19 @@ function CategoryChip({ label, icon, active, unavailable = false, onClick }: { l
 /** Encabezado de sección. En acordeón es el botón que pliega y despliega; en
     secciones es un título con un filete que separa la carta a la vista. */
 function SectionHeader({
-  label, icon, count, locked, collapsible, open, onToggle,
+  label, icon, count, locked, collapsible, open, width = 'movil', onToggle,
 }: {
   label: string; icon?: string; count: number; locked: boolean;
-  collapsible: boolean; open: boolean; onToggle: () => void;
+  collapsible: boolean; open: boolean; width?: LayoutWidth; onToggle: () => void;
 }) {
   const t = useText('poster', 'catalogSection');
+  // El rótulo de sección manda sobre una página ancha: a 20 px se perdía entre
+  // cuatro columnas de fotos y la carta dejaba de leerse por bloques.
+  const size = collapsible ? 20 : width === 'revista' ? 30 : width === 'ancho' ? 25 : 20;
   const inner = (
     <>
-      {icon && <Icon name={icon} size={17} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />}
-      <span className="t-poster" style={{ ...t.vars, fontSize: 20 * t.size, flex: 1, minWidth: 0, textAlign: 'left' }}>
+      {icon && <Icon name={icon} size={collapsible ? 17 : Math.round(size * 0.82)} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />}
+      <span className="t-poster" style={{ ...t.vars, fontSize: size * t.size, flex: 1, minWidth: 0, textAlign: 'left' }}>
         {label}
       </span>
       {locked && <Icon name="clock" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
@@ -992,12 +1130,16 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
    renders — si fuera aleatoria, la carta "bailaría" en cada actualización. */
 const MOSAIC_RATIOS = [1.35, 0.86, 1.05, 0.72];
 
+function mosaicRatio(p: ProdItem): number {
+  return MOSAIC_RATIOS[seedFromString(p.id) % MOSAIC_RATIOS.length];
+}
+
 function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: TileProps) {
   const config = useThemeConfig();
   const name = useLocalized(p.name, p.name_en);
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
-  const ratio = MOSAIC_RATIOS[seedFromString(p.id) % MOSAIC_RATIOS.length];
+  const ratio = mosaicRatio(p);
   return (
     <Glass
       interactive={!unavail}
@@ -1034,13 +1176,23 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
 }
 
 /* Tarjeta destacada: ancho completo, arte grande y texto sobre un degradado
-   (blanco sobre velo oscuro = legible con foto o patrón en cualquier paleta). */
-function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpen }: TileProps) {
+   (blanco sobre velo oscuro = legible con foto o patrón en cualquier paleta).
+
+   La proporción se abre con el lienzo EFECTIVO. Con 1.85 fijo, una tarjeta de
+   ancho completo en una página de 1.120 px medía 600 px de alto: media
+   pantalla de escritorio para un solo platillo. Ojo con "arreglarlo" poniendo
+   un `minHeight` junto al `aspect-ratio`: en un teléfono el navegador respeta
+   la proporción ensanchando la caja, y la tarjeta se iba a 645 px de ancho
+   fuera de la pantalla. */
+const FEATURED_RATIO: Record<LayoutWidth, number> = { movil: 1.85, ancho: 2.5, revista: 3.1 };
+
+function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, width = 'movil', onAdd, onOpen }: TileProps & { width?: LayoutWidth }) {
   const config = useThemeConfig();
   const content = useThemeContent();
   const name = useLocalized(p.name, p.name_en);
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
+  const wideFeat = width !== 'movil';
   return (
     <Glass
       interactive={!unavail}
@@ -1048,13 +1200,13 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, o
       ariaLabel={`Ver ${name}`}
       style={{ borderRadius: 22, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}
     >
-      <div style={{ position: 'relative', aspectRatio: '1.85', background: 'var(--surface-1)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', aspectRatio: String(FEATURED_RATIO[width] ?? 1.85), background: 'var(--surface-1)', overflow: 'hidden' }}>
         <ProductArt p={p} icon={icon} scale={1.35} />
         <div
           aria-hidden
           style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}
         />
-        <div style={{ position: 'absolute', top: 10, left: 10 }}>
+        <div style={{ position: 'absolute', top: wideFeat ? 20 : 10, left: wideFeat ? 24 : 10 }}>
           <span
             className="ct-tag"
             style={{
@@ -1066,20 +1218,22 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, o
             <Icon name="star" size={11} /> {content.tags.fav}
           </span>
         </div>
-        <div style={{ position: 'absolute', left: 14, right: 14, bottom: 12, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ position: 'absolute', left: wideFeat ? 24 : 14, right: wideFeat ? 24 : 14, bottom: wideFeat ? 20 : 12, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+          {/* El texto no se estira con la tarjeta: una descripción a 1.000 px de
+              ancho se lee como un pie de foto de periódico, no como un plato. */}
+          <div style={{ flex: 1, minWidth: 0, maxWidth: 620 }}>
             <div
               className="ct-product-name"
-              style={{ fontSize: 19 * roleSize(config, 'productName'), color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', lineHeight: 1.15, textDecoration: unavail ? 'line-through' : 'none' }}
+              style={{ fontSize: (wideFeat ? 27 : 19) * roleSize(config, 'productName'), color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', lineHeight: 1.15, textDecoration: unavail ? 'line-through' : 'none' }}
             >
               {name}
             </div>
             {description && (
-              <div className="line-clamp-2" style={{ fontSize: 12 * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+              <div className="line-clamp-2" style={{ fontSize: (wideFeat ? 13.5 : 12) * roleSize(config, 'productDesc'), color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                 {description}
               </div>
             )}
-            <Price amount={displayPrice(p)} size={17} style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: 5, display: 'inline-block' }} />
+            <Price amount={displayPrice(p)} size={wideFeat ? 20 : 17} style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: 5, display: 'inline-block' }} />
           </div>
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
