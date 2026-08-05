@@ -12,6 +12,7 @@ import {
   STATUS_LABEL, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
   stageClock, fmtElapsed, clockChipClass,
 } from '@/lib/order-status';
+import { sourceBadge } from '@/lib/order-source';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -34,8 +35,14 @@ function money(n: number, c: PanelCurrency): string {
 
 /* ── Origen del pedido ────────────────────────────────────────
    El dueño necesita distinguir de un vistazo si lo tomó un mesero, si el
-   comensal lo pidió con el QR de su mesa o si entró por internet. */
+   comensal lo pidió con el QR de su mesa o si entró por internet.
+
+   El canal externo (migración 101) manda sobre todo lo demás: si el pedido
+   llegó por WhatsApp o por una plataforma, eso es lo que hay que ver — que
+   nadie del local lo escribió. "En línea" a secas ocultaría justo ese dato. */
 function originLabel(order: OrderWithItems): { icon: string; text: string } {
+  const channel = sourceBadge(order.source);
+  if (channel) return channel;
   if (order.waiter_name) return { icon: 'userPlus', text: order.waiter_name };
   if (order.order_type === 'DINE_IN') return { icon: 'grid', text: 'QR en mesa' };
   return { icon: 'globe', text: 'En línea' };

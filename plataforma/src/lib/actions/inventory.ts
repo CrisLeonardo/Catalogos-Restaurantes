@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { logActivity } from '@/lib/activity';
 import { getProductMovements as fetchProductMovements, type StockMovement } from '@/lib/db/kardex';
 
@@ -101,6 +101,10 @@ export async function saveInventory(
 
   revalidatePath('/admin/inventario');
   revalidatePath('/admin/menu');
+  // Fijar stock cambia is_available, que SÍ viaja al menú público
+  // (PUBLIC_PRODUCT_COLUMNS). Sin esto el comensal sigue viendo vendible un
+  // producto recién agotado hasta que expire el TTL de 60s de getMenuDataCached.
+  updateTag(`menu:${ctx.restaurantId}`);
   return { ok: true };
 }
 
@@ -148,6 +152,9 @@ export async function adjustStock(formData: FormData) {
 
   revalidatePath('/admin/inventario');
   revalidatePath('/admin/menu');
+  // Ajustar a 0 marca is_available = false: invalidar el menú público ya, no
+  // esperar el TTL (es el caso "se acabó" que el dueño hace mirando la pantalla).
+  updateTag(`menu:${ctx.restaurantId}`);
 }
 
 export type LowStock = { low: number; out: number };

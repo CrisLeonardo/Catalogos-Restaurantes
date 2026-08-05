@@ -223,6 +223,10 @@ export interface Profile {
 
 export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'SERVED' | 'DELIVERED' | 'CANCEL';
 
+/** Canal por el que ENTRÓ el pedido (migración 101). Ortogonal a order_type,
+ *  que es cómo se entrega: un pedido puede ser WHATSAPP + PICKUP a la vez. */
+export type OrderSource = 'LEOGIN' | 'WHATSAPP' | 'PEDIDOSYA' | 'RAPPI' | 'UBEREATS' | 'OTRO';
+
 export interface Order {
   id: string;
   restaurant_id: string;
@@ -267,6 +271,8 @@ export interface Order {
   waiter_id: string | null;
   /** Se tomó sin conexión (hub local) y se sincronizó después (migración 062). */
   synced_from_hub: boolean;
+  /** Canal de entrada (migración 101); 'LEOGIN' = propio (QR, mesero, kiosko, hub). */
+  source: OrderSource;
 }
 
 /** Auditoría de anulación de pedido/ítem (migración 079): motivo obligatorio
