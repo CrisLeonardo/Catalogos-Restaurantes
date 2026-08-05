@@ -27,8 +27,25 @@ export interface FelSettings {
   iva_incluido: boolean;
   serie_prefijo: string;
   api_usuario: string;
+  /** @deprecated Texto plano heredado. Leer con readCredentials() (migración 106). */
   api_clave: string;
+  /** @deprecated Texto plano heredado. Leer con readCredentials() (migración 106). */
   api_llave_firma: string;
+  /** Cifrados con la caja fuerte (migración 106). Nunca viajan al cliente. */
+  api_clave_cipher?: string | null;
+  api_llave_firma_cipher?: string | null;
+  /**
+   * Si ya hay credencial guardada, sin revelarla. Es lo único que la UI
+   * necesita saber: permite mostrar "ya configurada" y dejar el campo vacío
+   * para no reenviar el secreto al navegador en cada carga de la página.
+   */
+  tiene_clave?: boolean;
+  tiene_llave_firma?: boolean;
+  /** Dirección fiscal que exige el esquema del SAT (migración 106). */
+  codigo_postal: string;
+  municipio: string;
+  departamento: string;
+  pais: string;
   next_correlativo: number;
   updated_at: string;
 }
@@ -53,6 +70,14 @@ export interface FelDocument {
   error_mensaje: string | null;
   dte_json: unknown;
   created_at: string;
+  /** Cola de reintentos (migración 106). */
+  intentos?: number;
+  ultimo_error?: string | null;
+  proximo_intento?: string | null;
+  /** DTE firmado y certificado: el documento con validez legal. */
+  xml_certificado?: string | null;
+  fecha_anulacion?: string | null;
+  motivo_anulacion?: string | null;
 }
 
 export interface Receptor {

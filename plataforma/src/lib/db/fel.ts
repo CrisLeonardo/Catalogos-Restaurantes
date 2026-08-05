@@ -1,7 +1,19 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import type { FelSettings, FelDocument, FelProvider } from '@/lib/fel';
 
-/** Config FEL del restaurante, con defaults si aún no existe fila. */
+/**
+ * Config FEL del restaurante, con defaults si aún no existe fila.
+ *
+ * ⚠️ SIN CREDENCIALES. Lo que devuelve esta función alimenta un componente
+ * cliente, así que la clave y la llave de firma salen vacías y solo se
+ * informa si existen (`tiene_clave` / `tiene_llave_firma`). Antes de la
+ * migración 106 viajaban en claro al navegador y se pintaban en los inputs;
+ * bastaba abrir las herramientas de desarrollo para leer las llaves con las
+ * que se factura a nombre del restaurante.
+ *
+ * Quien necesite las credenciales de verdad (la transmisión) las lee de la
+ * base con readCredentials(), en el servidor.
+ */
 export async function getFelSettings(restaurantId: string): Promise<FelSettings> {
   const db = createServiceClient();
   const { data } = await db
@@ -10,7 +22,18 @@ export async function getFelSettings(restaurantId: string): Promise<FelSettings>
     .eq('restaurant_id', restaurantId)
     .maybeSingle();
 
-  if (data) return data as FelSettings;
+  if (data) {
+    const row = data as FelSettings;
+    return {
+      ...row,
+      api_clave: '',
+      api_llave_firma: '',
+      api_clave_cipher: null,
+      api_llave_firma_cipher: null,
+      tiene_clave: Boolean(row.api_clave_cipher || row.api_clave),
+      tiene_llave_firma: Boolean(row.api_llave_firma_cipher || row.api_llave_firma),
+    };
+  }
 
   // Defaults en memoria (no se persiste hasta que el usuario guarda).
   return {
@@ -29,6 +52,14 @@ export async function getFelSettings(restaurantId: string): Promise<FelSettings>
     api_usuario: '',
     api_clave: '',
     api_llave_firma: '',
+    api_clave_cipher: null,
+    api_llave_firma_cipher: null,
+    tiene_clave: false,
+    tiene_llave_firma: false,
+    codigo_postal: '01001',
+    municipio: 'Guatemala',
+    departamento: 'Guatemala',
+    pais: 'GT',
     next_correlativo: 1,
     updated_at: new Date().toISOString(),
   };

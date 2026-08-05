@@ -151,7 +151,28 @@ Antes de crear, baja a **Environment Variables** y agrega estas 4:
 | `SUPABASE_SERVICE_ROLE_KEY` | tu service_role/secret key |
 | `NEXT_PUBLIC_ROOT_DOMAIN` | de momento `menuvivo.onrender.com` (luego tu dominio) |
 
+Estas 4 bastan para que la app arranque. Los módulos que hablan con terceros piden las suyas, y **si faltan, el módulo simplemente no opera — nada más se rompe**:
+
+| Key | Para qué | Si falta |
+|-----|----------|----------|
+| `LEOGIN_SECRET_KEY` | Cifra en la base los secretos que Leogin guarda por cuenta del restaurante (token de WhatsApp, credenciales del certificador FEL). 32 bytes: `openssl rand -base64 32` | No se pueden guardar esos secretos. La facturación en modo Manual sigue funcionando |
+| `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | Canal de WhatsApp (F1A/F1B) | El canal no opera |
+| `FEL_CRON_SECRET` | Autentica el disparador de la cola de facturas | El endpoint responde 401 siempre (cerrado por defecto, no abierto) |
+| `QZ_PRIVATE_KEY_B64` | Firma para impresión silenciosa | Imprime igual, pero QZ pide permiso la 1ª vez por sesión |
+
+> ⚠️ Si ya tenías `WHATSAPP_TOKEN_KEY` puesta, **copia ese mismo valor** en `LEOGIN_SECRET_KEY`. Es la misma clave con nombre nuevo; poner una distinta deja ilegibles los tokens de WhatsApp ya guardados y hay que reconectar cada número.
+
 3. **Create Web Service**. Render compila (2-5 min). Cuando termine, abre la URL `https://menuvivo.onrender.com`.
+
+## 3.2b Cron de la cola de facturas (solo si usas FEL con certificador)
+
+Si un restaurante factura con INFILE, las facturas que no certificaron al primer intento quedan en cola y hay que drenarla. En Render: **New → Cron Job**, cada 5 minutos (`*/5 * * * *`):
+
+```bash
+curl -fsS -X POST https://tudominio.com/api/fel/cola -H "Authorization: Bearer $FEL_CRON_SECRET"
+```
+
+Sin esto las facturas pendientes no se reintentan solas; el dueño puede reintentarlas a mano desde Facturación, pero no es un sustituto.
 
 ## 3.3 Primera prueba en producción
 

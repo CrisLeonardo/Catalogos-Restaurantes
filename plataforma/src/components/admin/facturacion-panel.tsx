@@ -6,7 +6,7 @@ import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { saveFelSettings, emitInvoice, anularInvoice, type FelSettingsPatch } from '@/lib/actions/fel';
+import { saveFelSettings, emitInvoice, anularInvoice, reintentarInvoice, type FelSettingsPatch } from '@/lib/actions/fel';
 import { PROVIDER_META, type FelProvider, type FelSettings, type FelDocument } from '@/lib/fel';
 import type { FelSummary, InvoiceableOrder } from '@/lib/db/fel';
 
@@ -94,13 +94,18 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
     nombre_emisor: settings.nombre_emisor,
     nombre_comercial: settings.nombre_comercial,
     direccion: settings.direccion,
+    codigo_postal: settings.codigo_postal ?? '01001',
+    municipio: settings.municipio ?? 'Guatemala',
+    departamento: settings.departamento ?? 'Guatemala',
     codigo_establecimiento: settings.codigo_establecimiento,
     afiliacion_iva: settings.afiliacion_iva,
     iva_incluido: settings.iva_incluido,
     serie_prefijo: settings.serie_prefijo,
     api_usuario: settings.api_usuario,
-    api_clave: settings.api_clave,
-    api_llave_firma: settings.api_llave_firma,
+    // Vacías a propósito: el servidor ya no manda las credenciales guardadas
+    // al navegador. Vacío significa "no la cambies" al guardar.
+    api_clave: '',
+    api_llave_firma: '',
   });
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -127,6 +132,9 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
         <div><label style={labelStyle}>Nombre comercial</label><input style={inputStyle} value={p.nombre_comercial} onChange={(e) => set('nombre_comercial', e.target.value)} /></div>
         <div><label style={labelStyle}>Código establecimiento</label><input style={inputStyle} value={p.codigo_establecimiento} onChange={(e) => set('codigo_establecimiento', e.target.value)} /></div>
         <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Dirección</label><input style={inputStyle} value={p.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, zona, ciudad" /></div>
+        <div><label style={labelStyle}>Municipio</label><input style={inputStyle} value={p.municipio} onChange={(e) => set('municipio', e.target.value)} placeholder="Guatemala" /></div>
+        <div><label style={labelStyle}>Departamento</label><input style={inputStyle} value={p.departamento} onChange={(e) => set('departamento', e.target.value)} placeholder="Guatemala" /></div>
+        <div><label style={labelStyle}>Código postal</label><input style={inputStyle} value={p.codigo_postal} onChange={(e) => set('codigo_postal', e.target.value)} placeholder="01001" /></div>
         <div>
           <label style={labelStyle}>Afiliación IVA</label>
           <Select
@@ -170,11 +178,27 @@ function SettingsForm({ restaurantId, settings, onSaved }: { restaurantId: strin
       </p>
 
       {meta.transmits && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-          <div><label style={labelStyle}>Usuario API</label><input style={inputStyle} value={p.api_usuario} onChange={(e) => set('api_usuario', e.target.value)} /></div>
-          <div><label style={labelStyle}>Clave / Token API</label><input style={inputStyle} type="password" value={p.api_clave} onChange={(e) => set('api_clave', e.target.value)} /></div>
-          <div><label style={labelStyle}>Llave de firma</label><input style={inputStyle} type="password" value={p.api_llave_firma} onChange={(e) => set('api_llave_firma', e.target.value)} /></div>
-        </div>
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div><label style={labelStyle}>Usuario API</label><input style={inputStyle} value={p.api_usuario} onChange={(e) => set('api_usuario', e.target.value)} /></div>
+            <div>
+              <label style={labelStyle}>Clave / Token API</label>
+              <input style={inputStyle} type="password" value={p.api_clave} onChange={(e) => set('api_clave', e.target.value)}
+                placeholder={settings.tiene_clave ? '•••••••• (guardada)' : ''} />
+            </div>
+            <div>
+              <label style={labelStyle}>Llave de firma</label>
+              <input style={inputStyle} type="password" value={p.api_llave_firma} onChange={(e) => set('api_llave_firma', e.target.value)}
+                placeholder={settings.tiene_llave_firma ? '•••••••• (guardada)' : ''} />
+            </div>
+          </div>
+          {(settings.tiene_clave || settings.tiene_llave_firma) && (
+            <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
+              Tus credenciales están guardadas y cifradas. Por seguridad no se muestran:
+              deja los campos en blanco para conservarlas, o escribe una nueva para reemplazarla.
+            </p>
+          )}
+        </>
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -199,6 +223,8 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
   const [direccion, setDireccion] = useState('Ciudad');
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  /** La factura se guardó pero aún no certificó: ni éxito ni error. */
+  const [enCola, setEnCola] = useState(false);
 
   if (!ready) {
     return (
@@ -212,6 +238,7 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
 
   function emit() {
     setMsg(null);
+    setEnCola(false);
     start(async () => {
       const res = await emitInvoice(restaurantId, {
         orderId: mode === 'pedido' ? orderId || undefined : undefined,
@@ -220,7 +247,11 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
         receptorNit: nit, receptorNombre: nombre, receptorDireccion: direccion,
       });
       if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      setMsg('Factura emitida ✓');
+      // La venta quedó registrada aunque el certificador no haya respondido:
+      // decirlo tal cual, en vez de un "emitida ✓" que haría creer al dueño
+      // que ya tiene el DTE en mano.
+      setEnCola(Boolean(res.aviso));
+      setMsg(res.aviso ?? 'Factura emitida ✓');
       setOrderId(''); setDescripcion(''); setMonto('');
       onEmitted();
     });
@@ -274,7 +305,11 @@ function EmitForm({ restaurantId, invoiceable, ready, onEmitted, onGoConfig }: {
         <Button onClick={emit} disabled={isPending || (mode === 'pedido' && !orderId)} className="rounded-adm-full">
           {isPending ? 'Emitiendo…' : 'Emitir factura'}
         </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
+        {msg && (
+          <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : enCola ? 'var(--c-warn)' : 'var(--c-ok)' }}>
+            {msg}
+          </span>
+        )}
       </div>
     </Card>
   );
@@ -286,12 +321,31 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
   const [isPending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
+
   function anular(id: string) {
     if (!window.confirm('¿Anular esta factura? No se podrá revertir.')) return;
     setBusy(id);
+    setError(null);
     start(async () => {
-      await anularInvoice(restaurantId, id);
+      // Anular un DTE certificado se transmite al SAT y puede fallar; antes
+      // el resultado se descartaba y la UI mostraba "anulado" pasara lo que
+      // pasara.
+      const res = await anularInvoice(restaurantId, id);
       setBusy(null);
+      if (res?.error) setError(res.error);
+      onChange();
+    });
+  }
+
+  function reintentar(id: string) {
+    setBusy(id);
+    setError(null);
+    start(async () => {
+      const res = await reintentarInvoice(restaurantId, id);
+      setBusy(null);
+      if (res?.error) setError(res.error);
+      else if (res?.aviso) setError(res.aviso);
       onChange();
     });
   }
@@ -306,6 +360,11 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
 
   return (
     <Card className="overflow-hidden p-0">
+      {error && (
+        <div style={{ padding: '10px 14px', fontSize: 13, color: 'var(--c-danger)', borderBottom: '1px solid var(--u-hair)' }}>
+          {error}
+        </div>
+      )}
       {/* 6 columnas no caben en un teléfono: scroll horizontal en vez de
           romper el layout (los montos y estados se leen deslizando). */}
       <div className="table-scroll">
@@ -333,11 +392,24 @@ function DocumentsList({ restaurantId, documents, onChange }: { restaurantId: st
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${ESTADO_COLOR[d.estado] ?? '#888'} 13%, transparent)`, color: ESTADO_COLOR[d.estado] ?? '#888' }}>
                   {d.estado}
                 </span>
+                {/* El motivo importa más que el estado: "ERROR" a secas deja
+                    al dueño sin saber si debe corregir algo o solo esperar. */}
+                {d.error_mensaje && (d.estado === 'ERROR' || d.estado === 'PENDIENTE') && (
+                  <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, maxWidth: 260 }}>
+                    {d.error_mensaje}
+                  </div>
+                )}
               </td>
               <td style={{ padding: '10px 12px', color: 'var(--u-text-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
                 {new Date(d.created_at).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: '2-digit' })}
               </td>
-              <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+              <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                {(d.estado === 'ERROR' || d.estado === 'PENDIENTE') && (
+                  <Button onClick={() => reintentar(d.id)} disabled={isPending && busy === d.id} variant="outline" size="sm"
+                    style={{ marginRight: 6 }}>
+                    {busy === d.id ? '…' : 'Reintentar'}
+                  </Button>
+                )}
                 {d.estado !== 'ANULADO' && (
                   <Button onClick={() => anular(d.id)} disabled={isPending && busy === d.id} variant="outline" size="sm"
                     className="border-[var(--c-danger-line)] text-[var(--c-danger)]">
