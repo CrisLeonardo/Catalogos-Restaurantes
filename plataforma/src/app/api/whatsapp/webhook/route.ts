@@ -33,9 +33,7 @@ import {
   restaurantIdForPhoneNumber,
   ensureConversation,
   logInboundMessage,
-  sendWhatsAppText,
 } from '@/lib/whatsapp/client';
-import { handleBotMessage, type BotState } from '@/lib/whatsapp/bot';
 
 /** Comparación en tiempo constante de dos strings (evita fugas por timing). */
 function safeEqual(a: string, b: string): boolean {
@@ -165,15 +163,26 @@ async function processWebhook(body: WebhookBody): Promise<void> {
   }
 }
 
-/** Mensajes del cliente: se registran, reabren la ventana de 24h y se pasan
- *  al bot (Fase 1B). El agente con IA de la 1C se enchufa en este mismo
- *  punto, conservando el bot como respaldo. */
+/**
+ * Mensajes del cliente: se registran y reabren la ventana de 24h.
+ *
+ * **Leogin no contesta por aquí.** El pedido se toma en el catálogo en
+ * línea; WhatsApp es el canal por el que el cliente se entera de cómo va
+ * (ver notify.ts). Cuando escribe, le responde el restaurante desde su
+ * propio WhatsApp Business, como a cualquier otro cliente.
+ *
+ * Registrar el mensaje no es opcional aunque nadie lo conteste
+ * automáticamente: es lo que reabre la ventana de servicio de 24h de Meta,
+ * y de esa ventana depende que los avisos de estado puedan salir como
+ * texto normal en vez de como plantilla aprobada.
+ *
+ * (Aquí vivía el bot que armaba el pedido dentro del chat — Fases 1B/1C.
+ * Se descartó: duplicaba lo que el catálogo ya hace bien.)
+ */
 async function handleInbound(
   restaurantId: string,
   messages: WaInboundMessage[],
 ): Promise<void> {
-  const db = createServiceClient();
-
   for (const msg of messages) {
     const waId = msg.from;
     if (!waId) continue;
@@ -188,38 +197,6 @@ async function handleInbound(
       waMessageId: msg.id ?? null,
       kind: msg.type ?? 'unknown',
       payload: msg,
-    });
-
-    // Un botón o una fila de lista traen su id; el texto libre no.
-    const interactiveId =
-      msg.interactive?.button_reply?.id ?? msg.interactive?.list_reply?.id ?? null;
-    const text = msg.text?.body ?? null;
-
-    // Sin nada que interpretar (audio, imagen, ubicación…) no se adivina:
-    // se le dice al cliente qué sí se entiende.
-    if (!interactiveId && !text) {
-      await sendWhatsAppText(
-        restaurantId, waId,
-        'Por ahora solo puedo leer mensajes de texto. Escribime *menú* para ver qué hay, o *humano* para hablar con alguien.',
-      );
-      continue;
-    }
-
-    const { data: hilo } = await db
-      .from('whatsapp_conversations')
-      .select('estado, handoff_hasta, bloqueado')
-      .eq('id', convo.id)
-      .single();
-
-    await handleBotMessage({
-      restaurantId,
-      waId,
-      conversationId: convo.id,
-      text,
-      interactiveId,
-      state: (hilo?.estado as BotState | null) ?? null,
-      handoffHasta: (hilo?.handoff_hasta as string | null) ?? null,
-      bloqueado: hilo?.bloqueado === true,
     });
   }
 }

@@ -210,7 +210,34 @@ migración 074: sin políticas públicas, solo service role).
 **Terminado cuando:** un pedido hecho en el menú web dispara los cinco avisos de
 estado al WhatsApp del cliente, y todo queda registrado en `whatsapp_messages`.
 
-### 1B — Bot determinista: pedir sin salir de WhatsApp (~2–3 semanas)
+> ## ⛔ 1B y 1C: DESCARTADAS (2026-08-05)
+>
+> **Decisión de Leonardo, y es la correcta.** Todo lo que sigue en 1B y 1C
+> queda documentado como historia, no como trabajo pendiente. El código se
+> implementó, se probó y se **borró**: `whatsapp/bot.ts`, `whatsapp/ai-agent.ts`
+> y las migraciones 105 y 107 (la numeración salta de 104 a 106 por eso).
+>
+> **La razón:** Leogin ya tiene un catálogo en línea donde el cliente pide.
+> Un bot que arma el pedido dentro de WhatsApp es un **segundo camino para el
+> mismo resultado** — y un segundo camino que mantener, que probar y que
+> puede divergir del primero. La premisa del análisis de competencia era que
+> el cliente "igual tiene que ir al menú web a armar el pedido"; para este
+> producto eso no es una carencia, es el diseño.
+>
+> **Lo que SÍ se conserva (1A):** el canal de WhatsApp y los avisos de estado
+> del pedido. Eso no compite con el catálogo, lo refuerza: el cliente pide en
+> el menú y se entera por WhatsApp de que su pedido va en camino. De ahí
+> dependen también los avisos del repartidor de F2. Leogin **no contesta**
+> mensajes entrantes: los registra (eso reabre la ventana de 24h de Meta, de
+> la que dependen los avisos) y a ellos responde el restaurante desde su
+> propio WhatsApp Business.
+>
+> **Consecuencia para el posicionamiento:** contra OlaClick ya no se compite
+> en "pedir por WhatsApp". Se compite en que el pedido entra por un catálogo
+> propio y personalizado, y WhatsApp avisa. Ajustar `MANEJO_DE_OBJECIONES.md`
+> antes de la próxima demo.
+
+### 1B — Bot determinista: pedir sin salir de WhatsApp (~2–3 semanas) — ⛔ descartada
 
 Máquina de estados, sin IA. Aquí es donde se cierra la brecha real: el cliente
 arma el pedido dentro de WhatsApp.
@@ -262,20 +289,35 @@ Lo que hace OlaClick y lo que más se nota en una demo: el cliente escribe
 
 **Guardrails obligatorios:**
 
-- [ ] Confirmación explícita del cliente antes de crear el pedido (leer el
-      resumen y el total)
-- [ ] Límite de turnos por conversación y presupuesto de tokens; al excederlo,
-      handoff a humano
-- [ ] Si una herramienta falla o el modelo no encuentra el producto → handoff, no
-      inventar
-- [ ] El contenido que llega por WhatsApp es **entrada no confiable**: un cliente
+- [x] Confirmación explícita del cliente antes de crear el pedido (leer el
+      resumen y el total). El candado no vive solo en el prompt: `confirmar_pedido`
+      recibe `cliente_confirmo` y **rechaza la creación** si viene en `false`.
+      Un prompt es una instrucción; esto es una tranca
+- [x] Límite de turnos por conversación y presupuesto de tokens; al excederlo,
+      handoff a humano (8 vueltas de herramientas por mensaje, 20 mensajes de
+      historial, `max_tokens` 4096)
+- [x] Si una herramienta falla o el modelo no encuentra el producto → handoff, no
+      inventar. Una herramienta que lanza igual devuelve `tool_result`: la API
+      exige uno por cada `tool_use`, y sin él el turno siguiente falla
+- [x] El contenido que llega por WhatsApp es **entrada no confiable**: un cliente
       puede escribir instrucciones dirigidas al modelo. El prompt de sistema debe
       dejar claro que los mensajes del cliente son datos, no órdenes, y que no
       puede cambiar precios, aplicar descuentos ni saltarse la confirmación
-- [ ] Registrar cada llamada a herramienta en `whatsapp_messages` para auditar y
-      depurar
-- [ ] Interruptor por restaurante: el dueño puede apagar la IA y quedarse con el
-      bot determinista de 1B. **1B es el respaldo de 1C**, no código desechado
+- [x] Registrar cada llamada a herramienta en `whatsapp_messages` para auditar y
+      depurar (`kind = 'ai_tool'`)
+- [x] Interruptor por restaurante: el dueño puede apagar la IA y quedarse con el
+      bot determinista de 1B. **1B es el respaldo de 1C**, no código desechado.
+      `restaurants.whatsapp_ai_enabled` (migración 107) arranca **apagado**, y
+      ambos comparten `whatsapp_conversations.estado`: al degradar, el carrito
+      sobrevive y el cliente no nota el cambio
+
+**Decisión de implementación no prevista en el plan: no se apaga el pensamiento
+del modelo.** Lo natural para un bot de WhatsApp sería desactivarlo por latencia,
+pero en `claude-opus-5` eso trae dos fallos que aquí serían graves: el modelo
+puede escribir la llamada a una herramienta como **texto plano** —el turno
+termina "bien", la herramienta nunca corre y nadie se entera— y puede filtrar
+etiquetas internas al mensaje del cliente. Se usa `effort: 'low'`, que da el
+mismo ahorro de latencia y tokens sin ninguno de los dos.
 
 **Control de costo:** cada conversación con IA cuesta tokens además del mensaje
 de WhatsApp. Medir el costo por pedido en el piloto antes de fijar el precio del
@@ -284,10 +326,12 @@ de intención inicial, dejando el modelo grande solo para armar el pedido.
 
 **Empaquetado comercial (aplica a toda la F1):**
 
-- [ ] Nuevo módulo `whatsapp_bot` en `ActivatableModuleKey` (`src/lib/modules.ts`)
+- [x] Nuevo módulo `whatsapp_bot` en `ActivatableModuleKey` (`src/lib/modules.ts`)
       y en `ADDON_MODULES` (`src/lib/plans.ts`), grupo `crecimiento`
-- [ ] `requiresSetup: true` — necesita conexión de número, como FEL
-- [ ] Precio a definir tras medir el costo real por conversación
+- [x] `requiresSetup: true` — necesita conexión de número, como FEL
+- [ ] Precio a definir tras medir el costo real por conversación — queda en
+      Q199 + Q300 de instalación y `comingSoon: true`, es decir **no se le
+      puede vender a nadie todavía**. El número sale del piloto, no del plan
 
 ---
 
@@ -369,25 +413,48 @@ Solo funciona el modo `MANUAL` (numeración interna, sin validez ante SAT).
 
 **Tareas:**
 
-- [ ] Adaptador por certificador en `src/lib/fel/providers/`, empezando por
-      **INFILE** (el más común en Guatemala). `PROVIDER_META` en `fel.ts:157` ya
-      declara INFILE, G4S, DIGIFACT y OTRO con su flag `transmits`
-- [ ] **Credenciales por restaurante, cifradas en base de datos** — no en
+- [x] Adaptador por certificador en `src/lib/fel/providers/`, empezando por
+      **INFILE** (el más común en Guatemala). `PROVIDER_META` en `fel.ts` ya
+      declara INFILE, G4S, DIGIFACT y OTRO con su flag `transmits`.
+      `registry.ts` devuelve `null` para los no implementados, y el llamador
+      responde "no está conectado" en vez de intentar contra un endpoint que
+      no existe
+- [x] **Credenciales por restaurante, cifradas en base de datos** — no en
       variables de entorno. Esto es multi-tenant: cada restaurante tiene su
       propia cuenta con el certificador. Es la diferencia clave con
-      `api-keys.ts`, que documenta el patrón de env vars para llaves *de Leogin*
-- [ ] Firma electrónica del DTE según el esquema del certificador
-- [ ] Sustituir el `return { error: ... }` de `actions/fel.ts:219` por la llamada
+      `api-keys.ts`, que documenta el patrón de env vars para llaves *de Leogin*.
+      Caja fuerte compartida en `secret-box.ts`; `whatsapp/crypto.ts` pasó a
+      delegar en ella (mismo formato, sin romper los tokens ya guardados)
+- [x] Firma electrónica del DTE según el esquema del certificador —
+      `fel/xml.ts` genera el XML `dte:GTDocumento` del SAT (que es lo que se
+      firma) y el adaptador llama al servicio de firma de INFILE antes de
+      certificar. Distingue FACT (régimen general) de FPEQ (pequeño
+      contribuyente): emitir el tipo equivocado hace que el DTE se rechace
+- [x] Sustituir el `return { error: ... }` de `actions/fel.ts` por la llamada
       real, conservando el camino MANUAL para quien no tenga certificador
-- [ ] **Cola de reintento**: si el certificador está caído, la venta no puede
-      quedar sin factura ni bloquear la caja. Mismo patrón de outbox que ya se usa
-      para pedidos offline
-- [ ] `anularInvoice` hoy solo marca el documento como anulado localmente — debe
-      transmitir la anulación al certificador
+- [x] **Cola de reintento**: si el certificador está caído, la venta no puede
+      quedar sin factura ni bloquear la caja. El documento se guarda PENDIENTE
+      *antes* de transmitir, con backoff 1m/5m/15m/1h/6h y tope de 5 intentos.
+      La drena `POST /api/fel/cola` (cron de Render, no pg_cron: reintentar es
+      salir a internet y eso no lo hace Postgres)
+- [x] `anularInvoice` hoy solo marca el documento como anulado localmente — debe
+      transmitir la anulación al certificador. Ya transmite; el estado local
+      solo cambia si el certificador confirma
 - [ ] Probar completo en ambiente `PRUEBAS` antes de tocar `PRODUCCION`
-      (`fel_settings.ambiente` ya distingue los dos)
+      (`fel_settings.ambiente` ya distingue los dos) — **bloqueado: hace falta
+      la cuenta de pruebas de INFILE**
+- [ ] Verificar los nombres de campo del JSON de INFILE contra su PDF de
+      integración (los endpoints sí están verificados; el resto del contrato
+      no es público y está aislado en el bloque CONTRATO de `providers/infile.ts`)
 - [ ] Quitar `comingSoon: true` de `fel` en `ADDON_MODULES` solo cuando esté
       certificado de punta a punta con un cliente real
+
+**Extra no planificado que salió al implementar:** `getFelSettings` mandaba
+`api_clave` y `api_llave_firma` en claro al navegador y el panel las pintaba en
+inputs — bastaba abrir las herramientas de desarrollo para leer las llaves con
+las que se factura a nombre del restaurante. Ahora el servidor solo informa
+*si* existen (`tiene_clave` / `tiene_llave_firma`) y el campo vacío significa
+"no la cambies". Esto adelanta parte del pendiente de F6.
 
 **Riesgo principal:** depende de un tercero (contrato, credenciales de prueba,
 documentación del certificador). **Iniciar el trámite con INFILE en la semana 1
@@ -395,7 +462,13 @@ del plan completo**, no cuando empiece la fase — el tiempo de espera es extern
 
 ---
 
-## Fase 4 — App móvil Android (~2–3 semanas)
+## Fase 4 — App móvil Android (~2–3 semanas) — ⏸️ pausada
+
+> **Pausada por decisión de Leonardo (2026-08-05).** No se implementó nada:
+> no hay código que borrar ni cuenta de Google Play que tramitar. La PWA
+> instalable que ya existe (`manifest.ts` + push VAPID + `install-banner.tsx`)
+> sigue funcionando y cubre el caso mientras tanto. Retomar cuando la
+> presencia en Play Store sea una objeción real de un prospecto, no antes.
 
 OlaClick tiene app en Google Play. Para el comensal no importa (el QR abre el
 navegador y está bien), pero para el **dueño, el mesero y el repartidor** una app
@@ -496,13 +569,14 @@ fase las audita y cierra el pendiente M-2 de la auditoría del 29 de julio.
 | 2 | Menú público cacheado | F0 | ✅ ya existía; corregido el hueco de inventario |
 | 3 | `orders.source` | F0 | 🟡 código listo; falta aplicar la migración 101 |
 | 4 | Canal WhatsApp + avisos de estado | F1A | 🟡 código listo; falta migración 102, credenciales y plantilla aprobada |
-| 5 | Bot determinista de pedidos | F1B | ⬜ |
-| 6 | Agente IA | F1C | ⬜ |
+| 5 | Bot determinista de pedidos | F1B | ⛔ **descartado** — duplica el catálogo (2026-08-05) |
+| 6 | Agente IA | F1C | ⛔ **descartado** — misma razón |
 | 7 | Repartidores + vista móvil + asignación | F2 | 🟡 código listo; falta migración 103 |
 | 7b | Zonas de reparto (tarifa por zona en el checkout) | F2 | 🟡 código listo; falta aplicar la migración 104 |
 | 8 | Cierre de caja del repartidor | F2 | 🟡 código listo (turno del repartidor + cuadre del dueño) |
-| 9 | FEL transmitiendo a INFILE | F3 | ⬜ |
-| 10 | App Android en Play Store | F4 | ⬜ |
+| 9 | FEL transmitiendo a INFILE | F3 | 🟡 código listo; falta migración 106, `LEOGIN_SECRET_KEY`, cuenta INFILE y verificar su contrato JSON |
+| 9b | Credenciales FEL fuera del navegador | F3/F6 | 🟢 hecho (adelanta pendiente de F6) |
+| 10 | App Android en Play Store | F4 | ⏸️ **pausada** por decisión propia (2026-08-05) — nada implementado |
 | 11 | Ingesta genérica de pedidos externos | F5A | ⬜ |
 | 12 | Integraciones oficiales | F5B | ⬜ |
 | 13 | CSP endurecida + auditoría de superficies nuevas | F6 | ⬜ |
