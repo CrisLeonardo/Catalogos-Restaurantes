@@ -25,6 +25,7 @@ export const ADMIN_SECTIONS = [
   { key: 'fel',          label: 'Facturación (FEL)' },
   { key: 'proveedores',  label: 'Proveedores' },
   { key: 'loyalty',      label: 'Lealtad' },
+  { key: 'whatsapp',     label: 'WhatsApp' },
   { key: 'modulos',      label: 'Módulos' },
   { key: 'suscripcion',  label: 'Mi suscripción' },
   { key: 'personalizar', label: 'Personalizar' },

@@ -4,6 +4,7 @@ import { createClient, createDinerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { createOrderSchema, type CreateOrderInput } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
@@ -20,6 +21,7 @@ import {
   type BillAssignment, type SplitMode,
 } from '@/lib/bill-split';
 import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyalty';
+import { notifyOrderStatus } from '@/lib/whatsapp/notify';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
@@ -843,6 +845,16 @@ export async function updateOrderStatus(
         /* best-effort */
       }
     }
+  }
+
+  // Aviso al comensal por WhatsApp (Fase 1A). Con `after` y no await: el
+  // envío puede tardar hasta 10s contra Meta y esta acción la ejecuta el
+  // personal decenas de veces al día — no puede quedarse esperando. Tampoco
+  // sirve dispararlo y olvidarlo: una promesa suelta puede morir cuando
+  // termina la request. `after` corre el trabajo DESPUÉS de responder.
+  // No-op si el restaurante no tiene número conectado.
+  if (changed) {
+    after(() => notifyOrderStatus(orderId, status));
   }
 
   if (profile.restaurant_id && changed) {
