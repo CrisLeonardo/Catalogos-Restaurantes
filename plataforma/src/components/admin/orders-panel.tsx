@@ -37,6 +37,9 @@ interface Props {
   agentReceipt?:      boolean;
   autoConfirmEnabled?: boolean;
   autoConfirmMinutes?: number;
+  /** Repartidores activos, para asignar entregas (Fase 2). Lista vacía = el
+   *  restaurante no usa reparto propio y no se muestra el selector. */
+  drivers?: { id: string; nombre: string }[];
 }
 
 /* El sonido y el aviso visual de "pedido nuevo" ya NO viven aquí: los maneja
@@ -97,6 +100,7 @@ function OrdersPanelInner({
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
   autoConfirmEnabled = false, autoConfirmMinutes = 1,
+  drivers = [],
 }: Props) {
   const router = useRouter();
   const toastManager = useToastManager();
@@ -351,6 +355,7 @@ function OrdersPanelInner({
     currency, restaurantName, ticketFormat, now,
     kitchenYellowMin, kitchenRedMin,
     agentKitchen, agentReceipt,
+    drivers, restaurantId,
   };
 
   const countByType = (t: 'ALL' | ServiceType) =>

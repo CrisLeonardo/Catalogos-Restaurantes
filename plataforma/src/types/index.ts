@@ -273,6 +273,15 @@ export interface Order {
   synced_from_hub: boolean;
   /** Canal de entrada (migración 101); 'LEOGIN' = propio (QR, mesero, kiosko, hub). */
   source: OrderSource;
+  /* ── Reparto propio (migración 103) ── */
+  /** Repartidor asignado; null = sin asignar o no es a domicilio. */
+  driver_id: string | null;
+  assigned_at: string | null;
+  /** Cuándo salió el repartidor con el pedido. */
+  picked_up_at: string | null;
+  /** Efectivo realmente recibido en la puerta (para cuadrar caja). */
+  cash_collected: number | null;
+  delivery_zone_id: string | null;
 }
 
 /** Auditoría de anulación de pedido/ítem (migración 079): motivo obligatorio

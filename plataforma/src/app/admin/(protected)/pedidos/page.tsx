@@ -7,6 +7,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getPanelOrders, getOrderStats } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import OrdersPanel from '@/components/admin/orders-panel';
+import { getDrivers } from '@/lib/db/drivers';
 
 export default async function PedidosPage() {
   const supabase = await createClient();
@@ -46,10 +47,17 @@ export default async function PedidosPage() {
   const agentKitchen = !!(agent?.kitchen_target);
   const agentReceipt = !!(agent?.receipt_target);
 
-  const [panelOrders, stats] = await Promise.all([
+  const [panelOrders, stats, drivers] = await Promise.all([
     getPanelOrders(restaurantId, timezone),
     getOrderStats(restaurantId, timezone),
+    getDrivers(restaurantId),
   ]);
+
+  // Solo los activos: un repartidor dado de baja no debe poder recibir
+  // entregas nuevas, aunque siga siendo el responsable de las que ya hizo.
+  const activeDrivers = drivers
+    .filter((d) => d.activo)
+    .map((d) => ({ id: d.id, nombre: d.nombre }));
 
   return (
     <OrdersPanel
@@ -70,6 +78,7 @@ export default async function PedidosPage() {
       agentReceipt={agentReceipt}
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
+      drivers={activeDrivers}
     />
   );
 }

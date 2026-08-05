@@ -26,6 +26,11 @@ export const ADMIN_SECTIONS = [
   { key: 'proveedores',  label: 'Proveedores' },
   { key: 'loyalty',      label: 'Lealtad' },
   { key: 'whatsapp',     label: 'WhatsApp' },
+  // Dos llaves distintas a propósito, igual que "mesero" vs. el resto:
+  // 'reparto' es la PANTALLA del repartidor (/repartidor, fuera del panel),
+  // 'repartidores' es la página donde el dueño los da de alta (/admin/repartidores).
+  { key: 'reparto',      label: 'Reparto (pantalla del repartidor)' },
+  { key: 'repartidores', label: 'Repartidores' },
   { key: 'modulos',      label: 'Módulos' },
   { key: 'suscripcion',  label: 'Mi suscripción' },
   { key: 'personalizar', label: 'Personalizar' },
@@ -65,8 +70,11 @@ export function can(
   return false;
 }
 
-/** Secciones del panel admin (todas menos "mesero", que es pantalla aparte). */
-const PANEL_SECTIONS: string[] = ADMIN_SECTIONS.map((s) => s.key).filter((k) => k !== 'mesero');
+/** Secciones del panel admin. Fuera quedan las que son pantalla aparte:
+ *  "mesero" (/admin/mesero) y "reparto" (/repartidor). */
+const PANEL_SECTIONS: string[] = ADMIN_SECTIONS
+  .map((s) => s.key)
+  .filter((k) => k !== 'mesero' && k !== 'reparto');
 
 /**
  * ¿Es un "mesero puro"? — solo toma pedidos en mesa y NO debe ver el panel admin.
@@ -80,4 +88,17 @@ export function isMeseroOnly(
   if (role !== 'RESTAURANT_STAFF') return false;
   if (!Array.isArray(permissions)) return false;
   return permissions.includes('mesero') && !permissions.some((p) => PANEL_SECTIONS.includes(p));
+}
+
+/**
+ * ¿Es un "repartidor puro"? — solo entrega pedidos y NO debe ver el panel admin.
+ * Mismo criterio que isMeseroOnly: su único acceso es su propia pantalla.
+ */
+export function isRepartidorOnly(
+  role: string | null | undefined,
+  permissions: string[] | null | undefined,
+): boolean {
+  if (role !== 'RESTAURANT_STAFF') return false;
+  if (!Array.isArray(permissions)) return false;
+  return permissions.includes('reparto') && !permissions.some((p) => PANEL_SECTIONS.includes(p));
 }

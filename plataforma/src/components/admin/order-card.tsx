@@ -13,6 +13,7 @@ import {
   stageClock, fmtElapsed, clockChipClass,
 } from '@/lib/order-status';
 import { sourceBadge } from '@/lib/order-source';
+import { assignDriver } from '@/lib/actions/drivers';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -296,6 +297,8 @@ export default function OrderCard({
   kitchenRedMin = 20,
   agentKitchen = false,
   agentReceipt = false,
+  drivers = [],
+  restaurantId,
 }: {
   order: OrderWithItems;
   currency: PanelCurrency;
@@ -310,6 +313,11 @@ export default function OrderCard({
   agentKitchen?: boolean;
   /** El Agente Leogin imprime el recibo (servidor) → el botón encola en vez de usar el navegador. */
   agentReceipt?: boolean;
+  /** Repartidores activos (Fase 2). Vacío o ausente = no se ofrece asignar:
+   *  el panel del mesero y el diálogo de anulación reusan esta tarjeta y ahí
+   *  no se reparte nada. */
+  drivers?: { id: string; nombre: string }[];
+  restaurantId?: string;
 }) {
   const [isPending, start] = useTransition();
   const [mapOpen, setMapOpen] = useState(false);
@@ -438,6 +446,39 @@ export default function OrderCard({
             >
               <Icon name="plug" size={11} /> Tomado sin conexión
             </span>
+          )}
+
+          {/* Asignación de repartidor (Fase 2). Solo a domicilio, solo mientras
+              el pedido sigue vivo y solo si el restaurante tiene repartidores. */}
+          {drivers.length > 0 && restaurantId && order.order_type === 'DELIVERY'
+            && order.status !== 'DELIVERED' && order.status !== 'CANCEL' && (
+            <form action={assignDriver} style={{ marginTop: 8 }}>
+              <input type="hidden" name="restaurantId" value={restaurantId} />
+              <input type="hidden" name="orderId" value={order.id} />
+              <label
+                htmlFor={`drv-${order.id}`}
+                style={{ fontSize: 10, color: 'var(--u-text-4)', display: 'block', marginBottom: 4 }}
+              >
+                Repartidor
+              </label>
+              <select
+                id={`drv-${order.id}`}
+                name="driverId"
+                defaultValue={order.driver_id ?? ''}
+                onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                style={{
+                  background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                  border: '1px solid var(--u-hair)', borderRadius: 9,
+                  padding: '6px 9px', color: 'var(--u-text)', fontSize: 12, outline: 'none',
+                  maxWidth: '100%',
+                }}
+              >
+                <option value="">Sin asignar</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </select>
+            </form>
           )}
         </div>
 
