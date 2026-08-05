@@ -96,6 +96,71 @@ export interface ShiftSummary {
   sinRegistro: number;
 }
 
+export interface DriverCashRow {
+  driverId: string;
+  nombre: string;
+  entregados: number;
+  /** Lo que el repartidor DEBERÍA traer: total de los pedidos en efectivo. */
+  esperado: number;
+  /** Lo que dijo haber recibido al marcar cada entrega. */
+  recibido: number;
+  /** recibido − esperado. Negativo = falta dinero. */
+  diferencia: number;
+  sinRegistro: number;
+}
+
+/**
+ * Cuadre del día por repartidor, para el dueño.
+ *
+ * Solo cuenta los pedidos en EFECTIVO: los de tarjeta al recibir no pasan por
+ * las manos del repartidor y sumarlos inflaría lo esperado, haciendo que todo
+ * el mundo pareciera estar corto. Los entregados sin monto anotado se cuentan
+ * aparte en vez de asumirlos en cero: un dato faltante no es un faltante de
+ * caja, y confundirlos sería acusar a alguien por un olvido.
+ */
+export async function getDriversCashToday(restaurantId: string): Promise<DriverCashRow[]> {
+  const db = createServiceClient();
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+
+  const [{ data: orders }, drivers] = await Promise.all([
+    db
+      .from('orders')
+      .select('driver_id, total, cash_collected, payment_method')
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'DELIVERED')
+      .not('driver_id', 'is', null)
+      .gte('delivered_at', since.toISOString()),
+    getDrivers(restaurantId),
+  ]);
+
+  const nombrePorId = new Map(drivers.map((d) => [d.id, d.nombre]));
+  const acc = new Map<string, DriverCashRow>();
+
+  for (const o of (orders ?? []) as {
+    driver_id: string; total: number; cash_collected: number | null; payment_method: string;
+  }[]) {
+    const id = o.driver_id;
+    const row = acc.get(id) ?? {
+      driverId: id,
+      nombre: nombrePorId.get(id) ?? 'Repartidor dado de baja',
+      entregados: 0, esperado: 0, recibido: 0, diferencia: 0, sinRegistro: 0,
+    };
+
+    row.entregados += 1;
+    if (o.payment_method === 'CASH') {
+      row.esperado += Number(o.total ?? 0);
+      if (o.cash_collected == null) row.sinRegistro += 1;
+      else row.recibido += Number(o.cash_collected);
+    }
+    acc.set(id, row);
+  }
+
+  return [...acc.values()]
+    .map((r) => ({ ...r, diferencia: r.recibido - r.esperado }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
 /**
  * Resumen del turno para cuadrar caja. "Hoy" = desde la medianoche local del
  * servidor; es una aproximación deliberada — el cierre de turno real puede

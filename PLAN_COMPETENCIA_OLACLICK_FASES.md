@@ -499,8 +499,8 @@ fase las audita y cierra el pendiente M-2 de la auditoría del 29 de julio.
 | 5 | Bot determinista de pedidos | F1B | ⬜ |
 | 6 | Agente IA | F1C | ⬜ |
 | 7 | Repartidores + vista móvil + asignación | F2 | 🟡 código listo; falta migración 103 |
-| 7b | Zonas de reparto (tarifa por zona en el checkout) | F2 | ⬜ tabla creada, sin UI ni uso en checkout |
-| 8 | Cierre de caja del repartidor | F2 | 🟡 el repartidor ve su turno; falta el reporte del dueño |
+| 7b | Zonas de reparto (tarifa por zona en el checkout) | F2 | 🟡 código listo; falta aplicar la migración 104 |
+| 8 | Cierre de caja del repartidor | F2 | 🟡 código listo (turno del repartidor + cuadre del dueño) |
 | 9 | FEL transmitiendo a INFILE | F3 | ⬜ |
 | 10 | App Android en Play Store | F4 | ⬜ |
 | 11 | Ingesta genérica de pedidos externos | F5A | ⬜ |

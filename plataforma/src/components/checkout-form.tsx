@@ -51,7 +51,9 @@ interface Props {
   restaurantId: string;
   restaurantName: string;
   whatsappNumber: string | null;
-  deliveryZones?: string[];
+  /** Zonas de cobertura con su tarifa (migración 103/104). La tarifa se
+   *  muestra aquí, pero el cobro real lo recalcula el servidor contra la BD. */
+  deliveryZones?: { nombre: string; tarifa: number }[];
   restaurantLat?: number | null;
   restaurantLng?: number | null;
   deliveryRadiusKm?: number | null;
@@ -235,7 +237,7 @@ export default function CheckoutForm({
           setName(remote.name);
           setPhone(remote.phone);
           if (remote.address) setAddress(remote.address);
-          if (remote.zone && deliveryZones.includes(remote.zone)) setZone(remote.zone);
+          if (remote.zone && deliveryZones.some((z) => z.nombre === remote.zone)) setZone(remote.zone);
           if (remote.lat != null && remote.lng != null) { setDeliveryLat(remote.lat); setDeliveryLng(remote.lng); }
           setWelcomeBack(true);
           return;
@@ -246,7 +248,7 @@ export default function CheckoutForm({
         setName(p.name);
         setPhone(p.phone);
         if (p.address) setAddress(p.address);
-        if (p.zone && deliveryZones.includes(p.zone)) setZone(p.zone);
+        if (p.zone && deliveryZones.some((z) => z.nombre === p.zone)) setZone(p.zone);
         if (p.lat != null && p.lng != null) { setDeliveryLat(p.lat); setDeliveryLng(p.lng); }
         setWelcomeBack(true);
       } finally {
@@ -323,7 +325,14 @@ export default function CheckoutForm({
     table:   type === 'DINE_IN' && !tableNumber ? 'Escanea el QR de tu mesa para continuar' : '',
   };
 
-  const deliveryFee  = type === 'DELIVERY' ? config.deliveryFee : 0;
+  // Envío: manda la tarifa de la zona elegida; sin zonas configuradas (o antes
+  // de elegir una), la tarifa plana del tema. Tiene que coincidir con lo que
+  // calcula computeOrderPricing en el servidor — si no, el comensal vería un
+  // total y se le cobraría otro.
+  const selectedZone = deliveryZones.find((z) => z.nombre === zone) ?? null;
+  const deliveryFee  = type === 'DELIVERY'
+    ? (selectedZone ? selectedZone.tarifa : config.deliveryFee)
+    : 0;
   const discount     = appliedCoupon ? Math.min(appliedCoupon.discount, total) : 0;
 
   // Propina obligatoria — según los tipos de pedido que el restaurante habilitó (tipOrderTypes).
@@ -1180,9 +1189,10 @@ export default function CheckoutForm({
           <div>
             <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>Zona de entrega</label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 6 }}>
-              {[...deliveryZones, NO_ZONE].map((z) => {
+              {[...deliveryZones.map((z) => z.nombre), NO_ZONE].map((z) => {
                 const isOther = z === NO_ZONE;
                 const on = zone === z;
+                const tarifa = deliveryZones.find((dz) => dz.nombre === z)?.tarifa ?? 0;
                 return (
                   <button
                     key={z}
@@ -1198,7 +1208,7 @@ export default function CheckoutForm({
                       transition: 'all 150ms',
                     }}
                   >
-                    {isOther ? 'Mi zona no aparece' : z}
+                    {isOther ? 'Mi zona no aparece' : tarifa > 0 ? `${z} · ${formatPrice(tarifa, config)}` : z}
                   </button>
                 );
               })}

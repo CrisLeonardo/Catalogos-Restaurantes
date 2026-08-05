@@ -3,37 +3,58 @@
 /* ============================================================
    ZONAS DE COBERTURA DEL DELIVERY — editor del dueño
    ------------------------------------------------------------
-   Lista simple de zonas/colonias a las que SÍ llega el reparto.
-   · Con zonas configuradas: el comensal elige su zona en el
-     checkout; si no aparece, solo puede pedir para recoger.
-   · Sin zonas: el delivery no se restringe (como hasta ahora).
+   Zonas/colonias a las que SÍ llega el reparto, cada una con su tarifa.
+   · Con zonas configuradas: el comensal elige la suya en el checkout y
+     paga la tarifa de esa zona; si no aparece, solo puede pedir para
+     recoger.
+   · Sin zonas: el delivery no se restringe y se cobra la tarifa plana
+     del tema (como hasta ahora).
+
+   Tarifa 0 = envío gratis para esa zona. Desde la migración 104 esto vive
+   en la tabla delivery_zones, no en el jsonb de restaurants.
    ============================================================ */
 
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { updateDeliveryZones, type RestaurantState } from '@/lib/actions/restaurant';
-import type { Restaurant } from '@/types';
 
 const empty: RestaurantState = null;
 
-export default function DeliveryZonesEditor({ restaurant }: { restaurant: Restaurant }) {
+export interface ZoneDraft {
+  nombre: string;
+  tarifa: number;
+}
+
+export default function DeliveryZonesEditor({
+  restaurantId, initialZones,
+}: {
+  restaurantId: string;
+  initialZones: ZoneDraft[];
+}) {
   const [state, formAction, isPending] = useActionState(updateDeliveryZones, empty);
-  const [zones, setZones] = useState<string[]>(restaurant.delivery_zones ?? []);
+  const [zones, setZones] = useState<ZoneDraft[]>(initialZones);
   const [draft, setDraft] = useState('');
 
   function addZone() {
     const z = draft.trim();
     if (!z) return;
-    if (!zones.some((x) => x.toLowerCase() === z.toLowerCase())) {
-      setZones((prev) => [...prev, z]);
+    if (!zones.some((x) => x.nombre.toLowerCase() === z.toLowerCase())) {
+      setZones((prev) => [...prev, { nombre: z, tarifa: 0 }]);
     }
     setDraft('');
   }
 
+  function setTarifa(nombre: string, valor: string) {
+    const n = Number(valor);
+    setZones((prev) => prev.map((z) =>
+      z.nombre === nombre ? { ...z, tarifa: Number.isFinite(n) && n > 0 ? n : 0 } : z,
+    ));
+  }
+
   return (
     <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <input type="hidden" name="restaurantId" value={restaurant.id} />
+      <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="zones" value={JSON.stringify(zones)} />
 
       <Glass variant="quiet" style={{ padding: 16 }}>
@@ -46,40 +67,61 @@ export default function DeliveryZonesEditor({ restaurant }: { restaurant: Restau
           Zonas a las que llega tu delivery
         </label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12, lineHeight: 1.5 }}>
-          Si agregas zonas, el cliente debe elegir la suya al pedir a domicilio;
-          si la suya no está, solo podrá pedir para recoger. Sin zonas = entregas
-          a cualquier dirección.
+          Si agregas zonas, el cliente debe elegir la suya al pedir a domicilio y
+          paga la tarifa de esa zona; si la suya no está, solo podrá pedir para
+          recoger. Sin zonas = entregas a cualquier dirección con la tarifa
+          normal. Tarifa en 0 = envío gratis para esa zona.
         </p>
 
-        {/* Chips de zonas */}
+        {/* Zonas con su tarifa */}
         {zones.length > 0 && (
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
             {zones.map((z) => (
-              <span
-                key={z}
+              <div
+                key={z.nombre}
                 className="glass-quiet"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  padding: '7px 8px 7px 13px', borderRadius: 99,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 10px 8px 13px', borderRadius: 'var(--radius-md)',
                   fontSize: 13, fontWeight: 600, color: 'var(--u-text)',
                 }}
               >
-                <Icon name="mapPin" size={13} style={{ color: 'var(--u-text-3)' }} />
-                {z}
+                <Icon name="mapPin" size={13} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>{z.nombre}</span>
+
+                <label htmlFor={`tarifa-${z.nombre}`} style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 500 }}>
+                  Envío
+                </label>
+                <input
+                  id={`tarifa-${z.nombre}`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={z.tarifa}
+                  onChange={(e) => setTarifa(z.nombre, e.target.value)}
+                  style={{
+                    width: 84, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                    border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)',
+                    padding: '7px 9px', color: 'var(--u-text)', fontSize: 13, outline: 'none',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                />
+
                 <button
                   type="button"
-                  onClick={() => setZones((prev) => prev.filter((x) => x !== z))}
+                  onClick={() => setZones((prev) => prev.filter((x) => x.nombre !== z.nombre))}
                   className="press"
-                  title={`Quitar ${z}`}
+                  title={`Quitar ${z.nombre}`}
                   style={{
                     width: 22, height: 22, borderRadius: 99, border: 'none', cursor: 'pointer',
                     background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-3)',
-                    display: 'grid', placeItems: 'center',
+                    display: 'grid', placeItems: 'center', flexShrink: 0,
                   }}
                 >
                   <Icon name="x" size={11} />
                 </button>
-              </span>
+              </div>
             ))}
           </div>
         )}

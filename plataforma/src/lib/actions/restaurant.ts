@@ -234,26 +234,72 @@ export async function updateDeliveryZones(
   const ctx = await resolveContext(formData);
   if (!ctx) return { error: 'No autorizado.' };
 
-  let zones: string[] = [];
+  // Desde la migración 104 las zonas viven en su propia tabla y traen tarifa.
+  // El formulario manda [{nombre, tarifa}]; se sanea todo aquí porque la
+  // tarifa es dinero y no se confía en lo que llega del cliente.
+  const zones: { nombre: string; tarifa: number }[] = [];
   try {
     const raw = JSON.parse((formData.get('zones') as string) || '[]');
     if (!Array.isArray(raw)) return { error: 'Zonas inválidas.' };
-    zones = [...new Set(
-      raw
-        .filter((z): z is string => typeof z === 'string')
-        .map((z) => z.trim().slice(0, 80))
-        .filter(Boolean),
-    )].slice(0, 60);
+
+    const vistos = new Set<string>();
+    for (const z of raw) {
+      const nombre = typeof z?.nombre === 'string' ? z.nombre.trim().slice(0, 80) : '';
+      if (!nombre) continue;
+      const clave = nombre.toLowerCase();
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+
+      const tarifaNum = Number(z?.tarifa);
+      zones.push({
+        nombre,
+        tarifa: Number.isFinite(tarifaNum) && tarifaNum > 0 ? Math.min(tarifaNum, 99999) : 0,
+      });
+      if (zones.length >= 60) break;
+    }
   } catch {
     return { error: 'Zonas inválidas.' };
   }
 
-  const { error } = await ctx.db
-    .from('restaurants')
-    .update({ delivery_zones: zones.length > 0 ? zones : null })
-    .eq('id', ctx.restaurantId);
+  // Las filas NO se borran: orders.delivery_zone_id las referencia y un pedido
+  // viejo no puede quedarse sin la zona con la que se cobró. Lo que desaparece
+  // del formulario se desactiva.
+  const { data: existentes } = await ctx.db
+    .from('delivery_zones')
+    .select('id, nombre')
+    .eq('restaurant_id', ctx.restaurantId);
 
-  if (error) return { error: error.message };
+  const porNombre = new Map(
+    ((existentes ?? []) as { id: string; nombre: string }[])
+      .map((z) => [z.nombre.toLowerCase(), z.id]),
+  );
+
+  const conservados = new Set<string>();
+  for (const [i, z] of zones.entries()) {
+    const existenteId = porNombre.get(z.nombre.toLowerCase());
+    if (existenteId) {
+      conservados.add(existenteId);
+      await ctx.db
+        .from('delivery_zones')
+        .update({ nombre: z.nombre, tarifa: z.tarifa, activo: true, sort_order: i })
+        .eq('id', existenteId);
+    } else {
+      await ctx.db.from('delivery_zones').insert({
+        restaurant_id: ctx.restaurantId,
+        nombre: z.nombre,
+        tarifa: z.tarifa,
+        sort_order: i,
+      });
+    }
+  }
+
+  const aDesactivar = ((existentes ?? []) as { id: string }[])
+    .map((z) => z.id)
+    .filter((id) => !conservados.has(id));
+
+  if (aDesactivar.length > 0) {
+    await ctx.db.from('delivery_zones').update({ activo: false }).in('id', aDesactivar);
+  }
 
   revalidatePath('/admin/perfil');
   revalidatePath('/');

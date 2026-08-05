@@ -13,6 +13,7 @@ import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import { resolveCoupon } from '@/lib/db/cupones';
+import { getDeliveryZones, resolveZoneFee } from '@/lib/db/zones';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder, enqueueSplitBillTicket } from '@/lib/print-agent';
@@ -156,6 +157,7 @@ async function computeOrderPricing(
   tipAccepted: boolean,
   couponCode: string | undefined,
   verifiedItems: VerifiedOrderItem[],
+  zoneName: string | null | undefined,
 ): Promise<{
   subtotal: number;
   fee: number;
@@ -165,7 +167,18 @@ async function computeOrderPricing(
   applied: Awaited<ReturnType<typeof resolveCoupon>>;
 }> {
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const fee = orderType === 'DELIVERY' ? Math.max(0, Number(themeConfig.deliveryFee) || 0) : 0;
+
+  // Envío: si el restaurante configuró zonas (migración 103/104), manda la
+  // tarifa de la zona elegida; si no, la tarifa plana del tema. La tarifa se
+  // resuelve SIEMPRE contra la BD por el nombre de la zona — el cliente manda
+  // qué zona eligió, nunca cuánto cuesta.
+  // Un nombre de zona que no existe cae a la tarifa plana en vez de a 0: el
+  // pedido ya viene validado contra la lista de zonas más arriba, así que
+  // llegar aquí sin coincidencia significa desconcierto, no envío gratis.
+  const zoneFee = orderType === 'DELIVERY' ? await resolveZoneFee(restaurantId, zoneName) : null;
+  const fee = orderType === 'DELIVERY'
+    ? (zoneFee ?? Math.max(0, Number(themeConfig.deliveryFee) || 0))
+    : 0;
 
   // Cupón (código escrito por el cliente). Autoritativo en el servidor:
   // el descuento NUNCA se toma del cliente, se recalcula contra la BD.
@@ -295,11 +308,16 @@ export async function createOrder(
     return { error: 'El restaurante está cerrado en este momento.' };
   }
 
-  // Cobertura de delivery: si el restaurante configuró zonas de texto, el pedido
-  // a domicilio DEBE traer una zona válida.
-  const zones = (restaurant.delivery_zones as string[] | null) ?? [];
+  // Cobertura de delivery: si el restaurante configuró zonas, el pedido a
+  // domicilio DEBE traer una válida. Las zonas viven en su propia tabla desde
+  // la migración 104 (antes eran nombres sueltos en restaurants.delivery_zones,
+  // ahora histórica) — la comparación es sin distinguir mayúsculas porque el
+  // nombre viaja como texto en el pedido y no como id.
+  const zones = customer.type === 'DELIVERY' ? await getDeliveryZones(restaurantId) : [];
   if (customer.type === 'DELIVERY' && zones.length > 0) {
-    if (!customer.zone || !zones.includes(customer.zone)) {
+    const zoneOk = customer.zone
+      && zones.some((z) => z.nombre.toLowerCase() === customer.zone!.trim().toLowerCase());
+    if (!zoneOk) {
       return {
         error:
           'El restaurante no llega a tu zona. Elige una zona de cobertura o pide para recoger en el local.',
@@ -414,6 +432,7 @@ export async function createOrder(
 
   const { subtotal, fee, discount, tip, total, applied } = await computeOrderPricing(
     restaurantId, themeConfig, customer.type, tipAccepted, parsed.data.couponCode, verifiedItems,
+    customer.type === 'DELIVERY' ? customer.zone : null,
   );
 
   // Registro automático del cliente (clave: teléfono normalizado por

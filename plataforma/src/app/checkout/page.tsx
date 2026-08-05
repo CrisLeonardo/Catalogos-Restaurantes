@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/lib/theme/context';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isOpenNow } from '@/lib/hours';
 import { hasActiveCoupons } from '@/lib/db/cupones';
+import { getDeliveryZones } from '@/lib/db/zones';
 import { isModuleActive } from '@/lib/modules';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import CheckoutForm from '@/components/checkout-form';
@@ -37,6 +38,9 @@ export default async function CheckoutPage() {
   const paused = restaurant.orders_paused === true;
   const open = isOpenNow(restaurant.hours, restaurant.timezone || 'America/Guatemala', new Date(), restaurant.hour_exceptions);
   const hasCoupons = await hasActiveCoupons(restaurant.id);
+  // Zonas con su tarifa (migración 104). El checkout las muestra; el cobro
+  // real lo recalcula createOrder contra esta misma tabla.
+  const zones = await getDeliveryZones(restaurant.id);
   const { hubUrl, hubToken } = await getAgentHubInfo(restaurant.id);
   const mod = restaurant.modules as Record<string, boolean> | null;
   const modSettings = restaurant.module_settings ?? null;
@@ -60,7 +64,7 @@ export default async function CheckoutPage() {
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
           whatsappNumber={restaurant.orders_whatsapp_enabled === false ? null : (restaurant.orders_whatsapp || restaurant.whatsapp_number)}
-          deliveryZones={restaurant.delivery_zones ?? []}
+          deliveryZones={zones.map((z) => ({ nombre: z.nombre, tarifa: z.tarifa }))}
           restaurantLat={restaurant.location_lat}
           restaurantLng={restaurant.location_lng}
           deliveryRadiusKm={restaurant.delivery_radius_km}
