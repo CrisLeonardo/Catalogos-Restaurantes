@@ -33,7 +33,9 @@ import {
   restaurantIdForPhoneNumber,
   ensureConversation,
   logInboundMessage,
+  sendWhatsAppText,
 } from '@/lib/whatsapp/client';
+import { handleBotMessage, type BotState } from '@/lib/whatsapp/bot';
 
 /** Comparación en tiempo constante de dos strings (evita fugas por timing). */
 function safeEqual(a: string, b: string): boolean {
@@ -112,6 +114,12 @@ interface WaInboundMessage {
   from?: string;
   type?: string;
   text?: { body?: string };
+  /** Respuesta a un botón o a una fila de lista (Fase 1B). */
+  interactive?: {
+    type?: string;
+    button_reply?: { id?: string; title?: string };
+    list_reply?: { id?: string; title?: string };
+  };
 }
 
 interface WaStatus {
@@ -157,12 +165,15 @@ async function processWebhook(body: WebhookBody): Promise<void> {
   }
 }
 
-/** Mensajes del cliente. En 1A solo se registran y se reabre la ventana de
- *  24h; responderlos es la Fase 1B (bot) y 1C (agente IA). */
+/** Mensajes del cliente: se registran, reabren la ventana de 24h y se pasan
+ *  al bot (Fase 1B). El agente con IA de la 1C se enchufa en este mismo
+ *  punto, conservando el bot como respaldo. */
 async function handleInbound(
   restaurantId: string,
   messages: WaInboundMessage[],
 ): Promise<void> {
+  const db = createServiceClient();
+
   for (const msg of messages) {
     const waId = msg.from;
     if (!waId) continue;
@@ -177,6 +188,38 @@ async function handleInbound(
       waMessageId: msg.id ?? null,
       kind: msg.type ?? 'unknown',
       payload: msg,
+    });
+
+    // Un botón o una fila de lista traen su id; el texto libre no.
+    const interactiveId =
+      msg.interactive?.button_reply?.id ?? msg.interactive?.list_reply?.id ?? null;
+    const text = msg.text?.body ?? null;
+
+    // Sin nada que interpretar (audio, imagen, ubicación…) no se adivina:
+    // se le dice al cliente qué sí se entiende.
+    if (!interactiveId && !text) {
+      await sendWhatsAppText(
+        restaurantId, waId,
+        'Por ahora solo puedo leer mensajes de texto. Escribime *menú* para ver qué hay, o *humano* para hablar con alguien.',
+      );
+      continue;
+    }
+
+    const { data: hilo } = await db
+      .from('whatsapp_conversations')
+      .select('estado, handoff_hasta, bloqueado')
+      .eq('id', convo.id)
+      .single();
+
+    await handleBotMessage({
+      restaurantId,
+      waId,
+      conversationId: convo.id,
+      text,
+      interactiveId,
+      state: (hilo?.estado as BotState | null) ?? null,
+      handoffHasta: (hilo?.handoff_hasta as string | null) ?? null,
+      bloqueado: hilo?.bloqueado === true,
     });
   }
 }

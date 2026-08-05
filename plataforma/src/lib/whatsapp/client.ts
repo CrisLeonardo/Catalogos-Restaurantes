@@ -285,6 +285,117 @@ export async function sendWhatsAppTemplate(
     : { ok: false, reason: 'api_error', detail: sent.detail };
 }
 
+/* ── Mensajes interactivos (Fase 1B) ─────────────────────────
+   Los límites son de Meta y no negociables: 3 botones como máximo, y 10
+   filas como máximo por lista. Pasarse no da un error claro — el mensaje
+   simplemente se rechaza —, así que se recortan aquí, en un solo lugar,
+   en vez de confiar en que cada pantalla del bot se acuerde. */
+
+export const WA_MAX_BUTTONS = 3;
+export const WA_MAX_LIST_ROWS = 10;
+
+/** Hasta 3 botones. `id` es lo que vuelve en el webhook al tocarlos. */
+export async function sendWhatsAppButtons(
+  restaurantId: string,
+  waId: string,
+  bodyText: string,
+  buttons: { id: string; title: string }[],
+): Promise<SendResult> {
+  const account = await getAccount(restaurantId);
+  if (!account) return { ok: false, reason: 'no_account' };
+
+  const convo = await ensureConversation(restaurantId, waId);
+  if (!convo) return { ok: false, reason: 'api_error', detail: 'no se pudo abrir la conversación' };
+  if (!isWindowOpen(convo.lastInboundAt)) return { ok: false, reason: 'window_closed' };
+
+  const body = {
+    messaging_product: 'whatsapp',
+    to: waId,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: bodyText.slice(0, 1024) },
+      action: {
+        buttons: buttons.slice(0, WA_MAX_BUTTONS).map((b) => ({
+          type: 'reply',
+          // El título de un botón no puede pasar de 20 caracteres.
+          reply: { id: b.id.slice(0, 256), title: b.title.slice(0, 20) },
+        })),
+      },
+    },
+  };
+
+  const sent = await postToGraph(account, body);
+  await logMessage({
+    conversationId: convo.id,
+    restaurantId,
+    direction: 'OUT',
+    kind: 'interactive_buttons',
+    payload: body,
+    waMessageId: sent.ok ? sent.waMessageId : null,
+    status: sent.ok ? 'sent' : 'failed',
+    error: sent.ok ? null : sent.detail,
+  });
+
+  return sent.ok
+    ? { ok: true, waMessageId: sent.waMessageId }
+    : { ok: false, reason: 'api_error', detail: sent.detail };
+}
+
+/** Lista desplegable de hasta 10 filas. */
+export async function sendWhatsAppList(
+  restaurantId: string,
+  waId: string,
+  bodyText: string,
+  buttonText: string,
+  rows: { id: string; title: string; description?: string }[],
+): Promise<SendResult> {
+  const account = await getAccount(restaurantId);
+  if (!account) return { ok: false, reason: 'no_account' };
+
+  const convo = await ensureConversation(restaurantId, waId);
+  if (!convo) return { ok: false, reason: 'api_error', detail: 'no se pudo abrir la conversación' };
+  if (!isWindowOpen(convo.lastInboundAt)) return { ok: false, reason: 'window_closed' };
+
+  const body = {
+    messaging_product: 'whatsapp',
+    to: waId,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: bodyText.slice(0, 1024) },
+      action: {
+        button: buttonText.slice(0, 20),
+        sections: [
+          {
+            rows: rows.slice(0, WA_MAX_LIST_ROWS).map((r) => ({
+              id: r.id.slice(0, 200),
+              title: r.title.slice(0, 24),
+              ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+            })),
+          },
+        ],
+      },
+    },
+  };
+
+  const sent = await postToGraph(account, body);
+  await logMessage({
+    conversationId: convo.id,
+    restaurantId,
+    direction: 'OUT',
+    kind: 'interactive_list',
+    payload: body,
+    waMessageId: sent.ok ? sent.waMessageId : null,
+    status: sent.ok ? 'sent' : 'failed',
+    error: sent.ok ? null : sent.detail,
+  });
+
+  return sent.ok
+    ? { ok: true, waMessageId: sent.waMessageId }
+    : { ok: false, reason: 'api_error', detail: sent.detail };
+}
+
 /** Registra un mensaje ENTRANTE (lo usa el webhook). */
 export async function logInboundMessage(args: {
   conversationId: string;
