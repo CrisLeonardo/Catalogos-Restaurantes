@@ -371,8 +371,8 @@ function buildCsp(nonce: string): string {
 
     "font-src 'self' data: https://fonts.gstatic.com",
 
-    // localhost: agente de impresión Leogin y QZ Tray, que corren en la
-    // máquina del restaurante y se hablan por http/ws local.
+    // localhost: el Agente de impresión Leogin, que corre en la máquina
+    // del restaurante y se habla por http/ws local.
     `connect-src 'self' ${supabaseHttp} ${supabaseWs} http://localhost:* ws://localhost:* https://localhost:* wss://localhost:*`,
 
     "worker-src 'self' blob:",

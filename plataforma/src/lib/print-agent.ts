@@ -218,7 +218,7 @@ export type KitchenEnqueueOutcome =
 /**
  * Encola la comanda de cocina de un pedido al agente del restaurante.
  * No-op si el restaurante no tiene agente con destino de cocina configurado
- * (así convive con la impresión por QZ/USB del navegador) y — salvo `force` —
+ * (así convive con la impresión por USB del navegador) y — salvo `force` —
  * si ese pedido YA tiene su comanda encolada.
  * Best-effort: nunca debe romper el cambio de estado del pedido.
  *

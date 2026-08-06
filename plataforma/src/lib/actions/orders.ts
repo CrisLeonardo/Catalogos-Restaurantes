@@ -1239,7 +1239,7 @@ function printFailureMessage(
 /**
  * Encola el recibo de caja de un pedido al agente de impresión del restaurante.
  * Lo llama el botón "Imprimir recibo" cuando el restaurante usa el Agente Leogin
- * (en vez de la impresión por navegador/QZ).
+ * (en vez de la impresión por navegador).
  *
  * Devuelve el error real: antes, sin impresora de caja asignada o con la PC
  * principal apagada, esto era un no-op silencioso — se pulsaba "Imprimir" y no

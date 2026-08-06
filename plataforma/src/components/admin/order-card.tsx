@@ -132,7 +132,7 @@ ${notesHtml}
 }
 
 /**
- * Imprime la comanda DESDE EL NAVEGADOR (QZ Tray / USB), para los locales que
+ * Imprime la comanda DESDE EL NAVEGADOR (Web USB), para los locales que
  * no usan el Agente de impresión.
  *
  * Una sola vez por pedido y por dispositivo: el candado del servidor

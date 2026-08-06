@@ -232,7 +232,7 @@ export default async function AdminMiPcPage() {
         icon="print"
         storageKey="mi-pc-navegador"
         defaultOpen={false}
-        subtitle="Impresión por USB/QZ Tray desde esta pantalla. Funciona, pero depende del dispositivo y del navegador — la PC principal es la opción recomendada."
+        subtitle="Impresión por USB desde esta pantalla. Funciona, pero depende del dispositivo y del navegador — la PC principal es la opción recomendada."
       >
         <KitchenPrintSettings />
       </CollapsibleCard>

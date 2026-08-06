@@ -179,7 +179,7 @@ function OrdersPanelInner({
   // Solo al montar: activeOrders y autoConfirm* son props de servidor, estables.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* ── Comanda por navegador (QZ / USB), para locales sin Agente ──────────
+  /* ── Comanda por navegador (Web USB), para locales sin Agente ───────────
      Antes la disparaba el botón "Confirmar" de la tarjeta. Eso dejaba fuera
      todo pedido que entrara a cocina por otra vía: el que toma un mesero (que
      ya nace enviado a cocina), el que confirma la pantalla de cocina y el que

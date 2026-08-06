@@ -1,5 +1,5 @@
 // Codificación ESC/POS para impresoras térmicas POS (Epson, 3Nstar, Star, etc.)
-// Genera Uint8Array listo para enviar vía Web USB o QZ Tray en modo raw.
+// Genera Uint8Array listo para enviar vía Web USB o el Agente Leogin en modo raw.
 
 import type { OrderWithItems } from '@/lib/db/orders';
 
