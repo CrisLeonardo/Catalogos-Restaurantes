@@ -19,11 +19,15 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
     router.push(`${basePath}?from=${nf}&to=${nt}`);
   }
 
-  function preset(days: number) {
+  function rangeFor(days: number): { nf: string; nt: string } {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - (days - 1));
-    const nf = ymd(start), nt = ymd(end);
+    return { nf: ymd(start), nt: ymd(end) };
+  }
+
+  function preset(days: number) {
+    const { nf, nt } = rangeFor(days);
     setF(nf); setT(nt); go(nf, nt);
   }
 
@@ -61,17 +65,28 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
         Aplicar
       </button>
       <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-        {atajos.map((p) => (
-          <button
-            key={p.d}
-            onClick={() => preset(p.d)}
-            aria-label={p.largo}
-            className="press glass-quiet"
-            style={{ padding: '10px 14px', minHeight: 40, borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 600, whiteSpace: 'nowrap' }}
-          >
-            {p.corto}
-          </button>
-        ))}
+        {atajos.map((p) => {
+          const { nf, nt } = rangeFor(p.d);
+          const activo = f === nf && t === nt;
+          return (
+            <button
+              key={p.d}
+              onClick={() => preset(p.d)}
+              aria-label={p.largo}
+              aria-pressed={activo}
+              className={activo ? 'press' : 'press glass-quiet'}
+              style={{
+                padding: '10px 14px', minHeight: 40, borderRadius: 99, border: 'none', cursor: 'pointer',
+                fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
+                background: activo ? 'var(--brand-accent)' : undefined,
+                color: activo ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+                boxShadow: activo ? '0 4px 14px color-mix(in srgb, var(--brand-accent) 28%, transparent)' : undefined,
+              }}
+            >
+              {p.corto}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

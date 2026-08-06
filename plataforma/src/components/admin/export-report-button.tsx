@@ -60,6 +60,7 @@ export default function ExportReportButton({
           ['Ingreso bruto', money(r.revenue)],
           ['Ingreso de productos', money(r.productRevenue)],
           ['Envíos', money(r.deliveryRevenue)],
+          ['Propinas', money(r.tips)],
           ['Costo', money(r.cost)],
           ['Utilidad', money(r.profit)],
           ['Margen %', r.marginPct != null ? `${r.marginPct.toFixed(1)}%` : 'n/d'],

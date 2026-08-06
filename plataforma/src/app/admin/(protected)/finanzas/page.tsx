@@ -104,6 +104,7 @@ export default async function AdminFinanzasPage({
         <Kpi label="Costo" value={money(report.cost)} sub="de productos vendidos" />
         <Kpi label="Ticket promedio" value={money(report.avgTicket)} />
         <Kpi label="Envíos" value={money(report.deliveryRevenue)} />
+        <Kpi label="Propinas" value={money(report.tips)} sub={report.tips > 0 ? 'ya incluidas en el ingreso' : undefined} />
       </div>
 
       {report.marginPct == null && report.orders > 0 && (

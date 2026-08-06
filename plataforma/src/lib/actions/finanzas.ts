@@ -295,6 +295,7 @@ export async function exportSalesReportXlsx(
   moneyRow('Ingreso bruto', report.revenue);
   moneyRow('Ingreso de productos', report.productRevenue);
   moneyRow('Envíos', report.deliveryRevenue);
+  moneyRow('Propinas', report.tips);
   moneyRow('Costo', report.cost);
   moneyRow('Utilidad', report.profit);
   if (report.marginPct != null) {

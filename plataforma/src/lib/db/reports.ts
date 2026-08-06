@@ -35,6 +35,8 @@ export interface SalesReport {
   /** Ingreso de productos = suma de subtotales (sin envío). */
   productRevenue: number;
   deliveryRevenue: number;
+  /** Propinas del rango (ya incluidas en `revenue`, aquí solo desglosadas). */
+  tips: number;
   /** Costo de los productos vendidos (solo ítems con costo capturado). */
   cost: number;
   /** Utilidad = ingreso de productos con costo − costo. */
@@ -59,7 +61,7 @@ const CHANNEL_LABEL: Record<string, string> = {
 };
 
 const EMPTY = (from: string, to: string): SalesReport => ({
-  from, to, orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0,
+  from, to, orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0, tips: 0,
   cost: 0, profit: 0, marginPct: null, costedRevenue: 0, avgTicket: 0,
   series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [],
 });
@@ -73,6 +75,7 @@ export interface RawSalesReport {
   revenue: number;
   productRevenue: number;
   deliveryRevenue: number;
+  tips: number;
   cost: number;
   costedRevenue: number;
   series: RawDay[];
@@ -135,6 +138,7 @@ export function buildSalesReport(from: string, to: string, d: RawSalesReport): S
     from, to, orders, revenue,
     productRevenue: Number(d.productRevenue ?? 0),
     deliveryRevenue: Number(d.deliveryRevenue ?? 0),
+    tips: Number(d.tips ?? 0),
     cost, profit, costedRevenue,
     marginPct: costedRevenue > 0 ? (profit / costedRevenue) * 100 : null,
     avgTicket: orders > 0 ? revenue / orders : 0,

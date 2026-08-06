@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildSalesReport, type RawSalesReport } from './reports';
 
 const EMPTY_RAW: RawSalesReport = {
-  orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0, cost: 0, costedRevenue: 0,
+  orders: 0, revenue: 0, productRevenue: 0, deliveryRevenue: 0, tips: 0, cost: 0, costedRevenue: 0,
   series: [], byChannel: [], byPayment: [], byZone: [], topByRevenue: [], topByProfit: [],
 };
 
@@ -77,6 +77,13 @@ describe('buildSalesReport', () => {
     const r = buildSalesReport('2026-08-01', '2026-08-01', raw);
     expect(r.topByRevenue).toHaveLength(2);
     expect(r.topByRevenue[1].hasCost).toBe(false);
+  });
+
+  it('expone tips como cifra aparte (ya incluida en revenue, no se resta)', () => {
+    const raw: RawSalesReport = { ...EMPTY_RAW, orders: 2, revenue: 120, tips: 20 };
+    const r = buildSalesReport('2026-08-01', '2026-08-01', raw);
+    expect(r.tips).toBe(20);
+    expect(r.revenue).toBe(120);
   });
 
   it('no revienta si el jsonb del RPC llega con arreglos ausentes', () => {
