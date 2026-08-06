@@ -15,9 +15,25 @@
 --  tenían antes si la tarifa plana era 0).
 --
 --  La tarifa arranca en el valor de la tarifa PLANA vigente del restaurante
---  (restaurants.delivery_fee, migración 008) y no en 0: así el cobro no
---  cambia solo por aplicar esta migración. Quien cobraba Q15 a todos sigue
---  cobrando Q15 a todos hasta que decida diferenciar por zona.
+--  y no en 0: así el cobro no cambia solo por aplicar esta migración. Quien
+--  cobraba Q15 a todos sigue cobrando Q15 a todos hasta que decida
+--  diferenciar por zona.
+--
+--  CORRECCIÓN (2026-08-05): la primera versión de esta migración leía
+--  `restaurants.delivery_fee`, una columna que NO EXISTE — fallaba con
+--  «column r.delivery_fee does not exist» y no dejaba aplicar nada. El
+--  comentario original citaba la migración 008, pero esa migración agrega
+--  `delivery_fee` a ORDERS (el monto cobrado en cada pedido), no a
+--  restaurants.
+--
+--  La tarifa plana real vive en `restaurant_themes.config->>'deliveryFee'`
+--  (jsonb, migración 007), que es de donde la lee el checkout hoy — ver
+--  computeOrderPricing() en src/lib/actions/orders.ts.
+--
+--  El valor se valida con una expresión regular antes de convertirlo: es un
+--  jsonb editable desde el panel y un valor no numérico ahí tumbaría la
+--  migración entera. Ante cualquier cosa rara, 0 — que es el mismo default
+--  que usa el tema.
 --
 --  Idempotente: solo copia zonas que aún no existen en la tabla, así que
 --  re-ejecutarla no duplica ni pisa tarifas ya editadas.
@@ -29,9 +45,16 @@ insert into delivery_zones (restaurant_id, nombre, tarifa, sort_order)
 select
   r.id,
   z.nombre,
-  coalesce(r.delivery_fee, 0),
+  case
+    when rt.config->>'deliveryFee' ~ '^[0-9]+(\.[0-9]+)?$'
+      then (rt.config->>'deliveryFee')::numeric
+    else 0
+  end,
   z.orden - 1
 from restaurants r
+-- left join: un restaurante sin fila de tema no se queda sin sus zonas.
+-- Cae a 0, que es exactamente lo que el tema por defecto ya cobraba.
+left join restaurant_themes rt on rt.restaurant_id = r.id
 cross join lateral (
   select value::text as nombre, ordinality as orden
   from jsonb_array_elements_text(r.delivery_zones) with ordinality as t(value, ordinality)

@@ -72,7 +72,7 @@ create index if not exists delivery_zones_restaurant_idx
   on delivery_zones(restaurant_id, sort_order);
 
 comment on column delivery_zones.tarifa is
-  'Costo de envío de esta zona. Reemplaza a restaurants.delivery_fee (tarifa '
+  'Costo de envío de esta zona. Reemplaza a restaurant_themes.config->>deliveryFee (tarifa '
   'plana, migración 008) cuando el restaurante configura zonas.';
 
 -- ── Pedido: a quién se asignó y cómo fue el reparto ──────────
