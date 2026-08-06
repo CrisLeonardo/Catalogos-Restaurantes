@@ -247,6 +247,9 @@ export default function AdminShell({
         ...lockableNavItem(preview, analiticaEnabled, hasAnalyticsPlan, { href: '/admin/analitica',   label: 'Analítica', icon: 'dashboard', key: 'analitica'   }),
         ...lockableNavItem(preview, finanzasEnabled, hasFinancePlan, { href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }),
         ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
+        // Canales externos va con los pedidos: si el restaurante no vende
+        // en línea, mapear productos de PedidosYa no le sirve de nada.
+        ...(on(ordersEnabled)      ? [{ href: '/admin/canales',     label: 'Canales',   icon: 'plug',      key: 'canales'     }] : []),
         ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt',   key: 'fel'         }] : []),
         ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
         ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
@@ -279,6 +282,7 @@ export default function AdminShell({
     '/admin/inventario': 'Inventario',
     '/admin/ingredientes': 'Ingredientes',
     '/admin/clientes': 'Clientes',
+    '/admin/canales': 'Canales externos',
     '/admin/metricas': 'Métricas',
     '/admin/analitica': 'Analítica',
     '/admin/finanzas': 'Finanzas',

@@ -512,17 +512,44 @@ comercial en la semana 1 del plan completo.**
 Esto se puede construir sin depender de nadie, y sirve de inmediato con un
 middleware (n8n, Zapier o un integrador local):
 
-- [ ] `POST /api/v1/orders` autenticado con las API keys que **ya existen**
+- [x] `POST /api/v1/orders` autenticado con las API keys que **ya existen**
       (`src/lib/api-keys.ts`: formato `lk_live_...`, hash SHA-256, scopes,
-      verificación en tiempo constante). Hoy `/api/v1` solo tiene `me/route.ts`
-- [ ] Scope nuevo `orders:write` para estas llaves
-- [ ] Validación con Zod reutilizando los esquemas de `src/lib/schemas.ts`
-- [ ] El pedido entra con `source` de F0.C y aterriza en la misma RPC
-      `create_order`
-- [ ] Tabla `channel_product_map` — mapeo producto externo ↔ producto Leogin
-- [ ] Pantalla `/admin/canales` para gestionar llaves y mapeos
-- [ ] Chip de origen visible en `/admin/pedidos` y en el KDS
-- [ ] Rate limiting por llave (reutilizar migración 100)
+      verificación en tiempo constante). Hoy `/api/v1` solo tenía `me/route.ts`
+- [x] Scope nuevo `orders:write` para estas llaves. **El endpoint nace cerrado
+      para todas las llaves ya emitidas** — hay que dárselo a mano a la que lo
+      necesite
+- [x] Validación con Zod. Formato de entrada **propio del canal** (`sku`,
+      `external_id`), no el de `createOrder`: un integrador externo no tiene
+      por qué conocer los uuid de Leogin. La traducción vive en `lib/channels.ts`
+- [x] El pedido entra con `source` de F0.C y aterriza en el mismo `createOrder`
+      que el checkout web
+- [x] Tabla `channel_product_map` — mapeo producto externo ↔ producto Leogin
+      (migración 107)
+- [x] Pantalla `/admin/canales` — solo mapeos. Las llaves se emiten desde
+      `/super` (`api-keys-manager.tsx`, ya existía): el candado es la llave, no
+      un módulo, así que el dueño puede dejar sus mapeos listos antes de tener
+      el canal contratado
+- [x] Chip de origen visible en `/admin/pedidos` y en el KDS — ya venía de F0.C
+- [x] Rate limiting **por llave**, no por IP (reutiliza la migración 100). Un
+      middleware legítimo manda todo desde una sola IP: limitar por IP castiga
+      al que se porta bien y no frena al que tiene la llave
+
+**Tres decisiones de diseño que el plan no anticipaba:**
+
+1. **El precio sale de la carta de Leogin, nunca del payload.** El formato de
+   entrada ni siquiera tiene dónde poner un monto. Si lo tuviera, una API key
+   filtrada serviría para facturarle al restaurante cualquier cifra.
+2. **Un `sku` sin mapear rechaza el pedido entero (422), no se salta la línea.**
+   Un pedido al que le falta un plato entra a la cocina como si estuviera
+   completo, sale mal, y el restaurante se entera por el reclamo del cliente.
+3. **Un producto agotado NO rechaza el pedido.** La venta ya ocurrió en la otra
+   app y el cliente ya pagó allá; rechazarlo aquí no la deshace, solo deja a la
+   cocina sin enterarse. Entra, y que el restaurante decida.
+
+**Idempotencia gratis:** `createOrder` ya la trae por `clientId` (migración 061,
+para la cola offline del catálogo). Aquí se deriva un UUID v5 estable de
+`canal + número de pedido externo`, así que un middleware que reintenta —porque
+se le perdió la respuesta, no porque haya otro pedido— no duplica la venta.
 
 ### 5.B Integraciones oficiales (cuando haya acuerdo)
 
@@ -577,7 +604,7 @@ fase las audita y cierra el pendiente M-2 de la auditoría del 29 de julio.
 | 9 | FEL transmitiendo a INFILE | F3 | 🟡 código listo; falta migración 106, `LEOGIN_SECRET_KEY`, cuenta INFILE y verificar su contrato JSON |
 | 9b | Credenciales FEL fuera del navegador | F3/F6 | 🟢 hecho (adelanta pendiente de F6) |
 | 10 | App Android en Play Store | F4 | ⏸️ **pausada** por decisión propia (2026-08-05) — nada implementado |
-| 11 | Ingesta genérica de pedidos externos | F5A | ⬜ |
+| 11 | Ingesta genérica de pedidos externos | F5A | 🟡 código listo; falta aplicar la migración 107 y emitir una llave con `orders:write` |
 | 12 | Integraciones oficiales | F5B | ⬜ |
 | 13 | CSP endurecida + auditoría de superficies nuevas | F6 | ⬜ |
 
