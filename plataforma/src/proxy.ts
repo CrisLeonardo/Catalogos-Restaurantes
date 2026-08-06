@@ -141,6 +141,19 @@ export async function proxy(request: NextRequest) {
     if (stableMesa) rewriteUrl.searchParams.set("mesa", stableMesa);
   }
 
+  // Nonce de esta petición. Tiene que ser único e impredecible: si un
+  // atacante pudiera adivinarlo, inyectar un <script> con ese nonce
+  // saltaría toda la política.
+  //
+  // Va en el REQUEST (no solo en la respuesta) porque Next lee de ahí la
+  // CSP durante el render y le pone el nonce a sus propios scripts —el
+  // runtime, los bundles de página, sus inlines— sin que haya que tocar
+  // ninguna etiqueta a mano.
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const csp = buildCsp(nonce);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', csp);
+
   // Fábrica de respuesta: NextResponse.rewrite si hay rewrite, next() si no.
   const makeResponse = () =>
     rewriteUrl
@@ -239,7 +252,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("Cache-Control", "no-store");
   }
 
-  applySecurityHeaders(response.headers);
+  applySecurityHeaders(response.headers, csp);
   return response;
 }
 
@@ -285,30 +298,83 @@ async function resolveStableLinkTenant(
 }
 
 /**
- * Cabeceras de seguridad para toda la app.
+ * Construye la CSP de la petición (hallazgo M-2 de la auditoría 2026-07-29).
  *
- * Notas de diseño (probadas contra cómo funciona Leogin):
- *  · CSP sin nonce: la app usa estilos en línea por todos lados → se requiere
- *    'unsafe-inline' en style-src. Se mantiene 'unsafe-eval' por exports PDF/Excel
- *    (jspdf/exceljs) y debug de React en dev.
- *  · frame-ancestors 'self' (NO 'none'): la vista previa del super admin embebe
- *    /preview/* en un iframe del MISMO origen; 'none' la rompería.
- *  · connect-src permite https:/wss: (Supabase + Realtime) y localhost (impresión
- *    QZ / agente Leogin). NO se usa upgrade-insecure-requests para no romper
- *    la impresión local por ws://localhost en producción.
- *  · HSTS solo en producción (en localhost rompería el dev por http).
+ * ── script-src: sin 'unsafe-inline', con nonce ──
+ * Era el hueco real. Con 'unsafe-inline', cualquier XSS que lograra meter
+ * un <script> en la página se ejecutaba; es la diferencia entre tener CSP
+ * y aparentar tenerla. Ahora solo corre lo que lleve el nonce de ESTA
+ * petición, y Next se lo pone solo a sus scripts.
+ *
+ * 'strict-dynamic' deja que un script ya confiado cargue a otros (así
+ * funciona el arranque por partes de Next). A cambio ignora 'self' y las
+ * listas de dominios: la confianza se propaga por la cadena, no por la
+ * URL.
+ *
+ * El costo documentado de los nonces —perder render estático y caché de
+ * CDN— aquí es nulo: la app ya se renderiza por petición en todas sus
+ * páginas (multi-tenant por subdominio + sesión), y la caché del menú
+ * público de la Fase 0 es de DATOS (unstable_cache), no de página, así
+ * que no se toca.
+ *
+ * ── style-src: 'unsafe-inline' se queda, y es a propósito ──
+ * El tema de cada restaurante se inyecta como <style> en el layout, y
+ * media UI usa el atributo style=. Quitarlo exige mover todo eso a hojas
+ * externas: es una refactorización grande y su beneficio de seguridad es
+ * mucho menor que el de script-src (un estilo inyectado puede afear la
+ * página o filtrar por selectores; un script inyectado se lleva la
+ * sesión).
+ *
+ * ── connect-src e img-src: cerrados ──
+ * Antes eran 'https:' a secas, o sea: cualquier dominio de internet. Con
+ * eso, un script malicioso podía mandarse los datos del panel a donde
+ * quisiera — justo lo que una CSP debería impedir. Ahora solo salen
+ * peticiones al propio origen, a Supabase y a localhost (impresión).
+ *
+ * Otras decisiones que ya estaban y siguen valiendo:
+ *  · frame-ancestors 'self' (NO 'none'): la vista previa del super admin
+ *    embebe /preview/* en un iframe del MISMO origen.
+ *  · NO se usa upgrade-insecure-requests: rompería la impresión local por
+ *    ws://localhost en producción.
  */
-function applySecurityHeaders(headers: Headers): void {
-  const csp = [
+function buildCsp(nonce: string): string {
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  // Origen de Supabase: API REST, Realtime (wss) y Storage (imágenes).
+  // Se lee del entorno porque cada despliegue tiene el suyo; si faltara,
+  // se cae a un comodín de subdominio en vez de dejar la app sin datos.
+  let supabaseHttp = 'https://*.supabase.co';
+  let supabaseWs = 'wss://*.supabase.co';
+  try {
+    const u = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
+    supabaseHttp = u.origin;
+    supabaseWs = `wss://${u.host}`;
+  } catch {
+    /* sin URL configurada: quedan los comodines de arriba */
+  }
+
+  return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    // style-src incluye Google Fonts (tipografía de cada tenant) y unpkg
-    // (CSS de Leaflet). Sin esto el CSP bloquearía las fuentes personalizadas
-    // de los restaurantes y dejaría los mapas sin estilo.
+
+    // En dev React usa eval para reconstruir los stacks del servidor en el
+    // navegador; en producción ni React ni Next lo necesitan.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+
+    // Google Fonts (tipografía de cada tenant) y unpkg (CSS de Leaflet):
+    // sin ellos las fuentes personalizadas y los mapas quedan sin estilo.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
-    "img-src 'self' blob: data: https:",
+
+    // blob: y data: los usan los QR y las vistas previas de imagen antes
+    // de subirlas. El resto de las fotos vive en Supabase Storage — es el
+    // único dominio remoto que next.config.ts permite para <Image>.
+    `img-src 'self' blob: data: ${supabaseHttp}`,
+
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https: wss: http://localhost:* ws://localhost:*",
+
+    // localhost: agente de impresión Leogin y QZ Tray, que corren en la
+    // máquina del restaurante y se hablan por http/ws local.
+    `connect-src 'self' ${supabaseHttp} ${supabaseWs} http://localhost:* ws://localhost:* https://localhost:* wss://localhost:*`,
+
     "worker-src 'self' blob:",
     "frame-src 'self'",
     "frame-ancestors 'self'",
@@ -316,7 +382,16 @@ function applySecurityHeaders(headers: Headers): void {
     "form-action 'self'",
     "object-src 'none'",
   ].join('; ');
+}
 
+/**
+ * Cabeceras de seguridad para toda la app.
+ * HSTS solo en producción (en localhost rompería el dev por http).
+ */
+function applySecurityHeaders(headers: Headers, csp: string): void {
+  // La misma política que viajó en el request: el nonce del header y el de
+  // los <script> que renderizó Next tienen que coincidir, o el navegador
+  // bloquea la página entera.
   headers.set('Content-Security-Policy', csp);
   headers.set('X-Content-Type-Options', 'nosniff');
   // Filtro XSS legacy del navegador desactivado (recomendación OWASP actual):

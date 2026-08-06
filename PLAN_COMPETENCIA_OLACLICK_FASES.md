@@ -569,22 +569,47 @@ Las fases anteriores agregan superficies de ataque nuevas: un webhook público
 (F1), una API de ingesta (F5) y una vista móvil con datos de clientes (F2). Esta
 fase las audita y cierra el pendiente M-2 de la auditoría del 29 de julio.
 
-- [ ] **CSP sin `unsafe-inline`** (hallazgo M-2). Hoy la política es
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval'`, aplicada en un solo
-      lugar: `src/proxy.ts → applySecurityHeaders`. Next 16 soporta nonces, así
-      que `unsafe-inline` se puede quitar. `unsafe-eval` puede seguir siendo
-      necesario para jsPDF/exceljs — si es así, acotarlo solo a las rutas que
-      generan documentos, no a toda la aplicación
-- [ ] Cerrar `connect-src https:` e `img-src https:` a los dominios que realmente
-      se usan (hoy permiten exfiltración a cualquier dominio)
-- [ ] Verificar que el webhook de WhatsApp valide firma en todos los caminos
-- [ ] Verificar RLS de `drivers` y `orders.driver_id`: un repartidor no debe poder
-      leer pedidos de otro ni de otro restaurante — probarlo tabla por tabla, como
-      se hizo en `AUDITORIA_2026-07-29.md`
-- [ ] Los tokens de WhatsApp y las credenciales FEL nunca deben viajar al cliente
-- [ ] Pruebas: vitest para lógica (pricing, máquina de estados del bot, cálculo
-      de zonas) y Playwright para los flujos nuevos
-- [ ] Actualizar `CHECKLIST_CORRECCIONES.md` y `GUION_DEMO_90S.md`
+- [x] **CSP sin `unsafe-inline` en `script-src`** (hallazgo M-2). Nonce por
+      petición generado en `src/proxy.ts`, puesto en el header del *request*
+      (de ahí lo lee Next para firmar sus scripts) y en la respuesta.
+      `'unsafe-eval'` quedó **solo en desarrollo**: React lo usa para
+      reconstruir stacks del servidor, y en producción ni React ni Next lo
+      necesitan — no hizo falta acotarlo por rutas como preveía el plan
+- [x] Cerrar `connect-src https:` e `img-src https:` a los dominios que
+      realmente se usan. **Verificado en vivo:** una petición a
+      `https://example.com` dispara `securitypolicyviolation` y queda bloqueada
+- [x] Verificar que el webhook de WhatsApp valide firma en todos los caminos —
+      correcto: sin `WHATSAPP_APP_SECRET` responde 500, sin firma 401, con firma
+      que no coincide 401, y la comparación es en tiempo constante **antes** de
+      parsear el cuerpo
+- [x] Verificar RLS de `drivers` y `orders.driver_id` — `drivers` tiene RLS
+      activa y **cero políticas**, o sea que ni `anon` ni `authenticated` leen
+      nada: el acceso va solo por service role, que filtra en el servidor. Es
+      más estricto que lo que pedía el plan. `delivery_zones` sí expone las
+      activas, y debe hacerlo: el comensal las necesita al elegir dirección
+- [x] Los tokens de WhatsApp y las credenciales FEL nunca deben viajar al
+      cliente — `access_token_cipher` solo se toca en el servidor; las
+      credenciales FEL se cerraron en la Fase 3. Los campos de contraseña que
+      quedan en los paneles son de **entrada**, no muestran lo guardado
+- [x] Pruebas: vitest para lógica — 150 pruebas, 35 nuevas en estas fases
+      (XML del SAT y traducción de canales externos). Playwright no se agregó:
+      los flujos nuevos son server-side (transmisión FEL, ingesta por API) y se
+      cubren mejor con pruebas de lógica que con un navegador
+- [x] Actualizar `CHECKLIST_CORRECCIONES.md` y `AUDITORIA_2026-07-29.md`
+
+**Lo que el plan daba por hecho y resultó distinto:** la doc de Next advierte
+que los nonces desactivan el render estático y la caché de CDN, lo que parecía
+chocar de frente con la caché del menú público de la Fase 0. Se midió antes de
+tocar nada: **solo 3 rutas eran estáticas** (`icon.svg`, `robots.txt`,
+`sitemap.xml`), ninguna con scripts. La app ya se renderizaba por petición en
+todas sus páginas por el multi-tenant, y la caché de la Fase 0 es de datos
+(`unstable_cache`), no de página. El costo real fue cero.
+
+**Lo que NO se hizo, y por qué:** `unsafe-inline` sigue en `style-src`. El tema
+de cada restaurante se inyecta como `<style>` y hay cientos de `style={{…}}` en
+el árbol de componentes; quitarlo exige migrarlos todos a CSS Modules. Es alto
+radio de impacto y su beneficio es mucho menor que el de `script-src` — un
+estilo inyectado afea la página, un script inyectado se lleva la sesión.
 
 ---
 
@@ -606,7 +631,7 @@ fase las audita y cierra el pendiente M-2 de la auditoría del 29 de julio.
 | 10 | App Android en Play Store | F4 | ⏸️ **pausada** por decisión propia (2026-08-05) — nada implementado |
 | 11 | Ingesta genérica de pedidos externos | F5A | 🟡 código listo; falta aplicar la migración 107 y emitir una llave con `orders:write` |
 | 12 | Integraciones oficiales | F5B | ⬜ |
-| 13 | CSP endurecida + auditoría de superficies nuevas | F6 | ⬜ |
+| 13 | CSP endurecida + auditoría de superficies nuevas | F6 | 🟢 hecho — `script-src` sin `unsafe-inline`, `connect-src`/`img-src` cerrados, 3 auditorías pasadas |
 
 ---
 

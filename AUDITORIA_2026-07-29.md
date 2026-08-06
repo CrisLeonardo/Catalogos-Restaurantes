@@ -36,7 +36,7 @@ eso, y los tres cuestan dinero — en las dos direcciones.
 | A-3 | La sesión por PIN se podía dejar abierta para siempre | **Medio** | ✅ Corregido |
 | A-4 | La tabla de precios es invisible para lectores de pantalla | **Medio** | ✅ Corregido |
 | M-1 | El menú público no cachea nada: consulta la base en cada escaneo | **Medio** | ⏳ Recomendado |
-| M-2 | CSP con `unsafe-inline` + `unsafe-eval` en scripts | **Medio** | ⏳ Recomendado |
+| M-2 | CSP con `unsafe-inline` + `unsafe-eval` en scripts | **Medio** | ✅ Corregido 2026-08-05 (Fase 6) — nonce por petición; ver `CHECKLIST_CORRECCIONES.md` |
 | M-3 | Tarjetas de producto con botones anidados | Bajo | ✅ Corregido |
 
 ---
