@@ -1,7 +1,8 @@
 'use client';
 
-import { useTransition, useState } from 'react';
+import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import { useToastManager } from '@/components/ui/toast';
 import { exportSalesReportXlsx, getSalesReportData } from '@/lib/actions/finanzas';
 import type { Split } from '@/lib/db/reports';
 import type { ReportProduct } from '@/lib/db/reports';
@@ -16,13 +17,12 @@ export default function ExportReportButton({
 }: { restaurantId: string; from: string; to: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
+  const toast = useToastManager();
 
   function downloadXlsx() {
-    setErr(null);
     startXlsx(async () => {
       const res = await exportSalesReportXlsx(restaurantId, from, to);
-      if (res.error || !res.xlsx) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -33,14 +33,14 @@ export default function ExportReportButton({
       a.download = res.filename ?? 'reporte.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      toast.add({ title: 'Excel descargado', type: 'success' });
     });
   }
 
   function downloadPdf() {
-    setErr(null);
     startPdf(async () => {
       const res = await getSalesReportData(restaurantId, from, to);
-      if (res.error || !res.report || !res.branding) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.report || !res.branding) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
       const r = res.report;
       const branding = res.branding;
       const money = (n: number) => formatDocMoney(n, branding);
@@ -110,6 +110,7 @@ export default function ExportReportButton({
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`reporte-ventas-${r.from}_a_${r.to}.pdf`);
+      toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }
 
@@ -136,7 +137,6 @@ export default function ExportReportButton({
       >
         {pendingPdf ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> PDF</>}
       </button>
-      {err && <span style={{ fontSize: 12, color: 'var(--c-danger)' }}>{err}</span>}
     </div>
   );
 }

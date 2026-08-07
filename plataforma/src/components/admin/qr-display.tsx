@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToastManager } from '@/components/ui/toast';
 import { stableMenuUrl } from '@/lib/tenant';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 export default function QRDisplay({ restaurantName, restaurantId }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const toast = useToastManager();
   // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
   // restaurante cambie de slug o la plataforma de dominio — ver
   // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
@@ -33,6 +35,7 @@ export default function QRDisplay({ restaurantName, restaurantId }: Props) {
 
   async function downloadPng() {
     setDownloading(true);
+    let downloaded = false;
     try {
       const res = await fetch(qrSrc);
       const svgBlob = await res.blob();
@@ -56,6 +59,7 @@ export default function QRDisplay({ restaurantName, restaurantId }: Props) {
               a.download = fileName;
               a.click();
               URL.revokeObjectURL(url);
+              downloaded = true;
             }
             URL.revokeObjectURL(svgUrl);
             resolve();
@@ -70,8 +74,12 @@ export default function QRDisplay({ restaurantName, restaurantId }: Props) {
       a.href = qrSrc;
       a.download = fileName;
       a.click();
+      downloaded = true;
     } finally {
       setDownloading(false);
+      toast.add(downloaded
+        ? { title: 'QR descargado', type: 'success' }
+        : { title: 'No se pudo descargar el QR', type: 'error' });
     }
   }
 

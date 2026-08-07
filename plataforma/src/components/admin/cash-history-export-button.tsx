@@ -1,7 +1,8 @@
 'use client';
 
-import { useTransition, useState } from 'react';
+import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import { useToastManager } from '@/components/ui/toast';
 import { exportCashHistoryXlsx, getCashHistoryPdfData } from '@/lib/actions/finanzas';
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
@@ -16,13 +17,12 @@ function methodSummary(byMethod: Record<string, number> | null): string {
 export default function CashHistoryExportButton({ restaurantId }: { restaurantId: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
+  const toast = useToastManager();
 
   function downloadXlsx() {
-    setErr(null);
     startXlsx(async () => {
       const res = await exportCashHistoryXlsx(restaurantId);
-      if (res.error || !res.xlsx) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -33,14 +33,14 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
       a.download = res.filename ?? 'arqueo-caja.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      toast.add({ title: 'Excel descargado', type: 'success' });
     });
   }
 
   function downloadPdf() {
-    setErr(null);
     startPdf(async () => {
       const res = await getCashHistoryPdfData(restaurantId);
-      if (res.error || !res.rows || !res.branding) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.rows || !res.branding) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
       const { rows, branding, slug } = res;
       const money = (n: number) => formatDocMoney(n, branding);
 
@@ -65,6 +65,7 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`arqueo-caja-${slug ?? 'restaurante'}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }
 
@@ -82,7 +83,6 @@ export default function CashHistoryExportButton({ restaurantId }: { restaurantId
       <button onClick={downloadPdf} disabled={pendingPdf} className="press" style={btnStyle(pendingPdf)}>
         {pendingPdf ? '…' : <><Icon name="download" size={11} style={{ display: 'inline', verticalAlign: '-1px' }} /> PDF</>}
       </button>
-      {err && <span style={{ fontSize: 11, color: 'var(--c-danger)' }}>{err}</span>}
     </div>
   );
 }

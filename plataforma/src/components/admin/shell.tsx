@@ -20,6 +20,7 @@ import WelcomeTour from '@/components/admin/welcome-tour';
 import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
+import { ToastProvider, Toaster } from '@/components/ui/toast';
 import { can, isMeseroOnly } from '@/lib/permissions';
 import { PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
@@ -340,10 +341,13 @@ export default function AdminShell({
 
   if (isWaiter) {
     return (
-      <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
-        {children}
-        {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
-      </div>
+      <ToastProvider>
+        <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
+          {children}
+          {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
+        </div>
+        <Toaster />
+      </ToastProvider>
     );
   }
 
@@ -384,6 +388,7 @@ export default function AdminShell({
   }
 
   return (
+    <ToastProvider>
     <div className="admin-shell">
       <OfflineSupport />
       <aside className="admin-sidebar">
@@ -521,5 +526,7 @@ export default function AdminShell({
           aquí para sobrevivir a las navegaciones entre páginas del panel. */}
       {!preview && <GuidedTourHost />}
     </div>
+    <Toaster />
+    </ToastProvider>
   );
 }

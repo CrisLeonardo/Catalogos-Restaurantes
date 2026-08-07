@@ -1,22 +1,20 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { exportBackupXlsx } from '@/lib/actions/backup';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToastManager } from '@/components/ui/toast';
 
 export default function RespaldoPanel({ restaurantId }: { restaurantId: string }) {
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const toast = useToastManager();
 
   function download() {
-    setError(null);
-    setDone(false);
     start(async () => {
       const res = await exportBackupXlsx(restaurantId);
-      if (res.error || !res.xlsx) { setError(res.error ?? 'No se pudo generar el respaldo.'); return; }
+      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo generar el respaldo.', type: 'error' }); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -27,7 +25,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
       a.download = res.filename ?? 'respaldo.xlsx';
       a.click();
       URL.revokeObjectURL(url);
-      setDone(true);
+      toast.add({ title: 'Listo — revisa tus descargas', type: 'success' });
     });
   }
 
@@ -54,9 +52,6 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
             ? 'Generando…'
             : <><Icon name="download" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} /> Descargar respaldo completo (.xlsx)</>}
         </Button>
-
-        {done && !error && <p style={{ fontSize: 12.5, color: 'var(--c-ok)' }}>Listo — revisa tus descargas.</p>}
-        {error && <p style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{error}</p>}
       </Card>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>

@@ -11,6 +11,7 @@ import { Icon } from '@/components/icons';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminThemeToggle from '@/components/admin/theme-toggle';
 import { LeoginMark } from '@/components/leogin-logo';
+import { ToastProvider, Toaster } from '@/components/ui/toast';
 
 const NAV = [
   { href: '/super',               label: 'Inicio',        icon: 'home' },
@@ -44,6 +45,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
     : TITLES.find(([p]) => pathname.startsWith(p))?.[1] ?? 'Super Admin';
 
   return (
+    <ToastProvider>
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <Link
@@ -115,5 +117,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
         </div>
       </div>
     </div>
+    <Toaster />
+    </ToastProvider>
   );
 }

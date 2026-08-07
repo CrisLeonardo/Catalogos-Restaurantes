@@ -4,10 +4,12 @@
 
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
+import { useToastManager } from '@/components/ui/toast';
 import { downloadReceipt, type ReceiptData } from '@/lib/receipt';
 
 export default function ReceiptDownloadButton({ data }: { data: ReceiptData }) {
   const [busy, setBusy] = useState(false);
+  const toast = useToastManager();
   return (
     <button
       type="button"
@@ -15,7 +17,14 @@ export default function ReceiptDownloadButton({ data }: { data: ReceiptData }) {
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        try { await downloadReceipt(data); } finally { setBusy(false); }
+        try {
+          await downloadReceipt(data);
+          toast.add({ title: 'Recibo descargado', type: 'success' });
+        } catch {
+          toast.add({ title: 'No se pudo generar el recibo', type: 'error' });
+        } finally {
+          setBusy(false);
+        }
       }}
       title="Descargar comprobante en PDF"
       style={{

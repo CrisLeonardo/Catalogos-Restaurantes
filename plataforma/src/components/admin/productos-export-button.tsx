@@ -1,7 +1,8 @@
 'use client';
 
-import { useTransition, useState } from 'react';
+import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import { useToastManager } from '@/components/ui/toast';
 import { exportProductsXlsx, getProductsPdfData, type ProductExportRow } from '@/lib/actions/products';
 import {
   createDoc, drawPdfHeader, brandedAutoTable, getLastAutoTableFinalY, pageBreakIfNeeded, finalizePdf, INK_RGB,
@@ -21,13 +22,12 @@ function groupByCategory(rows: ProductExportRow[]): [string, ProductExportRow[]]
 export default function ProductosExportButton({ restaurantId }: { restaurantId: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
+  const toast = useToastManager();
 
   function downloadXlsx() {
-    setErr(null);
     startXlsx(async () => {
       const res = await exportProductsXlsx(restaurantId);
-      if (res.error || !res.xlsx) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -38,14 +38,14 @@ export default function ProductosExportButton({ restaurantId }: { restaurantId: 
       a.download = res.filename ?? 'productos.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      toast.add({ title: 'Excel descargado', type: 'success' });
     });
   }
 
   function downloadPdf() {
-    setErr(null);
     startPdf(async () => {
       const res = await getProductsPdfData(restaurantId);
-      if ('error' in res) { setErr(res.error); return; }
+      if ('error' in res) { toast.add({ title: res.error, type: 'error' }); return; }
       const { rows, branding, slug } = res;
       const money = (n: number) => formatDocMoney(n, branding);
 
@@ -88,6 +88,7 @@ export default function ProductosExportButton({ restaurantId }: { restaurantId: 
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`productos-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }
 
@@ -105,7 +106,6 @@ export default function ProductosExportButton({ restaurantId }: { restaurantId: 
       <button onClick={downloadPdf} disabled={pendingPdf} className="press glass-quiet" style={btnStyle(pendingPdf)}>
         {pendingPdf ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> PDF</>}
       </button>
-      {err && <span style={{ fontSize: 12, color: 'var(--c-danger)' }}>{err}</span>}
     </div>
   );
 }

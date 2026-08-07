@@ -130,6 +130,7 @@ export function InstallSteps({
     a.download = 'config.local.json';
     a.click();
     URL.revokeObjectURL(url);
+    onCopied('✓ Config descargada');
   }
 
   function copyCmd() {

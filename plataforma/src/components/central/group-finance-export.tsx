@@ -5,8 +5,9 @@
    reporte (getGroupReport) y resuelve la marca — este componente solo
    dispara la descarga y dibuja el PDF con la librería compartida. */
 
-import { useTransition, useState } from 'react';
+import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import { useToastManager } from '@/components/ui/toast';
 import { exportGroupFinanceXlsx, getGroupFinancePdfData } from '@/lib/actions/group-finance';
 import { createDoc, drawPdfHeader, brandedAutoTable, getLastAutoTableFinalY, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, formatDateRangeLabel, longDate } from '@/lib/documents/format';
@@ -14,13 +15,12 @@ import { formatDocMoney, formatDateRangeLabel, longDate } from '@/lib/documents/
 export default function GroupFinanceExport({ from, to }: { from: string; to: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
   const [pendingPdf, startPdf] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
+  const toast = useToastManager();
 
   function downloadXlsx() {
-    setErr(null);
     startXlsx(async () => {
       const res = await exportGroupFinanceXlsx(from, to);
-      if (res.error || !res.xlsx) { setErr(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.xlsx) { toast.add({ title: res.error ?? 'No se pudo exportar.', type: 'error' }); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -31,14 +31,14 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
       a.download = res.filename ?? 'finanzas-grupo.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      toast.add({ title: 'Excel descargado', type: 'success' });
     });
   }
 
   function downloadPdf() {
-    setErr(null);
     startPdf(async () => {
       const res = await getGroupFinancePdfData(from, to);
-      if ('error' in res) { setErr(res.error); return; }
+      if ('error' in res) { toast.add({ title: res.error, type: 'error' }); return; }
       const { report, branding } = res;
       const money = (n: number) => formatDocMoney(n, branding);
 
@@ -80,6 +80,7 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`finanzas-grupo_${from}_a_${to}.pdf`);
+      toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }
 
@@ -98,7 +99,6 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
       <button type="button" onClick={downloadPdf} disabled={pendingPdf} className="press glass-quiet" style={btnStyle(pendingPdf)}>
         <Icon name="download" size={15} /> {pendingPdf ? '…' : 'PDF'}
       </button>
-      {err && <span style={{ fontSize: 12, color: 'var(--c-danger, #f87171)' }}>{err}</span>}
     </div>
   );
 }

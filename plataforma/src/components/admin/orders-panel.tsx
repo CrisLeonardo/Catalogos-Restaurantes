@@ -13,7 +13,7 @@ import { formatDocMoney, longDate } from '@/lib/documents/format';
 import type { TicketFormat } from '@/lib/escpos';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ToastProvider, Toaster, useToastManager } from '@/components/ui/toast';
+import { useToastManager } from '@/components/ui/toast';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
@@ -61,16 +61,8 @@ export function fmtMoney(n: number, c: PanelCurrency, decimals = 2): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
-/** Envuelve el panel en el proveedor de notificaciones (Base UI Toast) —
-    reemplaza el toast local ad-hoc (useState + setTimeout) que antes se
-    reimplementaba a mano en este componente. */
 export default function OrdersPanel(props: Props) {
-  return (
-    <ToastProvider>
-      <OrdersPanelInner {...props} />
-      <Toaster />
-    </ToastProvider>
-  );
+  return <OrdersPanelInner {...props} />;
 }
 
 /* ── Etapas del tablero ───────────────────────────────────────
@@ -211,8 +203,8 @@ function OrdersPanelInner({
   const [isExportingXls, startExportXls] = useTransition();
   const [isExportingPdf, startExportPdf] = useTransition();
 
-  const showToast = useCallback((msg: string) => {
-    toastManager.add({ title: msg, type: 'info' });
+  const showToast = useCallback((msg: string, type: 'error' | 'success' | 'info' = 'info') => {
+    toastManager.add({ title: msg, type });
   }, [toastManager]);
 
   useEffect(() => {
@@ -296,7 +288,7 @@ function OrdersPanelInner({
   function downloadExcel() {
     startExportXls(async () => {
       const res = await exportOrdersXlsx(restaurantId, 30);
-      if (res.error || !res.xlsx) { showToast(res.error ?? 'No se pudo exportar.'); return; }
+      if (res.error || !res.xlsx) { showToast(res.error ?? 'No se pudo exportar.', 'error'); return; }
       const binary = atob(res.xlsx);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -307,13 +299,14 @@ function OrdersPanelInner({
       a.download = res.filename ?? 'pedidos.xlsx';
       a.click();
       URL.revokeObjectURL(url);
+      showToast('Excel descargado', 'success');
     });
   }
 
   function downloadPdf() {
     startExportPdf(async () => {
       const res = await getOrdersPdfData(restaurantId, 30);
-      if ('error' in res) { showToast(res.error); return; }
+      if ('error' in res) { showToast(res.error, 'error'); return; }
       const { rows, branding, filename } = res;
 
       const doc = await createDoc({ format: 'a4', orientation: 'l' });
@@ -336,6 +329,7 @@ function OrdersPanelInner({
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
       doc.save(`${filename}.pdf`);
+      showToast('PDF descargado', 'success');
     });
   }
 

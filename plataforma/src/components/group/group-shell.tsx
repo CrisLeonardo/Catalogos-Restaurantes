@@ -10,6 +10,7 @@ import { Icon } from '@/components/icons';
 import AdminThemeToggle from '@/components/admin/theme-toggle';
 import OfflineSupport from '@/components/offline-support';
 import { logoutGroup } from '@/lib/actions/auth';
+import { ToastProvider, Toaster } from '@/components/ui/toast';
 
 interface Props {
   orgName: string;
@@ -39,6 +40,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
   const initial = orgName.trim().charAt(0).toUpperCase() || 'G';
 
   return (
+    <ToastProvider>
     <div className="admin-shell">
       <OfflineSupport />
       <aside className="admin-sidebar">
@@ -97,5 +99,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
         <div className="admin-content">{children}</div>
       </div>
     </div>
+    <Toaster />
+    </ToastProvider>
   );
 }

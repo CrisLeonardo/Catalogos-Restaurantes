@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
 import { stableTableUrl } from '@/lib/tenant';
+import { useToastManager } from '@/components/ui/toast';
 import FloorPlanEditor from '@/components/admin/floor-plan-editor';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
 function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; restaurantId: string }) {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const toast = useToastManager();
   // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
   // restaurante cambie de slug o la plataforma de dominio — ver
   // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
@@ -50,6 +52,7 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
 
   async function downloadPng() {
     setDownloading(true);
+    let downloaded = false;
     try {
       const res = await fetch(qrSrc);
       const svgBlob = await res.blob();
@@ -73,6 +76,7 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
               a.download = `mesa-${tableNumber}.png`;
               a.click();
               URL.revokeObjectURL(blobUrl);
+              downloaded = true;
             }
             URL.revokeObjectURL(svgUrl);
             resolve();
@@ -86,8 +90,12 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
       a.href = qrSrc;
       a.download = `mesa-${tableNumber}.png`;
       a.click();
+      downloaded = true;
     } finally {
       setDownloading(false);
+      toast.add(downloaded
+        ? { title: 'QR descargado', type: 'success' }
+        : { title: 'No se pudo descargar el QR', type: 'error' });
     }
   }
 
