@@ -690,6 +690,33 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-08-07 — Seed de demo comercial "Rincón 502" (restaurante variado)
+
+**Objetivo:** Leonardo venía mostrando demos con catálogos casi vacíos que no parecían un restaurante real. Se pidió un demo "vivo" — menú variado (hamburguesas, pizzas, pastas, paninis, ensaladas, postres, bebidas), semanas de historial de pedidos, y cada módulo activo con datos usados — pensado para ir a producción (no solo a Supabase local) y mostrarse a prospectos en El Progreso, Jutiapa.
+
+**Realizado:**
+- **`plataforma/supabase/seed_demo_rincon502.sql`** (nuevo, ~720 líneas, idempotente): siembra el restaurante "Rincón 502" — 8 categorías, 38 productos (2 marcados `is_available=false` a propósito, sin `image_url`: Leonardo las agrega él mismo), 4 cupones (dos activos que se "gastan" de verdad durante el historial, uno vencido, uno casi agotado), 6 reservaciones, 4 entradas de lista de espera, configuración de lealtad, ~110 pedidos (105 históricos de los últimos 45 días + 5 "en vivo" de las últimas horas) generados **exclusivamente vía el RPC real `place_order`** (nunca INSERT directo en `orders`/`order_items`, para heredar gratis numeración atómica, snapshots y triggers), ~18 calificaciones de pedidos y 5 llamadas de mesero.
+- **Flujo de uso deliberado:** el script NO crea el restaurante ni el usuario dueño — Leonardo lo da de alta primero con el flujo normal de la app (self-serve o `/super/restaurantes`), y el script busca por `slug='rincon502'` y falla con un mensaje claro si no existe. Evita tocar `auth.users` por SQL crudo (frágil, no soportado).
+- **Verificación exhaustiva contra el esquema real** (108 migraciones), delegada primero a un subagente y luego **releída y confirmada personalmente** contra las migraciones críticas antes de entregarla (`001`, `005`, `020`, `043`, `044`, `045`, `048`, `060`, `071`, `072`, `087`, `093`, `097`): contrato completo y vigente de `place_order` (19 parámetros nombrados, retorna `jsonb`), columnas reales de `coupons`/`reservations`/`waitlist_entries`/`order_ratings`/`waiter_calls`/`loyalty_settings`, y el CHECK vigente de `orders.status` (incluye `SERVED`, migración 071) y `restaurants.plan_actual` (`BASICO/ESTANDAR/PREMIUM/PRO`, migración 072).
+- **`schema_notes.md`** (en outputs, no versionado): detalle de qué se confirmó leyendo código y qué quedó como supuesto sin ejecutar contra una base real (no había credenciales de Supabase disponibles en esta sesión).
+
+**Decisiones clave:**
+- Restaurante variado (no un nicho único) a pedido explícito: hamburguesas, pizzas, pastas, paninis, ensaladas, postres, bebidas — slug `rincon502`, plan `PREMIUM`, los 7 módulos no pausados activados (`reservaciones, lista_espera, llamada_mesero, encuestas, cupones, loyalty, recetas`).
+- Usar el RPC `place_order` en vez de INSERT directo en `orders`/`order_items` — ver entrada nueva en `ERRORES.md` (es una lección reutilizable, no solo de esta sesión).
+- Los pedidos `CANCEL` del historial se marcan con `UPDATE` directo del status, no vía la RPC `void_order()` real — por diseño no generan fila en `order_voids` (la auditoría real de anulaciones); es cosmético, no reproduce el flujo anti-fraude completo.
+- No se pobló `customers`/`loyalty_accounts`/`loyalty_transactions` (opcional, se dejó fuera para no alargar el script) — la sección "Clientes" del panel quedará vacía aunque haya ~110 pedidos.
+
+**Pendiente (acciones de Leonardo):**
+1. Crear el restaurante "Rincón 502" desde la app (self-serve o `/super/restaurantes`) con slug exacto `rincon502`.
+2. Correr `seed_demo_rincon502.sql` primero en Supabase **local** y revisar el `RAISE NOTICE` final + un `select count(*) from orders where restaurant_id = ...` antes de tocar producción.
+3. Si el rol del SQL Editor da error de permiso en `place_order`/`increment_coupon_usage` (revocados de `anon/authenticated` en 084/092, no probado en vivo si `postgres` los ejecuta igual como dueño), correrlo explícitamente como `service_role`.
+4. Agregar las fotos de los 38 productos (a propósito no se generaron/asignaron).
+5. Opcional: dar de alta un mesero de prueba desde Personal antes de correr el script, para que ~35% de los pedidos DINE_IN queden asignados a un mesero real.
+
+**Próximo paso:** validar el script en local, poblarlo de imágenes, y usarlo como el demo estándar para mostrar en El Progreso, Jutiapa — en paralelo con `GUION_DEMO_90S.md`.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título
