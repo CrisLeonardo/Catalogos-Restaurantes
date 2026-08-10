@@ -22,6 +22,20 @@ import { DINER_COOKIE_NAME, LEGACY_DINER_COOKIE_PATTERN } from "@/lib/supabase/c
  *     impreso funciona igual de "estable" sin ninguno de los dos problemas.
  *  4. Refresca la sesión de Supabase (si las variables están configuradas).
  */
+/**
+ * Headers que pone ESTE proxy y que el resto de la app trata como confiables.
+ * Ninguno puede llegar del cliente: ver el borrado en proxy() más abajo.
+ */
+const INTERNAL_HEADERS = [
+  "x-tenant-slug",
+  "x-is-admin-subdomain",
+  "x-org-slug",
+  "x-admin-area",
+  "x-tenant-stable-id",
+  "x-pathname",
+  "x-nonce",
+] as const;
+
 export async function proxy(request: NextRequest) {
   // 1) Tenant + detección de subdominio admin
   const host = request.headers.get("host");
@@ -95,10 +109,27 @@ export async function proxy(request: NextRequest) {
     !pathname.startsWith("/preview");
 
   const requestHeaders = new Headers(request.headers);
+  // Los headers internos SIEMPRE se borran antes de escribirlos.
+  //
+  // Son la fuente de verdad de "en qué restaurante estoy" para todo lo que
+  // corre detrás (layouts del panel, resolveGroupBranchId, getGroupContext,
+  // las acciones del agente de impresión). Este objeto se construye COPIANDO
+  // los headers de la petición, así que sin este borrado un header que venga
+  // del cliente sobrevive intacto en cuanto la rama de abajo no lo pisa —y no
+  // lo pisa cuando el host no resuelve slug (dominio raíz) ni subdominio
+  // admin/central. Verificado: `curl -H "x-tenant-slug: otro" localhost:3000/admin/menu`
+  // hacía que la app se comportara como si estuviera en el subdominio de
+  // "otro". Hoy eso solo provoca un rebote, pero deja al cliente eligiendo el
+  // tenant que ve el servidor, que es exactamente lo que no debe poder hacer.
+  for (const h of INTERNAL_HEADERS) requestHeaders.delete(h);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
   if (adminSub) requestHeaders.set("x-is-admin-subdomain", "1");
   if (groupSlug) requestHeaders.set("x-org-slug", groupSlug);
   if (isAdminArea) requestHeaders.set("x-admin-area", "1");
+  // Ruta pedida. Un layout no puede leer el pathname por su cuenta, y el
+  // candado de tenant lo necesita para devolver al Super Admin a donde iba
+  // después de confirmar el modo soporte.
+  requestHeaders.set("x-pathname", pathname);
   // Marca de "vine por el link estable de mesa" — usada por src/app/manifest.ts
   // (scope/id/start_url pasan a /m/<id>/) y por el cookie-path del comensal
   // más abajo (evita que la sesión de un restaurante se filtre a otro bajo el

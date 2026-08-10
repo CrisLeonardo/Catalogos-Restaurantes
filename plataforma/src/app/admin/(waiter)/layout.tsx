@@ -7,6 +7,9 @@ import { can } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
+import { readSupportTicket, SUPPORT_COOKIE } from '@/lib/auth/support-session';
+import { decideTenantAccess } from '@/lib/auth/tenant-guard';
+import { adminUrl } from '@/lib/tenant';
 import AdminShell from '@/components/admin/shell';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import type { Metadata } from 'next';
@@ -27,7 +30,7 @@ export default async function WaiterLayout({ children }: { children: React.React
   const db = createServiceClient();
   const { data: profile } = await db
     .from('profiles')
-    .select('id, role, restaurant_id, full_name, permissions')
+    .select('id, role, restaurant_id, organization_id, full_name, permissions')
     .eq('id', user.id)
     .single();
 
@@ -35,7 +38,8 @@ export default async function WaiterLayout({ children }: { children: React.React
     redirect('/admin/login');
   }
 
-  const opCookie = (await cookies()).get(OPERATOR_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
     redirect('/admin/logout-operator');
@@ -43,16 +47,34 @@ export default async function WaiterLayout({ children }: { children: React.React
 
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug');
+  const tenantData = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
 
-  // SUPER_ADMIN no tiene restaurant_id propio: lo resolvemos del slug de tenant.
-  let restaurantId = profile.restaurant_id as string | null;
-  if (!restaurantId && profile.role === 'SUPER_ADMIN') {
-    if (!tenantSlug) redirect('/super/restaurantes');
-    const tenantData = await getRestaurantBySlug(tenantSlug);
-    if (!tenantData) redirect('/super/restaurantes');
-    restaurantId = tenantData.restaurant.id;
-  }
-  if (!restaurantId) redirect('/admin/login');
+  // ── Candado de tenant ──────────────────────────────────────────────
+  // Misma regla que el resto del panel (lib/auth/tenant-guard.ts). Antes esta
+  // comprobación estaba escrita a mano aquí y mandaba al menú PÚBLICO del
+  // restaurante ajeno; ahora el mesero vuelve a SU panel, como en /admin.
+  const own = profile.restaurant_id
+    ? await db.from('restaurants').select('slug').eq('id', profile.restaurant_id).maybeSingle()
+    : null;
+  const access = decideTenantAccess({
+    role: profile.role as string,
+    profileRestaurantId: profile.restaurant_id as string | null,
+    profileOrganizationId: profile.organization_id as string | null,
+    tenantSlug,
+    tenant: tenantData
+      ? { id: tenantData.restaurant.id, organizationId: tenantData.restaurant.organization_id ?? null }
+      : null,
+    ownSlug: (own?.data?.slug as string | null) ?? null,
+    supportTicketRestaurantId: readSupportTicket(cookieStore.get(SUPPORT_COOKIE)?.value),
+    pathname: headersList.get('x-pathname') ?? '/admin/mesero',
+    adminUrlFor: adminUrl,
+  });
+  if (!access.allow) redirect(access.redirectTo);
+
+  // SUPER_ADMIN no tiene restaurant_id propio: lo resuelve el subdominio (que
+  // el candado de arriba ya validó con su pase de soporte).
+  const restaurantId = (profile.restaurant_id as string | null) ?? tenantData?.restaurant.id ?? null;
+  if (!restaurantId) redirect(profile.role === 'SUPER_ADMIN' ? '/super/restaurantes' : '/admin/login');
 
   let restaurantName = 'Restaurante';
   let ordersEnabled = false;
@@ -64,9 +86,7 @@ export default async function WaiterLayout({ children }: { children: React.React
 
   let planActual: string | null = null;
 
-  if (tenantSlug) {
-    const tenantData = await getRestaurantBySlug(tenantSlug);
-    if (!tenantData || tenantData.restaurant.id !== restaurantId) redirect('/');
+  if (tenantData) {
     restaurantName = tenantData.restaurant.name;
     const mod = tenantData.restaurant.modules as ModulesMap;
     const modSettings = tenantData.restaurant.module_settings as ModuleSettings;

@@ -101,7 +101,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'login',
         title: 'Ingresa al panel admin',
         description:
-          'Abre tu navegador y ve a la URL que te dio Leogin (ej. turestaurante.leogin.app). Escribe tu correo y contraseña y da clic en "Iniciar sesión". Si olvidaste tu contraseña, contáctanos por WhatsApp.',
+          'Abre tu navegador y ve a la URL que te dio Leogin (ej. turestaurante.leogin.app). Escribe tu correo y contraseña y da clic en "Iniciar sesión". Si olvidaste tu contraseña, toca "Olvidé mi contraseña" en esa misma pantalla y te llega un enlace a tu correo.',
         route: 'turestaurante.leogin.app → /admin/login',
         screenshotDesc: 'Pantalla de login con campo de email y contraseña',
       },

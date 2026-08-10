@@ -219,6 +219,12 @@ export interface Profile {
   permissions: string[] | null;
   /** Para GROUP_OWNER (migración 024): el grupo que administra. */
   organization_id: string | null;
+  /**
+   * Cuándo confirmó su correo abriendo el enlace que le mandamos (migración
+   * 109); null = todavía no. No confundir con auth.users.email_confirmed_at,
+   * que el alta self-serve pone siempre para que la cuenta nazca usable.
+   */
+  email_verified_at: string | null;
 }
 
 export type OrderStatus = 'NEW' | 'PREP' | 'READY' | 'TRANSIT' | 'SERVED' | 'DELIVERED' | 'CANCEL';

@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getPricingSettings } from '@/lib/db/billing';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { sendEmailVerification } from '@/lib/auth/email-verification';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { findTemplate } from '@/lib/theme/templates';
 import { ESTANDAR_MAX_ORDER_TYPES, withPlanFloor, type PlanCode } from '@/lib/plans';
@@ -63,7 +64,9 @@ export async function signupRestaurant(
   // ── Entrada ─────────────────────────────────────────────────
   const name = (formData.get('name') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const email2 = (formData.get('email2') as string)?.trim().toLowerCase() ?? '';
   const password = (formData.get('password') as string) ?? '';
+  const password2 = (formData.get('password2') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
   const whatsapp = (formData.get('whatsapp') as string)?.trim() || null;
   const rawSlug = (formData.get('slug') as string)?.trim().toLowerCase() || '';
@@ -85,7 +88,13 @@ export async function signupRestaurant(
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
   if (!email || !validEmail(email)) return { error: 'Escribe un correo válido.' };
+  // La doble captura se valida TAMBIÉN aquí, no solo en el wizard: el
+  // formulario manda campos ocultos y cualquiera puede saltarse el paso del
+  // navegador. Un correo mal escrito deja al dueño fuera de su cuenta para
+  // siempre (es el identificador de login y la vía de recuperación).
+  if (email !== email2) return { error: 'Los dos correos no coinciden.' };
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+  if (password !== password2) return { error: 'Las dos contraseñas no coinciden.' };
   if (whatsapp && !/^\+?[\d\s\-()]{7,20}$/.test(whatsapp)) {
     return { error: 'El número de WhatsApp no es válido.' };
   }
@@ -203,6 +212,12 @@ export async function signupRestaurant(
     await db.auth.admin.deleteUser(userId);
     return { error: 'No se pudo terminar el registro. Inténtalo de nuevo.' };
   }
+
+  // ── 5b. Confirmación del correo (suave, no bloquea) ─────────
+  // La cuenta ya está viva; esto solo comprueba que el buzón existe y es
+  // suyo. Hasta que abra el enlace, el panel se lo recuerda con un aviso.
+  // Ver lib/auth/email-verification.ts para por qué no es un muro.
+  await sendEmailVerification(email);
 
   // ── 6. Iniciar sesión (best-effort; cookie compartida en prod) ──
   try {

@@ -36,6 +36,9 @@ function describeActivity(r: ActivityRow): string {
   if (r.action === 'stock') return `${who}ajustó inventario`;
   if (r.action === 'promo') return `${who}promoción "${r.entity ?? ''}"`;
   if (r.action === 'staff') return `${who}gestión de personal`;
+  // Soporte de Leogin dentro del panel: el actor no es del restaurante, así
+  // que el nombre va en `entity` y no en `actor_name` (no está en su staff).
+  if (r.action === 'soporte') return `Soporte de Leogin entró al panel${r.entity ? ` (${r.entity})` : ''}`;
   return `${who}${r.action}`;
 }
 function timeAgo(iso: string): string {

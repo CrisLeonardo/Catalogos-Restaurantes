@@ -144,7 +144,16 @@ export default function SignupWizard({
   const [slugEdited, setSlugEdited] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  // El correo y la contraseña se escriben DOS veces. No es burocracia: con
+  // este correo se entra al panel y —desde ahora— es por donde se recupera la
+  // contraseña, así que un dedazo aquí deja al dueño sin forma de volver a
+  // entrar por su cuenta. Es el riesgo real de esta pantalla, muy por encima
+  // del fraude.
+  const [email2, setEmail2] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  // Ver lo que se escribió: la confirmación dice "coinciden", esto dice "qué".
+  const [showPassword, setShowPassword] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
   const [terms, setTerms] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -183,7 +192,11 @@ export default function SignupWizard({
     if (step === 3) {
       if (fullName.trim().length < 2) return setStepError('Escribe tu nombre.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStepError('Escribe un correo válido.');
+      if (email.trim().toLowerCase() !== email2.trim().toLowerCase()) {
+        return setStepError('Los dos correos no coinciden. Revísalos: con este entrarás a tu panel.');
+      }
       if (password.length < 8) return setStepError('La contraseña debe tener al menos 8 caracteres.');
+      if (password !== password2) return setStepError('Las dos contraseñas no coinciden.');
     }
     setStep((s) => Math.min(LAST_STEP, s + 1));
   }
@@ -200,7 +213,9 @@ export default function SignupWizard({
       <input type="hidden" name="slug" value={effectiveSlug} />
       <input type="hidden" name="full_name" value={fullName} />
       <input type="hidden" name="email" value={email} />
+      <input type="hidden" name="email2" value={email2} />
       <input type="hidden" name="password" value={password} />
+      <input type="hidden" name="password2" value={password2} />
       <input type="hidden" name="whatsapp" value={whatsapp} />
       <input type="hidden" name="terms" value={terms ? 'on' : ''} />
 
@@ -388,11 +403,66 @@ export default function SignupWizard({
         <Field label="Tu nombre">
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" style={inputStyle} />
         </Field>
-        <Field label="Correo" hint="Con este correo entrarás a tu panel.">
+        <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida.">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" style={inputStyle} />
         </Field>
+        <Field
+          label="Repite tu correo"
+          hint={
+            email2.length > 0 && email.trim().toLowerCase() !== email2.trim().toLowerCase()
+              ? 'Los dos correos no coinciden.'
+              : 'Escríbelo de nuevo, sin copiar y pegar.'
+          }
+        >
+          <input
+            type="email"
+            value={email2}
+            onChange={(e) => setEmail2(e.target.value)}
+            onPaste={(e) => e.preventDefault()}
+            placeholder="tu@email.com"
+            autoComplete="off"
+            style={inputStyle}
+          />
+        </Field>
         <Field label="Contraseña" hint="Mínimo 8 caracteres.">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" style={inputStyle} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              style={inputStyle}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Ocultar la contraseña' : 'Ver la contraseña'}
+              className="press"
+              style={{
+                flexShrink: 0, padding: '0 14px', borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.05)',
+                color: 'var(--u-text-3)', cursor: 'pointer',
+              }}
+            >
+              <Icon name="eye" size={17} />
+            </button>
+          </div>
+        </Field>
+        <Field
+          label="Repite tu contraseña"
+          hint={
+            password2.length > 0 && password !== password2
+              ? 'Las dos contraseñas no coinciden.'
+              : undefined
+          }
+        >
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            autoComplete="new-password"
+            style={inputStyle}
+          />
         </Field>
         <Field label="WhatsApp (opcional)" hint="Para recibir avisos de pedidos.">
           <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+502 0000 0000" style={inputStyle} />

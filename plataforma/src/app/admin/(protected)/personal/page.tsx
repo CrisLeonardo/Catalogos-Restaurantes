@@ -9,6 +9,8 @@ import { listStaff, getActivityLog } from '@/lib/actions/staff';
 import { ADMIN_SECTIONS, type SectionKey } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import StaffPanel from '@/components/admin/staff-panel';
+import AccessLogPanel from '@/components/admin/access-log-panel';
+import { getPanelAccessLog } from '@/lib/auth/access-log';
 
 export const metadata = { title: 'Personal – Panel admin' };
 
@@ -31,10 +33,11 @@ export default async function AdminPersonalPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [staff, activity, { data: restaurant }, { data: themeRow }] = await Promise.all([
+  const [staff, activity, accessLog, { data: restaurant }, { data: themeRow }] = await Promise.all([
     listStaff(restaurantId),
     getActivityLog(restaurantId, 30),
-    db.from('restaurants').select('modules, module_settings, plan_actual').eq('id', restaurantId).single(),
+    getPanelAccessLog(restaurantId, 20),
+    db.from('restaurants').select('modules, module_settings, plan_actual, timezone').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
 
@@ -83,6 +86,10 @@ export default async function AdminPersonalPage() {
         </Link>
       </div>
       <StaffPanel restaurantId={restaurantId} staff={staff} activity={activity} enabledSections={enabledSections} />
+      <AccessLogPanel
+        rows={accessLog}
+        timezone={(restaurant?.timezone as string) || 'America/Guatemala'}
+      />
     </div>
   );
 }

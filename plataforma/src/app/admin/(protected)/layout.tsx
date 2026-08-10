@@ -8,6 +8,8 @@ import AdminShell from '@/components/admin/shell';
 import { PlanPricingProvider } from '@/components/plan-pricing-context';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
+import SupportModeBanner from '@/components/admin/support-mode-banner';
+import VerifyEmailBanner from '@/components/admin/verify-email-banner';
 import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
@@ -15,6 +17,9 @@ import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
+import { readSupportTicket, SUPPORT_COOKIE } from '@/lib/auth/support-session';
+import { decideTenantAccess } from '@/lib/auth/tenant-guard';
+import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
 
 export default async function AdminProtectedLayout({
@@ -53,11 +58,32 @@ export default async function AdminProtectedLayout({
     redirect('/admin/mesero');
   }
 
-  const opCookie = (await cookies()).get(OPERATOR_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role, ctx.userId)) {
     redirect('/admin/logout-operator');
   }
+
+  // ── Candado de tenant ──────────────────────────────────────────────
+  // Estar autenticado no dice nada sobre a qué panel se tiene derecho: la
+  // cookie del personal vale en todos los subdominios. La regla vive en
+  // lib/auth/tenant-guard.ts, una sola, compartida con el panel de mesero y
+  // con el KDS (que antes no tenía ninguna).
+  const access = decideTenantAccess({
+    role: profile.role,
+    profileRestaurantId: profile.restaurant_id,
+    profileOrganizationId: profile.organization_id,
+    tenantSlug,
+    tenant: tenantData
+      ? { id: tenantData.restaurant.id, organizationId: tenantData.restaurant.organization_id ?? null }
+      : null,
+    ownSlug: ctx.restaurant?.slug ?? null,
+    supportTicketRestaurantId: readSupportTicket(cookieStore.get(SUPPORT_COOKIE)?.value),
+    pathname: headersList.get('x-pathname') ?? '/admin',
+    adminUrlFor: adminUrl,
+  });
+  if (!access.allow) redirect(access.redirectTo);
 
   let restaurantName = 'Panel admin';
   let currentRestaurant: Restaurant | null = ctx.restaurant;
@@ -74,77 +100,40 @@ export default async function AdminProtectedLayout({
   // el panel de mesero completo (ver mesas/page.tsx).
   let dineInEnabled = false;
 
-  if (profile.role === 'SUPER_ADMIN') {
-    if (tenantSlug) {
-      restaurantName = tenantData?.restaurant.name ?? 'Panel admin';
-      currentRestaurant = tenantData?.restaurant ?? null;
-      logoUrl = tenantData?.resolved.config.logoUrl ?? null;
-      logoBg = tenantData?.resolved.config.colorBg ?? null;
-      zone = tenantData?.resolved.config.zone ?? '';
-      dineInEnabled = tenantData?.resolved.config.orderTypes.includes('dine_in') ?? false;
-    }
-  } else if (profile.role === 'GROUP_OWNER') {
-    // El dueño de grupo entra al admin de una sucursal de su organización sin
-    // re-login.
-    //
-    // SEGURIDAD: `tenantData` NO prueba pertenencia. getRestaurantBySlug usa el
-    // cliente RLS, pero las políticas se combinan con OR y
-    // `restaurants_select_active` (PUBLIC, USING status = 'active') deja leer
-    // cualquier restaurante activo — el menú público lo necesita. Por eso la
-    // sucursal se compara explícitamente contra el organization_id del perfil;
-    // sin esto, un dueño de grupo entraba al panel de un restaurante ajeno.
-    // Mismo candado que en getAdminContext (lib/db/admin.ts).
-    if (!tenantSlug) redirect('/central');
-    if (!tenantData) redirect('/central');
-    if (
-      !profile.organization_id ||
-      tenantData.restaurant.organization_id !== profile.organization_id
-    ) {
-      redirect('/central'); // no es una sucursal de su grupo
-    }
+  // A partir de aquí solo se arma lo que se PINTA: el candado de arriba ya
+  // decidió que esta sesión puede estar en este subdominio.
+  if (tenantSlug && tenantData) {
     restaurantName    = tenantData.restaurant.name;
     currentRestaurant = tenantData.restaurant;
     logoUrl = tenantData.resolved.config.logoUrl ?? null;
     logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
     dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
-
-    // Slug del grupo para el enlace "volver al grupo" (organizations no tiene
-    // RLS para GROUP_OWNER → se lee con el cliente de servicio).
-    if (tenantData.restaurant.organization_id) {
-      const svc = createServiceClient();
-      const { data: org } = await svc
-        .from('organizations')
-        .select('slug')
-        .eq('id', tenantData.restaurant.organization_id)
-        .maybeSingle();
-      if (org?.slug) groupReturnUrl = subdomainUrl(`${org.slug}-central`);
-    }
   } else {
-    if (!profile.restaurant_id) redirect('/admin/login');
-
-    if (tenantSlug) {
-      if (!tenantData || tenantData.restaurant.id !== profile.restaurant_id) {
-        // Sesión válida pero en el subdominio de OTRO restaurante (típico en
-        // Leogin Desktop tras cambiar de cuenta, o en una pestaña vieja):
-        // mandarlo a SU panel, no al menú público del restaurante equivocado
-        // — eso se leía como "tu cuenta no existe" cuando la cuenta estaba
-        // perfectamente bien.
-        if (ctx.restaurant?.slug) {
-          redirect(`${adminUrl(ctx.restaurant.slug)}/menu`);
-        }
-        redirect('/');
-      }
-      restaurantName    = tenantData.restaurant.name;
-      currentRestaurant = tenantData.restaurant;
-      logoUrl = tenantData.resolved.config.logoUrl ?? null;
-      logoBg = tenantData.resolved.config.colorBg ?? null;
-      zone = tenantData.resolved.config.zone ?? '';
-      dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
-    } else {
-      restaurantName = ctx.restaurant?.name ?? 'Panel admin';
-    }
+    // Sin subdominio de restaurante: el dueño de grupo va a su panel, el resto
+    // se queda con su propio restaurante (Leogin Desktop arranca así).
+    if (profile.role === 'GROUP_OWNER') redirect('/central');
+    if (profile.role !== 'SUPER_ADMIN' && !profile.restaurant_id) redirect('/admin/login');
+    restaurantName = ctx.restaurant?.name ?? 'Panel admin';
   }
+
+  // Enlace "volver al grupo" (solo dueño de grupo dentro de una sucursal).
+  // organizations no tiene RLS para GROUP_OWNER → cliente de servicio.
+  if (profile.role === 'GROUP_OWNER' && currentRestaurant?.organization_id) {
+    const svc = createServiceClient();
+    const { data: org } = await svc
+      .from('organizations')
+      .select('slug')
+      .eq('id', currentRestaurant.organization_id)
+      .maybeSingle();
+    if (org?.slug) groupReturnUrl = subdomainUrl(`${org.slug}-central`);
+  }
+
+  // Aviso de correo sin confirmar: solo al DUEÑO (el personal entra por PIN
+  // con correos inventados) y solo si de verdad podemos mandar el correo —
+  // un botón "reenviar" que no reenvía nada es peor que no tenerlo.
+  const needsEmailVerification =
+    profile.role === 'RESTAURANT_OWNER' && !profile.email_verified_at && emailEnabled();
 
   const planActual = (currentRestaurant?.plan_actual as string | null) ?? null;
 
@@ -228,6 +217,8 @@ export default async function AdminProtectedLayout({
       canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
       isOperatorSession={isOperatorSession}
     >
+      {access.supportMode && <SupportModeBanner restaurantName={restaurantName} />}
+      {needsEmailVerification && <VerifyEmailBanner email={user.email ?? null} />}
       {groupReturnUrl && (
         <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />
       )}

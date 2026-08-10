@@ -211,6 +211,19 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
             >
               {isPending ? 'Entrando…' : 'Entrar'}
             </button>
+
+            {/* Hasta ahora esta salida no existía: quien olvidaba su
+                contraseña tenía que escribir por WhatsApp y esperar a que
+                alguien de Leogin se la cambiara a mano. */}
+            <a
+              href="/admin/recuperar"
+              style={{
+                fontSize: 12.5, color: 'var(--u-text-3)', textAlign: 'center',
+                textDecoration: 'none', marginTop: 2,
+              }}
+            >
+              Olvidé mi contraseña
+            </a>
           </form>
         </Glass>
         )}

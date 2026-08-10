@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { resolveStaffDestination } from '@/lib/auth/destination';
+import { logPanelAccess } from '@/lib/auth/access-log';
 
 export type AuthState = { error: string } | null;
 
@@ -39,6 +40,14 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     .single();
 
   if (!profile) redirect('/admin/login');
+
+  // Bitácora de accesos (migración 109): el dueño la ve en /admin/personal.
+  await logPanelAccess({
+    profileId: signInData.user.id,
+    restaurantId: (profile.restaurant_id as string | null) ?? null,
+    method: 'password',
+    headers: await headers(),
+  });
 
   // Redirigir al subdominio del restaurante SIEMPRE que no sea ya el actual —
   // no solo cuando el login se hizo desde el dominio raíz. Antes esto solo

@@ -16,6 +16,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { writeOperatorCookie } from '@/lib/auth/operator-session';
+import { logPanelAccess } from '@/lib/auth/access-log';
 import { ownerCtx, assertStaffOfRestaurant } from '@/lib/actions/staff';
 import {
   isValidPin, newPinSalt, hashPin, verifyPin,
@@ -167,7 +168,15 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
     entity: (profile.full_name as string | null) ?? undefined,
   });
 
-  const tenantSlug = (await headers()).get('x-tenant-slug');
+  const headersList = await headers();
+  await logPanelAccess({
+    profileId: profile.id as string,
+    restaurantId,
+    method: 'pin',
+    headers: headersList,
+  });
+
+  const tenantSlug = headersList.get('x-tenant-slug');
   const destination = await resolveStaffDestination(
     supabase,
     profile as { role: string; permissions: string[] | null; restaurant_id: string | null },
