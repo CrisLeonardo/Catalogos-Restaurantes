@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { isStaleBuildError, recoverFromStaleBuild } from '@/lib/stale-build';
 
 export default function AdminError({
   error,
@@ -9,6 +11,15 @@ export default function AdminError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // El panel se queda abierto días en la PC del restaurante, así que es el
+  // sitio donde más probable es que un despliegue lo pille con el bundle
+  // viejo. Ver lib/stale-build.ts.
+  const [reloading, setReloading] = useState(false);
+  const stale = isStaleBuildError(error);
+  useEffect(() => {
+    if (stale) setReloading(recoverFromStaleBuild());
+  }, [stale]);
+
   return (
     <div
       style={{
@@ -46,15 +57,20 @@ export default function AdminError({
             marginBottom: 6,
           }}
         >
-          Error en el panel
+          {stale ? 'Hay una versión nueva' : 'Error en el panel'}
         </h2>
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
-          {error.message ?? 'No se pudo cargar esta sección. Intenta de nuevo.'}
+          {stale
+            ? reloading
+              ? 'Estamos actualizando el panel…'
+              : 'Este panel tiene una versión anterior de Leogin. Recárgalo para continuar.'
+            : error.message || 'No se pudo cargar esta sección. Intenta de nuevo.'}
         </p>
       </div>
 
       <button
-        onClick={reset}
+        // Contra un build viejo, `reset()` remonta el mismo bundle roto.
+        onClick={() => (stale ? window.location.reload() : reset())}
         style={{
           padding: '9px 20px',
           borderRadius: 'var(--radius-full)',
@@ -66,7 +82,7 @@ export default function AdminError({
           cursor: 'pointer',
         }}
       >
-        Intentar de nuevo
+        {stale ? 'Recargar' : 'Intentar de nuevo'}
       </button>
     </div>
   );

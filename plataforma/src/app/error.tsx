@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { isStaleBuildError, recoverFromStaleBuild } from '@/lib/stale-build';
 
 export default function GlobalError({
   error,
@@ -9,6 +11,15 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Pestaña abierta desde antes de un despliegue: el bundle que está
+  // corriendo pide archivos que ya no existen. Se recarga sola en vez de
+  // dejar al usuario en un callejón sin salida (ver lib/stale-build.ts).
+  const [reloading, setReloading] = useState(false);
+  const stale = isStaleBuildError(error);
+  useEffect(() => {
+    if (stale) setReloading(recoverFromStaleBuild());
+  }, [stale]);
+
   return (
     <main
       style={{
@@ -48,15 +59,21 @@ export default function GlobalError({
             marginBottom: 8,
           }}
         >
-          Algo salió mal
+          {stale ? 'Hay una versión nueva' : 'Algo salió mal'}
         </h2>
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
-          {error.message ?? 'Ha ocurrido un error inesperado. Por favor intenta de nuevo.'}
+          {stale
+            ? reloading
+              ? 'Estamos actualizando la página…'
+              : 'Esta pestaña tiene una versión anterior de Leogin. Recárgala para continuar.'
+            : error.message || 'Ha ocurrido un error inesperado. Por favor intenta de nuevo.'}
         </p>
       </div>
 
       <button
-        onClick={reset}
+        // `reset()` vuelve a montar el MISMO bundle: contra un build viejo no
+        // sirve de nada. Ahí la única salida real es recargar del servidor.
+        onClick={() => (stale ? window.location.reload() : reset())}
         style={{
           marginTop: 8,
           padding: '11px 24px',
@@ -69,7 +86,7 @@ export default function GlobalError({
           cursor: 'pointer',
         }}
       >
-        Intentar de nuevo
+        {stale ? 'Recargar' : 'Intentar de nuevo'}
       </button>
     </main>
   );
