@@ -144,12 +144,12 @@ export default function SignupWizard({
   const [slugEdited, setSlugEdited] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  // El correo y la contraseña se escriben DOS veces. No es burocracia: con
-  // este correo se entra al panel y —desde ahora— es por donde se recupera la
-  // contraseña, así que un dedazo aquí deja al dueño sin forma de volver a
-  // entrar por su cuenta. Es el riesgo real de esta pantalla, muy por encima
-  // del fraude.
-  const [email2, setEmail2] = useState('');
+  // El correo se escribe UNA vez. La doble captura se quitó a propósito: era
+  // un campo más que llenar en la pantalla donde más gente abandona, y el
+  // dedazo —que sigue siendo el riesgo real, porque con ese correo se entra al
+  // panel y se recupera la contraseña— se ataja igual de bien mostrándolo
+  // grande en el paso "Confirmar", antes de crear nada. La contraseña sí se
+  // repite: esa no se puede releer.
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   // Ver lo que se escribió: la confirmación dice "coinciden", esto dice "qué".
@@ -192,9 +192,6 @@ export default function SignupWizard({
     if (step === 3) {
       if (fullName.trim().length < 2) return setStepError('Escribe tu nombre.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStepError('Escribe un correo válido.');
-      if (email.trim().toLowerCase() !== email2.trim().toLowerCase()) {
-        return setStepError('Los dos correos no coinciden. Revísalos: con este entrarás a tu panel.');
-      }
       if (password.length < 8) return setStepError('La contraseña debe tener al menos 8 caracteres.');
       if (password !== password2) return setStepError('Las dos contraseñas no coinciden.');
     }
@@ -213,7 +210,6 @@ export default function SignupWizard({
       <input type="hidden" name="slug" value={effectiveSlug} />
       <input type="hidden" name="full_name" value={fullName} />
       <input type="hidden" name="email" value={email} />
-      <input type="hidden" name="email2" value={email2} />
       <input type="hidden" name="password" value={password} />
       <input type="hidden" name="password2" value={password2} />
       <input type="hidden" name="whatsapp" value={whatsapp} />
@@ -391,11 +387,20 @@ export default function SignupWizard({
       {/* ── Paso 2: Tu estilo (plantilla visual de inicio) ── */}
       <div style={{ display: step === 2 ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
         <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          Elige primero cómo se recorre tu carta y después con qué colores nace.
-          Es solo el punto de partida: podrás cambiar estructura, colores, tipografías
-          y cada detalle en «Personalizar».
+          Elige primero cómo se recorre tu carta y después con qué colores nace: son
+          dos decisiones distintas y cualquier color va en cualquier estructura.
+          Es solo el punto de partida — todo se cambia luego en «Personalizar».
         </p>
-        <TemplateGallery mode="pick" appliedId={templateId} onApply={(tpl) => setTemplateId(tpl.id)} />
+        {/* La galería abre en la estructura de la plantilla que ya está elegida,
+            no siempre en «Clásico»: abriendo siempre en la primera parecía que
+            solo existían las de siempre y que el resto no estaba. */}
+        <TemplateGallery
+          mode="pick"
+          compact
+          initialStructure={chosenTemplate?.structure ?? 'clasico'}
+          appliedId={templateId}
+          onApply={(tpl) => setTemplateId(tpl.id)}
+        />
       </div>
 
       {/* ── Paso 3: Tu cuenta ── */}
@@ -403,26 +408,8 @@ export default function SignupWizard({
         <Field label="Tu nombre">
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" style={inputStyle} />
         </Field>
-        <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida.">
+        <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida. Revísalo bien.">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" style={inputStyle} />
-        </Field>
-        <Field
-          label="Repite tu correo"
-          hint={
-            email2.length > 0 && email.trim().toLowerCase() !== email2.trim().toLowerCase()
-              ? 'Los dos correos no coinciden.'
-              : 'Escríbelo de nuevo, sin copiar y pegar.'
-          }
-        >
-          <input
-            type="email"
-            value={email2}
-            onChange={(e) => setEmail2(e.target.value)}
-            onPaste={(e) => e.preventDefault()}
-            placeholder="tu@email.com"
-            autoComplete="off"
-            style={inputStyle}
-          />
         </Field>
         <Field label="Contraseña" hint="Mínimo 8 caracteres.">
           <div style={{ display: 'flex', gap: 8 }}>
@@ -476,7 +463,32 @@ export default function SignupWizard({
           <Summary label="Restaurante" value={name || '—'} />
           <Summary label="Dirección" value={previewHost} />
           <Summary label="Estilo" value={styleSummary} />
-          <Summary label="Tu cuenta" value={email || '—'} />
+        </Glass>
+
+        {/* El correo, aparte y en grande. Sustituye a la doble captura: es el
+            identificador de login y la única vía de recuperación, así que la
+            última oportunidad de cazar un dedazo tiene que verse, no esconderse
+            en una fila más de la lista. */}
+        <Glass variant="quiet" style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Icon name="mail" size={17} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', wordBreak: 'break-all' }}>{email || '—'}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
+              Con este correo entrarás a tu panel. Revísalo: si está mal, no podrás recuperar tu cuenta.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setStepError(null); setStep(3); }}
+            className="press"
+            style={{
+              marginLeft: 'auto', flexShrink: 0, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              padding: '6px 12px', borderRadius: 99, border: '1px solid var(--u-hair-2)',
+              background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-2)',
+            }}
+          >
+            Corregir
+          </button>
         </Glass>
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
@@ -510,8 +522,20 @@ export default function SignupWizard({
         </div>
       )}
 
-      {/* Navegación */}
-      <div style={{ display: 'flex', gap: 10 }}>
+      {/* Navegación — pegada al fondo de la pantalla.
+          El paso "Tu estilo" es largo por naturaleza (hay 154 combinaciones que
+          enseñar) y tener que bajar hasta el final para pulsar «Continuar» era
+          justo lo que se sentía pesado. Ahora el botón viaja con la vista. */}
+      <div
+        style={{
+          position: 'sticky', bottom: 0, zIndex: 5,
+          display: 'flex', gap: 10,
+          margin: '0 -24px', padding: '14px 24px',
+          background: 'linear-gradient(to top, var(--brand-bg) 60%, color-mix(in srgb, var(--brand-bg) 72%, transparent))',
+          backdropFilter: 'blur(8px)',
+          borderTop: '1px solid var(--u-hair)',
+        }}
+      >
         {step > 0 && (
           <button
             type="button"

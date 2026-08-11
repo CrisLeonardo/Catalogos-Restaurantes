@@ -30,16 +30,31 @@ export interface AgentIdentity {
   restaurantId: string;
 }
 
-/** Valida el header Authorization: Bearer <token> contra print_agents. */
-export async function authenticateAgent(req: Request): Promise<AgentIdentity | null> {
+/**
+ * Resultado detallado de autenticar al agente.
+ *
+ * La diferencia entre 'revoked' y 'unavailable' no es cosmética: el agente
+ * APAGA su hub local cuando la nube le dice que ya no es la PC principal (ver
+ * agente-impresion/src/agent.ts). Si un fallo de base de datos se contara como
+ * "token inválido", una caída de Supabase apagaría los hubs de todos los
+ * restaurantes a la vez — justo cuando más falta hacen.
+ */
+export type AgentAuthResult =
+  | { status: 'ok'; identity: AgentIdentity }
+  /** El token no existe, o la PC principal está apagada / la reemplazó otra. */
+  | { status: 'revoked' }
+  /** No se pudo comprobar (base caída, red): no afirma nada sobre el token. */
+  | { status: 'unavailable' };
+
+export async function authenticateAgentResult(req: Request): Promise<AgentAuthResult> {
   const header = req.headers.get('authorization') ?? '';
   const match = header.match(/^Bearer\s+(.+)$/i);
-  if (!match) return null;
+  if (!match) return { status: 'revoked' };
   const token = match[1].trim();
-  if (!token) return null;
+  if (!token) return { status: 'revoked' };
 
   const db = createServiceClient();
-  const { data } = await db
+  const { data, error } = await db
     .from('print_agents')
     .select('id, restaurant_id')
     .eq('token_hash', hashToken(token))
@@ -47,10 +62,20 @@ export async function authenticateAgent(req: Request): Promise<AgentIdentity | n
     // panel, su agente deja de autenticar y se detiene solo — así apagar
     // funciona desde el celular del dueño, sin ir a desinstalar nada.
     .eq('is_active', true)
-    .single();
+    .maybeSingle();
 
-  if (!data) return null;
-  return { agentId: data.id as string, restaurantId: data.restaurant_id as string };
+  if (error) return { status: 'unavailable' };
+  if (!data) return { status: 'revoked' };
+  return {
+    status: 'ok',
+    identity: { agentId: data.id as string, restaurantId: data.restaurant_id as string },
+  };
+}
+
+/** Valida el header Authorization: Bearer <token> contra print_agents. */
+export async function authenticateAgent(req: Request): Promise<AgentIdentity | null> {
+  const res = await authenticateAgentResult(req);
+  return res.status === 'ok' ? res.identity : null;
 }
 
 export interface AgentHubInfo {

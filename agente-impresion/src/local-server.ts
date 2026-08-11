@@ -330,6 +330,8 @@ export function stopTlsServer(): void {
   }
 }
 
+let localServer: http.Server | null = null;
+
 /** Intenta tomar el puerto. true = somos la única instancia; false = ya hay otra. */
 export function startLocalServer(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -345,8 +347,24 @@ export function startLocalServer(): Promise<boolean> {
     });
 
     server.listen(LOCAL_PORT, '0.0.0.0', () => {
+      localServer = server;
       logger.info(`Hub local escuchando en el puerto ${LOCAL_PORT} (LAN).`);
       resolve(true);
     });
   });
+}
+
+/**
+ * Cierra el hub de la LAN. Se usa cuando la nube revoca a esta PC (dejó de ser
+ * la principal del local, ver agent.ts): un hub abierto de una PC revocada
+ * sigue aceptando pedidos por WiFi e imprimiéndolos, pero ya NO puede
+ * sincronizarlos —su token no vale— así que esos pedidos se quedan encerrados
+ * en esta computadora. Mejor rechazarlos y que el navegador use su cola o el
+ * hub de la PC que sí manda.
+ */
+export function stopLocalServer(): void {
+  if (localServer) {
+    localServer.close();
+    localServer = null;
+  }
 }

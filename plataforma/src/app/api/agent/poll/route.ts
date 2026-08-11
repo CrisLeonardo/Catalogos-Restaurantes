@@ -8,14 +8,35 @@
 
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { authenticateAgent } from '@/lib/print-agent';
+import { authenticateAgentResult } from '@/lib/print-agent';
 import { ensureHubTls } from '@/lib/hub-tls';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
-  const agent = await authenticateAgent(req);
-  if (!agent) return new NextResponse('Token de agente inválido.', { status: 401 });
+  const auth = await authenticateAgentResult(req);
+  // Este endpoint —y solo este— distingue "te revocaron" de "no pude
+  // comprobarlo". El agente apaga su hub local al ver `revoked`, así que un
+  // fallo de base de datos NO puede contarse como revocación: sería apagar
+  // todos los hubs del país durante una caída de Supabase.
+  if (auth.status === 'unavailable') {
+    return NextResponse.json(
+      { error: 'No se pudo comprobar el token ahora mismo.' },
+      { status: 503 },
+    );
+  }
+  if (auth.status === 'revoked') {
+    return NextResponse.json(
+      {
+        error: 'Esta computadora ya no es la PC principal del local.',
+        // Bandera explícita (agente ≥0.7.1): el 401 pelado no bastaba para
+        // decidir algo tan serio como dejar de servir pedidos.
+        revoked: true,
+      },
+      { status: 401 },
+    );
+  }
+  const agent = auth.identity;
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const db = createServiceClient();

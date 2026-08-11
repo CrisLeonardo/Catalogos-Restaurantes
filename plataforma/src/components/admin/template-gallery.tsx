@@ -23,7 +23,7 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '@/components/icons';
 import {
-  MENU_STRUCTURES, templatesForStructure,
+  BUILTIN_TEMPLATES, MENU_STRUCTURES, templatesForStructure,
   type BuiltinTemplate, type StructureId,
 } from '@/lib/theme/templates';
 import { DEFAULT_CONFIG, findFont, type ThemeConfig } from '@/lib/theme/defaults';
@@ -398,11 +398,17 @@ function Chip({ on, onClick, title, children }: { on: boolean; onClick: () => vo
   );
 }
 
+/** Cuántos estilos se ven antes de "Ver los 22" en modo compacto. Seis = tres
+    filas de dos en la columna del registro: suficiente para entender que hay
+    variedad, sin empujar el botón «Continuar» fuera de la pantalla. */
+const COMPACT_PREVIEW = 6;
+
 export default function TemplateGallery({
   onApply,
   appliedId,
   mode = 'apply',
   initialStructure = 'clasico',
+  compact = false,
 }: {
   /** Se llama con la plantilla elegida; el editor hace el merge y avisa. */
   onApply: (tpl: BuiltinTemplate) => void;
@@ -412,13 +418,44 @@ export default function TemplateGallery({
   mode?: 'apply' | 'pick';
   /** Estructura con la que abre la galería (la que el menú ya usa). */
   initialStructure?: StructureId;
+  /**
+   * Lista recortada con "Ver los 22" (registro). En el editor la galería es la
+   * pantalla entera y se puede desplegar a gusto; dentro del wizard es UN paso
+   * de cinco, y 22 tarjetas dejaban el botón de continuar a un scroll largo de
+   * distancia — la queja no era que faltaran estilos, era llegar al final.
+   */
+  compact?: boolean;
 }) {
   const [structureId, setStructureId] = useState<StructureId>(initialStructure);
   const [tone, setTone] = useState<Mode>('Todas');
+  const [showAll, setShowAll] = useState(false);
 
   const structure = MENU_STRUCTURES.find((s) => s.id === structureId) ?? MENU_STRUCTURES[0];
   const all = useMemo(() => templatesForStructure(structure.id), [structure.id]);
   const shown = tone === 'Todas' ? all : all.filter((t) => t.mode === tone);
+
+  /* Colapsada, la lista enseña las primeras y —si la elegida quedó fuera del
+     recorte— también esa: una galería que esconde lo que acabas de elegir
+     parece que no registró el clic. */
+  const appliedIndex = shown.findIndex((t) => t.id === appliedId);
+  const collapsed = compact && !showAll && shown.length > COMPACT_PREVIEW;
+  const visible = collapsed
+    ? [...shown.slice(0, COMPACT_PREVIEW), ...(appliedIndex >= COMPACT_PREVIEW ? [shown[appliedIndex]] : [])]
+    : shown;
+
+  /**
+   * Cambiar de estructura conserva la paleta. Sin esto, elegir "Revista"
+   * deshacía el color que el dueño acababa de elegir (o lo dejaba sin nada
+   * marcado, que es lo que pasaba en el registro): las dos decisiones son
+   * independientes y cambiar una no debería borrar la otra.
+   */
+  function pickStructure(id: StructureId) {
+    setStructureId(id);
+    const current = appliedId ? BUILTIN_TEMPLATES.find((t) => t.id === appliedId) : undefined;
+    if (!current?.palette) return;
+    const twin = templatesForStructure(id).find((t) => t.palette === current.palette);
+    if (twin && twin.id !== appliedId) onApply(twin);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -427,11 +464,13 @@ export default function TemplateGallery({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>1 · La estructura</span>
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>cómo se recorre tu carta</span>
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
+            cómo se recorre tu carta · {MENU_STRUCTURES.length} para elegir
+          </span>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {MENU_STRUCTURES.map((s) => (
-            <Chip key={s.id} on={s.id === structureId} onClick={() => setStructureId(s.id)} title={s.desc}>
+            <Chip key={s.id} on={s.id === structureId} onClick={() => pickStructure(s.id)} title={s.desc}>
               <StructureGlyph id={s.id} />
               {s.name}
             </Chip>
@@ -463,7 +502,7 @@ export default function TemplateGallery({
             una columna de ancho intermedio salían tres tarjetas por fila y la
             miniatura recortaba la última fila de platillos contra el borde. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
-          {shown.map((tpl) => {
+          {visible.map((tpl) => {
             const applied = appliedId === tpl.id;
             return (
               <button
@@ -509,6 +548,21 @@ export default function TemplateGallery({
             );
           })}
         </div>
+
+        {compact && shown.length > COMPACT_PREVIEW && (
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="press"
+            style={{
+              alignSelf: 'center', padding: '9px 18px', borderRadius: 99, cursor: 'pointer',
+              border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+              color: 'var(--u-text-2)', fontSize: 12.5, fontWeight: 700,
+            }}
+          >
+            {showAll ? 'Ver menos' : `Ver los ${shown.length} estilos de «${structure.name}»`}
+          </button>
+        )}
       </div>
     </div>
   );

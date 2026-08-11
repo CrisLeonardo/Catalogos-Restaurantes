@@ -64,7 +64,6 @@ export async function signupRestaurant(
   // ── Entrada ─────────────────────────────────────────────────
   const name = (formData.get('name') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
-  const email2 = (formData.get('email2') as string)?.trim().toLowerCase() ?? '';
   const password = (formData.get('password') as string) ?? '';
   const password2 = (formData.get('password2') as string) ?? '';
   const fullName = (formData.get('full_name') as string)?.trim() || null;
@@ -88,12 +87,12 @@ export async function signupRestaurant(
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
   if (!email || !validEmail(email)) return { error: 'Escribe un correo válido.' };
-  // La doble captura se valida TAMBIÉN aquí, no solo en el wizard: el
-  // formulario manda campos ocultos y cualquiera puede saltarse el paso del
-  // navegador. Un correo mal escrito deja al dueño fuera de su cuenta para
-  // siempre (es el identificador de login y la vía de recuperación).
-  if (email !== email2) return { error: 'Los dos correos no coinciden.' };
   if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+  // La doble captura de la contraseña se valida TAMBIÉN aquí, no solo en el
+  // wizard: el formulario manda campos ocultos y cualquiera puede saltarse el
+  // paso del navegador. El correo ya no se pide dos veces —era un campo más en
+  // la pantalla donde más gente abandona—: el dedazo se ataja mostrándolo
+  // grande en el paso "Confirmar", antes de crear nada.
   if (password !== password2) return { error: 'Las dos contraseñas no coinciden.' };
   if (whatsapp && !/^\+?[\d\s\-()]{7,20}$/.test(whatsapp)) {
     return { error: 'El número de WhatsApp no es válido.' };

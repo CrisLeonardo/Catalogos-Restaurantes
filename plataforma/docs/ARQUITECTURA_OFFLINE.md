@@ -432,3 +432,46 @@ estándar del rubro. El orden de inversión recomendado: (1) HTTPS del hub
 captura), (2) mejoras §8.5, (3) ✅ KDS local servido por el hub (implementado
 2026-07-07), (4) reevaluar sync engine solo cuando haya demanda real de KDS
 offline completo.
+
+---
+
+### 8.7 Corregido — el agente revocado seguía sirviendo su hub en la LAN (2026-08-10)
+
+Auditoría de la pregunta "si dos PCs quedan activadas como principal, ¿se
+duplican pedidos o impresiones?". **Duplicarse, no se duplican** — y no por
+casualidad, hay cuatro candados independientes:
+
+1. `print_agents.restaurant_id` es **unique**: un restaurante no puede tener dos
+   agentes. Encender una segunda PC hace `upsert` sobre la misma fila con un
+   token nuevo, así que la primera queda revocada en el mismo instante.
+2. `claim_print_jobs` reclama con `for update skip locked`: aunque dos procesos
+   pidieran trabajos a la vez, cada trabajo se entrega una sola vez.
+3. `kitchenTicketAlreadyQueued` (lib/print-agent.ts) impide una segunda comanda
+   del mismo pedido, y `/api/agent/offline-orders` **no** encola comanda al
+   sincronizar (el hub ya imprimió) y entra como `PREP` para que nadie pulse
+   "Confirmar" y la mande otra vez.
+4. `client_id` con índice único + comprobación previa en `createOrder`,
+   `createWaiterOrder` y la sincronización del hub: el mismo pedido reenviado
+   no crea dos filas.
+
+**Lo que sí estaba roto:** el agente revocado NO se enteraba. Seguía en su bucle
+con un token muerto (401 cada 3 s) pero con el hub **abierto en la LAN**,
+aceptando pedidos y **imprimiéndolos** — pedidos que ya no podía sincronizar
+nunca, porque su token no vale. No es duplicación: es *pérdida*. Y pasaba
+también al apagar la PC principal desde el celular, no solo al cambiar de PC.
+
+Arreglo (agente 0.7.1 + `POST /api/agent/poll`):
+
+- El poll distingue **revocado** (`401` con `{revoked:true}`) de **no se pudo
+  comprobar** (`503`). La diferencia es la parte importante: si un fallo de base
+  de datos contara como revocación, una caída de Supabase apagaría los hubs de
+  todos los restaurantes a la vez, justo cuando más falta hacen
+  (`authenticateAgentResult` en lib/print-agent.ts).
+- Tras 5 polls revocados seguidos (~15 s) el agente **cierra el hub** (HTTP y
+  HTTPS), avisa en el log cuántos pedidos quedaron sin sincronizar y sigue vivo
+  y callado preguntando cada 60 s. No se mata: la tarea programada lo relanza
+  cada 3 minutos y volvería a abrir el puerto unos segundos cada vez.
+- El panel avisa además cuando la impresora guardada no está entre las que
+  reporta la PC principal actual: al cambiar de computadora los destinos se
+  conservan (mig. 094) pero son los de la anterior, y las comandas se encolaban
+  contra una impresora que ya no existe.

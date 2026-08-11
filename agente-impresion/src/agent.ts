@@ -8,7 +8,7 @@ import { hostname, networkInterfaces } from 'node:os';
 import { loadConfig, type AgentConfig } from './config.ts';
 import { discoverPrinters, parseTarget, printRaw } from './printer/index.ts';
 import type { DiscoveredPrinter } from './printer/types.ts';
-import { LOCAL_PORT, startTlsServer } from './local-server.ts';
+import { LOCAL_PORT, startLocalServer, startTlsServer, stopLocalServer, stopTlsServer } from './local-server.ts';
 import { saveMenuSnapshot, saveStaffPins, getPendingOrders, markPendingOrderSynced, markPendingOrderFailed, getHubOrderToken, getHubTls, saveHubTls, type MenuSnapshot, type HubTls, type CachedStaffPin } from './store.ts';
 import { checkForUpdate } from './updater.ts';
 import { AGENT_VERSION } from './version.ts';
@@ -30,6 +30,26 @@ interface HubTlsAd {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * La nube contestó "esta PC ya no es la principal del local": o el dueño la
+ * apagó desde el panel, o encendió otra computadora en su lugar (la fila de
+ * print_agents es única por restaurante, así que encender la segunda deja sin
+ * valor el token de la primera).
+ */
+class AgentRevoked extends Error {
+  constructor() {
+    super('la nube ya no reconoce a esta computadora como la PC principal del local');
+    this.name = 'AgentRevoked';
+  }
+}
+
+/** Cuántos polls seguidos con "revocado" antes de apagar el hub. A 3 s por
+    poll son ~15 s: suficiente para no reaccionar a una respuesta rara, y
+    nada comparado con dejar un hub fantasma toda la noche. */
+const REVOKE_STRIKES = 5;
+/** Ritmo del poll una vez revocado: ya no hay nada que recoger. */
+const QUIET_POLL_MS = 60_000;
 
 /** Primera IP LAN (IPv4, no interna) de esta PC — es lo que el registro DNS
     del hub necesita, y lo que usa el navegador para el fallback HTTP. */
@@ -73,6 +93,13 @@ async function poll(cfg: AgentConfig, printers: DiscoveredPrinter[]): Promise<{ 
       deviceName: hostname().slice(0, 80),
     }),
   });
+  if (res.status === 401) {
+    // Solo el 401 que viene marcado como revocación cuenta: un 401 pelado
+    // puede ser una versión vieja del backend o un fallo que no sabemos leer,
+    // y apagar el hub del local por una duda sería peor que el problema.
+    const body = (await res.json().catch(() => null)) as { revoked?: boolean } | null;
+    if (body?.revoked) throw new AgentRevoked();
+  }
   if (!res.ok) throw new Error(`poll respondió HTTP ${res.status}`);
   const data = (await res.json()) as { jobs?: Job[]; hubTls?: HubTlsAd | null };
   return { jobs: data.jobs ?? [], hubTls: data.hubTls ?? null };
@@ -205,6 +232,29 @@ async function handleJob(cfg: AgentConfig, job: Job): Promise<void> {
   }
 }
 
+/**
+ * Deja de servir a la LAN sin morirse.
+ *
+ * NO se llama a process.exit: la tarea programada relanza el agente cada 3
+ * minutos, así que salir sería reabrir el hub una y otra vez unos segundos
+ * cada vez. Vivo y callado, el candado de instancia única (el puerto) también
+ * evita que arranque otra copia encima.
+ */
+function goQuiet(): void {
+  logger.error('Esta computadora ya no es la PC principal del local: se apaga el hub local.');
+  const stuck = getPendingOrders().filter((p) => p.status === 'pending').length;
+  if (stuck > 0) {
+    logger.error(
+      `ATENCIÓN: quedan ${stuck} pedido(s) tomados sin conexión en esta PC que ya no se pueden ` +
+      'sincronizar con este token. Vuelve a encender esta computadora como PC principal desde el ' +
+      'panel para recuperarlos.',
+    );
+  }
+  stopTlsServer();
+  stopLocalServer();
+  logger.info('El agente sigue vivo pero sin servir nada. Puedes cerrarlo o desinstalarlo cuando quieras.');
+}
+
 export async function runAgent(opts: { once?: boolean } = {}): Promise<void> {
   const cfg = await loadConfig();
   logger.info(`Agente conectado a ${cfg.apiUrl} (poll cada ${cfg.pollMs} ms).`);
@@ -214,17 +264,43 @@ export async function runAgent(opts: { once?: boolean } = {}): Promise<void> {
   let lastDiscover = Date.now();
   let lastHubSync = 0; // fuerza una sincronización de menú/pedidos en el primer ciclo
   let lastUpdateCheck = 0; // fuerza un chequeo de actualización al arrancar
+  let revokedStrikes = 0;
+  let quiet = false; // revocado: hub apagado, solo se sigue preguntando
 
   do {
     try {
       const { jobs, hubTls } = await poll(cfg, printers);
+      revokedStrikes = 0;
+      if (quiet) {
+        // La nube volvió a reconocer este token: se recupera el servicio.
+        logger.info('Esta computadora vuelve a ser la PC principal: reabriendo el hub local.');
+        quiet = false;
+        if (await startLocalServer()) startTlsServer();
+        lastHubSync = 0;
+      }
       for (const job of jobs) await handleJob(cfg, job);
       await syncHubTls(cfg, hubTls);
     } catch (e) {
-      logger.warn('Fallo al consultar trabajos:', (e as Error).message);
+      if (e instanceof AgentRevoked) {
+        revokedStrikes += 1;
+        if (!quiet && revokedStrikes >= REVOKE_STRIKES) {
+          quiet = true;
+          goQuiet();
+        }
+      } else {
+        logger.warn('Fallo al consultar trabajos:', (e as Error).message);
+      }
     }
 
     if (opts.once) break;
+
+    // Revocado: nada de descubrir impresoras, sincronizar o actualizarse —
+    // todas esas llamadas irían con el mismo token muerto. Solo se pregunta
+    // de vez en cuando por si el dueño vuelve a encender esta PC.
+    if (quiet) {
+      await sleep(QUIET_POLL_MS);
+      continue;
+    }
 
     // Refresca la lista de impresoras cada 60s (detecta nuevas o quitadas).
     if (Date.now() - lastDiscover > 60_000) {

@@ -70,6 +70,14 @@ function PrinterPicker({
   const isManual = value !== '' && value !== 'preview:' && !known.includes(value);
   const selectValue = isManual ? MANUAL : value;
 
+  /* Al cambiar de PC principal las impresoras asignadas se conservan (mig.
+     094), pero son las de la computadora ANTERIOR: aquí siguen guardadas y en
+     la nueva PC no existen, así que las comandas se encolan y fallan calladas.
+     Un destino de Windows que la PC conectada no reporta es exactamente eso.
+     (Un tcp:// no: esa impresora vive en la red, no en la PC.) */
+  const missingOnThisPc =
+    isManual && printers.length > 0 && !/^tcp:\/\//i.test(value);
+
   const options = [
     { value: '', label: '— No imprimir aquí —' },
     { value: 'preview:', label: 'Simulador en pantalla (preview:)' },
@@ -97,6 +105,17 @@ function PrinterPicker({
           placeholder="tcp://192.168.1.50:9100"
           style={{ ...selectStyle, marginTop: 6, fontFamily: 'monospace', fontSize: 12 }}
         />
+      )}
+
+      {missingOnThisPc && (
+        <div style={{
+          fontSize: 11.5, color: 'var(--u-text-3)', background: 'var(--c-warn-bg)',
+          border: '1px solid var(--c-warn-line)', borderRadius: 8,
+          padding: '7px 10px', lineHeight: 1.55, marginTop: 6,
+        }}>
+          Esta impresora no aparece entre las de la PC principal actual. Si cambiaste de
+          computadora, elige aquí una de las suyas: si no, las comandas se encolan y no salen.
+        </div>
       )}
 
       <Button type="button" onClick={onTest} variant="secondary" size="sm" className="mt-2">
