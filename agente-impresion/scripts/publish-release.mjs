@@ -8,6 +8,14 @@
 //   4. Inserta la fila en agent_releases con la URL del asset → los agentes
 //      del canal lo ven en su próximo chequeo (~1h) y se actualizan solos.
 //
+// Desde 2026-08-11 el paso 4 es OPCIONAL para el canal `stable`: la nube lee
+// los releases de GitHub y registra la fila ella sola (plataforma
+// src/lib/agent-updates.ts + /api/agent/latest), con el sha256 que publica el
+// propio GitHub en `assets[].digest`. Este script sigue sirviendo para
+// publicar sin esperar al descubrimiento, y es el ÚNICO camino para `beta`.
+// El kill switch no cambia: `enabled=false` en la fila frena la propagación
+// también por el camino nuevo.
+//
 // Uso:
 //   node scripts/publish-release.mjs [--channel stable|beta] [--notes "..."]
 //
@@ -18,6 +26,8 @@
 // del entorno, o de ../plataforma/.env.local (dev). Para publicar a PRODUCCIÓN,
 // carga las de producción en un .env.local propio (gitignored) y corre:
 //   node --env-file=.env.local scripts/publish-release.mjs
+// (o, para `stable`, sáltate esto: sube el release con `gh` y deja que la nube
+//  lo descubra sola.)
 
 import { createHash } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';

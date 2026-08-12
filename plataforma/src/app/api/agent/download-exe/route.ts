@@ -11,8 +11,10 @@
    se invalida tras el primer uso.
 
    Origen del binario:
-     - Producción: LEOGIN_AGENT_DOWNLOAD_URL (GitHub Releases / CDN). Se hace
-       proxy del binario para poder renombrarlo con el código.
+     - Producción: el último release publicado en GitHub (ver
+       lib/agent-updates.ts), o LEOGIN_AGENT_DOWNLOAD_URL si se quiere fijar
+       una versión concreta. Se hace proxy del binario para poder renombrarlo
+       con el código.
      - Desarrollo: se sirve el exe desde disco si existe.
    ============================================================ */
 
@@ -23,6 +25,7 @@ import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { getAdminContext } from '@/lib/db/admin';
 import { createServiceClient } from '@/lib/supabase/service';
+import { latestAgentFromGitHub } from '@/lib/agent-updates';
 
 export const runtime = 'nodejs';
 
@@ -95,7 +98,13 @@ export async function GET(req: Request) {
   const disposition = `attachment; filename="${filename}"`;
 
   // Producción: proxy del binario desde el CDN/Release con el nombre personalizado.
-  const downloadUrl = process.env.LEOGIN_AGENT_DOWNLOAD_URL;
+  //
+  // La variable de entorno es un OVERRIDE explícito (fijar una versión, o
+  // servir desde otro CDN). Sin ella se sirve el último release publicado en
+  // GitHub — así una versión nueva del agente no obliga a ir a tocar la
+  // configuración de Render, que es justo el paso que se olvida.
+  const downloadUrl =
+    process.env.LEOGIN_AGENT_DOWNLOAD_URL || (await latestAgentFromGitHub())?.url;
   if (downloadUrl) {
     const upstream = await fetch(downloadUrl);
     if (!upstream.ok || !upstream.body) {
