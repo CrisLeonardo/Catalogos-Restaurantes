@@ -104,12 +104,24 @@ export default function WaiterCallsAlert({
     refresh();
   }, [refresh]);
 
-  // Polling de respaldo cada 6 s — garantiza que la tarjeta Y el sonido
-  // lleguen en un tiempo razonable aunque Realtime falle o se demore.
+  // Polling de respaldo — garantiza que la tarjeta Y el sonido lleguen en un
+  // tiempo razonable aunque Realtime falle o se demore.
+  //
+  // La cadencia depende de si el canal propio está vivo. Esta alerta se monta
+  // en el AdminShell, o sea en TODAS las pantallas del panel: 6 s fijos eran
+  // 10 consultas por minuto y por pestaña abierta, indefinidamente, cuando con
+  // el socket en pie la llamada ya había entrado por el canal o por el evento
+  // DOM. Suscrito baja a 45 s; el sondeo NO se apaga nunca porque un socket
+  // puede quedarse "suscrito" y dejar de entregar en silencio. Si el canal
+  // falla, expira o se cierra, vuelve a los 6 s de siempre — llamar al mesero
+  // y que nadie conteste es justo el fallo que esta vía existe para evitar.
+  const [realtimeVivo, setRealtimeVivo] = useState(false);
+
   useEffect(() => {
-    const id = setInterval(() => refresh(), 6_000);
+    const cada = realtimeVivo ? 45_000 : 6_000;
+    const id = setInterval(() => refresh(), cada);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, realtimeVivo]);
 
   // Push → instantáneo: el service worker reenvía aquí el push apenas llega
   // (misma vía que ya usan las notificaciones del sistema, rápida y ajena al
@@ -177,11 +189,18 @@ export default function WaiterCallsAlert({
           if (c.resolved_at) setCalls((prev) => prev.filter((x) => x.id !== c.id));
         })
         .subscribe((status) => {
+          // Marca la cadencia del sondeo de respaldo (ver arriba).
+          setRealtimeVivo(status === 'SUBSCRIBED');
           if (status === 'CHANNEL_ERROR') refresh();
         });
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
+    return () => {
+      cancelled = true;
+      setRealtimeVivo(false);
+      channel?.unsubscribe();
+      stopAuthSync();
+    };
   }, [restaurantId, refresh, noteNew]);
 
   function resolve(id: string) {

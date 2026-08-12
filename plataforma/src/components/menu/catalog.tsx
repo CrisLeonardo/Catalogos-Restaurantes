@@ -656,6 +656,28 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
     style: { animationDelay: anim ? `${Math.min(i, 8) * 35}ms` : undefined },
   });
 
+  /**
+   * Igual que fade(), más el marcado que deja al navegador SALTARSE el pintado
+   * de las tarjetas que están fuera de pantalla (ver .menu-card-lazy en
+   * globals.css). En una carta larga esto es la diferencia entre maquetar y
+   * pintar 120 tarjetas con foto antes de enseñar la primera, o pintar las
+   * seis que caben en el teléfono.
+   *
+   * `shape` solo elige el alto estimado que se reserva mientras la tarjeta
+   * sigue sin pintar; en cuanto se pinta una vez, el navegador se queda con
+   * el alto real (por el `auto` de contain-intrinsic-size).
+   *
+   * NO se usa en la variante 'texto': esa se maqueta con columnCount, y el
+   * reparto en columnas necesita medir todo el contenido de verdad — con
+   * altos estimados los cortes de columna saldrían donde no toca. Tampoco en
+   * los destacados: son pocos, van arriba del todo y se ven desde el principio.
+   */
+  const fadeLazy = (i: number, shape: 'tarjeta' | 'fila') => ({
+    ...fade(i),
+    className: `${fade(i).className} menu-card-lazy`.trim(),
+    'data-shape': shape,
+  });
+
   if (card === 'texto') {
     /* Carta impresa: sin una sola imagen. El contraste entre nombre y precio lo
        hace la línea de puntos, no una foto.
@@ -722,7 +744,7 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
           {columns.map((col, ci) => (
             <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {col.map(({ p, i }) => (
-                <div key={p.id} {...fade(i)}>
+                <div key={p.id} {...fadeLazy(i, 'tarjeta')}>
                   <MosaicTile {...common(p)} />
                 </div>
               ))}
@@ -746,8 +768,9 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
       >
         {items.map((p, i) => {
           const featured = featuredIds.has(p.id);
+          const attrs = featured ? fade(i) : fadeLazy(i, 'fila');
           return (
-            <div key={p.id} {...fade(i)} style={{ ...fade(i).style, gridColumn: featured && wide ? '1 / -1' : undefined }}>
+            <div key={p.id} {...attrs} style={{ ...attrs.style, gridColumn: featured && wide ? '1 / -1' : undefined }}>
               {featured ? <FeaturedTile {...common(p)} width={width} /> : <ProductRow {...common(p)} />}
             </div>
           );
@@ -760,8 +783,9 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
     <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 12, marginTop: 12 }}>
       {items.map((p, i) => {
         const featured = featuredIds.has(p.id);
+        const attrs = featured ? fade(i) : fadeLazy(i, 'tarjeta');
         return (
-          <div key={p.id} {...fade(i)} style={{ ...fade(i).style, gridColumn: featured ? '1 / -1' : undefined }}>
+          <div key={p.id} {...attrs} style={{ ...attrs.style, gridColumn: featured ? '1 / -1' : undefined }}>
             {featured ? <FeaturedTile {...common(p)} width={width} /> : <ProductTile {...common(p)} />}
           </div>
         );

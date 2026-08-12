@@ -1,9 +1,20 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono, Unbounded, Anton, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
+import { Geist, Unbounded, Anton, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
 import { headers, cookies } from 'next/headers';
 import './globals.css';
 import ThemeBackground from '@/components/theme-background';
-import { getRestaurantBySlug } from '@/lib/db/restaurants';
+/**
+ * El layout solo usa el tema del restaurante (colores, fuentes, fondo, CSS
+ * propio, ícono, color de la barra del navegador) — nada que dependa de la
+ * sesión de quien mira. Por eso va con la variante cacheada y NO con
+ * getRestaurantBySlug: esa hace dos consultas VIVAS a Supabase (restaurants +
+ * restaurant_themes, en cadena) en cada carga de cada página pública, aunque
+ * la página de al lado (src/app/page.tsx) ya tuviera el mismo dato cacheado.
+ * Se sigue viendo al instante al editar: el tag `restaurant:<id>` se invalida
+ * con updateTag() en cada acción que toca el restaurante o su tema, y el
+ * lookup slug→id de dentro es en vivo (una suspensión corta el paso ya).
+ */
+import { getRestaurantBySlugCached } from '@/lib/db/restaurants';
 import {
   resolveTheme,
   buildThemeVars,
@@ -12,8 +23,13 @@ import {
 } from '@/lib/theme/resolve';
 import { DEMO_SLUG } from '@/lib/tenant';
 
+/**
+ * Fuente de INTERFAZ. Es la única que renderiza texto en TODAS las superficies
+ * (menú, panel, landing), así que es la única que se precarga. Sin `weight`
+ * a propósito: Geist es variable en Google Fonts y así viaja como UN archivo
+ * que cubre 100-900 en vez de un archivo por peso.
+ */
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 /**
  * Fuentes de MARCA por defecto (Unbounded/Anton/Instrument Serif/JetBrains
@@ -26,11 +42,32 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
  * familia ('Unbounded', etc.) a estas variables cuando el tema de un tenant
  * usa exactamente estos nombres (el resto de fuentes curadas del editor
  * sigue viajando por Google Fonts en tiempo real, ver buildFontsHref).
+ *
+ * `preload: false` NO las desactiva: siguen self-hosteadas y siguen llegando
+ * en cuanto el CSS las pide. Lo que se quita es el `<link rel=preload>`.
+ * Estas cuatro se declaran en el layout raíz (una sola plantilla para toda la
+ * app), así que con el preload por defecto el navegador las bajaba SIEMPRE,
+ * en toda página de todo restaurante — 173 KB en la ruta crítica. Y casi
+ * ningún tenant las usa: quien elige Fraunces/Space Grotesk/Inter en el
+ * editor bajaba esos 173 KB de tipografías que no pinta ni un glifo, POR
+ * DELANTE (prioridad de preload) de las fuentes que sí iba a usar. Medido en
+ * rincon502.leogin.online el 2026-08-12.
+ *
+ * Coste de quitarlo: donde SÍ se usan (landing, tema por defecto, KPIs del
+ * panel) la fuente se descubre al aplicar el CSS en vez de al leer el HTML,
+ * ~1 ida y vuelta más tarde. No hay salto de maquetación: next/font genera la
+ * métrica de respaldo ajustada ('Unbounded Fallback', etc.) y con
+ * `display: swap` el texto se pinta de inmediato.
+ *
+ * Sin `weight` en Unbounded y JetBrains Mono: ambas son variables en Google
+ * Fonts. Pedirles una lista de pesos obligaba a next/font a generar un
+ * archivo estático POR PESO (6 y 3); como variables son un archivo cada una
+ * y además queda disponible cualquier peso intermedio para el editor de temas.
  */
-const brandDisplay = Unbounded({ variable: '--font-unbounded', subsets: ['latin'], weight: ['400', '500', '600', '700', '800', '900'] });
-const brandPoster = Anton({ variable: '--font-anton', subsets: ['latin'], weight: '400' });
-const brandSerif = Instrument_Serif({ variable: '--font-instrument-serif', subsets: ['latin'], weight: '400', style: ['normal', 'italic'] });
-const brandMono = JetBrains_Mono({ variable: '--font-jetbrains-mono', subsets: ['latin'], weight: ['400', '500', '600'] });
+const brandDisplay = Unbounded({ variable: '--font-unbounded', subsets: ['latin'], preload: false });
+const brandPoster = Anton({ variable: '--font-anton', subsets: ['latin'], weight: '400', preload: false });
+const brandSerif = Instrument_Serif({ variable: '--font-instrument-serif', subsets: ['latin'], weight: '400', style: ['normal', 'italic'], preload: false });
+const brandMono = JetBrains_Mono({ variable: '--font-jetbrains-mono', subsets: ['latin'], preload: false });
 const BRAND_FONT_VARS = `${brandDisplay.variable} ${brandPoster.variable} ${brandSerif.variable} ${brandMono.variable}`;
 
 /**
@@ -63,7 +100,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   let appleIcon = '/icon-512.png'; // plataforma / demo → ícono genérico
   if (slug && slug !== DEMO_SLUG) {
-    const data = await getRestaurantBySlug(slug);
+    const data = await getRestaurantBySlugCached(slug);
     const icon = data?.resolved.config.pwaIconUrl ?? data?.resolved.config.logoUrl;
     if (icon) appleIcon = `/api/icon/${slug}`;
   }
@@ -106,7 +143,7 @@ export async function generateViewport(): Promise<Viewport> {
   if (slug === DEMO_SLUG) {
     themeColor = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG).config.colorBg;
   } else if (slug) {
-    const data = await getRestaurantBySlug(slug);
+    const data = await getRestaurantBySlugCached(slug);
     if (data) themeColor = data.resolved.config.colorBg;
   }
   return {
@@ -137,7 +174,7 @@ export default async function RootLayout({
         data-admin-area=""
         data-scheme={adminScheme}
         data-glass="translucido"
-        className={`${geistSans.variable} ${geistMono.variable} ${BRAND_FONT_VARS} h-full antialiased`}
+        className={`${geistSans.variable} ${BRAND_FONT_VARS} h-full antialiased`}
         style={{ colorScheme: adminScheme }}
       >
         <body className="min-h-full flex flex-col">{children}</body>
@@ -151,7 +188,7 @@ export default async function RootLayout({
   if (slug === DEMO_SLUG) {
     resolved = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG);
   } else if (slug) {
-    const data = await getRestaurantBySlug(slug);
+    const data = await getRestaurantBySlugCached(slug);
     resolved = data?.resolved ?? resolveTheme(null, slug);
   }
 
@@ -174,7 +211,7 @@ export default async function RootLayout({
       lang="es"
       data-glass={glassIntensity}
       data-scheme={scheme}
-      className={`${geistSans.variable} ${geistMono.variable} ${BRAND_FONT_VARS} h-full antialiased`}
+      className={`${geistSans.variable} ${BRAND_FONT_VARS} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* Variables del tema: stylesheet en vez de inline style → el customCss

@@ -2,8 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { PRICING_SETTINGS_TAG } from '@/lib/db/billing';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { withPlanFloor, type PlanCode } from '@/lib/plans';
 import { logChannelChanges } from '@/lib/db/channel-history';
@@ -795,6 +796,10 @@ export async function savePlatformSettings(
 
   if (error) return { error: error.message };
 
+  // Estas claves viven en la misma fila que lee getPricingSettings(), que
+  // cachea `platform_settings` entera entre peticiones: hay que invalidar
+  // aunque lo guardado aquí sea el contacto de soporte y no un precio.
+  updateTag(PRICING_SETTINGS_TAG);
   revalidatePath('/super/configuracion');
   revalidatePath('/admin/ayuda');
   return { saved: true };

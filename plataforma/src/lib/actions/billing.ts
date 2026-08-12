@@ -12,11 +12,12 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import {
   getBillingConfig,
   getInvoices,
   currentPeriod,
+  PRICING_SETTINGS_TAG,
   type BillingConfig,
   type Invoice,
 } from '@/lib/db/billing';
@@ -239,6 +240,10 @@ export async function savePricingSettings(
 
   // Aplica los precios nuevos a quienes estén en modo automático.
   const { data: count } = await db.rpc('leogin_apply_auto_price_all');
+  // getPricingSettings() cachea esta fila entre peticiones (es config de
+  // plataforma, la leen la landing y media app): sin esto, el precio nuevo
+  // tardaría hasta 5 minutos en salir en la web.
+  updateTag(PRICING_SETTINGS_TAG);
   revalidateBilling();
   revalidatePath('/super/configuracion');
   // Las superficies PÚBLICAS muestran estos precios: hay que regenerarlas

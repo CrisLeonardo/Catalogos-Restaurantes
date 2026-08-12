@@ -669,6 +669,24 @@ export const DEFAULT_CONTENT: ThemeContent = {
 /* ── Catálogo de fuentes Google curadas ──────────────────── */
 // `family` = nombre exacto en Google Fonts. `axis` = lo que pedimos en el href.
 // `role` filtra qué fuentes ofrecemos en cada selector del editor.
+//
+// PESOS EN RANGO (`wght@300..700`), NO EN LISTA (`wght@300;400;500;600;700`):
+// la mayoría de estas familias son fuentes VARIABLES. Pidiendo una lista de
+// pesos, Google devuelve un archivo estático POR PESO; pidiendo el rango,
+// devuelve UN archivo que los cubre todos y además deja disponibles los
+// intermedios. Medido el 2026-08-12 sobre el subconjunto latino:
+//   Inter          235 KB en 5 archivos → 47 KB en 1   (−188 KB)
+//   Space Grotesk   87 KB en 4 archivos → 21 KB en 1   (−66 KB)
+//   Fraunces        93 KB en 3 archivos → 80 KB en 2   (−13 KB)
+// Un restaurante con esas tres (rincon502) pasa de 415 KB a 148 KB de
+// tipografía, y de 12 descargas encadenadas tras el CSS de Google a 4.
+//
+// OJO al añadir fuentes: el rango solo vale si la familia es variable. Para
+// las que no lo son, Google responde 400 y el tenant se queda SIN tipografía.
+// Comprobadas como estáticas (van con lista de pesos a propósito): Poppins,
+// Space Mono, IBM Plex Mono. Verificación rápida antes de tocar una línea:
+//   curl -o /dev/null -w '%{http_code}' \
+//     'https://fonts.googleapis.com/css2?family=LaFuente:wght@400..700'
 
 export interface FontOption {
   family: string;
@@ -680,29 +698,31 @@ export interface FontOption {
 
 export const FONT_OPTIONS: FontOption[] = [
   // Display / poster (títulos con carácter)
-  { family: 'Unbounded',        label: 'Unbounded',        axis: 'Unbounded:wght@400;500;600;700;800;900', roles: ['display', 'poster'], stack: 'system-ui, sans-serif' },
+  { family: 'Unbounded',        label: 'Unbounded',        axis: 'Unbounded:wght@400..900',                 roles: ['display', 'poster'], stack: 'system-ui, sans-serif' },
   { family: 'Anton',            label: 'Anton',            axis: 'Anton',                                   roles: ['poster', 'display'], stack: "'Arial Narrow', sans-serif" },
   { family: 'Archivo Black',    label: 'Archivo Black',    axis: 'Archivo+Black',                           roles: ['display', 'poster'], stack: 'system-ui, sans-serif' },
   { family: 'Bebas Neue',       label: 'Bebas Neue',       axis: 'Bebas+Neue',                              roles: ['poster', 'display'], stack: "'Arial Narrow', sans-serif" },
-  { family: 'Space Grotesk',    label: 'Space Grotesk',    axis: 'Space+Grotesk:wght@400;500;600;700',      roles: ['display', 'body'],   stack: 'system-ui, sans-serif' },
-  { family: 'Syne',             label: 'Syne',             axis: 'Syne:wght@400;500;600;700;800',           roles: ['display', 'poster'], stack: 'system-ui, sans-serif' },
-  { family: 'Playfair Display', label: 'Playfair Display', axis: 'Playfair+Display:ital,wght@0,400;0,700;1,400', roles: ['display', 'serif'], stack: 'Georgia, serif' },
-  { family: 'Fraunces',         label: 'Fraunces',         axis: 'Fraunces:ital,wght@0,400;0,600;1,400',    roles: ['display', 'serif'],  stack: 'Georgia, serif' },
-  { family: 'Cormorant Garamond', label: 'Cormorant',      axis: 'Cormorant+Garamond:ital,wght@0,400;0,600;1,400', roles: ['serif', 'display'], stack: 'Georgia, serif' },
+  { family: 'Space Grotesk',    label: 'Space Grotesk',    axis: 'Space+Grotesk:wght@400..700',             roles: ['display', 'body'],   stack: 'system-ui, sans-serif' },
+  { family: 'Syne',             label: 'Syne',             axis: 'Syne:wght@400..800',                      roles: ['display', 'poster'], stack: 'system-ui, sans-serif' },
+  { family: 'Playfair Display', label: 'Playfair Display', axis: 'Playfair+Display:ital,wght@0,400..700;1,400..700', roles: ['display', 'serif'], stack: 'Georgia, serif' },
+  { family: 'Fraunces',         label: 'Fraunces',         axis: 'Fraunces:ital,wght@0,400..700;1,400..700', roles: ['display', 'serif'], stack: 'Georgia, serif' },
+  { family: 'Cormorant Garamond', label: 'Cormorant',      axis: 'Cormorant+Garamond:ital,wght@0,400..600;1,400..600', roles: ['serif', 'display'], stack: 'Georgia, serif' },
 
   // Serif decorativa (itálicas)
   { family: 'Instrument Serif', label: 'Instrument Serif', axis: 'Instrument+Serif:ital@0;1',               roles: ['serif'],             stack: "'Times New Roman', serif" },
 
   // Body / sans (cuerpo)
-  { family: 'Geist',            label: 'Geist',            axis: 'Geist:wght@300;400;500;600;700',          roles: ['body'],              stack: 'system-ui, sans-serif' },
-  { family: 'Inter',            label: 'Inter',            axis: 'Inter:wght@300;400;500;600;700',          roles: ['body'],              stack: 'system-ui, sans-serif' },
-  { family: 'Manrope',          label: 'Manrope',          axis: 'Manrope:wght@300;400;500;600;700;800',    roles: ['body'],              stack: 'system-ui, sans-serif' },
-  { family: 'Plus Jakarta Sans', label: 'Jakarta Sans',    axis: 'Plus+Jakarta+Sans:wght@300;400;500;600;700', roles: ['body'],          stack: 'system-ui, sans-serif' },
-  { family: 'DM Sans',          label: 'DM Sans',          axis: 'DM+Sans:wght@400;500;600;700',            roles: ['body'],              stack: 'system-ui, sans-serif' },
+  { family: 'Geist',            label: 'Geist',            axis: 'Geist:wght@300..700',                     roles: ['body'],              stack: 'system-ui, sans-serif' },
+  { family: 'Inter',            label: 'Inter',            axis: 'Inter:wght@300..700',                     roles: ['body'],              stack: 'system-ui, sans-serif' },
+  { family: 'Manrope',          label: 'Manrope',          axis: 'Manrope:wght@300..800',                   roles: ['body'],              stack: 'system-ui, sans-serif' },
+  { family: 'Plus Jakarta Sans', label: 'Jakarta Sans',    axis: 'Plus+Jakarta+Sans:wght@300..700',         roles: ['body'],              stack: 'system-ui, sans-serif' },
+  { family: 'DM Sans',          label: 'DM Sans',          axis: 'DM+Sans:wght@400..700',                   roles: ['body'],              stack: 'system-ui, sans-serif' },
+  // Estática en Google Fonts: el rango da 400. Va con lista de pesos.
   { family: 'Poppins',          label: 'Poppins',          axis: 'Poppins:wght@300;400;500;600;700',        roles: ['body', 'display'],   stack: 'system-ui, sans-serif' },
 
   // Mono (precios/números)
-  { family: 'JetBrains Mono',   label: 'JetBrains Mono',   axis: 'JetBrains+Mono:wght@400;500;600',         roles: ['mono'],              stack: 'ui-monospace, monospace' },
+  { family: 'JetBrains Mono',   label: 'JetBrains Mono',   axis: 'JetBrains+Mono:wght@400..600',            roles: ['mono'],              stack: 'ui-monospace, monospace' },
+  // Estáticas en Google Fonts (el rango da 400): lista de pesos a propósito.
   { family: 'Space Mono',       label: 'Space Mono',       axis: 'Space+Mono:wght@400;700',                 roles: ['mono'],              stack: 'ui-monospace, monospace' },
   { family: 'IBM Plex Mono',    label: 'IBM Plex Mono',    axis: 'IBM+Plex+Mono:wght@400;500;600',          roles: ['mono'],              stack: 'ui-monospace, monospace' },
 ];

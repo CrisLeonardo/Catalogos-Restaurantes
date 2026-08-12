@@ -1441,3 +1441,31 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
 @keyframes adm-shimmer {
   100% { transform: translateX(100%); }
 }
+
+/* ── Pintar solo lo que se ve ─────────────────────────────────
+   Una carta de 120 platillos son 120 tarjetas con foto, degradados y
+   sombras que el navegador maqueta y pinta ENTERAS antes de enseñar la
+   primera. Con content-visibility se salta las que están fuera de
+   pantalla y las pinta al acercarse el scroll.
+
+   `contain-intrinsic-size: auto <alto>` es la parte importante: reserva
+   ese alto estimado mientras la tarjeta está sin pintar, y el `auto`
+   hace que el navegador recuerde el alto REAL en cuanto la pinta una
+   vez. Sin esa reserva la barra de desplazamiento daría saltos y el ir
+   a una sección por el menú de categorías caería en el sitio
+   equivocado. Aplica a todos los aparatos: no cambia nada visible. */
+.menu-card-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;   /* data-shape="tarjeta": foto + texto */
+
+  /* OJO, esto no es decorativo: content-visibility trae contención de
+     PINTADO, que recorta a sus propios bordes todo lo que pinte de más lo de
+     dentro. La sombra de .glass es `0 10px 34px`, o sea que se sale ~44 px por
+     abajo: sin ampliar el borde de recorte, las tarjetas se quedarían sin
+     sombra y el mosaico perdería la profundidad que lo hace ver como piezas
+     de vidrio apoyadas. 48 px cubre la sombra más grande del sistema. */
+  overflow-clip-margin: 48px;
+}
+.menu-card-lazy[data-shape="fila"] {
+  contain-intrinsic-size: auto 96px;    /* miniatura de 74 px + relleno */
+}

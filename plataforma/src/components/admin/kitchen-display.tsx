@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
@@ -91,6 +91,37 @@ function semaforo(elapsedMin: number, yellowMin: number, redMin: number, C: Pale
   return C.green;
 }
 
+/**
+ * Cronómetro mm:ss de una tarjeta, con su PROPIO reloj.
+ *
+ * Antes el reloj vivía en KitchenDisplay y bajaba como prop `now` a cada
+ * tarjeta: una vez por segundo React reconciliaba el árbol ENTERO de cada
+ * pedido — cabecera, la lista de platillos con sus opciones y notas, el aviso
+ * del mesero y el botón. Con 20 pedidos de 5 líneas eso es más de mil nodos
+ * revisados por segundo, en la tablet más barata del local y justo en hora
+ * pico, que es cuando el KDS tiene que responder al toque sin pensárselo.
+ *
+ * Aquí el segundero solo se pinta a sí mismo: dos nodos. El color del
+ * semáforo NO se calcula aquí porque también tiñe el borde y la sombra de la
+ * tarjeta — ese viaja como prop ya resuelta desde el padre (que se actualiza
+ * cada 10 s, ver el temporizador de KitchenDisplay), así que la tarjeta solo
+ * se vuelve a pintar cuando el color de verdad cambia.
+ *
+ * Empieza en '··:··' y no en el tiempo real: el HTML lo genera el servidor y
+ * ahí no existe "ahora" del navegador. Pintar un número en el servidor daría
+ * un desajuste de hidratación y, peor, un cronómetro congelado en la hora del
+ * servidor durante el primer instante.
+ */
+const Cronometro = memo(function Cronometro({ createdMs }: { createdMs: number }) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <>{now == null ? '··:··' : fmtElapsed(now - createdMs)}</>;
+});
+
 export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark', isOperatorSession = false }: Props) {
   const router = useRouter();
   const orders = initialOrders;
@@ -118,10 +149,16 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
   }, []);
 
-  // Reloj/temporizadores
+  /* Reloj del ENCABEZADO y del semáforo — cada 10 s, no cada segundo.
+     El segundero de cada pedido ya no depende de este estado: se lo pinta
+     solo el componente <Cronometro>. Lo único que sigue colgando de aquí es
+     la hora hh:mm de la barra (que cambia una vez por minuto) y el color del
+     semáforo, cuyos umbrales están en MINUTOS. A 10 s, el peor retraso al
+     virar a ámbar o rojo son 10 segundos sobre un umbral que el restaurante
+     define en minutos; a cambio, el tablero se reconcilia 6 veces menos. */
   useEffect(() => {
     const t0 = setTimeout(() => setNow(Date.now()), 0);
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 10_000);
     return () => { clearTimeout(t0); clearInterval(id); };
   }, []);
 
@@ -203,6 +240,11 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
     return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
   }, [restaurantId, announce, refreshSoon]);
 
+  /* Estable entre renders: si fuera `() => router.refresh()` en línea, cada
+     tarjeta recibiría una función nueva cada vez y el memo de KitchenCard no
+     serviría de nada. */
+  const refreshNow = useCallback(() => router.refresh(), [router]);
+
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().then(() => setIsFull(true)).catch(() => {});
@@ -264,9 +306,24 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14, alignItems: 'start' }}>
-            {orders.map((order) => (
-              <KitchenCard key={order.id} order={order} now={now} yellowMin={yellowMin} redMin={redMin} C={C} onRefresh={() => router.refresh()} />
-            ))}
+            {orders.map((order) => {
+              /* El semáforo se resuelve AQUÍ, a color y booleano ya cocidos.
+                 Así KitchenCard (memo) recibe primitivas que casi nunca
+                 cambian y solo se vuelve a pintar cuando el pedido de verdad
+                 cambia de tramo — no 60 veces por minuto. */
+              const elapsedMin = now == null ? 0 : (now - new Date(order.created_at).getTime()) / 60000;
+              const mounted = now != null;
+              return (
+                <KitchenCard
+                  key={order.id}
+                  order={order}
+                  color={mounted ? semaforo(elapsedMin, yellowMin, redMin, C) : C.green}
+                  urgente={mounted && elapsedMin >= redMin}
+                  C={C}
+                  onRefresh={refreshNow}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -283,13 +340,17 @@ function iconBtnStyle(C: Palette): React.CSSProperties {
 
 /* ── Tarjeta de pedido ──────────────────────────────────────── */
 
-function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: OrderWithItems; now: number | null; yellowMin: number; redMin: number; C: Palette; onRefresh: () => void }) {
+/**
+ * Memoizada a propósito. Sus props son ahora todas estables o primitivas:
+ * `order` conserva identidad entre renders del padre (viene tal cual del
+ * server component), `C` es una constante de módulo, `onRefresh` va con
+ * useCallback y `color`/`urgente` ya vienen resueltos. Resultado: el tablero
+ * puede actualizar su reloj sin tocar una sola tarjeta, y cada tarjeta solo
+ * se vuelve a pintar cuando cambia su pedido o su tramo de semáforo.
+ */
+const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefresh }: { order: OrderWithItems; color: string; urgente: boolean; C: Palette; onRefresh: () => void }) {
   const [isPending, start] = useTransition();
   const createdMs = new Date(order.created_at).getTime();
-  const elapsedMs = now == null ? 0 : now - createdMs;
-  const elapsedMin = elapsedMs / 60000;
-  const mounted = now != null;
-  const color = mounted ? semaforo(elapsedMin, yellowMin, redMin, C) : C.green;
   const isNew = order.status === 'NEW';
   const label = orderLabel(order);
 
@@ -307,7 +368,7 @@ function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: O
       background: C.panel,
       border: `1px solid ${C.hair}`,
       borderTop: `4px solid ${color}`,
-      boxShadow: mounted && elapsedMin >= redMin ? `0 0 0 1px ${color}55, 0 6px 24px ${color}22` : 'none',
+      boxShadow: urgente ? `0 0 0 1px ${color}55, 0 6px 24px ${color}22` : 'none',
       display: 'flex', flexDirection: 'column',
       opacity: isPending ? 0.55 : 1,
       transition: 'opacity 150ms',
@@ -330,7 +391,7 @@ function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: O
         {/* Temporizador con semáforo */}
         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999, background: `${color}1a`, color, fontWeight: 800 }}>
           <Icon name="clock" size={14} />
-          <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 15, minWidth: 44, textAlign: 'right' }}>{mounted ? fmtElapsed(elapsedMs) : '··:··'}</span>
+          <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 15, minWidth: 44, textAlign: 'right' }}><Cronometro createdMs={createdMs} /></span>
         </div>
       </div>
 
@@ -415,4 +476,4 @@ function KitchenCard({ order, now, yellowMin, redMin, C, onRefresh }: { order: O
       <style>{`@keyframes kdsPulse { 0%,100% { opacity: 1 } 50% { opacity: 0.45 } }`}</style>
     </div>
   );
-}
+});

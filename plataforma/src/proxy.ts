@@ -251,10 +251,16 @@ export async function proxy(request: NextRequest) {
       await supabase.auth.getUser();
     };
 
-    await refreshSession(); // personal
-    if (!isAdminArea) {
-      await refreshSession(DINER_COOKIE_NAME); // comensal (menú público)
-    }
+    // En PARALELO, no en serie. Son dos sesiones independientes (cookies con
+    // nombres distintos; ninguna lee ni escribe la de la otra), pero cada
+    // getUser() con sesión iniciada es una ida y vuelta a Supabase Auth: en
+    // cadena, el menú público pagaba las dos antes de empezar a renderizar.
+    // `pendingCookies` se acumula igual — el push es síncrono y JS no
+    // intercala dentro de él.
+    await Promise.all([
+      refreshSession(), // personal
+      ...(isAdminArea ? [] : [refreshSession(DINER_COOKIE_NAME)]), // comensal (menú público)
+    ]);
 
     // Limpieza one-shot: expira las cookies del comensal v1 (`sb-leogin-diner`
     // y sus piezas `.N`), que eran de dominio ancho (.leogin.online) y dejaban

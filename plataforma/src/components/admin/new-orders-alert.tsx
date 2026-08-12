@@ -177,10 +177,24 @@ export default function NewOrdersAlert({
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  /* Cadencia del sondeo según esté vivo o no el socket de Realtime (vía 2).
+     Esta alerta se monta en el AdminShell, o sea en TODAS las pantallas del
+     panel: preguntar cada 12 s de por vida era una consulta cada 12 s por
+     pestaña abierta y por restaurante, las 24 horas, casi siempre para
+     enterarse de nada — porque con Realtime en pie el pedido ya había
+     entrado por la vía 2 mucho antes.
+     Con el canal suscrito baja a 60 s, y ahí se queda como red de seguridad
+     de verdad: un socket puede quedarse "suscrito" y dejar de entregar en
+     silencio, así que el sondeo NO se apaga nunca. En cuanto el canal falla,
+     expira o se cierra, vuelve a 12 s (y pregunta ya, sin esperar al
+     siguiente tic), que es el caso para el que se escribió esta vía. */
+  const [realtimeVivo, setRealtimeVivo] = useState(false);
+
   useEffect(() => {
-    const id = setInterval(() => refresh(), 12_000);
+    const cada = realtimeVivo ? 60_000 : 12_000;
+    const id = setInterval(() => refresh(), cada);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, realtimeVivo]);
 
   /* Refresca el "hace X min" de las tarjetas. */
   useEffect(() => {
@@ -270,11 +284,20 @@ export default function NewOrdersAlert({
           }
         })
         .subscribe((status) => {
+          // El estado del canal es lo que decide la cadencia del sondeo de
+          // respaldo (vía 3). Cualquier cosa que no sea SUBSCRIBED lo devuelve
+          // a 12 s; CHANNEL_ERROR además pregunta en el acto.
+          setRealtimeVivo(status === 'SUBSCRIBED');
           if (status === 'CHANNEL_ERROR') refresh();
         });
     })();
 
-    return () => { cancelled = true; channel?.unsubscribe(); stopAuthSync(); };
+    return () => {
+      cancelled = true;
+      setRealtimeVivo(false);
+      channel?.unsubscribe();
+      stopAuthSync();
+    };
   }, [restaurantId, addOrder, refresh, refreshSoon]);
 
   /* ── Descartar ──────────────────────────────────────────────────── */

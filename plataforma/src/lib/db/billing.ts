@@ -1,7 +1,15 @@
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
 import { PLANS, ADDON_MODULES, type PlanCode, type PlanPricing } from '@/lib/plans';
 import type { ActivatableModuleKey } from '@/lib/modules';
+
+/**
+ * Tag de caché de la configuración de precios de la plataforma.
+ * Quien escriba en `platform_settings` debe invalidarlo con updateTag() —
+ * si no, la web pública seguirá mostrando el precio viejo hasta 5 minutos.
+ */
+export const PRICING_SETTINGS_TAG = 'pricing-settings';
 
 /* ============================================================
    FACTURACIÓN — Cobro de Leogin a sus restaurantes (mig. 028)
@@ -182,8 +190,35 @@ export function trialDaysLeft(cfg: { trial_ends_at: string | null } | null): num
   return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
-/** Parámetros globales de precio + gracia. */
-export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
+/**
+ * Parámetros globales de precio + gracia.
+ *
+ * Dos capas de caché a propósito:
+ *  · `unstable_cache` (ENTRE peticiones): esto es configuración de PLATAFORMA
+ *    —una sola fila de precios para todo Leogin— que cambia cuando el super
+ *    admin la edita, o sea casi nunca. Estaba consultándose en vivo en cada
+ *    visita a leogin.online, a /planes, a /registro y en cada pantalla del
+ *    panel que enseña un precio: una ida y vuelta a Supabase, en la ruta
+ *    crítica de la landing, para leer un número que lleva meses igual.
+ *  · `cache` de React (DENTRO de una petición): la landing la pide desde
+ *    varios sitios; sin esto, cada uno pagaría su propia lectura.
+ *
+ * No espera a que expiren los 5 minutos: `savePricingSettings` invalida el
+ * tag `pricing-settings` con updateTag(), así que un cambio de precios se ve
+ * en la web al instante (ver lib/actions/billing.ts). El TTL es solo la red
+ * de seguridad por si alguien toca la tabla por fuera de la app.
+ */
+const fetchPricingSettingsCached = unstable_cache(
+  async (): Promise<PricingSettings> => leerPricingSettings(),
+  ['platform-pricing-settings'],
+  { revalidate: 300, tags: [PRICING_SETTINGS_TAG] },
+);
+
+export const getPricingSettings = cache(
+  (): Promise<PricingSettings> => fetchPricingSettingsCached(),
+);
+
+async function leerPricingSettings(): Promise<PricingSettings> {
   const db = createServiceClient();
   const { data } = await db.from('platform_settings').select('key, value');
   const map = new Map((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
@@ -214,7 +249,7 @@ export const getPricingSettings = cache(async (): Promise<PricingSettings> => {
     autoGenerate:       b('billing_auto_generate', true),
     trialDays:          n('trial_days',            30),
   };
-});
+}
 
 /** Precios vigentes en la forma que consumen las superficies públicas
  *  (landing, /planes, /registro, suscripción, upsells del panel).
