@@ -32,6 +32,12 @@ El código ya está listo. Para activarlo hay 3 pasos: Google Cloud → Supabase
    El subdominio comodín cubre el menú de cada restaurante (`slug.leogin.online`).
    En desarrollo agrega también `http://localhost:3000/auth/callback`.
 
+   **Si agregas otro dominio a `NEXT_PUBLIC_ROOT_DOMAIN`** (ver
+   `legacyDomainRedirectHost` en proxy.ts), agrega aquí el mismo trío de
+   patrones para ESE dominio también — Supabase no adivina dominios nuevos
+   por su cuenta, y sin esto el login "funciona" pero manda al comensal a la
+   raíz en vez de a su menú (ver la sección de abajo).
+
 ## 3. Variable de entorno
 
 Activa el botón en la app (Render / `.env.local`):
@@ -74,14 +80,22 @@ error visible — Supabase falla en silencio si algo no calza:
       y Secret pegados.
 - [ ] Supabase → Authentication → URL Configuration → **Site URL** =
       `https://leogin.online` (la raíz, sin subdominio).
-- [ ] Supabase → misma pantalla → **Redirect URLs** incluye, línea por línea:
+- [ ] Supabase → misma pantalla → **Redirect URLs** incluye, línea por línea,
+      el mismo trío por CADA dominio en `NEXT_PUBLIC_ROOT_DOMAIN` (hoy son dos:
+      leogin.online se dejó vivo tras migrar a distleogin.com — ver
+      `legacyDomainRedirectHost` en proxy.ts):
       ```
       https://leogin.online/auth/callback
       https://*.leogin.online/auth/callback
       https://*.leogin.online/**
+      https://distleogin.com/auth/callback
+      https://*.distleogin.com/auth/callback
+      https://*.distleogin.com/**
       ```
-      Si falta el patrón con `*`, Supabase regresa a la raíz en vez del
-      subdominio del restaurante y el comensal nunca queda logueado.
+      Si falta el patrón con `*` de un dominio, Supabase regresa a la raíz en
+      vez del subdominio del restaurante y el comensal nunca queda logueado
+      — confirmado en producción el 2026-08-13 tras agregar distleogin.com
+      sin actualizar esta lista.
 - [ ] `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` puesto en Render (no solo en
       `render.yaml` — hay que asignarle el valor en el dashboard porque el
       repo lo declara con `sync: false`).
@@ -94,17 +108,24 @@ error visible — Supabase falla en silencio si algo no calza:
 
 Causa: la URL de retorno del subdominio del restaurante **no está en la lista
 blanca** de Supabase, así que Supabase usa el *Site URL* (la raíz) como respaldo
-y nunca pasa por `/auth/callback`. **Solución:** en Supabase →
-**Authentication → URL Configuration → Redirect URLs** agrega (un patrón por línea):
+y nunca pasa por `/auth/callback`. Pasa lo mismo si el comensal entra por un
+dominio que no está en la lista aunque `leogin.online` sí lo esté (ej. un
+dominio nuevo recién agregado a `NEXT_PUBLIC_ROOT_DOMAIN`). **Solución:** en
+Supabase → **Authentication → URL Configuration → Redirect URLs** agrega (un
+patrón por línea, uno por CADA dominio activo):
 
 ```
 https://*.leogin.online/auth/callback
 https://*.leogin.online/**
+https://*.distleogin.com/auth/callback
+https://*.distleogin.com/**
 ```
 
-Deja el **Site URL** en `https://leogin.online`. Con eso, al volver de Google
-aterriza en `slug.leogin.online/auth/callback`, se crea la sesión (cookie
-host-only de ese subdominio) y queda logueado en el menú del restaurante.
+El **Site URL** no necesita cambiar cuando agregas un dominio — solo importa
+como respaldo cuando ninguna URL de la lista calza. Con el patrón `*` del
+dominio correcto en la lista, al volver de Google aterriza en
+`slug.<dominio>/auth/callback`, se crea la sesión (cookie host-only de ese
+subdominio) y queda logueado en el menú del restaurante.
 
 ### "La pantalla de Google dice jsvlxfkw…supabase.co, no mi marca"
 
