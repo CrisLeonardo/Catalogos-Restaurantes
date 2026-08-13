@@ -1,15 +1,31 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getTenantSlug, isAdminSubdomain, isGroupSubdomain, getGroupSlug } from "@/lib/tenant";
+import {
+  getTenantSlug,
+  isAdminSubdomain,
+  isGroupSubdomain,
+  getGroupSlug,
+  legacyDomainRedirectHost,
+} from "@/lib/tenant";
 import { DINER_COOKIE_NAME, LEGACY_DINER_COOKIE_PATTERN } from "@/lib/supabase/cookies";
 
 /**
  * Proxy (Next.js 16 — antes llamado "middleware"):
- *  1. Resuelve el subdominio → slug del restaurante y lo propaga como
+ *  1. Si el host es un dominio de marca anterior (ej. leogin.online tras
+ *     migrar a distleogin.com — ver `legacyDomainRedirectHost` en
+ *     lib/tenant.ts), redirect 301 permanente al mismo subdominio+ruta en el
+ *     dominio primario. `/api/*` queda FUERA a propósito: puede haber
+ *     webhooks de terceros (WhatsApp, FEL) con esa URL fija configurada del
+ *     lado de afuera, y la mayoría no sigue redirects — nadie navega a
+ *     `/api/*` a mano, así que no hay nada de marca que ganar
+ *     redirigiéndolo. A diferencia del punto 4, este SÍ es un salto de
+ *     origen real: es la migración de dominio que se pidió a propósito, no
+ *     una resolución interna de tenant.
+ *  2. Resuelve el subdominio → slug del restaurante y lo propaga como
  *     header interno `x-tenant-slug` para que la app lo lea.
- *  2. Si el host es admin.SLUG.dominio, reescribe la ruta a /admin/* para que
+ *  3. Si el host es admin.SLUG.dominio, reescribe la ruta a /admin/* para que
  *     el panel de administración viva en un origen separado (PWA independiente).
- *  3. Resuelve el link ESTABLE de mesa/menú (`/m/<restaurantId>/...` en el
+ *  4. Resuelve el link ESTABLE de mesa/menú (`/m/<restaurantId>/...` en el
  *     dominio raíz — ver `stableTableUrl`/`stableMenuUrl` en lib/tenant.ts) y
  *     lo reescribe (rewrite, no redirect) al tenant vigente. A propósito NO es
  *     un redirect HTTP a otro origen: un link que salta de dominio antes de
@@ -20,7 +36,7 @@ import { DINER_COOKIE_NAME, LEGACY_DINER_COOKIE_PATTERN } from "@/lib/supabase/c
  *     Sirviendo el contenido real bajo `/m/<id>/` en el mismo origen (con su
  *     propio `scope`/`id` de manifest — ver src/app/manifest.ts), el link
  *     impreso funciona igual de "estable" sin ninguno de los dos problemas.
- *  4. Refresca la sesión de Supabase (si las variables están configuradas).
+ *  5. Refresca la sesión de Supabase (si las variables están configuradas).
  */
 /**
  * Headers que pone ESTE proxy y que el resto de la app trata como confiables.
@@ -37,15 +53,28 @@ const INTERNAL_HEADERS = [
 ] as const;
 
 export async function proxy(request: NextRequest) {
-  // 1) Tenant + detección de subdominio admin
   const host = request.headers.get("host");
+  const pathname = request.nextUrl.pathname;
+
+  // 1) Dominio de marca anterior → redirect permanente al dominio primario.
+  if (!pathname.startsWith("/api/")) {
+    const redirectHost = legacyDomainRedirectHost(host);
+    if (redirectHost) {
+      const url = request.nextUrl.clone();
+      url.protocol = "https:";
+      url.hostname = redirectHost;
+      url.port = "";
+      return NextResponse.redirect(url, 301);
+    }
+  }
+
+  // 2) Tenant + detección de subdominio admin
   let slug = getTenantSlug(host);
   const adminSub = isAdminSubdomain(host);
   const groupSub = isGroupSubdomain(host);
   const groupSlug = getGroupSlug(host);
-  const pathname = request.nextUrl.pathname;
 
-  // 1b) Link estable de mesa/menú: solo aplica en el dominio raíz (sin slug,
+  // 2b) Link estable de mesa/menú: solo aplica en el dominio raíz (sin slug,
   // sin subdominio admin/central) y con forma /m/<uuid>(/resto). El resto
   // puede ser vacío (menú general), un número puro (mesa — semántica vieja
   // de ?mesa=N) o cualquier otro path interno (/checkout, /mis-pedidos,
@@ -136,7 +165,7 @@ export async function proxy(request: NextRequest) {
   // mismo dominio raíz).
   if (stableId) requestHeaders.set("x-tenant-stable-id", stableId);
 
-  // 2) Rewrite para subdominio admin.*
+  // 3) Rewrite para subdominio admin.*
   //    admin.mi-restaurante.leogin.online/       → /admin/
   //    admin.mi-restaurante.leogin.online/menu   → /admin/menu
   //    Rutas /api/, /_next/ y archivos estáticos no se reescriben.
@@ -191,7 +220,7 @@ export async function proxy(request: NextRequest) {
       ? NextResponse.rewrite(rewriteUrl!, { request: { headers: requestHeaders } })
       : NextResponse.next({ request: { headers: requestHeaders } });
 
-  // 3) Refresco de sesión Supabase (solo si hay credenciales configuradas).
+  // 5) Refresco de sesión Supabase (solo si hay credenciales configuradas).
   //    Hay DOS sesiones independientes (ver lib/supabase/server.ts):
   //    · PERSONAL (cookie por defecto) — se refresca siempre.
   //    · COMENSAL (cookie DINER_COOKIE_NAME) — solo en rutas del menú público;

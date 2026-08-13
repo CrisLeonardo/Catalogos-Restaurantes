@@ -154,3 +154,27 @@ export function getGroupSlug(host: string | null | undefined): string | null {
   }
   return null;
 }
+
+/**
+ * Si `host` vive en un ROOT_DOMAIN que NO es el primero de la lista (una
+ * marca/dominio anterior que se dejó vivo tras una migración, ej.
+ * leogin.online tras pasar a distleogin.com), devuelve el host equivalente
+ * en el dominio primario — mismo subdominio, solo cambia el sufijo. `null`
+ * si `host` ya es del dominio primario, no coincide con ningún ROOT_DOMAIN
+ * conocido, o solo hay uno configurado (nada que redirigir).
+ */
+export function legacyDomainRedirectHost(host: string | null | undefined): string | null {
+  if (!host) return null;
+  const [primary, ...legacy] = ROOT_DOMAINS;
+  if (!primary || legacy.length === 0) return null;
+  const hostname = host.toLowerCase().split(":")[0];
+  if (hostname === primary || hostname.endsWith(`.${primary}`)) return null;
+  for (const root of legacy) {
+    if (hostname === root) return primary;
+    if (hostname.endsWith(`.${root}`)) {
+      const sub = hostname.slice(0, hostname.length - root.length - 1);
+      return `${sub}.${primary}`;
+    }
+  }
+  return null;
+}
