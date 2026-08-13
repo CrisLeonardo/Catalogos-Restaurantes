@@ -28,9 +28,11 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
         // se dibujaba ENCIMA de la tarjeta y la tapaba.
         position: 'fixed', inset: 0, zIndex: 100, pointerEvents: 'none',
         background: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         padding: 16,
       }}
+      // Sube desde abajo en el teléfono y se centra de tablet para arriba,
+      // igual que el resto de hojas del comensal (ver globals.css).
+      className="menu-sheet-wrap"
     >
       <div style={{ width: '100%', maxWidth: 420, pointerEvents: 'auto' }}>
         <Glass

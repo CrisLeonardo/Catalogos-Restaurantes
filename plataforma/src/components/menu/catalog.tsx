@@ -18,14 +18,16 @@
    cambiaban de ropa, no de cuerpo. */
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
-import { LAYOUT_MAX_WIDTH, LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
+import { MOSAIC_MAX_TILE, canvasComposition, mosaicColumns, mosaicLayoutColumns, textColumns, type ScreenTier } from '@/lib/theme/canvas';
+import { useScreenTier } from '@/lib/theme/use-screen-tier';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
@@ -95,52 +97,12 @@ function supportsFeatured(card: CardStyle): boolean {
   return card === 'tarjeta' || card === 'fila' || card === 'mosaico';
 }
 
-/* ── Lienzo EFECTIVO ──────────────────────────────────────────
-   `layoutWidth` dice hasta dónde PUEDE crecer la página, no cuánta pantalla
-   hay. El menú se abre casi siempre desde el QR de la mesa, o sea en un
-   teléfono: ahí una plantilla de "revista" tiene 343 px reales, y decidir la
-   maqueta solo con la config daba resultados absurdos — un mosaico de tres
-   columnas de 106 px con los nombres cortados, y una tarjeta destacada de
-   proporción 3.1 que, al chocar contra su alto mínimo, se estiraba a 645 px de
-   ancho y se salía de la pantalla.
-
-   El máximo lo pone la plantilla; el mínimo, la pantalla. */
-const CANVAS_ORDER: LayoutWidth[] = ['movil', 'ancho', 'revista'];
-
-/** Ancho de ventana a partir del cual cada lienzo tiene sentido de verdad. */
-const CANVAS_MIN_VW: Record<LayoutWidth, number> = { movil: 0, ancho: 620, revista: 1000 };
-
-function useEffectiveWidth(configured: LayoutWidth): LayoutWidth {
-  const queries = useMemo(
-    () =>
-      CANVAS_ORDER.filter((w) => CANVAS_MIN_VW[w] > 0).map((w) => ({
-        w,
-        mq: typeof window === 'undefined' ? null : window.matchMedia(`(min-width: ${CANVAS_MIN_VW[w]}px)`),
-      })),
-    [],
-  );
-
-  const subscribe = useCallback(
-    (onChange: () => void) => {
-      const offs = queries.map(({ mq }) => {
-        mq?.addEventListener('change', onChange);
-        return () => mq?.removeEventListener('change', onChange);
-      });
-      return () => offs.forEach((off) => off());
-    },
-    [queries],
-  );
-
-  const get = useCallback(() => {
-    let allowed: LayoutWidth = 'movil';
-    for (const { w, mq } of queries) if (mq?.matches) allowed = w;
-    const i = Math.min(CANVAS_ORDER.indexOf(configured), CANVAS_ORDER.indexOf(allowed));
-    return CANVAS_ORDER[i < 0 ? 0 : i];
-  }, [queries, configured]);
-
-  // En el servidor no hay pantalla que medir: se asume teléfono. Es de donde
-  // entra casi todo el mundo y, además, el único caso que nunca desborda.
-  return useSyncExternalStore(subscribe, get, () => 'movil' as LayoutWidth);
+/* ── Tamaño de texto contra la COLUMNA ────────────────────────
+   Ver `colSize` en portada.tsx y el bloque «LIENZO DEL MENÚ» de globals.css:
+   con `vw` un titular metido en una columna de 460 px se dimensionaba con el
+   ancho del monitor. */
+function colSize(factor: number, min: number, max: number): string {
+  return `clamp(${min}px, calc(${factor} * var(--menu-col)), ${max}px)`;
 }
 
 /** Reloj que avanza cada `ms` para reevaluar los menús por franja sin recargar. */
@@ -205,7 +167,10 @@ export default function Catalog({
   const nav = config.catalogNav ?? 'chips';
   const card = config.cardStyle ?? 'tarjeta';
   const canvas = config.layoutWidth ?? 'movil';
-  const width = useEffectiveWidth(canvas);
+  // El ANCHO del lienzo lo pone el CSS (`--menu-max`); aquí solo se decide la
+  // COMPOSICIÓN, que es lo que no cabe en una media query. Ver lib/theme/canvas.ts.
+  const tier = useScreenTier();
+  const width = canvasComposition(canvas, tier);
 
   /** Traducción con fallback automático al español (ver lib/locale). */
   const localize = (base: string, translated?: string | null) =>
@@ -381,7 +346,7 @@ export default function Catalog({
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0);
 
   const itemsProps = {
-    card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen,
+    card, width, tier, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen,
   };
 
   return (
@@ -392,7 +357,7 @@ export default function Catalog({
           <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
           {/* El titular crece con el lienzo: 44 px que mandan en un teléfono se
               quedan cortos en una página de revista de 1.120 px. */}
-          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
+          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * ${colSize(0.12, 34, width === 'revista' ? 64 : width === 'ancho' ? 56 : 44)})`, marginTop: 2 }}>
             {content.catalog.heading}
           </h2>
         </div>
@@ -460,11 +425,11 @@ export default function Catalog({
           }}
         >
           <div
-            className="u-noscroll"
+            className="u-noscroll menu-canvas"
             style={{
-              display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px 10px',
-              // Se alinea con el <main>, que usa el lienzo CONFIGURADO.
-              maxWidth: LAYOUT_MAX_WIDTH[canvas] ?? LAYOUT_MAX_WIDTH.movil, margin: '0 auto',
+              // Se alinea con el <main>: misma clase, mismo ancho, mismo
+              // relleno, en cualquier pantalla.
+              display: 'flex', gap: 8, overflowX: 'auto', paddingBlock: '12px 10px',
             }}
           >
             {groups.map((g) => (
@@ -625,7 +590,11 @@ interface ItemsProps {
   items: ProdItem[];
   locked: boolean;
   card: CardStyle;
+  /** Composición (esqueleto) que toca. Ver lib/theme/canvas.ts. */
   width: LayoutWidth;
+  /** Cuánta pantalla hay. Lo necesitan las formas que reparten a mano
+      (mosaico y carta impresa), donde no hay rejilla que se auto-ajuste. */
+  tier: ScreenTier;
   featuredIds: Set<string>;
   catIcon: Map<string, string>;
   ordersEnabled: boolean;
@@ -634,7 +603,7 @@ interface ItemsProps {
   onOpen: (p: ProdItem) => void;
 }
 
-function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen }: ItemsProps) {
+function Items({ items, locked, card, width, tier, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
 
@@ -645,11 +614,21 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
 
   /* Columnas: en móvil manda la elección del dueño (2 o 3). En lienzos anchos
      se reparte por ancho disponible — con 2 columnas fijas en una pantalla de
-     escritorio cada tarjeta acabaría midiendo medio metro. */
+     escritorio cada tarjeta acabaría midiendo medio metro.
+
+     `minmax(0, 1fr)` y no `1fr`: son la misma cosa salvo por el mínimo, y ahí
+     está la diferencia. `1fr` es en realidad `minmax(auto, 1fr)`, y ese
+     `auto` es el mínimo de CONTENIDO de la pieza — o sea que basta una
+     tarjeta que declare un ancho mínimo para que la columna entera se plante
+     en él y la rejilla se salga de la página. Es exactamente lo que pasaba
+     con la reserva de `content-visibility` (ver `.menu-card-lazy` en
+     globals.css): dos columnas de 280 px dentro de 358, cortadas contra el
+     canto derecho de la pantalla. Con mínimo 0 la rejilla no puede
+     desbordar, pase lo que pase dentro de las piezas. */
   const wide = width !== 'movil';
   const gridCols = wide
     ? `repeat(auto-fill, minmax(${LAYOUT_MIN_COL[width]}px, 1fr))`
-    : `repeat(${config.catalogColumns}, 1fr)`;
+    : `repeat(${config.catalogColumns}, minmax(0, 1fr))`;
 
   const fade = (i: number) => ({
     className: anim ? 'anim-fade-up' : '',
@@ -681,10 +660,10 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   if (card === 'texto') {
     /* Carta impresa: sin una sola imagen. El contraste entre nombre y precio lo
        hace la línea de puntos, no una foto.
-       En una página de revista se parte en dos columnas: una sola línea de
-       puntos de 1.100 px separa tanto el nombre del precio que deja de leerse
-       como un par — y así es como se compone una carta impresa de verdad. */
-    const cols = width === 'revista' ? 2 : 1;
+       En escritorio se parte en dos columnas: una sola línea de puntos de
+       1.100 px separa tanto el nombre del precio que deja de leerse como un
+       par — y así es como se compone una carta impresa de verdad. */
+    const cols = textColumns(tier, width);
     return (
       <div style={{ columnCount: cols, columnGap: 54, marginTop: 4 }}>
         {items.map((p, i) => (
@@ -704,8 +683,10 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
         style={{
           display: 'flex', gap: 12, overflowX: 'auto', marginTop: 10,
           // El margen negativo deja que las piezas se deslicen hasta el borde
-          // de la pantalla en vez de cortarse contra el padding del <main>.
-          padding: '2px 16px 6px', marginInline: -16, scrollSnapType: 'x proximity',
+          // de la pantalla en vez de cortarse contra el padding del <main>,
+          // que ya no siempre es de 16 px (ver --menu-pad en globals.css).
+          paddingBlock: '2px 6px', paddingInline: 'var(--menu-pad)',
+          marginInline: 'calc(-1 * var(--menu-pad))', scrollSnapType: 'x proximity',
         }}
       >
         {items.map((p, i) => (
@@ -720,14 +701,17 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   if (card === 'mosaico') {
     const lead = items.filter((p) => featuredIds.has(p.id));
     const rest = items.filter((p) => !featuredIds.has(p.id));
-    /* Tres columnas en la página de revista, no cuatro: a 263 px la pieza se
-       parecía más a un tablero de recortes que a una doble página, y con
-       secciones de 4-7 platillos el reparto quedaba mucho más desigual (una
-       columna con dos piezas junto a otra con una salta a la vista).
-       Y nunca más columnas que piezas: una sección de tres platillos en una
-       rejilla de cuatro dejaba una columna entera en blanco a la derecha. */
-    const base = width === 'revista' ? 3 : width === 'ancho' ? 2 : config.catalogColumns;
-    const n = Math.max(2, Math.min(base, rest.length || 1));
+    /* El reparto lo decide `mosaicColumns` (lib/theme/canvas.ts): el mosaico
+       no usa la rejilla que se auto-ajusta —coloca las piezas a mano por
+       altura— así que necesita un número, y ese número tiene que crecer con
+       la pantalla o en un monitor salen piezas de medio metro. */
+    const n = mosaicColumns(width, tier, config.catalogColumns, rest.length);
+    const layoutN = mosaicLayoutColumns(width, tier, config.catalogColumns);
+    /* Sección más corta que la fila: las piezas NO se estiran a rellenar el
+       monitor. Una sección de dos platillos en un lienzo de 1.300 px daba dos
+       tarjetas de 646 px cada una — más parecidas a dos carteles que a un
+       mosaico. Se dibujan a tamaño normal y el grupo se centra. */
+    const short = n < layoutN;
     const columns = packColumns(rest, n);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
@@ -740,7 +724,20 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
             <FeaturedTile {...common(p)} width={width} />
           </div>
         ))}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, gap: 12, alignItems: 'start' }}>
+        <div
+          style={{
+            display: 'grid', gap: 12, alignItems: 'start',
+            // El tope va en la PISTA, no en la caja: la caja sigue ocupando
+            // todo el ancho y son las columnas las que se quedan en su tamaño
+            // y se centran. Recortar la caja con `margin-inline: auto` parecía
+            // equivalente y no lo es — dentro de un contenedor flex ese margen
+            // cancela el estirado y la rejilla se encogía a 12 px.
+            gridTemplateColumns: short
+              ? `repeat(${n}, minmax(0, ${MOSAIC_MAX_TILE}px))`
+              : `repeat(${n}, minmax(0, 1fr))`,
+            ...(short ? { justifyContent: 'center' } : {}),
+          }}
+        >
           {columns.map((col, ci) => (
             <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {col.map(({ p, i }) => (

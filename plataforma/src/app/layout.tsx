@@ -211,6 +211,13 @@ export default async function RootLayout({
       lang="es"
       data-glass={glassIntensity}
       data-scheme={scheme}
+      // Lienzo del menú. Va en <html> y no en el <main> del menú a propósito:
+      // así las CUATRO superficies del comensal (menú, checkout, «Mis
+      // pedidos» y el seguimiento del pedido) comparten la misma columna, y
+      // el ancho ya es el correcto en el primer pintado — sin medir la
+      // ventana desde React ni el salto de maqueta que eso traería.
+      // Ver el bloque «LIENZO DEL MENÚ» en globals.css.
+      data-canvas={resolved?.config.layoutWidth ?? 'movil'}
       className={`${geistSans.variable} ${BRAND_FONT_VARS} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

@@ -49,17 +49,12 @@ export type CardStyle =
   | 'mosaico'   // alturas alternas y arte dominante (editorial)
   | 'carrusel'; // fila horizontal desplazable por categoría
 
-/** Ancho del lienzo. El menú se comparte por link y se abre en cualquier
-    pantalla: 'movil' es la columna de siempre (460 px), los otros dos
-    aprovechan tablet y escritorio en vez de dejar dos franjas vacías. */
+/** Ambición del lienzo: cuánto quiere crecer el menú cuando hay pantalla de
+    sobra. NO es un ancho fijo — en un teléfono los tres valen lo mismo y de
+    tablet para arriba cada uno crece hasta su tope. El ancho en píxeles vive
+    en el CSS (`--menu-max`, bloque «LIENZO DEL MENÚ» de globals.css) y la
+    composición en lib/theme/canvas.ts. */
 export type LayoutWidth = 'movil' | 'ancho' | 'revista';
-
-/** Ancho máximo del <main> del menú por lienzo. */
-export const LAYOUT_MAX_WIDTH: Record<LayoutWidth, number> = {
-  movil: 460,
-  ancho: 760,
-  revista: 1120,
-};
 
 /** Ancho mínimo de columna para las rejillas que se auto-ajustan.
     En 'movil' se respetan las 2/3 columnas explícitas del dueño; en lienzos

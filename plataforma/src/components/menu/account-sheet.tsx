@@ -206,11 +206,13 @@ export default function AccountSheet({
       <OverlayBackground />
 
       <main
-        className="anim-fade-up themed-type"
+        className="anim-fade-up themed-type menu-canvas"
         style={{
           position: 'relative', zIndex: 1,
-          width: '100%', maxWidth: 460, margin: '0 auto',
-          padding: `calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))`,
+          // Se lee como una ficha, no como una carta: aunque el lienzo del
+          // menú llegue a 1.180 px, esta columna no pasa de 620.
+          maxWidth: 'min(var(--menu-max, 460px), 620px)',
+          paddingBlock: `calc(16px + env(safe-area-inset-top, 0px)) calc(88px + env(safe-area-inset-bottom, 0px))`,
           display: 'flex', flexDirection: 'column', gap: 14,
         }}
       >

@@ -1312,11 +1312,162 @@ html[data-scheme="light"] .btn-white {
    (no crea contenedor de scroll, solo recorta). */
 html { overflow-x: clip; }
 
+/* ============================================================
+   LIENZO DEL MENÚ — el ancho lo decide la pantalla
+   ------------------------------------------------------------
+   El menú se abre lo mismo desde el QR de la mesa que desde un link
+   compartido por WhatsApp y abierto en una computadora. Hasta aquí el ajuste
+   del dueño («Columna de móvil», «Ancho», «Revista») era un ancho FIJO, así
+   que el valor por defecto dejaba una columna de 460 px flotando en medio de
+   un monitor de 1.440 con dos franjas de fondo vacío de medio palmo a los
+   lados: la estampa exacta de un sitio pensado solo para el teléfono.
+
+   Ahora ese ajuste es la AMBICIÓN y la pantalla decide el ancho real. Los
+   tres crecen, en el mismo orden y sin cruzarse, y en el teléfono los tres
+   siguen valiendo exactamente lo mismo que antes.
+
+   Estas variables son la ÚNICA fuente del ancho (el TypeScript ya no lleva
+   una tabla de píxeles que se pudiera desincronizar de esta):
+
+     --menu-max : ancho máximo del lienzo.
+     --menu-pad : relleno lateral del lienzo.
+     --menu-col : ancho REAL de la columna de lectura, ya descontado el
+                  relleno. Es para dimensionar TEXTO contra la columna en vez
+                  de contra la ventana: un titular de `22vw` metido en una
+                  columna de 460 px se calculaba con los 1.440 px del monitor
+                  y salía siempre pegado a su tope. Nada de porcentajes aquí:
+                  en `font-size` un % es del tamaño del padre, no del ancho.
+============================================================ */
+[data-canvas] {
+  --menu-pad: 16px;
+  --menu-max: 460px;
+  --menu-col: min(100vw - var(--menu-pad) * 2, var(--menu-max) - var(--menu-pad) * 2);
+}
+
+/* Tablet y teléfono en horizontal */
+@media (min-width: 620px) {
+  [data-canvas]           { --menu-pad: 22px; }
+  [data-canvas="movil"]   { --menu-max: 560px; }
+  [data-canvas="ancho"]   { --menu-max: 760px; }
+  [data-canvas="revista"] { --menu-max: 860px; }
+}
+
+/* Escritorio */
+@media (min-width: 1000px) {
+  [data-canvas]           { --menu-pad: 28px; }
+  [data-canvas="movil"]   { --menu-max: 900px; }
+  [data-canvas="ancho"]   { --menu-max: 1000px; }
+  [data-canvas="revista"] { --menu-max: 1180px; }
+}
+
+/* Monitor grande. «Columna de móvil» crece menos que los otros dos y se
+   detiene antes: quien elige ese ajuste pide una carta compacta, no una que
+   siga estirándose sin final. El orden entre los tres se mantiene. */
+@media (min-width: 1400px) {
+  [data-canvas="movil"]   { --menu-max: 1040px; }
+  [data-canvas="ancho"]   { --menu-max: 1120px; }
+  [data-canvas="revista"] { --menu-max: 1360px; }
+}
+
+/* El lienzo en sí. Lo usan el menú, el checkout, «Mis pedidos» y el
+   seguimiento del pedido, para que las cuatro superficies del comensal
+   compartan la misma columna. */
+.menu-canvas {
+  width: 100%;
+  max-width: var(--menu-max);
+  margin-inline: auto;
+  padding-inline: var(--menu-pad);
+}
+
 /* Sección del MENÚ del comensal que rompe el max-width del <main> y llega
    hasta el borde de la ventana: la portada a sangre y el índice pegajoso de
    secciones. Sin esto, en tablet y escritorio la portada "a sangre" era una
    franja centrada con el fondo de la página asomando a los lados. */
 .menu-bleed { width: 100vw; max-width: 100vw; margin-left: calc(50% - 50vw); }
+
+/* ── Portada (héroe) ──────────────────────────────────────────
+   `min-height: 100svh` a secas fallaba por los dos extremos:
+
+   · Teléfono EN HORIZONTAL (844 × 390) — el contenido del héroe mide unos
+     490 px, así que pedía una pantalla entera y aun así se salía de ella:
+     el botón «Ver el menú» quedaba por debajo del borde inferior y no había
+     nada que insinuara que hubiera que seguir bajando.
+   · Escritorio — una pantalla entera de 900 px para un logo, un nombre y un
+     botón, con la carta escondida bajo el pliegue. Se entra al menú para ver
+     platillos, no para admirar una portada a tamaño monitor.
+
+   El relleno y los huecos viven AQUÍ y no en el `style` del componente por
+   un motivo muy concreto: un estilo en línea le gana a cualquier regla de
+   hoja de estilos, así que mientras el `padding: 40px` estuvo en línea, la
+   media query de pantalla baja no tenía forma de recortarlo. */
+.menu-hero {
+  min-height: 100svh;
+  gap: 22px;
+  padding: 40px 8px;
+}
+.menu-hero.is-stack  { gap: 18px; }
+.menu-hero.is-ticket { gap: 0; }
+
+/* Tablet: deja asomar el arranque de la carta. Que haya que deslizar una
+   pantalla ENTERA para ver el primer platillo es el precio del héroe a
+   pantalla completa, y en una tablet de 1.024 px de alto ese precio se nota. */
+@media (min-width: 620px) {
+  .menu-hero { min-height: min(100svh, 820px); }
+  /* La portada a sangre sí conserva la pantalla entera: ahí la foto ES el
+     argumento de venta y recortarla la deja en una franja. */
+  .menu-hero-bleed { min-height: 100svh; }
+}
+
+@media (min-width: 1000px) {
+  .menu-hero { min-height: min(100svh, 660px); }
+  .menu-hero-bleed { min-height: min(100svh, 760px); }
+}
+
+/* Va AL FINAL a propósito: en un teléfono en horizontal (829 × 390) también
+   se cumplen las media queries de ancho de arriba, y la que tiene que ganar
+   es esta. Que el héroe crezca con su contenido y apriete: en 390 px de alto
+   no sobra un solo píxel si el botón tiene que verse sin desplazar. */
+@media (max-height: 620px) {
+  .menu-hero { min-height: auto; padding: 24px 8px; gap: 14px; }
+  .menu-hero.is-stack  { gap: 12px; }
+  .menu-hero.is-ticket { gap: 0; }
+  /* La de foto a sangre no: su contenido son cuatro líneas al pie, así que
+     con `auto` la foto se quedaría en una tira de 250 px. `100svh` nunca
+     recorta —si el contenido pide más, crece— así que aquí es seguro. */
+  .menu-hero-bleed { min-height: 100svh; }
+}
+
+/* ── Hojas del comensal (producto, carrito, avisos) ───────────
+   En el teléfono son «bottom sheets»: suben desde el borde inferior, pegadas
+   a él, y solo redondean las esquinas de arriba. Es el gesto correcto con el
+   pulgar. En una computadora ese mismo panel se queda cosido al canto de la
+   pantalla, a 460 px de ancho y con la mitad de las esquinas en pico — lee
+   como un emulador de teléfono incrustado en la página. A partir de tablet
+   pasa a ser un diálogo centrado, que es el gesto de esa pantalla. */
+.menu-sheet-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.menu-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  max-height: 88dvh;
+}
+
+@media (min-width: 768px) {
+  .menu-sheet-wrap { align-items: center; padding: 24px; }
+  .menu-sheet {
+    max-width: 520px;
+    border-radius: var(--radius-2xl);
+    max-height: min(88dvh, 780px);
+  }
+  /* Deslizar hacia arriba solo tiene sentido si se entra desde el borde de
+     abajo. Centrado, el mismo gesto se lee como un salto. */
+  .menu-sheet.anim-slide-up { animation-name: pop-in; }
+}
 
 /* Sección que rompe el max-width del layout (centrado de 800px) */
 .bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
@@ -1456,7 +1607,24 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
    equivocado. Aplica a todos los aparatos: no cambia nada visible. */
 .menu-card-lazy {
   content-visibility: auto;
-  contain-intrinsic-size: auto 280px;   /* data-shape="tarjeta": foto + texto */
+
+  /* OJO con la forma corta: `contain-intrinsic-size: auto 280px` NO reserva
+     280 px de ALTO — reserva 280 px en LOS DOS EJES. Y una tarjeta sin
+     pintar que declara 280 px de ancho arrastra consigo la rejilla entera,
+     porque `1fr` es en realidad `minmax(auto, 1fr)` y ese `auto` es el
+     mínimo de contenido: las dos columnas se plantaban en 280 px cada una
+     (572 px con el hueco) dentro de una columna de 358 px en un teléfono de
+     390. Como `html` lleva `overflow-x: clip`, no aparecía barra de
+     desplazamiento que delatara nada: la segunda columna simplemente se
+     salía por el canto derecho de la pantalla, cortada, y las tarjetas
+     destacadas (que ocupan toda la fila) se cortaban por la mitad.
+
+     Separando los dos ejes, el ancho lo sigue decidiendo la rejilla (`none`
+     = sin tamaño intrínseco declarado) y la reserva de alto —que es lo
+     único que se buscaba, para que la barra de desplazamiento no dé saltos—
+     se queda intacta. */
+  contain-intrinsic-width: auto none;
+  contain-intrinsic-height: auto 280px;   /* data-shape="tarjeta": foto + texto */
 
   /* OJO, esto no es decorativo: content-visibility trae contención de
      PINTADO, que recorta a sus propios bordes todo lo que pinte de más lo de
@@ -1467,5 +1635,5 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
   overflow-clip-margin: 48px;
 }
 .menu-card-lazy[data-shape="fila"] {
-  contain-intrinsic-size: auto 96px;    /* miniatura de 74 px + relleno */
+  contain-intrinsic-height: auto 96px;  /* miniatura de 74 px + relleno */
 }

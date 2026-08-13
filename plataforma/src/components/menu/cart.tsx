@@ -25,7 +25,7 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
         interactive
         onClick={onOpen}
         className="anim-slide-up"
-        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 17, padding: '12px 14px 12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 'min(var(--menu-max, 460px), 560px)', borderRadius: 17, padding: '12px 14px 12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span className="t-kicker" style={{ fontSize: 10.5 }}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
@@ -55,17 +55,20 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      className="menu-sheet-wrap"
+      style={{ position: 'fixed', inset: 0, zIndex: 60 }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={content.cart.title}
     >
       <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      {/* `.menu-sheet`: hoja pegada al borde inferior en el teléfono (el gesto
+          del pulgar) y diálogo centrado de tablet para arriba. Ver globals.css. */}
       <div
-        className="glass anim-slide-up"
+        className="glass anim-slide-up menu-sheet"
         onClick={(e) => e.stopPropagation()}
-        style={{ position: 'relative', width: '100%', maxWidth: 460, borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0', padding: '20px 20px 28px', maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }}
+        style={{ padding: '20px 20px 28px', display: 'flex', flexDirection: 'column' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h2 className="t-display" style={{ ...titleT.vars, fontSize: 26 * titleT.size }}>{content.cart.title}</h2>

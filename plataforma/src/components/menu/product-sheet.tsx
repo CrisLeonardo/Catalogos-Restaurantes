@@ -161,17 +161,20 @@ export default function ProductSheet({
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      className="menu-sheet-wrap"
+      style={{ position: 'fixed', inset: 0, zIndex: 60 }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={name}
     >
       <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+      {/* `.menu-sheet`: hoja pegada al borde inferior en el teléfono y diálogo
+          centrado de tablet para arriba. Ver globals.css. */}
       <div
-        className="glass anim-slide-up"
+        className="glass anim-slide-up menu-sheet"
         onClick={(e) => e.stopPropagation()}
-        style={{ position: 'relative', width: '100%', maxWidth: 460, borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0', padding: '18px 20px 24px', maxHeight: '88dvh', overflowY: 'auto' }}
+        style={{ padding: '18px 20px 24px', overflowY: 'auto' }}
       >
         <button
           onClick={onClose}

@@ -12,7 +12,7 @@ import InstallBanner from '@/components/install-banner';
 import OfflineSupport from '@/components/offline-support';
 import { Icon } from '@/components/icons';
 import type { MenuReward } from '@/components/menu/rewards-section';
-import { LAYOUT_MAX_WIDTH, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
+import { type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 
@@ -79,8 +79,13 @@ export default function MenuShell({ config, content, categories, products, resta
         <VisitTracker restaurantId={restaurantId} />
         {/* El lienzo ya no es una columna de 460 px para todos: el menú se
             comparte por link y se abre en tablet y escritorio, donde esa
-            columna dejaba dos franjas vacías a los lados. */}
-        <main className="themed-type" style={{ width: '100%', maxWidth: LAYOUT_MAX_WIDTH[config.layoutWidth] ?? LAYOUT_MAX_WIDTH.movil, margin: '0 auto', padding: `0 16px calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}>
+            columna dejaba dos franjas vacías a los lados. El ancho lo pone
+            `.menu-canvas` a partir de `data-canvas` en <html> (globals.css),
+            no este componente: así es correcto ya en el primer pintado. */}
+        <main
+          className="themed-type menu-canvas"
+          style={{ paddingBottom: `calc(${ordersEnabled ? '80px' : '64px'} + env(safe-area-inset-bottom, 0px))` }}
+        >
           <Portada isOpen={isOpen} />
           <div id="menu" style={{ scrollMarginTop: 16, paddingTop: 12 }}>
             {!isOpen && (

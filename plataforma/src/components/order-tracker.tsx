@@ -172,7 +172,7 @@ export default function OrderTracker({
   const subtitle = content.tracking.subtitle || 'El estado se actualiza solo, en vivo.';
 
   return (
-    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
+    <main className="anim-fade-up themed-type menu-canvas" style={{ maxWidth: 'min(var(--menu-max, 440px), 620px)', paddingBlock: '24px 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <Link href={backHref} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>

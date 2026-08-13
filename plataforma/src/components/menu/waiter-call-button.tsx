@@ -80,7 +80,9 @@ export default function WaiterCallButton({
       className="press glass-solid"
       style={{
         position: 'fixed',
-        right: 16,
+        // Al canto derecho de la CARTA, no al de la ventana (ver el mismo
+        // ajuste en active-order-chip.tsx).
+        right: 'max(16px, calc(50% - var(--menu-max, 460px) / 2 + var(--menu-pad, 16px)))',
         bottom: raised ? 160 : 92,
         zIndex: 60,
         display: 'inline-flex',

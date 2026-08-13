@@ -109,6 +109,12 @@ export default function PreviewClient({
     const html = document.documentElement;
     html.setAttribute('data-glass', state.config.glassIntensity);
     html.setAttribute('data-scheme', state.config.scheme);
+    // El lienzo también: `--menu-max` sale de `[data-canvas]` (ver globals.css)
+    // y sin esto la vista previa se quedaba con el ancho que trajera el tema
+    // GUARDADO mientras el dueño movía el ajuste. Como el marco del editor es
+    // un iframe, sus media queries miden el ancho del marco, no el del
+    // monitor: el marco de teléfono enseña el lienzo de teléfono de verdad.
+    html.setAttribute('data-canvas', state.config.layoutWidth);
   }, [state.config]);
 
   /* La vista previa es solo para mirar: bloquear navegación interna
@@ -139,6 +145,7 @@ export default function PreviewClient({
       ref={wrapRef}
       data-glass={config.glassIntensity}
       data-scheme={config.scheme}
+      data-canvas={config.layoutWidth}
       style={{
         // Sin vars inline: las CSS vars van en el <style> de abajo para que
         // el customCss (último) pueda sobrescribirlas con selectores normales.

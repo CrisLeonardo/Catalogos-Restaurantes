@@ -121,7 +121,11 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
         // Anclado a la izquierda (no centrado) para no solapar el FAB
         // "Llamar al mesero" que vive en el lado derecho.
         position: 'fixed', bottom: `calc(${count > 0 ? 156 : 84}px + env(safe-area-inset-bottom, 0px))`,
-        left: 16,
+        // Al canto izquierdo de la CARTA, no al de la ventana: en una
+        // computadora la carta está centrada y un chip pegado al borde del
+        // monitor queda a medio palmo de todo lo demás, como si fuera de otra
+        // página. En el teléfono los dos cantos coinciden y sale 16 px igual.
+        left: 'max(16px, calc(50% - var(--menu-max, 460px) / 2 + var(--menu-pad, 16px)))',
         zIndex: 70, display: 'flex', alignItems: 'center', gap: 10,
         padding: '11px 18px', borderRadius: 99, textDecoration: 'none',
         maxWidth: 'calc(100vw - 210px)', whiteSpace: 'nowrap',

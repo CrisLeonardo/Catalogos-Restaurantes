@@ -265,7 +265,7 @@ function RewardsMenu({
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--brand-bg)', overflowY: 'auto' }} role="dialog" aria-modal="true" aria-label="Recompensas">
       <OverlayBackground />
-      <main className="themed-type" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 460, margin: '0 auto', padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))' }}>
+      <main className="themed-type menu-canvas" style={{ position: 'relative', zIndex: 1, maxWidth: 'min(var(--menu-max, 460px), 760px)', paddingBlock: 'calc(16px + env(safe-area-inset-top, 0px)) calc(88px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <button onClick={onClose} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }} aria-label="Volver al menú">

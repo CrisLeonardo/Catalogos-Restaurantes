@@ -953,7 +953,9 @@ export default function CheckoutForm({
 
   /* ── Formulario ── */
   return (
-    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
+    // Un formulario no se lee mejor por ser más ancho: 620 px es el tope,
+    // aunque la carta de la que se viene llegue a 1.180.
+    <main className="anim-fade-up themed-type menu-canvas" style={{ maxWidth: 'min(var(--menu-max, 440px), 620px)', paddingBlock: '24px 80px' }}>
       <div style={{ marginBottom: 20 }}>
         <Link href={tp('/')} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <Icon name="chevronLeft" size={16} /> {restaurantName}
