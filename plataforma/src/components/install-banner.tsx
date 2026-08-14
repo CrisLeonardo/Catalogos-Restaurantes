@@ -328,7 +328,7 @@ export default function InstallBanner({ brandName }: Props) {
         padding: '0 12px calc(16px + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <Glass style={{ padding: '18px 16px', borderRadius: 'var(--radius-xl)', maxWidth: 'min(var(--menu-max, 460px), 560px)', margin: '0 auto' }}>
+      <Glass style={{ padding: '18px 16px', borderRadius: 'var(--radius-xl)', maxWidth: 460, margin: '0 auto' }}>
         {platform === 'ios' ? (
           <IOSBanner brandName={brandName} onDismiss={dismiss} />
         ) : (

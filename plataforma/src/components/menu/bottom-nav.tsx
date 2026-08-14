@@ -39,11 +39,7 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
         className="glass"
         style={{
           pointerEvents: 'auto',
-          // Sigue al lienzo (--menu-max) para no quedar más estrecha que la
-          // carta que tiene encima, con un tope propio: cuatro pestañas
-          // repartidas a lo largo de 1.180 px dejan de leerse como una barra
-          // y pasan a ser cuatro botones sueltos flotando.
-          width: '100%', maxWidth: 'min(var(--menu-max, 460px), 560px)',
+          width: '100%', maxWidth: 460,
           borderRadius: 22,
           display: 'flex', alignItems: 'center', justifyContent: 'space-around',
           padding: '4px 6px',

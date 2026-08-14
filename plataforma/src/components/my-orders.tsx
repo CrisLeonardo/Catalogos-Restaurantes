@@ -129,7 +129,7 @@ export default function MyOrders({ restaurantId, onBack }: { restaurantId: strin
   };
 
   return (
-    <main className="anim-fade-up themed-type menu-canvas" style={{ maxWidth: 'min(var(--menu-max, 440px), 620px)', paddingBlock: `calc(16px + env(safe-area-inset-top, 0px)) ${onBack ? 'calc(88px + env(safe-area-inset-bottom, 0px))' : '80px'}` }}>
+    <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: `calc(16px + env(safe-area-inset-top, 0px)) 16px ${onBack ? 'calc(88px + env(safe-area-inset-bottom, 0px))' : '80px'}` }}>
       {/* Header uniforme con Fidelidad y Cuenta */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         {onBack ? (

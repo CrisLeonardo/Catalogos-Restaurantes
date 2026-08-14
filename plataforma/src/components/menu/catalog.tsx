@@ -26,7 +26,7 @@ import { Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 import { LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
-import { MOSAIC_MAX_TILE, canvasComposition, mosaicColumns, mosaicLayoutColumns, textColumns, type ScreenTier } from '@/lib/theme/canvas';
+import { MOSAIC_MAX_TILE, canvasComposition, mosaicColumns, mosaicLayoutColumns, textColumns } from '@/lib/theme/canvas';
 import { useScreenTier } from '@/lib/theme/use-screen-tier';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
@@ -95,14 +95,6 @@ function isFeaturedTag(p: ProdItem): boolean {
     agrandar y en 'carrusel' todas las piezas miden lo mismo por definición. */
 function supportsFeatured(card: CardStyle): boolean {
   return card === 'tarjeta' || card === 'fila' || card === 'mosaico';
-}
-
-/* ── Tamaño de texto contra la COLUMNA ────────────────────────
-   Ver `colSize` en portada.tsx y el bloque «LIENZO DEL MENÚ» de globals.css:
-   con `vw` un titular metido en una columna de 460 px se dimensionaba con el
-   ancho del monitor. */
-function colSize(factor: number, min: number, max: number): string {
-  return `clamp(${min}px, calc(${factor} * var(--menu-col)), ${max}px)`;
 }
 
 /** Reloj que avanza cada `ms` para reevaluar los menús por franja sin recargar. */
@@ -346,7 +338,7 @@ export default function Catalog({
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0);
 
   const itemsProps = {
-    card, width, tier, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen,
+    card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen,
   };
 
   return (
@@ -357,7 +349,7 @@ export default function Catalog({
           <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
           {/* El titular crece con el lienzo: 44 px que mandan en un teléfono se
               quedan cortos en una página de revista de 1.120 px. */}
-          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * ${colSize(0.12, 34, width === 'revista' ? 64 : width === 'ancho' ? 56 : 44)})`, marginTop: 2 }}>
+          <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
             {content.catalog.heading}
           </h2>
         </div>
@@ -592,9 +584,6 @@ interface ItemsProps {
   card: CardStyle;
   /** Composición (esqueleto) que toca. Ver lib/theme/canvas.ts. */
   width: LayoutWidth;
-  /** Cuánta pantalla hay. Lo necesitan las formas que reparten a mano
-      (mosaico y carta impresa), donde no hay rejilla que se auto-ajuste. */
-  tier: ScreenTier;
   featuredIds: Set<string>;
   catIcon: Map<string, string>;
   ordersEnabled: boolean;
@@ -603,7 +592,7 @@ interface ItemsProps {
   onOpen: (p: ProdItem) => void;
 }
 
-function Items({ items, locked, card, width, tier, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen }: ItemsProps) {
+function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled, qtyOf, onAdd, onOpen }: ItemsProps) {
   const config = useThemeConfig();
   const anim = config.animations;
 
@@ -663,7 +652,7 @@ function Items({ items, locked, card, width, tier, featuredIds, catIcon, ordersE
        En escritorio se parte en dos columnas: una sola línea de puntos de
        1.100 px separa tanto el nombre del precio que deja de leerse como un
        par — y así es como se compone una carta impresa de verdad. */
-    const cols = textColumns(tier, width);
+    const cols = textColumns(width);
     return (
       <div style={{ columnCount: cols, columnGap: 54, marginTop: 4 }}>
         {items.map((p, i) => (
@@ -705,8 +694,8 @@ function Items({ items, locked, card, width, tier, featuredIds, catIcon, ordersE
        no usa la rejilla que se auto-ajusta —coloca las piezas a mano por
        altura— así que necesita un número, y ese número tiene que crecer con
        la pantalla o en un monitor salen piezas de medio metro. */
-    const n = mosaicColumns(width, tier, config.catalogColumns, rest.length);
-    const layoutN = mosaicLayoutColumns(width, tier, config.catalogColumns);
+    const n = mosaicColumns(width, config.catalogColumns, rest.length);
+    const layoutN = mosaicLayoutColumns(width, config.catalogColumns);
     /* Sección más corta que la fila: las piezas NO se estiran a rellenar el
        monitor. Una sección de dos platillos en un lienzo de 1.300 px daba dos
        tarjetas de 646 px cada una — más parecidas a dos carteles que a un

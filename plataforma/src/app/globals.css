@@ -1313,65 +1313,33 @@ html[data-scheme="light"] .btn-white {
 html { overflow-x: clip; }
 
 /* ============================================================
-   LIENZO DEL MENÚ — el ancho lo decide la pantalla
+   LIENZO DEL MENÚ
    ------------------------------------------------------------
-   El menú se abre lo mismo desde el QR de la mesa que desde un link
-   compartido por WhatsApp y abierto en una computadora. Hasta aquí el ajuste
-   del dueño («Columna de móvil», «Ancho», «Revista») era un ancho FIJO, así
-   que el valor por defecto dejaba una columna de 460 px flotando en medio de
-   un monitor de 1.440 con dos franjas de fondo vacío de medio palmo a los
-   lados: la estampa exacta de un sitio pensado solo para el teléfono.
+   Ancho del menú del comensal según el ajuste del dueño («Columna de móvil»,
+   «Ancho», «Revista»), que llega como `data-canvas` en <html> desde
+   layout.tsx. Es un TECHO: la pantalla puede reducirlo (un lienzo de revista
+   en un teléfono son 343 px reales, ver lib/theme/canvas.ts) pero nunca lo
+   sube. En una computadora el menú se ve igual que en el teléfono, que es
+   como se decidió que debe verse.
 
-   Ahora ese ajuste es la AMBICIÓN y la pantalla decide el ancho real. Los
-   tres crecen, en el mismo orden y sin cruzarse, y en el teléfono los tres
-   siguen valiendo exactamente lo mismo que antes.
-
-   Estas variables son la ÚNICA fuente del ancho (el TypeScript ya no lleva
-   una tabla de píxeles que se pudiera desincronizar de esta):
+   SE PROBÓ lo contrario —que el lienzo creciera solo en pantallas grandes—
+   y se descartó tras verlo: las piezas del menú (fotos, tarjeta de platillo
+   destacado, buscador) están dibujadas para una columna de 460 px, así que
+   ensanchar el lienzo sin rediseñarlas las deforma. La tarjeta de destacado,
+   que ocupa la fila entera, se convertía en un cartel. Si algún día se
+   retoma, hay que rediseñar las piezas ANTES de tocar estos anchos.
 
      --menu-max : ancho máximo del lienzo.
-     --menu-pad : relleno lateral del lienzo.
-     --menu-col : ancho REAL de la columna de lectura, ya descontado el
-                  relleno. Es para dimensionar TEXTO contra la columna en vez
-                  de contra la ventana: un titular de `22vw` metido en una
-                  columna de 460 px se calculaba con los 1.440 px del monitor
-                  y salía siempre pegado a su tope. Nada de porcentajes aquí:
-                  en `font-size` un % es del tamaño del padre, no del ancho.
+     --menu-pad : relleno lateral.
 ============================================================ */
 [data-canvas] {
   --menu-pad: 16px;
   --menu-max: 460px;
-  --menu-col: min(100vw - var(--menu-pad) * 2, var(--menu-max) - var(--menu-pad) * 2);
 }
+[data-canvas="ancho"]   { --menu-max: 760px; }
+[data-canvas="revista"] { --menu-max: 1120px; }
 
-/* Tablet y teléfono en horizontal */
-@media (min-width: 620px) {
-  [data-canvas]           { --menu-pad: 22px; }
-  [data-canvas="movil"]   { --menu-max: 560px; }
-  [data-canvas="ancho"]   { --menu-max: 760px; }
-  [data-canvas="revista"] { --menu-max: 860px; }
-}
-
-/* Escritorio */
-@media (min-width: 1000px) {
-  [data-canvas]           { --menu-pad: 28px; }
-  [data-canvas="movil"]   { --menu-max: 900px; }
-  [data-canvas="ancho"]   { --menu-max: 1000px; }
-  [data-canvas="revista"] { --menu-max: 1180px; }
-}
-
-/* Monitor grande. «Columna de móvil» crece menos que los otros dos y se
-   detiene antes: quien elige ese ajuste pide una carta compacta, no una que
-   siga estirándose sin final. El orden entre los tres se mantiene. */
-@media (min-width: 1400px) {
-  [data-canvas="movil"]   { --menu-max: 1040px; }
-  [data-canvas="ancho"]   { --menu-max: 1120px; }
-  [data-canvas="revista"] { --menu-max: 1360px; }
-}
-
-/* El lienzo en sí. Lo usan el menú, el checkout, «Mis pedidos» y el
-   seguimiento del pedido, para que las cuatro superficies del comensal
-   compartan la misma columna. */
+/* El lienzo en sí: el <main> del menú y el índice pegajoso de secciones. */
 .menu-canvas {
   width: 100%;
   max-width: var(--menu-max);
@@ -1408,18 +1376,10 @@ html { overflow-x: clip; }
 .menu-hero.is-stack  { gap: 18px; }
 .menu-hero.is-ticket { gap: 0; }
 
-/* Tablet: deja asomar el arranque de la carta. Que haya que deslizar una
-   pantalla ENTERA para ver el primer platillo es el precio del héroe a
-   pantalla completa, y en una tablet de 1.024 px de alto ese precio se nota. */
-@media (min-width: 620px) {
-  .menu-hero { min-height: min(100svh, 820px); }
-  /* La portada a sangre sí conserva la pantalla entera: ahí la foto ES el
-     argumento de venta y recortarla la deja en una franja. */
-  .menu-hero-bleed { min-height: 100svh; }
-}
-
 @media (min-width: 1000px) {
   .menu-hero { min-height: min(100svh, 660px); }
+  /* La portada a sangre conserva más pantalla: ahí la foto ES el argumento de
+     venta y recortarla la deja en una franja. */
   .menu-hero-bleed { min-height: min(100svh, 760px); }
 }
 

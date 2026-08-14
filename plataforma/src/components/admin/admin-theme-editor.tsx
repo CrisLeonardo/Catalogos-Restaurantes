@@ -447,9 +447,8 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               />
               <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
                 Cuando compartes el menú por link se abre también en tablet y computadora.
-                En el teléfono las tres opciones se ven igual; lo que cambia es cuánto
-                crece el menú en pantallas grandes: «Columna de móvil» se queda compacto,
-                «Revista» aprovecha el monitor entero y «Ancho» va en medio.
+                «Columna de móvil» lo deja en 460 px siempre; las otras dos aprovechan la
+                pantalla en vez de dejar dos franjas vacías a los lados.
               </p>
 
               {/* Las columnas solo mandan en la columna de móvil: en lienzos anchos

@@ -25,7 +25,7 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
         interactive
         onClick={onOpen}
         className="anim-slide-up"
-        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 'min(var(--menu-max, 460px), 560px)', borderRadius: 17, padding: '12px 14px 12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 17, padding: '12px 14px 12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span className="t-kicker" style={{ fontSize: 10.5 }}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>

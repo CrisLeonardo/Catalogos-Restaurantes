@@ -12,6 +12,7 @@ import type { LayoutWidth } from './defaults';
 
 const ALL_WIDTHS: LayoutWidth[] = ['movil', 'ancho', 'revista'];
 const ALL_TIERS: ScreenTier[] = ['phone', 'tablet', 'desktop', 'wide'];
+const RANK: Record<LayoutWidth, number> = { movil: 0, ancho: 1, revista: 2 };
 
 describe('screenTier', () => {
   it('reparte los anchos de ventana usuales', () => {
@@ -29,10 +30,9 @@ describe('screenTier', () => {
   });
 
   it('es monótono: más ventana nunca baja de escalón', () => {
-    const order = ALL_TIERS;
     let last = -1;
     for (let vw = 0; vw <= 2000; vw += 10) {
-      const i = order.indexOf(screenTier(vw));
+      const i = ALL_TIERS.indexOf(screenTier(vw));
       expect(i).toBeGreaterThanOrEqual(last);
       last = i;
     }
@@ -48,93 +48,80 @@ describe('screenTier', () => {
 });
 
 describe('canvasComposition', () => {
-  it('en el teléfono los tres ajustes se ven igual', () => {
-    for (const w of ALL_WIDTHS) expect(canvasComposition(w, 'phone')).toBe('movil');
+  it('el ajuste del dueño es un TECHO: la pantalla nunca lo sube', () => {
+    // Se probó lo contrario (que «Columna de móvil» se ensanchara en una
+    // computadora) y se descartó: las piezas están dibujadas para 460 px.
+    for (const tier of ALL_TIERS) {
+      for (const w of ALL_WIDTHS) {
+        expect(RANK[canvasComposition(w, tier)]).toBeLessThanOrEqual(RANK[w]);
+      }
+    }
+    expect(canvasComposition('movil', 'wide')).toBe('movil');
+    expect(canvasComposition('movil', 'desktop')).toBe('movil');
   });
 
-  it('«Columna de móvil» deja de ser una columna fija en escritorio', () => {
-    // Era el fallo de fondo: 460 px en un monitor de 1.440 con dos franjas
-    // de fondo vacío a los lados.
-    expect(canvasComposition('movil', 'tablet')).toBe('movil');
-    expect(canvasComposition('movil', 'desktop')).toBe('ancho');
-    expect(canvasComposition('movil', 'wide')).toBe('ancho');
+  it('la pantalla sí lo REDUCE: en un teléfono todo se compone como móvil', () => {
+    // Un lienzo de «revista» tiene 343 px reales en un teléfono; componerlo
+    // como revista daba un mosaico de tres columnas de 106 px.
+    for (const w of ALL_WIDTHS) expect(canvasComposition(w, 'phone')).toBe('movil');
+    expect(canvasComposition('revista', 'tablet')).toBe('ancho');
+    expect(canvasComposition('revista', 'desktop')).toBe('revista');
   });
 
   it('respeta el orden que eligió el dueño: nadie adelanta a nadie', () => {
-    const rank = { movil: 0, ancho: 1, revista: 2 };
     for (const tier of ALL_TIERS) {
-      const [m, a, r] = ALL_WIDTHS.map((w) => rank[canvasComposition(w, tier)]);
+      const [m, a, r] = ALL_WIDTHS.map((w) => RANK[canvasComposition(w, tier)]);
       expect(m).toBeLessThanOrEqual(a);
       expect(a).toBeLessThanOrEqual(r);
-    }
-  });
-
-  it('nunca compone más ancho de lo que el dueño pidió, salvo el salto de «móvil»', () => {
-    const rank = { movil: 0, ancho: 1, revista: 2 };
-    for (const tier of ALL_TIERS) {
-      for (const w of ['ancho', 'revista'] as LayoutWidth[]) {
-        expect(rank[canvasComposition(w, tier)]).toBeLessThanOrEqual(rank[w]);
-      }
     }
   });
 });
 
 describe('mosaicColumns', () => {
-  it('en el teléfono manda la elección del dueño', () => {
-    expect(mosaicColumns('movil', 'phone', 2, 9)).toBe(2);
-    expect(mosaicColumns('movil', 'phone', 3, 9)).toBe(3);
+  it('en la columna de móvil manda la elección del dueño', () => {
+    expect(mosaicColumns('movil', 2, 9)).toBe(2);
+    expect(mosaicColumns('movil', 3, 9)).toBe(3);
   });
 
-  it('crece con la pantalla en vez de dar piezas de medio metro', () => {
-    expect(mosaicColumns('ancho', 'tablet', 2, 9)).toBe(2);
-    expect(mosaicColumns('ancho', 'desktop', 2, 9)).toBe(3);
-    expect(mosaicColumns('revista', 'desktop', 2, 9)).toBe(4);
-    expect(mosaicColumns('revista', 'wide', 2, 9)).toBe(4);
+  it('el lienzo ancho reparte en 2 y la página de revista en 3', () => {
+    expect(mosaicColumns('ancho', 2, 9)).toBe(2);
+    expect(mosaicColumns('revista', 2, 9)).toBe(3);
   });
 
   it('nunca más columnas que piezas (o quedaría una columna en blanco)', () => {
-    expect(mosaicColumns('revista', 'wide', 2, 3)).toBe(3);
-    expect(mosaicColumns('revista', 'wide', 2, 2)).toBe(2);
+    expect(mosaicColumns('revista', 2, 2)).toBe(2);
   });
 
   it('nunca baja de 2: un mosaico de una columna no es un mosaico', () => {
-    expect(mosaicColumns('revista', 'wide', 2, 1)).toBe(2);
-    expect(mosaicColumns('revista', 'wide', 2, 0)).toBe(2);
-    expect(mosaicColumns('movil', 'phone', 1, 9)).toBe(2);
+    expect(mosaicColumns('revista', 2, 1)).toBe(2);
+    expect(mosaicColumns('revista', 2, 0)).toBe(2);
+    expect(mosaicColumns('movil', 1, 9)).toBe(2);
   });
 });
 
 describe('mosaicLayoutColumns', () => {
   it('no recorta por número de piezas: dice lo que cabe, no lo que hay', () => {
-    // Es la diferencia entre «esta sección tiene 2 platillos» y «aquí caben
-    // 2 columnas»: sin ella, dos piezas se estiraban a 646 px cada una.
-    expect(mosaicLayoutColumns('revista', 'wide', 2)).toBe(4);
-    expect(mosaicColumns('revista', 'wide', 2, 2)).toBe(2);
+    // Es la diferencia entre «esta sección tiene 2 platillos» y «aquí caben 3
+    // columnas»: sin ella, dos piezas se estiraban a llenar el lienzo.
+    expect(mosaicLayoutColumns('revista', 2)).toBe(3);
+    expect(mosaicColumns('revista', 2, 2)).toBe(2);
   });
 
   it('nunca es menor que lo que devuelve mosaicColumns', () => {
-    for (const tier of ALL_TIERS) {
-      for (const w of ALL_WIDTHS) {
-        for (const items of [1, 2, 3, 5, 20]) {
-          expect(mosaicColumns(w, tier, 2, items)).toBeLessThanOrEqual(
-            Math.max(2, mosaicLayoutColumns(w, tier, 2)),
-          );
-        }
+    for (const w of ALL_WIDTHS) {
+      for (const items of [1, 2, 3, 5, 20]) {
+        expect(mosaicColumns(w, 2, items)).toBeLessThanOrEqual(
+          Math.max(2, mosaicLayoutColumns(w, 2)),
+        );
       }
     }
   });
 });
 
 describe('textColumns', () => {
-  it('la carta impresa se parte solo cuando la columna da para dos', () => {
-    expect(textColumns('phone', 'movil')).toBe(1);
-    expect(textColumns('tablet', 'ancho')).toBe(1);
-    expect(textColumns('desktop', 'ancho')).toBe(2);
-    expect(textColumns('wide', 'ancho')).toBe(2);
-  });
-
-  it('la doble página de revista en monitor grande admite tres', () => {
-    expect(textColumns('wide', 'revista')).toBe(3);
-    expect(textColumns('desktop', 'revista')).toBe(2);
+  it('la carta impresa solo se parte en la página de revista', () => {
+    expect(textColumns('movil')).toBe(1);
+    expect(textColumns('ancho')).toBe(1);
+    expect(textColumns('revista')).toBe(2);
   });
 });

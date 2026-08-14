@@ -42,69 +42,64 @@ export function screenTier(vw: number): ScreenTier {
   return tier;
 }
 
+/** Orden de los lienzos, de más estrecho a más ancho. */
+const ORDER: LayoutWidth[] = ['movil', 'ancho', 'revista'];
+
+/** El lienzo más ancho que tiene sentido en cada escalón de pantalla. */
+const ALLOWED_BY_TIER: Record<ScreenTier, LayoutWidth> = {
+  phone: 'movil',
+  tablet: 'ancho',
+  desktop: 'revista',
+  wide: 'revista',
+};
+
 /**
  * Composición del catálogo: con qué esqueleto se dibuja la carta.
  *
- * Devuelve el mismo vocabulario de siempre ('movil' | 'ancho' | 'revista')
- * porque es el que ya entienden las piezas del catálogo, pero ahora sale de
- * cruzar la ambición del dueño con la pantalla real:
+ * El ajuste del dueño es un TECHO y la pantalla solo puede REDUCIRLO, nunca
+ * subirlo. Las dos mitades de esa regla importan:
  *
- *   · En un teléfono SIEMPRE es 'movil'. Es de donde entra casi todo el
- *     mundo (el QR de la mesa) y el único caso que nunca desborda: una
- *     plantilla de «revista» tiene ahí 343 px reales, y componer un mosaico
- *     de tres columnas de 106 px con los nombres cortados era el resultado
- *     de decidir la maqueta mirando solo la configuración.
- *   · En escritorio, «Columna de móvil» deja de significar «460 px para
- *     siempre»: pasa a repartirse por ancho disponible como 'ancho'. Sin
- *     esto, un lienzo que ya mide 900 px seguiría dibujando las 2 columnas
- *     fijas del teléfono, o sea tarjetas de 444 px.
+ *   · La pantalla reduce — el menú se abre casi siempre desde el QR de la
+ *     mesa, o sea en un teléfono: ahí una plantilla de «revista» tiene 343 px
+ *     reales, y decidir la maqueta solo con la configuración daba un mosaico
+ *     de tres columnas de 106 px con los nombres cortados.
+ *   · La pantalla NO sube — se probó lo contrario (que «Columna de móvil»
+ *     se repartiera como 'ancho' en una computadora) y se descartó al verlo:
+ *     las piezas están dibujadas para 460 px y estirarlas las deforma. Ver la
+ *     nota larga en el bloque «LIENZO DEL MENÚ» de globals.css.
  */
 export function canvasComposition(configured: LayoutWidth, tier: ScreenTier): LayoutWidth {
-  if (tier === 'phone') return 'movil';
-  if (tier === 'tablet') return configured === 'movil' ? 'movil' : 'ancho';
-  // Escritorio y monitor grande comparten esqueleto: lo que cambia entre
-  // ellos es cuánta pieza cabe, y de eso se encarga la rejilla que se
-  // auto-ajusta (y `mosaicColumns` donde no la hay).
-  return configured === 'revista' ? 'revista' : 'ancho';
+  const i = Math.min(ORDER.indexOf(configured), ORDER.indexOf(ALLOWED_BY_TIER[tier]));
+  return ORDER[i < 0 ? 0 : i];
 }
 
 /**
- * Columnas del MOSAICO (y de la carta impresa, que se parte igual).
+ * Columnas del MOSAICO.
  *
  * El mosaico no puede usar la rejilla que se auto-ajusta: reparte las piezas
  * a mano por altura (para que no queden huecos de 800 px), así que necesita
- * un número. Y ese número no puede salir solo de la composición, porque
- * 'ancho' cubre desde 560 px de tablet hasta 1.120 de monitor, y dos columnas
- * en 1.120 px dan piezas de medio metro.
+ * un número.
  *
  * Nunca menos de 2 (un mosaico de una columna no es un mosaico) y nunca más
  * columnas que piezas, que dejaría una columna entera en blanco a la derecha.
  */
-export function mosaicColumns(
-  composition: LayoutWidth,
-  tier: ScreenTier,
-  ownerColumns: number,
-  itemCount: number,
-): number {
-  return Math.max(2, Math.min(mosaicLayoutColumns(composition, tier, ownerColumns), itemCount || 1));
+export function mosaicColumns(composition: LayoutWidth, ownerColumns: number, itemCount: number): number {
+  return Math.max(2, Math.min(mosaicLayoutColumns(composition, ownerColumns), itemCount || 1));
 }
 
 /**
- * Las columnas que pide la PANTALLA, sin recortar por cuántas piezas hay.
+ * Las columnas que pide el LIENZO, sin recortar por cuántas piezas hay.
  *
  * Sirve para distinguir «esta sección tiene 2 platillos» de «aquí caben 2
- * columnas»: en el primer caso las dos piezas no deben estirarse a 646 px
- * cada una para rellenar un monitor — se dibujan a tamaño normal y el grupo
- * se centra. Ver el uso en catalog.tsx.
+ * columnas»: en el primer caso las dos piezas no deben estirarse a llenar el
+ * ancho — se dibujan a tamaño normal y el grupo se centra. Sin esto, en un
+ * lienzo de revista una sección de dos platillos daba dos tarjetas de más de
+ * 500 px, que es justo el tamaño que se ve mal. Ver el uso en catalog.tsx.
  */
-export function mosaicLayoutColumns(
-  composition: LayoutWidth,
-  tier: ScreenTier,
-  ownerColumns: number,
-): number {
-  if (tier === 'phone') return ownerColumns;
-  if (tier === 'tablet') return composition === 'movil' ? ownerColumns : 2;
-  return composition === 'revista' ? 4 : 3;
+export function mosaicLayoutColumns(composition: LayoutWidth, ownerColumns: number): number {
+  // Tres columnas en la página de revista, no cuatro: a 263 px la pieza se
+  // parecía más a un tablero de recortes que a una doble página.
+  return composition === 'revista' ? 3 : composition === 'ancho' ? 2 : ownerColumns;
 }
 
 /** Ancho máximo de una pieza de mosaico cuando la sección no llena la fila. */
@@ -113,13 +108,10 @@ export const MOSAIC_MAX_TILE = 340;
 /**
  * ¿En cuántas columnas se compone la carta impresa ('texto')?
  *
- * Una sola línea de puntos de 1.100 px separa tanto el nombre del precio que
- * deja de leerse como un par — y en una carta impresa de verdad tampoco se
- * compone así. Se parte en cuanto la columna da para dos de ~380 px, y en una
- * doble página de revista sobre monitor grande, en tres.
+ * Solo se parte en la página de revista: una sola línea de puntos de 1.100 px
+ * separa tanto el nombre del precio que deja de leerse como un par — y así es
+ * como se compone una carta impresa de verdad.
  */
-export function textColumns(tier: ScreenTier, composition: LayoutWidth): number {
-  if (tier === 'phone' || tier === 'tablet') return 1;
-  if (tier === 'wide' && composition === 'revista') return 3;
-  return 2;
+export function textColumns(composition: LayoutWidth): number {
+  return composition === 'revista' ? 2 : 1;
 }

@@ -88,24 +88,19 @@ const heroWrap: CSSProperties = {
   alignItems: 'center', justifyContent: 'center', textAlign: 'center',
 };
 
-/* ── Tamaño del titular ───────────────────────────────────────
-   Medido contra la COLUMNA (--menu-col), no contra la ventana. Con `vw` un
-   titular metido en una columna de 460 px se calculaba con los 1.440 px del
-   monitor: salía siempre pegado a su tope y no distinguía una columna
-   estrecha de una ancha. Los factores están elegidos para que en un teléfono
-   dé exactamente lo mismo que antes; lo que cambia es de tablet para arriba.
-   Ver el bloque «LIENZO DEL MENÚ» en globals.css. */
-function colSize(factor: number, min: number, max: number): string {
-  return `clamp(${min}px, calc(${factor} * var(--menu-col)), ${max}px)`;
-}
+/* ── Tamaño del titular del héroe ─────────────────────────────
+   El tamaño por ancho de ventana (`vw`) es el de siempre; lo nuevo es el
+   segundo techo, en ALTO de ventana (`svh`). Sin él, un teléfono EN
+   HORIZONTAL (844 x 390) calculaba el titular con sus 844 px de ancho y lo
+   sacaba enorme en una pantalla de 390 px de alto: sumado al logo, empujaba
+   el botón «Ver el menú» por debajo del borde inferior, sin nada que
+   insinuara que había que seguir bajando. Un titular no puede comerse la
+   altura que necesita el resto del héroe.
 
-/* Igual que colSize, con un techo añadido en ALTO de ventana. Es lo que le
-   faltaba a la portada: un teléfono en horizontal tiene una columna de 516 px
-   de ancho y solo 390 px de alto, así que el titular salía de 67 px y, sumado
-   al logo, empujaba el botón «Ver el menú» fuera de la pantalla. Un titular no
-   puede comerse la altura que necesita el resto del héroe. */
-function heroSize(factor: number, min: number, max: number, svh: number): string {
-  return `clamp(${min}px, min(calc(${factor} * var(--menu-col)), ${svh}svh), ${max}px)`;
+   En vertical y en escritorio el `svh` nunca es el que manda, así que el
+   resultado es exactamente el de antes. */
+function heroSize(vw: number, min: number, max: number, svh: number): string {
+  return `clamp(${min}px, min(${vw}vw, ${svh}svh), ${max}px)`;
 }
 
 export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
@@ -118,10 +113,11 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   const title = content.portada.title || config.brandName;
   const subtitle = content.portada.subtitle || config.tagline;
   const anim = config.animations;
-  // El titular crece con la COLUMNA (ver colSize/heroSize) y la columna de
-  // texto sale de `.menu-canvas`, la misma clase que usa el <main> de la
-  // carta: así la portada y los platillos arrancan en la misma vertical en
-  // cualquier pantalla, sin que este componente tenga que saber cuánto mide.
+  // El lienzo ancho (tablet/escritorio/revista) pide un titular mayor; la
+  // columna de texto sale de `.menu-canvas`, la misma clase que usa el <main>
+  // de la carta, para que la portada y los platillos arranquen en la misma
+  // vertical sin que este componente tenga que saber cuánto mide.
+  const wideCanvas = config.layoutWidth !== 'movil';
 
   /* ── Spotlight ── */
   if (config.portadaVariant === 'spotlight') {
@@ -141,7 +137,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           </div>
         )}
         <div className={anim ? 'anim-fade-up' : ''}>
-          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(0.13, 40, 68, 13)})` }}>{title}</h1>
+          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(12, 40, 60, 13)})` }}>{title}</h1>
           {subtitle && (
             <p className="t-serif" style={{ ...subT.vars, fontSize: 19 * subT.size, marginTop: 12 }}>{subtitle}</p>
           )}
@@ -166,7 +162,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div className="t-poster" style={{ fontSize: 14, letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{content.portada.posterKicker}</div>
-          <div className="t-poster" style={{ fontSize: heroSize(0.24, 56, 150, 24), lineHeight: 0.84, marginTop: 6 }}>{title}</div>
+          <div className="t-poster" style={{ fontSize: heroSize(22, 56, 104, 24), lineHeight: 0.84, marginTop: 6 }}>{title}</div>
           {subtitle && (
             <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 20, color: 'var(--u-text-2)', marginTop: 18 }}>{subtitle}</p>
           )}
@@ -217,12 +213,12 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           <div className={anim ? 'anim-fade-up' : ''}>
             <h1
               className="t-display"
-              style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(0.14, 42, 96, 15)})`, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.55)' }}
+              style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(13, 42, wideCanvas ? 96 : 68, 15)})`, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.55)' }}
             >
               {title}
             </h1>
             {subtitle && (
-              <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(${subT.size} * ${colSize(0.05, 18, 24)})`, color: 'rgba(255,255,255,0.88)', marginTop: 10, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
+              <p className="t-serif" style={{ ...subT.vars, fontSize: (wideCanvas ? 22 : 18) * subT.size, color: 'rgba(255,255,255,0.88)', marginTop: 10, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
                 {subtitle}
               </p>
             )}
@@ -261,7 +257,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
             // La comanda es angosta por definición: un recibo de un metro deja
             // de leerse como un recibo. Solo se le da algo de aire en pantalla
             // grande para que no quede como un sello perdido en medio.
-            position: 'relative', width: '100%', maxWidth: 'min(100%, 380px)',
+            position: 'relative', width: '100%', maxWidth: 330,
             background: 'var(--surface-2)', border: '1px solid var(--u-hair)',
             padding: '26px 22px 24px', borderRadius: 3,
             boxShadow: '0 20px 44px rgba(0,0,0,0.26)',
@@ -325,11 +321,11 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   if (config.portadaVariant === 'directo') {
     return (
       <section style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '24px 0 2px' }}>
-        {config.portadaShowLogo && <BrandMark size={54} cssSize={colSize(0.15, 54, 92)} />}
+        {config.portadaShowLogo && <BrandMark size={54} />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${colSize(0.07, 22, 44)})` }}>{title}</h1>
+          <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(22px, 6.5vw, 30px))` }}>{title}</h1>
           {subtitle && (
-            <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(${subT.size} * ${colSize(0.039, 14, 19)})`, marginTop: 3 }}>{subtitle}</p>
+            <p className="t-serif" style={{ ...subT.vars, fontSize: 14 * subT.size, marginTop: 3 }}>{subtitle}</p>
           )}
           {config.portadaShowBadge && (
             <div style={{ marginTop: 9 }}><OpenBadge isOpen={isOpen} /></div>
@@ -349,10 +345,10 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
     <section className="menu-hero is-stack" style={{ ...heroWrap, justifyContent: 'flex-start' }}>
       <div className={anim ? 'anim-fade-up' : ''} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 6 }}>
         {config.portadaShowLogo && <BrandMark size={92} cssSize="min(92px, 16svh)" />}
-        <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(0.098, 30, 56, 11)})` }}>{title}</h1>
-        {subtitle && <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(${subT.size} * ${colSize(0.047, 17, 22)})` }}>{subtitle}</p>}
+        <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(9, 30, 40, 11)})` }}>{title}</h1>
+        {subtitle && <p className="t-serif" style={{ ...subT.vars, fontSize: 17 * subT.size }}>{subtitle}</p>}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 460, flex: 1, justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 360, flex: 1, justifyContent: 'center' }}>
         {feats.map((f, i) => (
           <Glass key={i} style={{ padding: '15px 16px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 13 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
@@ -362,9 +358,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           </Glass>
         ))}
       </div>
-      {/* Mismo ancho que la lista de arriba: con 360 aquí y 460 allí, los dos
-          bloques quedaban desalineados por 14 px en un teléfono. */}
-      <div style={{ width: '100%', maxWidth: 460 }}>
+      <div style={{ width: '100%', maxWidth: 360 }}>
         {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge isOpen={isOpen} /></div>}
         <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
       </div>
