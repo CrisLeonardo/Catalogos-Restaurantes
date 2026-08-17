@@ -36,7 +36,7 @@ export type SignupState = { error: string } | null;
  * plans.ts: SIGNUP_MODULES_PREMIUM ponía reservaciones, lista_espera y loyalty
  * en false, mientras /planes vendía Premium con "7 módulos incluidos gratis"
  * y INCLUDED_MODULES.PREMIUM los daba por incluidos. Resultado: quien se daba
- * de alta solo en Premium pagaba Q599 y esos tres módulos no le aparecían por
+ * de alta solo en Premium pagaba Q349 y esos tres módulos no le aparecían por
  * ningún lado — ni activos ni bloqueados. Ahora sale todo de withPlanFloor(),
  * así que la única forma de cambiar lo que incluye un plan es cambiar plans.ts.
  *

@@ -83,8 +83,8 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     code: 'ESTANDAR',
     name: 'Estándar',
     tagline: 'Elige 2 de 3 modos de pedido, con avisos en tiempo real y reportes financieros',
-    priceMonthly: 299,
-    priceLabel: 'Q299 / mes',
+    priceMonthly: 199,
+    priceLabel: 'Q199 / mes',
     setupFee: 300,
     products: 'unlimited',
     users: 2,
@@ -105,8 +105,8 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     tagline: 'Para llevar, comer en local y delivery — panel de mesero, analítica e inventario',
     badge: 'MÁS POPULAR',
     highlight: true,
-    priceMonthly: 599,
-    priceLabel: 'Q599 / mes',
+    priceMonthly: 349,
+    priceLabel: 'Q349 / mes',
     setupFee: 300,
     products: 'unlimited',
     users: 'unlimited',
@@ -126,8 +126,10 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     tagline: 'Todo Premium + facturación electrónica, proveedores y soporte prioritario',
     badge: 'TODO INCLUIDO',
     highlight: false,
-    priceMonthly: 999,
-    priceLabel: 'Q999 / mes',
+    // Provisional: reubicado al bajar Premium a Q349 (lanzamiento 2026-08-17).
+    // Pro sigue pausado comercialmente hasta que Proveedores y FEL estén listos.
+    priceMonthly: 599,
+    priceLabel: 'Q599 / mes',
     setupFee: 0,
     products: 'unlimited',
     users: 'unlimited',
@@ -244,12 +246,12 @@ export function defaultPlanPricing(): PlanPricing {
   };
 }
 
-/** "Q599" — precio vigente del plan, sin decimales. */
+/** "Q349" — precio vigente del plan, sin decimales. */
 export function planPriceQ(pricing: PlanPricing, code: PlanCode): string {
   return 'Q' + pricing.prices[code].toLocaleString('es-GT', { maximumFractionDigits: 0 });
 }
 
-/** "Q599 / mes" — etiqueta de precio vigente (reemplaza a PLANS[x].priceLabel). "Gratis" si el precio vigente es Q0. */
+/** "Q349 / mes" — etiqueta de precio vigente (reemplaza a PLANS[x].priceLabel). "Gratis" si el precio vigente es Q0. */
 export function planPriceLabel(pricing: PlanPricing, code: PlanCode): string {
   if (pricing.prices[code] === 0) return 'Gratis';
   return `${planPriceQ(pricing, code)} / mes`;

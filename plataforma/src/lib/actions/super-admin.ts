@@ -163,7 +163,7 @@ export async function updateRestaurantPlan(
   // withPlanFloor garantiza que el jsonb nunca quede por DEBAJO de lo que el
   // plan promete. El formulario puede añadir (vender un módulo a la carta que
   // el plan no trae) pero no quitar: guardar un Premium sin Analítica dejaba
-  // al cliente pagando Q599 con la sección desaparecida del panel — ni
+  // al cliente pagando Q349 con la sección desaparecida del panel — ni
   // accesible ni bloqueada, sin rastro de que faltaba.
   const modules = withPlanFloor(plan_actual as PlanCode, {
     catalog: true,
