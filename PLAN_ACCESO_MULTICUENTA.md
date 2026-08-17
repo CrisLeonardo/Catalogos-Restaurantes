@@ -333,7 +333,7 @@ Las tres son decisiones tuyas; el código las soporta sin cambios de fondo.
 | Fase | Qué | Riesgo | Estado |
 |---|---|---|---|
 | **0** | Google en login y registro; el registro reutiliza la cuenta de Google si ya existe | Bajo — nada existente cambia de comportamiento | ✅ **hecho hoy** |
-| **1** | `restaurant_members` + relleno + `is_member_of()` con políticas aditivas + selector de restaurante | Medio — es RLS; se prueba tabla por tabla, como la 053 | siguiente |
+| **1** | `restaurant_members` + relleno + `is_member_of()` con políticas aditivas + **Mi cuenta** + crear otro restaurante | Medio — es RLS; se prueba tabla por tabla, como la 053 | ✅ **hecho** |
 | **2** | **Gerente de sucursal con credencial propia** (hecho) + invitaciones por correo (pendiente) | Bajo | 🟨 **a medias** |
 | **3** | "Crear otro restaurante" desde el panel, con su plan y su cobro | Bajo (técnico) / decisión comercial | |
 | **4** | PIN atado a dispositivos vinculados + grilla directa en el aparato del local | Bajo — nace apagado, nadie se queda fuera | ✅ **hecho** |
@@ -413,5 +413,49 @@ una atestación de hardware. Por eso el PIN **conserva todas sus defensas
 anteriores** — el candado se suma, no las sustituye.
 
 **Lo que falta de la Fase 2:** invitar al gerente por correo en vez de pasarle
-una contraseña temporal a mano, y decidir si un gerente puede dar de alta
-cajeros de su sucursal (hoy no puede: `personal` es solo del dueño).
+una contraseña temporal a mano.
+
+---
+
+## 12c. Fase 1 — Mi cuenta y las membresías (migración 112)
+
+**El modelo.** `restaurant_members(user_id, restaurant_id, role, permissions)`
+separa las dos preguntas que antes estaban pegadas en una sola fila de
+`profiles`: *quién eres* (tu usuario de Auth, uno para siempre) y *qué eres
+aquí* (una fila por restaurante). Los roles son `OWNER`, `MANAGER`, `STAFF`,
+`WAITER`.
+
+**Mi cuenta** (`/mi-cuenta`) es una **pantalla, no un privilegio**: lista tus
+membresías, y lo que puedes hacer ahí sale de tu rol en cada una. El dueño ve
+sus restaurantes y el botón de crear otro; un gerente ve solo las sucursales
+donde lo invitaron, sin cobro ni crear. Con **un solo** restaurante no se pasa
+por aquí: el login entra directo, como siempre.
+
+**El PIN de entrada** es opcional por restaurante (`restaurants.entry_pin_*`).
+Sin PIN se entra directo; con PIN se pide al abrir desde Mi cuenta y se
+recuerda 12 h por navegador, en una cookie **firmada** por el servidor — sin
+firma, cualquiera se escribiría a mano la lista de restaurantes desbloqueados.
+
+**El gerente ya da de alta a su equipo**, con cuatro reglas comprobadas en el
+servidor: solo crea personal por PIN (nunca otro gerente con correo), solo
+reparte permisos que él mismo tiene, no puede tocarse a sí mismo ni a otro
+gerente ni al dueño, y todo queda en la bitácora del dueño.
+
+**Lo que costó de verdad (y no era la tabla).** `profiles.restaurant_id` es
+**un** id, y las ~17 acciones del panel lo usaban para saber sobre qué
+restaurante escribir. Estando en el panel de B con el perfil apuntando a A,
+cada acción —cambiar un precio, apagar los pedidos— habría escrito en A
+mientras la pantalla decía B. No es un fallo de permisos: es escribir en el
+negocio equivocado. Se resolvió con dos helpers, en el mismo sitio donde cada
+acción ya resolvía lo suyo:
+
+- `resolveOwnRestaurantId()` — sobre qué restaurante se actúa;
+- `canActOnRestaurant()` — para las que ya reciben el id y solo lo comprueban.
+
+Sin membresías los dos devuelven exactamente lo de antes, así que un
+restaurante que hoy opera no cambia de comportamiento.
+
+**Y una decisión que NO se tomó:** nunca se escribe `profiles.restaurant_id` al
+cambiar de restaurante. El restaurante activo vive en el subdominio, que es
+por pestaña; guardarlo en el perfil habría hecho que dos pestañas abiertas en
+dos negocios distintos se pisaran los datos.

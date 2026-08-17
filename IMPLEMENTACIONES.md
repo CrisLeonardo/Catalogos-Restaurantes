@@ -776,6 +776,36 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-08-17 (cont.) — Fase 1: Mi cuenta y membresías
+
+**Objetivo:** que una sola cuenta (correo o Google) administre varios restaurantes, con la pantalla «Mi cuenta» como hogar, y que el gerente de una sucursal pueda dar de alta a su propio equipo.
+
+**Realizado:**
+- **Migración 112 (`restaurant_members`).** Separa *quién eres* (usuario de Auth) de *qué eres aquí* (una fila por restaurante, con rol y permisos). Relleno automático desde `profiles` — incluidos los `GROUP_OWNER`, que pasan a ser `OWNER` de cada sucursal de su organización. Políticas RLS **aditivas** con `is_member_of()`, mismo patrón probado de la 053, con `to_regclass` para que la lista de tablas siga siendo reaplicable aunque el catálogo cambie.
+- **`/mi-cuenta`**: lista de restaurantes por membresía, con rol, logo y estado; entrar a uno; y **＋ Crear otro restaurante** con su plan, su prueba y su `restaurant_billing` propio.
+- **PIN de entrada opcional por restaurante** (`restaurants.entry_pin_*`): se pide al abrir desde Mi cuenta, se recuerda 12 h en una cookie **firmada** por el servidor.
+- **`getAdminContext` resuelve el restaurante desde el SUBDOMINIO** cuando hay membresía, y traduce el rol de membresía al rol de perfil en memoria: las ~30 páginas del panel siguen leyendo `ctx.profile.restaurant_id` sin tocarlas.
+- **El candado de tenant, el destino del login y los paneles de mesero y cocina** deciden por membresía (`isMember`, `resolveEffectiveRole`). Con más de un restaurante el login cae en Mi cuenta; con uno solo entra directo, como siempre.
+- **El gerente gestiona el personal de su sucursal** con cuatro reglas anti-escalación en el servidor.
+- **«Cambiar de restaurante»** en el panel, solo visible con más de uno.
+
+**Decisiones clave:**
+- **El restaurante activo se queda en el subdominio, NUNCA en `profiles.restaurant_id`.** Guardarlo en el perfil es estado global: dos pestañas en dos negocios distintos se pisarían los datos.
+- **Lo caro no era la tabla, eran las acciones.** Las ~17 acciones del panel resolvían el restaurante desde `profiles.restaurant_id`; con dos restaurantes habrían escrito en el negocio equivocado mientras la pantalla decía otro. Se arregló con `resolveOwnRestaurantId()` y `canActOnRestaurant()`, en el mismo punto donde cada acción ya resolvía lo suyo. Sin membresías devuelven exactamente lo de antes.
+- **Nada sustituye a lo que ya funcionaba:** `profiles.restaurant_id` sigue vivo y las políticas viejas intactas. Un restaurante que opera hoy no cambia de comportamiento al aplicar la migración.
+- **Una membresía NO le abre la puerta al super admin.** Su entrada a un restaurante ajeno sigue pasando por el pase de soporte, que deja rastro en la bitácora y pinta una franja en el panel; si una membresía bastara, ese rastro desaparecería. Probado en `tenant-guard.test.ts`.
+- **La cookie del PIN de entrada va firmada** (HMAC con la service role key): sin firma, cualquiera se escribiría a mano la lista de restaurantes desbloqueados, que es justo lo que el candado impide.
+- **`/mi-cuenta` se excluye del rewrite del proxy**: es de la persona, no de un restaurante. Sin eso, «Cambiar de restaurante» pedía `/admin/mi-cuenta` y daba 404 — justo en el enlace que sirve para salir de ahí.
+
+**Pendiente (acciones de Leonardo):**
+1. **Aplicar la migración 112** (después de la 111). Sin ella el código sigue funcionando como antes: sin membresías, todo cae al camino de siempre.
+2. Probar con una cuenta que tenga dos restaurantes: entrar a cada uno y confirmar que lo que se edita en el panel de B se guarda en B.
+3. Decidir las políticas comerciales del §9 del plan (prueba del segundo restaurante en adelante, descuento de cadena, factura única).
+
+**Próximo paso:** Fase 2 — invitación por correo para el gerente, en vez de pasarle una contraseña temporal a mano.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

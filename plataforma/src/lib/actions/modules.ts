@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import {
   ACTIVATABLE_MODULES,
@@ -54,7 +55,7 @@ export async function setModuleEnabled(
   if (!isSuper && !isOwner) return { error: 'Solo el propietario puede activar módulos.' };
 
   // El dueño solo puede tocar su propio restaurante.
-  if (isOwner && profile.restaurant_id !== restaurantId) {
+  if (isOwner && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
     return { error: 'No autorizado para este restaurante.' };
   }
 

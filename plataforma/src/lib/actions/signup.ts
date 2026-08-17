@@ -282,6 +282,17 @@ export async function signupRestaurant(
     return { error: 'No se pudo terminar el registro. Inténtalo de nuevo.' };
   }
 
+  // ── 5c. Membresía de dueño (migración 112) ─────────────────
+  // Es lo que hace que este restaurante aparezca en Mi cuenta y lo que
+  // permitirá que esta misma persona abra otro mañana. El perfil de arriba
+  // sigue siendo la vía de siempre; esta es la que escala.
+  await db.from('restaurant_members').insert({
+    user_id: userId,
+    restaurant_id: restaurantId,
+    role: 'OWNER',
+    status: 'active',
+  });
+
   // ── 5b. Confirmación del correo (suave, no bloquea) ─────────
   // La cuenta ya está viva; esto solo comprueba que el buzón existe y es
   // suyo. Hasta que abra el enlace, el panel se lo recuerda con un aviso.

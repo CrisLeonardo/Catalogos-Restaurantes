@@ -111,6 +111,8 @@ interface Props {
   userName?: string | null;
   /** El dueño/super admin puede ver la sección Personal. */
   canManageStaff?: boolean;
+  /** Esta cuenta administra más de un restaurante (migración 112). */
+  hasMultipleRestaurants?: boolean;
   /** Plan actual del restaurante — para mostrar badge en la barra lateral. */
   planActual?: string | null;
   /** "Comer en local" activo — da acceso a Mesas aunque el plan no incluya
@@ -176,7 +178,8 @@ export default function AdminShell({
   felActive = false, proveedoresActive = false, loyaltyActive = false,
   reservacionesActive = false, listaEsperaActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
-  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, planActual, dineInEnabled = false, preview = false,
+  logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, hasMultipleRestaurants = false,
+  planActual, dineInEnabled = false, preview = false,
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -463,6 +466,25 @@ export default function AdminShell({
               Plan {PLAN_NAMES[planActual] ?? planActual}
             </Badge>
           </Link>
+        )}
+
+        {/* Cambiar de restaurante. Solo aparece con más de uno: al que tiene
+            uno solo no se le enseña un selector que nunca va a usar. */}
+        {!preview && hasMultipleRestaurants && (
+          <a
+            href="/mi-cuenta"
+            className="press glass-quiet"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 9, borderRadius: 13,
+              padding: '10px 12px', marginBottom: 8, textDecoration: 'none',
+            }}
+          >
+            <Icon name="grid" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+              Cambiar de restaurante
+            </span>
+            <Icon name="chevronRight" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+          </a>
         )}
 
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>

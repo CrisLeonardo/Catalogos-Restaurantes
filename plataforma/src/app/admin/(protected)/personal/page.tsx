@@ -11,6 +11,7 @@ import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modu
 import StaffPanel from '@/components/admin/staff-panel';
 import AccessLogPanel from '@/components/admin/access-log-panel';
 import TrustedDevicesPanel from '@/components/admin/trusted-devices-panel';
+import EntryPinCard from '@/components/admin/entry-pin-card';
 import { getPanelAccessLog } from '@/lib/auth/access-log';
 import { listTrustedDevices } from '@/lib/auth/trusted-device';
 
@@ -20,8 +21,12 @@ export const metadata = { title: 'Personal – Panel admin' };
 export default async function AdminPersonalPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  // Solo el dueño (o super admin) gestiona personal.
-  if (ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
+  // El dueño, el super admin y —desde la migración 112— el GERENTE de esta
+  // sucursal, que es quien da de alta a su propio equipo. Lo que el gerente
+  // no puede hacer se corta en las acciones (lib/actions/staff.ts), no
+  // escondiendo la pantalla.
+  const isManager = ctx.memberRole === 'MANAGER';
+  if (!isManager && ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
     redirect('/admin/menu');
   }
 
@@ -40,7 +45,7 @@ export default async function AdminPersonalPage() {
     getActivityLog(restaurantId, 30),
     getPanelAccessLog(restaurantId, 20),
     listTrustedDevices(restaurantId),
-    db.from('restaurants').select('modules, module_settings, plan_actual, timezone, pin_requires_trusted_device').eq('id', restaurantId).single(),
+    db.from('restaurants').select('modules, module_settings, plan_actual, timezone, pin_requires_trusted_device, entry_pin_hash').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
 
@@ -94,6 +99,11 @@ export default async function AdminPersonalPage() {
         devices={devices}
         requiresTrusted={restaurant?.pin_requires_trusted_device === true}
       />
+      {/* El candado de Mi cuenta es del dueño: un gerente no le pone a su
+          jefe un PIN que su jefe no conoce. */}
+      {!isManager && (
+        <EntryPinCard restaurantId={restaurantId} hasPin={!!restaurant?.entry_pin_hash} />
+      )}
       <AccessLogPanel
         rows={accessLog}
         timezone={(restaurant?.timezone as string) || 'America/Guatemala'}

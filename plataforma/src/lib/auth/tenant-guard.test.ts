@@ -115,6 +115,63 @@ describe('dueño de grupo', () => {
   });
 });
 
+describe('varios restaurantes con una sola cuenta (migración 112)', () => {
+  it('el dueño de A y B entra a B, aunque su perfil apunte a A', () => {
+    // El caso que abre todo el modelo de membresías: `profiles.restaurant_id`
+    // es UN id, así que sin `isMember` el dueño de dos negocios rebotaba de su
+    // propio segundo restaurante a "su" panel, sin entender por qué.
+    expect(
+      decideTenantAccess(input({
+        isMember: true,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({ allow: true, supportMode: false });
+  });
+
+  it('el gerente invitado a una sucursal entra a esa sucursal', () => {
+    expect(
+      decideTenantAccess(input({
+        role: 'RESTAURANT_STAFF',
+        isMember: true,
+        profileRestaurantId: null,
+        ownSlug: null,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({ allow: true, supportMode: false });
+  });
+
+  it('sin membresía sigue rebotando al panel propio', () => {
+    expect(
+      decideTenantAccess(input({
+        isMember: false,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({ allow: false, redirectTo: `${ADMIN_URL('restaurante-a')}/menu` });
+  });
+
+  it('una membresía NO le abre la puerta al super admin', () => {
+    // Su entrada a un restaurante ajeno pasa por el pase de soporte, que deja
+    // rastro en la bitácora y pinta una franja en el panel. Si una membresía
+    // bastara, ese rastro desaparecería.
+    expect(
+      decideTenantAccess(input({
+        role: 'SUPER_ADMIN',
+        isMember: true,
+        profileRestaurantId: null,
+        ownSlug: null,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({
+      allow: false,
+      redirectTo: `/admin/soporte?destino=${encodeURIComponent('/admin/pedidos')}`,
+    });
+  });
+});
+
 describe('casos borde', () => {
   it('sin slug de tenant (dominio raíz, login central) no hay nada que candar', () => {
     expect(decideTenantAccess(input({ tenantSlug: null }))).toEqual({

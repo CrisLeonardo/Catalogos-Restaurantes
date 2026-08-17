@@ -31,6 +31,15 @@ export type TenantDecision =
 
 export type TenantGuardInput = {
   role: string | null | undefined;
+  /**
+   * ¿Es miembro del restaurante de este subdominio? (migración 112.)
+   *
+   * Es la vía por la que entra quien tiene más de un restaurante: su perfil
+   * solo puede apuntar a uno, así que `profileRestaurantId` no alcanza para
+   * contestar "¿este también es tuyo?". Se calcula en el servidor contra
+   * restaurant_members; quien llama responde por ella.
+   */
+  isMember?: boolean;
   /** Restaurante propio del perfil (null en Super Admin y dueño de grupo). */
   profileRestaurantId: string | null | undefined;
   /** Organización del perfil (solo dueño de grupo). */
@@ -59,7 +68,7 @@ export type TenantGuardInput = {
  */
 export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   const {
-    role, profileRestaurantId, profileOrganizationId,
+    role, isMember, profileRestaurantId, profileOrganizationId,
     tenantSlug, tenant, ownSlug, supportTicketRestaurantId, pathname, adminUrlFor,
   } = input;
 
@@ -70,6 +79,14 @@ export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
 
   // Su propio restaurante: el caso normal, sin importar el rol.
   if (profileRestaurantId && profileRestaurantId === tenant.id) {
+    return { allow: true, supportMode: false };
+  }
+
+  // Otro de sus restaurantes (membresía). El SUPER_ADMIN queda fuera a
+  // propósito: su entrada a un restaurante ajeno pasa por el pase de soporte
+  // —que deja rastro en la bitácora y pinta una franja en el panel— y una
+  // membresía se lo daría en silencio.
+  if (isMember && role !== 'SUPER_ADMIN') {
     return { allow: true, supportMode: false };
   }
 

@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient, createDinerClient } from '@/lib/supabase/server';
+import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
@@ -1209,7 +1210,7 @@ async function authorizeOrderAccess(
   const allowed =
     profile.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'].includes(profile.role) &&
-      profile.restaurant_id === order.restaurant_id) ||
+      (await canActOnRestaurant(profile.restaurant_id, order.restaurant_id))) ||
     (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === order.restaurant_id);
   if (!allowed) return { error: 'No autorizado.' };
 
@@ -1445,7 +1446,7 @@ export async function getPendingNewOrders(restaurantId: string): Promise<Pending
     ? true
     : profile.role === 'GROUP_OWNER'
       ? (await resolveGroupBranchId()) === restaurantId
-      : profile.restaurant_id === restaurantId;
+      : (await canActOnRestaurant(profile.restaurant_id, restaurantId));
   if (!ownsBranch) return [];
 
   const since = new Date(Date.now() - 30 * 60_000).toISOString();

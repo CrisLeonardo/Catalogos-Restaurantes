@@ -176,6 +176,11 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/_next") ||
       pathname.startsWith("/admin") ||  // ya tiene el prefijo
       pathname.startsWith("/preview") || // iframe de vista previa del editor (misma origin)
+      // Mi cuenta (migración 112) es de la PERSONA, no de un restaurante: vive
+      // fuera del panel y se abre igual desde cualquier subdominio. Sin esta
+      // excepción, "Cambiar de restaurante" pedía /admin/mi-cuenta, que no
+      // existe — un 404 justo en el enlace que sirve para salir de aquí.
+      pathname.startsWith("/mi-cuenta") ||
       pathname === "/favicon.ico" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {
@@ -188,6 +193,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/central") ||
+      pathname.startsWith("/mi-cuenta") || // ver la nota del subdominio admin
       pathname === "/favicon.ico" ||
       /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
     if (!skip) {

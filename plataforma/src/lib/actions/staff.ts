@@ -13,6 +13,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { STAFF_ASSIGNABLE } from '@/lib/permissions';
 import { SYNTHETIC_EMAIL_DOMAIN, isSyntheticStaffEmail } from '@/lib/staff-email';
+import { getMyMembership, resolveOwnRestaurantId, canManageStaff } from '@/lib/db/membership';
 import { rateLimit } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 import { isValidPin, newPinSalt, hashPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
@@ -30,9 +31,35 @@ function validEmail(email: string): boolean {
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
-type Ctx = { db: ReturnType<typeof createServiceClient>; restaurantId: string; userId: string };
+type Ctx = {
+  db: ReturnType<typeof createServiceClient>;
+  restaurantId: string;
+  userId: string;
+  /**
+   * Quién está administrando el personal, y con cuánto alcance:
+   *  · 'OWNER'   → el dueño (o el super admin): puede todo.
+   *  · 'MANAGER' → el gerente de esta sucursal: solo personal por PIN, y
+   *    nunca por encima de sí mismo (ver assertStaffOfRestaurant).
+   */
+  as: 'OWNER' | 'MANAGER';
+  /** Permisos del gerente: el techo de lo que puede repartir. */
+  ownPermissions: string[] | null;
+};
 
-/** Solo el DUEÑO (o super admin) gestiona personal. */
+/**
+ * Quién puede gestionar personal en ESTE restaurante.
+ *
+ * Antes solo el dueño. Ahora también el gerente de la sucursal, porque no
+ * tenía sentido pedirle al dueño de una cadena que diera de alta a mano a los
+ * cajeros de cada local — que es exactamente la pregunta que abrió esto.
+ *
+ * Lo que hace seguro delegarlo son las reglas de `as: 'MANAGER'`, todas
+ * comprobadas en el servidor:
+ *   1. solo crea personal por PIN, nunca a otro gerente con correo;
+ *   2. solo reparte permisos que él mismo tiene;
+ *   3. no puede tocarse a sí mismo, ni al dueño, ni a otro gerente;
+ *   4. el dueño lo ve todo en la bitácora y puede revertirlo.
+ */
 export async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Ctx | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -45,13 +72,35 @@ export async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Ct
     .single();
   if (!profile) return null;
 
-  const isSuper = profile.role === 'SUPER_ADMIN';
-  if (!isSuper && profile.role !== 'RESTAURANT_OWNER') return null;
+  const db = createServiceClient();
 
-  const restaurantId = isSuper ? (restaurantIdFromForm ?? '') : (profile.restaurant_id ?? '');
+  if (profile.role === 'SUPER_ADMIN') {
+    const restaurantId = restaurantIdFromForm ?? '';
+    if (!restaurantId) return null;
+    return { db, restaurantId, userId: user.id, as: 'OWNER', ownPermissions: null };
+  }
+
+  // El restaurante sobre el que se actúa sale del subdominio cuando esta
+  // persona es miembro de él: su perfil solo apunta a uno y podría ser otro.
+  const restaurantId = (await resolveOwnRestaurantId(profile.restaurant_id)) ?? '';
   if (!restaurantId) return null;
 
-  return { db: createServiceClient(), restaurantId, userId: user.id };
+  const membership = await getMyMembership(restaurantId);
+  if (membership) {
+    if (!canManageStaff(membership.role)) return null;
+    return {
+      db,
+      restaurantId,
+      userId: user.id,
+      as: membership.role === 'OWNER' ? 'OWNER' : 'MANAGER',
+      ownPermissions: membership.permissions,
+    };
+  }
+
+  // Sin membresía: el camino de siempre, solo el dueño.
+  if (profile.role !== 'RESTAURANT_OWNER') return null;
+  if (profile.restaurant_id !== restaurantId) return null;
+  return { db, restaurantId, userId: user.id, as: 'OWNER', ownPermissions: null };
 }
 
 export type StaffMember = {
@@ -145,6 +194,20 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
 
   if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
 
+  // ── Techo del gerente ──────────────────────────────────────
+  // Un gerente da de alta al equipo de SU sucursal, no crea pares suyos ni
+  // reparte accesos que él no tiene. Sin esto, delegar la gestión de personal
+  // sería delegar la capacidad de ascenderse.
+  if (ctx.as === 'MANAGER') {
+    if (byEmail) {
+      return { error: 'Solo el dueño puede crear accesos por correo. Da de alta a tu equipo con un PIN.' };
+    }
+    const ceiling = ctx.ownPermissions;
+    if (ceiling && permissions.some((p) => !ceiling.includes(p))) {
+      return { error: 'No puedes dar acceso a secciones que tú no tienes.' };
+    }
+  }
+
   let email: string;
   let password: string;
 
@@ -195,6 +258,18 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     return { error: profErr.message };
   }
 
+  // Membresía (migración 112): quien entra con correo es gerente de esta
+  // sucursal; quien entra con PIN es personal. Se mantiene en paralelo con el
+  // perfil de arriba mientras conviven los dos modelos.
+  await ctx.db.from('restaurant_members').insert({
+    user_id: created.user.id,
+    restaurant_id: ctx.restaurantId,
+    role: byEmail ? 'MANAGER' : 'STAFF',
+    permissions,
+    status: 'active',
+    invited_by: ctx.userId,
+  });
+
   // Solo quien entra por PIN recibe PIN. Un gerente con correo NO aparece en
   // la grilla "¿Quién eres?" del local, que es justo lo que se busca: su
   // credencial es suya y no está a la vista de todo el que abra el login.
@@ -220,12 +295,34 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   return { ok: true };
 }
 
-/** Solo permite operar sobre STAFF/WAITER de ESTE restaurante. */
+/**
+ * Solo permite operar sobre STAFF/WAITER de ESTE restaurante.
+ *
+ * Y, si quien administra es un GERENTE, además: nunca sobre sí mismo ni sobre
+ * otro gerente. Sin esa segunda regla, un gerente podía ponerle un PIN a otro
+ * gerente y entrar como él — escalar de "gerente de la sucursal" a "cualquier
+ * gerente" sin tocar nada más. La comprobación va contra la MEMBRESÍA porque
+ * el rol de perfil de un gerente es RESTAURANT_STAFF, igual que el de un
+ * cajero: por ahí no se distinguen.
+ */
 export async function assertStaffOfRestaurant(ctx: Ctx, userId: string): Promise<boolean> {
   const { data } = await ctx.db.from('profiles').select('role, restaurant_id').eq('id', userId).single();
-  return !!data
+  const isStaffHere = !!data
     && (data.role === 'RESTAURANT_STAFF' || data.role === 'RESTAURANT_WAITER')
     && data.restaurant_id === ctx.restaurantId;
+  if (!isStaffHere) return false;
+  if (ctx.as === 'OWNER') return true;
+
+  if (userId === ctx.userId) return false; // no se edita a sí mismo
+
+  const { data: target } = await ctx.db
+    .from('restaurant_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('restaurant_id', ctx.restaurantId)
+    .maybeSingle();
+  const targetRole = (target?.role as string | null) ?? 'STAFF';
+  return targetRole !== 'OWNER' && targetRole !== 'MANAGER';
 }
 
 export async function updateStaffPermissions(prevState: StaffState, formData: FormData): Promise<StaffState> {
@@ -239,11 +336,27 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
   const permissions = readPermissions(formData);
   if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
 
+  // Mismo techo que al crear: un gerente no puede ascender a nadie por encima
+  // de sí mismo editándolo después.
+  if (ctx.as === 'MANAGER' && ctx.ownPermissions) {
+    if (permissions.some((p) => !ctx.ownPermissions!.includes(p))) {
+      return { error: 'No puedes dar acceso a secciones que tú no tienes.' };
+    }
+  }
+
   // Si era un mesero del rol deprecado, lo normalizamos a STAFF al editarlo.
   const { error } = await ctx.db.from('profiles')
     .update({ permissions, full_name: fullName, role: 'RESTAURANT_STAFF' })
     .eq('id', userId);
   if (error) return { error: error.message };
+
+  // Y la membresía, que es de donde leen los candados nuevos. Si las dos vías
+  // no se actualizan juntas, alguien podría conservar por una lo que se le
+  // acaba de quitar por la otra.
+  await ctx.db.from('restaurant_members')
+    .update({ permissions })
+    .eq('user_id', userId)
+    .eq('restaurant_id', ctx.restaurantId);
 
   revalidatePath('/admin/personal');
   return { ok: true };

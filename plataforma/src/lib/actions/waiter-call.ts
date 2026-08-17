@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendPushToRestaurant } from '@/lib/push';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
@@ -27,7 +28,7 @@ async function authorizedFor(restaurantId: string): Promise<boolean> {
     .eq('id', user.id)
     .single();
   if (!profile) return false;
-  return profile.role === 'SUPER_ADMIN' || profile.restaurant_id === restaurantId;
+  return profile.role === 'SUPER_ADMIN' || (await canActOnRestaurant(profile.restaurant_id, restaurantId));
 }
 
 /**
