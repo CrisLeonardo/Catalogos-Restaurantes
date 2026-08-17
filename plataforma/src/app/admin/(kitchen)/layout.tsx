@@ -6,7 +6,6 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import { adminUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
-import { readSupportTicket, SUPPORT_COOKIE } from '@/lib/auth/support-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import OfflineSupport from '@/components/offline-support';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
@@ -69,8 +68,6 @@ export default async function KitchenLayout({ children }: { children: React.Reac
       ? { id: tenant.restaurant.id, organizationId: tenant.restaurant.organization_id ?? null }
       : null,
     ownSlug: (own?.data?.slug as string | null) ?? null,
-    supportTicketRestaurantId: readSupportTicket(cookieStore.get(SUPPORT_COOKIE)?.value),
-    pathname: headersList.get('x-pathname') ?? '/admin/cocina',
     adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);

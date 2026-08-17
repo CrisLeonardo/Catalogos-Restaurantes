@@ -7,7 +7,6 @@ import { can } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
-import { readSupportTicket, SUPPORT_COOKIE } from '@/lib/auth/support-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { adminUrl } from '@/lib/tenant';
 import AdminShell from '@/components/admin/shell';
@@ -65,8 +64,6 @@ export default async function WaiterLayout({ children }: { children: React.React
       ? { id: tenantData.restaurant.id, organizationId: tenantData.restaurant.organization_id ?? null }
       : null,
     ownSlug: (own?.data?.slug as string | null) ?? null,
-    supportTicketRestaurantId: readSupportTicket(cookieStore.get(SUPPORT_COOKIE)?.value),
-    pathname: headersList.get('x-pathname') ?? '/admin/mesero',
     adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);
