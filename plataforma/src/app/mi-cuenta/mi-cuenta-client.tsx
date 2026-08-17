@@ -34,7 +34,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function MiCuentaClient({
-  cards, pricing, rootDomain, accountName, accountEmail, canCreate,
+  cards, pricing, rootDomain, accountName, accountEmail, canCreate, groupPanel,
 }: {
   cards: MembershipCard[];
   pricing: PlanPricing;
@@ -42,6 +42,8 @@ export default function MiCuentaClient({
   accountName: string;
   accountEmail: string;
   canCreate: boolean;
+  /** Panel consolidado, si esta cuenta administra una cadena. */
+  groupPanel: { name: string; url: string; branchCount: number } | null;
 }) {
   /** Restaurante cuyo PIN se está pidiendo (null = ninguno). */
   const [asking, setAsking] = useState<MembershipCard | null>(null);
@@ -90,6 +92,38 @@ export default function MiCuentaClient({
             ? 'Este es tu restaurante.'
             : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`}
         </p>
+
+        {/* El panel consolidado va ARRIBA de las sucursales: quien administra
+            una cadena entra primero a mirar el conjunto y solo después baja a
+            un local concreto. */}
+        {groupPanel && (
+          <a
+            href={groupPanel.url}
+            className="press"
+            style={{ display: 'block', textDecoration: 'none', marginBottom: 12 }}
+          >
+            <Glass style={{ padding: '15px 17px', display: 'flex', alignItems: 'center', gap: 13 }}>
+              <span
+                style={{
+                  width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
+                  background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+                  color: 'var(--brand-accent-ink)',
+                }}
+              >
+                <Icon name="grid" size={19} />
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 15.5, fontWeight: 700, color: 'var(--u-text)' }}>
+                  {groupPanel.name}
+                </span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+                  Panel del grupo · {groupPanel.branchCount} sucursal{groupPanel.branchCount === 1 ? '' : 'es'} juntas
+                </span>
+              </span>
+              <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+            </Glass>
+          </a>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cards.map((c) => (

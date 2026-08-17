@@ -806,6 +806,36 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-08-17 (cont.) — Fase 2 (invitaciones) y Fase 5a
+
+**Objetivo:** cerrar la Fase 2 del plan (invitar al equipo por correo, en vez de crearle la cuenta y pasarle la contraseña) y unir el panel de grupo con Mi cuenta sin tocar el rol `GROUP_OWNER`.
+
+**Realizado:**
+- **Migración 113 (`restaurant_invitations`).** Token de 32 bytes; se guarda **solo su sha-256**. Un uso, 7 días, y un índice único parcial para que no queden dos enlaces vivos al mismo correo.
+- **Invitar / revocar / aceptar** (`lib/actions/invitations.ts`) + página `/invitacion/[token]`. Los tres caminos de aceptación terminan igual: ya hay sesión con ese correo → un botón; ya existe cuenta → su contraseña de siempre; no existe → elige una. También se puede aceptar con Google.
+- **Correo de invitación** con la plantilla existente (`lib/email`), y **el enlace se enseña siempre** en el panel, se haya mandado el correo o no.
+- **Tarjeta de Invitaciones** en `/admin/personal`, con las pendientes, cuándo vencen y el botón de cancelar.
+- **Fase 5a:** Mi cuenta enseña el panel consolidado del grupo arriba de las sucursales, y el panel del grupo enseña «Mis restaurantes». Un restaurante creado por un dueño de grupo **nace dentro de su organización**.
+- Pruebas del token (`invite-token.test.ts`): que el hash no sea el token, que sea reproducible, que no se repitan y que tengan entropía de sobra.
+
+**Decisiones clave:**
+- **La invitación es PARA UN CORREO.** Quien la acepta entra con ese mismo correo; si no, reenviar el enlace regalaría el acceso al restaurante.
+- **Solo el dueño invita por correo.** El gerente suma a su equipo con PIN pero no crea pares suyos — misma regla anti-escalación de la Fase 1.
+- **El enlace se muestra aunque el correo salga bien.** Sin `RESEND_API_KEY` es la única vía, y con proveedor configurado sigue siendo el plan B cuando el correo tarda o cae en spam. Un producto que se detiene porque cayó el proveedor de correo no sirve en un restaurante.
+- **A quien ya tiene su propio restaurante no se le toca su `restaurant_id` de casa** al aceptar: su acceso al otro viaja por la membresía.
+- **La cuenta nace confirmada al aceptar**: acaba de demostrar que tiene ese buzón abriendo el enlace que le llegó ahí. Y así puede entrar después con Google sin duplicar cuenta.
+- **NO se retiró el rol `GROUP_OWNER`** (Fase 5b). Unir dos vistas es añadir enlaces; retirar un rol con clientes vivos encima es otra entrega, y el propio plan desaconseja sumarla a la que acaba de migrar la identidad.
+- El token vive en `lib/invite-token.ts` **sin `server-only`**, para que se pueda probar de verdad — mismo patrón que `pin-policy.ts` y `tenant-guard.ts`.
+
+**Pendiente (acciones de Leonardo):**
+1. **Aplicar la migración 113** (después de la 111 y la 112).
+2. Poner `RESEND_API_KEY` si quieres que las invitaciones salgan por correo solas. Sin ella todo funciona igual: el panel te da el enlace para pasárselo tú.
+3. **Decidir la prueba gratis del segundo restaurante en adelante.** Hoy cada restaurante nuevo nace con la prueba completa, así que «crear otro restaurante» es una vía para encadenar pruebas con la misma cuenta. Hay techo de 5/hora, que frena el abuso automático pero no el manual.
+
+**Próximo paso:** Fase 5b — retirar `GROUP_OWNER` y dejar solo membresías, en su propia entrega y con sus pruebas.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

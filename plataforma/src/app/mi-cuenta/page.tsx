@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getMyRestaurantCards, canBill } from '@/lib/db/membership';
+import { getMyRestaurantCards, getMyGroupPanel, canBill } from '@/lib/db/membership';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { rootDomainForUrls } from '@/lib/tenant';
 import MiCuentaClient from './mi-cuenta-client';
@@ -33,14 +33,16 @@ export default async function MiCuentaPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login');
 
-  const [cards, pricing] = await Promise.all([
+  const [cards, pricing, groupPanel] = await Promise.all([
     getMyRestaurantCards(),
     getEffectivePlanPricing(),
+    getMyGroupPanel(),
   ]);
 
   // Sin ningún restaurante: no hay cuenta que administrar todavía. Se le manda
-  // a crear el primero en vez de enseñarle una pantalla vacía.
-  if (cards.length === 0) redirect('/registro');
+  // a crear el primero en vez de enseñarle una pantalla vacía. (Un dueño de
+  // grupo sí tiene algo que ver aunque no tenga tarjetas: su panel del grupo.)
+  if (cards.length === 0 && !groupPanel) redirect('/registro');
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -56,6 +58,7 @@ export default async function MiCuentaPage() {
       accountName={(profile?.full_name as string | null) ?? user.email ?? 'tu cuenta'}
       accountEmail={user.email ?? ''}
       canCreate={cards.some((c) => canBill(c.role))}
+      groupPanel={groupPanel}
     />
   );
 }

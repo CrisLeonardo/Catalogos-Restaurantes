@@ -12,6 +12,9 @@ import StaffPanel from '@/components/admin/staff-panel';
 import AccessLogPanel from '@/components/admin/access-log-panel';
 import TrustedDevicesPanel from '@/components/admin/trusted-devices-panel';
 import EntryPinCard from '@/components/admin/entry-pin-card';
+import InvitationsPanel from '@/components/admin/invitations-panel';
+import { listPendingInvitations } from '@/lib/auth/invitations';
+import { emailEnabled } from '@/lib/email';
 import { getPanelAccessLog } from '@/lib/auth/access-log';
 import { listTrustedDevices } from '@/lib/auth/trusted-device';
 
@@ -40,11 +43,12 @@ export default async function AdminPersonalPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [staff, activity, accessLog, devices, { data: restaurant }, { data: themeRow }] = await Promise.all([
+  const [staff, activity, accessLog, devices, invitations, { data: restaurant }, { data: themeRow }] = await Promise.all([
     listStaff(restaurantId),
     getActivityLog(restaurantId, 30),
     getPanelAccessLog(restaurantId, 20),
     listTrustedDevices(restaurantId),
+    listPendingInvitations(restaurantId),
     db.from('restaurants').select('modules, module_settings, plan_actual, timezone, pin_requires_trusted_device, entry_pin_hash').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
@@ -94,6 +98,16 @@ export default async function AdminPersonalPage() {
         </Link>
       </div>
       <StaffPanel restaurantId={restaurantId} staff={staff} activity={activity} enabledSections={enabledSections} />
+      {/* Invitar por correo es del dueño: un gerente suma a su equipo con PIN,
+          no crea pares suyos. */}
+      {!isManager && (
+        <InvitationsPanel
+          restaurantId={restaurantId}
+          invitations={invitations}
+          enabledSections={enabledSections}
+          emailEnabled={emailEnabled()}
+        />
+      )}
       <TrustedDevicesPanel
         restaurantId={restaurantId}
         devices={devices}

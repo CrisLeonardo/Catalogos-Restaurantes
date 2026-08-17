@@ -172,6 +172,17 @@ export async function createAnotherRestaurant(
 
   const db = createServiceClient();
 
+  // Si quien crea administra una cadena, el local nuevo nace DENTRO de ella:
+  // es lo que hace que aparezca solo en el panel consolidado, sin que nadie
+  // tenga que pedirle a Leogin que lo enlace a mano después.
+  const { data: creator } = await db
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .maybeSingle();
+  const organizationId =
+    creator?.role === 'GROUP_OWNER' ? ((creator.organization_id as string | null) ?? null) : null;
+
   // ── Dirección (slug) ───────────────────────────────────────
   let slug: string;
   if (rawSlug) {
@@ -200,6 +211,7 @@ export async function createAnotherRestaurant(
       status: 'active',
       onboarding_done: false,
       contact_email: user.email ?? null,
+      ...(organizationId ? { organization_id: organizationId } : {}),
     })
     .select('id')
     .single();

@@ -334,10 +334,11 @@ Las tres son decisiones tuyas; el código las soporta sin cambios de fondo.
 |---|---|---|---|
 | **0** | Google en login y registro; el registro reutiliza la cuenta de Google si ya existe | Bajo — nada existente cambia de comportamiento | ✅ **hecho hoy** |
 | **1** | `restaurant_members` + relleno + `is_member_of()` con políticas aditivas + **Mi cuenta** + crear otro restaurante | Medio — es RLS; se prueba tabla por tabla, como la 053 | ✅ **hecho** |
-| **2** | **Gerente de sucursal con credencial propia** (hecho) + invitaciones por correo (pendiente) | Bajo | 🟨 **a medias** |
-| **3** | "Crear otro restaurante" desde el panel, con su plan y su cobro | Bajo (técnico) / decisión comercial | |
+| **2** | Gerente de sucursal con credencial propia + **invitaciones por correo** | Bajo | ✅ **hecho** |
+| **3** | "Crear otro restaurante" desde el panel, con su plan y su cobro | Bajo (técnico) / decisión comercial | ✅ **hecho** |
 | **4** | PIN atado a dispositivos vinculados + grilla directa en el aparato del local | Bajo — nace apagado, nadie se queda fuera | ✅ **hecho** |
-| **5** | Fundir `/central` con el selector: `GROUP_OWNER` pasa a ser miembro `OWNER` de N sucursales | Medio — retirar un rol con datos vivos | |
+| **5a** | Unir las dos vistas: Mi cuenta enseña el panel del grupo y el panel del grupo enseña Mi cuenta | Bajo — solo se añaden enlaces | ✅ **hecho** |
+| **5b** | Retirar el rol `GROUP_OWNER` y dejar solo membresías | Medio — un rol con clientes vivos encima | pendiente, **en entrega aparte** |
 
 Las fases 1 y 2 juntas son las que contestan de verdad la pregunta del cliente
 con tres locales. La 3 es la que convierte esa respuesta en ingresos.
@@ -412,8 +413,8 @@ el "código de dispositivo" de un TPV de caja: sube muchísimo el listón, no es
 una atestación de hardware. Por eso el PIN **conserva todas sus defensas
 anteriores** — el candado se suma, no las sustituye.
 
-**Lo que falta de la Fase 2:** invitar al gerente por correo en vez de pasarle
-una contraseña temporal a mano.
+*(La invitación por correo, que era lo que faltaba aquí, se cerró en la Fase 2
+— ver §12d.)*
 
 ---
 
@@ -459,3 +460,67 @@ restaurante que hoy opera no cambia de comportamiento.
 cambiar de restaurante. El restaurante activo vive en el subdominio, que es
 por pestaña; guardarlo en el perfil habría hecho que dos pestañas abiertas en
 dos negocios distintos se pisaran los datos.
+
+---
+
+## 12d. Fase 2 — Invitaciones, y Fase 5a — las dos vistas unidas
+
+### Invitaciones (migración 113)
+
+Sumar a un gerente ya no es "créale la cuenta y pásale la contraseña". El
+dueño escribe el correo y marca las secciones; le llega un enlace; **la cuenta
+la crea —o la reusa— quien acepta**, con su propia contraseña o con su Google.
+
+Los tres problemas que arregla, y que no se arreglaban con mejor interfaz:
+
+1. **La contraseña dejaba de ser suya.** Viajaba por WhatsApp, quedaba escrita
+   en un chat para siempre, y casi nadie la cambiaba después.
+2. **La elegía el dueño**, no su dueño real.
+3. **Crear la cuenta ocupaba ese correo en todo Leogin** aunque la persona
+   nunca llegara a entrar — y si un día quería abrir su propio restaurante, se
+   topaba con "ya existe una cuenta con ese correo".
+
+Lo que la sostiene:
+
+- El token **no se guarda**: se guarda su sha-256. Una fuga de la tabla no
+  reparte accesos. Con pruebas (`invite-token.test.ts`).
+- **Un solo uso**, caduca a los 7 días, y una invitación viva por correo y
+  restaurante (índice único parcial): pulsar dos veces no deja dos enlaces
+  válidos sueltos.
+- **La invitación es PARA UN CORREO.** Quien la acepta entra con ese mismo
+  correo; si no, reenviar el enlace regalaría el acceso al restaurante.
+- Solo **el dueño** invita por correo. El gerente suma a su equipo con PIN,
+  nunca crea pares suyos — la misma regla anti-escalación de la Fase 1.
+- **El enlace se enseña siempre**, se haya mandado el correo o no. Sin
+  `RESEND_API_KEY` el flujo sigue funcionando: el dueño copia y pega. Un
+  producto que deja de funcionar porque cayó el proveedor de correo no sirve
+  en un restaurante.
+
+Los tres caminos de aceptación terminan igual (membresía + sesión abierta): ya
+hay sesión con ese correo → un botón; ya existe cuenta → su contraseña de
+siempre; no existe → elige una. Y a quien ya tiene su propio restaurante **no
+se le toca su `restaurant_id` de casa**: su acceso a este otro viaja por la
+membresía, que es exactamente para lo que está.
+
+### Fase 5a — las dos vistas unidas
+
+El dueño de una cadena tenía dos hogares sin relación: el panel del grupo
+(`/central`) y, desde la Fase 1, la lista de sus restaurantes. Ahora cada uno
+lleva al otro: Mi cuenta enseña el panel consolidado arriba de las sucursales,
+y el panel del grupo enseña "Mis restaurantes". Además, **un restaurante creado
+por un dueño de grupo nace dentro de su organización**, así que aparece solo en
+el consolidado sin pedirle a nadie que lo enlace a mano.
+
+**Lo que NO se hizo, a propósito:** retirar el rol `GROUP_OWNER`. Unir dos
+vistas es añadir enlaces; retirar un rol con clientes vivos encima es otra
+cosa, y el propio plan dice que no conviene sumarlo a la entrega que acaba de
+migrar la identidad. Queda como 5b, con sus propias pruebas.
+
+### Lo que sigue pendiente (y no es código)
+
+Las tres decisiones comerciales del §9 siguen sin tomar, y una de ellas ya
+tiene consecuencia real: hoy **cada restaurante nuevo nace con la prueba
+gratis completa**, así que "crear otro restaurante" es, tal cual está, una vía
+para encadenar pruebas con la misma cuenta. Hay un techo de 5 por hora, que
+frena el abuso automático pero no el manual. Decide si el segundo restaurante
+en adelante lleva prueba corta o ninguna.
