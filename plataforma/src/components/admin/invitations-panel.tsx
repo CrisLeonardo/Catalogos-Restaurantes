@@ -1,6 +1,6 @@
 'use client';
 
-/* Invitaciones al equipo (migración 113).
+/* Invitaciones al equipo (migración 114).
    El dueño invita por correo; la cuenta la crea quien acepta, con su propia
    contraseña o con su Google. Reemplaza al "te creo la cuenta y te paso la
    contraseña por WhatsApp". */

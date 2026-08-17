@@ -258,7 +258,7 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     return { error: profErr.message };
   }
 
-  // Membresía (migración 112): quien entra con correo es gerente de esta
+  // Membresía (migración 113): quien entra con correo es gerente de esta
   // sucursal; quien entra con PIN es personal. Se mantiene en paralelo con el
   // perfil de arriba mientras conviven los dos modelos.
   await ctx.db.from('restaurant_members').insert({

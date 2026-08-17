@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { hashPin, verifyPin, newPinSalt, isValidPin } from '@/lib/staff-pin-crypto';
 
 /* ============================================================
-   PIN DE ENTRADA AL RESTAURANTE (migración 112)
+   PIN DE ENTRADA AL RESTAURANTE (migración 113)
    ------------------------------------------------------------
    El candado que se pide al abrir un restaurante desde Mi cuenta.
 

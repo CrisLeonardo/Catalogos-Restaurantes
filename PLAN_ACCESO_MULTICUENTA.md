@@ -400,7 +400,7 @@ ni crear a otro gerente. Su correo nace confirmado, así que además puede entra
 con **Continuar con Google** usando ese mismo correo. No aparece en la grilla de
 PIN del local: su credencial es suya.
 
-**Dispositivos de confianza** (migración 111, `lib/auth/trusted-device.ts`)
+**Dispositivos de confianza** (migración 112, `lib/auth/trusted-device.ts`)
 En **Personal → Dispositivos del local**: la lista de aparatos reconocidos, el
 botón "Autorizar este dispositivo" y el interruptor del candado, con el aviso de
 qué implica cada estado en palabras del dueño, no del sistema.
@@ -418,7 +418,7 @@ anteriores** — el candado se suma, no las sustituye.
 
 ---
 
-## 12c. Fase 1 — Mi cuenta y las membresías (migración 112)
+## 12c. Fase 1 — Mi cuenta y las membresías (migración 113)
 
 **El modelo.** `restaurant_members(user_id, restaurant_id, role, permissions)`
 separa las dos preguntas que antes estaban pegadas en una sola fila de
@@ -465,7 +465,7 @@ dos negocios distintos se pisaran los datos.
 
 ## 12d. Fase 2 — Invitaciones, y Fase 5a — las dos vistas unidas
 
-### Invitaciones (migración 113)
+### Invitaciones (migración 114)
 
 Sumar a un gerente ya no es "créale la cuenta y pásale la contraseña". El
 dueño escribe el correo y marca las secciones; le llega un enlace; **la cuenta

@@ -26,7 +26,7 @@ interface Props {
   googleEnabled?: boolean;
   /** Volvimos de Google con un fallo — se avisa en vez de dejar la pantalla muda. */
   authError?: boolean;
-  /** ¿Puede este aparato usar el PIN? (candado de dispositivos, migración 111). */
+  /** ¿Puede este aparato usar el PIN? (candado de dispositivos, migración 112). */
   pinAllowed?: boolean;
   /** ¿Es este uno de los aparatos del local? Si lo es, se abre en la grilla. */
   pinTrusted?: boolean;

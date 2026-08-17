@@ -768,7 +768,7 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 - **Alcance real de la protección, dicho en el código:** el id de aparato es un UUID del navegador; protege contra quien no lo conoce (no se puede adivinar), no contra quien lo copia. Mismo grado que el "código de dispositivo" de un TPV. Por eso el PIN conserva todas sus defensas anteriores.
 
 **Pendiente (acciones de Leonardo):**
-1. **Aplicar la migración 111** en Supabase. Sin ella, el código sigue funcionando exactamente como antes (todo cae al estado "sin candado").
+1. **Aplicar la migración 112** en Supabase. Sin ella, el código sigue funcionando exactamente como antes (todo cae al estado "sin candado").
 2. Entrar a **Personal → Dispositivos del local** desde la tableta/PC del local y pulsar *Autorizar este dispositivo*; o simplemente dejar que el personal entre con su PIN unos días y ver cómo se llena sola la lista. Encender el candado después.
 3. Avisar al personal antes de encenderlo: cambia su rutina (ya no podrán entrar con PIN desde su casa).
 
@@ -798,7 +798,7 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 - **`/mi-cuenta` se excluye del rewrite del proxy**: es de la persona, no de un restaurante. Sin eso, «Cambiar de restaurante» pedía `/admin/mi-cuenta` y daba 404 — justo en el enlace que sirve para salir de ahí.
 
 **Pendiente (acciones de Leonardo):**
-1. **Aplicar la migración 112** (después de la 111). Sin ella el código sigue funcionando como antes: sin membresías, todo cae al camino de siempre.
+1. **Aplicar la migración 113** (después de la 112). Sin ella el código sigue funcionando como antes: sin membresías, todo cae al camino de siempre.
 2. Probar con una cuenta que tenga dos restaurantes: entrar a cada uno y confirmar que lo que se edita en el panel de B se guarda en B.
 3. Decidir las políticas comerciales del §9 del plan (prueba del segundo restaurante en adelante, descuento de cadena, factura única).
 
@@ -828,7 +828,7 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 - El token vive en `lib/invite-token.ts` **sin `server-only`**, para que se pueda probar de verdad — mismo patrón que `pin-policy.ts` y `tenant-guard.ts`.
 
 **Pendiente (acciones de Leonardo):**
-1. **Aplicar la migración 113** (después de la 111 y la 112).
+1. **Aplicar la migración 114** (después de la 112 y la 113).
 2. Poner `RESEND_API_KEY` si quieres que las invitaciones salgan por correo solas. Sin ella todo funciona igual: el panel te da el enlace para pasárselo tú.
 3. **Decidir la prueba gratis del segundo restaurante en adelante.** Hoy cada restaurante nuevo nace con la prueba completa, así que «crear otro restaurante» es una vía para encadenar pruebas con la misma cuenta. Hay techo de 5/hora, que frena el abuso automático pero no el manual.
 

@@ -111,7 +111,7 @@ interface Props {
   userName?: string | null;
   /** El dueño/super admin puede ver la sección Personal. */
   canManageStaff?: boolean;
-  /** Esta cuenta administra más de un restaurante (migración 112). */
+  /** Esta cuenta administra más de un restaurante (migración 113). */
   hasMultipleRestaurants?: boolean;
   /** Plan actual del restaurante — para mostrar badge en la barra lateral. */
   planActual?: string | null;

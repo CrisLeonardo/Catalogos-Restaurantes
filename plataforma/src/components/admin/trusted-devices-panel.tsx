@@ -1,6 +1,6 @@
 'use client';
 
-/* Dispositivos de confianza del local (migración 111).
+/* Dispositivos de confianza del local (migración 112).
    El dueño ve qué aparatos reconoce su restaurante, autoriza el que tiene en
    la mano y decide si el PIN del personal vale SOLO en ellos. */
 

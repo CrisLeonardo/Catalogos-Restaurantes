@@ -75,7 +75,7 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
 
         <div className="admin-spacer" style={{ flex: 1 }} />
 
-        {/* Puente hacia Mi cuenta (migración 112). El dueño de una cadena
+        {/* Puente hacia Mi cuenta (migración 113). El dueño de una cadena
             tenía dos hogares sin relación: este panel y la lista de sus
             restaurantes. Desde aquí se llega al otro — y desde el otro, a
             este. El rol GROUP_OWNER no cambia todavía: unir las dos vistas es

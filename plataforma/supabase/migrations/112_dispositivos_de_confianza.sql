@@ -1,5 +1,5 @@
 -- ============================================================
---  Migración 111 — Dispositivos de confianza del local
+--  Migración 112 — Dispositivos de confianza del local
 --  ------------------------------------------------------------
 --  El PIN de 4 dígitos es la credencial correcta para el personal
 --  DENTRO del local: se teclea quince veces por turno y una
@@ -40,7 +40,7 @@
 --  lib/device-id.ts (localStorage) que la migración 110 ya usa
 --  para la PC principal. No identifica a una persona.
 --
---  Ejecutar DESPUÉS de 001..110.
+--  Ejecutar DESPUÉS de 001..111.
 -- ============================================================
 
 create table if not exists restaurant_devices (

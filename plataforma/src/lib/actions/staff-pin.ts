@@ -75,7 +75,7 @@ export type PinStaffMember = { id: string; full_name: string | null };
  *
  * Y "público" era justo el problema: cualquiera que abriera el login del
  * restaurante veía los nombres de todo el personal sin iniciar sesión. Con el
- * candado de dispositivos encendido (migración 111) la lista solo se entrega
+ * candado de dispositivos encendido (migración 112) la lista solo se entrega
  * a los aparatos del local. El aparato se lee de su cookie aquí dentro, no de
  * un parámetro: una acción de servidor que se fía de lo que le pasa el
  * cliente no protege nada.
@@ -134,7 +134,7 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
   }
 
-  // Candado de dispositivos (migración 111). Se comprueba TAMBIÉN aquí, no
+  // Candado de dispositivos (migración 112). Se comprueba TAMBIÉN aquí, no
   // solo al pintar la pantalla: esconder la grilla sin cerrar la acción deja
   // la puerta abierta a quien la llame directamente. Y antes de mirar el PIN,
   // para que un aparato no autorizado no gaste intentos del contador de la

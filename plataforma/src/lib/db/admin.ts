@@ -60,7 +60,7 @@ export type AdminContext = {
   restaurant: Restaurant | null;
   theme: RestaurantTheme | null;
   /**
-   * Rol en ESTE restaurante según las membresías (migración 112), cuando se
+   * Rol en ESTE restaurante según las membresías (migración 113), cuando se
    * entró por esa vía. null = se entró por el camino de siempre
    * (`profiles.restaurant_id`), que sigue vivo.
    *
@@ -99,7 +99,7 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
   let theme: RestaurantTheme | null = null;
   let memberRole: MemberRole | null = null;
 
-  /* ── Membresías (migración 112) ───────────────────────────────────────
+  /* ── Membresías (migración 113) ───────────────────────────────────────
      Va PRIMERO porque es la única vía que sabe resolver "estoy en el
      subdominio del restaurante B y también soy de B", que es justo lo que
      `profiles.restaurant_id` —un solo id— no puede contestar. Sin esto, un

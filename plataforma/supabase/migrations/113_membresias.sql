@@ -1,5 +1,5 @@
 -- ============================================================
---  Migración 112 — Membresías: una persona, varios restaurantes
+--  Migración 113 — Membresías: una persona, varios restaurantes
 --  ------------------------------------------------------------
 --  Hasta ahora una cuenta era un restaurante y punto: `profiles.id`
 --  ES `auth.users.id` (clave primaria) y tiene UN `restaurant_id`.
@@ -31,7 +31,7 @@
 --     altera una sola política previa, así que es imposible que un
 --     dueño o un cajero de hoy se quede fuera por este cambio.
 --
---  Ejecutar DESPUÉS de 001..111.
+--  Ejecutar DESPUÉS de 001..112.
 -- ============================================================
 
 -- ── La tabla ────────────────────────────────────────────────

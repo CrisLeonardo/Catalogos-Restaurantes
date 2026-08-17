@@ -8,7 +8,6 @@ import AdminShell from '@/components/admin/shell';
 import { PlanPricingProvider } from '@/components/plan-pricing-context';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import GroupOwnerBanner from '@/components/admin/group-owner-banner';
-import SupportModeBanner from '@/components/admin/support-mode-banner';
 import VerifyEmailBanner from '@/components/admin/verify-email-banner';
 import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
@@ -17,7 +16,6 @@ import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
-import { readSupportTicket, SUPPORT_COOKIE } from '@/lib/auth/support-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
@@ -85,8 +83,6 @@ export default async function AdminProtectedLayout({
       ? { id: tenantData.restaurant.id, organizationId: tenantData.restaurant.organization_id ?? null }
       : null,
     ownSlug: ctx.restaurant?.slug ?? null,
-    supportTicketRestaurantId: readSupportTicket(cookieStore.get(SUPPORT_COOKIE)?.value),
-    pathname: headersList.get('x-pathname') ?? '/admin',
     adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);
@@ -228,7 +224,6 @@ export default async function AdminProtectedLayout({
       hasMultipleRestaurants={(await getMyMemberships()).length > 1}
       isOperatorSession={isOperatorSession}
     >
-      {access.supportMode && <SupportModeBanner restaurantName={restaurantName} />}
       {needsEmailVerification && <VerifyEmailBanner email={user.email ?? null} />}
       {groupReturnUrl && (
         <GroupOwnerBanner branchName={restaurantName} returnUrl={groupReturnUrl} />

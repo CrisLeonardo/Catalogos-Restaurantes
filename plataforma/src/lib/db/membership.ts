@@ -8,7 +8,7 @@ import { subdomainUrl } from '@/lib/tenant';
 import { LEGACY_ROLE, type MemberRole, type Membership, type MembershipCard } from '@/lib/membership-roles';
 
 /* ============================================================
-   MEMBRESÍAS — una persona, varios restaurantes (migración 112)
+   MEMBRESÍAS — una persona, varios restaurantes (migración 113)
    ------------------------------------------------------------
    Separa las dos preguntas que antes estaban pegadas en una sola fila de
    `profiles`:
@@ -153,8 +153,9 @@ export async function resolveEffectiveRole(
     memberRole: null,
   };
 
-  // El super admin nunca entra por membresía: su acceso a un restaurante
-  // ajeno pasa por el pase de soporte, que deja rastro.
+  // El super admin nunca se resuelve por membresía: si tuviera una, su rol
+  // efectivo pasaría a ser el de esa membresía —RESTAURANT_OWNER o menos— y
+  // perdería su propio panel. Su acceso ya lo resuelve el candado de tenant.
   if (!tenantRestaurantId || profile.role === 'SUPER_ADMIN') return fallback;
 
   const membership = await getMyMembership(tenantRestaurantId);

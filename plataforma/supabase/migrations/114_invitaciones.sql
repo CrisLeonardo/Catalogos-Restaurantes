@@ -1,7 +1,7 @@
 -- ============================================================
---  Migración 113 — Invitaciones al equipo (Fase 2)
+--  Migración 114 — Invitaciones al equipo (Fase 2)
 --  ------------------------------------------------------------
---  La migración 112 dejó el modelo de membresías, pero para sumar a
+--  La migración 113 dejó el modelo de membresías, pero para sumar a
 --  un gerente había que crearle la cuenta a mano y pasarle una
 --  contraseña temporal. Eso tiene tres problemas que no se arreglan
 --  con mejor UI:
@@ -25,7 +25,7 @@
 --     entrar con ese mismo correo. Sin esa regla, reenviar el enlace
 --     regala el acceso al restaurante.
 --
---  Ejecutar DESPUÉS de 001..112.
+--  Ejecutar DESPUÉS de 001..113.
 -- ============================================================
 
 create table if not exists restaurant_invitations (

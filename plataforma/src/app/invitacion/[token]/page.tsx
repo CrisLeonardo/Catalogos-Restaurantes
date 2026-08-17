@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 /**
- * Aceptar una invitación al equipo de un restaurante (migración 113).
+ * Aceptar una invitación al equipo de un restaurante (migración 114).
  *
  * La página resuelve TRES cosas antes de pintar, porque de ellas depende qué
  * se le pide a la persona:

@@ -7,7 +7,6 @@ import { can } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
-import { readSupportTicket, SUPPORT_COOKIE } from '@/lib/auth/support-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import { adminUrl } from '@/lib/tenant';
@@ -48,7 +47,7 @@ export default async function WaiterLayout({ children }: { children: React.React
   const tenantSlug = headersList.get('x-tenant-slug');
   const tenantData = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
 
-  // Qué es esta persona EN ESTE restaurante (migración 112). Se resuelve
+  // Qué es esta persona EN ESTE restaurante (migración 113). Se resuelve
   // ANTES de comprobar el permiso 'mesero': quien es mesero en la sucursal B
   // pero cajero en su propio local A tiene que entrar aquí con lo de B.
   const effective = await resolveEffectiveRole(
@@ -74,14 +73,12 @@ export default async function WaiterLayout({ children }: { children: React.React
       ? { id: tenantData.restaurant.id, organizationId: tenantData.restaurant.organization_id ?? null }
       : null,
     ownSlug: (own?.data?.slug as string | null) ?? null,
-    supportTicketRestaurantId: readSupportTicket(cookieStore.get(SUPPORT_COOKIE)?.value),
-    pathname: headersList.get('x-pathname') ?? '/admin/mesero',
     adminUrlFor: adminUrl,
   });
   if (!access.allow) redirect(access.redirectTo);
 
   // SUPER_ADMIN no tiene restaurant_id propio: lo resuelve el subdominio (que
-  // el candado de arriba ya validó con su pase de soporte).
+  // el candado de arriba ya validó).
   const restaurantId = (profile.restaurant_id as string | null) ?? tenantData?.restaurant.id ?? null;
   if (!restaurantId) redirect(profile.role === 'SUPER_ADMIN' ? '/super/restaurantes' : '/admin/login');
 

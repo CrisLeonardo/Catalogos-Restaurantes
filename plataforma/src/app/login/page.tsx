@@ -41,7 +41,7 @@ export default async function LoginPage({
 
   let hubUrl: string | null = null;
   let hubToken: string | null = null;
-  // Candado de dispositivos (migración 111): decidido en el servidor para que
+  // Candado de dispositivos (migración 112): decidido en el servidor para que
   // la pantalla no parpadee entre "entra con tu PIN" y "este aparato no está
   // autorizado" en cada visita.
   let pinAllowed = true;

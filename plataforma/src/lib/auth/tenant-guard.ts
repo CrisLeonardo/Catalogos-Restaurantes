@@ -24,15 +24,15 @@
    ============================================================ */
 
 export type TenantDecision =
-  /** Puede entrar. `supportMode` = Super Admin con pase temporal (ver support-session.ts). */
-  | { allow: true; supportMode: boolean }
+  /** Puede entrar. */
+  | { allow: true }
   /** No puede: a dónde mandarlo (nunca al panel del restaurante ajeno). */
   | { allow: false; redirectTo: string };
 
 export type TenantGuardInput = {
   role: string | null | undefined;
   /**
-   * ¿Es miembro del restaurante de este subdominio? (migración 112.)
+   * ¿Es miembro del restaurante de este subdominio? (migración 113.)
    *
    * Es la vía por la que entra quien tiene más de un restaurante: su perfil
    * solo puede apuntar a uno, así que `profileRestaurantId` no alcanza para
@@ -53,10 +53,6 @@ export type TenantGuardInput = {
   tenant: { id: string; organizationId: string | null } | null;
   /** Slug del restaurante propio, para poder mandarlo a SU panel. */
   ownSlug: string | null | undefined;
-  /** Restaurante del pase de soporte vigente (readSupportTicket), si hay. */
-  supportTicketRestaurantId: string | null;
-  /** Ruta actual, para volver a ella después de confirmar el modo soporte. */
-  pathname: string;
   /** Cómo construir la URL absoluta del panel de un slug (adminUrl en la app). */
   adminUrlFor: (slug: string) => string;
 };
@@ -69,40 +65,33 @@ export type TenantGuardInput = {
 export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   const {
     role, isMember, profileRestaurantId, profileOrganizationId,
-    tenantSlug, tenant, ownSlug, supportTicketRestaurantId, pathname, adminUrlFor,
+    tenantSlug, tenant, ownSlug, adminUrlFor,
   } = input;
 
-  if (!tenantSlug) return { allow: true, supportMode: false };
+  if (!tenantSlug) return { allow: true };
 
   // El subdominio no corresponde a ningún restaurante legible: a la portada.
   if (!tenant) return { allow: false, redirectTo: ownSlug ? `${adminUrlFor(ownSlug)}/menu` : '/' };
 
   // Su propio restaurante: el caso normal, sin importar el rol.
   if (profileRestaurantId && profileRestaurantId === tenant.id) {
-    return { allow: true, supportMode: false };
+    return { allow: true };
   }
 
-  // Otro de sus restaurantes (membresía). El SUPER_ADMIN queda fuera a
-  // propósito: su entrada a un restaurante ajeno pasa por el pase de soporte
-  // —que deja rastro en la bitácora y pinta una franja en el panel— y una
-  // membresía se lo daría en silencio.
-  if (isMember && role !== 'SUPER_ADMIN') {
-    return { allow: true, supportMode: false };
-  }
+  // Otro de sus restaurantes (membresía, migración 113). Es la vía del que
+  // tiene varios: su perfil solo puede apuntar a uno.
+  if (isMember) return { allow: true };
 
-  if (role === 'SUPER_ADMIN') {
-    // Puede entrar a cualquiera, pero solo pidiéndolo: el pase deja rastro en
-    // la bitácora del restaurante y el panel muestra una franja mientras dura.
-    if (supportTicketRestaurantId === tenant.id) return { allow: true, supportMode: true };
-    return { allow: false, redirectTo: `/admin/soporte?destino=${encodeURIComponent(pathname)}` };
-  }
+  // El Super Admin entra a cualquier panel sin pedir nada extra: ya ve todo
+  // desde /super, esto solo evita el salto de un subdominio a otro.
+  if (role === 'SUPER_ADMIN') return { allow: true };
 
   if (role === 'GROUP_OWNER') {
     // Solo sucursales de SU grupo. `tenant` NO prueba pertenencia por sí solo:
     // las políticas RLS se combinan con OR y `restaurants_select_active` deja
     // leer cualquier restaurante activo (lo necesita el menú público).
     if (profileOrganizationId && tenant.organizationId === profileOrganizationId) {
-      return { allow: true, supportMode: false };
+      return { allow: true };
     }
     return { allow: false, redirectTo: '/central' };
   }

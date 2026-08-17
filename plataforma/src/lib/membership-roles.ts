@@ -1,5 +1,5 @@
 /* ============================================================
-   MEMBRESÍAS — tipos y reglas de rol (migración 112)
+   MEMBRESÍAS — tipos y reglas de rol (migración 113)
    ------------------------------------------------------------
    Sin dependencias de servidor a propósito: esto lo necesitan por igual la
    capa de datos (lib/db/membership.ts, que sí habla con la base) y las

@@ -1,7 +1,7 @@
 'use server';
 
 /* ============================================================
-   INVITACIONES — invitar, revocar, aceptar (migración 113)
+   INVITACIONES — invitar, revocar, aceptar (migración 114)
    ------------------------------------------------------------
    Reemplaza al "créale la cuenta y pásale la contraseña": la cuenta la crea
    —o la reusa— quien acepta. Ver lib/auth/invitations.ts para el token.
@@ -85,7 +85,7 @@ export async function inviteToTeam(prevState: InviteState, formData: FormData): 
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
 
   // Una invitación viva por correo y restaurante (índice único parcial de la
-  // migración 113): reinvitar sustituye la anterior en vez de dejar dos
+  // migración 114): reinvitar sustituye la anterior en vez de dejar dos
   // enlaces válidos sueltos.
   await ctx.db
     .from('restaurant_invitations')

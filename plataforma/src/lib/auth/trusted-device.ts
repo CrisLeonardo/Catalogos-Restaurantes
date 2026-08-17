@@ -7,7 +7,7 @@ import { decidePinAccess, isValidDeviceId, type PinAccess } from '@/lib/auth/pin
 export type { PinAccess };
 
 /* ============================================================
-   DISPOSITIVOS DE CONFIANZA DEL LOCAL (migración 111)
+   DISPOSITIVOS DE CONFIANZA DEL LOCAL (migración 112)
    ------------------------------------------------------------
    El PIN es la credencial correcta DENTRO del local y una mala
    credencial en internet abierto. Esto es lo que distingue una
@@ -60,7 +60,7 @@ export async function getPinAccess(restaurantId: string): Promise<PinAccess> {
 
   // Sin restaurante legible no se afirma que el candado esté puesto: el PIN
   // conserva sus otras defensas y el dueño no se queda fuera por un fallo de
-  // lectura. (La columna no existe hasta aplicar la migración 111: hasta
+  // lectura. (La columna no existe hasta aplicar la migración 112: hasta
   // entonces esto vale `false` y todo se comporta como siempre.)
   const requiresTrusted = rest?.pin_requires_trusted_device === true;
 
@@ -130,7 +130,7 @@ export async function rememberDevice(input: {
       last_seen_at: now,
     });
   } catch {
-    // Sin la migración 111 aplicada, o con la tabla caída: no se anota nada y
+    // Sin la migración 112 aplicada, o con la tabla caída: no se anota nada y
     // el login sigue su curso.
   }
 }

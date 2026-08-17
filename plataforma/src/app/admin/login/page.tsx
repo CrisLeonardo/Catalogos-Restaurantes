@@ -59,7 +59,7 @@ export default async function AdminLoginPage({
   // hub con esto — nunca abre sesión por sí solo, solo identifica al operador.
   let hubUrl: string | null = null;
   let hubToken: string | null = null;
-  // Candado de dispositivos (migración 111) — ver /login/page.tsx.
+  // Candado de dispositivos (migración 112) — ver /login/page.tsx.
   let pinAllowed = true;
   let pinTrusted = false;
   if (restaurantId) {

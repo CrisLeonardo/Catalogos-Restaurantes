@@ -24,7 +24,7 @@ export const metadata = { title: 'Personal – Panel admin' };
 export default async function AdminPersonalPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  // El dueño, el super admin y —desde la migración 112— el GERENTE de esta
+  // El dueño, el super admin y —desde la migración 113— el GERENTE de esta
   // sucursal, que es quien da de alta a su propio equipo. Lo que el gerente
   // no puede hacer se corta en las acciones (lib/actions/staff.ts), no
   // escondiendo la pantalla.

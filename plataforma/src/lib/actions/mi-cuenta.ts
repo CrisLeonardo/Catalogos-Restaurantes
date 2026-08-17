@@ -1,7 +1,7 @@
 'use server';
 
 /* ============================================================
-   MI CUENTA — acciones (migración 112)
+   MI CUENTA — acciones (migración 113)
    ------------------------------------------------------------
    La pantalla donde una persona ve TODOS sus restaurantes, entra a
    uno, y crea el siguiente. Ver PLAN_ACCESO_MULTICUENTA.md.

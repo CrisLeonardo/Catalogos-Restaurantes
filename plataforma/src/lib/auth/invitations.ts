@@ -8,7 +8,7 @@ import type { MemberRole } from '@/lib/membership-roles';
 export { newInviteToken, hashInviteToken, INVITE_TTL_MS } from '@/lib/invite-token';
 
 /* ============================================================
-   INVITACIONES AL EQUIPO (migración 113)
+   INVITACIONES AL EQUIPO (migración 114)
    ------------------------------------------------------------
    Sumar a un gerente ya no es "créale la cuenta y pásale la contraseña por
    WhatsApp". Se le manda un enlace, y la cuenta la crea —o la reusa— QUIEN
@@ -98,6 +98,6 @@ export async function listPendingInvitations(restaurantId: string): Promise<Pend
       expired: new Date(i.expires_at as string).getTime() < now,
     }));
   } catch {
-    return []; // migración 113 sin aplicar
+    return []; // migración 114 sin aplicar
   }
 }

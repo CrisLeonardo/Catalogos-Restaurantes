@@ -1,5 +1,5 @@
 /* ============================================================
-   CANDADO DEL PIN — la decisión, sin dependencias (migración 111)
+   CANDADO DEL PIN — la decisión, sin dependencias (migración 112)
    ------------------------------------------------------------
    Vive aparte de trusted-device.ts (que habla con la base de datos) por la
    misma razón que tenant-guard.ts: la regla que decide quién entra tiene que

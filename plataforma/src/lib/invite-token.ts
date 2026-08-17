@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 /* ============================================================
-   TOKEN DE INVITACIÓN (migración 113)
+   TOKEN DE INVITACIÓN (migración 114)
    ------------------------------------------------------------
    Vive aparte de lib/auth/invitations.ts —que habla con la base de datos y
    con el proveedor de correo— por la misma razón que pin-policy.ts y

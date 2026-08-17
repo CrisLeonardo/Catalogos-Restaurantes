@@ -1,6 +1,6 @@
 'use client';
 
-/* PIN de entrada al restaurante (migración 112).
+/* PIN de entrada al restaurante (migración 113).
    El candado que se pide al abrir este restaurante desde Mi cuenta. Solo lo
    ve y lo cambia el dueño: protege el negocio entero, así que lo pone quien
    responde por él. */

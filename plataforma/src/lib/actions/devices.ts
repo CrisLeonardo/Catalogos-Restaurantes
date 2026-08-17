@@ -1,7 +1,7 @@
 'use server';
 
 /* ============================================================
-   DISPOSITIVOS DE CONFIANZA — acciones del dueño (migración 111)
+   DISPOSITIVOS DE CONFIANZA — acciones del dueño (migración 112)
    ------------------------------------------------------------
    El dueño autoriza los aparatos del local y decide si el PIN del
    personal vale SOLO en ellos. Ver lib/auth/trusted-device.ts

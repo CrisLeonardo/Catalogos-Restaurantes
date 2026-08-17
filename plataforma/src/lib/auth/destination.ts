@@ -30,7 +30,7 @@ export async function resolveStaffDestination(
   if (profile.role === 'SUPER_ADMIN') return '/super/restaurantes';
   if (profile.role === 'GROUP_OWNER') return '/central';
 
-  /* Con más de un restaurante (migración 112), a Mi cuenta a elegir.
+  /* Con más de un restaurante (migración 113), a Mi cuenta a elegir.
      Con UNO SOLO se entra directo, sin selector: el 90% de los clientes tiene
      un solo local y la mejora para quien tiene tres no puede costarle un
      toque a quien tiene uno. Esa es la regla, y por eso el corte es en 2. */

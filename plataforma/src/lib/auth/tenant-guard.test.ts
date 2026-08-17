@@ -27,8 +27,6 @@ function input(over: Partial<TenantGuardInput> = {}): TenantGuardInput {
     tenantSlug: 'restaurante-a',
     tenant: REST_A,
     ownSlug: 'restaurante-a',
-    supportTicketRestaurantId: null,
-    pathname: '/admin/pedidos',
     adminUrlFor: ADMIN_URL,
     ...over,
   };
@@ -36,7 +34,7 @@ function input(over: Partial<TenantGuardInput> = {}): TenantGuardInput {
 
 describe('dueño / staff de un restaurante', () => {
   it('entra a su propio panel', () => {
-    expect(decideTenantAccess(input())).toEqual({ allow: true, supportMode: false });
+    expect(decideTenantAccess(input())).toEqual({ allow: true });
   });
 
   it('en el subdominio de OTRO restaurante lo manda a su panel, no al ajeno', () => {
@@ -65,26 +63,9 @@ describe('dueño / staff de un restaurante', () => {
 describe('super admin', () => {
   const sa = { role: 'SUPER_ADMIN', profileRestaurantId: null, ownSlug: null };
 
-  it('sin pase de soporte NO entra: pasa por la confirmación', () => {
+  it('entra directo a cualquier restaurante, sin pedir nada extra', () => {
     const d = decideTenantAccess(input({ ...sa, tenantSlug: 'restaurante-b', tenant: REST_B }));
-    expect(d).toEqual({
-      allow: false,
-      redirectTo: '/admin/soporte?destino=%2Fadmin%2Fpedidos',
-    });
-  });
-
-  it('con pase para ESE restaurante entra, y en modo soporte', () => {
-    const d = decideTenantAccess(
-      input({ ...sa, tenantSlug: 'restaurante-b', tenant: REST_B, supportTicketRestaurantId: 'rest-b' }),
-    );
-    expect(d).toEqual({ allow: true, supportMode: true });
-  });
-
-  it('un pase de OTRO restaurante no sirve: el pase es por restaurante', () => {
-    const d = decideTenantAccess(
-      input({ ...sa, tenantSlug: 'restaurante-b', tenant: REST_B, supportTicketRestaurantId: 'rest-a' }),
-    );
-    expect(d.allow).toBe(false);
+    expect(d).toEqual({ allow: true });
   });
 });
 
@@ -95,7 +76,7 @@ describe('dueño de grupo', () => {
     const d = decideTenantAccess(
       input({ ...go, tenantSlug: 'sucursal', tenant: { id: 'rest-b', organizationId: 'org-1' } }),
     );
-    expect(d).toEqual({ allow: true, supportMode: false });
+    expect(d).toEqual({ allow: true });
   });
 
   it('no entra a un restaurante de otro grupo aunque sea legible por RLS', () => {
@@ -115,7 +96,7 @@ describe('dueño de grupo', () => {
   });
 });
 
-describe('varios restaurantes con una sola cuenta (migración 112)', () => {
+describe('varios restaurantes con una sola cuenta (migración 113)', () => {
   it('el dueño de A y B entra a B, aunque su perfil apunte a A', () => {
     // El caso que abre todo el modelo de membresías: `profiles.restaurant_id`
     // es UN id, así que sin `isMember` el dueño de dos negocios rebotaba de su
@@ -126,7 +107,7 @@ describe('varios restaurantes con una sola cuenta (migración 112)', () => {
         tenantSlug: 'restaurante-b',
         tenant: REST_B,
       })),
-    ).toEqual({ allow: true, supportMode: false });
+    ).toEqual({ allow: true });
   });
 
   it('el gerente invitado a una sucursal entra a esa sucursal', () => {
@@ -139,7 +120,7 @@ describe('varios restaurantes con una sola cuenta (migración 112)', () => {
         tenantSlug: 'restaurante-b',
         tenant: REST_B,
       })),
-    ).toEqual({ allow: true, supportMode: false });
+    ).toEqual({ allow: true });
   });
 
   it('sin membresía sigue rebotando al panel propio', () => {
@@ -152,32 +133,27 @@ describe('varios restaurantes con una sola cuenta (migración 112)', () => {
     ).toEqual({ allow: false, redirectTo: `${ADMIN_URL('restaurante-a')}/menu` });
   });
 
-  it('una membresía NO le abre la puerta al super admin', () => {
-    // Su entrada a un restaurante ajeno pasa por el pase de soporte, que deja
-    // rastro en la bitácora y pinta una franja en el panel. Si una membresía
-    // bastara, ese rastro desaparecería.
+  it('una membresía no cambia nada para el dueño de grupo ajeno', () => {
+    // El dueño de grupo se sigue midiendo por su organización. Si además
+    // tuviera membresía en esa sucursal, entra por esa vía — pero sin ella,
+    // pertenecer a OTRO grupo nunca alcanza.
     expect(
       decideTenantAccess(input({
-        role: 'SUPER_ADMIN',
-        isMember: true,
+        role: 'GROUP_OWNER',
+        isMember: false,
         profileRestaurantId: null,
+        profileOrganizationId: 'org-1',
         ownSlug: null,
-        tenantSlug: 'restaurante-b',
-        tenant: REST_B,
+        tenantSlug: 'ajeno',
+        tenant: { id: 'rest-b', organizationId: 'org-2' },
       })),
-    ).toEqual({
-      allow: false,
-      redirectTo: `/admin/soporte?destino=${encodeURIComponent('/admin/pedidos')}`,
-    });
+    ).toEqual({ allow: false, redirectTo: '/central' });
   });
 });
 
 describe('casos borde', () => {
   it('sin slug de tenant (dominio raíz, login central) no hay nada que candar', () => {
-    expect(decideTenantAccess(input({ tenantSlug: null }))).toEqual({
-      allow: true,
-      supportMode: false,
-    });
+    expect(decideTenantAccess(input({ tenantSlug: null }))).toEqual({ allow: true });
   });
 
   it('slug que no resuelve a ningún restaurante: fuera del panel', () => {
