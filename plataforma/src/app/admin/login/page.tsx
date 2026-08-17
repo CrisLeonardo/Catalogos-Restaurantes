@@ -4,6 +4,7 @@ import { DEMO_SLUG } from '@/lib/tenant';
 import { getResumeSession } from '@/lib/auth/resume';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
+import { getPinAccess } from '@/lib/auth/trusted-device';
 import LoginClient from '@/app/login/login-client';
 
 /**
@@ -58,6 +59,9 @@ export default async function AdminLoginPage({
   // hub con esto — nunca abre sesión por sí solo, solo identifica al operador.
   let hubUrl: string | null = null;
   let hubToken: string | null = null;
+  // Candado de dispositivos (migración 111) — ver /login/page.tsx.
+  let pinAllowed = true;
+  let pinTrusted = false;
   if (restaurantId) {
     try {
       const hub = await getAgentHubInfo(restaurantId);
@@ -65,6 +69,13 @@ export default async function AdminLoginPage({
       hubToken = hub.hubToken;
     } catch {
       /* sin agente vinculado → sin fallback offline */
+    }
+    try {
+      const access = await getPinAccess(restaurantId);
+      pinAllowed = access.allowed;
+      pinTrusted = access.trusted;
+    } catch {
+      /* sin BD → se deja como estaba */
     }
   }
 
@@ -79,6 +90,8 @@ export default async function AdminLoginPage({
       hubToken={hubToken}
       googleEnabled={isGoogleAuthEnabled()}
       authError={authError}
+      pinAllowed={pinAllowed}
+      pinTrusted={pinTrusted}
     />
   );
 }

@@ -17,6 +17,7 @@ import { logActivity } from '@/lib/activity';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { writeOperatorCookie } from '@/lib/auth/operator-session';
 import { logPanelAccess } from '@/lib/auth/access-log';
+import { getPinAccess, readDeviceId, rememberDevice } from '@/lib/auth/trusted-device';
 import { ownerCtx, assertStaffOfRestaurant } from '@/lib/actions/staff';
 import {
   isValidPin, newPinSalt, hashPin, verifyPin,
@@ -71,9 +72,20 @@ export type PinStaffMember = { id: string; full_name: string | null };
  * Grilla "¿Quién eres?" (pre-login): solo nombre + id de quienes tienen PIN
  * activo. A diferencia de listStaff() (para el dueño ya autenticado), esto
  * es público — nunca exponer email aquí.
+ *
+ * Y "público" era justo el problema: cualquiera que abriera el login del
+ * restaurante veía los nombres de todo el personal sin iniciar sesión. Con el
+ * candado de dispositivos encendido (migración 111) la lista solo se entrega
+ * a los aparatos del local. El aparato se lee de su cookie aquí dentro, no de
+ * un parámetro: una acción de servidor que se fía de lo que le pasa el
+ * cliente no protege nada.
  */
 export async function listStaffForPin(restaurantId: string): Promise<PinStaffMember[]> {
   if (!UUID_RE.test(restaurantId)) return [];
+
+  const access = await getPinAccess(restaurantId);
+  if (!access.allowed) return [];
+
   const db = createServiceClient();
   const { data } = await db
     .from('staff_pins')
@@ -84,6 +96,22 @@ export async function listStaffForPin(restaurantId: string): Promise<PinStaffMem
     id: r.profile_id as string,
     full_name: ((r.profiles as unknown as { full_name: string | null } | null))?.full_name ?? null,
   }));
+}
+
+/**
+ * ¿Puede este aparato usar el PIN? Solo para explicar una lista vacía.
+ *
+ * La pantalla de login ya decide esto en el servidor y ni siquiera ofrece el
+ * PIN cuando no toca. Esto cubre el hueco de en medio: que el dueño encienda
+ * el candado mientras alguien tiene la pantalla abierta. Sin esto, esa
+ * persona vería "todavía no hay personal con PIN configurado" —que es falso y
+ * manda a buscar el problema donde no está— en vez de "este aparato no está
+ * autorizado".
+ */
+export async function isPinAllowedHere(restaurantId: string): Promise<boolean> {
+  if (!UUID_RE.test(restaurantId)) return false;
+  const access = await getPinAccess(restaurantId);
+  return access.allowed;
 }
 
 export type PinVerifyState = { error: string } | null;
@@ -97,10 +125,24 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
   if (!isValidPin(pin)) return { error: 'PIN inválido.' };
 
   // Anti fuerza bruta: por IP y por restaurante+persona (mismo patrón que login()).
+  // Va PRIMERO, incluso antes del candado de dispositivos: es lo que acota
+  // cuánto trabajo puede provocar alguien sin identificarse. Comprobar el
+  // aparato antes dejaría esa consulta fuera de todo límite.
   const ip = clientIp(await headers());
   if (!(await rateLimit(`pin:${ip}`, 20, 5 * 60_000)) ||
       !(await rateLimit(`pin:${restaurantId}:${profileId}`, 8, 5 * 60_000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
+  }
+
+  // Candado de dispositivos (migración 111). Se comprueba TAMBIÉN aquí, no
+  // solo al pintar la pantalla: esconder la grilla sin cerrar la acción deja
+  // la puerta abierta a quien la llame directamente. Y antes de mirar el PIN,
+  // para que un aparato no autorizado no gaste intentos del contador de la
+  // persona — si no, cualquiera podría dejar a un cajero bloqueado desde
+  // fuera sin siquiera poder entrar.
+  const access = await getPinAccess(restaurantId);
+  if (!access.allowed) {
+    return { error: 'Este dispositivo no está autorizado para entrar con PIN. Entra con tu correo o pídele al dueño que lo autorice.' };
   }
 
   const db = createServiceClient();
@@ -160,6 +202,17 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
   // directamente en vez de pasar por touchOperatorSession(), que la deriva de
   // auth.getUser() — la sesión acaba de crearse en este mismo request.
   await writeOperatorCookie(profile.id as string);
+
+  // Confianza al primer uso: un PIN correcto registra (o refresca) el aparato.
+  // Así la lista del dueño se llena sola con las tabletas y la computadora que
+  // de verdad se usan, y el día que encienda el candado lo que ya funcionaba
+  // sigue funcionando. Con el candado puesto solo refresca la última visita —
+  // getPinAccess ya cortó arriba a cualquier aparato desconocido, así que esto
+  // nunca puede AÑADIR uno nuevo estando encendido.
+  const deviceId = await readDeviceId();
+  if (deviceId) {
+    await rememberDevice({ restaurantId, deviceId });
+  }
 
   await logActivity({
     restaurantId,

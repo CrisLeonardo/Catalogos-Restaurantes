@@ -18,10 +18,23 @@ import {
 } from '@/lib/actions/staff';
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
 
+/** Secciones que un gerente NO recibe con su plantilla.
+    'suscripcion' es el cobro del restaurante: quién paga, cuánto y con qué
+    plan. Un encargado administra la operación, no la cuenta de su jefe.
+    (La gestión de personal ni siquiera está en ADMIN_SECTIONS: no es
+    delegable, así que un gerente tampoco puede darse permisos a sí mismo ni
+    crear a otro gerente.) */
+const GERENTE_EXCLUDES = ['suscripcion'];
+
 /** Plantillas de permisos al crear personal — pre-llenan lo típico de cada
     rol para no abrumar al dueño con ~20 opciones en un miembro nuevo; sigue
-    pudiendo ajustar libremente después de elegir una. */
-const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] }[] = [
+    pudiendo ajustar libremente después de elegir una.
+
+    "Gerente" es distinta de las otras tres en algo más que los permisos: es
+    la única que entra con SU correo (o con Google) en vez de con un PIN del
+    local — ver `access` en el modal. */
+const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] | 'gerente'; access?: 'email' }[] = [
+  { key: 'gerente', label: 'Gerente', icon: 'key', perms: 'gerente', access: 'email' },
   { key: 'mesero', label: 'Mesero', icon: 'userPlus', perms: ['mesero'] },
   { key: 'cajero', label: 'Cajero', icon: 'wallet', perms: ['pedidos', 'mesas', 'clientes'] },
   { key: 'cocina', label: 'Cocina', icon: 'flame', perms: ['cocina'] },
@@ -72,6 +85,7 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
 
   function MemberCard({ m }: { m: StaffMember }) {
     const isMesero = m.permissions?.includes('mesero') ?? false;
+    const byEmail = m.access === 'email';
     return (
       <Card key={m.id} className="p-3.5 flex items-center gap-3">
         <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
@@ -84,7 +98,12 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
               <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
             )}
           </div>
+          {/* Con qué credencial entra: es lo primero que el dueño necesita
+              saber cuando alguien le dice "no puedo entrar". */}
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {byEmail ? `Entra con ${m.email ?? 'su correo'}` : 'Entra con PIN en el local'}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {describePerms(m)}
           </div>
         </div>
@@ -147,10 +166,20 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
 }) {
   const isNew = !member;
   const [perms, setPerms] = useState<string[]>(member?.permissions ?? ['mesero']);
+  // Con qué credencial entra: PIN en el aparato del local (lo normal) o su
+  // propio correo (el gerente, que entra desde donde sea).
+  const [access, setAccess] = useState<'pin' | 'email'>('pin');
   const visibleSections = ADMIN_SECTIONS.filter((s) => enabledSections.includes(s.key));
 
-  function applyPreset(presetPerms: string[]) {
-    setPerms(presetPerms.filter((p) => enabledSections.includes(p)));
+  /** El gerente lleva todo lo que el restaurante tenga activo menos el cobro. */
+  const gerentePerms = visibleSections
+    .map((s) => s.key as string)
+    .filter((k) => !GERENTE_EXCLUDES.includes(k));
+
+  function applyPreset(preset: (typeof ROLE_PRESETS)[number]) {
+    const list = preset.perms === 'gerente' ? gerentePerms : preset.perms;
+    setPerms(list.filter((p) => enabledSections.includes(p)));
+    setAccess(preset.access ?? 'pin');
   }
 
   const createAction = useActionState<StaffState, FormData>(createStaff, null);
@@ -192,6 +221,69 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
 
             {isNew && (
               <div>
+                <label style={label}>Plantilla</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {ROLE_PRESETS.map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      className="press"
+                      style={{
+                        padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                        color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
+                      }}
+                    >
+                      <Icon name={p.icon} size={12} />{p.label}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
+                  Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
+                  <strong> Gerente</strong> da todo menos el cobro, y entra con su propio correo.
+                </p>
+              </div>
+            )}
+
+            {/* Cómo entra. Dos credenciales para dos situaciones distintas:
+                el PIN es para quien teclea quince veces por turno en el
+                aparato del local; el correo es para el encargado, que entra
+                desde su casa y responde por lo que hace. */}
+            {isNew && (
+              <div>
+                <input type="hidden" name="access_type" value={access} />
+                <label style={label}>Cómo entra *</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {([
+                    { id: 'pin' as const, title: 'Con un PIN', desc: 'En el aparato del local' },
+                    { id: 'email' as const, title: 'Con su correo', desc: 'Desde donde sea' },
+                  ]).map((opt) => {
+                    const on = access === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setAccess(opt.id)}
+                        className="press"
+                        style={{
+                          flex: 1, textAlign: 'left', cursor: 'pointer',
+                          padding: '10px 12px', borderRadius: 11,
+                          border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
+                          background: on ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                        }}
+                      >
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{opt.title}</span>
+                        <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>{opt.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {isNew && access === 'pin' && (
+              <div>
                 <label style={label}>PIN de acceso (4 dígitos) *</label>
                 <input
                   name="pin"
@@ -209,30 +301,37 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
               </div>
             )}
 
-            {isNew && (
-              <div>
-                <label style={label}>Plantilla</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {ROLE_PRESETS.map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => applyPreset(p.perms)}
-                      className="press"
-                      style={{
-                        padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
-                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                        color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
-                      }}
-                    >
-                      <Icon name={p.icon} size={12} />{p.label}
-                    </button>
-                  ))}
+            {isNew && access === 'email' && (
+              <>
+                <div>
+                  <label style={label}>Su correo *</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="off"
+                    placeholder="encargado@ejemplo.com"
+                    style={input}
+                  />
                 </div>
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
-                  Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
-                </p>
-              </div>
+                <div>
+                  <label style={label}>Contraseña temporal (mínimo 8) *</label>
+                  <input
+                    name="password"
+                    type="text"
+                    minLength={8}
+                    required
+                    autoComplete="off"
+                    placeholder="Ej. Sucursal2026"
+                    style={input}
+                  />
+                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
+                    Pásasela y pídele que la cambie desde &quot;Olvidé mi contraseña&quot;. También podrá
+                    entrar con <strong>Continuar con Google</strong> usando ese mismo correo.
+                    No aparecerá en la grilla de PIN del local.
+                  </p>
+                </div>
+              </>
             )}
 
             {/* Permisos de secciones — incluye "Mesero" como una más */}

@@ -259,28 +259,49 @@ inactividad a los 30 minutos y respaldo contra el hub local cuando se cae
 internet es, punto por punto, lo que hacen Toast, Square y Shopify — y el
 respaldo offline es **mejor** que lo que ofrecen ellos.
 
-Tres arreglos, ninguno de fondo:
+Tres arreglos, ninguno de fondo. **Los tres están implementados** (migración
+111 — ver §12b):
 
-**1. Un PIN de 4 dígitos es una credencial de local, no de internet.**
-Hoy la pantalla de PIN se abre desde cualquier parte del mundo que conozca el
-subdominio. Está bien defendida (5 intentos y se bloquea, más límites por IP y
-por persona: `staff-pin.ts:101`), pero sigue siendo un número de 4 cifras
+**1. Un PIN de 4 dígitos es una credencial de local, no de internet.** ✅
+La pantalla de PIN se abría desde cualquier parte del mundo que conociera el
+subdominio. Estaba bien defendida (5 intentos y se bloquea, más límites por IP y
+por persona: `staff-pin.ts:101`), pero seguía siendo un número de 4 cifras
 expuesto a la red abierta.
-*Arreglo:* aceptar PIN **solo en dispositivos vinculados al restaurante**. La
-pieza ya existe: `lib/device-id.ts` da un id anónimo y estable por aparato, y la
-migración 110 ya lo usa para saber cuál es la PC principal. Fuera de esos
-aparatos, para entrar hace falta credencial real (correo o Google).
+*Hecho:* el restaurante tiene una lista de **dispositivos de confianza**
+(`restaurant_devices`) y un interruptor para que el PIN valga **solo en ellos**.
+El id del aparato es el mismo anónimo y estable de `lib/device-id.ts` que la
+migración 110 ya usaba para la PC principal. Fuera de esos aparatos hace falta
+credencial real (correo o Google).
 
-**2. La grilla "¿Quién eres?" es pública.** Cualquiera que abra el login del
-restaurante ve los nombres de todo el personal (`listStaffForPin`, sin sesión).
-Es cómodo dentro del local y es una filtración de datos de empleados fuera de
-él. Se arregla con lo mismo: la grilla solo en dispositivos vinculados.
+**2. La grilla "¿Quién eres?" es pública.** ✅
+Cualquiera que abriera el login del restaurante veía los nombres de todo el
+personal (`listStaffForPin`, sin sesión). Cómodo dentro del local, filtración de
+datos de empleados fuera de él.
+*Hecho:* con el candado puesto, la grilla solo se entrega a los aparatos del
+local. La comprobación vive en el servidor y se repite en `verifyStaffPin`:
+esconder la pantalla sin cerrar la acción no habría protegido nada.
 
-**3. Sobra un toque en el aparato del local.** Hoy hay que pulsar "Soy personal
-del restaurante" antes de ver la grilla, cada vez, todo el día. En un
-dispositivo vinculado, el login debería **abrir directo en la grilla de PIN**, y
-dejar "entrar con correo" como la opción secundaria. Es la inversión de dos
-líneas que más se agradece en la operación diaria.
+**3. Sobra un toque en el aparato del local.** ✅
+Había que pulsar "Soy personal del restaurante" antes de ver la grilla, cada
+vez, todo el día.
+*Hecho:* en un aparato reconocido, el login **abre directo en la grilla de
+PIN**, con "entrar con correo" como opción secundaria. Se decide en el servidor
+(cookie espejo del id de aparato) para que la pantalla no parpadee entre los dos
+estados.
+
+### Las dos decisiones que evitan dejar a alguien fuera
+
+Un candado de acceso mal desplegado deja a un local entero sin poder abrir caja
+en hora pico. Por eso:
+
+- **Nace apagado.** Ningún restaurante que ya opera cambia de comportamiento al
+  aplicar la migración.
+- **Mientras está apagado, cada PIN correcto registra el aparato**
+  (confianza al primer uso). La lista se llena sola con las tabletas y la
+  computadora que de verdad se usan, así que el día que el dueño lo encienda,
+  lo que ya funcionaba sigue funcionando.
+- Y **no se deja encender con la lista vacía**: es el error más caro que se
+  puede cometer en esa pantalla, y el más fácil.
 
 Y una nota sobre el dueño: mantener siempre visible **"Continuar como {nombre}"**
 (ya existe, `lib/auth/resume.ts`). Ese es el camino corto real para el 90% de los
@@ -313,9 +334,9 @@ Las tres son decisiones tuyas; el código las soporta sin cambios de fondo.
 |---|---|---|---|
 | **0** | Google en login y registro; el registro reutiliza la cuenta de Google si ya existe | Bajo — nada existente cambia de comportamiento | ✅ **hecho hoy** |
 | **1** | `restaurant_members` + relleno + `is_member_of()` con políticas aditivas + selector de restaurante | Medio — es RLS; se prueba tabla por tabla, como la 053 | siguiente |
-| **2** | Invitaciones + rol de **gerente de sucursal** | Bajo | |
+| **2** | **Gerente de sucursal con credencial propia** (hecho) + invitaciones por correo (pendiente) | Bajo | 🟨 **a medias** |
 | **3** | "Crear otro restaurante" desde el panel, con su plan y su cobro | Bajo (técnico) / decisión comercial | |
-| **4** | PIN atado a dispositivos vinculados + grilla directa en el aparato del local | Bajo, pero **avisar antes**: cambia la rutina del personal | |
+| **4** | PIN atado a dispositivos vinculados + grilla directa en el aparato del local | Bajo — nace apagado, nadie se queda fuera | ✅ **hecho** |
 | **5** | Fundir `/central` con el selector: `GROUP_OWNER` pasa a ser miembro `OWNER` de N sucursales | Medio — retirar un rol con datos vivos | |
 
 Las fases 1 y 2 juntas son las que contestan de verdad la pregunta del cliente
@@ -363,3 +384,34 @@ Falta solo configuración externa (Google Cloud + Supabase + la variable
 `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`): la lista está en
 `plataforma/docs/GOOGLE_AUTH.md`, con las URLs de retorno nuevas ya agregadas.
 Sin esa variable, los botones no aparecen y todo sigue exactamente como estaba.
+
+---
+
+## 12b. Y lo que quedó en la segunda entrega (§8 y el gerente)
+
+**Gerente de sucursal con credencial propia** (`staff.ts`)
+Al crear personal, el dueño elige **cómo entra**: con un PIN (cajeros, cocina,
+meseros — como siempre) o **con su propio correo** (el encargado). La plantilla
+**Gerente** marca todas las secciones activas del restaurante menos
+`suscripcion`, así que administra la operación pero no toca el cobro. Y como
+`personal` no es una sección delegable, tampoco puede darse permisos a sí mismo
+ni crear a otro gerente. Su correo nace confirmado, así que además puede entrar
+con **Continuar con Google** usando ese mismo correo. No aparece en la grilla de
+PIN del local: su credencial es suya.
+
+**Dispositivos de confianza** (migración 111, `lib/auth/trusted-device.ts`)
+En **Personal → Dispositivos del local**: la lista de aparatos reconocidos, el
+botón "Autorizar este dispositivo" y el interruptor del candado, con el aviso de
+qué implica cada estado en palabras del dueño, no del sistema.
+
+**Hasta dónde llega esta protección, dicho sin adornos:** el id del aparato es
+un UUID que guarda el propio navegador. Alguien que ya *conozca* el id de un
+aparato autorizado podría copiarlo; lo que no puede es adivinarlo (128 bits al
+azar que solo se ven en el panel del dueño). Es el mismo grado de protección que
+el "código de dispositivo" de un TPV de caja: sube muchísimo el listón, no es
+una atestación de hardware. Por eso el PIN **conserva todas sus defensas
+anteriores** — el candado se suma, no las sustituye.
+
+**Lo que falta de la Fase 2:** invitar al gerente por correo en vez de pasarle
+una contraseña temporal a mano, y decidir si un gerente puede dar de alta
+cajeros de su sucursal (hoy no puede: `personal` es solo del dueño).

@@ -746,6 +746,36 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-08-17 (cont.) — Gerente de sucursal y dispositivos de confianza
+
+**Objetivo:** cerrar los dos huecos de acceso que salieron del plan: no existía un rol con credencial propia para el encargado de una sucursal, y el PIN del personal se podía teclear desde cualquier parte del mundo.
+
+**Realizado:**
+- **Migración 111 (`restaurant_devices` + `restaurants.pin_requires_trusted_device`).** La lista de aparatos que el restaurante reconoce como suyos, y el interruptor para que el PIN valga solo en ellos. El id es el mismo anónimo de `lib/device-id.ts` que la 110 ya usaba para la PC principal.
+- **`lib/auth/trusted-device.ts`** (habla con la BD) + **`lib/auth/pin-policy.ts`** (la decisión, pura y con pruebas — mismo patrón que `tenant-guard.ts`). La regla vive en un solo sitio y la aplican por igual la pantalla de login, la grilla de nombres y `verifyStaffPin`.
+- **La grilla "¿Quién eres?" deja de ser pública** cuando el candado está puesto: `listStaffForPin` y `verifyStaffPin` comprueban el aparato en el servidor, leyendo su id de una cookie propia (no de un parámetro del cliente).
+- **En el aparato del local, el login abre DIRECTO en la grilla de PIN.** Se decide en el servidor gracias a una cookie espejo del id de aparato, así que no parpadea entre los dos estados.
+- **Rol de gerente con credencial propia** (`createStaff`): al crear personal se elige *cómo entra* — con PIN (como siempre) o con **su propio correo**. Plantilla **Gerente** = todas las secciones activas menos `suscripcion`.
+- **`Personal → Dispositivos del local`** (`trusted-devices-panel.tsx`): lista de aparatos, "Autorizar este dispositivo", quitar, y el interruptor del candado explicando en cada estado qué implica.
+- El correo interno del personal por PIN (`@staff.leogin.internal`) **ya no viaja al navegador**: `StaffMember` lleva `access: 'pin' | 'email'` y el correo real solo cuando lo hay.
+
+**Decisiones clave:**
+- **El candado nace APAGADO y se enciende a mano.** Aplicar la migración no cambia el comportamiento de ningún restaurante que ya opera. Encenderlo de golpe para todos habría dejado locales enteros sin poder abrir caja en hora pico.
+- **Confianza al primer uso mientras está apagado:** cada PIN correcto registra el aparato, así la lista se llena sola con las tabletas y la computadora que de verdad se usan. El día que el dueño encienda el candado, lo que ya funcionaba sigue funcionando.
+- **No se deja encender con la lista vacía** — es el error más caro de esa pantalla y el más fácil de cometer.
+- **El límite de intentos va ANTES del candado de dispositivos** en `verifyStaffPin`: es lo que acota cuánto trabajo puede provocar alguien sin identificarse. Y el candado va antes de mirar el PIN, para que un aparato ajeno no pueda gastar los intentos de un cajero y dejarlo bloqueado desde fuera.
+- **El gerente no gestiona personal.** `personal` no está en `ADMIN_SECTIONS` (no es delegable), así que no puede darse permisos a sí mismo ni crear a otro gerente. Es una limitación consciente, anotada como pendiente de la Fase 2.
+- **Alcance real de la protección, dicho en el código:** el id de aparato es un UUID del navegador; protege contra quien no lo conoce (no se puede adivinar), no contra quien lo copia. Mismo grado que el "código de dispositivo" de un TPV. Por eso el PIN conserva todas sus defensas anteriores.
+
+**Pendiente (acciones de Leonardo):**
+1. **Aplicar la migración 111** en Supabase. Sin ella, el código sigue funcionando exactamente como antes (todo cae al estado "sin candado").
+2. Entrar a **Personal → Dispositivos del local** desde la tableta/PC del local y pulsar *Autorizar este dispositivo*; o simplemente dejar que el personal entre con su PIN unos días y ver cómo se llena sola la lista. Encender el candado después.
+3. Avisar al personal antes de encenderlo: cambia su rutina (ya no podrán entrar con PIN desde su casa).
+
+**Próximo paso:** Fase 1 del plan (`restaurant_members` + selector de restaurante), que es lo que convierte "una cuenta = un restaurante" en "una cuenta, varios restaurantes".
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título
