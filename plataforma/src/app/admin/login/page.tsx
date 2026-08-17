@@ -3,6 +3,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { DEMO_SLUG } from '@/lib/tenant';
 import { getResumeSession } from '@/lib/auth/resume';
 import { getAgentHubInfo } from '@/lib/print-agent';
+import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import LoginClient from '@/app/login/login-client';
 
 /**
@@ -20,8 +21,13 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminLoginPage() {
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ auth_error?: string }>;
+}) {
   const slug = (await headers()).get('x-tenant-slug');
+  const authError = (await searchParams).auth_error === '1';
 
   let restaurantName: string | null = null;
   let restaurantId: string | null = null;
@@ -71,6 +77,8 @@ export default async function AdminLoginPage() {
       resume={resume}
       hubUrl={hubUrl}
       hubToken={hubToken}
+      googleEnabled={isGoogleAuthEnabled()}
+      authError={authError}
     />
   );
 }

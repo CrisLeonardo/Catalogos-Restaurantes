@@ -15,7 +15,7 @@ import { clientIp } from '@/lib/rate-limit';
    impedir que alguien entre a trabajar.
    ============================================================ */
 
-export type AccessMethod = 'password' | 'pin' | 'soporte';
+export type AccessMethod = 'password' | 'google' | 'pin' | 'soporte';
 
 export async function logPanelAccess(input: {
   profileId: string;

@@ -1,15 +1,41 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import TemplateGallery from '@/components/admin/template-gallery';
+import GoogleStaffButton from '@/components/auth/google-staff-button';
+import GoogleG from '@/components/auth/google-g';
 import { findStructure, findTemplate } from '@/lib/theme/templates';
 import { signupRestaurant, type SignupState } from '@/lib/actions/signup';
 import { defaultPlanPricing, planPriceLabel, planPriceQ, type PlanPricing } from '@/lib/plans';
 
 const empty: SignupState = null;
+
+/**
+ * Borrador del wizard mientras el navegador se va a Google y vuelve.
+ *
+ * Entrar con Google es una redirección de página completa: sin esto, quien
+ * llega al paso "Tu cuenta" con el plan elegido, el nombre escrito y la
+ * plantilla seleccionada volvería al wizard en blanco y tendría que rehacerlo
+ * todo — la forma más rápida de perder a alguien que ya estaba a un paso de
+ * terminar. Se guarda en sessionStorage (muere con la pestaña) y NUNCA lleva
+ * contraseñas: con Google no hay ninguna que guardar.
+ */
+const DRAFT_KEY = 'leogin_signup_draft';
+
+type Draft = {
+  step: number;
+  plan: PlanOption;
+  estandarTypes: OrderTypeOption[];
+  templateId: string;
+  name: string;
+  slug: string;
+  slugEdited: boolean;
+  fullName: string;
+  whatsapp: string;
+};
 
 function localSlugify(text: string): string {
   return text
@@ -125,9 +151,21 @@ function buildPlanCards(pricing: PlanPricing): PlanCardDef[] {
 export default function SignupWizard({
   rootDomain,
   pricing = defaultPlanPricing(),
+  googleEnabled = false,
+  googleAccount = null,
+  existingAccount = null,
+  authError = false,
 }: {
   rootDomain: string;
   pricing?: PlanPricing;
+  /** ¿Está configurado el acceso con Google? (NEXT_PUBLIC_GOOGLE_AUTH_ENABLED) */
+  googleEnabled?: boolean;
+  /** Cuenta de Google ya autenticada y todavía SIN restaurante → registro sin contraseña. */
+  googleAccount?: { email: string; fullName: string | null } | null;
+  /** Cuenta abierta en este navegador que YA administra un restaurante. */
+  existingAccount?: { email: string; restaurantName: string | null; panelUrl: string | null } | null;
+  /** Volvimos de Google sin sesión (cancelado o fallido) — se avisa y se sigue. */
+  authError?: boolean;
 }) {
   const PLAN_CARDS = buildPlanCards(pricing);
   const trialDays = pricing.trialDays;
@@ -157,6 +195,58 @@ export default function SignupWizard({
   const [whatsapp, setWhatsapp] = useState('');
   const [terms, setTerms] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
+
+  const googleEmail = googleAccount?.email ?? null;
+  const googleName = googleAccount?.fullName ?? null;
+  /** Con Google no hay contraseña que pedir: la identidad ya está probada. */
+  const withGoogle = !!googleEmail;
+
+  // Volvimos de Google: recuperar el borrador y seguir donde se quedó.
+  // Corre siempre, no solo cuando el login salió bien: el borrador únicamente
+  // se escribe al salir hacia Google, así que si existe es que esta pestaña
+  // estaba a mitad del registro — y quien canceló en la pantalla de Google
+  // merece encontrar su wizard intacto, no en blanco.
+  useEffect(() => {
+    let draft: Draft | null = null;
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        draft = JSON.parse(raw) as Draft;
+        sessionStorage.removeItem(DRAFT_KEY);
+      }
+    } catch {
+      /* sessionStorage bloqueado o borrador corrupto → wizard limpio */
+    }
+    if (draft) {
+      setSelectedPlan(draft.plan);
+      setEstandarTypes(draft.estandarTypes);
+      setTemplateId(draft.templateId);
+      setName(draft.name);
+      setSlug(draft.slug);
+      setSlugEdited(draft.slugEdited);
+      setWhatsapp(draft.whatsapp);
+      setFullName(draft.fullName || googleName || '');
+      // Con sesión de Google, al paso de la cuenta: ahí ve que ya quedó
+      // conectada. Sin ella (canceló, o falló), justo donde lo dejó.
+      setStep(googleEmail ? Math.max(3, draft.step) : draft.step);
+    } else if (googleEmail) {
+      setFullName((prev) => prev || googleName || '');
+      setStep(3);
+    }
+  }, [googleEmail, googleName]);
+
+  /** Guarda el borrador justo antes de que el navegador se vaya a Google. */
+  function saveDraft() {
+    try {
+      const draft: Draft = {
+        step, plan: selectedPlan, estandarTypes, templateId,
+        name, slug, slugEdited, fullName, whatsapp,
+      };
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* sin sessionStorage se pierde el borrador, pero el registro sigue */
+    }
+  }
 
   const effectiveSlug = slugEdited ? slug : localSlugify(name);
 
@@ -191,9 +281,13 @@ export default function SignupWizard({
     }
     if (step === 3) {
       if (fullName.trim().length < 2) return setStepError('Escribe tu nombre.');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStepError('Escribe un correo válido.');
-      if (password.length < 8) return setStepError('La contraseña debe tener al menos 8 caracteres.');
-      if (password !== password2) return setStepError('Las dos contraseñas no coinciden.');
+      // Con Google el correo viene de la sesión (verificado por Google) y no
+      // hay contraseña: solo se valida lo que la persona sí escribió.
+      if (!withGoogle) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStepError('Escribe un correo válido.');
+        if (password.length < 8) return setStepError('La contraseña debe tener al menos 8 caracteres.');
+        if (password !== password2) return setStepError('Las dos contraseñas no coinciden.');
+      }
     }
     setStep((s) => Math.min(LAST_STEP, s + 1));
   }
@@ -209,11 +303,14 @@ export default function SignupWizard({
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="slug" value={effectiveSlug} />
       <input type="hidden" name="full_name" value={fullName} />
-      <input type="hidden" name="email" value={email} />
-      <input type="hidden" name="password" value={password} />
-      <input type="hidden" name="password2" value={password2} />
+      <input type="hidden" name="email" value={withGoogle ? '' : email} />
+      <input type="hidden" name="password" value={withGoogle ? '' : password} />
+      <input type="hidden" name="password2" value={withGoogle ? '' : password2} />
       <input type="hidden" name="whatsapp" value={whatsapp} />
       <input type="hidden" name="terms" value={terms ? 'on' : ''} />
+      {/* Pista, no credencial: el servidor no se fía de este campo — vuelve a
+          leer la sesión de Google por su cuenta antes de crear nada. */}
+      <input type="hidden" name="auth_provider" value={withGoogle ? 'google' : 'password'} />
 
       {/* Progreso */}
       <div style={{ display: 'flex', gap: 8 }}>
@@ -405,12 +502,74 @@ export default function SignupWizard({
 
       {/* ── Paso 3: Tu cuenta ── */}
       <div style={{ display: step === 3 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
+        {/* Ya hay una sesión abierta que administra otro restaurante. Hoy una
+            cuenta = un restaurante, así que crear otro desde aquí significa
+            una cuenta nueva; decirlo antes evita el "ya existe ese correo"
+            al final, cuando ya se llenó todo. */}
+        {existingAccount && !withGoogle && (
+          <Glass variant="quiet" style={{ padding: '13px 15px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
+              <Icon name="user" size={15} style={{ color: 'var(--brand-accent-ink)' }} />
+              Ya tienes sesión iniciada como {existingAccount.email}
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
+              {existingAccount.restaurantName
+                ? `Esa cuenta administra ${existingAccount.restaurantName}. `
+                : ''}
+              Para crear otro restaurante necesitas un correo distinto al de arriba.
+              {existingAccount.panelUrl && (
+                <>
+                  {' '}
+                  <a href={existingAccount.panelUrl} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
+                    Ir a mi panel
+                  </a>
+                </>
+              )}
+            </p>
+          </Glass>
+        )}
+
+        {withGoogle ? (
+          /* Registro con Google: el correo lo pone Google (ya verificado) y no
+             hay contraseña que inventar ni que recordar. */
+          <Glass variant="quiet" style={{ padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <GoogleG size={22} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 12, color: 'var(--u-text-4)' }}>Entrarás con tu cuenta de Google</div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', wordBreak: 'break-all' }}>
+                {googleEmail}
+              </div>
+            </div>
+            <span className="chip chip-ok" style={{ flexShrink: 0 }}>
+              <Icon name="check" size={12} /> Lista
+            </span>
+          </Glass>
+        ) : googleEnabled ? (
+          <>
+            <GoogleStaffButton
+              intent="signup"
+              label="Registrarme con Google"
+              next="/registro"
+              onBeforeRedirect={saveDraft}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
+              <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o crea tu cuenta con un correo</span>
+              <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
+            </div>
+          </>
+        ) : null}
+
         <Field label="Tu nombre">
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre y apellido" style={inputStyle} />
         </Field>
+        {!withGoogle && (
         <Field label="Correo" hint="Con este correo entrarás a tu panel y recuperarás tu contraseña si se te olvida. Revísalo bien.">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" style={inputStyle} />
         </Field>
+        )}
+        {!withGoogle && (
+        <>
         <Field label="Contraseña" hint="Mínimo 8 caracteres.">
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -451,6 +610,8 @@ export default function SignupWizard({
             style={inputStyle}
           />
         </Field>
+        </>
+        )}
         <Field label="WhatsApp (opcional)" hint="Para recibir avisos de pedidos.">
           <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+502 0000 0000" style={inputStyle} />
         </Field>
@@ -470,25 +631,31 @@ export default function SignupWizard({
             última oportunidad de cazar un dedazo tiene que verse, no esconderse
             en una fila más de la lista. */}
         <Glass variant="quiet" style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Icon name="mail" size={17} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
+          {withGoogle ? <GoogleG size={19} /> : <Icon name="mail" size={17} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />}
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', wordBreak: 'break-all' }}>{email || '—'}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', wordBreak: 'break-all' }}>
+              {(withGoogle ? googleEmail : email) || '—'}
+            </div>
             <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
-              Con este correo entrarás a tu panel. Revísalo: si está mal, no podrás recuperar tu cuenta.
+              {withGoogle
+                ? 'Entrarás a tu panel con esta cuenta de Google. Sin contraseña que recordar.'
+                : 'Con este correo entrarás a tu panel. Revísalo: si está mal, no podrás recuperar tu cuenta.'}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => { setStepError(null); setStep(3); }}
-            className="press"
-            style={{
-              marginLeft: 'auto', flexShrink: 0, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              padding: '6px 12px', borderRadius: 99, border: '1px solid var(--u-hair-2)',
-              background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-2)',
-            }}
-          >
-            Corregir
-          </button>
+          {!withGoogle && (
+            <button
+              type="button"
+              onClick={() => { setStepError(null); setStep(3); }}
+              className="press"
+              style={{
+                marginLeft: 'auto', flexShrink: 0, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 99, border: '1px solid var(--u-hair-2)',
+                background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-2)',
+              }}
+            >
+              Corregir
+            </button>
+          )}
         </Glass>
         <Glass style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>
@@ -516,6 +683,11 @@ export default function SignupWizard({
       </div>
 
       {/* Errores */}
+      {authError && !stepError && !state?.error && !withGoogle && (
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13.5 }}>
+          No se completó el acceso con Google. Puedes intentarlo otra vez o seguir con tu correo — lo que ya llenaste sigue aquí.
+        </div>
+      )}
       {(stepError || state?.error) && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13.5 }}>
           {stepError ?? state?.error}

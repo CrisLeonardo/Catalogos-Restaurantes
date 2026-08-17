@@ -4,6 +4,7 @@ import { describeDevice, type AccessRow } from '@/lib/auth/access-log';
 
 const METHOD_LABEL: Record<string, string> = {
   password: 'Correo y contraseña',
+  google: 'Cuenta de Google',
   pin: 'PIN',
   soporte: 'Soporte de Leogin',
 };

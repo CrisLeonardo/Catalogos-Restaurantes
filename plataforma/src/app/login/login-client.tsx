@@ -7,6 +7,7 @@ import { Icon } from '@/components/icons';
 import { login, type AuthState } from '@/lib/actions/auth';
 import type { ResumeSession } from '@/lib/auth/resume';
 import StaffPinLogin from '@/components/admin/staff-pin-login';
+import GoogleStaffButton from '@/components/auth/google-staff-button';
 
 const emptyState: AuthState = null;
 
@@ -20,9 +21,13 @@ interface Props {
   /** Hub local (Fase 2 offline) — fallback si el PIN falla por conectividad. */
   hubUrl?: string | null;
   hubToken?: string | null;
+  /** ¿Mostrar "Continuar con Google"? (NEXT_PUBLIC_GOOGLE_AUTH_ENABLED). */
+  googleEnabled?: boolean;
+  /** Volvimos de Google con un fallo — se avisa en vez de dejar la pantalla muda. */
+  authError?: boolean;
 }
 
-export default function LoginClient({ restaurantName, restaurantId, logoUrl, slug, resume, hubUrl, hubToken }: Props) {
+export default function LoginClient({ restaurantName, restaurantId, logoUrl, slug, resume, hubUrl, hubToken, googleEnabled, authError }: Props) {
   const [mode, setMode] = useState<'password' | 'pin'>('password');
   const [state, formAction, isPending] = useActionState(login, emptyState);
 
@@ -125,6 +130,34 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
           <StaffPinLogin restaurantId={restaurantId} hubUrl={hubUrl ?? null} hubToken={hubToken ?? null} onBack={() => setMode('password')} />
         ) : (
         <Glass style={{ padding: '28px 24px' }}>
+          {authError && (
+            <div
+              style={{
+                padding: '10px 14px', marginBottom: 16,
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(220,50,50,0.12)',
+                border: '1px solid rgba(220,50,50,0.25)',
+                color: '#f87171', fontSize: 13.5,
+              }}
+            >
+              No pudimos completar el acceso con Google. Inténtalo otra vez o entra con tu correo.
+            </div>
+          )}
+
+          {/* Google va ARRIBA del formulario a propósito: para quien ya creó su
+              cuenta así, es un toque contra escribir correo y contraseña, y es
+              el orden que espera el mercado (Shopify, Square, Toast). */}
+          {googleEnabled && (
+            <div style={{ marginBottom: 18 }}>
+              <GoogleStaffButton />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
+                <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
+                <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>o con tu correo</span>
+                <span style={{ flex: 1, height: 1, background: 'var(--u-hair-2)' }} />
+              </div>
+            </div>
+          )}
+
           <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label

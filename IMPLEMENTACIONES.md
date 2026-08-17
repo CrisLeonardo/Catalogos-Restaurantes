@@ -717,6 +717,35 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-08-17 — Acceso con Google para dueños + plan multicuenta
+
+**Objetivo:** que crear un restaurante e iniciar sesión se pueda hacer con la cuenta de Google, y dejar decidido cómo va a acceder el cliente que tiene varios restaurantes o sucursales.
+
+**Realizado:**
+- **Entrar con Google** en `/login`, `/admin/login` y `/central/login` (`components/auth/google-staff-button.tsx`), arriba del formulario de correo y solo si `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`.
+- **Callback propio del personal** (`/admin/auth/google/callback`), separado del de comensales: usa la cookie del PERSONAL (dominio ancho), apunta el ingreso en `panel_access_log` con método `google` y resuelve destino con el mismo `resolveStaffDestination` del login con contraseña. Una cuenta de Google sin restaurante cae en `/registro` en vez de en un "no existe" sin salida.
+- **Registrarse con Google** en el paso "Tu cuenta" del wizard: sin contraseña, con el correo ya verificado por Google (`profiles.email_verified_at` se marca al crear, así el panel no le pide confirmar un correo que nunca escribió).
+- **Borrador del wizard en `sessionStorage`** antes de salir hacia Google: volver (o cancelar) ya no manda a nadie a empezar de cero. Cancelar en Google devuelve a `/registro?auth_error=1`, no al login.
+- `signupRestaurant` acepta las dos vías: **relee la sesión en el servidor** (el campo `auth_provider` del formulario es una pista, no una credencial) y en el camino de Google no crea usuario, no manda correo de verificación, no reinicia sesión y **no borra el usuario en los rollbacks** (es la identidad de la persona, no una cuenta nuestra).
+- **`PLAN_ACCESO_MULTICUENTA.md`** (nuevo, raíz): análisis de los dos modelos de acceso multi-restaurante, comparación con la competencia, esquema de `restaurant_members`, los cuatro niveles de acceso, y las 6 fases con riesgo.
+- `docs/GOOGLE_AUTH.md` actualizado: los dos flujos (comensal y dueño), las URLs de retorno nuevas y qué pasa cuando una cuenta de Google ya administra un restaurante.
+
+**Decisiones clave:**
+- **Callback y cookie separados del comensal.** Reusar `/auth/callback` habría metido la sesión del dueño en la cookie del comensal (host-only, por restaurante): el panel se habría cerrado solo al cambiar de subdominio.
+- **Una cuenta de Google que ya administra un restaurante NO puede crear otro** — se detiene con un mensaje claro antes de ocupar el slug o crear cobro. Hoy `profiles` es uno a uno con el usuario de Auth; ese mensaje es exactamente lo que quita la Fase 1 del plan.
+- **Modelo recomendado para varios restaurantes: una identidad, varias membresías** (no una cuenta de Gmail por local). Con Google, "una cuenta por restaurante" obliga a tener varios Gmail: es lo que cierra la discusión.
+- **El "restaurante activo" se queda en el subdominio**, no en una columna del perfil: dos pestañas en dos negocios distintos no se pisan.
+- **El PIN del personal se mantiene** — es lo que hace toda la competencia. Los arreglos pendientes son atarlo a dispositivos vinculados y abrir directo en la grilla, no cambiar el mecanismo.
+
+**Pendiente (acciones de Leonardo):**
+1. Configurar Google Cloud + Supabase y poner `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` en Render — lista completa en `plataforma/docs/GOOGLE_AUTH.md`. **Agregar las URLs de retorno nuevas** (`/admin/auth/google/callback`, raíz y comodín de subdominio) o el botón del dueño deja la sesión a medias.
+2. Probar en un dominio real que un dueño que se registró con correo pueda después entrar con Google usando el MISMO correo y caiga en su misma cuenta (Supabase enlaza identidades cuando el correo coincide y está verificado; conviene confirmarlo en vivo antes de anunciarlo).
+3. Decidir las tres políticas comerciales del §9 del plan: prueba gratis del segundo restaurante en adelante, descuento de cadena y factura única por grupo.
+
+**Próximo paso:** Fase 1 del plan — `restaurant_members`, relleno desde `profiles`, políticas RLS aditivas con `is_member_of()` y el selector de restaurante.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título
