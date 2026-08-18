@@ -1,5 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { DINER_COOKIE_NAME } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, cookieDomainForHost } from "@/lib/supabase/cookies";
 import { getStableLinkPrefix } from "@/lib/tenant-client";
 
 /**
@@ -24,10 +24,14 @@ import { getStableLinkPrefix } from "@/lib/tenant-client";
  *   subdominio del restaurante donde se inició, no para toda la plataforma.
  *   Cliente y servidor escriben host-only por igual: sin cookies fantasma.
  */
-const rootDomainRaw = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(",")[0].trim() ?? "";
-const isLocalEnv = !rootDomainRaw || rootDomainRaw.includes("localhost");
-/** `.leogin.online` en prod, undefined en local (no forzar dominio en localhost). */
-const COOKIE_DOMAIN = isLocalEnv ? undefined : `.${rootDomainRaw.split(":")[0]}`;
+/** El dominio se decide POR HOST, no por la variable de entorno a secas:
+    en un host que no cuelga del dominio configurado (la URL de Render, una
+    previa) el navegador rechazaría la cookie sin decir nada. Ver
+    `cookieDomainForHost`. */
+function dominioDeCookie(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return cookieDomainForHost(window.location.hostname, process.env.NEXT_PUBLIC_ROOT_DOMAIN);
+}
 
 /* ------------------------------------------------------------------
    Un cliente por sesión, cacheado AQUÍ y no por @supabase/ssr.
@@ -66,7 +70,7 @@ const clientesPorCookie = new Map<string, ReturnType<typeof nuevoCliente>>();
 
 function createWithCookieName(cookieName?: string) {
   // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
-  const domain = cookieName ? undefined : COOKIE_DOMAIN;
+  const domain = cookieName ? undefined : dominioDeCookie();
   // Bajo el link estable de mesa (dominio raíz), la cookie del COMENSAL debe
   // quedar atada a `/m/<restaurantId>/` — si no, la sesión de invitado de un
   // restaurante se vería en /m/<otro-id>/ del mismo host (ver proxy.ts, que

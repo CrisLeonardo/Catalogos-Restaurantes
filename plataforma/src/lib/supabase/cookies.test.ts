@@ -5,6 +5,7 @@ import {
   isCodeVerifierCookie,
   isDeadSessionCode,
   isStaffSessionCookie,
+  cookieDomainForHost,
 } from './cookies';
 
 describe('duplicateCookieNames', () => {
@@ -91,5 +92,40 @@ describe('isDeadSessionCode', () => {
     expect(isDeadSessionCode(undefined)).toBe(false);
     expect(isDeadSessionCode(null)).toBe(false);
     expect(isDeadSessionCode('')).toBe(false);
+  });
+});
+
+describe('cookieDomainForHost', () => {
+  const ROOTS = 'distleogin.com,leogin.online';
+
+  it('comparte la sesión entre subdominios del dominio configurado', () => {
+    expect(cookieDomainForHost('distleogin.com', ROOTS)).toBe('.distleogin.com');
+    expect(cookieDomainForHost('demo-admin.distleogin.com', ROOTS)).toBe('.distleogin.com');
+    expect(cookieDomainForHost('demo-central.distleogin.com:443', ROOTS)).toBe('.distleogin.com');
+  });
+
+  it('reconoce cada dominio de la lista, no solo el primero', () => {
+    expect(cookieDomainForHost('algo.leogin.online', ROOTS)).toBe('.leogin.online');
+  });
+
+  it('en un host ajeno escribe host-only en vez de una cookie imposible', () => {
+    // El caso que rompía el acceso con Google: el navegador RECHAZA una
+    // cookie con Domain=.distleogin.com servida desde otro dominio, sin
+    // decir nada. No se guardaba ni la sesión ni el verificador PKCE.
+    expect(cookieDomainForHost('catalogos-restaurantes.onrender.com', ROOTS)).toBeUndefined();
+    expect(cookieDomainForHost('mi-previa.vercel.app', ROOTS)).toBeUndefined();
+  });
+
+  it('no se deja engañar por un dominio que solo TERMINA parecido', () => {
+    expect(cookieDomainForHost('maldistleogin.com', ROOTS)).toBeUndefined();
+  });
+
+  it('en local no fuerza dominio', () => {
+    expect(cookieDomainForHost('demo-admin.localhost', 'localhost:3000')).toBeUndefined();
+  });
+
+  it('sin configuración, host-only', () => {
+    expect(cookieDomainForHost('distleogin.com', '')).toBeUndefined();
+    expect(cookieDomainForHost(null, ROOTS)).toBeUndefined();
   });
 });

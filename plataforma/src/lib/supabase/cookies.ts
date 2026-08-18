@@ -146,3 +146,36 @@ export function sessionCookieNames(storageKey: string, presentNames: readonly st
 export function isStaffCodeVerifierCookie(name: string): boolean {
   return isCodeVerifierCookie(name) && name.startsWith("sb-") && !name.startsWith(DINER_COOKIE_NAME);
 }
+
+/**
+ * El `domain` con el que hay que escribir la cookie de sesión EN ESTE HOST.
+ *
+ * Antes salía de `NEXT_PUBLIC_ROOT_DOMAIN` a secas, sin mirar dónde se
+ * estaba sirviendo. En el dominio de siempre funciona; en cualquier otro
+ * host —la URL de Render, una previa, un dominio de marca anterior— el
+ * navegador RECHAZA una cookie con `Domain=` de otro dominio, en silencio y
+ * sin error. Ahí no fallaba solo la sesión: no se podía guardar ni el
+ * verificador PKCE, así que "Continuar con Google" salía, volvía, y el
+ * canje no encontraba nada. Sin una sola cookie en la petición y sin nada
+ * en los logs que dijera por qué.
+ *
+ * Devuelve `undefined` (cookie host-only, válida en cualquier sitio) cuando
+ * el host no cuelga de ninguno de los dominios configurados. Se pierde
+ * compartir la sesión entre subdominios, que es justo lo que ese host no
+ * tiene.
+ */
+export function cookieDomainForHost(
+  host: string | null | undefined,
+  rootDomainEnv: string | null | undefined,
+): string | undefined {
+  if (!host || !rootDomainEnv) return undefined;
+  const hostname = host.toLowerCase().split(":")[0];
+  for (const crudo of rootDomainEnv.split(",")) {
+    const root = crudo.trim().toLowerCase().split(":")[0];
+    // En local no se fuerza dominio: los subdominios *.localhost no lo
+    // admiten en todos los navegadores.
+    if (!root || root.includes("localhost")) continue;
+    if (hostname === root || hostname.endsWith(`.${root}`)) return `.${root}`;
+  }
+  return undefined;
+}

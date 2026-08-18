@@ -10,6 +10,7 @@ import {
 import {
   DINER_COOKIE_NAME,
   LEGACY_DINER_COOKIE_PATTERN,
+  cookieDomainForHost,
   defaultStorageKey,
   duplicateCookieNames,
   isCodeVerifierCookie,
@@ -315,9 +316,10 @@ export async function proxy(request: NextRequest) {
     // En producción compartimos la sesión en todos los subdominios usando
     // domain=.leogin.online. En local no se toca (los subdominios *.localhost
     // no admiten cookie-domain en todos los navegadores).
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(",")[0].trim() ?? "";
-    const isLocal = !rootDomain || rootDomain.includes("localhost");
-    const cookieDomain = isLocal ? undefined : `.${rootDomain.split(":")[0]}`;
+    const cookieDomain = cookieDomainForHost(
+      request.headers.get("x-forwarded-host") ?? host ?? request.nextUrl.hostname,
+      process.env.NEXT_PUBLIC_ROOT_DOMAIN,
+    );
 
     // Estado de las cookies TAL COMO LLEGARON, antes de que el refresco toque
     // nada. `requestHeaders` todavía es la copia fiel del original aquí.
