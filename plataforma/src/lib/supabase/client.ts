@@ -29,6 +29,41 @@ const isLocalEnv = !rootDomainRaw || rootDomainRaw.includes("localhost");
 /** `.leogin.online` en prod, undefined en local (no forzar dominio en localhost). */
 const COOKIE_DOMAIN = isLocalEnv ? undefined : `.${rootDomainRaw.split(":")[0]}`;
 
+/* ------------------------------------------------------------------
+   Un cliente por sesión, cacheado AQUÍ y no por @supabase/ssr.
+
+   `createBrowserClient` guarda un único cliente por página y lo devuelve
+   a todo el que lo pida, ignorando las opciones de las llamadas
+   siguientes (`cachedBrowserClient`, con `isSingleton` implícito en el
+   navegador). Con dos sesiones como las nuestras eso las funde: quien
+   llame segundo recibe el cliente del primero, con SU clave de cookie.
+
+   Se veía en el peor sitio posible: si en la página se construía antes el
+   cliente del COMENSAL, "Continuar con Google" del personal guardaba el
+   verificador PKCE como `sb-leogin-diner-v2-code-verifier`, y el callback
+   del panel —que busca `sb-<ref>-auth-token-code-verifier`— se encontraba
+   sin nada que canjear: "PKCE code verifier not found in storage", login
+   con Google fallido. Al revés es igual de malo: la sesión del comensal
+   escribiendo sobre la del panel, que es justo lo que las dos cookies
+   separadas existen para impedir.
+
+   Con `isSingleton: false` cada llamada crea el suyo, y la caché de aquí
+   —por nombre de cookie— conserva la ventaja de no rehacer el cliente en
+   cada render.
+   ------------------------------------------------------------------ */
+function nuevoCliente(cookieOptions: Record<string, unknown>) {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      isSingleton: false,
+      ...(Object.keys(cookieOptions).length > 0 ? { cookieOptions } : {}),
+    },
+  );
+}
+
+const clientesPorCookie = new Map<string, ReturnType<typeof nuevoCliente>>();
+
 function createWithCookieName(cookieName?: string) {
   // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
   const domain = cookieName ? undefined : COOKIE_DOMAIN;
@@ -47,11 +82,13 @@ function createWithCookieName(cookieName?: string) {
     ...(cookieName ? { name: cookieName } : {}),
   };
 
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    Object.keys(cookieOptions).length > 0 ? { cookieOptions } : undefined,
-  );
+  const cacheKey = cookieName ?? "personal";
+  const yaCreado = clientesPorCookie.get(cacheKey);
+  if (yaCreado) return yaCreado;
+
+  const cliente = nuevoCliente(cookieOptions);
+  clientesPorCookie.set(cacheKey, cliente);
+  return cliente;
 }
 
 /** Sesión del PERSONAL (panel admin, mesero, cocina, realtime del panel). */
