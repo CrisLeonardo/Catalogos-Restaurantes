@@ -46,13 +46,37 @@ create table if not exists restaurant_members (
                   check (role in ('OWNER', 'MANAGER', 'STAFF', 'WAITER')),
   -- Mismas secciones que lib/permissions.ts. NULL = sin restringir
   -- (lo que ya significaba en profiles.permissions).
-  permissions   text[],
+  --
+  -- jsonb, NO text[]: es el tipo que usa `profiles.permissions` desde la
+  -- migración 023, y las dos columnas guardan exactamente lo mismo. Tenerlas
+  -- con tipos distintos rompía el relleno de más abajo (COALESCE no mezcla
+  -- jsonb con text[]) y habría hecho imposible compararlas en cualquier
+  -- consulta futura.
+  permissions   jsonb,
   status        text        not null default 'active'
                   check (status in ('active', 'invited', 'suspended')),
   invited_by    uuid        references auth.users(id) on delete set null,
   created_at    timestamptz not null default now(),
   primary key (user_id, restaurant_id)
 );
+
+-- Reparación para quien ya corrió una versión anterior de esta migración:
+-- `create table if not exists` no cambia el tipo de una columna existente, así
+-- que una tabla creada con `text[]` se quedaría así para siempre y el relleno
+-- de abajo seguiría fallando.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'restaurant_members'
+      and column_name = 'permissions'
+      and data_type = 'ARRAY'
+  ) then
+    alter table restaurant_members
+      alter column permissions type jsonb using to_jsonb(permissions);
+  end if;
+end $$;
 
 comment on table restaurant_members is
   'Quién puede entrar a qué restaurante y con qué rol. Una persona puede '
@@ -100,7 +124,7 @@ select
     else 'STAFF'
   end,
   -- El mesero del rol deprecado nunca tuvo permissions; su sección es 'mesero'.
-  coalesce(p.permissions, case when p.role = 'RESTAURANT_WAITER' then array['mesero'] else null end),
+  coalesce(p.permissions, case when p.role = 'RESTAURANT_WAITER' then '["mesero"]'::jsonb else null end),
   'active',
   now()
 from profiles p

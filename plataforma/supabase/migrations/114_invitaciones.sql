@@ -36,7 +36,10 @@ create table if not exists restaurant_invitations (
   email         text        not null,
   role          text        not null default 'MANAGER'
                   check (role in ('MANAGER', 'STAFF', 'WAITER')),
-  permissions   text[],
+  -- jsonb como `profiles.permissions` y `restaurant_members.permissions`:
+  -- las tres guardan la misma lista de secciones y tienen que poder
+  -- compararse entre sí.
+  permissions   jsonb,
   -- sha-256 del token que viaja en el enlace. El token en claro solo existe
   -- en el correo de la persona y en el instante en que se generó.
   token_hash    text        not null unique,
@@ -58,6 +61,22 @@ comment on column restaurant_invitations.token_hash is
 comment on column restaurant_invitations.email is
   'Correo invitado, en minúsculas. Quien acepta tiene que entrar con ESTE '
   'correo — si no, reenviar el enlace regalaría el acceso.';
+
+-- Reparación para quien ya corrió una versión anterior con `text[]`:
+-- `create table if not exists` no cambia el tipo de una columna existente.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'restaurant_invitations'
+      and column_name = 'permissions'
+      and data_type = 'ARRAY'
+  ) then
+    alter table restaurant_invitations
+      alter column permissions type jsonb using to_jsonb(permissions);
+  end if;
+end $$;
 
 -- Lectura típica: "las invitaciones pendientes de este restaurante".
 create index if not exists restaurant_invitations_restaurant_idx
