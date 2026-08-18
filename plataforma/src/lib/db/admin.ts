@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
+import { getMyMemberships } from '@/lib/db/membership';
+import { type MemberRole } from '@/lib/membership-roles';
 import type { Category, Product, Profile, Restaurant, RestaurantTheme } from '@/types';
 
 /**
@@ -42,11 +44,31 @@ export async function resolveGroupBranchId(): Promise<string | null> {
   return branch.id as string;
 }
 
+/** Cómo se ve una membresía desde el rol de perfil de toda la vida. El panel
+    entero razona con estos, así que la membresía se traduce en memoria en vez
+    de reescribir treinta páginas. */
+const LEGACY_ROLE: Record<MemberRole, Profile['role']> = {
+  OWNER: 'RESTAURANT_OWNER',
+  MANAGER: 'RESTAURANT_STAFF',
+  STAFF: 'RESTAURANT_STAFF',
+  WAITER: 'RESTAURANT_WAITER',
+};
+
 export type AdminContext = {
   userId: string;
   profile: Profile;
   restaurant: Restaurant | null;
   theme: RestaurantTheme | null;
+  /**
+   * Rol en ESTE restaurante según las membresías (migración 113), cuando se
+   * entró por esa vía. null = se entró por el camino de siempre
+   * (`profiles.restaurant_id`), que sigue vivo.
+   *
+   * Existe aparte de `profile.role` porque son preguntas distintas: el perfil
+   * dice quién eres en la plataforma, la membresía dice qué eres AQUÍ. Un
+   * gerente de la sucursal B puede ser dueño de su propio restaurante A.
+   */
+  memberRole: MemberRole | null;
 };
 
 /**
@@ -75,8 +97,43 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
 
   let restaurant: Restaurant | null = null;
   let theme: RestaurantTheme | null = null;
+  let memberRole: MemberRole | null = null;
 
-  if (profile.restaurant_id) {
+  /* ── Membresías (migración 113) ───────────────────────────────────────
+     Va PRIMERO porque es la única vía que sabe resolver "estoy en el
+     subdominio del restaurante B y también soy de B", que es justo lo que
+     `profiles.restaurant_id` —un solo id— no puede contestar. Sin esto, un
+     dueño con dos restaurantes abría el panel de B y veía los datos de A.
+
+     El SUPER_ADMIN se queda fuera a propósito: su acceso a un restaurante
+     ajeno pasa por el pase de soporte (support-session.ts), que deja rastro
+     en la bitácora; una membresía se lo daría en silencio. */
+  const tenantSlug = (await headers()).get('x-tenant-slug');
+  if (tenantSlug && profile.role !== 'SUPER_ADMIN') {
+    const tenant = await getRestaurantBySlug(tenantSlug);
+    if (tenant) {
+      const membership = (await getMyMemberships()).find(
+        (m) => m.restaurantId === tenant.restaurant.id,
+      );
+      if (membership) {
+        restaurant = tenant.restaurant;
+        theme = tenant.theme;
+        memberRole = membership.role;
+        // Se fijan EN MEMORIA (nunca se escriben) para que las ~30 páginas
+        // del panel, que leen ctx.profile.restaurant_id y ctx.profile.
+        // permissions, operen sobre este restaurante sin tocarlas una por
+        // una. La verdad en la base de datos sigue siendo la membresía.
+        const p = profile as Profile;
+        p.restaurant_id = tenant.restaurant.id;
+        p.role = LEGACY_ROLE[membership.role];
+        p.permissions = membership.permissions;
+      }
+    }
+  }
+
+  if (restaurant) {
+    // Ya resuelto por membresía.
+  } else if (profile.restaurant_id) {
     const [{ data: r }, { data: t }] = await Promise.all([
       supabase
         .from('restaurants')
@@ -123,6 +180,7 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
     profile: profile as Profile,
     restaurant,
     theme,
+    memberRole,
   };
 });
 

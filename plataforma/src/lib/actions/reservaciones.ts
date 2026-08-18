@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
@@ -27,7 +28,7 @@ async function getAuthorizedRestaurantId(restaurantId: string): Promise<{ ok: tr
   }
   const allowed = ['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'];
   if (!isSuper && !allowed.includes(profile.role)) return { ok: false, error: 'Sin permisos.' };
-  if (!isSuper && profile.restaurant_id !== restaurantId) return { ok: false, error: 'No autorizado.' };
+  if (!isSuper && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { ok: false, error: 'No autorizado.' };
 
   return { ok: true, restaurantId };
 }

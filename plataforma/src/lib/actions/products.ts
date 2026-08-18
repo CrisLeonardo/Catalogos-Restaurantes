@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId, getAdminMenu } from '@/lib/db/admin';
+import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -42,7 +43,7 @@ async function resolveContext(formData: FormData) {
     ? (formData.get('restaurantId') as string)
     : profile.role === 'GROUP_OWNER'
       ? await resolveGroupBranchId()
-      : profile.restaurant_id;
+      : await resolveOwnRestaurantId(profile.restaurant_id);
 
   if (!restaurantId) return null;
 

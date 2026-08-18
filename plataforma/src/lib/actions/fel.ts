@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
@@ -46,7 +47,7 @@ async function authorizeFel(restaurantId: string): Promise<{ error: string } | {
     if (profile.role === 'GROUP_OWNER') {
       if ((await resolveGroupBranchId()) !== restaurantId) return { error: 'No autorizado.' };
     } else {
-      if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
+      if (!(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { error: 'No autorizado.' };
       const role = profile.role as string;
       const perms = profile.permissions as string[] | null;
       const allowed = role === 'RESTAURANT_OWNER' || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes('fel')));

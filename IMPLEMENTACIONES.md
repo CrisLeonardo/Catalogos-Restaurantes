@@ -717,6 +717,125 @@ Leyenda: ⬜ Pendiente · 🟨 En progreso · ✅ Completada
 
 ---
 
+## Sesión — 2026-08-17 — Acceso con Google para dueños + plan multicuenta
+
+**Objetivo:** que crear un restaurante e iniciar sesión se pueda hacer con la cuenta de Google, y dejar decidido cómo va a acceder el cliente que tiene varios restaurantes o sucursales.
+
+**Realizado:**
+- **Entrar con Google** en `/login`, `/admin/login` y `/central/login` (`components/auth/google-staff-button.tsx`), arriba del formulario de correo y solo si `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`.
+- **Callback propio del personal** (`/admin/auth/google/callback`), separado del de comensales: usa la cookie del PERSONAL (dominio ancho), apunta el ingreso en `panel_access_log` con método `google` y resuelve destino con el mismo `resolveStaffDestination` del login con contraseña. Una cuenta de Google sin restaurante cae en `/registro` en vez de en un "no existe" sin salida.
+- **Registrarse con Google** en el paso "Tu cuenta" del wizard: sin contraseña, con el correo ya verificado por Google (`profiles.email_verified_at` se marca al crear, así el panel no le pide confirmar un correo que nunca escribió).
+- **Borrador del wizard en `sessionStorage`** antes de salir hacia Google: volver (o cancelar) ya no manda a nadie a empezar de cero. Cancelar en Google devuelve a `/registro?auth_error=1`, no al login.
+- `signupRestaurant` acepta las dos vías: **relee la sesión en el servidor** (el campo `auth_provider` del formulario es una pista, no una credencial) y en el camino de Google no crea usuario, no manda correo de verificación, no reinicia sesión y **no borra el usuario en los rollbacks** (es la identidad de la persona, no una cuenta nuestra).
+- **`PLAN_ACCESO_MULTICUENTA.md`** (nuevo, raíz): análisis de los dos modelos de acceso multi-restaurante, comparación con la competencia, esquema de `restaurant_members`, los cuatro niveles de acceso, y las 6 fases con riesgo.
+- `docs/GOOGLE_AUTH.md` actualizado: los dos flujos (comensal y dueño), las URLs de retorno nuevas y qué pasa cuando una cuenta de Google ya administra un restaurante.
+
+**Decisiones clave:**
+- **Callback y cookie separados del comensal.** Reusar `/auth/callback` habría metido la sesión del dueño en la cookie del comensal (host-only, por restaurante): el panel se habría cerrado solo al cambiar de subdominio.
+- **Una cuenta de Google que ya administra un restaurante NO puede crear otro** — se detiene con un mensaje claro antes de ocupar el slug o crear cobro. Hoy `profiles` es uno a uno con el usuario de Auth; ese mensaje es exactamente lo que quita la Fase 1 del plan.
+- **Modelo recomendado para varios restaurantes: una identidad, varias membresías** (no una cuenta de Gmail por local). Con Google, "una cuenta por restaurante" obliga a tener varios Gmail: es lo que cierra la discusión.
+- **El "restaurante activo" se queda en el subdominio**, no en una columna del perfil: dos pestañas en dos negocios distintos no se pisan.
+- **El PIN del personal se mantiene** — es lo que hace toda la competencia. Los arreglos pendientes son atarlo a dispositivos vinculados y abrir directo en la grilla, no cambiar el mecanismo.
+
+**Pendiente (acciones de Leonardo):**
+1. Configurar Google Cloud + Supabase y poner `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` en Render — lista completa en `plataforma/docs/GOOGLE_AUTH.md`. **Agregar las URLs de retorno nuevas** (`/admin/auth/google/callback`, raíz y comodín de subdominio) o el botón del dueño deja la sesión a medias.
+2. Probar en un dominio real que un dueño que se registró con correo pueda después entrar con Google usando el MISMO correo y caiga en su misma cuenta (Supabase enlaza identidades cuando el correo coincide y está verificado; conviene confirmarlo en vivo antes de anunciarlo).
+3. Decidir las tres políticas comerciales del §9 del plan: prueba gratis del segundo restaurante en adelante, descuento de cadena y factura única por grupo.
+
+**Próximo paso:** Fase 1 del plan — `restaurant_members`, relleno desde `profiles`, políticas RLS aditivas con `is_member_of()` y el selector de restaurante.
+
+---
+
+## Sesión — 2026-08-17 (cont.) — Gerente de sucursal y dispositivos de confianza
+
+**Objetivo:** cerrar los dos huecos de acceso que salieron del plan: no existía un rol con credencial propia para el encargado de una sucursal, y el PIN del personal se podía teclear desde cualquier parte del mundo.
+
+**Realizado:**
+- **Migración 111 (`restaurant_devices` + `restaurants.pin_requires_trusted_device`).** La lista de aparatos que el restaurante reconoce como suyos, y el interruptor para que el PIN valga solo en ellos. El id es el mismo anónimo de `lib/device-id.ts` que la 110 ya usaba para la PC principal.
+- **`lib/auth/trusted-device.ts`** (habla con la BD) + **`lib/auth/pin-policy.ts`** (la decisión, pura y con pruebas — mismo patrón que `tenant-guard.ts`). La regla vive en un solo sitio y la aplican por igual la pantalla de login, la grilla de nombres y `verifyStaffPin`.
+- **La grilla "¿Quién eres?" deja de ser pública** cuando el candado está puesto: `listStaffForPin` y `verifyStaffPin` comprueban el aparato en el servidor, leyendo su id de una cookie propia (no de un parámetro del cliente).
+- **En el aparato del local, el login abre DIRECTO en la grilla de PIN.** Se decide en el servidor gracias a una cookie espejo del id de aparato, así que no parpadea entre los dos estados.
+- **Rol de gerente con credencial propia** (`createStaff`): al crear personal se elige *cómo entra* — con PIN (como siempre) o con **su propio correo**. Plantilla **Gerente** = todas las secciones activas menos `suscripcion`.
+- **`Personal → Dispositivos del local`** (`trusted-devices-panel.tsx`): lista de aparatos, "Autorizar este dispositivo", quitar, y el interruptor del candado explicando en cada estado qué implica.
+- El correo interno del personal por PIN (`@staff.leogin.internal`) **ya no viaja al navegador**: `StaffMember` lleva `access: 'pin' | 'email'` y el correo real solo cuando lo hay.
+
+**Decisiones clave:**
+- **El candado nace APAGADO y se enciende a mano.** Aplicar la migración no cambia el comportamiento de ningún restaurante que ya opera. Encenderlo de golpe para todos habría dejado locales enteros sin poder abrir caja en hora pico.
+- **Confianza al primer uso mientras está apagado:** cada PIN correcto registra el aparato, así la lista se llena sola con las tabletas y la computadora que de verdad se usan. El día que el dueño encienda el candado, lo que ya funcionaba sigue funcionando.
+- **No se deja encender con la lista vacía** — es el error más caro de esa pantalla y el más fácil de cometer.
+- **El límite de intentos va ANTES del candado de dispositivos** en `verifyStaffPin`: es lo que acota cuánto trabajo puede provocar alguien sin identificarse. Y el candado va antes de mirar el PIN, para que un aparato ajeno no pueda gastar los intentos de un cajero y dejarlo bloqueado desde fuera.
+- **El gerente no gestiona personal.** `personal` no está en `ADMIN_SECTIONS` (no es delegable), así que no puede darse permisos a sí mismo ni crear a otro gerente. Es una limitación consciente, anotada como pendiente de la Fase 2.
+- **Alcance real de la protección, dicho en el código:** el id de aparato es un UUID del navegador; protege contra quien no lo conoce (no se puede adivinar), no contra quien lo copia. Mismo grado que el "código de dispositivo" de un TPV. Por eso el PIN conserva todas sus defensas anteriores.
+
+**Pendiente (acciones de Leonardo):**
+1. **Aplicar la migración 112** en Supabase. Sin ella, el código sigue funcionando exactamente como antes (todo cae al estado "sin candado").
+2. Entrar a **Personal → Dispositivos del local** desde la tableta/PC del local y pulsar *Autorizar este dispositivo*; o simplemente dejar que el personal entre con su PIN unos días y ver cómo se llena sola la lista. Encender el candado después.
+3. Avisar al personal antes de encenderlo: cambia su rutina (ya no podrán entrar con PIN desde su casa).
+
+**Próximo paso:** Fase 1 del plan (`restaurant_members` + selector de restaurante), que es lo que convierte "una cuenta = un restaurante" en "una cuenta, varios restaurantes".
+
+---
+
+## Sesión — 2026-08-17 (cont.) — Fase 1: Mi cuenta y membresías
+
+**Objetivo:** que una sola cuenta (correo o Google) administre varios restaurantes, con la pantalla «Mi cuenta» como hogar, y que el gerente de una sucursal pueda dar de alta a su propio equipo.
+
+**Realizado:**
+- **Migración 112 (`restaurant_members`).** Separa *quién eres* (usuario de Auth) de *qué eres aquí* (una fila por restaurante, con rol y permisos). Relleno automático desde `profiles` — incluidos los `GROUP_OWNER`, que pasan a ser `OWNER` de cada sucursal de su organización. Políticas RLS **aditivas** con `is_member_of()`, mismo patrón probado de la 053, con `to_regclass` para que la lista de tablas siga siendo reaplicable aunque el catálogo cambie.
+- **`/mi-cuenta`**: lista de restaurantes por membresía, con rol, logo y estado; entrar a uno; y **＋ Crear otro restaurante** con su plan, su prueba y su `restaurant_billing` propio.
+- **PIN de entrada opcional por restaurante** (`restaurants.entry_pin_*`): se pide al abrir desde Mi cuenta, se recuerda 12 h en una cookie **firmada** por el servidor.
+- **`getAdminContext` resuelve el restaurante desde el SUBDOMINIO** cuando hay membresía, y traduce el rol de membresía al rol de perfil en memoria: las ~30 páginas del panel siguen leyendo `ctx.profile.restaurant_id` sin tocarlas.
+- **El candado de tenant, el destino del login y los paneles de mesero y cocina** deciden por membresía (`isMember`, `resolveEffectiveRole`). Con más de un restaurante el login cae en Mi cuenta; con uno solo entra directo, como siempre.
+- **El gerente gestiona el personal de su sucursal** con cuatro reglas anti-escalación en el servidor.
+- **«Cambiar de restaurante»** en el panel, solo visible con más de uno.
+
+**Decisiones clave:**
+- **El restaurante activo se queda en el subdominio, NUNCA en `profiles.restaurant_id`.** Guardarlo en el perfil es estado global: dos pestañas en dos negocios distintos se pisarían los datos.
+- **Lo caro no era la tabla, eran las acciones.** Las ~17 acciones del panel resolvían el restaurante desde `profiles.restaurant_id`; con dos restaurantes habrían escrito en el negocio equivocado mientras la pantalla decía otro. Se arregló con `resolveOwnRestaurantId()` y `canActOnRestaurant()`, en el mismo punto donde cada acción ya resolvía lo suyo. Sin membresías devuelven exactamente lo de antes.
+- **Nada sustituye a lo que ya funcionaba:** `profiles.restaurant_id` sigue vivo y las políticas viejas intactas. Un restaurante que opera hoy no cambia de comportamiento al aplicar la migración.
+- **Una membresía NO le abre la puerta al super admin.** Su entrada a un restaurante ajeno sigue pasando por el pase de soporte, que deja rastro en la bitácora y pinta una franja en el panel; si una membresía bastara, ese rastro desaparecería. Probado en `tenant-guard.test.ts`.
+- **La cookie del PIN de entrada va firmada** (HMAC con la service role key): sin firma, cualquiera se escribiría a mano la lista de restaurantes desbloqueados, que es justo lo que el candado impide.
+- **`/mi-cuenta` se excluye del rewrite del proxy**: es de la persona, no de un restaurante. Sin eso, «Cambiar de restaurante» pedía `/admin/mi-cuenta` y daba 404 — justo en el enlace que sirve para salir de ahí.
+
+**Pendiente (acciones de Leonardo):**
+1. **Aplicar la migración 113** (después de la 112). Sin ella el código sigue funcionando como antes: sin membresías, todo cae al camino de siempre.
+2. Probar con una cuenta que tenga dos restaurantes: entrar a cada uno y confirmar que lo que se edita en el panel de B se guarda en B.
+3. Decidir las políticas comerciales del §9 del plan (prueba del segundo restaurante en adelante, descuento de cadena, factura única).
+
+**Próximo paso:** Fase 2 — invitación por correo para el gerente, en vez de pasarle una contraseña temporal a mano.
+
+---
+
+## Sesión — 2026-08-17 (cont.) — Fase 2 (invitaciones) y Fase 5a
+
+**Objetivo:** cerrar la Fase 2 del plan (invitar al equipo por correo, en vez de crearle la cuenta y pasarle la contraseña) y unir el panel de grupo con Mi cuenta sin tocar el rol `GROUP_OWNER`.
+
+**Realizado:**
+- **Migración 113 (`restaurant_invitations`).** Token de 32 bytes; se guarda **solo su sha-256**. Un uso, 7 días, y un índice único parcial para que no queden dos enlaces vivos al mismo correo.
+- **Invitar / revocar / aceptar** (`lib/actions/invitations.ts`) + página `/invitacion/[token]`. Los tres caminos de aceptación terminan igual: ya hay sesión con ese correo → un botón; ya existe cuenta → su contraseña de siempre; no existe → elige una. También se puede aceptar con Google.
+- **Correo de invitación** con la plantilla existente (`lib/email`), y **el enlace se enseña siempre** en el panel, se haya mandado el correo o no.
+- **Tarjeta de Invitaciones** en `/admin/personal`, con las pendientes, cuándo vencen y el botón de cancelar.
+- **Fase 5a:** Mi cuenta enseña el panel consolidado del grupo arriba de las sucursales, y el panel del grupo enseña «Mis restaurantes». Un restaurante creado por un dueño de grupo **nace dentro de su organización**.
+- Pruebas del token (`invite-token.test.ts`): que el hash no sea el token, que sea reproducible, que no se repitan y que tengan entropía de sobra.
+
+**Decisiones clave:**
+- **La invitación es PARA UN CORREO.** Quien la acepta entra con ese mismo correo; si no, reenviar el enlace regalaría el acceso al restaurante.
+- **Solo el dueño invita por correo.** El gerente suma a su equipo con PIN pero no crea pares suyos — misma regla anti-escalación de la Fase 1.
+- **El enlace se muestra aunque el correo salga bien.** Sin `RESEND_API_KEY` es la única vía, y con proveedor configurado sigue siendo el plan B cuando el correo tarda o cae en spam. Un producto que se detiene porque cayó el proveedor de correo no sirve en un restaurante.
+- **A quien ya tiene su propio restaurante no se le toca su `restaurant_id` de casa** al aceptar: su acceso al otro viaja por la membresía.
+- **La cuenta nace confirmada al aceptar**: acaba de demostrar que tiene ese buzón abriendo el enlace que le llegó ahí. Y así puede entrar después con Google sin duplicar cuenta.
+- **NO se retiró el rol `GROUP_OWNER`** (Fase 5b). Unir dos vistas es añadir enlaces; retirar un rol con clientes vivos encima es otra entrega, y el propio plan desaconseja sumarla a la que acaba de migrar la identidad.
+- El token vive en `lib/invite-token.ts` **sin `server-only`**, para que se pueda probar de verdad — mismo patrón que `pin-policy.ts` y `tenant-guard.ts`.
+
+**Pendiente (acciones de Leonardo):**
+1. **Aplicar la migración 114** (después de la 112 y la 113).
+2. Poner `RESEND_API_KEY` si quieres que las invitaciones salgan por correo solas. Sin ella todo funciona igual: el panel te da el enlace para pasárselo tú.
+3. **Decidir la prueba gratis del segundo restaurante en adelante.** Hoy cada restaurante nuevo nace con la prueba completa, así que «crear otro restaurante» es una vía para encadenar pruebas con la misma cuenta. Hay techo de 5/hora, que frena el abuso automático pero no el manual.
+
+**Próximo paso:** Fase 5b — retirar `GROUP_OWNER` y dejar solo membresías, en su propia entrega y con sus pruebas.
+
+---
+
 <!-- PLANTILLA PARA NUEVAS SESIONES (copiar y rellenar)
 
 ## Sesión N — AAAA-MM-DD — Título

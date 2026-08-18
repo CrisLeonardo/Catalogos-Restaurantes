@@ -11,6 +11,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
+import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { revalidatePath, updateTag } from 'next/cache';
 import { logActivity } from '@/lib/activity';
@@ -37,7 +38,7 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
     ? (restaurantIdFromForm ?? '')
     : profile.role === 'GROUP_OWNER'
       ? ((await resolveGroupBranchId()) ?? '')
-      : (profile.restaurant_id ?? '');
+      : ((await resolveOwnRestaurantId(profile.restaurant_id)) ?? '');
   if (!restaurantId) return null;
 
   return { db: createServiceClient(), restaurantId, userId: user.id };

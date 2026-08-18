@@ -17,6 +17,7 @@ import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
+import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
 
@@ -70,6 +71,11 @@ export default async function AdminProtectedLayout({
   // con el KDS (que antes no tenía ninguna).
   const access = decideTenantAccess({
     role: profile.role,
+    // getAdminContext ya resolvió la membresía en este subdominio (y con ella
+    // el rol y los permisos de aquí). Se pasa explícito en vez de dejar que
+    // el candado lo deduzca del restaurant_id reescrito en memoria: la regla
+    // tiene que poder leerse sin conocer ese detalle.
+    isMember: ctx.memberRole !== null,
     profileRestaurantId: profile.restaurant_id,
     profileOrganizationId: profile.organization_id,
     tenantSlug,
@@ -210,7 +216,12 @@ export default async function AdminProtectedLayout({
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
+      canManageStaff={
+        ctx.memberRole === 'MANAGER'
+        || profile.role === 'RESTAURANT_OWNER'
+        || profile.role === 'SUPER_ADMIN'
+      }
+      hasMultipleRestaurants={(await getMyMemberships()).length > 1}
       isOperatorSession={isOperatorSession}
     >
       {needsEmailVerification && <VerifyEmailBanner email={user.email ?? null} />}

@@ -8,6 +8,7 @@ import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modu
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import { adminUrl } from '@/lib/tenant';
 import AdminShell from '@/components/admin/shell';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
@@ -33,9 +34,7 @@ export default async function WaiterLayout({ children }: { children: React.React
     .eq('id', user.id)
     .single();
 
-  if (!profile || !can(profile.role as string, profile.permissions as string[] | null, 'mesero')) {
-    redirect('/admin/login');
-  }
+  if (!profile) redirect('/admin/login');
 
   const cookieStore = await cookies();
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
@@ -48,6 +47,15 @@ export default async function WaiterLayout({ children }: { children: React.React
   const tenantSlug = headersList.get('x-tenant-slug');
   const tenantData = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
 
+  // Qué es esta persona EN ESTE restaurante (migración 113). Se resuelve
+  // ANTES de comprobar el permiso 'mesero': quien es mesero en la sucursal B
+  // pero cajero en su propio local A tiene que entrar aquí con lo de B.
+  const effective = await resolveEffectiveRole(
+    { role: profile.role as string, permissions: profile.permissions as string[] | null },
+    tenantData?.restaurant.id ?? null,
+  );
+  if (!can(effective.role, effective.permissions, 'mesero')) redirect('/admin/login');
+
   // ── Candado de tenant ──────────────────────────────────────────────
   // Misma regla que el resto del panel (lib/auth/tenant-guard.ts). Antes esta
   // comprobación estaba escrita a mano aquí y mandaba al menú PÚBLICO del
@@ -57,6 +65,7 @@ export default async function WaiterLayout({ children }: { children: React.React
     : null;
   const access = decideTenantAccess({
     role: profile.role as string,
+    isMember: effective.isMember,
     profileRestaurantId: profile.restaurant_id as string | null,
     profileOrganizationId: profile.organization_id as string | null,
     tenantSlug,
@@ -69,7 +78,7 @@ export default async function WaiterLayout({ children }: { children: React.React
   if (!access.allow) redirect(access.redirectTo);
 
   // SUPER_ADMIN no tiene restaurant_id propio: lo resuelve el subdominio (que
-  // el candado de arriba ya validó con su pase de soporte).
+  // el candado de arriba ya validó).
   const restaurantId = (profile.restaurant_id as string | null) ?? tenantData?.restaurant.id ?? null;
   if (!restaurantId) redirect(profile.role === 'SUPER_ADMIN' ? '/super/restaurantes' : '/admin/login');
 
@@ -123,7 +132,11 @@ export default async function WaiterLayout({ children }: { children: React.React
       role={profile.role}
       permissions={profile.permissions}
       userName={profile.full_name}
-      canManageStaff={profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN'}
+      canManageStaff={
+        effective.memberRole === 'MANAGER'
+        || profile.role === 'RESTAURANT_OWNER'
+        || profile.role === 'SUPER_ADMIN'
+      }
       isOperatorSession={isOperatorSession}
     >
       {isOperatorSession && <OperatorHeartbeat profileId={user.id} />}

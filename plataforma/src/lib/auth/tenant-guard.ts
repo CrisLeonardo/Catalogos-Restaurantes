@@ -31,6 +31,15 @@ export type TenantDecision =
 
 export type TenantGuardInput = {
   role: string | null | undefined;
+  /**
+   * ¿Es miembro del restaurante de este subdominio? (migración 113.)
+   *
+   * Es la vía por la que entra quien tiene más de un restaurante: su perfil
+   * solo puede apuntar a uno, así que `profileRestaurantId` no alcanza para
+   * contestar "¿este también es tuyo?". Se calcula en el servidor contra
+   * restaurant_members; quien llama responde por ella.
+   */
+  isMember?: boolean;
   /** Restaurante propio del perfil (null en Super Admin y dueño de grupo). */
   profileRestaurantId: string | null | undefined;
   /** Organización del perfil (solo dueño de grupo). */
@@ -54,7 +63,10 @@ export type TenantGuardInput = {
  * Desktop) no hay nada que proteger: la página que se abra decidirá.
  */
 export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
-  const { role, profileRestaurantId, profileOrganizationId, tenantSlug, tenant, ownSlug, adminUrlFor } = input;
+  const {
+    role, isMember, profileRestaurantId, profileOrganizationId,
+    tenantSlug, tenant, ownSlug, adminUrlFor,
+  } = input;
 
   if (!tenantSlug) return { allow: true };
 
@@ -65,6 +77,10 @@ export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   if (profileRestaurantId && profileRestaurantId === tenant.id) {
     return { allow: true };
   }
+
+  // Otro de sus restaurantes (membresía, migración 113). Es la vía del que
+  // tiene varios: su perfil solo puede apuntar a uno.
+  if (isMember) return { allow: true };
 
   // El Super Admin entra a cualquier panel sin pedir nada extra: ya ve todo
   // desde /super, esto solo evita el salto de un subdominio a otro.

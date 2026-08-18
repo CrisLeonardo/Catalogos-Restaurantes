@@ -7,6 +7,7 @@ import { can } from '@/lib/permissions';
 import { adminUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import OfflineSupport from '@/components/offline-support';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import type { Metadata } from 'next';
@@ -34,9 +35,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     .eq('id', user.id)
     .single();
 
-  if (!profile || !can(profile.role as string, profile.permissions as string[] | null, 'cocina')) {
-    redirect('/admin/login');
-  }
+  if (!profile) redirect('/admin/login');
 
   const cookieStore = await cookies();
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
@@ -59,8 +58,17 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     ? await db.from('restaurants').select('slug').eq('id', profile.restaurant_id).maybeSingle()
     : null;
 
+  // Qué es esta persona EN ESTE restaurante (migración 113) — mismo criterio
+  // que el panel de mesero: el permiso se comprueba con lo que es AQUÍ.
+  const effective = await resolveEffectiveRole(
+    { role: profile.role as string, permissions: profile.permissions as string[] | null },
+    tenant?.restaurant.id ?? null,
+  );
+  if (!can(effective.role, effective.permissions, 'cocina')) redirect('/admin/login');
+
   const access = decideTenantAccess({
     role: profile.role as string,
+    isMember: effective.isMember,
     profileRestaurantId: profile.restaurant_id as string | null,
     profileOrganizationId: profile.organization_id as string | null,
     tenantSlug,

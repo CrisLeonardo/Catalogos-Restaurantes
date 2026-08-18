@@ -1,8 +1,18 @@
-# Login con Google para comensales (Lealtad v2)
+# Login con Google (comensales y dueños)
 
-El menú permite que el comensal **continúe con Google** para ver y canjear sus
-puntos desde cualquier dispositivo. Es **opcional**: si no se configura, el botón
-simplemente no aparece y todo sigue funcionando por teléfono (nadie pierde puntos).
+Hay **dos flujos con Google**, con la misma configuración externa (Google Cloud
++ Supabase) y el mismo interruptor (`NEXT_PUBLIC_GOOGLE_AUTH_ENABLED`), pero con
+sesiones y callbacks distintos:
+
+| | Comensal (menú) | Dueño / gerente (panel) |
+|---|---|---|
+| Dónde aparece | Menú público → Cuenta / Recompensas | `/login`, `/admin/login`, `/central/login` y el wizard de `/registro` |
+| Callback | `/auth/callback` | `/admin/auth/google/callback` |
+| Cookie | `sb-leogin-diner-v2`, host-only (por restaurante) | cookie por defecto de Supabase, dominio `.leogin.online` |
+| Para qué | Ver y canjear puntos desde cualquier dispositivo | Crear el restaurante y entrar al panel sin contraseña |
+
+Los dos son **opcionales**: sin configurar, los botones no aparecen y todo
+sigue funcionando (el comensal por teléfono, el dueño con correo y contraseña).
 
 El código ya está listo. Para activarlo hay 3 pasos: Google Cloud → Supabase → variable de entorno.
 
@@ -24,13 +34,19 @@ El código ya está listo. Para activarlo hay 3 pasos: Google Cloud → Supabase
 1. Supabase → **Authentication → Providers → Google** → activar.
 2. Pega el **Client ID** y **Client Secret** del paso anterior. Guardar.
 3. Supabase → **Authentication → URL Configuration → Redirect URLs**. Agrega las
-   URLs a las que el comensal puede volver tras autenticar (un patrón por línea):
+   URLs a las que se puede volver tras autenticar (un patrón por línea):
    ```
    https://leogin.online/auth/callback
    https://*.leogin.online/auth/callback
+   https://leogin.online/admin/auth/google/callback
+   https://*.leogin.online/admin/auth/google/callback
    ```
-   El subdominio comodín cubre el menú de cada restaurante (`slug.leogin.online`).
-   En desarrollo agrega también `http://localhost:3000/auth/callback`.
+   El subdominio comodín cubre el menú y el panel de cada restaurante
+   (`slug.leogin.online`, `admin.slug.leogin.online`). Las dos últimas líneas
+   son las del **dueño**: sin ellas el botón del menú funciona pero el del
+   panel deja al dueño en la raíz sin sesión. En desarrollo agrega también
+   `http://localhost:3000/auth/callback` y
+   `http://localhost:3000/admin/auth/google/callback`.
 
    **Si agregas otro dominio a `NEXT_PUBLIC_ROOT_DOMAIN`** (ver
    `legacyDomainRedirectHost` en proxy.ts), agrega aquí el mismo trío de
@@ -92,6 +108,10 @@ error visible — Supabase falla en silencio si algo no calza:
       https://*.distleogin.com/auth/callback
       https://*.distleogin.com/**
       ```
+      El patrón `https://*.<dominio>/**` ya cubre el callback del dueño
+      (`/admin/auth/google/callback`) en los subdominios; agrega además
+      `https://<dominio>/admin/auth/google/callback` para el dominio raíz, que
+      es donde se registra un restaurante nuevo.
       Si falta el patrón con `*` de un dominio, Supabase regresa a la raíz en
       vez del subdominio del restaurante y el comensal nunca queda logueado
       — confirmado en producción el 2026-08-13 tras agregar distleogin.com
@@ -140,6 +160,32 @@ Eso lo controla Google, no la app:
   URI de Google a `https://auth.leogin.online/auth/v1/callback`.
 
 Funciona igual con o sin esto: es solo cosmético / de confianza visual.
+
+## Cómo funciona el flujo del DUEÑO
+
+- **Entrar** (`/login`, `/admin/login`, `/central/login`): "Continuar con
+  Google" → Google → `/admin/auth/google/callback`. El callback canjea el
+  código con la cookie del PERSONAL, apunta el acceso en la bitácora
+  (`panel_access_log`, método `google`) y manda a donde mandaría el login con
+  contraseña (`resolveStaffDestination`): su panel, `/central` si es dueño de
+  grupo, `/super/restaurantes` si es super admin.
+- **Registrarse** (`/registro`, paso "Tu cuenta"): "Registrarme con Google" →
+  el wizard guarda su borrador en `sessionStorage` (plan, nombre, dirección,
+  plantilla) para que la vuelta de Google no lo mande a empezar de nuevo → al
+  volver, el paso de la cuenta ya está resuelto y no se pide contraseña.
+  `signupRestaurant` **relee la sesión en el servidor**: el campo
+  `auth_provider` del formulario es una pista, no una credencial.
+- **Cuenta de Google que ya administra un restaurante**: el registro se detiene
+  antes de crear nada ("esta cuenta ya administra un restaurante"). Hoy
+  `profiles` es uno a uno con el usuario de Auth — una cuenta, un restaurante.
+  Quitar esa limitación (una cuenta con varios restaurantes y un selector) es
+  lo que plantea `PLAN_ACCESO_MULTICUENTA.md` en la raíz del repo.
+- **Mismo correo con contraseña y con Google**: Supabase enlaza la identidad de
+  Google al usuario que ya existe cuando el correo coincide y está confirmado.
+  El dueño que se registró con correo puede entrar después con Google (mismo
+  correo) y cae en su misma cuenta, sin duplicados.
+- **El personal (cajeros, meseros) no usa Google**: entra por PIN en el
+  dispositivo del local (`staff-pin.ts`). Es a propósito — ver el plan.
 
 ## Nota sobre sesiones
 

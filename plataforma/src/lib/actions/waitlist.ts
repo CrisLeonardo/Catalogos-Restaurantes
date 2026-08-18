@@ -13,6 +13,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
@@ -35,7 +36,7 @@ async function getAuthorizedRestaurantId(restaurantId: string): Promise<{ ok: tr
     if ((await resolveGroupBranchId()) !== restaurantId) return { ok: false, error: 'No autorizado.' };
     return { ok: true, restaurantId };
   }
-  if (profile.role !== 'SUPER_ADMIN' && profile.restaurant_id !== restaurantId) {
+  if (profile.role !== 'SUPER_ADMIN' && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
     return { ok: false, error: 'No autorizado.' };
   }
   if (!can(profile.role, profile.permissions as string[] | null, 'lista_espera')) {

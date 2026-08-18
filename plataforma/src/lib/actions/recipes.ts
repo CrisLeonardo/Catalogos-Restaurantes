@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
+import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { getProductRecipe, type RecipeItem } from '@/lib/db/recipes';
 import { getIngredientMovements as fetchIngredientMovements, type StockMovement } from '@/lib/db/kardex';
 
@@ -31,8 +32,9 @@ async function resolveRestaurantId(formRestaurantId?: string | null): Promise<Re
     if (!id) return { error: 'Sin restaurante' };
     return { restaurantId: id };
   }
-  if (!profile.restaurant_id) return { error: 'Sin restaurante' };
-  return { restaurantId: profile.restaurant_id };
+  const own = await resolveOwnRestaurantId(profile.restaurant_id);
+  if (!own) return { error: 'Sin restaurante' };
+  return { restaurantId: own };
 }
 
 // ── Ingredientes ─────────────────────────────────────────────

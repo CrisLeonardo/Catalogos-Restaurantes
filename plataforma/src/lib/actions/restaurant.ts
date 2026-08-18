@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId } from '@/lib/db/admin';
+import { canActOnRestaurant, resolveOwnRestaurantId } from '@/lib/db/membership';
 import { logChannelChanges } from '@/lib/db/channel-history';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -47,7 +48,7 @@ async function resolveContext(formData: FormData) {
     ? (formData.get('restaurantId') as string)
     : isGroupOwner
       ? await resolveGroupBranchId()
-      : profile.restaurant_id;
+      : await resolveOwnRestaurantId(profile.restaurant_id);
 
   if (!restaurantId) return null;
 
@@ -447,7 +448,7 @@ export async function saveOrdersAndCurrency(input: {
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   const allowed = isSuperAdmin
-    || profile.restaurant_id === input.restaurantId
+    || (await canActOnRestaurant(profile.restaurant_id, input.restaurantId))
     || (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === input.restaurantId);
   if (!allowed) {
     return { error: 'No autorizado.' };
@@ -516,7 +517,7 @@ export async function updateOwnOrderTypes(
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   const allowed = isSuperAdmin
-    || profile.restaurant_id === restaurantId
+    || (await canActOnRestaurant(profile.restaurant_id, restaurantId))
     || (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
   if (!allowed) {
     return { error: 'No autorizado para este restaurante.' };
@@ -592,7 +593,7 @@ export async function dismissOnboarding(restaurantId: string): Promise<SaveTheme
   if (!profile) return { error: 'No autorizado.' };
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  if (!isSuperAdmin && profile.restaurant_id !== restaurantId) {
+  if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
     return { error: 'No autorizado para este restaurante.' };
   }
 
@@ -631,7 +632,7 @@ export async function saveAdminRestaurantTheme(input: {
   if (!profile) return { error: 'No autorizado.' };
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  if (!isSuperAdmin && profile.restaurant_id !== input.restaurantId) {
+  if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, input.restaurantId))) {
     return { error: 'No autorizado.' };
   }
 
@@ -729,7 +730,7 @@ async function resolveOwnerThemeContext(restaurantId: string) {
   if (!profile) return null;
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  if (!isSuperAdmin && profile.restaurant_id !== restaurantId) return null;
+  if (!isSuperAdmin && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return null;
 
   return createServiceClient();
 }

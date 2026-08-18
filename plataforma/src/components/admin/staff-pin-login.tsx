@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { listStaffForPin, verifyStaffPin, type PinStaffMember } from '@/lib/actions/staff-pin';
+import { listStaffForPin, verifyStaffPin, isPinAllowedHere, type PinStaffMember } from '@/lib/actions/staff-pin';
 import { tryHubPinStaffList, tryHubPinVerify } from '@/lib/hub-fallback';
 
 const PIN_LEN = 4;
@@ -28,6 +28,8 @@ interface Props {
 
 export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hubToken = null }: Props) {
   const [members, setMembers] = useState<PinStaffMember[] | null>(null);
+  /** Lista vacía porque este aparato no está autorizado, no porque falte personal. */
+  const [deviceBlocked, setDeviceBlocked] = useState(false);
   const [selected, setSelected] = useState<PinStaffMember | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,20 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
   useEffect(() => {
     let cancelled = false;
     listStaffForPin(restaurantId)
-      .then((m) => { if (!cancelled) setMembers(m); })
+      .then(async (m) => {
+        if (cancelled) return;
+        setMembers(m);
+        // Una lista vacía tiene dos causas muy distintas y el mensaje cambia:
+        // no hay nadie con PIN, o este aparato no está autorizado.
+        if (m.length === 0) {
+          try {
+            const allowed = await isPinAllowedHere(restaurantId);
+            if (!cancelled) setDeviceBlocked(!allowed);
+          } catch {
+            /* sin respuesta → se deja el mensaje genérico */
+          }
+        }
+      })
       .catch(async () => {
         if (cancelled) return;
         if (hubUrl) {
@@ -139,8 +154,10 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
         {members === null ? (
           <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Cargando…</p>
         ) : members.length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>
-            Todavía no hay personal con PIN configurado. El dueño puede asignarlo desde Personal.
+          <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.55 }}>
+            {deviceBlocked
+              ? 'Este dispositivo no está autorizado para entrar con PIN. Entra con tu correo, o pídele al dueño que lo autorice desde Personal → Dispositivos del local.'
+              : 'Todavía no hay personal con PIN configurado. El dueño puede asignarlo desde Personal.'}
           </p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>

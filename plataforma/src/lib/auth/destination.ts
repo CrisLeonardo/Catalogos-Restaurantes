@@ -2,6 +2,7 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import { isMeseroOnly } from '@/lib/permissions';
+import { getMyMemberships } from '@/lib/db/membership';
 import { adminUrl } from '@/lib/tenant';
 
 type ProfileLike = {
@@ -28,6 +29,27 @@ export async function resolveStaffDestination(
 ): Promise<string> {
   if (profile.role === 'SUPER_ADMIN') return '/super/restaurantes';
   if (profile.role === 'GROUP_OWNER') return '/central';
+
+  /* Con más de un restaurante (migración 113), a Mi cuenta a elegir.
+     Con UNO SOLO se entra directo, sin selector: el 90% de los clientes tiene
+     un solo local y la mejora para quien tiene tres no puede costarle un
+     toque a quien tiene uno. Esa es la regla, y por eso el corte es en 2. */
+  const memberships = await getMyMemberships();
+  if (memberships.length > 1) return `/mi-cuenta${suffix}`;
+  if (memberships.length === 1 && !profile.restaurant_id) {
+    // Perfil sin restaurante "de casa" pero con una membresía: se entra a esa.
+    const { data: only } = await supabase
+      .from('restaurants')
+      .select('slug')
+      .eq('id', memberships[0].restaurantId)
+      .single();
+    if (only?.slug) {
+      return only.slug === tenantSlug
+        ? `/admin/menu${suffix}`
+        : `${adminUrl(only.slug as string)}/menu${suffix}`;
+    }
+  }
+
   if (!profile.restaurant_id) return '/admin/login';
 
   const { data: rest } = await supabase

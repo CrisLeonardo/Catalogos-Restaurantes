@@ -75,6 +75,26 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
 
         <div className="admin-spacer" style={{ flex: 1 }} />
 
+        {/* Puente hacia Mi cuenta (migración 113). El dueño de una cadena
+            tenía dos hogares sin relación: este panel y la lista de sus
+            restaurantes. Desde aquí se llega al otro — y desde el otro, a
+            este. El rol GROUP_OWNER no cambia todavía: unir las dos vistas es
+            una cosa, retirar un rol con clientes encima es otra. */}
+        <a
+          href="/mi-cuenta"
+          className="press glass-quiet"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 9, borderRadius: 13,
+            padding: '10px 12px', marginBottom: 8, textDecoration: 'none',
+          }}
+        >
+          <Icon name="bag" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+            Mis restaurantes
+          </span>
+          <Icon name="chevronRight" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        </a>
+
         <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="user" size={17} />

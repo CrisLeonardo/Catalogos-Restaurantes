@@ -3,8 +3,11 @@ import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
-import { rootDomainForUrls } from '@/lib/tenant';
+import { rootDomainForUrls, adminUrl } from '@/lib/tenant';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
+import { isGoogleAuthEnabled } from '@/lib/auth-config';
+import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import SignupWizard from './signup-wizard';
 
 export const metadata: Metadata = {
@@ -20,12 +23,90 @@ const perks = (trialDays: number) => [
   { icon: 'wallet', text: `${trialDays} días gratis · sin tarjeta · cancela cuando quieras` },
 ];
 
-// Los precios pueden cambiar desde /super/configuracion (ISR + revalidación al guardar).
-export const revalidate = 600;
+/* Esta página ya no se puede pre-renderizar: mira la sesión del visitante para
+   saber si vuelve de Google (y con qué cuenta). Los precios siguen saliendo de
+   /super/configuracion, ahora leídos en cada visita — un registro al día no
+   justifica cachear, y así un cambio de precio se ve al instante. */
+export const dynamic = 'force-dynamic';
 
-export default async function RegistroPage() {
+/**
+ * Cuenta de personal ya autenticada en este navegador, si la hay.
+ *
+ * Dos casos muy distintos:
+ *  · `hasProfile: false` → cuenta de Google recién creada que todavía no
+ *    administra ningún restaurante: es exactamente quien está a mitad del
+ *    registro con Google. El wizard salta el paso de la contraseña.
+ *  · `hasProfile: true`  → esa cuenta YA administra un restaurante. Hoy una
+ *    cuenta = un restaurante, así que no puede crear otro con ella misma; se
+ *    le avisa y se le ofrece su panel (ver PLAN_ACCESO_MULTICUENTA.md para el
+ *    modelo de varias sucursales bajo una sola cuenta).
+ */
+async function currentStaffAccount(): Promise<{
+  email: string;
+  fullName: string | null;
+  hasProfile: boolean;
+  restaurantName: string | null;
+  panelUrl: string | null;
+} | null> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
+
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) return null;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, restaurant_id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const meta = user.user_metadata as { full_name?: string; name?: string } | null;
+    const fullName =
+      (profile?.full_name as string | null) ?? meta?.full_name ?? meta?.name ?? null;
+
+    if (!profile) {
+      return { email: user.email, fullName, hasProfile: false, restaurantName: null, panelUrl: null };
+    }
+
+    let restaurantName: string | null = null;
+    let panelUrl: string | null = null;
+    if (profile.restaurant_id) {
+      // Cliente de servicio: el menú público solo deja leer restaurantes
+      // activos, y aquí hace falta el nombre aunque esté pausado.
+      const db = createServiceClient();
+      const { data: rest } = await db
+        .from('restaurants')
+        .select('name, slug')
+        .eq('id', profile.restaurant_id as string)
+        .maybeSingle();
+      restaurantName = (rest?.name as string | null) ?? null;
+      panelUrl = rest?.slug ? `${adminUrl(rest.slug as string)}/menu` : null;
+    }
+    return { email: user.email, fullName, hasProfile: true, restaurantName, panelUrl };
+  } catch {
+    return null; // sin BD → registro normal
+  }
+}
+
+export default async function RegistroPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ auth_error?: string }>;
+}) {
   const rootDomain = rootDomainForUrls();
-  const pricing = await getEffectivePlanPricing();
+  const [pricing, account, params] = await Promise.all([
+    getEffectivePlanPricing(),
+    currentStaffAccount(),
+    searchParams,
+  ]);
+
+  const googleAccount =
+    account && !account.hasProfile ? { email: account.email, fullName: account.fullName } : null;
+  const existingAccount =
+    account && account.hasProfile
+      ? { email: account.email, restaurantName: account.restaurantName, panelUrl: account.panelUrl }
+      : null;
 
   return (
     <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
@@ -74,7 +155,14 @@ export default async function RegistroPage() {
 
           {/* Lado derecho: wizard */}
           <Glass style={{ padding: '26px 24px' }}>
-            <SignupWizard rootDomain={rootDomain} pricing={pricing} />
+            <SignupWizard
+              rootDomain={rootDomain}
+              pricing={pricing}
+              googleEnabled={isGoogleAuthEnabled()}
+              googleAccount={googleAccount}
+              existingAccount={existingAccount}
+              authError={params.auth_error === '1'}
+            />
           </Glass>
         </div>
       </div>

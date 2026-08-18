@@ -96,6 +96,61 @@ describe('dueño de grupo', () => {
   });
 });
 
+describe('varios restaurantes con una sola cuenta (migración 113)', () => {
+  it('el dueño de A y B entra a B, aunque su perfil apunte a A', () => {
+    // El caso que abre todo el modelo de membresías: `profiles.restaurant_id`
+    // es UN id, así que sin `isMember` el dueño de dos negocios rebotaba de su
+    // propio segundo restaurante a "su" panel, sin entender por qué.
+    expect(
+      decideTenantAccess(input({
+        isMember: true,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({ allow: true });
+  });
+
+  it('el gerente invitado a una sucursal entra a esa sucursal', () => {
+    expect(
+      decideTenantAccess(input({
+        role: 'RESTAURANT_STAFF',
+        isMember: true,
+        profileRestaurantId: null,
+        ownSlug: null,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({ allow: true });
+  });
+
+  it('sin membresía sigue rebotando al panel propio', () => {
+    expect(
+      decideTenantAccess(input({
+        isMember: false,
+        tenantSlug: 'restaurante-b',
+        tenant: REST_B,
+      })),
+    ).toEqual({ allow: false, redirectTo: `${ADMIN_URL('restaurante-a')}/menu` });
+  });
+
+  it('una membresía no cambia nada para el dueño de grupo ajeno', () => {
+    // El dueño de grupo se sigue midiendo por su organización. Si además
+    // tuviera membresía en esa sucursal, entra por esa vía — pero sin ella,
+    // pertenecer a OTRO grupo nunca alcanza.
+    expect(
+      decideTenantAccess(input({
+        role: 'GROUP_OWNER',
+        isMember: false,
+        profileRestaurantId: null,
+        profileOrganizationId: 'org-1',
+        ownSlug: null,
+        tenantSlug: 'ajeno',
+        tenant: { id: 'rest-b', organizationId: 'org-2' },
+      })),
+    ).toEqual({ allow: false, redirectTo: '/central' });
+  });
+});
+
 describe('casos borde', () => {
   it('sin slug de tenant (dominio raíz, login central) no hay nada que candar', () => {
     expect(decideTenantAccess(input({ tenantSlug: null }))).toEqual({ allow: true });
