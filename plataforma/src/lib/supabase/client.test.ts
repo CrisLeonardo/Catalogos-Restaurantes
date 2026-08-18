@@ -15,8 +15,10 @@ import { describe, it, expect, beforeAll } from 'vitest';
    la suya.
    ============================================================ */
 
-let createClient: () => { auth: { storageKey: string } };
-let createDinerClient: () => { auth: { storageKey: string } };
+/** `storageKey` es protected en el tipo de Supabase; en runtime está ahí. */
+type ClienteConClave = { auth: { storageKey: string } };
+let createClient: () => ClienteConClave;
+let createDinerClient: () => ClienteConClave;
 
 beforeAll(async () => {
   // El módulo se evalúa como si estuviera en el navegador.
@@ -36,8 +38,8 @@ beforeAll(async () => {
   process.env.NEXT_PUBLIC_ROOT_DOMAIN = 'distleogin.com';
 
   const mod = await import('./client');
-  createClient = mod.createClient as typeof createClient;
-  createDinerClient = mod.createDinerClient as typeof createDinerClient;
+  createClient = mod.createClient as unknown as typeof createClient;
+  createDinerClient = mod.createDinerClient as unknown as typeof createDinerClient;
 });
 
 describe('createClient / createDinerClient en el navegador', () => {

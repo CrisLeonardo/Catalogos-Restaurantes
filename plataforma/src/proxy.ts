@@ -14,6 +14,7 @@ import {
   duplicateCookieNames,
   isCodeVerifierCookie,
   isDeadSessionCode,
+  isStaffCodeVerifierCookie,
   isStaffSessionCookie,
   sessionCookieNames,
 } from "@/lib/supabase/cookies";
@@ -74,6 +75,34 @@ export async function proxy(request: NextRequest) {
       url.hostname = redirectHost;
       url.port = "";
       return NextResponse.redirect(url, 301);
+    }
+  }
+
+  // 1c) Rescate del login con Google cuando Supabase no reconoce nuestro
+  // `redirect_to`. En ese caso GoTrue no devuelve un error: ignora la URL
+  // que le pedimos y manda el `code` a la Site URL a secas —la portada—,
+  // asi que "entrar con Google" deja a la persona en la pagina principal,
+  // sin sesion y SIN UNA SOLA LINEA en los logs, porque el callback ni
+  // llega a ejecutarse. Es un fallo mudo, y por eso vale la pena atarlo
+  // aqui en vez de confiar en que la lista blanca este siempre bien.
+  //
+  // La cookie del verificador PKCE del personal es lo que autoriza el
+  // reenvio: sin ella este `code` no es de un acceso al panel empezado en
+  // este navegador y no se toca nada. El destino es el mismo origen, asi
+  // que no abre ninguna redireccion a terceros.
+  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const esLoginDelPersonal = request.cookies
+      .getAll()
+      .some(({ name }) => isStaffCodeVerifierCookie(name));
+    if (esLoginDelPersonal) {
+      const fwdHost = request.headers.get("x-forwarded-host") ?? host ?? request.nextUrl.host;
+      const fwdProto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+      console.warn(
+        "[proxy] Supabase devolvio el code a la portada (redirect_to fuera de la lista blanca): reenviando al callback del panel",
+      );
+      return NextResponse.redirect(
+        new URL(`/admin/auth/google/callback${request.nextUrl.search}`, `${fwdProto}://${fwdHost}`),
+      );
     }
   }
 

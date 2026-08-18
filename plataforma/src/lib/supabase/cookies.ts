@@ -137,3 +137,12 @@ export function sessionCookieNames(storageKey: string, presentNames: readonly st
       (name === storageKey || (name.startsWith(`${storageKey}.`) && /^\d+$/.test(name.slice(storageKey.length + 1)))),
   );
 }
+
+/**
+ * El verificador PKCE de un login del PERSONAL (no el del comensal).
+ * Es la prueba de que un `code` que llega a este navegador pertenece a un
+ * acceso del panel empezado aquí mismo.
+ */
+export function isStaffCodeVerifierCookie(name: string): boolean {
+  return isCodeVerifierCookie(name) && name.startsWith("sb-") && !name.startsWith(DINER_COOKIE_NAME);
+}

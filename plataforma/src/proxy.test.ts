@@ -113,6 +113,54 @@ describe('el token recién rotado llega al render', () => {
   });
 });
 
+describe('Supabase devuelve el code a la portada', () => {
+  // Cuando el `redirect_to` no esta en la lista blanca de Supabase, GoTrue
+  // no da error: manda el code a la Site URL a secas. La persona acaba en
+  // la portada, sin sesion, y en los logs no aparece NADA porque el
+  // callback ni se ejecuta.
+  const PORTADA = 'https://distleogin.com/?code=abc123&intent=signup';
+
+  it('reenvia el code al callback del panel si hay verificador del personal', async () => {
+    const res = await proxy(
+      new NextRequest(PORTADA, {
+        headers: { cookie: `${STAFF}-code-verifier=VERIFICADOR`, 'x-forwarded-proto': 'https' },
+      }),
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe(
+      'https://distleogin.com/admin/auth/google/callback?code=abc123&intent=signup',
+    );
+  });
+
+  it('no toca la portada normal, sin code', async () => {
+    const res = await proxy(
+      new NextRequest('https://distleogin.com/', {
+        headers: { cookie: `${STAFF}-code-verifier=VERIFICADOR` },
+      }),
+    );
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('sin verificador del personal no reenvia nada', async () => {
+    // Un `code` suelto en la portada no basta: sin la cookie que lo ata a
+    // este navegador, reenviarlo seria seguir a ciegas un parametro ajeno.
+    const res = await proxy(
+      new NextRequest(PORTADA, { headers: { cookie: 'tema=oscuro' } }),
+    );
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('el verificador del COMENSAL no dispara el reenvio al panel', async () => {
+    const res = await proxy(
+      new NextRequest(PORTADA, {
+        headers: { cookie: 'sb-leogin-diner-v2-code-verifier=OTRO' },
+      }),
+    );
+    expect(res.headers.get('location')).toBeNull();
+  });
+});
+
 describe('el verificador PKCE de un login con Google en vuelo', () => {
   it('sobrevive aunque la sesión anterior esté muerta', async () => {
     // Alguien con una sesión caducada pulsa "Continuar con Google": el
