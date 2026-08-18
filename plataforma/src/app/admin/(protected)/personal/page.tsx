@@ -49,9 +49,30 @@ export default async function AdminPersonalPage() {
     getPanelAccessLog(restaurantId, 20),
     listTrustedDevices(restaurantId),
     listPendingInvitations(restaurantId),
-    db.from('restaurants').select('modules, module_settings, plan_actual, timezone, pin_requires_trusted_device, entry_pin_hash').eq('id', restaurantId).single(),
+    db.from('restaurants').select('modules, module_settings, plan_actual, timezone').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
+
+  // Las columnas de los candados van en su PROPIA consulta, aparte y tolerante
+  // a fallo: viven en las migraciones 112 y 113. Pedirlas en la consulta de
+  // arriba haría que, entre desplegar el código y aplicar las migraciones, esa
+  // consulta fallara ENTERA y la pantalla se quedara sin plan, sin módulos y
+  // sin zona horaria — una pantalla rota por dos columnas que ni siquiera son
+  // el asunto principal. Así, mientras no existan, los candados salen apagados
+  // y el resto de Personal funciona igual.
+  let requiresTrustedDevice = false;
+  let hasEntryPin = false;
+  try {
+    const { data: locks } = await db
+      .from('restaurants')
+      .select('pin_requires_trusted_device, entry_pin_hash')
+      .eq('id', restaurantId)
+      .maybeSingle();
+    requiresTrustedDevice = locks?.pin_requires_trusted_device === true;
+    hasEntryPin = !!locks?.entry_pin_hash;
+  } catch {
+    /* migraciones sin aplicar → sin candados, como antes */
+  }
 
   // No confundir al dueño con secciones que ni él mismo tiene activas (ej.
   // Facturación/Proveedores si no los ha prendido) — mismo criterio que
@@ -111,12 +132,12 @@ export default async function AdminPersonalPage() {
       <TrustedDevicesPanel
         restaurantId={restaurantId}
         devices={devices}
-        requiresTrusted={restaurant?.pin_requires_trusted_device === true}
+        requiresTrusted={requiresTrustedDevice}
       />
       {/* El candado de Mi cuenta es del dueño: un gerente no le pone a su
           jefe un PIN que su jefe no conoce. */}
       {!isManager && (
-        <EntryPinCard restaurantId={restaurantId} hasPin={!!restaurant?.entry_pin_hash} />
+        <EntryPinCard restaurantId={restaurantId} hasPin={hasEntryPin} />
       )}
       <AccessLogPanel
         rows={accessLog}

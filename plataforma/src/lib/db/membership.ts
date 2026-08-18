@@ -181,6 +181,9 @@ export async function getMyRestaurantCards(): Promise<MembershipCard[]> {
   const ids = memberships.map((m) => m.restaurantId);
 
   const [{ data: restaurants }, { data: themes }] = await Promise.all([
+    // `entry_pin_hash` (migración 113) va aquí porque esta pantalla no existe
+    // sin esa misma migración: si no hay membresías, no hay tarjetas que
+    // pintar y no se llega hasta aquí.
     db.from('restaurants').select('id, name, slug, orders_paused, entry_pin_hash').in('id', ids),
     db.from('restaurant_themes').select('restaurant_id, logo_url').in('restaurant_id', ids),
   ]);
