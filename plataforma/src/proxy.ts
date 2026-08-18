@@ -282,8 +282,44 @@ export async function proxy(request: NextRequest) {
           },
         },
       });
-      // IMPORTANTE: no metas lógica entre createServerClient y getUser().
-      await supabase.auth.getUser();
+      try {
+        // IMPORTANTE: no metas lógica entre createServerClient y getUser().
+        await supabase.auth.getUser();
+      } catch (err) {
+        // Refresh token roto (sesión vieja, revocada, o de un proyecto/dominio
+        // anterior): sin este catch, CADA petición de ese navegador repetía
+        // el mismo fallo contra Supabase y lo tiraba a los logs sin parar,
+        // porque este proxy corre en casi toda ruta (ver `matcher` abajo).
+        // Se borra la cookie rota para que la siguiente petición ya llegue
+        // "sin sesión" (usuario desconectado) en vez de reintentar lo mismo.
+        // También se quita de ESTA petición (no solo de la respuesta): si no,
+        // el layout del panel (admin/(protected)/layout.tsx) que también
+        // llama getUser() directamente se estrella con la misma cookie rota
+        // antes de que el navegador reciba el Set-Cookie que la limpia.
+        const code = (err as { code?: string } | null)?.code;
+        const isDeadRefreshToken =
+          code === 'refresh_token_not_found' ||
+          code === 'refresh_token_already_used' ||
+          code === 'session_not_found';
+        if (isDeadRefreshToken) {
+          const isDiner = !!cookieName;
+          for (const { name } of request.cookies.getAll()) {
+            const matches = isDiner
+              ? name === DINER_COOKIE_NAME || name.startsWith(`${DINER_COOKIE_NAME}.`)
+              : name.startsWith('sb-') && !name.startsWith(DINER_COOKIE_NAME) && !LEGACY_DINER_COOKIE_PATTERN.test(name);
+            if (matches) {
+              request.cookies.delete(name);
+              pendingCookies.push({
+                name,
+                value: '',
+                options: { path: cookiePath ?? '/', maxAge: 0, ...(domain ? { domain } : {}) },
+              });
+            }
+          }
+        } else {
+          console.error('[proxy] getUser() falló de forma inesperada:', err);
+        }
+      }
     };
 
     // En PARALELO, no en serie. Son dos sesiones independientes (cookies con
