@@ -108,3 +108,32 @@ export function duplicateCookieNames(cookieHeader: string | null | undefined): s
   }
   return [...duplicated];
 }
+
+/**
+ * La clave con la que supabase-js guarda la sesión del PERSONAL:
+ * `sb-<ref-del-proyecto>-auth-token`, sacada del host de la URL de Supabase.
+ * Es la misma cuenta que hace supabase-js por dentro cuando no le pasas un
+ * `storageKey`; el proxy la necesita para poder limpiar una sesión muerta
+ * por su cuenta, sin depender de que auth-js lo haga a tiempo.
+ */
+export function defaultStorageKey(supabaseUrl: string): string | null {
+  try {
+    return `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Los nombres de cookie que componen UNA sesión: la clave a secas y sus
+ * trozos `.0`, `.1`, … (@supabase/ssr parte el valor cuando no cabe en 4 KB).
+ * No incluye el verificador PKCE aunque comparta prefijo — ver
+ * `isCodeVerifierCookie`.
+ */
+export function sessionCookieNames(storageKey: string, presentNames: readonly string[]): string[] {
+  return presentNames.filter(
+    (name) =>
+      !isCodeVerifierCookie(name) &&
+      (name === storageKey || (name.startsWith(`${storageKey}.`) && /^\d+$/.test(name.slice(storageKey.length + 1)))),
+  );
+}

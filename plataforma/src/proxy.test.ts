@@ -132,6 +132,53 @@ describe('el verificador PKCE de un login con Google en vuelo', () => {
   });
 });
 
+describe('sesion muerta: el proxy suelta la cookie por su cuenta', () => {
+  /** getUser() falla y auth-js NO alcanza a pedir el borrado (promesa suelta). */
+  const muertaSinLimpiar = async () => ({ error: { code: 'refresh_token_not_found' } });
+
+  it('expira la cookie aunque auth-js no haya pedido borrarla', async () => {
+    // auth-js sí llama a _removeSession cuando el refresco falla, pero por el
+    // camino de onAuthStateChange -> _emitInitialSession, que corre en una
+    // promesa que nadie espera. Si ese borrado llega despues de armada la
+    // respuesta, el navegador conserva la cookie muerta y la vuelve a mandar
+    // en la peticion siguiente. Para siempre. Aqui la soltamos nosotros.
+    h.behaviour = muertaSinLimpiar;
+    const res = await proxy(panelRequest(`${STAFF}=MUERTO; ${STAFF}.0=A; tema=oscuro`));
+
+    const borrados = setCookies(res).filter((c) => /max-age=0/i.test(c));
+    expect(borrados.some((c) => c.startsWith(`${STAFF}=;`))).toBe(true);
+    expect(borrados.some((c) => c.startsWith(`${STAFF}.0=;`))).toBe(true);
+  });
+
+  it('no arrastra cookies ajenas ni el verificador PKCE', async () => {
+    h.behaviour = muertaSinLimpiar;
+    const res = await proxy(
+      panelRequest(`${STAFF}=MUERTO; ${STAFF}-code-verifier=VERIFICADOR; tema=oscuro`),
+    );
+
+    const borrados = setCookies(res).filter((c) => /max-age=0/i.test(c));
+    expect(borrados.some((c) => c.startsWith('tema=;'))).toBe(false);
+    expect(borrados.some((c) => c.startsWith(`${STAFF}-code-verifier=;`))).toBe(false);
+  });
+
+  it('en la MISMA peticion el render ya no ve la sesion muerta', async () => {
+    // Si no se quita tambien del request, el layout del panel vuelve a
+    // intentar el mismo refresh token muerto antes de que el navegador
+    // reciba el Set-Cookie que lo limpia.
+    h.behaviour = muertaSinLimpiar;
+    const res = await proxy(panelRequest(`${STAFF}=MUERTO; tema=oscuro`));
+
+    expect(cookiesQueVeElRender(res)).not.toContain('MUERTO');
+    expect(cookiesQueVeElRender(res)).toContain('tema=oscuro');
+  });
+
+  it('una sesion sana no se suelta', async () => {
+    h.behaviour = rotaElToken;
+    const res = await proxy(panelRequest(`${STAFF}=TOKEN-VIEJO`));
+    expect(setCookies(res).some((c) => c.startsWith(`${STAFF}=;`))).toBe(false);
+  });
+});
+
 describe('cookie fantasma del personal', () => {
   const conFantasma = `${STAFF}=FANTASMA-VIEJA; tema=oscuro; ${STAFF}=LA-BUENA`;
 

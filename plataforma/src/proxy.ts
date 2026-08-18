@@ -10,10 +10,12 @@ import {
 import {
   DINER_COOKIE_NAME,
   LEGACY_DINER_COOKIE_PATTERN,
+  defaultStorageKey,
   duplicateCookieNames,
   isCodeVerifierCookie,
   isDeadSessionCode,
   isStaffSessionCookie,
+  sessionCookieNames,
 } from "@/lib/supabase/cookies";
 
 /**
@@ -358,6 +360,43 @@ export async function proxy(request: NextRequest) {
         // IMPORTANTE: no metas lógica entre createServerClient y getUser().
         const { error } = await supabase.auth.getUser();
         if (!cookieName) staffSessionIsDead = isDeadSessionCode(error?.code);
+        // Con una fantasma de por medio no: ese veredicto salio de leer dos
+        // sesiones mezcladas y no prueba que la buena este muerta. De eso se
+        // encarga el bloque de la fantasma, mas abajo.
+        if (isDeadSessionCode(error?.code) && !(!cookieName && hasGhostStaffCookie)) {
+          // Soltamos la cookie NOSOTROS, aquí, con el error en la mano.
+          //
+          // auth-js también la suelta —_callRefreshToken llama a
+          // _removeSession cuando el refresco falla— pero por un camino que
+          // este proxy no espera: `createServerClient` registra un
+          // onAuthStateChange cuyo emitInitialSession corre en una promesa
+          // suelta, sin await de nadie. Si el refresco que falla es ese, el
+          // borrado llega DESPUÉS de que ya armamos la respuesta, no entra
+          // en `pendingCookies`, y el navegador se queda con la cookie
+          // muerta: vuelve a mandarla, vuelve a fallar, en cada peticion y
+          // para siempre. Es justo lo que se veia en los logs.
+          const key = cookieName ?? defaultStorageKey(supabaseUrl);
+          const muertas = key
+            ? sessionCookieNames(key, request.cookies.getAll().map(({ name }) => name))
+            : [];
+          if (muertas.length) {
+            console.warn(
+              `[proxy] sesion muerta (${cookieName ? "comensal" : "personal"}, ${error?.code}): soltando ${muertas.join(", ")}`,
+            );
+            for (const name of muertas) {
+              request.cookies.delete(name);
+              pendingCookies.push({
+                name,
+                value: "",
+                options: {
+                  path: cookiePath ?? "/",
+                  maxAge: 0,
+                  ...(domain ? { domain } : {}),
+                },
+              });
+            }
+          }
+        }
       } catch (err) {
         // Aquí solo llega lo que NO es un AuthError: red caída, Supabase
         // devolviendo HTML, etc. Se traga a propósito —una petición al menú
