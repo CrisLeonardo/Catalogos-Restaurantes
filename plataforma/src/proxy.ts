@@ -91,15 +91,22 @@ export async function proxy(request: NextRequest) {
   // este navegador y no se toca nada. El destino es el mismo origen, asi
   // que no abre ninguna redireccion a terceros.
   if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
-    const esLoginDelPersonal = request.cookies
+    const verificadores = request.cookies
       .getAll()
-      .some(({ name }) => isStaffCodeVerifierCookie(name));
+      .map(({ name }) => name)
+      .filter(isCodeVerifierCookie);
+    const esLoginDelPersonal = verificadores.some(isStaffCodeVerifierCookie);
+    // Se registra SIEMPRE, actúe o no. Que llegue un `code` a la portada ya
+    // es una anomalía; si ademas se decide no reenviarlo, el porqué es el
+    // dato que hace falta para saber si la cookie no llegó o llegó con otro
+    // nombre. Callar aquí deja el fallo igual de mudo que antes.
+    console.warn(
+      `[proxy] code en la portada · verificadores=[${verificadores.join(", ") || "NINGUNO"}]` +
+        ` · ${esLoginDelPersonal ? "reenviando al callback del panel" : "NO reenvío: no hay verificador del personal"}`,
+    );
     if (esLoginDelPersonal) {
       const fwdHost = request.headers.get("x-forwarded-host") ?? host ?? request.nextUrl.host;
       const fwdProto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
-      console.warn(
-        "[proxy] Supabase devolvio el code a la portada (redirect_to fuera de la lista blanca): reenviando al callback del panel",
-      );
       return NextResponse.redirect(
         new URL(`/admin/auth/google/callback${request.nextUrl.search}`, `${fwdProto}://${fwdHost}`),
       );

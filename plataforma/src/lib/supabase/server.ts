@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
-import { DINER_COOKIE_NAME, defaultStorageKey, sessionCookieNames } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, defaultStorageKey, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
 
 export { DINER_COOKIE_NAME };
 
@@ -62,13 +62,22 @@ async function createWithCookieName(cookieName?: string, ocultarSesionPrevia = f
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // El verificador PKCE solo lo toca el callback de OAuth, que
+              // es quien lo canjea y quien debe limpiarlo después. Cualquier
+              // otra petición que decida que la sesión no vale —una Server
+              // Action, un Route Handler— llamará a _removeSession(), que
+              // arrastra el verificador con ella. Si eso ocurre mientras la
+              // persona está en la pantalla de Google, al volver ya no hay
+              // con qué canjear el código: el acceso muere y sin motivo
+              // visible. En el proxy esto ya estaba tapado; aquí no.
+              if (isCodeVerifierCookie(name) && !ocultarSesionPrevia) return;
               cookieStore.set(name, value, {
                 ...options,
                 ...(domain ? { domain } : {}),
                 ...(path ? { path } : {}),
-              }),
-            );
+              });
+            });
           } catch {
             // Llamado desde un Server Component: el middleware ya refresca
             // la sesión, así que se puede ignorar con seguridad.

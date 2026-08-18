@@ -52,6 +52,18 @@ export async function GET(request: NextRequest) {
   // Cliente aislado de la sesión anterior: si auth-js la mira y no le
   // convence, borra el verificador PKCE de esta misma petición y el canje
   // muere sin motivo. Ver createOAuthCallbackClient en lib/supabase/server.
+  // Traza de entrada, siempre. Hasta ahora este callback solo hablaba
+  // cuando fallaba el canje, asi que "no aparece nada en los logs" tapaba
+  // dos cosas opuestas: que no se llegara aqui, o que se llegara y todo
+  // fuera bien. Una linea por intento de acceso no es ruido.
+  const verificadores = (await cookies()).getAll()
+    .map(({ name }) => name)
+    .filter((n) => n.endsWith('-code-verifier'));
+  console.warn(
+    `[admin/auth/google/callback] entrada · host=${host} · intent=${intent}` +
+      ` · next=${safeNext ?? '(ninguno)'} · verificadores=[${verificadores.join(', ') || 'NINGUNO'}]`,
+  );
+
   const supabase = await createOAuthCallbackClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
