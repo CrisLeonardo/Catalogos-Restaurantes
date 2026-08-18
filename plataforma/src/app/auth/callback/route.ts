@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createDinerClient } from '@/lib/supabase/server';
+import { createOAuthCallbackClient } from '@/lib/supabase/server';
+import { DINER_COOKIE_NAME } from '@/lib/supabase/cookies';
 
 export const runtime = 'nodejs';
 
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
   if (code) {
     // Cliente del COMENSAL: la sesión de Google se guarda en su propia cookie
     // (DINER_COOKIE_NAME) y nunca pisa la sesión del personal del restaurante.
-    const supabase = await createDinerClient();
+    // Aislado de la sesión anterior por el mismo motivo que el callback del
+    // personal: auth-js borra el verificador PKCE si la sesión guardada no
+    // le convence. Ver createOAuthCallbackClient.
+    const supabase = await createOAuthCallbackClient(DINER_COOKIE_NAME);
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       return NextResponse.redirect(`${origin}${safeNext}`);

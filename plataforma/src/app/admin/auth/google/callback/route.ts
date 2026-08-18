@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { createOAuthCallbackClient } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
 
@@ -48,9 +49,25 @@ export async function GET(request: NextRequest) {
   };
   if (!code) return fail('sin parámetro code (Google canceló o el redirect_to no está en la lista blanca de Supabase)');
 
-  const supabase = await createClient();
+  // Cliente aislado de la sesión anterior: si auth-js la mira y no le
+  // convence, borra el verificador PKCE de esta misma petición y el canje
+  // muere sin motivo. Ver createOAuthCallbackClient en lib/supabase/server.
+  const supabase = await createOAuthCallbackClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return fail(`exchangeCodeForSession falló: ${error.message}`);
+  if (error) {
+    // Qué cookies llegaron REALMENTE (solo nombres — el valor del
+    // verificador es lo que canjea el acceso, y la sesión es la sesión).
+    // Sin esto, "no está en storage" no distingue tres cosas muy
+    // distintas: que el navegador no la mandara, que llegara con otro
+    // nombre, o que algo la borrara por el camino.
+    const llegaron = (await cookies()).getAll().map(({ name }) => name);
+    const verificadores = llegaron.filter((n) => n.endsWith('-code-verifier'));
+    return fail(
+      `exchangeCodeForSession falló: ${error.message} · host=${host}` +
+        ` · verificadores=[${verificadores.join(', ') || 'NINGUNO'}]` +
+        ` · cookies sb-=[${llegaron.filter((n) => n.startsWith('sb-')).join(', ') || 'ninguna'}]`,
+    );
+  }
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return fail('exchangeCodeForSession no dio error pero getUser() no devolvió usuario');

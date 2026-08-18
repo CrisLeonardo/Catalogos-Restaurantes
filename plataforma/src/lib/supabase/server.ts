@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
-import { DINER_COOKIE_NAME } from "@/lib/supabase/cookies";
+import { DINER_COOKIE_NAME, defaultStorageKey, sessionCookieNames } from "@/lib/supabase/cookies";
 
 export { DINER_COOKIE_NAME };
 
@@ -33,7 +33,7 @@ const isLocalEnv = !rootDomainRaw || rootDomainRaw.includes("localhost");
 /** `.leogin.online` en prod, undefined en local (no forzar dominio en localhost). */
 const COOKIE_DOMAIN = isLocalEnv ? undefined : `.${rootDomainRaw.split(":")[0]}`;
 
-async function createWithCookieName(cookieName?: string) {
+async function createWithCookieName(cookieName?: string, ocultarSesionPrevia = false) {
   const cookieStore = await cookies();
   // Solo el PERSONAL (sin cookieName) comparte dominio; el COMENSAL es host-only.
   const domain = cookieName ? undefined : COOKIE_DOMAIN;
@@ -52,7 +52,13 @@ async function createWithCookieName(cookieName?: string) {
       ...(cookieName ? { cookieOptions: { name: cookieName } } : {}),
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          const todas = cookieStore.getAll();
+          if (!ocultarSesionPrevia) return todas;
+          // Ver createOAuthCallbackClient, más abajo.
+          const clave = cookieName ?? defaultStorageKey(process.env.NEXT_PUBLIC_SUPABASE_URL!);
+          if (!clave) return todas;
+          const deLaSesion = new Set(sessionCookieNames(clave, todas.map(({ name }) => name)));
+          return todas.filter(({ name }) => !deLaSesion.has(name));
         },
         setAll(cookiesToSet) {
           try {
@@ -81,4 +87,25 @@ export async function createClient() {
 /** Sesión del COMENSAL (menú público: cuenta Google, lealtad, mis pedidos). */
 export async function createDinerClient() {
   return createWithCookieName(DINER_COOKIE_NAME);
+}
+
+/**
+ * Cliente SOLO para canjear el código de un login con Google.
+ *
+ * Es igual que los de arriba salvo en una cosa: le esconde la cookie de
+ * sesión que ya hubiera en el navegador. El motivo es que auth-js no lee
+ * esa sesión de forma inocente — `createServerClient` registra un
+ * `onAuthStateChange` que arranca solo, y si la sesión guardada no le
+ * convence (forma inválida, trozos mezclados, refresco fallido) llama a
+ * `_removeSession()`, que borra de la misma bolsa el VERIFICADOR PKCE.
+ * Cuando eso gana la carrera contra `exchangeCodeForSession`, el canje se
+ * queda sin verificador y muere con "PKCE code verifier not found in
+ * storage", aunque la cookie hubiera llegado perfectamente.
+ *
+ * Aquí esa sesión previa no aporta nada: venimos justo a sustituirla. Sin
+ * ella a la vista, auth-js no tiene nada que invalidar, el verificador
+ * sobrevive y el canje escribe la sesión nueva con normalidad.
+ */
+export async function createOAuthCallbackClient(cookieName?: string) {
+  return createWithCookieName(cookieName, true);
 }
