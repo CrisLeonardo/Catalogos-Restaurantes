@@ -79,6 +79,35 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // 1b) El `code` de un acceso con Google aterrizando en un host que NO es
+  // ninguno de nuestros dominios. Pasa cuando la Site URL de Supabase
+  // apunta a otro sitio —la URL cruda de Render, por ejemplo— y el
+  // `redirect_to` que pedimos no esta en su lista blanca: GoTrue no avisa,
+  // simplemente manda el codigo a la Site URL.
+  //
+  // Ahi no hay nada que hacer con las cookies: el verificador PKCE se
+  // escribio en NUESTRO dominio y una cookie no cruza a otro dominio, por
+  // diseño. Lo unico que sirve es devolver el codigo a casa. Es seguro: el
+  // destino no sale de la URL entrante sino de nuestra propia
+  // configuracion, asi que esto no puede convertirse en un salto a un
+  // tercero; y el codigo es de un solo uso y dura poco.
+  const codigoOAuth = request.nextUrl.searchParams.get("code");
+  if (codigoOAuth) {
+    const hostActual = request.headers.get("x-forwarded-host") ?? host ?? request.nextUrl.hostname;
+    const esDominioNuestro = !!cookieDomainForHost(hostActual, process.env.NEXT_PUBLIC_ROOT_DOMAIN);
+    const principal = (process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(",")[0].trim() ?? "").split(":")[0];
+    if (!esDominioNuestro && principal && !principal.includes("localhost")) {
+      console.warn(
+        `[proxy] el code de Google aterrizo en ${hostActual}, que no es un dominio nuestro` +
+          ` (la Site URL de Supabase apunta ahi): devolviendolo a ${principal}`,
+      );
+      const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+      return NextResponse.redirect(
+        new URL(`${pathname}${request.nextUrl.search}`, `${proto || "https"}://${principal}`),
+      );
+    }
+  }
+
   // 1c) Rescate del login con Google cuando Supabase no reconoce nuestro
   // `redirect_to`. En ese caso GoTrue no devuelve un error: ignora la URL
   // que le pedimos y manda el `code` a la Site URL a secas —la portada—,

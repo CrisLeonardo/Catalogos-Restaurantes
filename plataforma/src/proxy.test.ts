@@ -113,6 +113,50 @@ describe('el token recién rotado llega al render', () => {
   });
 });
 
+describe('el code aterriza en un host que no es nuestro', () => {
+  // La Site URL de Supabase apunta a la URL cruda de Render. GoTrue manda
+  // el code ahi, donde el verificador PKCE —escrito en nuestro dominio— no
+  // llega ni puede llegar: una cookie no cruza de dominio.
+  const AJENO = 'https://catalogos-restaurantes.onrender.com/?code=abc123';
+
+  it('lo devuelve al dominio de verdad, conservando ruta y parámetros', async () => {
+    const res = await proxy(new NextRequest(AJENO, {
+      headers: { host: 'catalogos-restaurantes.onrender.com', 'x-forwarded-proto': 'https' },
+    }));
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('https://distleogin.com/?code=abc123');
+  });
+
+  it('también si cae directamente en el callback', async () => {
+    const res = await proxy(
+      new NextRequest('https://catalogos-restaurantes.onrender.com/admin/auth/google/callback?code=abc&intent=signup', {
+        headers: { host: 'catalogos-restaurantes.onrender.com', 'x-forwarded-proto': 'https' },
+      }),
+    );
+    expect(res.headers.get('location')).toBe(
+      'https://distleogin.com/admin/auth/google/callback?code=abc&intent=signup',
+    );
+  });
+
+  it('no rebota nada en nuestro propio dominio', async () => {
+    // Si no, sería un bucle: llega, rebota, vuelve a llegar.
+    const res = await proxy(
+      new NextRequest('https://distleogin.com/?code=abc123', { headers: { host: 'distleogin.com' } }),
+    );
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('no toca una visita normal al host de Render, sin code', async () => {
+    const res = await proxy(
+      new NextRequest('https://catalogos-restaurantes.onrender.com/planes', {
+        headers: { host: 'catalogos-restaurantes.onrender.com' },
+      }),
+    );
+    expect(res.headers.get('location')).toBeNull();
+  });
+});
+
 describe('Supabase devuelve el code a la portada', () => {
   // Cuando el `redirect_to` no esta en la lista blanca de Supabase, GoTrue
   // no da error: manda el code a la Site URL a secas. La persona acaba en
