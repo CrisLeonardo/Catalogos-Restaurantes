@@ -7,7 +7,14 @@ import {
   getGroupSlug,
   legacyDomainRedirectHost,
 } from "@/lib/tenant";
-import { DINER_COOKIE_NAME, LEGACY_DINER_COOKIE_PATTERN } from "@/lib/supabase/cookies";
+import {
+  DINER_COOKIE_NAME,
+  LEGACY_DINER_COOKIE_PATTERN,
+  duplicateCookieNames,
+  isCodeVerifierCookie,
+  isDeadSessionCode,
+  isStaffSessionCookie,
+} from "@/lib/supabase/cookies";
 
 /**
  * Proxy (Next.js 16 — antes llamado "middleware"):
@@ -221,10 +228,29 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set('Content-Security-Policy', csp);
 
   // Fábrica de respuesta: NextResponse.rewrite si hay rewrite, next() si no.
-  const makeResponse = () =>
-    rewriteUrl
+  //
+  // Se llama DESPUÉS del refresco de sesión (punto 5), y por eso vuelve a
+  // copiar la cabecera `cookie`: `requestHeaders` se sacó mucho más arriba,
+  // y el refresco escribe los tokens nuevos en `request.cookies`, que por
+  // dentro reescribe la cabecera del request ORIGINAL. La copia se queda
+  // con la de antes.
+  //
+  // Que hoy no reviente es por un rodeo de Next: además de estas cabeceras
+  // manda las Set-Cookie del proxy en `x-middleware-set-cookie`, y lo que
+  // devuelve `cookies()` es la mezcla de las dos, con la cookie nueva
+  // ganando (server/async-storage/request-store.js). Así que `cookies()` —de
+  // donde lee lib/supabase/server.ts— ve el token bueno, pero `headers()`
+  // seguía diciendo lo contrario dentro de la misma petición. Una petición
+  // no puede llevar dos versiones de sus propias cookies: la primera que
+  // lea la cabecera cruda se lleva un refresh token ya gastado.
+  const makeResponse = () => {
+    const refreshedCookies = request.headers.get('cookie');
+    if (refreshedCookies === null) requestHeaders.delete('cookie');
+    else requestHeaders.set('cookie', refreshedCookies);
+    return rewriteUrl
       ? NextResponse.rewrite(rewriteUrl!, { request: { headers: requestHeaders } })
       : NextResponse.next({ request: { headers: requestHeaders } });
+  };
 
   // 5) Refresco de sesión Supabase (solo si hay credenciales configuradas).
   //    Hay DOS sesiones independientes (ver lib/supabase/server.ts):
@@ -241,6 +267,11 @@ export async function proxy(request: NextRequest) {
   // respuesta por su cuenta, el segundo pisaría las cookies del primero).
   type PendingCookie = { name: string; value: string; options: Record<string, unknown> };
   const pendingCookies: PendingCookie[] = [];
+  // Set-Cookie que se escriben A MANO, sin pasar por `response.cookies`.
+  // Ese API indexa por NOMBRE, y aquí hacen falta DOS borrados con el mismo
+  // nombre (uno por dominio, otro host-only) — ver el bloque de la cookie
+  // fantasma más abajo.
+  const rawSetCookies: string[] = [];
 
   if (supabaseUrl && anonKey) {
     // En producción compartimos la sesión en todos los subdominios usando
@@ -249,6 +280,23 @@ export async function proxy(request: NextRequest) {
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(",")[0].trim() ?? "";
     const isLocal = !rootDomain || rootDomain.includes("localhost");
     const cookieDomain = isLocal ? undefined : `.${rootDomain.split(":")[0]}`;
+
+    // Estado de las cookies TAL COMO LLEGARON, antes de que el refresco toque
+    // nada. `requestHeaders` todavía es la copia fiel del original aquí.
+    const staffCookieNames = request.cookies
+      .getAll()
+      .map(({ name }) => name)
+      .filter(isStaffSessionCookie);
+    // Cookies fantasma del PERSONAL: el mismo nombre repetido en la cabecera
+    // (una host-only vieja + la de dominio ancho de ahora). Solo tiene
+    // sentido en producción: en local la cookie buena ES host-only.
+    // Ver el bloque "LEER LA COOKIE DE SESIÓN SIN CREERLE DE MÁS" en
+    // lib/supabase/cookies.ts.
+    const ghostStaffCookies = cookieDomain
+      ? duplicateCookieNames(requestHeaders.get("cookie")).filter(isStaffSessionCookie)
+      : [];
+    const hasGhostStaffCookie = ghostStaffCookies.length > 0;
+    let staffSessionIsDead = false;
 
     const refreshSession = async (cookieName?: string) => {
       // Solo la sesión del PERSONAL comparte dominio entre subdominios; la del
@@ -268,6 +316,19 @@ export async function proxy(request: NextRequest) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
+              // El verificador PKCE no es asunto de este proxy: lo escribe el
+              // navegador al pulsar "Continuar con Google" y lo consume el
+              // callback. Si al fallar el refresco auth-js pide borrarlo
+              // (_removeSession lo borra junto con la sesión), obedecer aquí
+              // deja al usuario que vuelve de Google sin con qué canjear su
+              // `code` → login fallido con ?auth_error=1.
+              if (isCodeVerifierCookie(name)) return;
+              // Con una cookie fantasma de por medio, lo que acabamos de leer
+              // es una mezcla de dos sesiones: su "esta sesión no vale" no es
+              // de fiar. No dejamos que ese veredicto borre la cookie buena;
+              // más abajo se expira la fantasma y la siguiente petición ya
+              // lee una sola sesión, entera.
+              if (hasGhostStaffCookie && value === "" && isStaffSessionCookie(name)) return;
               request.cookies.set(name, value);
               pendingCookies.push({
                 name,
@@ -282,43 +343,27 @@ export async function proxy(request: NextRequest) {
           },
         },
       });
+      // getUser() DEVUELVE el error de autenticación, NO lo lanza: auth-js
+      // atrapa todo AuthError y responde `{ data: { user: null }, error }`
+      // (GoTrueClient._getUser). Un try/catch alrededor no ve un refresh
+      // token muerto — hay que mirar el valor de vuelta.
+      //
+      // Y el `Error [AuthApiError]` que sale en los logs tampoco viene de
+      // aquí: lo imprime el propio auth-js con un console.error suelto
+      // dentro de _emitInitialSession, que createServerClient dispara sin
+      // await desde onAuthStateChange. No hay try/catch capaz de callarlo.
+      // La única forma de que deje de aparecer es que el refresco deje de
+      // fallar, que es de lo que va todo lo demás de este bloque.
       try {
         // IMPORTANTE: no metas lógica entre createServerClient y getUser().
-        await supabase.auth.getUser();
+        const { error } = await supabase.auth.getUser();
+        if (!cookieName) staffSessionIsDead = isDeadSessionCode(error?.code);
       } catch (err) {
-        // Refresh token roto (sesión vieja, revocada, o de un proyecto/dominio
-        // anterior): sin este catch, CADA petición de ese navegador repetía
-        // el mismo fallo contra Supabase y lo tiraba a los logs sin parar,
-        // porque este proxy corre en casi toda ruta (ver `matcher` abajo).
-        // Se borra la cookie rota para que la siguiente petición ya llegue
-        // "sin sesión" (usuario desconectado) en vez de reintentar lo mismo.
-        // También se quita de ESTA petición (no solo de la respuesta): si no,
-        // el layout del panel (admin/(protected)/layout.tsx) que también
-        // llama getUser() directamente se estrella con la misma cookie rota
-        // antes de que el navegador reciba el Set-Cookie que la limpia.
-        const code = (err as { code?: string } | null)?.code;
-        const isDeadRefreshToken =
-          code === 'refresh_token_not_found' ||
-          code === 'refresh_token_already_used' ||
-          code === 'session_not_found';
-        if (isDeadRefreshToken) {
-          const isDiner = !!cookieName;
-          for (const { name } of request.cookies.getAll()) {
-            const matches = isDiner
-              ? name === DINER_COOKIE_NAME || name.startsWith(`${DINER_COOKIE_NAME}.`)
-              : name.startsWith('sb-') && !name.startsWith(DINER_COOKIE_NAME) && !LEGACY_DINER_COOKIE_PATTERN.test(name);
-            if (matches) {
-              request.cookies.delete(name);
-              pendingCookies.push({
-                name,
-                value: '',
-                options: { path: cookiePath ?? '/', maxAge: 0, ...(domain ? { domain } : {}) },
-              });
-            }
-          }
-        } else {
-          console.error('[proxy] getUser() falló de forma inesperada:', err);
-        }
+        // Aquí solo llega lo que NO es un AuthError: red caída, Supabase
+        // devolviendo HTML, etc. Se traga a propósito —una petición al menú
+        // público no tiene por qué morir porque Auth esté de baja— pero se
+        // deja en los logs, que para eso está.
+        console.error('[proxy] getUser() falló de forma inesperada:', err);
       }
     };
 
@@ -332,6 +377,35 @@ export async function proxy(request: NextRequest) {
       refreshSession(), // personal
       ...(isAdminArea ? [] : [refreshSession(DINER_COOKIE_NAME)]), // comensal (menú público)
     ]);
+
+    // Cookie fantasma del PERSONAL: expira la copia HOST-ONLY (misma clave,
+    // sin `domain`) que quedó de antes de compartir la sesión entre
+    // subdominios. Es el motivo de que `refresh_token_not_found` se repita
+    // en cada petición del mismo navegador y no se cure solo: cuando
+    // auth-js da la sesión por muerta, la borra con `Domain=.<dominio>`, y
+    // ese Set-Cookie no toca la host-only. Sigue llegando, sigue
+    // mezclándose con la buena, sigue fallando. Aquí se borra por su
+    // dominio de verdad — el implícito, que es no poner ninguno.
+    //
+    // Se dispara cuando el nombre viene repetido (fantasma a la vista) o
+    // cuando la sesión salió muerta (puede que la fantasma sea ya la única
+    // que queda, y entonces no hay duplicado que ver). Deja de dispararse
+    // sola en cuanto no quedan cookies viejas, igual que la limpieza del
+    // comensal v1 de aquí abajo.
+    if (cookieDomain && (hasGhostStaffCookie || staffSessionIsDead)) {
+      if (hasGhostStaffCookie) {
+        // Una línea por navegador afectado y deja de aparecer en cuanto la
+        // fantasma se va: es la forma de saber, mirando los logs, si los
+        // `refresh_token_not_found` venían de esto o de otra cosa. Solo
+        // nombres — el valor de esta cookie ES la sesión.
+        console.warn(`[proxy] cookie fantasma del personal, expirando la copia host-only: ${ghostStaffCookies.join(", ")}`);
+      }
+      const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+      const secure = proto === "https" ? "; Secure" : "";
+      for (const name of staffCookieNames) {
+        rawSetCookies.push(`${name}=; Path=/; Max-Age=0; SameSite=Lax${secure}`);
+      }
+    }
 
     // Limpieza one-shot: expira las cookies del comensal v1 (`sb-leogin-diner`
     // y sus piezas `.N`), que eran de dominio ancho (.leogin.online) y dejaban
@@ -352,6 +426,13 @@ export async function proxy(request: NextRequest) {
   const response = makeResponse();
   for (const c of pendingCookies) {
     response.cookies.set(c.name, c.value, c.options);
+  }
+  // Después del bucle, obligatoriamente: `response.cookies.set` no añade una
+  // cabecera, sino que reescribe TODAS las Set-Cookie desde un mapa indexado
+  // por nombre. Cualquier cosa escrita antes a mano desaparecería, y dos
+  // cookies del mismo nombre no caben en ese mapa.
+  for (const raw of rawSetCookies) {
+    response.headers.append("set-cookie", raw);
   }
   // El link estable nunca debe cachearse: la resolución id→slug puede cambiar
   // (el restaurante renombra su slug) y una respuesta cacheada la dejaría
