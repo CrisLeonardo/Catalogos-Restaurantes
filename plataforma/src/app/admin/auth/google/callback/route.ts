@@ -42,15 +42,18 @@ export async function GET(request: NextRequest) {
   // ahí es donde la persona quería estar. Aterrizar en el login le habría
   // borrado de la vista el plan, el nombre y la plantilla que ya eligió.
   const failUrl = intent === 'signup' && safeNext ? safeNext : '/admin/login';
-  const fail = () => NextResponse.redirect(`${origin}${failUrl}?auth_error=1`);
-  if (!code) return fail();
+  const fail = (reason: string) => {
+    console.error(`[admin/auth/google/callback] ${reason}`);
+    return NextResponse.redirect(`${origin}${failUrl}?auth_error=1`);
+  };
+  if (!code) return fail('sin parámetro code (Google canceló o el redirect_to no está en la lista blanca de Supabase)');
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return fail();
+  if (error) return fail(`exchangeCodeForSession falló: ${error.message}`);
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return fail();
+  if (!user) return fail('exchangeCodeForSession no dio error pero getUser() no devolvió usuario');
 
   const { data: profile } = await supabase
     .from('profiles')

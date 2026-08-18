@@ -37,6 +37,9 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
+    console.error(`[auth/callback] exchangeCodeForSession falló: ${error.message}`);
+  } else {
+    console.error('[auth/callback] sin parámetro code (Google canceló o el redirect_to no está en la lista blanca de Supabase)');
   }
 
   // Cualquier fallo vuelve al menú con una marca para mostrar un aviso amable.
