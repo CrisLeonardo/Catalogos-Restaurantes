@@ -32,12 +32,20 @@ export async function resolveStaffDestination(
   // Administra una cadena → panel del grupo (migración 116: por organización).
   if (await myOrganizationId()) return '/central';
 
-  /* Con más de un restaurante (migración 113), a Mi cuenta a elegir.
-     Con UNO SOLO se entra directo, sin selector: el 90% de los clientes tiene
-     un solo local y la mejora para quien tiene tres no puede costarle un
-     toque a quien tiene uno. Esa es la regla, y por eso el corte es en 2. */
+  /* Mi cuenta es la casa de la PERSONA: quien tiene restaurantes aterriza ahí
+     y desde ahí entra al que quiera, tenga uno o tenga cinco.
+
+     Antes se entraba directo cuando solo había uno, para ahorrarle un toque.
+     Se cambió a propósito: ese atajo escondía la pantalla donde se crea otro
+     local, se ve el plan y se invita al equipo, y quien tiene un restaurante
+     hoy puede tener dos mañana — justamente lo que este modelo busca.
+
+     El personal NO pasa por aquí: un cajero o un mesero no elige nada, tiene
+     un solo sitio donde trabajar y entra directo. Por eso la condición mira
+     si es DUEÑO de algo, no cuántas membresías tiene. */
   const memberships = await getMyMemberships();
-  if (memberships.length > 1) return `/mi-cuenta${suffix}`;
+  const isOwner = memberships.some((m) => m.role === 'OWNER');
+  if (isOwner || memberships.length > 1) return `/mi-cuenta${suffix}`;
   if (memberships.length === 1 && !profile.restaurant_id) {
     // Perfil sin restaurante "de casa" pero con una membresía: se entra a esa.
     const { data: only } = await supabase

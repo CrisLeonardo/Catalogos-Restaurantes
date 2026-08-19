@@ -127,7 +127,7 @@ export default function MiCuentaClient({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cards.map((c) => (
-            <RestaurantRow key={c.restaurantId} card={c} onAskPin={() => setAsking(c)} />
+            <RestaurantRow key={c.restaurantId} card={c} rootDomain={rootDomain} onAskPin={() => setAsking(c)} />
           ))}
         </div>
 
@@ -179,7 +179,38 @@ export default function MiCuentaClient({
 
 /* ── Una tarjeta de restaurante ──────────────────────────────── */
 
-function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () => void }) {
+/**
+ * Atajo al equipo de ESE restaurante desde su tarjeta.
+ *
+ * Lleva a la pantalla de Personal, que es donde vive invitar y dar de alta,
+ * en vez de repetir aquí el formulario: qué secciones puede tener un gerente
+ * depende del plan y de los módulos de cada local, y esa regla duplicada se
+ * desincroniza sola. Un enlace no puede desincronizarse.
+ *
+ * Solo para el dueño: un gerente invitado no crea pares suyos.
+ */
+function TeamLink({ card, rootDomain }: { card: MembershipCard; rootDomain: string }) {
+  if (card.role !== 'OWNER') return null;
+  const host = rootDomain.includes('localhost')
+    ? `http://${card.slug}-admin.${rootDomain}`
+    : `https://${card.slug}-admin.${rootDomain}`;
+  return (
+    <a
+      href={`${host}/admin/personal`}
+      className="press"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+        padding: '6px 11px', borderRadius: 'var(--radius-full)',
+        border: '1px solid var(--u-hair-2)', textDecoration: 'none',
+        fontSize: 12, color: 'var(--u-text-3)',
+      }}
+    >
+      <Icon name="users" size={13} /> Equipo y accesos
+    </a>
+  );
+}
+
+function RestaurantRow({ card, rootDomain, onAskPin }: { card: MembershipCard; rootDomain: string; onAskPin: () => void }) {
   const [state, formAction, isPending] = useActionState<EntryState, FormData>(enterRestaurant, null);
 
   // Con candado, el PIN se pide en un diálogo aparte; sin candado, un solo
@@ -187,6 +218,7 @@ function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () 
   // tiene candado nunca vea ni un paso de más.
   if (card.locked) {
     return (
+      <>
       <button
         type="button"
         onClick={onAskPin}
@@ -195,6 +227,8 @@ function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () 
       >
         <RowBody card={card} pending={false} />
       </button>
+      <TeamLink card={card} rootDomain={rootDomain} />
+      </>
     );
   }
 
@@ -207,6 +241,7 @@ function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () 
       {state && 'error' in state && (
         <p style={{ fontSize: 12.5, color: '#f87171', margin: '6px 0 0' }}>{state.error}</p>
       )}
+      <TeamLink card={card} rootDomain={rootDomain} />
     </form>
   );
 }
