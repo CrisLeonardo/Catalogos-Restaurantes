@@ -45,9 +45,22 @@ export function emailEnabled(): boolean {
   return !!process.env.RESEND_API_KEY;
 }
 
-/** Remitente. Tiene que ser un dominio verificado en Resend. */
+/**
+ * Remitente. El dominio TIENE que estar verificado en Resend, o el envío se
+ * rechaza (y como sendEmail nunca lanza, se rechaza en silencio).
+ *
+ * Si no se configura `EMAIL_FROM`, se deriva del dominio de la plataforma en
+ * vez de llevar uno escrito a mano: el valor fijo que había aquí seguía
+ * apuntando a leogin.online después de migrar a distleogin.com, y con Resend
+ * verificando el dominio nuevo eso habría fallado en todos los correos sin
+ * decir por qué.
+ */
 function fromAddress(): string {
-  return process.env.EMAIL_FROM || 'Leogin <no-responder@leogin.online>';
+  if (process.env.EMAIL_FROM) return process.env.EMAIL_FROM;
+  const root = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? '').split(',')[0].trim().split(':')[0];
+  return root && !root.includes('localhost')
+    ? `Leogin <no-responder@${root}>`
+    : 'Leogin <onboarding@resend.dev>'; // remitente de pruebas de Resend
 }
 
 export type SendResult = { ok: true } | { ok: false; error: string };
