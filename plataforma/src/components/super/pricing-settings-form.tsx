@@ -156,7 +156,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
         <Grid>
           <Field name="group_panel_fee" label="Panel de grupo (Q/mes)" value={pricing.groupPanelFee} />
           <Field name="grace_days"      label="Días de gracia (global)" value={pricing.graceDays} step="1" />
-          <Field name="trial_days"      label="Días de prueba gratis"   value={pricing.trialDays} step="1" />
+          <Field name="trial_days"      label="Días de prueba (1er restaurante)" value={pricing.trialDays} step="1" />
         </Grid>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--u-text-2)', cursor: 'pointer' }}>

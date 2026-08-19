@@ -28,6 +28,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getPricingSettings } from '@/lib/db/billing';
+import { newRestaurantBilling } from '@/lib/billing-signup';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendEmailVerification } from '@/lib/auth/email-verification';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
@@ -244,12 +245,12 @@ export async function signupRestaurant(
   // ESTANDAR/PREMIUM sí quedan en prueba gratis, sin cobrar hasta graduar.
   const pricing = await getPricingSettings();
   const trialDays = Math.max(0, Math.round(pricing.trialDays || 30));
-  const trialEnds = new Date(Date.now() + trialDays * 86_400_000).toISOString();
-  await db.from('restaurant_billing').insert(
-    planCode === 'BASICO'
-      ? { restaurant_id: restaurantId, auto_price: true, active: true, trial_ends_at: null, currency: 'GTQ' }
-      : { restaurant_id: restaurantId, auto_price: true, active: false, trial_ends_at: trialEnds, currency: 'GTQ' },
-  );
+  // Esta es el alta de la calle: el primer restaurante de la persona, y el
+  // único que lleva prueba gratis. Ver lib/billing-signup.ts.
+  await db.from('restaurant_billing').insert({
+    restaurant_id: restaurantId,
+    ...newRestaurantBilling({ planCode, trialDays, isFirstOfOwner: true }),
+  });
   // Calcula y guarda la mensualidad del plan (se muestra al dueño, se cobra al graduar).
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 

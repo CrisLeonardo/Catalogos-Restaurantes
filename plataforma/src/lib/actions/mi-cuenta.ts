@@ -18,9 +18,9 @@ import { checkEntryGate, unlockWithEntryPin, setEntryPin } from '@/lib/auth/entr
 import { isValidPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
-import { getPricingSettings } from '@/lib/db/billing';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { withPlanFloor, type PlanCode } from '@/lib/plans';
+import { newRestaurantBilling } from '@/lib/billing-signup';
 import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
 
@@ -235,20 +235,14 @@ export async function createAnotherRestaurant(
     config: { ...(template ? structuredClone(template.config) : {}), orderTypes },
   });
 
-  // ── Cobro (mismo criterio que el alta de la calle) ─────────
-  const pricing = await getPricingSettings();
-  const trialDays = Math.max(0, Math.round(pricing.trialDays || 30));
-  await db.from('restaurant_billing').insert(
-    planCode === 'BASICO'
-      ? { restaurant_id: restaurantId, auto_price: true, active: true, trial_ends_at: null, currency: 'GTQ' }
-      : {
-          restaurant_id: restaurantId,
-          auto_price: true,
-          active: false,
-          trial_ends_at: new Date(Date.now() + trialDays * 86_400_000).toISOString(),
-          currency: 'GTQ',
-        },
-  );
+  // ── Cobro ──────────────────────────────────────────────────
+  // Sin prueba: aquí solo llega quien YA es dueño de algo (lo exige la
+  // comprobación de arriba), y la prueba es una por persona. Ver la regla y
+  // el porqué en lib/billing-signup.ts.
+  await db.from('restaurant_billing').insert({
+    restaurant_id: restaurantId,
+    ...newRestaurantBilling({ planCode, trialDays: 0, isFirstOfOwner: false }),
+  });
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 
   // ── La membresía de dueño ──────────────────────────────────

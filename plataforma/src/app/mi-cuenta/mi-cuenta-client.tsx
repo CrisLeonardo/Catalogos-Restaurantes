@@ -346,7 +346,8 @@ function NewRestaurantDialog({ pricing, rootDomain, onClose }: {
       <Glass style={{ padding: '26px 24px', width: '100%', maxWidth: 420, maxHeight: '86vh', overflowY: 'auto' }}>
         <p className="t-display" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Crear otro restaurante</p>
         <p className="t-mute" style={{ fontSize: 13, margin: '6px 0 18px', lineHeight: 1.5 }}>
-          Entrarás con esta misma cuenta. El plan que elijas se suma a tu mensualidad.
+          Entrarás con esta misma cuenta. El plan que elijas se suma a tu mensualidad
+          desde hoy: la prueba gratis es solo para tu primer restaurante.
         </p>
 
         <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
@@ -415,7 +416,7 @@ function NewRestaurantDialog({ pricing, rootDomain, onClose }: {
             <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '8px 0 0', lineHeight: 1.45 }}>
               {plan === 'BASICO'
                 ? 'Gratis para siempre. Puedes subir de plan cuando quieras.'
-                : `Empieza con ${pricing.trialDays} días gratis; después se suma a tu mensualidad.`}
+                : 'Se suma a tu mensualidad desde hoy, sin días de prueba.'}
             </p>
           </div>
 
