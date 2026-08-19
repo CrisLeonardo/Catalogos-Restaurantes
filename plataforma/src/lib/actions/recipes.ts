@@ -27,11 +27,9 @@ async function resolveRestaurantId(formRestaurantId?: string | null): Promise<Re
     if (!formRestaurantId) return { error: 'Falta restaurant_id' };
     return { restaurantId: formRestaurantId };
   }
-  if (profile.role === 'GROUP_OWNER') {
-    const id = await resolveGroupBranchId();
-    if (!id) return { error: 'Sin restaurante' };
-    return { restaurantId: id };
-  }
+  // Sucursal del grupo que administra, si administra alguno (migración 116).
+  const groupBranchId = await resolveGroupBranchId();
+  if (groupBranchId) return { restaurantId: groupBranchId };
   const own = await resolveOwnRestaurantId(profile.restaurant_id);
   if (!own) return { error: 'Sin restaurante' };
   return { restaurantId: own };

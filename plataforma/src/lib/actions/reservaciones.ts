@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { canActOnGroupBranch } from '@/lib/db/admin';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
 
 export type ReservationResult = { error?: string; ok?: boolean };
@@ -22,10 +22,8 @@ async function getAuthorizedRestaurantId(restaurantId: string): Promise<{ ok: tr
   if (!profile) return { ok: false, error: 'Perfil no encontrado.' };
 
   const isSuper = profile.role === 'SUPER_ADMIN';
-  if (profile.role === 'GROUP_OWNER') {
-    if ((await resolveGroupBranchId()) !== restaurantId) return { ok: false, error: 'No autorizado.' };
-    return { ok: true, restaurantId };
-  }
+  // Administrar el grupo de esta sucursal basta (migración 116).
+  if (await canActOnGroupBranch(restaurantId)) return { ok: true, restaurantId };
   const allowed = ['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'];
   if (!isSuper && !allowed.includes(profile.role)) return { ok: false, error: 'Sin permisos.' };
   if (!isSuper && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { ok: false, error: 'No autorizado.' };

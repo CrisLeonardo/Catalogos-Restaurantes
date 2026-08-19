@@ -64,7 +64,8 @@ async function requirePreviewAccess(id: string) {
     return;
   }
 
-  if (id !== 'new' && profile?.role === 'GROUP_OWNER' && profile.organization_id) {
+  // Quien administra un grupo puede previsualizar sus sucursales (mig. 116).
+  if (id !== 'new' && profile?.organization_id) {
     const svc = createServiceClient();
     const { data: branch } = await svc
       .from('restaurants')

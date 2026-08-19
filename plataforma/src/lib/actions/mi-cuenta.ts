@@ -180,8 +180,9 @@ export async function createAnotherRestaurant(
     .select('role, organization_id')
     .eq('id', user.id)
     .maybeSingle();
-  const organizationId =
-    creator?.role === 'GROUP_OWNER' ? ((creator.organization_id as string | null) ?? null) : null;
+  // Si administra una cadena, el local nuevo nace dentro de ella. La cadena
+  // se reconoce por la organización del perfil (migración 116).
+  const organizationId = (creator?.organization_id as string | null) ?? null;
 
   // ── Dirección (slug) ───────────────────────────────────────
   let slug: string;

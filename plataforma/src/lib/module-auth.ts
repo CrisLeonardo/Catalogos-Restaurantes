@@ -1,7 +1,7 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { canActOnGroupBranch } from '@/lib/db/admin';
 import { isModuleActive, type ActivatableModuleKey, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 
 /**
@@ -26,9 +26,10 @@ export async function authorizeModuleAction(
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   if (!isSuper) {
-    if (profile.role === 'GROUP_OWNER') {
-      // Dueño de grupo: la sucursal debe pertenecer a su organización.
-      if ((await resolveGroupBranchId()) !== restaurantId) return { error: 'No autorizado.' };
+    // Quien administra el grupo de esta sucursal entra por ahí, sin más
+    // comprobaciones (migración 116: el grupo se lee de la organización).
+    if (await canActOnGroupBranch(restaurantId)) {
+      // autorizado por el grupo
     } else {
       if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
       const role = profile.role as string;

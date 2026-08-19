@@ -8,8 +8,8 @@ import type { Organization, Restaurant } from '@/types';
 
 /* ============================================================
    PANEL DE GRUPO — capa de datos (Fase E)
-   El GROUP_OWNER ve consolidado de todas sus sucursales.
-   Auth: GROUP_OWNER por su organization_id; SUPER_ADMIN por x-org-slug.
+   Quien administra el grupo ve consolidado de todas sus sucursales.
+   Auth: el jefe del grupo por su organization_id; SUPER_ADMIN por x-org-slug.
    ============================================================ */
 
 export type GroupContext = {
@@ -36,7 +36,8 @@ export const getGroupContext = cache(async (): Promise<GroupContext | null> => {
   const db = createServiceClient();
   let orgId: string | null = null;
 
-  if (profile.role === 'GROUP_OWNER') {
+  // Quien administra un grupo se reconoce por su organización (mig. 116).
+  if (profile.organization_id) {
     orgId = profile.organization_id as string | null;
   } else if (profile.role === 'SUPER_ADMIN') {
     const slug = (await headers()).get('x-org-slug');

@@ -213,11 +213,12 @@ export interface LoyaltyReward {
 export interface Profile {
   id: string;
   restaurant_id: string | null;
-  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF' | 'GROUP_OWNER' | 'RESTAURANT_WAITER';
+  role: 'SUPER_ADMIN' | 'RESTAURANT_OWNER' | 'RESTAURANT_STAFF' | 'RESTAURANT_WAITER';
   full_name: string | null;
   /** Secciones permitidas para RESTAURANT_STAFF (migración 023); null = todas. */
   permissions: string[] | null;
-  /** Para GROUP_OWNER (migración 024): el grupo que administra. */
+  /** El grupo que administra, si administra alguno. Desde la migración 116
+      esto —y no un rol— es lo que define a un jefe de cadena. */
   organization_id: string | null;
   /**
    * Cuándo confirmó su correo abriendo el enlace que le mandamos (migración

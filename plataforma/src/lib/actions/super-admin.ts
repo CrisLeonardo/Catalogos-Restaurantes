@@ -722,7 +722,9 @@ export async function createGroupOwner(
 
   const { error: profErr } = await db.from('profiles').upsert({
     id: created.user.id,
-    role: 'GROUP_OWNER',
+    // Sin rol propio desde la migración 116: es un dueño más, y lo que le da
+    // el grupo entero es `organization_id`.
+    role: 'RESTAURANT_OWNER',
     organization_id: orgId,
     restaurant_id: null,
     full_name: fullName,

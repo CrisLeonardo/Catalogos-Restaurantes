@@ -78,8 +78,8 @@ export default function GroupShell({ orgName, logoUrl, branchCount, children }: 
         {/* Puente hacia Mi cuenta (migración 113). El dueño de una cadena
             tenía dos hogares sin relación: este panel y la lista de sus
             restaurantes. Desde aquí se llega al otro — y desde el otro, a
-            este. El rol GROUP_OWNER no cambia todavía: unir las dos vistas es
-            una cosa, retirar un rol con clientes encima es otra. */}
+            este. El rol GROUP_OWNER se retiró después, en la migración 116:
+            quien administra la cadena se reconoce por su organización. */}
         <a
           href="/mi-cuenta"
           className="press glass-quiet"

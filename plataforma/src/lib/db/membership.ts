@@ -220,7 +220,7 @@ export type GroupPanel = { name: string; url: string; branchCount: number };
  * Es el primer paso de unir `/central` con Mi cuenta: hasta ahora el dueño de
  * una cadena tenía DOS hogares sin relación —el panel de grupo en su propio
  * subdominio y, desde la 112, la lista de sus sucursales— y nada que llevara
- * de uno al otro. Aquí solo se AÑADE el enlace; retirar el rol GROUP_OWNER es
+ * de uno al otro. El rol GROUP_OWNER se retiró en la migración 116; lo que
  * otra entrega, con sus propias pruebas (ver PLAN_ACCESO_MULTICUENTA.md §10).
  */
 export async function getMyGroupPanel(): Promise<GroupPanel | null> {
@@ -238,9 +238,10 @@ export async function getMyGroupPanel(): Promise<GroupPanel | null> {
       .eq('id', user.id)
       .maybeSingle();
 
-    // Solo el dueño de grupo: un gerente invitado a dos sucursales de la misma
-    // cadena no tiene por qué ver las finanzas consolidadas de su jefe.
-    if (profile?.role !== 'GROUP_OWNER' || !profile.organization_id) return null;
+    // Solo quien administra la cadena: un gerente invitado a dos sucursales de
+    // la misma no tiene por qué ver las finanzas consolidadas de su jefe. Desde
+    // la migración 116 eso lo dice la organización del perfil, no un rol.
+    if (!profile?.organization_id) return null;
 
     const [{ data: org }, { count }] = await Promise.all([
       db.from('organizations').select('name, slug').eq('id', profile.organization_id as string).maybeSingle(),

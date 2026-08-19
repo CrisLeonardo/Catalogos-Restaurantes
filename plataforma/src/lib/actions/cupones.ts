@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { canActOnGroupBranch } from '@/lib/db/admin';
 import { resolveCoupon, type DiscountType } from '@/lib/db/cupones';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 
@@ -55,11 +55,11 @@ async function getAuthorized(restaurantId: string) {
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   const isOwner = profile.role === 'RESTAURANT_OWNER';
-  const isGroupOwner = profile.role === 'GROUP_OWNER';
-  if (!isSuper && !isOwner && !isGroupOwner) return { ok: false as const, error: 'Solo el propietario puede gestionar cupones.' };
-  if (isGroupOwner) {
-    if ((await resolveGroupBranchId()) !== restaurantId) return { ok: false as const, error: 'No autorizado.' };
-  } else if (!isSuper && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
+  // Administrar el grupo de esta sucursal vale igual que ser su dueño
+  // (migración 116: el grupo se lee de la organización, no de un rol).
+  const enSuGrupo = await canActOnGroupBranch(restaurantId);
+  if (!isSuper && !isOwner && !enSuGrupo) return { ok: false as const, error: 'Solo el propietario puede gestionar cupones.' };
+  if (!isSuper && !enSuGrupo && !(await canActOnRestaurant(profile.restaurant_id, restaurantId))) {
     return { ok: false as const, error: 'No autorizado.' };
   }
 

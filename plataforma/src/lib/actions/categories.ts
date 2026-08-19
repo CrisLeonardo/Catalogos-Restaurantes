@@ -24,15 +24,18 @@ async function resolveContext(formData: FormData) {
   // Un staff sin permiso "categorias" no puede modificarlas (candado server-side).
   if (!can(profile.role, profile.permissions as string[] | null, 'categorias')) return null;
 
-  // SUPER_ADMIN y GROUP_OWNER administran una sucursal que no es su
+  // El super admin y quien administra un grupo trabajan sobre una sucursal que no es su
   // restaurant_id: el primero por el id del form, el segundo por el subdominio
   // verificado contra su organización (resolveGroupBranchId).
-  const elevated = profile.role === 'SUPER_ADMIN' || profile.role === 'GROUP_OWNER';
+  // Quien administra un grupo entra a la sucursal del subdominio (verificada
+  // contra su organización); el resto, al suyo. `resolveGroupBranchId`
+  // devuelve null si no administra ninguno, así que sirve de las dos cosas:
+  // de comprobación y de id. Ver la migración 116.
+  const groupBranchId = profile.role === 'SUPER_ADMIN' ? null : await resolveGroupBranchId();
+  const elevated = profile.role === 'SUPER_ADMIN' || groupBranchId !== null;
   const restaurantId = profile.role === 'SUPER_ADMIN'
     ? (formData.get('restaurantId') as string)
-    : profile.role === 'GROUP_OWNER'
-      ? await resolveGroupBranchId()
-      : await resolveOwnRestaurantId(profile.restaurant_id);
+    : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
 

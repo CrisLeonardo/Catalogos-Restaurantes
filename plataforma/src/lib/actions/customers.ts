@@ -10,7 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { canActOnGroupBranch } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { getAllCustomersForExport, type CustomerExportRow } from '@/lib/db/customers';
 import { loyaltyActive } from '@/lib/db/loyalty';
@@ -47,7 +47,7 @@ async function authAndFetch(restaurantId: string): Promise<CustomersExportData |
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
-    (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+    (await canActOnGroupBranch(restaurantId));
   if (!belongs) return { error: 'No autorizado.' };
   if (!can(profile?.role, profile?.permissions as string[] | null, 'clientes')) {
     return { error: 'No autorizado.' };

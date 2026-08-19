@@ -42,11 +42,14 @@ async function resolveContext(restaurantIdFromForm?: string | null): Promise<Ctx
 
   if (!can(profile.role, profile.permissions as string[] | null, 'ajustes')) return null;
 
+  // Quien administra un grupo entra a la sucursal del subdominio, verificada
+  // contra su organización; el resto, al suyo. `resolveGroupBranchId` da null
+  // si no administra ninguno (migración 116).
   const restaurantId = profile.role === 'SUPER_ADMIN'
     ? (restaurantIdFromForm ?? '')
-    : profile.role === 'GROUP_OWNER'
-      ? ((await resolveGroupBranchId()) ?? '')
-      : ((await resolveOwnRestaurantId(profile.restaurant_id)) ?? '');
+    : ((await resolveGroupBranchId())
+       ?? (await resolveOwnRestaurantId(profile.restaurant_id))
+       ?? '');
   if (!restaurantId) return null;
 
   return { db: createServiceClient(), restaurantId };

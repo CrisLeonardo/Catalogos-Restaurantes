@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId, getAdminMenu } from '@/lib/db/admin';
+import { resolveGroupBranchId, canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
 import { resolveOwnRestaurantId } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { revalidatePath, updateTag } from 'next/cache';
@@ -36,14 +36,17 @@ async function resolveContext(formData: FormData) {
   // aunque la UI esté oculta (la verificación de UI no basta como candado).
   if (!can(profile.role, profile.permissions as string[] | null, 'catalogo')) return null;
 
-  // GROUP_OWNER administra una sucursal de su grupo (subdominio verificado);
+  // Quien administra un grupo trabaja sobre una sucursal suya (subdominio verificado);
   // SUPER_ADMIN, cualquiera por el id del form. Ambos usan el cliente elevado.
-  const elevated = profile.role === 'SUPER_ADMIN' || profile.role === 'GROUP_OWNER';
+  // Quien administra un grupo entra a la sucursal del subdominio (verificada
+  // contra su organización); el resto, al suyo. `resolveGroupBranchId`
+  // devuelve null si no administra ninguno, así que sirve de las dos cosas:
+  // de comprobación y de id. Ver la migración 116.
+  const groupBranchId = profile.role === 'SUPER_ADMIN' ? null : await resolveGroupBranchId();
+  const elevated = profile.role === 'SUPER_ADMIN' || groupBranchId !== null;
   const restaurantId = profile.role === 'SUPER_ADMIN'
     ? (formData.get('restaurantId') as string)
-    : profile.role === 'GROUP_OWNER'
-      ? await resolveGroupBranchId()
-      : await resolveOwnRestaurantId(profile.restaurant_id);
+    : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
 
@@ -521,7 +524,7 @@ async function authAndBuildProductsExport(restaurantId: string): Promise<Product
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
-    (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+    (await canActOnGroupBranch(restaurantId));
   if (!belongs) return { error: 'No autorizado.' };
   if (!can(profile?.role, profile?.permissions as string[] | null, 'catalogo')) {
     return { error: 'No autorizado.' };

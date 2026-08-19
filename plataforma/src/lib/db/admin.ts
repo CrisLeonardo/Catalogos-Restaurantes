@@ -16,32 +16,69 @@ import type { Category, Product, Profile, Restaurant, RestaurantTheme } from '@/
  *
  * Autónoma: recarga usuario + perfil con el cliente de servicio, así cualquier
  * acción puede llamarla sin pedir `organization_id` en su propio select.
- * Devuelve null si el usuario no es GROUP_OWNER o la sucursal no es de su grupo.
+ * Devuelve null si la persona no administra ningún grupo o la sucursal no es
+ * del suyo.
+ *
+ * Cacheada por petición: desde la 116 la llaman también quienes no
+ * administran ningún grupo (es lo que sustituye a preguntar por el rol), y
+ * sin la caché eso sería una consulta de más en cada acción.
+ *
+ * Quién administra un grupo se lee de `profiles.organization_id` y de nada
+ * más. Antes se exigía además el rol GROUP_OWNER, retirado en la migración
+ * 116: eran dos formas de decir lo mismo —el único sitio que ponía la
+ * organización era el alta de jefe de grupo, que ponía las dos a la vez— y
+ * de esas parejas siempre acaba arreglándose una sola.
  */
-export async function resolveGroupBranchId(): Promise<string | null> {
-  const slug = (await headers()).get('x-tenant-slug');
-  if (!slug) return null;
-
+/**
+ * El grupo que administra la persona de esta petición, o null.
+ *
+ * Es LA pregunta que sustituye al rol GROUP_OWNER (migración 116). Vive
+ * aquí y cacheada por petición a propósito: si en vez de esto se añadiera
+ * `organization_id` a los `select` de perfil repartidos por la app, bastaría
+ * con olvidar uno para que a un jefe de cadena se le cerrara una puerta sin
+ * que nadie entendiera por qué.
+ */
+export const myOrganizationId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const svc = createServiceClient();
-  const { data: prof } = await svc
+  const { data } = await createServiceClient()
     .from('profiles')
-    .select('role, organization_id')
+    .select('organization_id')
     .eq('id', user.id)
     .maybeSingle();
-  if (!prof || prof.role !== 'GROUP_OWNER' || !prof.organization_id) return null;
+  return (data?.organization_id as string | null) ?? null;
+});
 
-  const { data: branch } = await svc
+export const resolveGroupBranchId = cache(async (): Promise<string | null> => {
+  const slug = (await headers()).get('x-tenant-slug');
+  if (!slug) return null;
+
+  const orgId = await myOrganizationId();
+  if (!orgId) return null;
+
+  const { data: branch } = await createServiceClient()
     .from('restaurants')
     .select('id, organization_id')
     .eq('slug', slug)
     .maybeSingle();
-  if (!branch || branch.organization_id !== prof.organization_id) return null;
+  if (!branch || branch.organization_id !== orgId) return null;
 
   return branch.id as string;
+});
+
+/**
+ * ¿Esta persona puede actuar sobre este restaurante por administrar su grupo?
+ *
+ * Sustituye al `profile.role === 'GROUP_OWNER' && (await
+ * resolveGroupBranchId()) === restaurantId` que estaba repetido en nueve
+ * acciones. Repetir una regla de acceso nueve veces es repetir nueve veces
+ * la ocasión de escribirla mal.
+ */
+export async function canActOnGroupBranch(restaurantId: string | null | undefined): Promise<boolean> {
+  if (!restaurantId) return false;
+  return (await resolveGroupBranchId()) === restaurantId;
 }
 
 /** Cómo se ve una membresía desde el rol de perfil de toda la vida. El panel
@@ -148,8 +185,8 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
     ]);
     restaurant = r as Restaurant ?? null;
     theme = t as RestaurantTheme ?? null;
-  } else if (profile.role === 'GROUP_OWNER') {
-    // Dueño de grupo "entrando" a una sucursal: se resuelve por el subdominio
+  } else if (profile.organization_id) {
+    // Quien administra un grupo "entrando" a una sucursal: se resuelve por el subdominio
     // (x-tenant-slug). Se fija `profile.restaurant_id` en memoria para que
     // TODAS las páginas admin (que usan ctx.profile.restaurant_id /
     // ctx.restaurant) operen sobre esa sucursal sin cambios página por página.

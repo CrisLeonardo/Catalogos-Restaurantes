@@ -69,8 +69,9 @@ describe('super admin', () => {
   });
 });
 
-describe('dueño de grupo', () => {
-  const go = { role: 'GROUP_OWNER', profileRestaurantId: null, profileOrganizationId: 'org-1', ownSlug: null };
+describe('quien administra un grupo', () => {
+  // Desde la migración 116 no hay rol que lo diga: lo dice tener organización.
+  const go = { role: 'RESTAURANT_OWNER', profileRestaurantId: null, profileOrganizationId: 'org-1', ownSlug: null };
 
   it('entra a una sucursal de su grupo', () => {
     const d = decideTenantAccess(
@@ -133,13 +134,13 @@ describe('varios restaurantes con una sola cuenta (migración 113)', () => {
     ).toEqual({ allow: false, redirectTo: `${ADMIN_URL('restaurante-a')}/menu` });
   });
 
-  it('una membresía no cambia nada para el dueño de grupo ajeno', () => {
-    // El dueño de grupo se sigue midiendo por su organización. Si además
+  it('una membresía no cambia nada si el grupo es ajeno', () => {
+    // Quien administra un grupo se mide por su organización. Si además
     // tuviera membresía en esa sucursal, entra por esa vía — pero sin ella,
     // pertenecer a OTRO grupo nunca alcanza.
     expect(
       decideTenantAccess(input({
-        role: 'GROUP_OWNER',
+        role: 'RESTAURANT_OWNER',
         isMember: false,
         profileRestaurantId: null,
         profileOrganizationId: 'org-1',

@@ -4,7 +4,7 @@
    FINANZAS DE GRUPO — export a PDF/Excel (marca de organización)
    ------------------------------------------------------------
    Reusa getGroupContext() (mismo auth que /central/finanzas:
-   GROUP_OWNER por su organización, SUPER_ADMIN por x-org-slug) y
+   el jefe del grupo por su organización, SUPER_ADMIN por x-org-slug) y
    re-deriva el reporte en servidor vía getGroupReport — nunca se
    confía en números que mande el cliente.
    ============================================================ */

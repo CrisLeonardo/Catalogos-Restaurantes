@@ -207,7 +207,6 @@ export default function AdminShell({
   const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
   const allow = (key: string) => can(effRole, permissions ?? null, key);
   const roleLabel = effRole === 'SUPER_ADMIN' ? 'Super Admin'
-    : effRole === 'GROUP_OWNER' ? 'Dueño de grupo'
     : isMeseroOnly(effRole, permissions ?? null) ? 'Mesero'
     : effRole === 'RESTAURANT_STAFF' ? 'Personal'
     : 'Administrador';

@@ -2,7 +2,7 @@ import { headers, cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { getAdminContext } from '@/lib/db/admin';
+import { getAdminContext, myOrganizationId } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import AdminShell from '@/components/admin/shell';
 import { PlanPricingProvider } from '@/components/plan-pricing-context';
@@ -114,14 +114,17 @@ export default async function AdminProtectedLayout({
   } else {
     // Sin subdominio de restaurante: el dueño de grupo va a su panel, el resto
     // se queda con su propio restaurante (Leogin Desktop arranca así).
-    if (profile.role === 'GROUP_OWNER') redirect('/central');
+    if (await myOrganizationId()) redirect('/central');
     if (profile.role !== 'SUPER_ADMIN' && !profile.restaurant_id) redirect('/admin/login');
     restaurantName = ctx.restaurant?.name ?? 'Panel admin';
   }
 
-  // Enlace "volver al grupo" (solo dueño de grupo dentro de una sucursal).
-  // organizations no tiene RLS para GROUP_OWNER → cliente de servicio.
-  if (profile.role === 'GROUP_OWNER' && currentRestaurant?.organization_id) {
+  // Enlace "volver al grupo" (solo quien administra el grupo, dentro de una de
+  // sus sucursales). organizations no tiene RLS para ese caso → cliente de
+  // servicio. Desde la migración 116 se reconoce por la organización del
+  // perfil, no por un rol.
+  if (currentRestaurant?.organization_id
+      && (await myOrganizationId()) === currentRestaurant.organization_id) {
     const svc = createServiceClient();
     const { data: org } = await svc
       .from('organizations')

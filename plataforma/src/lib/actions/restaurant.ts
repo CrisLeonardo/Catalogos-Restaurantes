@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { resolveGroupBranchId, canActOnGroupBranch } from '@/lib/db/admin';
 import { canActOnRestaurant, resolveOwnRestaurantId } from '@/lib/db/membership';
 import { logChannelChanges } from '@/lib/db/channel-history';
 import { revalidatePath, updateTag } from 'next/cache';
@@ -43,12 +43,12 @@ async function resolveContext(formData: FormData) {
   if (!profile) return null;
 
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
-  const isGroupOwner = profile.role === 'GROUP_OWNER';
+  // Sucursal del grupo que administra, si administra alguno (migración 116).
+  const groupBranchId = isSuperAdmin ? null : await resolveGroupBranchId();
+  const isGroupOwner = groupBranchId !== null;
   const restaurantId = isSuperAdmin
     ? (formData.get('restaurantId') as string)
-    : isGroupOwner
-      ? await resolveGroupBranchId()
-      : await resolveOwnRestaurantId(profile.restaurant_id);
+    : (groupBranchId ?? (await resolveOwnRestaurantId(profile.restaurant_id)));
 
   if (!restaurantId) return null;
 
@@ -449,7 +449,7 @@ export async function saveOrdersAndCurrency(input: {
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   const allowed = isSuperAdmin
     || (await canActOnRestaurant(profile.restaurant_id, input.restaurantId))
-    || (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === input.restaurantId);
+    || (await canActOnGroupBranch(input.restaurantId));
   if (!allowed) {
     return { error: 'No autorizado.' };
   }
@@ -518,7 +518,7 @@ export async function updateOwnOrderTypes(
   const isSuperAdmin = profile.role === 'SUPER_ADMIN';
   const allowed = isSuperAdmin
     || (await canActOnRestaurant(profile.restaurant_id, restaurantId))
-    || (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+    || (await canActOnGroupBranch(restaurantId));
   if (!allowed) {
     return { error: 'No autorizado para este restaurante.' };
   }

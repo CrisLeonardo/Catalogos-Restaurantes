@@ -3,7 +3,7 @@
 import { createClient, createDinerClient } from '@/lib/supabase/server';
 import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { resolveGroupBranchId, canActOnGroupBranch } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
@@ -734,9 +734,10 @@ export async function freeTable(
     .eq('id', user.id)
     .single();
 
-  const ownsBranch = profile?.role === 'GROUP_OWNER'
-    ? (await resolveGroupBranchId()) === restaurantId
-    : profile?.restaurant_id === restaurantId;
+  // O administra el grupo de esta sucursal, o es su propio restaurante
+  // (migración 116: ya no hay un rol que preguntar).
+  const ownsBranch = (await canActOnGroupBranch(restaurantId))
+    || profile?.restaurant_id === restaurantId;
   if (
     !profile ||
     !ownsBranch ||
@@ -791,11 +792,13 @@ export async function updateOrderStatus(
 
   if (!profile) return { error: 'No autorizado.' };
 
-  const validRoles = ['SUPER_ADMIN', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER', 'GROUP_OWNER'];
+  const validRoles = ['SUPER_ADMIN', 'RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'];
   if (!validRoles.includes(profile.role)) return { error: 'No autorizado.' };
 
-  // GROUP_OWNER usa el cliente RLS: la migración 053 limita la actualización a
-  // pedidos de sucursales de su grupo (con service no habría filtro por sucursal).
+  // Quien administra un grupo usa el cliente con RLS: la política de la
+  // migración 053 —desde la 116 sin mirar el rol— limita la actualización a
+  // pedidos de sucursales de su organización. Con el cliente de servicio no
+  // habría filtro por sucursal ninguno.
   const db = profile.role === 'SUPER_ADMIN' ? createServiceClient() : supabase;
 
   // Sella la marca de tiempo de la transición (analítica de tiempos). CANCEL
@@ -931,9 +934,8 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     .single();
   if (!order) return { error: 'Pedido no encontrado.' };
 
-  const ownsBranch = requester.role === 'GROUP_OWNER'
-    ? (await resolveGroupBranchId()) === order.restaurant_id
-    : requester.restaurant_id === order.restaurant_id;
+  const ownsBranch = (await canActOnGroupBranch(order.restaurant_id))
+    || requester.restaurant_id === order.restaurant_id;
   if (
     !ownsBranch ||
     !can(requester.role as string, requester.permissions as string[] | null, 'mesero')
@@ -996,9 +998,10 @@ async function assertTableAccess(restaurantId: string): Promise<{ error: string 
     .eq('id', user.id)
     .single();
 
-  const ownsBranch = profile?.role === 'GROUP_OWNER'
-    ? (await resolveGroupBranchId()) === restaurantId
-    : profile?.restaurant_id === restaurantId;
+  // O administra el grupo de esta sucursal, o es su propio restaurante
+  // (migración 116: ya no hay un rol que preguntar).
+  const ownsBranch = (await canActOnGroupBranch(restaurantId))
+    || profile?.restaurant_id === restaurantId;
   if (
     !profile ||
     !ownsBranch ||
@@ -1156,9 +1159,10 @@ export async function archiveAbandonedTables(restaurantId: string): Promise<{ er
     .eq('id', user.id)
     .single();
 
-  const ownsBranch = profile?.role === 'GROUP_OWNER'
-    ? (await resolveGroupBranchId()) === restaurantId
-    : profile?.restaurant_id === restaurantId;
+  // O administra el grupo de esta sucursal, o es su propio restaurante
+  // (migración 116: ya no hay un rol que preguntar).
+  const ownsBranch = (await canActOnGroupBranch(restaurantId))
+    || profile?.restaurant_id === restaurantId;
   if (
     !profile ||
     !ownsBranch ||
@@ -1211,7 +1215,7 @@ async function authorizeOrderAccess(
     profile.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF', 'RESTAURANT_WAITER'].includes(profile.role) &&
       (await canActOnRestaurant(profile.restaurant_id, order.restaurant_id))) ||
-    (profile.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === order.restaurant_id);
+    (await canActOnGroupBranch(order.restaurant_id));
   if (!allowed) return { error: 'No autorizado.' };
 
   return { restaurantId: order.restaurant_id as string };
@@ -1332,7 +1336,7 @@ async function buildOrdersExportData(
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
-    (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+    (await canActOnGroupBranch(restaurantId));
   if (!allowed) return { error: 'No autorizado.' };
   if (!can(profile?.role, profile?.permissions as string[] | null, 'pedidos')) {
     return { error: 'No autorizado.' };
@@ -1443,10 +1447,8 @@ export async function getPendingNewOrders(restaurantId: string): Promise<Pending
   // el objetivo es justamente que no dependa de que una persona concreta esté
   // mirando la pantalla de pedidos.
   const ownsBranch = profile.role === 'SUPER_ADMIN'
-    ? true
-    : profile.role === 'GROUP_OWNER'
-      ? (await resolveGroupBranchId()) === restaurantId
-      : (await canActOnRestaurant(profile.restaurant_id, restaurantId));
+    || (await canActOnGroupBranch(restaurantId))
+    || (await canActOnRestaurant(profile.restaurant_id, restaurantId));
   if (!ownsBranch) return [];
 
   const since = new Date(Date.now() - 30 * 60_000).toISOString();

@@ -60,7 +60,7 @@ export function can(
 ): boolean {
   // El dueño de grupo administra cualquier sucursal de su organización
   // igual que un dueño de restaurante (alcance acotado por RLS a su grupo).
-  if (role === 'SUPER_ADMIN' || role === 'RESTAURANT_OWNER' || role === 'GROUP_OWNER') return true;
+  if (role === 'SUPER_ADMIN' || role === 'RESTAURANT_OWNER') return true;
   if (role === 'RESTAURANT_STAFF') {
     if (permissions == null) return true; // aún sin restringir
     return permissions.includes(section);

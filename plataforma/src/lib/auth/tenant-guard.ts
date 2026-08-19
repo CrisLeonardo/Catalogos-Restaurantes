@@ -86,13 +86,13 @@ export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   // desde /super, esto solo evita el salto de un subdominio a otro.
   if (role === 'SUPER_ADMIN') return { allow: true };
 
-  if (role === 'GROUP_OWNER') {
-    // Solo sucursales de SU grupo. `tenant` NO prueba pertenencia por sí solo:
-    // las políticas RLS se combinan con OR y `restaurants_select_active` deja
-    // leer cualquier restaurante activo (lo necesita el menú público).
-    if (profileOrganizationId && tenant.organizationId === profileOrganizationId) {
-      return { allow: true };
-    }
+  // Quien administra un grupo: solo sucursales del SUYO. `tenant` NO prueba
+  // pertenencia por sí solo: las políticas RLS se combinan con OR y
+  // `restaurants_select_active` deja leer cualquier restaurante activo (lo
+  // necesita el menú público). Desde la migración 116 esto se reconoce por la
+  // organización del perfil, no por un rol.
+  if (profileOrganizationId) {
+    if (tenant.organizationId === profileOrganizationId) return { allow: true };
     return { allow: false, redirectTo: '/central' };
   }
 

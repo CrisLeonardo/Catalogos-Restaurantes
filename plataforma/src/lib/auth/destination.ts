@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { isMeseroOnly } from '@/lib/permissions';
 import { getMyMemberships } from '@/lib/db/membership';
+import { myOrganizationId } from '@/lib/db/admin';
 import { adminUrl } from '@/lib/tenant';
 
 type ProfileLike = {
@@ -17,7 +18,7 @@ type ProfileLike = {
  * (email+contraseña), getResumeSession() ("Continuar como") y
  * verifyStaffPin() (PIN) — antes estaba triplicado.
  *
- * SUPER_ADMIN/GROUP_OWNER van a su panel propio. El resto entra a SU
+ * El super admin y quien administra un grupo van a su panel propio. El resto entra a SU
  * restaurante: relativo si el subdominio actual ya es el suyo, absoluto
  * (con adminUrl) si no. Mesero puro → /mesero, si no → /menu.
  */
@@ -28,7 +29,8 @@ export async function resolveStaffDestination(
   suffix = '',
 ): Promise<string> {
   if (profile.role === 'SUPER_ADMIN') return '/super/restaurantes';
-  if (profile.role === 'GROUP_OWNER') return '/central';
+  // Administra una cadena → panel del grupo (migración 116: por organización).
+  if (await myOrganizationId()) return '/central';
 
   /* Con más de un restaurante (migración 113), a Mi cuenta a elegir.
      Con UNO SOLO se entra directo, sin selector: el 90% de los clientes tiene

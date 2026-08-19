@@ -120,7 +120,7 @@ export const getOrganizationDetail = cache(
     const [{ data: branches }, { data: available }, { data: ownerProfiles }] = await Promise.all([
       db.from('restaurants').select('*').eq('organization_id', orgId).order('name'),
       db.from('restaurants').select('*').is('organization_id', null).order('name'),
-      db.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'GROUP_OWNER'),
+      db.from('profiles').select('id, full_name').eq('organization_id', orgId),
     ]);
 
     const owners = await Promise.all(

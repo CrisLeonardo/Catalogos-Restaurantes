@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId } from '@/lib/db/admin';
+import { canActOnGroupBranch } from '@/lib/db/admin';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import {
   buildFacturaDte,
@@ -44,8 +44,10 @@ async function authorizeFel(restaurantId: string): Promise<{ error: string } | {
 
   const isSuper = profile.role === 'SUPER_ADMIN';
   if (!isSuper) {
-    if (profile.role === 'GROUP_OWNER') {
-      if ((await resolveGroupBranchId()) !== restaurantId) return { error: 'No autorizado.' };
+    // Quien administra el grupo de esta sucursal entra por ahí; el resto,
+    // por su propio restaurante (migración 116).
+    if (await canActOnGroupBranch(restaurantId)) {
+      // Autorizado por el grupo: sin más comprobaciones de permisos.
     } else {
       if (!(await canActOnRestaurant(profile.restaurant_id, restaurantId))) return { error: 'No autorizado.' };
       const role = profile.role as string;

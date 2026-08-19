@@ -13,7 +13,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId, getAdminMenu } from '@/lib/db/admin';
+import { canActOnGroupBranch, getAdminMenu } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { getAllCustomersForExport } from '@/lib/db/customers';
 import { loyaltyActive } from '@/lib/db/loyalty';
@@ -50,7 +50,7 @@ async function authRestaurant(restaurantId: string): Promise<{ error: string } |
     profile?.role === 'SUPER_ADMIN' ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
-    (profile?.role === 'GROUP_OWNER' && (await resolveGroupBranchId()) === restaurantId);
+    (await canActOnGroupBranch(restaurantId));
   if (!belongs) return { error: 'No autorizado.' };
   if (!can(profile?.role, profile?.permissions as string[] | null, 'respaldo')) {
     return { error: 'No autorizado.' };
