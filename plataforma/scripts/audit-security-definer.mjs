@@ -54,6 +54,7 @@ const ALLOWLIST = {
   get_my_restaurant_id: 'usada dentro de políticas RLS',
   get_my_org_id: 'usada dentro de políticas RLS',
   is_my_group_branch: 'usada dentro de políticas RLS',
+  is_member_of: 'usada dentro de políticas RLS (36 de ellas, desde la migración 113)',
   get_group_branches: 'selector de sucursal anónimo, público por diseño desde la migración 026',
 };
 
