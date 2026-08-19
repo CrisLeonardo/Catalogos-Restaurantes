@@ -126,7 +126,14 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
       await skipIntro.click();
     }
 
-    await page.getByRole('button', { name: `Agregar ${tenantA.productName}`, exact: true }).click();
+    // Sin `exact`: el boton se llama "Agregar <producto> a tu pedido" —el
+    // sufijo es de accesibilidad, para que quien navegue por lector de
+    // pantalla oiga una frase y no un fragmento—. Este test pedia el nombre
+    // exacto SIN ese sufijo y llevaba roto desde que se anadio, avisando de
+    // una diferencia de texto y no de un fallo de verdad. El nombre del
+    // producto ya lleva un sufijo aleatorio por corrida, asi que buscarlo
+    // como subcadena sigue siendo inequivoco.
+    await page.getByRole('button', { name: `Agregar ${tenantA.productName}` }).click();
     await page.goto(tenantUrl(tenantA.slug, '/checkout'));
 
     await page.getByRole('button', { name: 'Para llevar' }).click();
@@ -150,7 +157,12 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     await page.getByLabel('Email').fill(tenantA.ownerEmail);
     await page.getByLabel('Contraseña').fill(OWNER_PASSWORD);
     await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-    await page.waitForURL(/\/admin\/(menu|pedidos)/, { timeout: 40_000 });
+    // Acepta las dos aterrizadas posibles: el dueño cae en Mi cuenta (es su
+    // casa desde que se unificó el acceso multi-restaurante) y el personal
+    // entra directo al panel. Lo que este paso comprueba es que el login
+    // TERMINÓ, no a qué pantalla lleva; la navegación a /admin/pedidos que
+    // viene justo debajo es explícita y no depende de esto.
+    await page.waitForURL(/\/(mi-cuenta|admin\/(menu|pedidos))/, { timeout: 40_000 });
     await page.waitForLoadState('load');
 
     await page.goto(tenantUrl(tenantA.slug, '/admin/pedidos'), { waitUntil: 'domcontentloaded' });
