@@ -3,7 +3,7 @@ import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import PlanBuilder from './components/plan-builder';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, BRANCH_DISCOUNT_TIERS, isAddonAvailable, planPriceLabel } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, isAddonAvailable, planPriceLabel } from '@/lib/plans';
 import type { PlanCode, PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -397,37 +397,13 @@ export default async function PlanesPage() {
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
         <h2 className="t-display" style={{ fontSize: 22, marginBottom: 8 }}>Grupos y franquicias</h2>
         <p className="t-mute" style={{ fontSize: 14, marginBottom: 24, maxWidth: 620 }}>
-          Cada sucursal elige el plan que necesita. Mientras más sucursales tengas en tu grupo,
-          más barata sale cada una a partir de la segunda.
+          Cada sucursal elige el plan que necesita y paga el suyo. El panel de grupo, para
+          verlas todas juntas, se cobra una sola vez por grupo.
         </p>
-        <Glass variant="quiet" style={{ borderRadius: 18, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>Tamaño del grupo</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>Descuento por sucursal (desde la 2a)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                <td style={{ padding: '11px 16px', color: 'var(--u-text-2)' }}>1 sucursal</td>
-                <td style={{ padding: '11px 16px', textAlign: 'right', color: 'var(--u-text-4)' }}>—</td>
-              </tr>
-              {BRANCH_DISCOUNT_TIERS.slice().reverse().map((tier) => (
-                <tr key={tier.label} style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                  <td style={{ padding: '11px 16px', color: 'var(--u-text-2)' }}>{tier.label}</td>
-                  <td style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 700, color: '#4ade80', fontFamily: 'var(--ui-font-mono)' }}>
-                    {Math.round(tier.pct * 100)}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Glass>
         <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 14, lineHeight: 1.6 }}>
           El panel de grupo consolidado (ver todas tus sucursales en un solo lugar) cuesta{' '}
           {fmtQ(pricing.groupPanelFee)}/mes, una sola vez por grupo, sin importar cuántas sucursales tengas.
-          Para grupos de 10 o más sucursales, escríbenos: armamos un plan a medida.
+          Para grupos grandes, escríbenos: armamos un plan a medida.
         </p>
         <a
           href={waLink('Hola, quiero información sobre planes para mi grupo de restaurantes / franquicia')}

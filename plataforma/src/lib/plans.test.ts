@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  branchDiscountPct,
   defaultPlanPricing,
   hasModuleEntitlement,
   hasPlanFeature,
@@ -114,26 +113,6 @@ describe('planAddonCostWith / planTotalWith (con precios vigentes)', () => {
   });
 });
 
-describe('branchDiscountPct', () => {
-  it('sin descuento por debajo de 2 sucursales', () => {
-    expect(branchDiscountPct(1)).toBe(0);
-  });
-
-  it('10% entre 2 y 4 sucursales', () => {
-    expect(branchDiscountPct(2)).toBe(0.10);
-    expect(branchDiscountPct(4)).toBe(0.10);
-  });
-
-  it('15% entre 5 y 9 sucursales', () => {
-    expect(branchDiscountPct(5)).toBe(0.15);
-    expect(branchDiscountPct(9)).toBe(0.15);
-  });
-
-  it('20% desde 10 sucursales', () => {
-    expect(branchDiscountPct(10)).toBe(0.20);
-    expect(branchDiscountPct(100)).toBe(0.20);
-  });
-});
 
 describe('isUpgrade / nextPlan', () => {
   it('Premium es upgrade sobre Básico', () => {

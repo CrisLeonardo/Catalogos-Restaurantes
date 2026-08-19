@@ -322,8 +322,6 @@ export interface FeeBreakdown {
   /** Qué métodos se facturan como apagados ('dine_in' | 'pickup' | 'delivery'). */
   channelsOffKeys: string[];
   discount: number;
-  /** % de descuento por volumen de sucursales del grupo (0 si no aplica). */
-  branchDiscountPct: number;
   /** Costo mensual de módulos a la carta facturados este periodo. */
   addonTotal: number;
   /** Detalle por módulo facturado (para el desglose del dueño). */
@@ -348,7 +346,6 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
     channelsOff:           Number(d.channels_off ?? 0),
     channelsOffKeys:       Array.isArray(d.channels_off_keys) ? (d.channels_off_keys as string[]) : [],
     discount:              Number(d.discount ?? 0),
-    branchDiscountPct:     Number(d.branch_discount_pct ?? 0),
     addonTotal:            Number(d.addon_total ?? 0),
     addonItems:            Array.isArray(d.addon_items)
       ? (d.addon_items as { key: string; price: number }[]).map((it) => ({ key: String(it.key), price: Number(it.price) || 0 }))

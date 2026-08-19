@@ -63,9 +63,6 @@ export default async function FichaPlanPage({
                 color={feeBreakdown.discount > 0 ? '#4ade80' : undefined}
               />
             )}
-            {feeBreakdown.branchDiscountPct > 0 && (
-              <Row label={`Descuento por volumen de sucursales (${Math.round(feeBreakdown.branchDiscountPct * 100)}%)`} value="aplicado sobre el neto del plan" color="#4ade80" />
-            )}
             {feeBreakdown.addonTotal > 0 && (
               <Row label="Módulos a la carta (no incluidos en el plan)" value={`+ ${fmtQ(feeBreakdown.addonTotal)}`} />
             )}

@@ -71,7 +71,6 @@ export default async function ModulosPage() {
         channelDiscountMax={pricing.channelDiscountMax}
         billedNow={feeBreakdown?.final ?? null}
         nextPeriodFee={nextPeriodFee}
-        branchDiscountPct={feeBreakdown?.branchDiscountPct ?? 0}
       />
     </div>
   );

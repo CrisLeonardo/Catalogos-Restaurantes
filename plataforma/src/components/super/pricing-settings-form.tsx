@@ -151,7 +151,7 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
 
       <Section
         title="Reglas de cobranza"
-        description={<>El descuento por volumen de sucursales (10% / 15% / 20% según el tamaño del grupo) no es editable aquí: vive en <code>leogin_branch_discount_pct()</code> en la base de datos.</>}
+        description="Cada sucursal paga su plan, pertenezca o no a un grupo: el descuento por volumen se retiró en la migración 115."
       >
         <Grid>
           <Field name="group_panel_fee" label="Panel de grupo (Q/mes)" value={pricing.groupPanelFee} />

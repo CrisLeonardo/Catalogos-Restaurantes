@@ -471,7 +471,7 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; currency: string; autoPrice: boolean; maxOff: number }) {
   const timing = whenChangeApplies();
-  const saving = b.discount > 0 || b.branchDiscountPct > 0;
+  const saving = b.discount > 0;
   // Un método recién apagado no baja el cobro de inmediato (mig. 073/078):
   // debe seguir apagado la mayor parte del ciclo actual antes de que el
   // descuento entre en el próximo cobro. Estos dos avisos cubren las dos
@@ -527,13 +527,6 @@ function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; curr
             accent="#4ade80"
           />
         ))}
-        {b.branchDiscountPct > 0 && (
-          <LineItem
-            label={`Descuento por volumen de sucursales (${Math.round(b.branchDiscountPct * 100)}%)`}
-            value="aplicado"
-            accent="#4ade80"
-          />
-        )}
         {b.addonItems.map((it) => {
           let label = it.key;
           try { label = moduleMeta(it.key as ActivatableModuleKey).label; } catch {}

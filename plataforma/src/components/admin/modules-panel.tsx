@@ -102,8 +102,6 @@ interface Props {
   billedNow?: number | null;
   /** Lo que facturará el motor de cobro el mes que viene si todo queda como está. */
   nextPeriodFee?: number | null;
-  /** Descuento por volumen de sucursales, para que el simulador cuadre con el cobro real. */
-  branchDiscountPct?: number;
 }
 
 const BADGE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -468,7 +466,7 @@ function LiveBillCard({
   );
 }
 
-export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, channelDiscountPer = 50, channelDiscountMax = 2, billedNow = null, nextPeriodFee = null, branchDiscountPct = 0 }: Props) {
+export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, channelDiscountPer = 50, channelDiscountMax = 2, billedNow = null, nextPeriodFee = null }: Props) {
   const router = useRouter();
   const pricing = usePlanPricing();
   const [isPending, startTransition] = useTransition();
@@ -567,7 +565,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       localSettings[m.key]?.enabled !== false,        // y el dueño lo tiene encendido
   );
 
-  const planNet = Math.max(base - channelDiscount, 0) * (1 - branchDiscountPct);
+  const planNet = Math.max(base - channelDiscount, 0);
   const addonTotal = billedAddons.reduce((s, m) => s + (pricing.modulePrices[m.key] ?? 0), 0);
   const liveTotal = Math.round(planNet + addonTotal);
 
@@ -579,9 +577,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   const billLines: BillLine[] = [
     { label: `Plan ${PLANS[currentPlan].name}`, amount: base, kind: 'base' },
     ...offChannelLabels.map((label): BillLine => ({ label: `${label} apagado`, amount: channelDiscountPer, kind: 'discount' })),
-    ...(branchDiscountPct > 0
-      ? [{ label: `Descuento por sucursales (${Math.round(branchDiscountPct * 100)}%)`, amount: Math.round((base - channelDiscount) * branchDiscountPct), kind: 'discount' as const }]
-      : []),
     ...billedAddons.map((m): BillLine => ({ label: m.label, amount: pricing.modulePrices[m.key] ?? 0, kind: 'addon' })),
   ];
 

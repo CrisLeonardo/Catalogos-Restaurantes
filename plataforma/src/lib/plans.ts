@@ -369,20 +369,6 @@ export function planTotal(plan: PlanCode, addons: ActivatableModuleKey[]): numbe
   return PLANS[plan].priceMonthly + planAddonCost(plan, addons);
 }
 
-/* ── Descuento por volumen de sucursales (franquicias/grupos) ──── */
+/* ── Grupos y franquicias ──────────────────────────────────────── */
 
 export const GROUP_PANEL_FEE = 299;
-
-export const BRANCH_DISCOUNT_TIERS: { minBranches: number; pct: number; label: string }[] = [
-  { minBranches: 10, pct: 0.20, label: '10+ sucursales' },
-  { minBranches: 5, pct: 0.15, label: '5–9 sucursales' },
-  { minBranches: 2, pct: 0.10, label: '2–4 sucursales' },
-];
-
-/** % de descuento sobre el precio de plan de cada sucursal adicional (no aplica a la primera). */
-export function branchDiscountPct(totalBranches: number): number {
-  for (const tier of BRANCH_DISCOUNT_TIERS) {
-    if (totalBranches >= tier.minBranches) return tier.pct;
-  }
-  return 0;
-}
