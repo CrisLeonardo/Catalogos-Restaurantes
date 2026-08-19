@@ -57,7 +57,9 @@ export default async function MiCuentaPage() {
       rootDomain={rootDomainForUrls()}
       accountName={(profile?.full_name as string | null) ?? user.email ?? 'tu cuenta'}
       accountEmail={user.email ?? ''}
-      canCreate={cards.some((c) => canBill(c.role))}
+      // Sin restaurantes todavía es justo quien MÁS necesita el botón: el
+      // alta de la calle crea solo la cuenta y aterriza aquí.
+      canCreate={cards.length === 0 || cards.some((c) => canBill(c.role))}
       groupPanel={groupPanel}
     />
   );

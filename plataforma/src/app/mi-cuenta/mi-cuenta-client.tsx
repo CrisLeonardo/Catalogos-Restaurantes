@@ -47,6 +47,8 @@ export default function MiCuentaClient({
 }) {
   /** Restaurante cuyo PIN se está pidiendo (null = ninguno). */
   const [asking, setAsking] = useState<MembershipCard | null>(null);
+  /** Sin restaurantes todavía: el alta de la calle solo crea la cuenta. */
+  const esElPrimero = cards.length === 0;
   const [creating, setCreating] = useState(false);
 
   return (
@@ -154,10 +156,12 @@ export default function MiCuentaClient({
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>
-                Crear otro restaurante
+                {esElPrimero ? 'Crear mi restaurante' : 'Crear otro restaurante'}
               </span>
               <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 1 }}>
-                Su plan se suma a tu mensualidad actual
+                {esElPrimero
+                  ? `Elige tu plan y su nombre · ${pricing.trialDays} días gratis`
+                  : 'Su plan se suma a tu mensualidad actual'}
               </span>
             </span>
             <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
@@ -170,6 +174,7 @@ export default function MiCuentaClient({
         <NewRestaurantDialog
           pricing={pricing}
           rootDomain={rootDomain}
+          esElPrimero={esElPrimero}
           onClose={() => setCreating(false)}
         />
       )}
@@ -363,9 +368,10 @@ const PLAN_OPTIONS: { code: 'BASICO' | 'ESTANDAR' | 'PREMIUM'; name: string }[] 
   { code: 'PREMIUM', name: 'Premium' },
 ];
 
-function NewRestaurantDialog({ pricing, rootDomain, onClose }: {
+function NewRestaurantDialog({ pricing, rootDomain, esElPrimero, onClose }: {
   pricing: PlanPricing;
   rootDomain: string;
+  esElPrimero: boolean;
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
@@ -379,10 +385,13 @@ function NewRestaurantDialog({ pricing, rootDomain, onClose }: {
   return (
     <Backdrop onClose={onClose}>
       <Glass style={{ padding: '26px 24px', width: '100%', maxWidth: 420, maxHeight: '86vh', overflowY: 'auto' }}>
-        <p className="t-display" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Crear otro restaurante</p>
+        <p className="t-display" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+          {esElPrimero ? 'Crear mi restaurante' : 'Crear otro restaurante'}
+        </p>
         <p className="t-mute" style={{ fontSize: 13, margin: '6px 0 18px', lineHeight: 1.5 }}>
-          Entrarás con esta misma cuenta. El plan que elijas se suma a tu mensualidad
-          desde hoy: la prueba gratis es solo para tu primer restaurante.
+          {esElPrimero
+            ? `Entrarás con esta misma cuenta. Empiezas con ${pricing.trialDays} días gratis, sin tarjeta.`
+            : 'Entrarás con esta misma cuenta. El plan que elijas se suma a tu mensualidad desde hoy: la prueba gratis es solo para tu primer restaurante.'}
         </p>
 
         <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
@@ -451,7 +460,9 @@ function NewRestaurantDialog({ pricing, rootDomain, onClose }: {
             <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '8px 0 0', lineHeight: 1.45 }}>
               {plan === 'BASICO'
                 ? 'Gratis para siempre. Puedes subir de plan cuando quieras.'
-                : 'Se suma a tu mensualidad desde hoy, sin días de prueba.'}
+                : esElPrimero
+                  ? `Empiezas con ${pricing.trialDays} días gratis; después se suma a tu mensualidad.`
+                  : 'Se suma a tu mensualidad desde hoy, sin días de prueba.'}
             </p>
           </div>
 

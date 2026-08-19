@@ -21,6 +21,7 @@ import { adminUrl } from '@/lib/tenant';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
 import { withPlanFloor, type PlanCode } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
+import { getPricingSettings } from '@/lib/db/billing';
 import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
 
@@ -153,12 +154,18 @@ export async function createAnotherRestaurant(
     return { error: 'Has creado varios restaurantes seguidos. Espera un rato antes del siguiente.' };
   }
 
-  // Solo quien ya es DUEÑO de algo puede abrir otro: un gerente invitado a una
-  // sucursal no crea negocios a nombre de su jefe.
+  // Desde aquí se crean TODOS los restaurantes, también el primero: el alta de
+  // la calle solo crea la cuenta y manda a esta pantalla.
+  //
+  // Quien no tiene ninguno puede crear el suyo. Quien ya tiene, otro más. Lo
+  // que no puede es crear a nombre de un jefe: un gerente invitado a una
+  // sucursal —membresía que no factura— se queda fuera.
   const memberships = await getMyMemberships();
-  if (!memberships.some((m) => canBill(m.role))) {
+  const esDueñoDeAlgo = memberships.some((m) => canBill(m.role));
+  if (memberships.length > 0 && !esDueñoDeAlgo) {
     return { error: 'Solo el dueño de un restaurante puede crear otro.' };
   }
+  const esElPrimero = memberships.length === 0;
 
   const name = ((formData.get('name') as string) ?? '').trim();
   const rawSlug = ((formData.get('slug') as string) ?? '').trim().toLowerCase();
@@ -237,12 +244,16 @@ export async function createAnotherRestaurant(
   });
 
   // ── Cobro ──────────────────────────────────────────────────
-  // Sin prueba: aquí solo llega quien YA es dueño de algo (lo exige la
-  // comprobación de arriba), y la prueba es una por persona. Ver la regla y
-  // el porqué en lib/billing-signup.ts.
+  // La prueba gratis es UNA por persona, en su primer restaurante. Ver la
+  // regla y el porqué en lib/billing-signup.ts.
+  const pricing = await getPricingSettings();
   await db.from('restaurant_billing').insert({
     restaurant_id: restaurantId,
-    ...newRestaurantBilling({ planCode, trialDays: 0, isFirstOfOwner: false }),
+    ...newRestaurantBilling({
+      planCode,
+      trialDays: pricing.trialDays,
+      isFirstOfOwner: esElPrimero,
+    }),
   });
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: restaurantId });
 
