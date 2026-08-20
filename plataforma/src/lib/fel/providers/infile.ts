@@ -60,6 +60,18 @@ function endpoints() {
 const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
 const deB64 = (s: string) => Buffer.from(s, 'base64').toString('utf8');
 
+/**
+ * Identificador de solicitud a partir de la clave estable del documento.
+ *
+ * INFILE limita el largo del campo, así que se recorta; el id del
+ * documento es un UUID y sus 32 hexadecimales siguen siendo únicos de
+ * sobra dentro de una cuenta.
+ */
+function idFel(clave: string, prefijo = 'DTE'): string {
+  const limpia = clave.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  return `LG${prefijo}${limpia}`.slice(0, 50);
+}
+
 /** Lee el primer campo presente. Absorbe diferencias de nombre entre versiones. */
 function pick(obj: Record<string, unknown>, ...keys: string[]): string {
   for (const k of keys) {
@@ -182,9 +194,13 @@ async function firmarXml(
 export async function certificar(input: CertificarInput): Promise<CertificarResult> {
   const { credentials, nitEmisor, xml } = input;
 
-  // Identificador único de la solicitud: permite a INFILE deduplicar si un
-  // reintento nuestro llega después de que ellos ya procesaron el original.
-  const identificador = `LEOGIN-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // Identificador ESTABLE del documento: es lo que permite a INFILE
+  // reconocer un reintento nuestro como el mismo documento y no emitir un
+  // segundo DTE. Antes se generaba con Date.now() + un aleatorio, así que
+  // cada reintento parecía una factura nueva: si el primer envío llegaba y
+  // la respuesta se perdía por timeout, la venta terminaba con DOS
+  // facturas ante el SAT. Ver la nota en types.ts.
+  const identificador = idFel(input.idempotencyKey);
 
   const firma = await firmarXml(xml, credentials.llaveFirma, credentials.usuario, identificador);
   if (!firma.ok) {
@@ -265,7 +281,9 @@ export async function certificar(input: CertificarInput): Promise<CertificarResu
 
 export async function anular(input: AnularInput): Promise<AnularResult> {
   const { credentials, nitEmisor } = input;
-  const identificador = `LEOGIN-ANU-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // Estable también aquí: anular dos veces el mismo documento es un error
+  // que el certificador debe poder absorber.
+  const identificador = idFel(input.idempotencyKey, 'ANU');
 
   const xml = buildAnulacionXml({
     uuidOriginal: input.uuidOriginal,

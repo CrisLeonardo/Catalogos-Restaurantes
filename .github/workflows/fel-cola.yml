@@ -1,0 +1,83 @@
+# ============================================================
+#  Cola de reintentos FEL — reloj externo
+#  ------------------------------------------------------------
+#  /api/fel/cola drena las facturas que quedaron PENDIENTE porque el
+#  certificador estaba caído o no respondió. Está bien construido (backoff,
+#  tope de intentos, idempotencia), pero NADIE lo llamaba: sin un reloj que
+#  lo dispare, cada factura que no certifica al primer intento se queda
+#  pendiente para siempre y el restaurante se entera cuando le reclama un
+#  cliente o cuando cuadra el mes.
+#
+#  ── Por qué aquí y no en Postgres ──
+#  El cobro automatizado (migración 035) usa pg_cron porque todo su trabajo
+#  ocurre dentro de la base. Reintentar no: es hablar por HTTPS con el
+#  certificador, y Postgres no debe salir a internet. El reloj vive fuera.
+#
+#  ── Por qué GitHub Actions ──
+#  Es gratis y el repositorio ya lo usa. Un cron job de Render haría lo
+#  mismo y es de pago; si algún día se prefiere, basta con apagar este
+#  workflow — el endpoint es el mismo.
+#
+#  Configurar antes de que sirva de algo (Settings → Secrets → Actions):
+#    FEL_CRON_URL     https://tudominio.com/api/fel/cola
+#    FEL_CRON_SECRET  el mismo valor que la variable del servidor
+#
+#  Sin esos secretos el trabajo termina sin hacer nada y lo dice, en vez de
+#  fallar cada cinco minutos y llenar el historial de rojo.
+# ============================================================
+
+name: Cola FEL
+
+on:
+  # ── APAGADO A PROPÓSITO ──────────────────────────────────────
+  # La facturación está desactivada a nivel plataforma
+  # (NEXT_PUBLIC_FEL_ENABLED, ver plataforma/src/lib/modules.ts), así que
+  # no hay cola que drenar. Correr cada 5 minutos solo gastaría minutos de
+  # Actions y llenaría el historial de corridas vacías.
+  #
+  # Al encender la facturación, descomentar el bloque `schedule`. El
+  # endpoint ya responde "desactivado" mientras el interruptor esté
+  # apagado, así que activarlo antes de tiempo tampoco emitiría nada.
+  #
+  # schedule:
+  #   # Cada 5 minutos. Correr más seguido no acelera nada: el backoff de
+  #   # transmit.ts decide qué documento toca, así que solo serían consultas.
+  #   - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+# Si una corrida se alarga, la siguiente espera en vez de solaparse: dos
+# drenajes a la vez le pegarían al certificador por duplicado.
+concurrency:
+  group: fel-cola
+  cancel-in-progress: false
+
+jobs:
+  drenar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Procesar la cola
+        env:
+          URL: ${{ secrets.FEL_CRON_URL }}
+          SECRET: ${{ secrets.FEL_CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "FEL_CRON_URL o FEL_CRON_SECRET no están configurados: no hay nada que hacer."
+            exit 0
+          fi
+
+          codigo=$(curl -sS -o respuesta.json -w '%{http_code}' \
+            --max-time 120 \
+            -X POST "$URL" \
+            -H "Authorization: Bearer $SECRET")
+
+          echo "HTTP $codigo"
+          cat respuesta.json
+          echo
+
+          # 401 significa secreto mal configurado, no un problema pasajero:
+          # conviene que se vea en rojo para que alguien lo arregle.
+          if [ "$codigo" != "200" ]; then
+            echo "::error::La cola FEL respondió $codigo"
+            exit 1
+          fi

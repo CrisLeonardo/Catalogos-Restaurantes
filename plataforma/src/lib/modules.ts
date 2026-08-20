@@ -197,12 +197,42 @@ export type ModuleSettings = Partial<Record<ActivatableModuleKey, { enabled?: bo
 /** Mapa de "gestionado por Leogin" (restaurants.modules) — jsonb libre. */
 export type ModulesMap = Record<string, boolean> | null | undefined;
 
+/* ── Interruptor general de la Factura Electrónica ──────────────
+   El módulo FEL está TERMINADO pero apagado a propósito: falta elegir
+   certificador, verificar su contrato, correr la migración 118 en
+   producción y confirmar el régimen fiscal con un contador.
+
+   Está apagado a nivel plataforma y no restaurante por restaurante,
+   porque la emisión automática al cerrar el cobro se dispara sola: basta
+   con que una fila de `restaurants.modules` tenga fel=true (algunas lo
+   tienen desde la migración 038) para que esa caja empiece a emitir
+   documentos fiscales reales sin que nadie lo pida. Un interruptor en la
+   base se puede encender por descuido; este no.
+
+   Para encenderlo cuando todo esté listo: NEXT_PUBLIC_FEL_ENABLED=1.
+   Ausente o cualquier otro valor = apagado. Ver docs/FEL.md. */
+export const FEL_DISPONIBLE = process.env.NEXT_PUBLIC_FEL_ENABLED === '1';
+
+/**
+ * ¿Este módulo está disponible en la plataforma, sin mirar la base?
+ *
+ * Un módulo puede estar completo en el código y aun así no deber
+ * ejecutarse todavía. Se comprueba antes que nada para que ninguna ruta
+ * —panel, navegación, emisión automática, acciones de servidor— pueda
+ * saltárselo: todas pasan por isManaged().
+ */
+function disponibleEnPlataforma(key: ActivatableModuleKey): boolean {
+  if (key === 'fel') return FEL_DISPONIBLE;
+  return true;
+}
+
 /**
  * ¿Leogin gestiona este módulo? (modules[key] === true)
  * Cuando es true, el módulo queda forzado ON y se oculta del panel del
  * restaurante (lo administra Leogin directamente).
  */
 export function isManaged(modules: ModulesMap, key: ActivatableModuleKey): boolean {
+  if (!disponibleEnPlataforma(key)) return false;
   return modules?.[key] === true;
 }
 

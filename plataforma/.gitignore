@@ -45,3 +45,6 @@ dev-server.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# XML de muestra que genera muestras-xml.test.ts para validar contra los XSD
+scripts/fel/muestras/

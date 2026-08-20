@@ -28,6 +28,7 @@ import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalt
 import { resolveItemOptions } from '@/lib/order-options';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import { getOrdersForTable, type OrderWithItems } from '@/lib/db/orders';
+import { emitirFacturaAutomatica } from '@/lib/actions/fel';
 import {
   createBrandedWorkbook, addBrandedHeader, writeStyledTable, freezeHeaderRow, autoFitColumns,
   workbookToBase64,
@@ -747,15 +748,29 @@ export async function freeTable(
   }
 
   const tableAddress = `Mesa ${tableNumber}`;
-  const { error } = await db
+  // Se piden los ids de vuelta: cerrar la mesa es el momento en que la venta
+  // de comer en local queda cobrada, y es cuando toca facturarla. Sin el
+  // `select` no habría a qué pedido emitirle factura — este camino no pasa
+  // por updateOrderStatus().
+  const { data: cerrados, error } = await db
     .from('orders')
     .update({ status: 'DELIVERED', delivered_at: new Date().toISOString() })
     .eq('restaurant_id', restaurantId)
     .eq('address', tableAddress)
     .eq('order_type', 'DINE_IN')
-    .not('status', 'in', '("DELIVERED","CANCEL")');
+    .not('status', 'in', '("DELIVERED","CANCEL")')
+    .select('id');
 
   if (error) return { error: error.message };
+
+  // Una factura por pedido cerrado. En `after` para no dejar al mesero
+  // esperando al certificador con la mesa ocupada en pantalla.
+  const ids = (cerrados ?? []).map((r) => r.id as string);
+  if (ids.length > 0) {
+    after(async () => {
+      for (const id of ids) await emitirFacturaAutomatica(restaurantId, id);
+    });
+  }
 
   revalidatePath('/admin/mesero');
   revalidatePath('/admin/pedidos');
@@ -868,6 +883,20 @@ export async function updateOrderStatus(
         /* best-effort */
       }
     }
+  }
+
+  // Factura electrónica al cerrar la venta (migración 118). Va en `after`
+  // y no en línea: hablar con el certificador puede tardar hasta 20s y esta
+  // acción la pulsa el personal decenas de veces al día — la caja no puede
+  // quedarse esperando al SAT. Tampoco se suelta la promesa sin más, que
+  // moriría al terminar la request.
+  //
+  // No-op si el módulo está inactivo, si el dueño apagó la emisión
+  // automática o si faltan datos fiscales. Nunca lanza: una venta ya
+  // cobrada no se revierte porque el certificador tuviera un mal día.
+  if ((status === 'DELIVERED' || status === 'SERVED') && changed) {
+    const ridFel = (profile.restaurant_id as string | null) ?? rowRestaurantId;
+    if (ridFel) after(() => emitirFacturaAutomatica(ridFel, orderId));
   }
 
   // Aviso al comensal por WhatsApp (Fase 1A). Con `after` y no await: el

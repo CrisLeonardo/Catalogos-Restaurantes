@@ -8,8 +8,10 @@ import { getActiveHubCert, HUB_TLS_PORT } from '@/lib/hub-tls';
 import {
   buildKitchenEscPos, buildReceiptEscPos, buildSplitBillEscPos,
   DEFAULT_TICKET_FORMAT,
-  type EscPosCurrency, type SplitTicketLine, type TicketFormat,
+  type EscPosCurrency, type SplitTicketLine, type TicketFormat, type FelTicket,
 } from '@/lib/escpos';
+import { getFelDocumentForOrder } from '@/lib/db/fel';
+import { urlVerificacion } from '@/lib/fel/verificacion';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { OrderWithItems } from '@/lib/db/orders';
 
@@ -328,7 +330,14 @@ export async function enqueueReceiptForOrder(
   };
 
   const { name, format } = await ticketHeader(db, restaurantId);
-  const bytes = buildReceiptEscPos(order, currency, name, { ...format, locale: cfg.locale || format.locale });
+  const fel = await felTicketForOrder(orderId);
+  const bytes = buildReceiptEscPos(
+    order,
+    currency,
+    name,
+    { ...format, locale: cfg.locale || format.locale },
+    fel,
+  );
   const res = await enqueuePrintJob({
     restaurantId,
     role: 'receipt',
@@ -384,4 +393,49 @@ export async function enqueueSplitBillTicket(input: {
     format,
   });
   return enqueuePrintJob({ restaurantId: input.restaurantId, role: 'receipt', bytes });
+}
+
+/**
+ * Datos del DTE del pedido para imprimirlos en el ticket, si los hay.
+ *
+ * Best-effort: un fallo aquí imprime el ticket sin bloque fiscal, que es
+ * mucho mejor que no imprimir el ticket. La factura sigue existiendo en el
+ * panel y el ticket se puede reimprimir.
+ */
+async function felTicketForOrder(orderId: string): Promise<FelTicket | null> {
+  try {
+    const doc = await getFelDocumentForOrder(orderId);
+    if (!doc) return null;
+
+    const db = createServiceClient();
+    const { data: settings } = await db
+      .from('fel_settings')
+      .select('nit_emisor')
+      .eq('restaurant_id', doc.restaurant_id)
+      .maybeSingle();
+
+    const autorizacion = doc.numero_autorizacion ?? doc.uuid_sat ?? '';
+
+    return {
+      estado: doc.estado,
+      esFiscal: Boolean(doc.es_fiscal),
+      serie: doc.serie,
+      numero: doc.numero,
+      numeroAutorizacion: autorizacion || null,
+      fechaCertificacion: doc.fecha_certificacion,
+      receptorId: doc.receptor_nit,
+      receptorNombre: doc.receptor_nombre,
+      montoIva: Number(doc.monto_iva ?? 0),
+      urlVerificacion: doc.es_fiscal
+        ? urlVerificacion({
+            numeroAutorizacion: autorizacion,
+            nitEmisor: (settings?.nit_emisor as string) ?? '',
+            idReceptor: doc.receptor_nit,
+            montoTotal: Number(doc.monto_total),
+          })
+        : null,
+    };
+  } catch {
+    return null;
+  }
 }

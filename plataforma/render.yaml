@@ -32,3 +32,28 @@ services:
       # Google Cloud) — si no, el botón aparece pero el login falla.
       - key: NEXT_PUBLIC_GOOGLE_AUTH_ENABLED
         sync: false
+
+      # Interruptor general de la Factura Electrónica (FEL). El módulo está
+      # terminado pero APAGADO: falta elegir certificador, correr la
+      # migración 118 y confirmar el régimen fiscal. Poner en "1" SOLO
+      # cuando todo eso esté hecho — enciende la emisión automática, que
+      # empieza a facturar sola al cerrar cada cobro. Ver docs/FEL.md §0.
+      - key: NEXT_PUBLIC_FEL_ENABLED
+        sync: false
+
+      # Clave maestra con la que se cifran los secretos de cada restaurante
+      # (credenciales del certificador FEL, token de WhatsApp). 32 bytes en
+      # base64 o hex. SIN ESTO no se pueden guardar credenciales de
+      # facturación: la app se niega en vez de dejarlas en texto plano.
+      #   openssl rand -base64 32
+      - key: LEOGIN_SECRET_KEY
+        sync: false
+
+      # Secreto que autoriza a /api/fel/cola, el endpoint que reintenta las
+      # facturas que quedaron pendientes. Sin él, el endpoint queda CERRADO
+      # (no abierto) y la cola nunca se drena. El mismo valor va en el
+      # secreto FEL_CRON_SECRET de GitHub Actions — ver
+      # .github/workflows/fel-cola.yml.
+      #   openssl rand -hex 32
+      - key: FEL_CRON_SECRET
+        sync: false

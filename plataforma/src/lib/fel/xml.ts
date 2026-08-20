@@ -1,36 +1,49 @@
 /* ============================================================
    DTE → XML del SAT (Guatemala) · lógica pura
    ------------------------------------------------------------
-   src/lib/fel.ts calcula la factura y produce un objeto `FacturaDte`
-   propio de Leogin. El SAT no recibe eso: recibe un XML con el esquema
-   `dte:GTDocumento` (namespace http://www.sat.gob.gt/dte/fel/0.2.0), que
-   es el formato que TODOS los certificadores firman y transmiten. Este
-   archivo es el puente entre los dos, y por eso vive fuera de
-   providers/: el XML es del SAT, no de INFILE.
+   El XML es lo único que ve el certificador. Aquí no hay red ni base:
+   entran los datos, sale una cadena, y por eso se puede probar entero
+   con vitest sin tocar un servicio real.
 
-   Sin dependencias de red ni de base: entra un DTE, sale una cadena. Así
-   se puede probar con vitest sin tocar un certificador.
+   Los montos vienen ya calculados y cuadrados de `totales.ts`, y las
+   frases legales de `frases.ts`. Este archivo solo serializa: no decide
+   nada fiscal, no redondea y no inventa valores por defecto. Esa
+   separación es deliberada — cuando el certificador rechaza un DTE, hay
+   que poder saber si el problema fue el cálculo o la serialización.
 
-   ── Dos tipos de documento según la afiliación al IVA ──
-   GEN (contribuyente normal) → tipo FACT, frase 1: el IVA va desglosado.
-   PEQ (pequeño contribuyente) → tipo FPEQ, frase 2: no factura IVA, y el
-   SAT exige la leyenda de retención. Emitir un FACT desde una cuenta PEQ
-   lo rechaza el certificador, así que la distinción no es cosmética.
+   ── Los tres namespaces, que NO son el mismo ──
+     · Documento (factura, nota de crédito): dte/fel/0.2.0
+     · Anulación:                            dte/fel/0.1.0   ← distinto
+     · Complemento de nota:                  face2/ComplementoReferenciaNota/0.1.0
+   Antes la anulación se generaba con el namespace del documento y el
+   certificador la habría rechazado siempre. Están verificados contra los
+   XSD oficiales (GT_Documento-0.2.1, GT_AnulacionDocumento-0.1.0,
+   GT_Complemento_Referencia_Nota-0.1.0).
 
-   ⚠️ VERIFICAR CONTRA EL SAT ANTES DE PRODUCCIÓN: los códigos de escenario
-   de las frases y el catálogo de unidades de medida cambian con las
-   resoluciones del SAT. Lo que está aquí cubre el caso de un restaurante
-   (venta de bienes y servicios, IVA general o pequeño contribuyente); un
-   caso con exenciones, retenciones o exportación necesita más frases.
+   ── Por qué se genera en una sola línea ──
+   El certificador firma estos bytes exactos. Reindentar, añadir saltos o
+   reordenar atributos después invalida la firma, así que no hay formato
+   bonito: hay bytes estables.
    ============================================================ */
 
-import type { FacturaDte, FelSettings } from '@/lib/fel';
+import type { Frase } from './frases';
+import type { MontosDte } from './totales';
+import type { ReceptorId } from './nit';
 
-/** Namespace del esquema FEL vigente. */
-const DTE_NS = 'http://www.sat.gob.gt/dte/fel/0.2.0';
+/** Namespace del documento tributario (facturas, notas). */
+const NS_DTE = 'http://www.sat.gob.gt/dte/fel/0.2.0';
+/** Namespace de la anulación. Es OTRA versión, no un descuido. */
+const NS_ANULACION = 'http://www.sat.gob.gt/dte/fel/0.1.0';
+/** Namespace del complemento que ata una nota de crédito a su factura. */
+const NS_REFERENCIA_NOTA = 'http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0';
+
+/** Tipos de DTE que este módulo sabe emitir. */
+export type TipoDte = 'FACT' | 'FPEQ' | 'NCRE';
+
+/* ── Utilidades de serialización ─────────────────────────────── */
 
 /** Escapa los cinco caracteres que romperían el XML. */
-function esc(value: string): string {
+export function esc(value: string): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -39,23 +52,37 @@ function esc(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/** Monto con 2 decimales fijos: el SAT rechaza notación científica. */
+/** Monto con 2 decimales fijos: el SAT rechaza la notación científica. */
 function money(n: number): string {
   return Number(n || 0).toFixed(2);
 }
 
-/** Cantidad: hasta 6 decimales, sin ceros de relleno innecesarios. */
-function qty(n: number): string {
+/** Número con hasta `d` decimales, sin ceros de relleno. */
+function num(n: number, d = 6): string {
   const v = Number(n || 0);
-  return Number.isInteger(v) ? v.toFixed(0) : String(Number(v.toFixed(6)));
+  if (Number.isInteger(v)) return v.toFixed(0);
+  return String(Number(v.toFixed(d)));
 }
 
 /**
- * Fecha en el formato que pide el SAT: ISO 8601 CON offset local, no en UTC
- * con Z. Guatemala es UTC-6 todo el año (no hay horario de verano), así que
- * el offset es fijo. Mandar la hora en UTC adelanta la emisión 6 horas y
- * puede caer en el día siguiente — un problema real para el cierre fiscal
- * de las ventas de la noche.
+ * Recorta un texto al límite del esquema.
+ *
+ * `Descripcion` admite 10.000 caracteres, pero `NombreReceptor` solo 400 y
+ * `UnidadMedida` solo 3. Un nombre largo no debe tumbar una venta: se
+ * recorta y se emite, que es mejor que rechazar la factura del cliente.
+ */
+function corta(value: string, max: number): string {
+  const v = (value ?? '').trim();
+  return v.length <= max ? v : v.slice(0, max);
+}
+
+/**
+ * Fecha y hora en el formato del SAT: ISO 8601 con offset local, no UTC.
+ *
+ * Guatemala es UTC−6 todo el año (no hay horario de verano), así que el
+ * offset es fijo. Mandar la hora en UTC adelanta la emisión seis horas y
+ * puede empujarla al día siguiente — un problema real para el cierre
+ * fiscal de las ventas de la noche, que acabarían declaradas en otro día.
  */
 export function felDateTime(d: Date = new Date()): string {
   const gt = new Date(d.getTime() - 6 * 60 * 60 * 1000);
@@ -66,12 +93,13 @@ export function felDateTime(d: Date = new Date()): string {
   );
 }
 
-/** Tipo de DTE que corresponde a la afiliación IVA del emisor. */
-export function dteTipo(settings: Pick<FelSettings, 'afiliacion_iva'>): 'FACT' | 'FPEQ' {
-  return settings.afiliacion_iva === 'PEQ' ? 'FPEQ' : 'FACT';
+/** Solo la fecha (xs:date) en hora de Guatemala. */
+export function felDate(d: Date = new Date()): string {
+  return felDateTime(d).slice(0, 10);
 }
 
-/** Datos de dirección que el esquema exige y que fel_settings no tenía. */
+/* ── Estructuras de entrada ──────────────────────────────────── */
+
 export interface DireccionFiscal {
   direccion: string;
   codigoPostal: string;
@@ -80,135 +108,207 @@ export interface DireccionFiscal {
   pais: string;
 }
 
-function direccionXml(tag: string, d: DireccionFiscal): string {
+export interface EmisorDte {
+  nit: string;
+  nombre: string;
+  nombreComercial: string;
+  codigoEstablecimiento: string;
+  /** GEN o PEQ, según el XSD. Lo deriva frases.ts. */
+  afiliacionIva: 'GEN' | 'PEQ';
+  correo?: string | null;
+  direccion: DireccionFiscal;
+}
+
+export interface ReceptorDte {
+  id: ReceptorId;
+  nombre: string;
+  /** Si viene, el certificador le envía el DTE al cliente por correo. */
+  correo?: string | null;
+  direccion?: Partial<DireccionFiscal> | null;
+}
+
+/** Datos que atan una nota de crédito a la factura que corrige. */
+export interface ReferenciaNota {
+  /** UUID de autorización del DTE original. */
+  numeroAutorizacionOrigen: string;
+  /** Fecha de emisión del original, YYYY-MM-DD. */
+  fechaEmisionOrigen: string;
+  serieOrigen: string;
+  numeroOrigen: string;
+  motivoAjuste: string;
+}
+
+export interface DocumentoDte {
+  tipo: TipoDte;
+  /** Instante de emisión en ISO. Se convierte a hora de Guatemala al serializar. */
+  fechaEmision: string;
+  moneda: string;
+  emisor: EmisorDte;
+  receptor: ReceptorDte;
+  frases: Frase[];
+  montos: MontosDte;
+  /**
+   * ¿Lleva bloque de impuestos?
+   *
+   * Explícito y no deducido del tipo: normalmente coincide con el régimen
+   * (FPEQ no desglosa), pero una nota de crédito emitida más de dos meses
+   * después de su factura tampoco lleva IVA aunque el emisor sea del
+   * régimen general. Deducirlo escondía ese caso.
+   */
+  desglosaIva: boolean;
+  /** Obligatorio para NCRE: sin esto el SAT no sabe qué factura se corrige. */
+  referenciaNota?: ReferenciaNota;
+}
+
+/* ── Serialización ───────────────────────────────────────────── */
+
+function direccionXml(tag: string, d: Partial<DireccionFiscal> | null | undefined): string {
   return [
     `<dte:${tag}>`,
-    `<dte:Direccion>${esc(d.direccion || 'Ciudad')}</dte:Direccion>`,
-    `<dte:CodigoPostal>${esc(d.codigoPostal || '01001')}</dte:CodigoPostal>`,
-    `<dte:Municipio>${esc(d.municipio || 'Guatemala')}</dte:Municipio>`,
-    `<dte:Departamento>${esc(d.departamento || 'Guatemala')}</dte:Departamento>`,
-    `<dte:Pais>${esc(d.pais || 'GT')}</dte:Pais>`,
+    `<dte:Direccion>${esc(corta(d?.direccion || 'Ciudad', 200))}</dte:Direccion>`,
+    `<dte:CodigoPostal>${esc(d?.codigoPostal || '01001')}</dte:CodigoPostal>`,
+    `<dte:Municipio>${esc(d?.municipio || 'Guatemala')}</dte:Municipio>`,
+    `<dte:Departamento>${esc(d?.departamento || 'Guatemala')}</dte:Departamento>`,
+    `<dte:Pais>${esc(d?.pais || 'GT')}</dte:Pais>`,
     `</dte:${tag}>`,
   ].join('');
 }
 
-export interface BuildXmlOptions {
-  /** Dirección fiscal del emisor (de fel_settings, migración 106). */
-  emisor: DireccionFiscal;
-  /**
-   * Dirección del receptor. El SAT la acepta genérica para consumidor final,
-   * que es el 99% de los tickets de un restaurante.
-   */
-  receptor?: Partial<DireccionFiscal>;
-}
-
-/**
- * Serializa un `FacturaDte` al XML `dte:GTDocumento` listo para firmar.
- *
- * El resultado NO va firmado: la firma la aplica el certificador (o su
- * servicio de firma) sobre este XML exacto, así que no se puede reformatear
- * ni reindentar después — cualquier byte que cambie invalida la firma. Por
- * eso se genera en una sola línea, sin saltos ni espacios decorativos.
- */
-export function buildDteXml(
-  dte: FacturaDte,
-  settings: FelSettings,
-  opts: BuildXmlOptions,
-): string {
-  const tipo = dteTipo(settings);
-  const esPequeno = tipo === 'FPEQ';
-
-  const items = dte.items
-    .map((it, i) => {
-      // "B" = bien, "S" = servicio. El envío es servicio; lo demás, bien.
-      const bienOServicio = /entrega|servicio|domicilio|propina/i.test(it.descripcion) ? 'S' : 'B';
-
-      // El pequeño contribuyente no desglosa IVA: todo el monto es gravable
-      // sin impuesto asociado, y el bloque <dte:Impuestos> se omite.
-      const impuestos = esPequeno
-        ? ''
-        : [
+function itemsXml(montos: MontosDte, desglosaIva: boolean): string {
+  return montos.lineas
+    .map((l) => {
+      // El orden de los elementos lo fija el XSD (secuencia, no elección):
+      // Cantidad, UnidadMedida, Descripcion, PrecioUnitario, Precio,
+      // Descuento, Impuestos, Total. Cambiarlo invalida el documento.
+      const impuestos = desglosaIva
+        ? [
             '<dte:Impuestos>',
             '<dte:Impuesto>',
             '<dte:NombreCorto>IVA</dte:NombreCorto>',
+            // Unidad gravable 1 = tasa 12%, según el catálogo del SAT.
             '<dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>',
-            `<dte:MontoGravable>${money(it.montoGravable)}</dte:MontoGravable>`,
-            `<dte:MontoImpuesto>${money(it.montoImpuesto)}</dte:MontoImpuesto>`,
+            `<dte:MontoGravable>${money(l.montoGravable)}</dte:MontoGravable>`,
+            `<dte:MontoImpuesto>${money(l.montoImpuesto)}</dte:MontoImpuesto>`,
             '</dte:Impuesto>',
             '</dte:Impuestos>',
-          ].join('');
+          ].join('')
+        : '';
 
       return [
-        `<dte:Item NumeroLinea="${i + 1}" BienOServicio="${bienOServicio}">`,
-        `<dte:Cantidad>${qty(it.cantidad)}</dte:Cantidad>`,
-        `<dte:UnidadMedida>UND</dte:UnidadMedida>`,
-        `<dte:Descripcion>${esc(it.descripcion)}</dte:Descripcion>`,
-        `<dte:PrecioUnitario>${money(it.precioUnitario)}</dte:PrecioUnitario>`,
-        `<dte:Precio>${money(it.total)}</dte:Precio>`,
-        `<dte:Descuento>0.00</dte:Descuento>`,
+        `<dte:Item NumeroLinea="${l.numeroLinea}" BienOServicio="${l.bienOServicio}">`,
+        `<dte:Cantidad>${num(l.cantidad)}</dte:Cantidad>`,
+        `<dte:UnidadMedida>${esc(corta(l.unidadMedida || 'UND', 3))}</dte:UnidadMedida>`,
+        `<dte:Descripcion>${esc(corta(l.descripcion || 'Consumo', 10000))}</dte:Descripcion>`,
+        `<dte:PrecioUnitario>${num(l.precioUnitario)}</dte:PrecioUnitario>`,
+        `<dte:Precio>${money(l.precio)}</dte:Precio>`,
+        `<dte:Descuento>${money(l.descuento)}</dte:Descuento>`,
         impuestos,
-        `<dte:Total>${money(it.total)}</dte:Total>`,
+        `<dte:Total>${money(l.total)}</dte:Total>`,
         '</dte:Item>',
       ].join('');
     })
     .join('');
+}
 
-  // Frases obligatorias. Sin la frase correcta el certificador rechaza el DTE.
-  const frases = esPequeno
-    ? '<dte:Frase TipoFrase="2" CodigoEscenario="1"/>'
-    : '<dte:Frase TipoFrase="1" CodigoEscenario="1"/>';
+function frasesXml(frases: Frase[]): string {
+  if (frases.length === 0) return '';
+  const items = frases
+    .map((f) => {
+      const attrs = [
+        `TipoFrase="${f.tipoFrase}"`,
+        `CodigoEscenario="${f.codigoEscenario}"`,
+        f.numeroResolucion ? `NumeroResolucion="${esc(corta(f.numeroResolucion, 30))}"` : '',
+        f.fechaResolucion ? `FechaResolucion="${esc(f.fechaResolucion)}"` : '',
+      ].filter(Boolean);
+      return `<dte:Frase ${attrs.join(' ')}/>`;
+    })
+    .join('');
+  return `<dte:Frases>${items}</dte:Frases>`;
+}
 
-  const totalImpuestos = esPequeno
-    ? ''
-    : [
+function complementoNotaXml(ref: ReferenciaNota): string {
+  return [
+    '<dte:Complementos>',
+    '<dte:Complemento IDComplemento="ReferenciaNota"',
+    ' NombreComplemento="ReferenciaNota"',
+    ` URIComplemento="${esc(NS_REFERENCIA_NOTA)}">`,
+    `<cno:ReferenciasNota xmlns:cno="${NS_REFERENCIA_NOTA}" Version="0.1"`,
+    ` NumeroAutorizacionDocumentoOrigen="${esc(ref.numeroAutorizacionOrigen)}"`,
+    ` SerieDocumentoOrigen="${esc(corta(ref.serieOrigen, 20))}"`,
+    ` NumeroDocumentoOrigen="${esc(corta(ref.numeroOrigen, 20))}"`,
+    ` FechaEmisionDocumentoOrigen="${esc(ref.fechaEmisionOrigen)}"`,
+    ` MotivoAjuste="${esc(corta(ref.motivoAjuste || 'Ajuste', 200))}"/>`,
+    '</dte:Complemento>',
+    '</dte:Complementos>',
+  ].join('');
+}
+
+/**
+ * Serializa un documento al XML `dte:GTDocumento` listo para firmar.
+ *
+ * El resultado NO va firmado: la firma la aplica el certificador sobre
+ * este XML exacto.
+ */
+export function buildDteXml(doc: DocumentoDte): string {
+  const { emisor, receptor, montos } = doc;
+  const desglosaIva = doc.desglosaIva;
+
+  const totalImpuestos = desglosaIva
+    ? [
         '<dte:TotalImpuestos>',
-        `<dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="${money(dte.totalImpuesto)}"/>`,
+        `<dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="${money(montos.totalImpuesto)}"/>`,
         '</dte:TotalImpuestos>',
-      ].join('');
+      ].join('')
+    : '';
 
-  const receptorDir: DireccionFiscal = {
-    direccion: opts.receptor?.direccion || dte.receptor.direccion || 'Ciudad',
-    codigoPostal: opts.receptor?.codigoPostal || '01001',
-    municipio: opts.receptor?.municipio || 'Guatemala',
-    departamento: opts.receptor?.departamento || 'Guatemala',
-    pais: opts.receptor?.pais || 'GT',
-  };
+  const tipoEspecial =
+    receptor.id.tipo === 'CUI' || receptor.id.tipo === 'EXT'
+      ? ` TipoEspecial="${receptor.id.tipo}"`
+      : '';
+
+  const correoReceptor = receptor.correo
+    ? ` CorreoReceptor="${esc(corta(receptor.correo, 100))}"`
+    : '';
+
+  const correoEmisor = emisor.correo ? ` CorreoEmisor="${esc(corta(emisor.correo, 100))}"` : '';
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    `<dte:GTDocumento xmlns:dte="${DTE_NS}" Version="0.1">`,
+    `<dte:GTDocumento xmlns:dte="${NS_DTE}" Version="0.1">`,
     '<dte:SAT ClaseDocumento="dte">',
     '<dte:DTE ID="DatosCertificados">',
     '<dte:DatosEmision ID="DatosEmision">',
 
-    // La fecha se normaliza aquí, no en fel.ts: ese archivo guarda el
-    // instante en ISO/UTC (lo correcto para la base) y el SAT quiere la hora
-    // de pared guatemalteca con su offset. Convertir en el borde evita que
-    // fel.ts tenga que importar este módulo y cerrar un ciclo.
-    `<dte:DatosGenerales Tipo="${tipo}"`,
-    ` FechaHoraEmision="${esc(felDateTime(new Date(dte.fechaEmision)))}"`,
-    ` CodigoMoneda="${esc(dte.moneda || 'GTQ')}"/>`,
+    `<dte:DatosGenerales Tipo="${doc.tipo}"`,
+    ` FechaHoraEmision="${esc(felDateTime(new Date(doc.fechaEmision)))}"`,
+    ` CodigoMoneda="${esc(doc.moneda || 'GTQ')}"/>`,
 
-    `<dte:Emisor NITEmisor="${esc(dte.emisor.nit)}"`,
-    ` NombreEmisor="${esc(dte.emisor.nombre)}"`,
-    ` CodigoEstablecimiento="${esc(dte.emisor.codigoEstablecimiento)}"`,
-    ` NombreComercial="${esc(dte.emisor.nombreComercial)}"`,
-    ` AfiliacionIVA="${esc(dte.emisor.afiliacionIVA)}">`,
-    direccionXml('DireccionEmisor', opts.emisor),
+    `<dte:Emisor NITEmisor="${esc(emisor.nit)}"`,
+    ` NombreEmisor="${esc(corta(emisor.nombre, 400))}"`,
+    ` CodigoEstablecimiento="${esc(emisor.codigoEstablecimiento || '1')}"`,
+    ` NombreComercial="${esc(corta(emisor.nombreComercial || emisor.nombre, 400))}"`,
+    correoEmisor,
+    ` AfiliacionIVA="${esc(emisor.afiliacionIva)}">`,
+    direccionXml('DireccionEmisor', emisor.direccion),
     '</dte:Emisor>',
 
-    `<dte:Receptor IDReceptor="${esc(dte.receptor.nit)}"`,
-    ` NombreReceptor="${esc(dte.receptor.nombre)}">`,
-    direccionXml('DireccionReceptor', receptorDir),
+    `<dte:Receptor IDReceptor="${esc(receptor.id.valor)}"`,
+    tipoEspecial,
+    ` NombreReceptor="${esc(corta(receptor.nombre || 'Consumidor Final', 400))}"`,
+    correoReceptor,
+    '>',
+    direccionXml('DireccionReceptor', receptor.direccion),
     '</dte:Receptor>',
 
-    `<dte:Frases>${frases}</dte:Frases>`,
-    `<dte:Items>${items}</dte:Items>`,
+    frasesXml(doc.frases),
+    `<dte:Items>${itemsXml(montos, desglosaIva)}</dte:Items>`,
 
     '<dte:Totales>',
     totalImpuestos,
-    `<dte:GranTotal>${money(dte.granTotal)}</dte:GranTotal>`,
+    `<dte:GranTotal>${money(montos.granTotal)}</dte:GranTotal>`,
     '</dte:Totales>',
+
+    doc.referenciaNota ? complementoNotaXml(doc.referenciaNota) : '',
 
     '</dte:DatosEmision>',
     '</dte:DTE>',
@@ -221,29 +321,35 @@ export function buildDteXml(
  * XML de anulación de un DTE ya certificado.
  *
  * Anular no es borrar: el SAT exige un documento propio que referencia el
- * UUID original. Por eso `anularInvoice` no puede limitarse a marcar la fila
- * como ANULADO — mientras esto no se transmita, para el SAT la factura sigue
- * viva y el restaurante la debe pagar.
+ * UUID original. Mientras esto no se transmita y el certificador no lo
+ * confirme, para el SAT la factura sigue viva y el restaurante la debe
+ * declarar — por eso el estado local no se toca antes de la confirmación.
+ *
+ * Ojo con el namespace: la anulación va en dte/fel/0.1.0, no en el 0.2.0
+ * del documento.
  */
 export function buildAnulacionXml(params: {
   uuidOriginal: string;
+  /** Fecha/hora de emisión del original, en formato del SAT. */
   fechaEmisionOriginal: string;
   nitEmisor: string;
   idReceptor: string;
   motivo: string;
+  fechaAnulacion?: Date;
 }): string {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    `<dte:GTAnulacionDocumento xmlns:dte="${DTE_NS}" Version="0.1">`,
+    `<dte:GTAnulacionDocumento xmlns:dte="${NS_ANULACION}" Version="0.1">`,
     '<dte:SAT>',
     '<dte:AnulacionDTE ID="DatosCertificados">',
-    `<dte:DatosGenerales ID="DatosAnulacion"`,
+    '<dte:DatosGenerales ID="DatosAnulacion"',
     ` NumeroDocumentoAAnular="${esc(params.uuidOriginal)}"`,
     ` NITEmisor="${esc(params.nitEmisor)}"`,
     ` IDReceptor="${esc(params.idReceptor)}"`,
     ` FechaEmisionDocumentoAnular="${esc(params.fechaEmisionOriginal)}"`,
-    ` FechaHoraAnulacion="${felDateTime()}"`,
-    ` MotivoAnulacion="${esc(params.motivo || 'Anulación solicitada por el emisor')}"/>`,
+    ` FechaHoraAnulacion="${esc(felDateTime(params.fechaAnulacion ?? new Date()))}"`,
+    // MotivoAnulacion es obligatorio en el XSD: nunca puede ir vacío.
+    ` MotivoAnulacion="${esc(corta(params.motivo || 'Anulación solicitada por el emisor', 200))}"/>`,
     '</dte:AnulacionDTE>',
     '</dte:SAT>',
     '</dte:GTAnulacionDocumento>',

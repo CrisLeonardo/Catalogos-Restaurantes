@@ -22,8 +22,8 @@
    ============================================================ */
 
 import { createServiceClient } from '@/lib/supabase/service';
-import { PROVIDER_META, type FelSettings, type FacturaDte } from '@/lib/fel';
-import { buildDteXml } from '@/lib/fel/xml';
+import { PROVIDER_META, type FelSettings } from '@/lib/fel';
+import { buildDteXml, type DocumentoDte } from '@/lib/fel/xml';
 import { readCredentials, hasCredentials } from '@/lib/fel/credentials';
 import { getAdapter } from '@/lib/fel/providers/registry';
 import type { FelAmbiente } from '@/lib/fel/providers/types';
@@ -78,16 +78,15 @@ export async function transmitirDocumento(documentId: string): Promise<TransmitR
   if (!settingsRow) {
     return marcarError(documentId, 'Falta la configuración fiscal del restaurante.');
   }
-  const settings = settingsRow as FelSettings & {
-    codigo_postal?: string; municipio?: string; departamento?: string; pais?: string;
-  };
+  const settings = settingsRow as FelSettings;
 
   const adapter = getAdapter(settings.provider);
   if (!adapter) {
     return marcarError(
       documentId,
       `La transmisión con ${PROVIDER_META[settings.provider]?.label ?? settings.provider} todavía no está ` +
-      `implementada en Leogin. Contacta a Leogin para conectarlo, o usa el modo Manual mientras tanto.`,
+      'conectada en Leogin. Contacta a Leogin para activarla; mientras tanto este documento no se puede ' +
+      'certificar ante el SAT.',
     );
   }
 
@@ -113,28 +112,28 @@ export async function transmitirDocumento(documentId: string): Promise<TransmitR
 
   // El DTE se reconstruye del snapshot, NO se recalcula: los precios de la
   // venta ya ocurrieron y un reintento mañana no puede facturar otro monto
-  // porque entretanto cambió la carta.
-  const dte = doc.dte_json as FacturaDte | null;
-  if (!dte || !Array.isArray(dte.items) || dte.items.length === 0) {
+  // porque entretanto cambió la carta — ni otras frases porque el dueño
+  // tocó su configuración fiscal entre el cobro y el reintento.
+  const dte = doc.dte_json as DocumentoDte | null;
+  if (!dte?.montos || !Array.isArray(dte.montos.lineas) || dte.montos.lineas.length === 0) {
     return marcarError(documentId, 'El documento no tiene un DTE válido guardado.');
   }
 
-  const xml = buildDteXml(dte, settings, {
-    emisor: {
-      direccion: settings.direccion,
-      codigoPostal: settings.codigo_postal ?? '01001',
-      municipio: settings.municipio ?? 'Guatemala',
-      departamento: settings.departamento ?? 'Guatemala',
-      pais: settings.pais ?? 'GT',
-    },
-    receptor: { direccion: doc.receptor_direccion as string },
-  });
+  const xml = buildDteXml(dte);
+
+  // Se archiva lo que se manda, antes de mandarlo: si el SAT lo rechaza,
+  // el diagnóstico se hace mirando el documento real y no reconstruyéndolo
+  // de memoria.
+  await db.from('fel_documents').update({ xml_enviado: xml }).eq('id', documentId);
 
   const res = await adapter.certificar({
     xml,
     credentials,
     ambiente: settings.ambiente as FelAmbiente,
     nitEmisor: settings.nit_emisor,
+    // El id del documento no cambia entre reintentos: es lo que impide que
+    // un timeout convierta una venta en dos facturas ante el SAT.
+    idempotencyKey: documentId,
   });
 
   if (res.ok) {

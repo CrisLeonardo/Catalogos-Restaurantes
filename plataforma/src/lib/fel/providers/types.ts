@@ -34,6 +34,21 @@ export interface CertificarInput {
   credentials: FelCredentials;
   ambiente: FelAmbiente;
   nitEmisor: string;
+  /**
+   * Identificador ESTABLE de este documento, igual en todos los reintentos.
+   *
+   * Es la única defensa contra la doble factura, y no es teórica: si el
+   * certificador recibe el DTE, lo transmite al SAT y la respuesta se
+   * pierde por un timeout, nuestra cola reintenta. Con un identificador
+   * nuevo en cada intento, el certificador no tiene forma de saber que es
+   * el mismo documento y emite un SEGUNDO DTE — dos facturas ante el SAT
+   * por una sola venta, dos veces el IVA a pagar, y nada en el sistema que
+   * lo delate.
+   *
+   * Debe derivarse del id del documento, nunca de Date.now() ni de un
+   * aleatorio.
+   */
+  idempotencyKey: string;
 }
 
 export interface CertificarOk {
@@ -68,6 +83,8 @@ export interface AnularInput {
   motivo: string;
   credentials: FelCredentials;
   ambiente: FelAmbiente;
+  /** Estable entre reintentos, igual que en la certificación. */
+  idempotencyKey: string;
 }
 
 export type AnularResult =

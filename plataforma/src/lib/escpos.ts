@@ -119,6 +119,35 @@ class EscPosBuilder {
     return this.text(left).text(' '.repeat(pad)).line(right);
   }
 
+  /**
+   * Código QR nativo de la impresora (GS ( k, modelo 2).
+   *
+   * Se imprime desde la impresora y no como imagen: una imagen habría que
+   * rasterizarla y pesa; el comando es estándar ESC/POS y lo entienden las
+   * térmicas de 80mm actuales. Aun así, quien llama debe imprimir TAMBIÉN
+   * la dirección en texto — si una impresora vieja ignora el comando, el
+   * cliente se queda sin forma de consultar su factura.
+   */
+  qr(data: string, size = 6): this {
+    const bytes = encodeText(data);
+    const len = bytes.length + 3;
+    const pL = len & 0xff;
+    const pH = (len >> 8) & 0xff;
+
+    // Modelo 2
+    this.b.push(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+    // Tamaño del módulo (1..16)
+    this.b.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, Math.min(16, Math.max(1, size)));
+    // Corrección de errores M (48=L, 49=M, 50=Q, 51=H). M aguanta manchas de
+    // grasa y tinta corrida, que es el estado normal de un ticket de cocina.
+    this.b.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31);
+    // Guardar los datos
+    this.b.push(0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30, ...bytes);
+    // Imprimir
+    this.b.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30);
+    return this;
+  }
+
   cut(): this {
     this.b.push(0x1b, 0x64, 4);    // ESC d 4: avanza 4 líneas
     this.b.push(0x1d, 0x56, 0x42, 0x00); // GS V B 0: corte parcial
@@ -218,11 +247,97 @@ function fmtMoney(n: number, c: EscPosCurrency): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
+/**
+ * Datos del DTE para imprimirlos en el ticket.
+ *
+ * Hasta ahora el ticket no mencionaba la factura por ningún lado, aunque el
+ * DTE existiera: el cliente se iba con un papel que no le servía para nada
+ * fiscal. Es lo mínimo que el SAT espera que lleve impreso un comprobante
+ * del régimen FEL.
+ */
+export interface FelTicket {
+  estado: string;
+  /** Falso = registro interno de Leogin, SIN validez ante el SAT. */
+  esFiscal: boolean;
+  serie: string | null;
+  numero: string | null;
+  numeroAutorizacion: string | null;
+  fechaCertificacion: string | null;
+  receptorId: string;
+  receptorNombre: string;
+  montoIva: number;
+  /** Enlace al verificador del SAT, ya con el documento cargado. */
+  urlVerificacion: string | null;
+}
+
+/**
+ * Bloque fiscal del ticket.
+ *
+ * Cada estado dice la verdad sobre lo que el cliente tiene en la mano. En
+ * particular el registro interno se marca como NO factura: un documento con
+ * serie y número que parece fiscal y no lo es, es peor que no imprimir nada.
+ */
+function felBlockEscPos(
+  b: EscPosBuilder,
+  fel: FelTicket,
+  fm: (n: number) => string,
+  format: TicketFormat,
+): void {
+  if (!fel.esFiscal) {
+    b.sep('-')
+     .align('center')
+     .line('REGISTRO INTERNO')
+     .line(`${fel.serie ?? ''}-${fel.numero ?? ''}`)
+     .bold(true).line('NO ES UNA FACTURA').bold(false)
+     .line('Sin validez fiscal ante el SAT')
+     .align('left');
+    return;
+  }
+
+  if (fel.estado === 'PENDIENTE') {
+    b.sep('-')
+     .align('center')
+     .bold(true).line('FACTURA EN PROCESO').bold(false)
+     .line('Se esta generando tu factura')
+     .line('electronica. Vuelve a pedir el')
+     .line('ticket en unos minutos.')
+     .align('left');
+    return;
+  }
+
+  if (fel.estado !== 'CERTIFICADO') return;
+
+  b.sep('=')
+   .align('center')
+   .bold(true).line('FACTURA ELECTRONICA EN LINEA').bold(false)
+   .align('left');
+
+  if (fel.serie || fel.numero) b.row('Serie', `${fel.serie ?? ''}-${fel.numero ?? ''}`);
+  b.row('NIT receptor', fel.receptorId);
+  b.line(fel.receptorNombre);
+  if (fel.montoIva > 0) b.row('IVA incluido', fm(fel.montoIva));
+  if (fel.fechaCertificacion) b.row('Certificada', ticketDateTime(fel.fechaCertificacion, format));
+
+  if (fel.numeroAutorizacion) {
+    b.line('Autorizacion:').line(fel.numeroAutorizacion);
+  }
+
+  if (fel.urlVerificacion) {
+    // QR + dirección en texto: si la impresora no entiende el comando de QR,
+    // el cliente todavía puede consultar su factura a mano.
+    b.align('center').lf(1).qr(fel.urlVerificacion, 5).lf(1)
+     .line('Verifica tu factura en')
+     .line('felpub.c.sat.gob.gt')
+     .align('left');
+  }
+}
+
 export function buildReceiptEscPos(
   order: OrderWithItems,
   currency: EscPosCurrency,
   restaurantName: string,
   format: TicketFormat = DEFAULT_TICKET_FORMAT,
+  fel?: FelTicket | null,
 ): Uint8Array {
   const b = new EscPosBuilder();
   const fm = (n: number) => fmtMoney(n, currency);
@@ -281,6 +396,8 @@ export function buildReceiptEscPos(
   }
 
   if (order.notes) b.line(`Nota: ${order.notes}`);
+
+  if (fel) felBlockEscPos(b, fel, fm, format);
 
   b.align('center')
    .sep('-')

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveModuleContext } from '@/lib/modules-server';
-import { getFelSettings, listFelDocuments, getFelSummary, getInvoiceableOrders } from '@/lib/db/fel';
+import { getFelSettings, getFelEstadoConfig, listFelDocuments, getFelSummary, getInvoiceableOrders } from '@/lib/db/fel';
 import FacturacionPanel from '@/components/admin/facturacion-panel';
 
 export const metadata = { title: 'Facturación (FEL) – Panel admin' };
@@ -28,6 +28,7 @@ export default async function FacturacionPage() {
       <FacturacionPanel
         restaurantId={mc.restaurantId}
         settings={settings}
+        estado={getFelEstadoConfig(settings)}
         documents={documents}
         summary={summary}
         invoiceable={invoiceable}

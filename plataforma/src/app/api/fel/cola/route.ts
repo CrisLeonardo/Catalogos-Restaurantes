@@ -16,6 +16,7 @@
    ============================================================ */
 
 import { procesarColaFel } from '@/lib/fel/transmit';
+import { FEL_DISPONIBLE } from '@/lib/modules';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,17 @@ function autorizado(req: Request): boolean {
 export async function POST(req: Request) {
   if (!autorizado(req)) {
     return Response.json({ error: 'No autorizado.' }, { status: 401 });
+  }
+
+  // Facturación apagada a nivel plataforma: no hay nada que drenar y no se
+  // debe transmitir nada al certificador. Se responde 200 y no error, para
+  // que el cron no se ponga en rojo cada cinco minutos por algo que es
+  // deliberado. Ver el interruptor en lib/modules.ts.
+  if (!FEL_DISPONIBLE) {
+    return Response.json(
+      { ok: true, desactivado: true, procesados: 0, certificados: 0 },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 
   try {
