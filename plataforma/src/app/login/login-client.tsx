@@ -191,16 +191,23 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                   marginBottom: 6,
                 }}
               >
-                Email
+                {/* En el login de un restaurante caben DOS credenciales: el
+                    correo del dueño y el usuario que el dueño le dio a su
+                    administrador. Nombrar solo el correo dejaba a la mitad
+                    del equipo mirando un campo que creía que no era suyo. */}
+                {slug ? 'Correo o usuario' : 'Email'}
               </label>
               <input
                 id="email"
                 name="email"
-                type="email"
+                type={slug ? 'text' : 'email'}
                 required
-                autoComplete="email"
+                autoComplete={slug ? 'username' : 'email'}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 autoFocus
-                placeholder="tu@email.com"
+                placeholder={slug ? 'tu@email.com  ·  o tu usuario' : 'tu@email.com'}
                 style={inputStyle}
               />
             </div>

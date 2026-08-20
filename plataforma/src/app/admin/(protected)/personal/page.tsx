@@ -14,7 +14,6 @@ import TrustedDevicesPanel from '@/components/admin/trusted-devices-panel';
 import EntryPinCard from '@/components/admin/entry-pin-card';
 import InvitationsPanel from '@/components/admin/invitations-panel';
 import { listPendingInvitations } from '@/lib/auth/invitations';
-import { emailEnabled } from '@/lib/email';
 import { getPanelAccessLog } from '@/lib/auth/access-log';
 import { listTrustedDevices } from '@/lib/auth/trusted-device';
 
@@ -118,16 +117,22 @@ export default async function AdminPersonalPage() {
           Reparto de propinas →
         </Link>
       </div>
-      <StaffPanel restaurantId={restaurantId} staff={staff} activity={activity} enabledSections={enabledSections} />
-      {/* Invitar por correo es del dueño: un gerente suma a su equipo con PIN,
-          no crea pares suyos. */}
-      {!isManager && (
-        <InvitationsPanel
-          restaurantId={restaurantId}
-          invitations={invitations}
-          enabledSections={enabledSections}
-          emailEnabled={emailEnabled()}
-        />
+      <StaffPanel
+        restaurantId={restaurantId}
+        staff={staff}
+        activity={activity}
+        enabledSections={enabledSections}
+        isOwner={!isManager}
+      />
+      {/* Invitaciones por correo: se retiraron de la pantalla. El acceso del
+          administrador se crea aquí mismo, con usuario y contraseña, que es
+          lo que un dueño puede dictar por WhatsApp sin depender de que la
+          otra persona tenga correo, lo revise, y de que nuestro proveedor de
+          correo esté en pie. Este bloque solo aparece si quedan invitaciones
+          vivas de antes, para poder revocarlas — cuando no queda ninguna,
+          desaparece solo y para siempre. */}
+      {!isManager && invitations.length > 0 && (
+        <InvitationsPanel restaurantId={restaurantId} invitations={invitations} />
       )}
       <TrustedDevicesPanel
         restaurantId={restaurantId}

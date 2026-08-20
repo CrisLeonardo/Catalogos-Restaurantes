@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ADMIN_SECTIONS } from '@/lib/permissions';
 import {
-  createStaff, updateStaffPermissions, removeStaff,
+  createStaff, updateStaffPermissions, removeStaff, resetStaffPassword,
   type StaffState, type StaffMember, type ActivityRow,
 } from '@/lib/actions/staff';
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
@@ -31,10 +31,10 @@ const GERENTE_EXCLUDES = ['suscripcion'];
     pudiendo ajustar libremente después de elegir una.
 
     "Gerente" es distinta de las otras tres en algo más que los permisos: es
-    la única que entra con SU correo (o con Google) en vez de con un PIN del
-    local — ver `access` en el modal. */
-const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] | 'gerente'; access?: 'email' }[] = [
-  { key: 'gerente', label: 'Gerente', icon: 'key', perms: 'gerente', access: 'email' },
+    la única que entra con USUARIO y contraseña desde donde sea, en vez de
+    con un PIN del aparato del local — ver `access` en el modal. */
+const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] | 'gerente'; access?: 'user' }[] = [
+  { key: 'gerente', label: 'Gerente', icon: 'key', perms: 'gerente', access: 'user' },
   { key: 'mesero', label: 'Mesero', icon: 'userPlus', perms: ['mesero'] },
   { key: 'cajero', label: 'Cajero', icon: 'wallet', perms: ['pedidos', 'mesas', 'clientes'] },
   { key: 'cocina', label: 'Cocina', icon: 'flame', perms: ['cocina'] },
@@ -64,13 +64,17 @@ function timeAgo(iso: string): string {
 
 const SECTION_LABEL: Record<string, string> = Object.fromEntries(ADMIN_SECTIONS.map((s) => [s.key, s.label]));
 
-export default function StaffPanel({ restaurantId, staff, activity, enabledSections }: {
+export default function StaffPanel({ restaurantId, staff, activity, enabledSections, isOwner = true }: {
   restaurantId: string;
   staff: StaffMember[];
   activity: ActivityRow[];
   /** Secciones que el restaurante realmente tiene activas — el picker de
       permisos no debe ofrecer módulos que el dueño ni siquiera prendió. */
   enabledSections: string[];
+  /** ¿Lo mira el dueño? Solo él restablece la contraseña de un administrador
+      (el servidor lo vuelve a comprobar; esto es para no enseñar un botón
+      que iba a ser rechazado). */
+  isOwner?: boolean;
 }) {
   const router = useRouter();
   const [editor, setEditor] = useState<{ open: boolean; member: StaffMember | null }>({ open: false, member: null });
@@ -84,8 +88,11 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
   }
 
   function MemberCard({ m }: { m: StaffMember }) {
-    const isMesero = m.permissions?.includes('mesero') ?? false;
-    const byEmail = m.access === 'email';
+    // La insignia dice QUÉ ES esta persona, no qué secciones tiene marcadas.
+    // Con "tiene mesero" un gerente salía etiquetado como Mesero, porque su
+    // plantilla incluye esa sección igual que las otras 25.
+    const isMesero = m.meseroOnly;
+    const conCredencial = m.access !== 'pin';
     return (
       <Card key={m.id} className="p-3.5 flex items-center gap-3">
         <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
@@ -101,7 +108,11 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
           {/* Con qué credencial entra: es lo primero que el dueño necesita
               saber cuando alguien le dice "no puedo entrar". */}
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {byEmail ? `Entra con ${m.email ?? 'su correo'}` : 'Entra con PIN en el local'}
+            {m.access === 'user'
+              ? `Entra con el usuario ${m.username}`
+              : conCredencial
+                ? `Entra con ${m.email ?? 'su correo'}`
+                : 'Entra con PIN en el local'}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {describePerms(m)}
@@ -149,6 +160,7 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
           restaurantId={restaurantId}
           member={editor.member}
           enabledSections={enabledSections}
+          isOwner={isOwner}
           onClose={() => setEditor({ open: false, member: null })}
           onSaved={() => { setEditor({ open: false, member: null }); router.refresh(); }}
         />
@@ -157,19 +169,24 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
   );
 }
 
-function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }: {
+function StaffModal({ restaurantId, member, enabledSections, isOwner, onClose, onSaved }: {
   restaurantId: string;
   member: StaffMember | null;
   enabledSections: string[];
+  isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const isNew = !member;
   const [perms, setPerms] = useState<string[]>(member?.permissions ?? ['mesero']);
-  // Con qué credencial entra: PIN en el aparato del local (lo normal) o su
-  // propio correo (el gerente, que entra desde donde sea).
-  const [access, setAccess] = useState<'pin' | 'email'>('pin');
+  // Con qué credencial entra: PIN en el aparato del local (lo normal) o un
+  // usuario de este restaurante (el administrador, que entra desde donde sea).
+  const [access, setAccess] = useState<'pin' | 'user'>('pin');
   const visibleSections = ADMIN_SECTIONS.filter((s) => enabledSections.includes(s.key));
+  /* Un gerente da de alta a SU equipo, no a otro gerente: el servidor lo
+     rechaza (ver createStaff), así que tampoco se le ofrece aquí. La
+     plantilla Gerente y la credencial por usuario son del dueño. */
+  const presets = isOwner ? ROLE_PRESETS : ROLE_PRESETS.filter((p) => p.key !== 'gerente');
 
   /** El gerente lleva todo lo que el restaurante tenga activo menos el cobro. */
   const gerentePerms = visibleSections
@@ -185,11 +202,13 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
   const createAction = useActionState<StaffState, FormData>(createStaff, null);
   const updateAction = useActionState<StaffState, FormData>(updateStaffPermissions, null);
   const pinAction = useActionState<StaffPinState, FormData>(setStaffPin, null);
+  const passAction = useActionState<StaffState, FormData>(resetStaffPassword, null);
 
   const [state, formAction, isPending] = isNew ? createAction : updateAction;
 
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
   useEffect(() => { if (pinAction[0] && 'ok' in pinAction[0]) alert('PIN actualizado.'); }, [pinAction]);
+  useEffect(() => { if (passAction[0] && 'ok' in passAction[0]) alert('Contraseña actualizada. Pásasela a esta persona.'); }, [passAction]);
 
   function toggle(key: string) {
     setPerms((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
@@ -223,7 +242,7 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
               <div>
                 <label style={label}>Plantilla</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {ROLE_PRESETS.map((p) => (
+                  {presets.map((p) => (
                     <button
                       key={p.key}
                       type="button"
@@ -241,7 +260,11 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
                 </div>
                 <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
                   Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
-                  <strong> Gerente</strong> da todo menos el cobro, y entra con su propio correo.
+                  {isOwner && (
+                    <>
+                      <strong> Gerente</strong> da todo menos el cobro, y entra con su propio usuario.
+                    </>
+                  )}
                 </p>
               </div>
             )}
@@ -250,14 +273,15 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
                 el PIN es para quien teclea quince veces por turno en el
                 aparato del local; el correo es para el encargado, que entra
                 desde su casa y responde por lo que hace. */}
-            {isNew && (
+            {isNew && !isOwner && <input type="hidden" name="access_type" value="pin" />}
+            {isNew && isOwner && (
               <div>
                 <input type="hidden" name="access_type" value={access} />
                 <label style={label}>Cómo entra *</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([
                     { id: 'pin' as const, title: 'Con un PIN', desc: 'En el aparato del local' },
-                    { id: 'email' as const, title: 'Con su correo', desc: 'Desde donde sea' },
+                    { id: 'user' as const, title: 'Con un usuario', desc: 'Desde donde sea' },
                   ]).map((opt) => {
                     const on = access === opt.id;
                     return (
@@ -301,21 +325,31 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
               </div>
             )}
 
-            {isNew && access === 'email' && (
+            {isNew && access === 'user' && (
               <>
                 <div>
-                  <label style={label}>Su correo *</label>
+                  <label style={label}>Usuario *</label>
                   <input
-                    name="email"
-                    type="email"
+                    name="username"
+                    type="text"
                     required
+                    minLength={3}
+                    maxLength={24}
+                    pattern="[a-z0-9_-]{3,24}"
                     autoComplete="off"
-                    placeholder="encargado@ejemplo.com"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    placeholder="Ej. carlos"
                     style={input}
                   />
+                  <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
+                    Minúsculas, números, guion y guion bajo. Este usuario es solo de tu
+                    restaurante: no ocupa ningún correo ni sirve en ningún otro local.
+                  </p>
                 </div>
                 <div>
-                  <label style={label}>Contraseña temporal (mínimo 8) *</label>
+                  <label style={label}>Contraseña (mínimo 8) *</label>
                   <input
                     name="password"
                     type="text"
@@ -326,9 +360,9 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
                     style={input}
                   />
                   <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
-                    Pásasela y pídele que la cambie desde &quot;Olvidé mi contraseña&quot;. También podrá
-                    entrar con <strong>Continuar con Google</strong> usando ese mismo correo.
-                    No aparecerá en la grilla de PIN del local.
+                    Pásale el usuario y la contraseña, y dile que entre en esta misma
+                    dirección. No aparecerá en la grilla de PIN del local, y si la
+                    olvida se la cambias tú desde su ficha.
                   </p>
                 </div>
               </>
@@ -390,6 +424,25 @@ function StaffModal({ restaurantId, member, enabledSections, onClose, onSaved }:
                   <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
                 </form>
                 {pinAction[0] && 'error' in pinAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{pinAction[0].error}</div>}
+
+                {/* Un acceso por usuario no tiene correo, así que no existe
+                    "olvidé mi contraseña" para él: el buzón al que se
+                    mandaría el enlace no existe. Esta es su única vía de
+                    recuperación, y por eso es del dueño. */}
+                {isOwner && member!.access === 'user' && (
+                  <>
+                    <form action={passAction[1]} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                      <input type="hidden" name="restaurantId" value={restaurantId} />
+                      <input type="hidden" name="userId" value={member!.id} />
+                      <div style={{ flex: 1 }}>
+                        <label style={label}>Nueva contraseña de {member!.username}</label>
+                        <input name="password" type="text" minLength={8} autoComplete="off" placeholder="Mínimo 8 caracteres" style={input} />
+                      </div>
+                      <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>
+                    </form>
+                    {passAction[0] && 'error' in passAction[0] && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{passAction[0].error}</div>}
+                  </>
+                )}
 
                 <form action={removeStaff} onSubmit={(e) => { if (!confirm('¿Quitar a este miembro? Perderá el acceso.')) e.preventDefault(); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />

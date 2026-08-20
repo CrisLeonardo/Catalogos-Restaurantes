@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getMyMembership, getMyMemberships, canBill } from '@/lib/db/membership';
+import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { checkEntryGate, unlockWithEntryPin, setEntryPin } from '@/lib/auth/entry-pin';
 import { isValidPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { logPanelAccess } from '@/lib/auth/access-log';
@@ -157,15 +158,19 @@ export async function createAnotherRestaurant(
   // Desde aquí se crean TODOS los restaurantes, también el primero: el alta de
   // la calle solo crea la cuenta y manda a esta pantalla.
   //
-  // Quien no tiene ninguno puede crear el suyo. Quien ya tiene, otro más. Lo
-  // que no puede es crear a nombre de un jefe: un gerente invitado a una
-  // sucursal —membresía que no factura— se queda fuera.
-  const memberships = await getMyMemberships();
-  const esDueñoDeAlgo = memberships.some((m) => canBill(m.role));
-  if (memberships.length > 0 && !esDueñoDeAlgo) {
-    return { error: 'Solo el dueño de un restaurante puede crear otro.' };
+  // Quien queda fuera es la cuenta de PIN del local (correo sintético): esa no
+  // es la identidad de una persona que abre un negocio, es una credencial de
+  // turno atada a un aparato. Un gerente invitado SÍ puede: el restaurante que
+  // cree nace a su nombre, con su propia membresía de dueño, no a nombre del
+  // jefe que lo invitó — negárselo era rechazar a un cliente que paga.
+  if (isSyntheticStaffEmail(user.email)) {
+    return { error: 'Esta cuenta es de acceso por PIN. Crea tu restaurante desde tu propia cuenta.' };
   }
-  const esElPrimero = memberships.length === 0;
+
+  const memberships = await getMyMemberships();
+  // La prueba gratis es de la PERSONA y va en su primer restaurante propio:
+  // ser gerente en el local de otro no la gasta. Ver lib/billing-signup.ts.
+  const esElPrimero = !memberships.some((m) => canBill(m.role));
 
   const name = ((formData.get('name') as string) ?? '').trim();
   const rawSlug = ((formData.get('slug') as string) ?? '').trim().toLowerCase();

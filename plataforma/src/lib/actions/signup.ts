@@ -134,11 +134,11 @@ export async function signupRestaurant(
 
   const db = createServiceClient();
 
-  // Una cuenta de Google que ya administra un restaurante no puede crear otro
-  // con ella misma: hoy `profiles` es uno a uno con el usuario de Auth. Se
-  // detiene ANTES de ocupar el slug o cobrar nada. (El modelo de varios
-  // restaurantes bajo una sola cuenta está planteado en
-  // PLAN_ACCESO_MULTICUENTA.md — es lo que quita esta limitación.)
+  // Una cuenta que ya administra un restaurante no crea el siguiente POR AQUÍ:
+  // este formulario da de alta la cuenta y el restaurante a la vez, y el
+  // perfil es uno a uno con el usuario de Auth. Lo crea desde Mi cuenta, que
+  // es la pantalla hecha para eso (mig. 113). Se detiene ANTES de ocupar el
+  // slug o cobrar nada.
   if (withGoogle) {
     const { data: already } = await db
       .from('profiles')
@@ -146,7 +146,7 @@ export async function signupRestaurant(
       .eq('id', googleUser!.id)
       .maybeSingle();
     if (already) {
-      return { error: 'Esta cuenta de Google ya administra un restaurante. Entra a tu panel o usa otra cuenta.' };
+      return { error: 'Esta cuenta ya administra un restaurante. Crea el siguiente desde Mi cuenta, con esta misma cuenta.' };
     }
   }
 

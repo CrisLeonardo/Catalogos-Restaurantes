@@ -60,7 +60,12 @@ export async function resolveStaffDestination(
     }
   }
 
-  if (!profile.restaurant_id) return '/admin/login';
+  /* Cuenta sin ningún restaurante todavía: ni propio ni por membresía.
+     Su casa es Mi cuenta, que es donde se crea el primero. Antes se le
+     devolvía al login, y eso se lee como "tu acceso falló" cuando en
+     realidad entró perfectamente — con Google es peor todavía, porque el
+     rebote es idéntico al de un canje fallido. */
+  if (!profile.restaurant_id) return `/mi-cuenta${suffix}`;
 
   const { data: rest } = await supabase
     .from('restaurants')

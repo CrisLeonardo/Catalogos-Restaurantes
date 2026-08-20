@@ -11,6 +11,7 @@ import {
 } from '@/lib/actions/mi-cuenta';
 import { roleLabel, type MembershipCard } from '@/lib/membership-roles';
 import { planPriceLabel, type PlanPricing } from '@/lib/plans';
+import { adminUrl } from '@/lib/tenant';
 
 function localSlugify(text: string): string {
   return text
@@ -47,8 +48,11 @@ export default function MiCuentaClient({
 }) {
   /** Restaurante cuyo PIN se está pidiendo (null = ninguno). */
   const [asking, setAsking] = useState<MembershipCard | null>(null);
-  /** Sin restaurantes todavía: el alta de la calle solo crea la cuenta. */
-  const esElPrimero = cards.length === 0;
+  /** Su primer restaurante PROPIO: no es dueño de ninguno todavía. Se mide
+      por la propiedad y no por tener cero tarjetas, porque un gerente
+      invitado al local de otro ya tiene una tarjeta y sigue yendo por el
+      primero suyo — con su prueba gratis, que es de la persona. */
+  const esElPrimero = !cards.some((c) => c.role === 'OWNER');
   const [creating, setCreating] = useState(false);
 
   return (
@@ -90,9 +94,11 @@ export default function MiCuentaClient({
           Hola, {accountName.split(' ')[0]}
         </h1>
         <p className="t-mute" style={{ fontSize: 14.5, marginTop: 8, marginBottom: 26 }}>
-          {cards.length === 1
-            ? 'Este es tu restaurante.'
-            : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`}
+          {cards.length === 0
+            ? 'Todavía no tienes ningún restaurante. Crea el primero aquí abajo.'
+            : cards.length === 1
+              ? 'Este es tu restaurante.'
+              : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`}
         </p>
 
         {/* El panel consolidado va ARRIBA de las sucursales: quien administra
@@ -129,7 +135,7 @@ export default function MiCuentaClient({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cards.map((c) => (
-            <RestaurantRow key={c.restaurantId} card={c} rootDomain={rootDomain} onAskPin={() => setAsking(c)} />
+            <RestaurantRow key={c.restaurantId} card={c} onAskPin={() => setAsking(c)} />
           ))}
         </div>
 
@@ -194,14 +200,20 @@ export default function MiCuentaClient({
  *
  * Solo para el dueño: un gerente invitado no crea pares suyos.
  */
-function TeamLink({ card, rootDomain }: { card: MembershipCard; rootDomain: string }) {
+function TeamLink({ card }: { card: MembershipCard }) {
   if (card.role !== 'OWNER') return null;
-  const host = rootDomain.includes('localhost')
-    ? `http://${card.slug}-admin.${rootDomain}`
-    : `https://${card.slug}-admin.${rootDomain}`;
+  /* El panel de un restaurante NO vive en el mismo sitio en local que en
+     producción (`slug.localhost:3000/admin` vs `slug-admin.dominio`), y aquí
+     se armaba a mano siempre con la forma de producción: en local el enlace
+     llevaba a un host donde no hay sesión, o sea al login.
+
+     `adminUrl()` es el mismo ayudante que usa el servidor para esto, y ya
+     trae la raíz del panel — la página se le pega detrás (`/personal`), sin
+     repetir `/admin`, igual que hace resolveStaffDestination con `/menu`. */
+  const href = `${adminUrl(card.slug)}/personal`;
   return (
     <a
-      href={`${host}/admin/personal`}
+      href={href}
       className="press"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
@@ -215,7 +227,7 @@ function TeamLink({ card, rootDomain }: { card: MembershipCard; rootDomain: stri
   );
 }
 
-function RestaurantRow({ card, rootDomain, onAskPin }: { card: MembershipCard; rootDomain: string; onAskPin: () => void }) {
+function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () => void }) {
   const [state, formAction, isPending] = useActionState<EntryState, FormData>(enterRestaurant, null);
 
   // Con candado, el PIN se pide en un diálogo aparte; sin candado, un solo
@@ -232,7 +244,7 @@ function RestaurantRow({ card, rootDomain, onAskPin }: { card: MembershipCard; r
       >
         <RowBody card={card} pending={false} />
       </button>
-      <TeamLink card={card} rootDomain={rootDomain} />
+      <TeamLink card={card} />
       </>
     );
   }
@@ -246,7 +258,7 @@ function RestaurantRow({ card, rootDomain, onAskPin }: { card: MembershipCard; r
       {state && 'error' in state && (
         <p style={{ fontSize: 12.5, color: '#f87171', margin: '6px 0 0' }}>{state.error}</p>
       )}
-      <TeamLink card={card} rootDomain={rootDomain} />
+      <TeamLink card={card} />
     </form>
   );
 }

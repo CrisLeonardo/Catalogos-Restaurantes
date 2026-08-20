@@ -206,6 +206,15 @@ export default function AdminShell({
   const effRole = role ?? 'RESTAURANT_OWNER';
   const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
   const allow = (key: string) => can(effRole, permissions ?? null, key);
+  /* "Personal" NO es una sección delegable: no está en ADMIN_SECTIONS, así
+     que no puede aparecer en la lista de permisos de nadie —a propósito, para
+     que un gerente no pueda darse permisos a sí mismo repartiéndola. Su
+     llave es el ROL, y esa ya se aplicó al armar el elemento.
+
+     Sin esta excepción el gerente quedaba en la peor de las dos posturas: la
+     pantalla lo deja entrar (es él quien da de alta a su equipo) pero el menú
+     no la enseñaba, así que solo llegaba escribiendo la URL. */
+  const allowNav = (key: string) => (key === 'personal' ? showStaff : allow(key));
   const roleLabel = effRole === 'SUPER_ADMIN' ? 'Super Admin'
     : isMeseroOnly(effRole, permissions ?? null) ? 'Mesero'
     : effRole === 'RESTAURANT_STAFF' ? 'Personal'
@@ -274,7 +283,7 @@ export default function AdminShell({
       ],
     },
   ]
-    .map((s) => ({ ...s, items: s.items.filter((it) => allow(it.key)) }))
+    .map((s) => ({ ...s, items: s.items.filter((it) => allowNav(it.key)) }))
     .filter((s) => s.items.length > 0);
 
   const TITLES: Record<string, string> = {

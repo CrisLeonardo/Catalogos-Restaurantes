@@ -516,10 +516,15 @@ export default function SignupWizard({
               {existingAccount.restaurantName
                 ? `Esa cuenta administra ${existingAccount.restaurantName}. `
                 : ''}
-              Para crear otro restaurante necesitas un correo distinto al de arriba.
+              Con esta misma cuenta puedes tener varios: el siguiente se crea desde Mi
+              cuenta, sin inventarte otro correo.
+              {' '}
+              <a href="/mi-cuenta" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
+                Crear otro restaurante
+              </a>
               {existingAccount.panelUrl && (
                 <>
-                  {' '}
+                  {' · '}
                   <a href={existingAccount.panelUrl} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600, textDecoration: 'none' }}>
                     Ir a mi panel
                   </a>

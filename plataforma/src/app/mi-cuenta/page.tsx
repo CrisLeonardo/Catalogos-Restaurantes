@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getMyRestaurantCards, getMyGroupPanel, canBill } from '@/lib/db/membership';
+import { getMyRestaurantCards, getMyGroupPanel } from '@/lib/db/membership';
+import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { rootDomainForUrls } from '@/lib/tenant';
 import MiCuentaClient from './mi-cuenta-client';
@@ -33,22 +34,18 @@ export default async function MiCuentaPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login');
 
-  const [cards, pricing, groupPanel] = await Promise.all([
+  const [cards, pricing, groupPanel, { data: profile }] = await Promise.all([
     getMyRestaurantCards(),
     getEffectivePlanPricing(),
     getMyGroupPanel(),
+    supabase.from('profiles').select('full_name, restaurant_id').eq('id', user.id).maybeSingle(),
   ]);
 
-  // Sin ningún restaurante: no hay cuenta que administrar todavía. Se le manda
-  // a crear el primero en vez de enseñarle una pantalla vacía. (Un dueño de
-  // grupo sí tiene algo que ver aunque no tenga tarjetas: su panel del grupo.)
-  if (cards.length === 0 && !groupPanel) redirect('/registro');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .maybeSingle();
+  // Sin tarjetas pero con un restaurante "de casa" en el perfil: o las
+  // membresías no están aplicadas, o la fila se perdió. Enseñarle aquí un
+  // "crea tu primer restaurante" sería mentirle sobre lo que ya tiene, así
+  // que se le devuelve al camino de siempre.
+  if (cards.length === 0 && !groupPanel && profile?.restaurant_id) redirect('/registro');
 
   return (
     <MiCuentaClient
@@ -57,9 +54,10 @@ export default async function MiCuentaPage() {
       rootDomain={rootDomainForUrls()}
       accountName={(profile?.full_name as string | null) ?? user.email ?? 'tu cuenta'}
       accountEmail={user.email ?? ''}
-      // Sin restaurantes todavía es justo quien MÁS necesita el botón: el
-      // alta de la calle crea solo la cuenta y aterriza aquí.
-      canCreate={cards.length === 0 || cards.some((c) => canBill(c.role))}
+      // Misma regla que aplica el servidor en createAnotherRestaurant: crea
+      // quien tiene una identidad propia. Solo queda fuera la cuenta de PIN
+      // del local, que es una credencial de turno, no una persona.
+      canCreate={!isSyntheticStaffEmail(user.email)}
       groupPanel={groupPanel}
     />
   );

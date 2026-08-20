@@ -154,7 +154,10 @@ test.describe('Fase 0 — cobertura mínima E2E', () => {
     const orderId = orders![0].id as string;
 
     await page.goto(tenantUrl(tenantA.slug, '/admin/login'));
-    await page.getByLabel('Email').fill(tenantA.ownerEmail);
+    // En el subdominio de un restaurante el campo se llama "Correo o usuario":
+    // ahí caben las dos credenciales, la del dueño y la del administrador que
+    // el dueño da de alta (ver PLAN_ACCESO_MULTICUENTA.md §13).
+    await page.getByLabel('Correo o usuario').fill(tenantA.ownerEmail);
     await page.getByLabel('Contraseña').fill(OWNER_PASSWORD);
     await page.getByRole('button', { name: 'Entrar', exact: true }).click();
     // Acepta las dos aterrizadas posibles: el dueño cae en Mi cuenta (es su

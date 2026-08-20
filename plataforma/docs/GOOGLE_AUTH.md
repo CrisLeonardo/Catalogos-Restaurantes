@@ -95,7 +95,12 @@ error visible — Supabase falla en silencio si algo no calza:
 - [ ] Supabase → Authentication → Providers → Google → activado, con Client ID
       y Secret pegados.
 - [ ] Supabase → Authentication → URL Configuration → **Site URL** =
-      `https://leogin.online` (la raíz, sin subdominio).
+      `https://distleogin.com` (la raíz del dominio PRIMARIO —el primero de
+      `NEXT_PUBLIC_ROOT_DOMAIN`—, sin subdominio). Importa más de lo que
+      parece: cuando una URL de retorno no calza con la lista de abajo,
+      Supabase manda el `code` AQUÍ en vez de dar error. El proxy sabe
+      rescatarlo (§1b y §1c de `proxy.ts`), pero ese rescate es la red, no
+      el camino.
 - [ ] Supabase → misma pantalla → **Redirect URLs** incluye, línea por línea,
       el mismo trío por CADA dominio en `NEXT_PUBLIC_ROOT_DOMAIN` (hoy son dos:
       leogin.online se dejó vivo tras migrar a distleogin.com — ver
@@ -167,25 +172,30 @@ Funciona igual con o sin esto: es solo cosmético / de confianza visual.
   Google" → Google → `/admin/auth/google/callback`. El callback canjea el
   código con la cookie del PERSONAL, apunta el acceso en la bitácora
   (`panel_access_log`, método `google`) y manda a donde mandaría el login con
-  contraseña (`resolveStaffDestination`): su panel, `/central` si es dueño de
-  grupo, `/super/restaurantes` si es super admin.
+  contraseña (`resolveStaffDestination`): **Mi cuenta** si tiene restaurantes
+  propios, el panel del local si es personal de uno solo, `/central` si
+  administra una cadena, `/super/restaurantes` si es super admin.
 - **Registrarse** (`/registro`, paso "Tu cuenta"): "Registrarme con Google" →
   el wizard guarda su borrador en `sessionStorage` (plan, nombre, dirección,
   plantilla) para que la vuelta de Google no lo mande a empezar de nuevo → al
   volver, el paso de la cuenta ya está resuelto y no se pide contraseña.
   `signupRestaurant` **relee la sesión en el servidor**: el campo
   `auth_provider` del formulario es una pista, no una credencial.
-- **Cuenta de Google que ya administra un restaurante**: el registro se detiene
-  antes de crear nada ("esta cuenta ya administra un restaurante"). Hoy
-  `profiles` es uno a uno con el usuario de Auth — una cuenta, un restaurante.
-  Quitar esa limitación (una cuenta con varios restaurantes y un selector) es
-  lo que plantea `PLAN_ACCESO_MULTICUENTA.md` en la raíz del repo.
+- **Cuenta que ya administra un restaurante**: el wizard de `/registro` no
+  crea el siguiente (ese formulario da de alta cuenta y restaurante a la vez,
+  y el perfil es uno a uno con el usuario de Auth). El siguiente se crea desde
+  **Mi cuenta**, con la misma cuenta y sin otro correo — es el modelo de
+  membresías de `PLAN_ACCESO_MULTICUENTA.md`, ya implementado (mig. 113).
 - **Mismo correo con contraseña y con Google**: Supabase enlaza la identidad de
   Google al usuario que ya existe cuando el correo coincide y está confirmado.
   El dueño que se registró con correo puede entrar después con Google (mismo
   correo) y cae en su misma cuenta, sin duplicados.
-- **El personal (cajeros, meseros) no usa Google**: entra por PIN en el
-  dispositivo del local (`staff-pin.ts`). Es a propósito — ver el plan.
+- **Google es del DUEÑO, y solo de él.** El resto del equipo entra con lo que
+  el dueño le da: los cajeros y meseros con **PIN** en el aparato del local
+  (`staff-pin.ts`), y el administrador con un **usuario y contraseña de ese
+  restaurante** (`lib/staff-email.ts`). Ninguno de los dos pasa por Google, y
+  es a propósito: esas credenciales son del local, no de la persona — ver
+  `PLAN_ACCESO_MULTICUENTA.md` §13.
 
 ## Nota sobre sesiones
 

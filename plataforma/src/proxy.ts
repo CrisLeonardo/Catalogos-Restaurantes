@@ -643,7 +643,14 @@ function buildCsp(nonce: string): string {
   try {
     const u = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
     supabaseHttp = u.origin;
-    supabaseWs = `wss://${u.host}`;
+    // El esquema del socket SIGUE al de la URL. En producción es https → wss
+    // y no cambia nada; en local Supabase habla http, así que Realtime abre
+    // `ws://` y una CSP que solo permitiera `wss://` lo bloqueaba. Y sin
+    // Realtime el panel no se queda "solo sin tiempo real": los sondeos son
+    // adaptativos, al no haber canal se disparan al ritmo alto, y en el
+    // servidor de desarrollo esa tormenta de peticiones deja las pantallas
+    // colgadas en "Cargando la sección" para siempre.
+    supabaseWs = `${u.protocol === 'http:' ? 'ws' : 'wss'}://${u.host}`;
   } catch {
     /* sin URL configurada: quedan los comodines de arriba */
   }

@@ -524,3 +524,69 @@ gratis completa**, así que "crear otro restaurante" es, tal cual está, una ví
 para encadenar pruebas con la misma cuenta. Hay un techo de 5 por hora, que
 frena el abuso automático pero no el manual. Decide si el segundo restaurante
 en adelante lleva prueba corta o ninguna.
+
+
+---
+
+## 13. Corrección de rumbo (2026-08-19): el usuario del restaurante
+
+> Decisión del dueño del producto tras ver las dos vías funcionando. Cambia
+> lo que dicen §6, §7 y §12d sobre CÓMO entra el administrador de un local.
+> Lo demás del plan sigue en pie.
+
+**Qué cambia.** El administrador ya no se suma por invitación al correo. El
+dueño le crea, en *Personal → Nuevo miembro → Con un usuario*, un **usuario y
+una contraseña de ese restaurante**, y con eso entra desde la dirección de su
+local. La invitación por correo se retiró de la pantalla.
+
+**Por qué, después de haber recomendado lo contrario.** La invitación resuelve
+un problema real —la contraseña elegida por el jefe y mandada por WhatsApp—
+pero cobra un precio que en este mercado es más alto que el problema:
+
+1. **Exige un correo que el encargado tenga y revise.** En un restaurante de
+   barrio el canal es WhatsApp; pedir un correo era inventar un trámite en el
+   único momento en que el dueño está enseñando el producto a su equipo.
+2. **Depende de un proveedor de correo.** Sin `RESEND_API_KEY`, o con el
+   correo en spam, dar de alta a un encargado deja de funcionar. Un producto
+   que se cae porque se cayó el correo no sirve en un local a las 7 de la
+   tarde.
+3. **Ocupaba un correo real en TODA la plataforma.** `auth.users` es único por
+   correo: dar de alta al encargado con su Gmail le apartaba esa dirección
+   para siempre. El día que esa persona quisiera abrir su propio restaurante
+   en Leogin se topaba con "ya existe una cuenta con ese correo" — por una
+   cuenta que le hizo un jefe anterior. **Con usuarios eso desaparece del
+   todo**, y era el peor de los tres.
+
+**Lo que se pierde, dicho sin adornos.** El administrador ya no elige su
+contraseña ni entra con su Google, y no tiene "olvidé mi contraseña" —no hay
+buzón al que mandar el enlace. Por eso el dueño puede **restablecérsela desde
+su ficha**, y esa acción queda en la bitácora: es la única vía de recuperación
+y no podía quedar sin registrar. La lectura correcta es que **la credencial es
+del restaurante, no de la persona** — igual que el PIN de un cajero, y por la
+misma razón.
+
+**Cómo está hecho** (`lib/staff-email.ts`, con pruebas): el usuario se guarda
+como un correo interno `u.<id del restaurante>.<usuario>@staff.leogin.internal`.
+Va el **id** y no el slug para que cambiar la dirección del menú no deje al
+equipo sin poder entrar. El login (`lib/actions/auth.ts`) acepta las dos
+cosas en el mismo campo: un correo de verdad se usa tal cual, y un usuario se
+traduce contra el restaurante del subdominio (o `usuario@direccion` desde el
+dominio raíz). Se distinguen por el punto: un correo siempre lo lleva en el
+dominio, una dirección de restaurante nunca.
+
+**Lo que NO se borró.** La migración 114, `acceptInvitation` y la pantalla
+`/invitacion/<token>` siguen vivas: cualquier enlace ya enviado tiene que
+seguir funcionando, y las invitaciones pendientes se pueden revocar desde
+Personal. Cuando no quede ninguna viva, ese bloque desaparece solo.
+
+### Y el alta de la calle se queda como está
+
+`/registro` sigue creando **cuenta y restaurante de una sola vez**, y esa es
+la recomendación. Partirlo en "primero tu cuenta, luego tu restaurante" suma
+un paso al embudo donde más gente abandona, a cambio de nada que el visitante
+quiera: quien llega de la calle viene por un restaurante, no por una cuenta.
+El reparto correcto es el que hay: **la calle crea el primero, Mi cuenta crea
+del segundo en adelante** — que es, por cierto, lo que hacen Shopify y Square.
+Lo que sí hacía falta era que las dos vías se encontraran en vez de chocar, y
+eso ya está: quien ya administra un restaurante y cae en `/registro` no ve un
+"necesitas otro correo", ve el camino a Mi cuenta.

@@ -12,21 +12,21 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
 import { STAFF_ASSIGNABLE } from '@/lib/permissions';
-import { SYNTHETIC_EMAIL_DOMAIN, isSyntheticStaffEmail } from '@/lib/staff-email';
+import {
+  SYNTHETIC_EMAIL_DOMAIN, isSyntheticStaffEmail,
+  validateUsername, staffUsernameEmail, parseStaffUsername,
+} from '@/lib/staff-email';
 import { getMyMembership, resolveOwnRestaurantId, canManageStaff } from '@/lib/db/membership';
 import { rateLimit } from '@/lib/rate-limit';
 import { logActivity } from '@/lib/activity';
 import { isValidPin, newPinSalt, hashPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
+import { isMeseroOnly } from '@/lib/permissions';
 
 /** Email interno autogenerado por miembro de staff — nunca se le pide al
     dueño ni se le muestra a la persona: solo satisface el requisito de
     Supabase Auth de tener un identificador. El PIN es la credencial real. */
 function syntheticStaffEmail(): string {
   return `staff-${crypto.randomBytes(12).toString('hex')}${SYNTHETIC_EMAIL_DOMAIN}`;
-}
-
-function validEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -105,12 +105,30 @@ export async function ownerCtx(restaurantIdFromForm?: string | null): Promise<Ct
 
 export type StaffMember = {
   id: string;
-  /** Su correo REAL, o null si entra por PIN (el interno nunca sale de aquí). */
+  /** Su correo REAL, o null si entra por PIN o por usuario (el interno nunca
+      sale de aquí: no es de nadie y no sirve para entrar tal cual). */
   email: string | null;
+  /** Su usuario de ESTE restaurante, si entra así. */
+  username: string | null;
   full_name: string | null;
   permissions: string[] | null;
-  /** Cómo entra: 'pin' en el aparato del local, 'email' desde donde sea. */
-  access: 'pin' | 'email';
+  /**
+   * Cómo entra:
+   *  · 'pin'   → en el aparato del local, desde "¿Quién eres?";
+   *  · 'user'  → usuario y contraseña de este restaurante (el administrador);
+   *  · 'email' → con su correo real. Es la forma ANTIGUA: ya no se crean
+   *    así, pero las cuentas que existen siguen entrando igual.
+   */
+  access: 'pin' | 'user' | 'email';
+  /**
+   * ¿Su ÚNICO trabajo es el piso? (misma regla que usa el resto del sistema
+   * para mandarlo a /admin/mesero en vez de al panel).
+   *
+   * No es lo mismo que "tiene la sección Mesero": un gerente la tiene también
+   * —para poder tomar un pedido en mesa cuando hace falta— y llamarlo "Mesero"
+   * en la lista del equipo es decirle al dueño lo que esa persona NO es.
+   */
+  meseroOnly: boolean;
 };
 
 async function buildMemberList(
@@ -128,12 +146,21 @@ async function buildMemberList(
       // confunde ("¿ese es su correo?").
       const rawEmail = data.user?.email ?? null;
       const synthetic = isSyntheticStaffEmail(rawEmail);
+      // Dentro de los internos hay dos cosas distintas: el PIN del local
+      // (`staff-<azar>@…`) y el usuario del administrador (`u.<id>.<usuario>@…`).
+      // Al dueño le importa la diferencia: uno se teclea en la tableta y el
+      // otro se dicta por WhatsApp.
+      const asUser = parseStaffUsername(rawEmail);
       return {
         id: p.id as string,
         email: synthetic ? null : rawEmail,
+        username: asUser?.username ?? null,
         full_name: (p.full_name as string | null) ?? null,
         permissions: perms,
-        access: synthetic ? ('pin' as const) : ('email' as const),
+        access: asUser ? ('user' as const) : synthetic ? ('pin' as const) : ('email' as const),
+        // Se decide AQUÍ, donde se conoce el rol real del perfil; el navegador
+        // solo recibe la respuesta.
+        meseroOnly: isMeseroOnly(p.role as string | null, perms),
       };
     }),
   );
@@ -190,7 +217,10 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   const fullName = (formData.get('full_name') as string)?.trim() || null;
   const pin = (formData.get('pin') as string) ?? '';
   const permissions = readPermissions(formData);
-  const byEmail = (formData.get('access_type') as string | null) === 'email';
+  // Cómo va a entrar: con el PIN del aparato del local, o con un USUARIO y
+  // contraseña de este restaurante (el administrador que entra desde donde
+  // sea). Cualquier valor que no sea 'pin' se trata como usuario.
+  const byUser = (formData.get('access_type') as string | null) !== 'pin';
 
   if (permissions.length === 0) return { error: 'Marca al menos una sección de acceso.' };
 
@@ -199,8 +229,8 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   // reparte accesos que él no tiene. Sin esto, delegar la gestión de personal
   // sería delegar la capacidad de ascenderse.
   if (ctx.as === 'MANAGER') {
-    if (byEmail) {
-      return { error: 'Solo el dueño puede crear accesos por correo. Da de alta a tu equipo con un PIN.' };
+    if (byUser) {
+      return { error: 'Solo el dueño puede crear accesos de administrador. Da de alta a tu equipo con un PIN.' };
     }
     const ceiling = ctx.ownPermissions;
     if (ceiling && permissions.some((p) => !ceiling.includes(p))) {
@@ -211,21 +241,23 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   let email: string;
   let password: string;
 
-  if (byEmail) {
-    email = ((formData.get('email') as string) ?? '').trim().toLowerCase();
-    password = (formData.get('password') as string) ?? '';
-    if (!validEmail(email)) return { error: 'Escribe un correo válido para esta persona.' };
-    if (isSyntheticStaffEmail(email)) return { error: 'Ese correo no es válido.' };
-    if (password.length < 8) return { error: 'La contraseña temporal debe tener al menos 8 caracteres.' };
+  if (byUser) {
+    const username = ((formData.get('username') as string) ?? '').trim().toLowerCase();
+    const badUser = validateUsername(username);
+    if (badUser) return { error: badUser };
 
-    // Techo por restaurante: crear un gerente OCUPA ese correo en todo Leogin
-    // (auth.users es único por correo), así que en teoría un dueño podría ir
-    // apartando correos ajenos de uno en uno. Nadie da de alta 20 encargados
-    // en una hora; quien lo intente se topa con esto. El arreglo de fondo es
-    // la invitación por correo —que la acepta la persona, no el dueño— y está
-    // anotada como Fase 2 en PLAN_ACCESO_MULTICUENTA.md.
-    if (!(await rateLimit(`staff-email:${ctx.restaurantId}`, 20, 60 * 60_000))) {
-      return { error: 'Has creado varios accesos por correo seguidos. Espera un rato antes de agregar otro.' };
+    password = (formData.get('password') as string) ?? '';
+    if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+
+    // El usuario es de ESTE restaurante: dos locales pueden tener su propio
+    // `carlos` sin enterarse el uno del otro, y dar de alta a alguien ya no
+    // ocupa un correo real en toda la plataforma (ver lib/staff-email.ts).
+    email = staffUsernameEmail(ctx.restaurantId, username);
+
+    // Nadie da de alta 20 administradores en una hora: esto solo frena un
+    // formulario disparado en bucle.
+    if (!(await rateLimit(`staff-user:${ctx.restaurantId}`, 20, 60 * 60_000))) {
+      return { error: 'Has creado varios accesos seguidos. Espera un rato antes de agregar otro.' };
     }
   } else {
     if (!isValidPin(pin)) return { error: `El PIN debe tener ${PIN_LENGTH} dígitos.` };
@@ -234,14 +266,15 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   }
 
   const { data: created, error: createErr } = await ctx.db.auth.admin.createUser({
-    // Nace confirmado a propósito: puede entrar de una, y habilita que después
-    // use "Continuar con Google" con ese mismo correo sin duplicar la cuenta.
+    // Nace confirmado a propósito: el correo interno no existe y no hay nada
+    // que confirmar — sin esto la cuenta se quedaría esperando un enlace que
+    // nadie va a recibir nunca.
     email, password, email_confirm: true, user_metadata: { full_name: fullName },
   });
   if (createErr || !created?.user) {
     const m = createErr?.message?.toLowerCase() ?? '';
-    if (byEmail && (m.includes('already') || m.includes('registered') || m.includes('exists'))) {
-      return { error: 'Ya existe una cuenta de Leogin con ese correo. Usa otro correo para esta persona.' };
+    if (byUser && (m.includes('already') || m.includes('registered') || m.includes('exists'))) {
+      return { error: 'Ya hay alguien con ese usuario en este restaurante. Elige otro.' };
     }
     return { error: createErr?.message ?? 'No se pudo crear el miembro.' };
   }
@@ -264,18 +297,18 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
   await ctx.db.from('restaurant_members').insert({
     user_id: created.user.id,
     restaurant_id: ctx.restaurantId,
-    role: byEmail ? 'MANAGER' : 'STAFF',
+    role: byUser ? 'MANAGER' : 'STAFF',
     permissions,
     status: 'active',
     invited_by: ctx.userId,
   });
 
-  // Solo quien entra por PIN recibe PIN. Un gerente con correo NO aparece en
-  // la grilla "¿Quién eres?" del local, que es justo lo que se busca: su
-  // credencial es suya y no está a la vista de todo el que abra el login.
+  // Solo quien entra por PIN recibe PIN. Un administrador con usuario NO
+  // aparece en la grilla "¿Quién eres?" del local, que es justo lo que se
+  // busca: su credencial no está a la vista de todo el que abra el login.
   // (El dueño puede darle un PIN después desde la ficha, si además atiende
   // caja.)
-  if (!byEmail) {
+  if (!byUser) {
     const salt = newPinSalt();
     const pinHash = await hashPin(pin, salt);
     const { error: pinErr } = await ctx.db.from('staff_pins').insert({
@@ -290,7 +323,7 @@ export async function createStaff(prevState: StaffState, formData: FormData): Pr
     }
   }
 
-  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: fullName ?? 'Sin nombre', meta: { added: true, role: 'RESTAURANT_STAFF', permissions, access: byEmail ? 'email' : 'pin' } });
+  await logActivity({ restaurantId: ctx.restaurantId, actorId: ctx.userId, action: 'staff', entity: fullName ?? 'Sin nombre', meta: { added: true, role: 'RESTAURANT_STAFF', permissions, access: byUser ? 'user' : 'pin' } });
   revalidatePath('/admin/personal');
   return { ok: true };
 }
@@ -358,6 +391,44 @@ export async function updateStaffPermissions(prevState: StaffState, formData: Fo
     .eq('user_id', userId)
     .eq('restaurant_id', ctx.restaurantId);
 
+  revalidatePath('/admin/personal');
+  return { ok: true };
+}
+
+/**
+ * Le pone una contraseña nueva a alguien de su equipo.
+ *
+ * Es OBLIGATORIO que exista, y no un lujo: un acceso por usuario no tiene
+ * correo, así que no hay "olvidé mi contraseña" que valga — el buzón al que
+ * se mandaría el enlace no existe. Sin esto, un encargado que olvida su
+ * contraseña deja de poder trabajar hasta que le borren la cuenta y le hagan
+ * otra, perdiendo sus permisos por el camino.
+ *
+ * Solo el DUEÑO: la contraseña de un administrador la restablece quien
+ * responde por el negocio, no un gerente al de otro gerente.
+ */
+export async function resetStaffPassword(prevState: StaffState, formData: FormData): Promise<StaffState> {
+  const ctx = await ownerCtx(formData.get('restaurantId') as string | null);
+  if (!ctx || ctx.as !== 'OWNER') return { error: 'No autorizado.' };
+
+  const userId = (formData.get('userId') as string)?.trim();
+  if (!userId || !(await assertStaffOfRestaurant(ctx, userId))) return { error: 'No autorizado.' };
+
+  const password = (formData.get('password') as string) ?? '';
+  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
+
+  const { error } = await ctx.db.auth.admin.updateUserById(userId, { password });
+  if (error) return { error: 'No se pudo cambiar la contraseña. Inténtalo de nuevo.' };
+
+  // Queda en la bitácora del dueño: cambiar la credencial de otra persona no
+  // es un ajuste cualquiera, y quien la usaba merece que se sepa cuándo pasó.
+  await logActivity({
+    restaurantId: ctx.restaurantId,
+    actorId: ctx.userId,
+    action: 'staff',
+    entity: userId,
+    meta: { password_reset: true },
+  });
   revalidatePath('/admin/personal');
   return { ok: true };
 }

@@ -84,11 +84,17 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return fail('exchangeCodeForSession no dio error pero getUser() no devolvió usuario');
 
-  const { data: profile } = await supabase
+  const { data: profile, error: perfilErr } = await supabase
     .from('profiles')
     .select('role, permissions, restaurant_id')
     .eq('id', user.id)
     .maybeSingle();
+  // Si la consulta FALLA, `profile` viene vacío igual que si la cuenta fuera
+  // nueva — y el camino de abajo la mandaría a crear un restaurante que ya
+  // tiene. No es lo mismo "no hay perfil" que "no se pudo leer el perfil":
+  // lo primero es un alta, lo segundo es un fallo, y confundirlos le enseña
+  // al dueño una pantalla de registro en vez de su panel.
+  if (perfilErr) return fail(`no se pudo leer el perfil: ${perfilErr.message}`);
 
   // Cuenta de Google sin restaurante: se va a crear uno. El wizard lee la
   // sesión por su cuenta (registro/page.tsx) — aquí solo la llevamos ahí.
