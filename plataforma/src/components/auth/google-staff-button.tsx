@@ -42,6 +42,16 @@ export default function GoogleStaffButton({
     try {
       onBeforeRedirect?.();
       const supabase = createClient();
+      // Si ya había sesión del personal en este navegador (otra cuenta, de
+      // otra visita), se cierra ANTES de ir a Google. Sin esto, el navegador
+      // tiene que sobreescribir una cookie que ya existe con el mismo nombre
+      // cuando vuelve el callback — y ahí es donde se vio fallar en Edge: la
+      // pestaña se quedaba con la sesión VIEJA pese a que el servidor sí
+      // canjeó el código y mandó la cookie nueva (confirmado con los logs:
+      // exchangeCodeForSession sin error, pero /registro seguía leyendo la
+      // cuenta anterior). Partiendo sin cookie previa, el `Set-Cookie` ya no
+      // es una sobreescritura sino un alta limpia.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       const params = new URLSearchParams({ intent });
       if (next) params.set('next', next);
       const redirectTo = `${window.location.origin}/admin/auth/google/callback?${params.toString()}`;
