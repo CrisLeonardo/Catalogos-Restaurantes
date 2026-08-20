@@ -35,6 +35,26 @@ async function currentUser() {
   return user;
 }
 
+/**
+ * Slug libre para un grupo nuevo (base, base-2, base-3…). El subdominio es
+ * un namespace compartido con los restaurantes (ver crossSlugCollision), así
+ * que hay que revisar las dos tablas, no solo `organizations`.
+ */
+async function uniqueOrgSlug(db: ReturnType<typeof createServiceClient>, base: string): Promise<string> {
+  const taken = async (s: string) => {
+    const { data } = await db.from('organizations').select('id').eq('slug', s).maybeSingle();
+    return !!data || !!(await crossSlugCollision(db, s, 'organizations'));
+  };
+  const root = base || 'grupo';
+  let slug = root.slice(0, 56);
+  if (!(await taken(slug))) return slug;
+  for (let n = 2; n < 100; n++) {
+    slug = `${root.slice(0, 52)}-${n}`;
+    if (!(await taken(slug))) return slug;
+  }
+  return `${root.slice(0, 46)}-${Date.now().toString(36)}`;
+}
+
 /* ── Entrar a un restaurante ─────────────────────────────────── */
 
 export type EntryState = { error: string } | null;
@@ -202,15 +222,48 @@ export async function createAnotherRestaurant(
 
   // Si quien crea administra una cadena, el local nuevo nace DENTRO de ella:
   // es lo que hace que aparezca solo en el panel consolidado, sin que nadie
-  // tenga que pedirle a Leogin que lo enlace a mano después.
+  // tenga que pedirle a Leogin que lo enlace a mano después. La cadena se
+  // reconoce por la organización del perfil (migración 116).
   const { data: creator } = await db
     .from('profiles')
-    .select('role, organization_id')
+    .select('organization_id, full_name')
     .eq('id', user.id)
     .maybeSingle();
-  // Si administra una cadena, el local nuevo nace dentro de ella. La cadena
-  // se reconoce por la organización del perfil (migración 116).
-  const organizationId = (creator?.organization_id as string | null) ?? null;
+  let organizationId = (creator?.organization_id as string | null) ?? null;
+
+  // Segundo restaurante PROPIO y todavía sin grupo: antes esto era exactamente
+  // el hueco del modelo viejo — "dueño de 2+ locales" solo existía si Leogin
+  // le armaba un grupo a mano (ver PLAN_ACCESO_MULTICUENTA.md §1 y §2). Con
+  // membresías ya no hace falta pedirlo: se crea el grupo aquí mismo, y con
+  // él aparecen solos el panel consolidado en Mi cuenta y el aviso "volver al
+  // grupo" dentro de cada sucursal — nada de eso es nuevo, solo estaba
+  // huérfano de quién lo encendiera.
+  if (!organizationId && !esElPrimero) {
+    const ownedIds = memberships.filter((m) => m.role === 'OWNER').map((m) => m.restaurantId);
+    const fullName = (creator?.full_name as string | null) ?? null;
+    const orgSlug = await uniqueOrgSlug(db, slugify(fullName ?? 'grupo'));
+
+    const { data: org } = await db
+      .from('organizations')
+      .insert({
+        name: fullName ? `Restaurantes de ${fullName}` : 'Mis restaurantes',
+        slug: orgSlug,
+        contact_email: user.email ?? null,
+      })
+      .select('id')
+      .single();
+
+    // Si la creación del grupo falla por lo que sea, el restaurante se crea
+    // igual, suelto: no vale la pena tirar toda el alta por un extra que se
+    // puede resolver después a mano, igual que se resolvía antes.
+    if (org) {
+      organizationId = org.id as string;
+      if (ownedIds.length > 0) {
+        await db.from('restaurants').update({ organization_id: organizationId }).in('id', ownedIds);
+      }
+      await db.from('profiles').update({ organization_id: organizationId }).eq('id', user.id);
+    }
+  }
 
   // ── Dirección (slug) ───────────────────────────────────────
   let slug: string;
