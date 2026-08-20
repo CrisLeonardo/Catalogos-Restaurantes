@@ -1,27 +1,15 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import { logout } from '@/lib/actions/auth';
-import {
-  enterRestaurant, createAnotherRestaurant,
-  type EntryState, type NewRestaurantState,
-} from '@/lib/actions/mi-cuenta';
+import { enterRestaurant, type EntryState } from '@/lib/actions/mi-cuenta';
 import { roleLabel, type MembershipCard } from '@/lib/membership-roles';
-import { planPriceLabel, type PlanPricing } from '@/lib/plans';
+import { type PlanPricing } from '@/lib/plans';
 import { adminUrl } from '@/lib/tenant';
-
-function localSlugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -35,11 +23,10 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function MiCuentaClient({
-  cards, pricing, rootDomain, accountName, accountEmail, canCreate, groupPanel,
+  cards, pricing, accountName, accountEmail, canCreate, groupPanel,
 }: {
   cards: MembershipCard[];
   pricing: PlanPricing;
-  rootDomain: string;
   accountName: string;
   accountEmail: string;
   canCreate: boolean;
@@ -53,7 +40,6 @@ export default function MiCuentaClient({
       invitado al local de otro ya tiene una tarjeta y sigue yendo por el
       primero suyo — con su prueba gratis, que es de la persona. */
   const esElPrimero = !cards.some((c) => c.role === 'OWNER');
-  const [creating, setCreating] = useState(false);
 
   return (
     <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
@@ -140,11 +126,11 @@ export default function MiCuentaClient({
         </div>
 
         {canCreate && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
+          <Link
+            href="/mi-cuenta/nuevo"
             className="press"
             style={{
+              textDecoration: 'none',
               display: 'flex', alignItems: 'center', gap: 12, width: '100%', marginTop: 12,
               padding: '16px 18px', borderRadius: 'var(--radius-lg)',
               border: '1.5px dashed var(--u-hair-2)', background: 'transparent',
@@ -171,19 +157,11 @@ export default function MiCuentaClient({
               </span>
             </span>
             <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-          </button>
+          </Link>
         )}
       </div>
 
       {asking && <EntryPinDialog card={asking} onClose={() => setAsking(null)} />}
-      {creating && (
-        <NewRestaurantDialog
-          pricing={pricing}
-          rootDomain={rootDomain}
-          esElPrimero={esElPrimero}
-          onClose={() => setCreating(false)}
-        />
-      )}
     </main>
   );
 }
@@ -358,144 +336,6 @@ function EntryPinDialog({ card, onClose }: { card: MembershipCard; onClose: () =
             }}
           >
             {isPending ? 'Entrando…' : 'Entrar'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 12.5, cursor: 'pointer' }}
-          >
-            Cancelar
-          </button>
-        </form>
-      </Glass>
-    </Backdrop>
-  );
-}
-
-/* ── Crear otro restaurante ──────────────────────────────────── */
-
-const PLAN_OPTIONS: { code: 'BASICO' | 'ESTANDAR' | 'PREMIUM'; name: string }[] = [
-  { code: 'BASICO', name: 'Básico' },
-  { code: 'ESTANDAR', name: 'Estándar' },
-  { code: 'PREMIUM', name: 'Premium' },
-];
-
-function NewRestaurantDialog({ pricing, rootDomain, esElPrimero, onClose }: {
-  pricing: PlanPricing;
-  rootDomain: string;
-  esElPrimero: boolean;
-  onClose: () => void;
-}) {
-  const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugEdited, setSlugEdited] = useState(false);
-  const [plan, setPlan] = useState<'BASICO' | 'ESTANDAR' | 'PREMIUM'>('PREMIUM');
-
-  const effectiveSlug = slugEdited ? slug : localSlugify(name);
-
-  return (
-    <Backdrop onClose={onClose}>
-      <Glass style={{ padding: '26px 24px', width: '100%', maxWidth: 420, maxHeight: '86vh', overflowY: 'auto' }}>
-        <p className="t-display" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
-          {esElPrimero ? 'Crear mi restaurante' : 'Crear otro restaurante'}
-        </p>
-        <p className="t-mute" style={{ fontSize: 13, margin: '6px 0 18px', lineHeight: 1.5 }}>
-          {esElPrimero
-            ? `Entrarás con esta misma cuenta. Empiezas con ${pricing.trialDays} días gratis, sin tarjeta.`
-            : 'Entrarás con esta misma cuenta. El plan que elijas se suma a tu mensualidad desde hoy: la prueba gratis es solo para tu primer restaurante.'}
-        </p>
-
-        <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-          <input type="hidden" name="slug" value={effectiveSlug} />
-          <input type="hidden" name="plan_code" value={plan} />
-
-          <div>
-            <label style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-              Nombre
-            </label>
-            <input
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoFocus
-              placeholder="Ej. Sucursal Zona 10"
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-              Dirección de su menú
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-              <input
-                value={effectiveSlug}
-                onChange={(e) => { setSlugEdited(true); setSlug(localSlugify(e.target.value)); }}
-                placeholder="sucursal"
-                style={{ ...inputStyle, border: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
-              />
-              <span style={{ fontSize: 12.5, color: 'var(--u-text-4)', padding: '0 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                .{rootDomain.replace(/:\d+$/, '')}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-              Plan
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {PLAN_OPTIONS.map((p) => {
-                const on = plan === p.code;
-                return (
-                  <button
-                    key={p.code}
-                    type="button"
-                    onClick={() => setPlan(p.code)}
-                    className="press"
-                    style={{
-                      padding: '11px 8px', borderRadius: 11, cursor: 'pointer', textAlign: 'center',
-                      border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair-2)'}`,
-                      background: on ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'transparent',
-                    }}
-                  >
-                    <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{p.name}</span>
-                    <span style={{ display: 'block', fontSize: 11, color: 'var(--u-text-4)', marginTop: 2 }}>
-                      {planPriceLabel(pricing, p.code)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '8px 0 0', lineHeight: 1.45 }}>
-              {plan === 'BASICO'
-                ? 'Gratis para siempre. Puedes subir de plan cuando quieras.'
-                : esElPrimero
-                  ? `Empiezas con ${pricing.trialDays} días gratis; después se suma a tu mensualidad.`
-                  : 'Se suma a tu mensualidad desde hoy, sin días de prueba.'}
-            </p>
-          </div>
-
-          {state && 'error' in state && (
-            <div style={{ padding: '10px 13px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 13 }}>
-              {state.error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isPending || name.trim().length < 2}
-            className="press btn-accent"
-            style={{
-              width: '100%', padding: '13px', borderRadius: 'var(--radius-full)',
-              fontWeight: 600, fontSize: 15, border: 'none',
-              cursor: isPending ? 'wait' : 'pointer',
-              opacity: isPending || name.trim().length < 2 ? 0.6 : 1,
-            }}
-          >
-            {isPending ? 'Creando…' : 'Crear restaurante'}
           </button>
           <button
             type="button"

@@ -518,12 +518,43 @@ migrar la identidad. Queda como 5b, con sus propias pruebas.
 
 ### Lo que sigue pendiente (y no es código)
 
-Las tres decisiones comerciales del §9 siguen sin tomar, y una de ellas ya
-tiene consecuencia real: hoy **cada restaurante nuevo nace con la prueba
-gratis completa**, así que "crear otro restaurante" es, tal cual está, una vía
-para encadenar pruebas con la misma cuenta. Hay un techo de 5 por hora, que
-frena el abuso automático pero no el manual. Decide si el segundo restaurante
-en adelante lleva prueba corta o ninguna.
+Las tres decisiones comerciales del §9 siguen sin tomar. La de la prueba
+gratis ya se resolvió: es **una por persona**, en su primer restaurante
+propio (`lib/billing-signup.ts`), así que "crear otro restaurante" ya no es
+una vía para encadenar pruebas con la misma cuenta.
+
+---
+
+## 12e. El alta partida en dos (la última pieza)
+
+Quedaba una puerta que seguía pensando "una cuenta, un restaurante": el
+asistente de `/registro`, que creaba las dos cosas de un tirón en cinco pasos.
+Mientras estuviera así, había **dos caminos** para que naciera un restaurante,
+con reglas distintas —el de la calle sabía de plantillas y de los 2 modos de
+pedido de Estándar; el de Mi cuenta, no— y se iban separando solos.
+
+Ahora son dos pantallas con una sola responsabilidad cada una:
+
+| | Qué crea | Dónde |
+|---|---|---|
+| `/registro` | La **cuenta**, nada más. Correo y contraseña, o Google. 2 pasos. | `signupAccount()` |
+| `/mi-cuenta/nuevo` | El **restaurante**: plan (+ los 2 modos de Estándar), nombre, dirección, WhatsApp y estilo. 4 pasos. | `createAnotherRestaurant()` |
+
+Lo que se gana, además de que el modelo por fin se lea igual en todas partes:
+
+- **El embudo se acorta donde más gente abandona.** La pantalla del alta pasó
+  de cinco pasos a dos, y el resto se pide cuando la persona ya está dentro.
+- **El primer restaurante y el quinto nacen exactamente igual**, con el mismo
+  código, la misma validación y las mismas opciones. El diálogo de Mi cuenta
+  —que no ofrecía ni plantilla ni modos de pedido— se retiró.
+- **`profiles.restaurant_id` nace en `null`**: una cuenta ya no *es* un
+  restaurante, tiene los que quiera por `restaurant_members`.
+- Quien ya tiene cuenta y aterriza en `/registro` no encuentra un callejón
+  sin salida: se le lleva a Mi cuenta.
+
+El primer restaurante sigue aterrizando en `/registro/listo` (la pantalla de
+bienvenida con su plan y los siguientes pasos); del segundo en adelante se
+entra directo al panel.
 
 
 ---

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
-import { rootDomainForUrls, adminUrl } from '@/lib/tenant';
+import { adminUrl } from '@/lib/tenant';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 import { createClient } from '@/lib/supabase/server';
@@ -11,8 +11,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import SignupWizard from './signup-wizard';
 
 export const metadata: Metadata = {
-  title: 'Crea tu restaurante — Leogin',
-  description: 'Crea tu menú digital con pedidos en línea en minutos. 1 mes de prueba gratis, sin tarjeta.',
+  title: 'Crea tu cuenta — Leogin',
+  description: 'Crea tu cuenta y pon tu restaurante en línea en minutos. 1 mes de prueba gratis, sin tarjeta.',
   robots: { index: true, follow: true },
 };
 
@@ -33,13 +33,11 @@ export const dynamic = 'force-dynamic';
  * Cuenta de personal ya autenticada en este navegador, si la hay.
  *
  * Dos casos muy distintos:
- *  · `hasProfile: false` → cuenta de Google recién creada que todavía no
- *    administra ningún restaurante: es exactamente quien está a mitad del
- *    registro con Google. El wizard salta el paso de la contraseña.
- *  · `hasProfile: true`  → esa cuenta YA administra un restaurante. Hoy una
- *    cuenta = un restaurante, así que no puede crear otro con ella misma; se
- *    le avisa y se le ofrece su panel (ver PLAN_ACCESO_MULTICUENTA.md para el
- *    modelo de varias sucursales bajo una sola cuenta).
+ *  · `hasProfile: false` → cuenta de Google recién autenticada que todavía no
+ *    tiene perfil en Leogin: es exactamente quien está a mitad del alta con
+ *    Google. El asistente salta el paso de la contraseña.
+ *  · `hasProfile: true`  → esa cuenta YA existe en Leogin. No necesita otra:
+ *    desde Mi cuenta abre todos los restaurantes que quiera.
  */
 async function currentStaffAccount(): Promise<{
   email: string;
@@ -94,7 +92,6 @@ export default async function RegistroPage({
 }: {
   searchParams: Promise<{ auth_error?: string }>;
 }) {
-  const rootDomain = rootDomainForUrls();
   const [pricing, account, params] = await Promise.all([
     getEffectivePlanPricing(),
     currentStaffAccount(),
@@ -133,13 +130,13 @@ export default async function RegistroPage({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 28, alignItems: 'start' }}>
           {/* Lado izquierdo: promesa */}
           <div style={{ paddingTop: 8 }}>
-            <div className="t-kicker" style={{ fontSize: 11, marginBottom: 14 }}>Crea tu restaurante</div>
+            <div className="t-kicker" style={{ fontSize: 11, marginBottom: 14 }}>Crea tu cuenta</div>
             <h1 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.05 }}>
               Tu menú en línea, en vivo hoy mismo.
             </h1>
             <p className="t-mute" style={{ fontSize: 15, lineHeight: 1.55, marginTop: 14, maxWidth: 420 }}>
-              Regístrate, personaliza y comparte. Sin instalar nada, sin saber de tecnología.
-              Te guiamos paso a paso.
+              Primero tu cuenta —es un minuto—, y enseguida creas tu restaurante:
+              eliges plan, nombre y estilo. Sin instalar nada, sin saber de tecnología.
             </p>
             <ul style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {perks(pricing.trialDays).map((p) => (
@@ -156,7 +153,6 @@ export default async function RegistroPage({
           {/* Lado derecho: wizard */}
           <Glass style={{ padding: '26px 24px' }}>
             <SignupWizard
-              rootDomain={rootDomain}
               pricing={pricing}
               googleEnabled={isGoogleAuthEnabled()}
               googleAccount={googleAccount}

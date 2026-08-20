@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { getMyRestaurantCards, getMyGroupPanel } from '@/lib/db/membership';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
-import { rootDomainForUrls } from '@/lib/tenant';
 import MiCuentaClient from './mi-cuenta-client';
 
 export const metadata: Metadata = {
@@ -51,7 +50,6 @@ export default async function MiCuentaPage() {
     <MiCuentaClient
       cards={cards}
       pricing={pricing}
-      rootDomain={rootDomainForUrls()}
       accountName={(profile?.full_name as string | null) ?? user.email ?? 'tu cuenta'}
       accountEmail={user.email ?? ''}
       // Misma regla que aplica el servidor en createAnotherRestaurant: crea

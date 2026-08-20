@@ -20,7 +20,7 @@ import { isValidPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
-import { withPlanFloor, type PlanCode } from '@/lib/plans';
+import { withPlanFloor, ESTANDAR_MAX_ORDER_TYPES, type PlanCode } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
 import { findTemplate } from '@/lib/theme/templates';
@@ -130,13 +130,16 @@ export async function updateEntryPin(prevState: EntryPinState, formData: FormDat
 export type NewRestaurantState = { error: string } | null;
 
 /**
- * Crea OTRO restaurante para la cuenta que ya está dentro.
+ * Crea un restaurante para la cuenta que ya está dentro. EL ÚNICO sitio
+ * donde nace uno, sea el primero de alguien que acaba de registrarse o el
+ * quinto de una cadena.
  *
- * Es el hermano de signupRestaurant() (lib/actions/signup.ts): aquel crea la
- * cuenta Y el restaurante para quien llega de la calle; este reusa la cuenta
- * que ya inició sesión y solo añade el restaurante y su membresía de dueño.
- * No se pide correo ni contraseña — esa es justamente la gracia del modelo de
- * membresías: una identidad, varios negocios.
+ * Su hermano es signupAccount() (lib/actions/signup.ts), que crea la CUENTA y
+ * nada más. Antes aquella creaba las dos cosas de un tirón y esta era "la de
+ * los restaurantes siguientes"; eran dos caminos con reglas distintas —el de
+ * la calle sabía de plantillas y modos de pedido, este no— y se fueron
+ * separando solos. No se pide correo ni contraseña: esa es justamente la
+ * gracia del modelo de membresías, una identidad y varios negocios.
  *
  * El cobro es independiente por restaurante, así que el nuevo nace con su
  * propio `restaurant_billing` y su propia mensualidad, que se suma a lo que
@@ -178,9 +181,22 @@ export async function createAnotherRestaurant(
   const planCode: PlanCode =
     rawPlan === 'BASICO' ? 'BASICO' : rawPlan === 'ESTANDAR' ? 'ESTANDAR' : 'PREMIUM';
   const template = findTemplate(((formData.get('template_id') as string) ?? '').trim());
+  const whatsapp = ((formData.get('whatsapp') as string) ?? '').trim() || null;
+
+  // Estándar lleva 2 de los 3 modos de pedido. Un valor inválido o con conteo
+  // distinto cae al par de siempre — misma regla que aplicaba el alta de la
+  // calle, que es de donde vino esta pantalla.
+  const VALID_ORDER_TYPES: OrderType[] = ['dine_in', 'pickup', 'delivery'];
+  const rawTypes = ((formData.get('estandar_order_types') as string | null) ?? '').split(',').map((t) => t.trim());
+  const requestedEstandarTypes = [...new Set(rawTypes)].filter((t): t is OrderType => VALID_ORDER_TYPES.includes(t as OrderType));
+  const estandarOrderTypes: OrderType[] =
+    requestedEstandarTypes.length === ESTANDAR_MAX_ORDER_TYPES ? requestedEstandarTypes : ['pickup', 'dine_in'];
 
   if (!name || name.length < 2) return { error: 'Escribe el nombre de tu restaurante.' };
   if (name.length > 80) return { error: 'El nombre es demasiado largo.' };
+  if (whatsapp && !/^\+?[\d\s\-()]{7,20}$/.test(whatsapp)) {
+    return { error: 'El número de WhatsApp no es válido.' };
+  }
 
   const db = createServiceClient();
 
@@ -224,6 +240,8 @@ export async function createAnotherRestaurant(
       status: 'active',
       onboarding_done: false,
       contact_email: user.email ?? null,
+      whatsapp_number: whatsapp,
+      orders_whatsapp: whatsapp,
       ...(organizationId ? { organization_id: organizationId } : {}),
     })
     .select('id')
@@ -240,7 +258,7 @@ export async function createAnotherRestaurant(
   // ── Tema ───────────────────────────────────────────────────
   const orderTypes: OrderType[] =
     planCode === 'BASICO' ? ['pickup']
-      : planCode === 'ESTANDAR' ? ['pickup', 'dine_in']
+      : planCode === 'ESTANDAR' ? estandarOrderTypes
         : ['dine_in', 'delivery', 'pickup'];
   await db.from('restaurant_themes').insert({
     restaurant_id: restaurantId,
@@ -278,5 +296,10 @@ export async function createAnotherRestaurant(
     return { error: 'No se pudo terminar de crear el restaurante. Inténtalo de nuevo.' };
   }
 
+  /* El PRIMERO aterriza en la pantalla de bienvenida —qué incluye su plan y
+     qué hacer ahora—, que es la que antes cerraba el registro. Del segundo en
+     adelante se entra directo al panel: quien abre su tercer local no necesita
+     que le expliquen el producto otra vez. */
+  if (esElPrimero) redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
   redirect(`${adminUrl(slug)}/menu?welcome=1`);
 }
