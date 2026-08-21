@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import LeoginLogo from '@/components/leogin-logo';
+import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
 import { DesktopPlatformNotice } from '@/components/desktop-platform-notice';
 
 export const metadata: Metadata = {
@@ -65,77 +64,26 @@ const FAQS = [
 export default function DescargasPage() {
   return (
     <div style={{ width: '100%' }}>
-      {/* ── Header ──────────────────────────────────────────── */}
-      <header
-        className="glass-solid"
-        style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-          height: 58, padding: '0 18px',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}
-      >
-        <Link href="/" style={{ textDecoration: 'none', flex: '0 0 auto' }}>
-          <LeoginLogo size={26} />
-        </Link>
-        <nav style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Link href="/" className="press t-mute" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
-            Sitio principal
-          </Link>
-          <Link href="/planes" className="press t-mute" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
-            Planes
-          </Link>
-          <Link
-            href="/login"
-            className="press"
-            style={{
-              padding: '7px 14px', borderRadius: 'var(--radius-full)',
-              fontSize: 13, fontWeight: 600, textDecoration: 'none',
-              color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-              background: 'rgba(255,255,255,0.06)',
-            }}
-          >
-            Acceder
-          </Link>
-        </nav>
-      </header>
+      <SiteHeader />
 
-      <main className="anim-fade-up" style={{ maxWidth: 1040, margin: '0 auto', padding: '8px 18px 80px' }}>
-        {/* ── Hero ──────────────────────────────────────────── */}
-        <section style={{ position: 'relative', textAlign: 'center', padding: '60px 8px 30px' }}>
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute', inset: '-20px -20px auto', height: 360,
-              background: 'radial-gradient(60% 70% at 50% 0%, color-mix(in srgb, var(--brand-accent) 26%, transparent), transparent 70%)',
-              pointerEvents: 'none',
-            }}
-          />
-          <div className="t-kicker" style={{ fontSize: 11, marginBottom: 18 }}>
-            Leogin Desktop
-          </div>
-          <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)', maxWidth: 640, margin: '0 auto', lineHeight: 1.05 }}>
+      <main className="anim-fade-up">
+        {/* ── Portada ───────────────────────────────────────── */}
+        <section className="lp-shell" style={{ textAlign: 'center', padding: 'clamp(48px, 7vw, 88px) 20px clamp(28px, 4vw, 40px)' }}>
+          <div className="lp-eyebrow">Leogin Escritorio</div>
+          <h1 className="lp-h1" style={{ fontSize: 'clamp(34px, 5.4vw, 58px)', marginTop: 16, maxWidth: 760, marginInline: 'auto' }}>
             Tu restaurante, <span style={{ color: 'var(--brand-accent-ink)' }}>instalado</span> en tu PC.
           </h1>
-          <p className="t-mute" style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 540, margin: '20px auto 0' }}>
+          <p className="lp-lead" style={{ margin: '18px auto 0', maxWidth: 560 }}>
             El mismo panel que ya conoces, pero como una app de verdad: ícono propio, siempre a la mano
             en la bandeja del sistema, con impresión y modo sin internet listos desde adentro.
           </p>
 
           <div style={{ marginTop: 30 }}>
-            <a
-              href={DOWNLOAD_HREF}
-              className="press btn-accent"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '16px 32px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 16, textDecoration: 'none', color: '#fff',
-              }}
-            >
+            <a href={DOWNLOAD_HREF} className="lp-btn lp-btn-lg lp-btn-primary">
               <Icon name="download" size={19} /> Descargar para Windows
             </a>
             <div>
-              <span className="t-mute" style={{ fontSize: 12.5, marginTop: 12, display: 'inline-block' }}>
+              <span className="lp-body" style={{ fontSize: 13, marginTop: 14, display: 'inline-block', color: 'var(--u-text-4)' }}>
                 Windows 10/11 (64 bits) · gratis · sin tarjeta · sin conocimientos técnicos
               </span>
             </div>
@@ -150,7 +98,7 @@ export default function DescargasPage() {
               { icon: 'upload', label: 'Se actualiza sola' },
               { icon: 'print', label: 'Impresión en un clic' },
             ].map((c) => (
-              <span key={c.label} className="glass-quiet" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 99, fontSize: 12.5, color: 'var(--u-text-2)' }}>
+              <span key={c.label} className="lp-chip">
                 <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent-ink)' }} /> {c.label}
               </span>
             ))}
@@ -158,223 +106,206 @@ export default function DescargasPage() {
         </section>
 
         {/* ── Vistazo (mockup) ──────────────────────────────── */}
-        <section style={{ marginTop: 44 }}>
-          <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', alignItems: 'center' }}>
+        <section className="lp-shell lp-section">
+          <div className="lp-split">
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 10 }}>Un vistazo</div>
-              <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
+              <div className="lp-eyebrow">Un vistazo</div>
+              <h2 className="lp-h2" style={{ marginTop: 14 }}>
                 Con ventana, bandeja y estado en vivo
               </h2>
-              <p className="t-mute" style={{ fontSize: 14.5, lineHeight: 1.6, marginTop: 12, maxWidth: 420 }}>
+              <p className="lp-lead" style={{ marginTop: 16, fontSize: 16 }}>
                 Un punto de color en la bandeja te dice si la nube está conectada o si tu restaurante
                 está operando con el respaldo local — sin abrir nada para saberlo.
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 20 }}>
                 {['🟢 Nube conectada', '🟡 Modo local activo', 'Instálala en cada PC del local'].map((t) => (
-                  <span key={t} className="glass-quiet" style={{ fontSize: 12, color: 'var(--u-text-2)', padding: '7px 13px', borderRadius: 99 }}>{t}</span>
+                  <span key={t} className="lp-chip">{t}</span>
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="lp-split-media" style={{ display: 'flex', justifyContent: 'center' }}>
               <DesktopMockup />
             </div>
           </div>
         </section>
 
         {/* ── Así de simple ─────────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Así de simple
-          </h2>
-          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
-            Sin códigos que copiar ni direcciones que memorizar — igual de fácil que iniciar sesión en
-            cualquier cuenta que ya usas todos los días.
-          </p>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+        <section className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Instalación"
+            title="Así de simple"
+            lead="Sin códigos que copiar ni direcciones que memorizar: igual de fácil que iniciar sesión en cualquier cuenta que ya usas todos los días."
+            center
+          />
+          <div className="lp-steps" style={{ marginTop: 32 }}>
             {STEPS.map((s) => (
-              <Glass key={s.n} variant="quiet" style={{ padding: '24px 20px' }}>
-                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', fontWeight: 700 }}>{s.n}</div>
-                <h3 className="t-display" style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
-                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8 }}>{s.body}</p>
-              </Glass>
+              <div key={s.n} className="lp-card" style={{ padding: '26px 22px' }}>
+                <span className="lp-step-n">{s.n.replace('0', '')}</span>
+                <h3 className="lp-h3" style={{ marginTop: 16 }}>{s.title}</h3>
+                <p className="lp-body" style={{ fontSize: 13.5, marginTop: 8 }}>{s.body}</p>
+              </div>
             ))}
           </div>
 
-          <div style={{
-            marginTop: 16, fontSize: 12.5, color: 'var(--u-text-3)', background: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '12px 16px', lineHeight: 1.55,
-            maxWidth: 640, marginLeft: 'auto', marginRight: 'auto',
-          }}>
-            <strong style={{ color: 'var(--u-text-2)' }}>Si Windows muestra una pantalla azul</strong> («Windows
-            protegió tu PC») al abrir el instalador, haz clic en <strong style={{ color: '#fcd34d' }}>Más
+          {/* Aviso de SmartScreen. Antes iba en ámbar -300 sobre ámbar al 8 %:
+              sobre fondo claro eso era amarillo-sobre-blanco (~2:1). Con los
+              tokens --c-warn* el mismo aviso se resuelve al ámbar oscuro en
+              claro y al vivo en oscuro, sin mantener dos paletas. */}
+          <div
+            style={{
+              marginTop: 20, maxWidth: 680, marginInline: 'auto',
+              fontSize: 13, lineHeight: 1.6, color: 'var(--u-text-2)',
+              background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
+              borderRadius: 14, padding: '14px 18px',
+            }}
+          >
+            <strong style={{ color: 'var(--c-warn)' }}>Si Windows muestra una pantalla azul</strong> («Windows
+            protegió tu PC») al abrir el instalador, haz clic en <strong style={{ color: 'var(--c-warn)' }}>Más
             información → Ejecutar de todos modos</strong>. Es normal en programas nuevos que todavía no
             tienen firma digital — no afecta lo que hace la app.
           </div>
         </section>
 
         {/* ── Beneficios ─────────────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Todo lo que ya haces, más a la mano
-          </h2>
-          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
-            Nada nuevo que aprender: el mismo panel, con presencia real en tu PC.
-          </p>
-          <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+        <section className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Qué ganas"
+            title="Todo lo que ya haces, más a la mano"
+            lead="Nada nuevo que aprender: el mismo panel, con presencia real en tu PC."
+            center
+          />
+          <div className="lp-cols" style={{ marginTop: 32 }}>
             {BENEFITS.map((f) => (
-              <Glass key={f.title} variant="quiet" style={{ padding: '16px 16px', display: 'flex', gap: 13, alignItems: 'flex-start' }}>
-                <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent-ink)' }}>
-                  <Icon name={f.icon} size={19} />
-                </span>
+              <div key={f.title} className="lp-card lp-card-lift" style={{ padding: '18px 18px', display: 'flex', gap: 14, alignItems: 'flex-start', borderRadius: 18 }}>
+                <span className="lp-icon"><Icon name={f.icon} size={19} /></span>
                 <div>
-                  <h3 className="t-display" style={{ fontSize: 15, fontWeight: 700 }}>{f.title}</h3>
-                  <p className="t-mute" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{f.desc}</p>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <p className="lp-body" style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 5 }}>{f.desc}</p>
                 </div>
-              </Glass>
+              </div>
             ))}
           </div>
         </section>
 
         {/* ── FAQ ────────────────────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 26 }}>
-            Preguntas frecuentes
-          </h2>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', maxWidth: 880, margin: '0 auto' }}>
-            {FAQS.map((f) => (
-              <Glass key={f.q} variant="quiet" style={{ padding: '18px 18px' }}>
-                <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
+        <section className="lp-shell lp-section">
+          <SectionHead eyebrow="Dudas" title="Preguntas frecuentes" center />
+          <div style={{ maxWidth: 820, margin: '26px auto 0' }}>
+            {FAQS.map((f, i) => (
+              <details key={f.q} className="lp-faq" open={i === 0}>
+                <summary>
                   {f.q}
-                </h3>
-                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8, paddingLeft: 24 }}>{f.a}</p>
-              </Glass>
+                  <Icon name="chevronDown" size={18} className="lp-faq-mark" />
+                </summary>
+                <p className="lp-body lp-faq-body">{f.a}</p>
+              </details>
             ))}
           </div>
         </section>
 
         {/* ── CTA final ─────────────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <Glass variant="solid" style={{ padding: '40px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <section className="lp-shell lp-section" style={{ paddingBottom: 'clamp(72px, 9vw, 112px)' }}>
+          <div
+            style={{
+              position: 'relative', overflow: 'hidden', borderRadius: 28, textAlign: 'center',
+              padding: 'clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px)',
+              background: 'linear-gradient(150deg, #1f1e23 0%, #17161a 55%, #241a16 100%)',
+              boxShadow: 'var(--lp-shadow-lg)',
+            }}
+          >
             <div
               aria-hidden
               style={{
-                position: 'absolute', inset: 'auto -20px -40px', height: 220,
-                background: 'radial-gradient(60% 80% at 50% 100%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)',
+                position: 'absolute', inset: 'auto -10% -55%', height: 320,
+                background: 'radial-gradient(55% 75% at 50% 100%, color-mix(in srgb, var(--brand-accent) 46%, transparent), transparent 70%)',
                 pointerEvents: 'none',
               }}
             />
-            <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', position: 'relative' }}>
-              Instálala en la caja, la cocina o donde la necesites
-            </h2>
-            <p className="t-mute" style={{ fontSize: 15, maxWidth: 460, margin: '12px auto 0', lineHeight: 1.55, position: 'relative' }}>
-              Gratis, incluida en tu cuenta de Leogin. Instálala en cada PC del local que quieras — solo
-              inicia sesión y listo.
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24, position: 'relative' }}>
-              <a
-                href={DOWNLOAD_HREF}
-                className="press btn-accent"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '14px 30px', borderRadius: 'var(--radius-full)',
-                  fontWeight: 700, fontSize: 15, textDecoration: 'none', color: '#fff',
-                }}
-              >
-                <Icon name="download" size={17} /> Descargar para Windows
-              </a>
-              <Link
-                href="/registro"
-                className="press"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '14px 28px', borderRadius: 'var(--radius-full)',
-                  fontWeight: 600, fontSize: 15, textDecoration: 'none',
-                  color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)',
-                }}
-              >
-                Aún no tengo cuenta de Leogin
-              </Link>
+            <div style={{ position: 'relative' }}>
+              <h2 className="lp-h2" style={{ color: '#F5F3EF' }}>
+                Instálala en la caja, la cocina o donde la necesites
+              </h2>
+              <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 480, margin: '14px auto 0' }}>
+                Gratis, incluida en tu cuenta de Leogin. Instálala en cada PC del local que quieras:
+                solo inicia sesión y listo.
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
+                <a href={DOWNLOAD_HREF} className="lp-btn lp-btn-lg lp-btn-primary">
+                  <Icon name="download" size={17} /> Descargar para Windows
+                </a>
+                <Link
+                  href="/registro"
+                  className="lp-btn lp-btn-lg"
+                  style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
+                >
+                  Aún no tengo cuenta de Leogin
+                </Link>
+              </div>
             </div>
-          </Glass>
+          </div>
         </section>
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid var(--u-hair)', padding: '28px 18px' }}>
-        <div
-          style={{
-            maxWidth: 1040, margin: '0 auto',
-            display: 'flex', flexWrap: 'wrap', gap: 16,
-            alignItems: 'center', justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <LeoginLogo size={22} />
-            <span className="t-mute" style={{ fontSize: 12.5 }}>
-              Menús interactivos para restaurantes
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Link href="/" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Sitio principal</Link>
-            <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
-            <Link href="/terminos" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Términos</Link>
-            <Link href="/privacidad" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Privacidad</Link>
-          </div>
-        </div>
-        <div style={{ maxWidth: 1040, margin: '16px auto 0' }}>
-          <span className="t-mute" style={{ fontSize: 12 }}>
-            © {new Date().getFullYear()} Leogin · Todos los derechos reservados
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
 
 /* ── Mockup de la ventana de escritorio (CSS puro, sin imágenes) ── */
 function DesktopMockup() {
+  /* La ventana va CLARA: el panel real de Leogin va claro desde el rediseño
+     2026-07-12, y este mockup antes leía --brand-bg/--u-text del tema, que en
+     la web nueva ya resuelven a claro — pero las filas seguían con relleno
+     `rgba(255,255,255,0.04)`, o sea blanco sobre blanco: los pedidos
+     desaparecían. Ahora los colores de la "captura" son explícitos y no
+     dependen de la paleta de la página. */
   const orders = [
-    { id: '#128', table: 'Mesa 4', status: 'Preparando', g: 'linear-gradient(135deg,#f59e0b,#b45309)' },
-    { id: '#129', table: 'Para llevar', status: 'Nuevo', g: 'linear-gradient(135deg,#e8534a,#f5a030)' },
-    { id: '#127', table: 'Mesa 1', status: 'Listo', g: 'linear-gradient(135deg,#22c55e,#15803d)' },
+    { id: '#128', table: 'Mesa 4',      status: 'Preparando', g: 'linear-gradient(135deg,#e0873b,#b45309)' },
+    { id: '#129', table: 'Para llevar', status: 'Nuevo',      g: 'linear-gradient(135deg,#e8534a,#f5a030)' },
+    { id: '#127', table: 'Mesa 1',      status: 'Listo',      g: 'linear-gradient(135deg,#3fa76b,#15803d)' },
   ];
   return (
-    <div style={{ position: 'relative' }}>
-      <div aria-hidden style={{ position: 'absolute', inset: -30, background: 'radial-gradient(50% 50% at 50% 40%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{
-        position: 'relative', width: 380, maxWidth: '100%', borderRadius: 16, overflow: 'hidden',
-        background: 'linear-gradient(160deg,#2a2a2e,#161618)', border: '1px solid rgba(255,255,255,0.10)',
-        boxShadow: '0 30px 70px rgba(0,0,0,0.45)',
-      }}>
-        {/* Barra de título estilo Windows */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ width: 16, height: 16, borderRadius: 4, background: '#1C1C1E', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-            <svg width="10" height="10" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <defs><linearGradient id="dm-lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stopColor="#E8534A" /><stop offset="1" stopColor="#F5A030" /></linearGradient></defs>
-              <path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#dm-lg)" />
-            </svg>
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>Leogin</span>
-          <span style={{ flex: 1 }} />
-          <span style={{ width: 8, height: 8, borderRadius: 99, background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.6)' }} />
-        </div>
-        {/* Contenido: tablero de pedidos */}
-        <div style={{ padding: '14px 14px 16px', background: 'var(--brand-bg, #0c0c0e)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--u-text, #fff)' }}>Pedidos en vivo</span>
-            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.15)', padding: '3px 8px', borderRadius: 99 }}>● Conectado</span>
+    <div style={{ position: 'relative', width: '100%', maxWidth: 440 }}>
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(68% 62% at 50% 42%, color-mix(in srgb, var(--brand-accent) 18%, transparent), transparent 72%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div className="lp-device lp-device-desk">
+        <div className="lp-device-screen-desk" style={{ background: '#f4f4f6' }}>
+          {/* Barra de título estilo Windows */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fff', borderBottom: '1px solid rgba(23,22,26,0.08)' }}>
+            <span style={{ width: 16, height: 16, borderRadius: 4, background: '#1C1C1E', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <svg width="10" height="10" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <defs><linearGradient id="dm-lg" x1="27" y1="19" x2="72" y2="81" gradientUnits="userSpaceOnUse"><stop stopColor="#E8534A" /><stop offset="1" stopColor="#F5A030" /></linearGradient></defs>
+                <path d="M27 19 h18 v44 h27 v18 H27 Z" fill="url(#dm-lg)" />
+              </svg>
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 650, color: 'rgba(23,22,26,0.62)' }}>Leogin</span>
+            <span style={{ flex: 1 }} />
+            <span aria-hidden style={{ width: 8, height: 8, borderRadius: 99, background: '#2f9e63', boxShadow: '0 0 0 3px rgba(47,158,99,0.16)' }} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {orders.map((o) => (
-              <div key={o.id} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 9 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: o.g, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>{o.id.replace('#', '')}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--u-text, #fff)' }}>{o.id} · {o.table}</div>
-                  <div style={{ fontSize: 10, color: 'var(--u-text-3, #999)', marginTop: 1 }}>{o.status}</div>
+
+          {/* Contenido: tablero de pedidos */}
+          <div style={{ padding: '14px 14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 8 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: '#17161a' }}>Pedidos en vivo</span>
+              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#157347', background: 'rgba(21,115,71,0.10)', padding: '4px 9px', borderRadius: 99, whiteSpace: 'nowrap' }}>● Conectado</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {orders.map((o) => (
+                <div key={o.id} style={{ display: 'flex', gap: 10, alignItems: 'center', background: '#fff', border: '1px solid rgba(23,22,26,0.07)', borderRadius: 12, padding: 9 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: o.g, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>{o.id.replace('#', '')}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#17161a' }}>{o.id} · {o.table}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(23,22,26,0.6)', marginTop: 2 }}>{o.status}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

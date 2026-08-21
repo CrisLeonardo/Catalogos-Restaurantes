@@ -234,7 +234,7 @@ function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () 
         <RowBody card={card} pending={isPending} />
       </button>
       {state && 'error' in state && (
-        <p style={{ fontSize: 12.5, color: '#f87171', margin: '6px 0 0' }}>{state.error}</p>
+        <p style={{ fontSize: 12.5, color: 'var(--c-danger)', margin: '6px 0 0' }}>{state.error}</p>
       )}
       <TeamLink card={card} />
     </form>
@@ -322,7 +322,7 @@ function EntryPinDialog({ card, onClose }: { card: MembershipCard; onClose: () =
           />
 
           {state && 'error' in state && (
-            <p style={{ fontSize: 13, color: '#f87171', margin: 0 }}>{state.error}</p>
+            <p style={{ fontSize: 13, color: 'var(--c-danger)', margin: 0 }}>{state.error}</p>
           )}
 
           <button

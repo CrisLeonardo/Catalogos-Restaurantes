@@ -1,55 +1,72 @@
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import LeoginLogo from '@/components/leogin-logo';
+import { LeoginMark } from '@/components/leogin-logo';
+import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PUBLIC_PLANS, planPriceQ, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, planPriceQ, isAddonAvailable, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 
-/* ── Contacto (configurable por env; cae a valores por defecto) ──────────
-   Define NEXT_PUBLIC_CONTACT_WHATSAPP (ej. "50212345678") para que el CTA
-   abra WhatsApp. Si no, usa el correo de NEXT_PUBLIC_CONTACT_EMAIL.        */
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
-const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP; // solo dígitos, con código de país
+/* Cifras de la tira de confianza. Solo hechos verificables del producto —
+   nada de "+200 restaurantes" ni promedios inventados.
+
+   El número de módulos sale de ACTIVATABLE_MODULES filtrado por
+   isAddonAvailable, igual que en /planes: los que todavía no se venden
+   (comingSoon) no se cuentan. Escrito a mano se quedaría desfasado en
+   cuanto se active o se retire uno. */
+const SELLABLE_MODULES = ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).length;
+
+const PROOF = [
+  { value: 'Q0',  label: 'El plan Básico es gratis para siempre' },
+  { value: '0 %', label: 'De comisión sobre lo que vendes' },
+  { value: String(SELLABLE_MODULES), label: 'Módulos a la carta, que activas cuando los necesitas' },
+  { value: 'Hoy', label: 'Tu menú puede quedar en vivo el mismo día' },
+];
 
 /* Beneficios para el dueño y para el comensal. */
 const FOR_OWNER = [
-  { icon: 'bell',     title: 'Pedidos en tiempo real', body: 'Cada pedido suena y aparece al instante en tu panel y cocina. Nada se te escapa.' },
-  { icon: 'chart',    title: 'Sabes qué se vende',      body: 'Ventas, horas pico, platos estrella y ticket promedio. Decide con datos, no a ciegas.' },
-  { icon: 'wallet',   title: 'Control de tu dinero',    body: 'Costos, margen por plato, corte de caja y reportes exportables. Tu negocio claro.' },
-  { icon: 'sparkle',  title: 'Tu marca, no la nuestra', body: 'Colores, logo, fotos y estilo propios. Tus clientes ven tu restaurante, no “otra app”.' },
+  { icon: 'bell',    title: 'Los pedidos no se te escapan', body: 'Cada pedido suena y aparece al instante en tu panel, en la cocina y en la impresora de comandas.' },
+  { icon: 'wallet',  title: 'Tu dinero, cuadrado',          body: 'Corte de caja, costo por plato, margen real y reportes que puedes exportar. Sin hojas de cálculo a mano.' },
+  { icon: 'box',     title: 'Sabes qué tienes y qué falta', body: 'Inventario con recetas y kardex: cada venta descuenta insumos y te avisa antes de quedarte sin nada.' },
+  { icon: 'sparkle', title: 'Tu marca, no la nuestra',      body: 'Colores, logo, fotos y tipografía propios. Tus clientes ven tu restaurante, no “otra app” con tu comida adentro.' },
 ];
 const FOR_DINER = [
-  { icon: 'grid',     title: 'Abre con un QR',          body: 'Escanea y ve el menú al instante. Sin descargar apps, sin PDFs lentos.' },
-  { icon: 'bag',      title: 'Ordena en segundos',      body: 'Para llevar, a domicilio o desde la mesa. Con fotos que dan ganas de pedir.' },
-  { icon: 'truck',    title: 'Sigue su pedido',         body: 'El cliente ve el estado en vivo y recibe aviso cuando está listo.' },
-  { icon: 'star',     title: 'Vuelve por más',          body: 'Puntos de lealtad y cupones que convierten una visita en un cliente fiel.' },
+  { icon: 'grid',  title: 'Abre con un QR',      body: 'Escanea y ve el menú al instante. Sin descargar apps y sin PDFs que tardan en cargar.' },
+  { icon: 'bag',   title: 'Ordena en segundos',  body: 'Desde la mesa, para llevar o a domicilio, con fotos y descripciones que dan ganas de pedir.' },
+  { icon: 'truck', title: 'Sigue su pedido',     body: 'Ve el estado en vivo — recibido, en cocina, listo — y le avisamos cuando puede pasar por él.' },
+  { icon: 'star',  title: 'Vuelve por más',      body: 'Puntos de lealtad y cupones que convierten una visita suelta en un cliente que regresa.' },
 ];
 
-/* Catálogo completo de capacidades (muestra la amplitud del sistema). */
-const CAPABILITIES = [
-  { icon: 'bag',      label: 'Menú digital QR' },
-  { icon: 'truck',    label: 'Pedidos a domicilio' },
-  { icon: 'grid',     label: 'Comer en local (mesa)' },
-  { icon: 'list',     label: 'Pedidos para llevar' },
-  { icon: 'flame',    label: 'Pantalla de cocina (KDS)' },
-  { icon: 'userPlus', label: 'Panel de mesero' },
-  { icon: 'print',    label: 'Impresión de comandas' },
-  { icon: 'star',     label: 'Programa de lealtad' },
-  { icon: 'ticket',   label: 'Cupones y descuentos' },
-  { icon: 'calendar', label: 'Reservaciones' },
-  { icon: 'box',      label: 'Inventario y stock' },
-  { icon: 'chart',    label: 'Analítica avanzada' },
-  { icon: 'wallet',   label: 'Finanzas y caja' },
-  { icon: 'receipt',  label: 'Factura electrónica (FEL)' },
-  { icon: 'users',    label: 'Usuarios con roles' },
-  { icon: 'dashboard',label: 'Multisucursal' },
+/* Catálogo de capacidades (el bento de "todo tu restaurante"). Las dos
+   primeras van a doble ancho: son las que definen el producto.
+   `soon` marca lo que está construido pero todavía NO habilitado —
+   ver la nota de FEL más abajo. */
+const CAPABILITIES: {
+  icon: string; label: string; body: string; wide?: boolean; soon?: boolean;
+}[] = [
+  { icon: 'bag',      label: 'Menú digital con QR',   body: 'Tu carta con fotos, categorías, variantes y combos. Cambias un precio y está en vivo al segundo.', wide: true },
+  { icon: 'truck',    label: 'Pedidos en línea',      body: 'Comer en local con número de mesa, para llevar y a domicilio con mapa y zonas de reparto.', wide: true },
+  { icon: 'flame',    label: 'Pantalla de cocina',    body: 'El KDS ordena las comandas por tiempo y estado.' },
+  { icon: 'userPlus', label: 'Panel de mesero',       body: 'Toma la orden en la tablet, divide la cuenta y cobra.' },
+  { icon: 'print',    label: 'Comandas impresas',     body: 'La comanda sale sola en la impresora térmica.' },
+  { icon: 'wallet',   label: 'Finanzas y caja',       body: 'Corte de caja, gastos, margen por plato y reportes.' },
+  { icon: 'box',      label: 'Inventario y recetas',  body: 'Kardex con costo promedio ponderado y alertas.' },
+  { icon: 'chart',    label: 'Analítica',             body: 'Horas pico, platos estrella y ticket promedio.' },
+  { icon: 'star',     label: 'Lealtad y cupones',     body: 'Puntos por compra, premios canjeables y códigos.' },
+  { icon: 'calendar', label: 'Reservas y espera',     body: 'Reservaciones de mesa y control de la cola.' },
+  { icon: 'users',    label: 'Personal con roles',    body: 'Cada quien entra con su PIN y ve solo lo suyo.' },
+  { icon: 'dashboard',label: 'Multisucursal',         body: 'Cada local con su menú y su QR, todo en un panel.' },
+  { icon: 'monitor',  label: 'Leogin Escritorio',     body: 'La app de la caja, con impresión y modo kiosco.' },
+  { icon: 'thumbsUp', label: 'Encuestas',             body: 'Calificación y comentario después de cada pedido.' },
+  { icon: 'globe',    label: 'Menú bilingüe',         body: 'La misma carta en dos idiomas para el turista.' },
+  { icon: 'leaf',     label: 'Alérgenos y dietas',    body: 'Marca vegano, sin gluten y los 14 alérgenos.' },
+  { icon: 'receipt',  label: 'Factura electrónica',   body: 'Certificación FEL de la SAT desde el mismo cobro.', soon: true },
 ];
 
 const steps = (trialDays: number) => [
-  { n: '01', title: 'Regístrate en minutos', body: `Crea tu cuenta y tu restaurante queda en vivo al instante. Sin tarjeta, ${trialDays} días gratis.` },
-  { n: '02', title: 'Personalízalo, guiado', body: 'Colores, logo y tu primer menú con un asistente paso a paso. No necesitas saber de tecnología.' },
-  { n: '03', title: 'Comparte tu QR',        body: 'Tus clientes escanean, ven tu menú y ordenan en línea. Tú recibes los pedidos en tiempo real.' },
+  { n: '1', title: 'Crea tu cuenta',       body: `Te registras y tu restaurante queda en línea al instante. Sin tarjeta y con ${trialDays} días de prueba en los planes con pedidos.` },
+  { n: '2', title: 'Súbelo a tu estilo',   body: 'Un asistente te lleva paso a paso por colores, logo y tu primer menú. No necesitas saber nada de tecnología.' },
+  { n: '3', title: 'Comparte tu QR',       body: 'Lo pones en las mesas o en el mostrador. Tus clientes escanean, ordenan, y tú recibes todo en tiempo real.' },
 ];
 
 /* Puntos de marketing por plan (los precios y el badge SIEMPRE salen de plans.ts,
@@ -77,12 +94,14 @@ function landingPlans(pricing: PlanPricing) {
 }
 
 const FAQS = [
-  { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres, lo configuramos por ti.' },
-  { q: '¿Cobran comisión por cada pedido?', a: 'No. Pagas una mensualidad fija según tu plan. Lo que vendes es tuyo, sin comisiones por pedido.' },
-  { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Opcionalmente pueden “instalarlo” como app.' },
-  { q: '¿Puedo cambiar de plan después?', a: 'Sí, cuando quieras. Empiezas en el plan que más te convenga y subes a medida que creces.' },
-  { q: '¿Y si no hago domicilio o solo atiendo en local?', a: 'Con “Plan a tu medida” pagas solo por los canales que usas: cada canal que no necesites baja tu mensualidad.' },
-  { q: '¿Sirve si tengo varias sucursales?', a: 'Sí. Cada sucursal tiene su menú y QR, y tú ves todo consolidado en un panel de grupo.' },
+  { q: '¿Necesito saber de tecnología?', a: 'No. Te guiamos paso a paso y en minutos tienes tu menú en vivo. Si prefieres, lo configuramos por ti sin costo adicional.' },
+  { q: '¿Cobran comisión por cada pedido?', a: 'No. Pagas una mensualidad fija según tu plan. Lo que vendes es tuyo: igual en un mes flojo que en tu mejor mes, sin porcentajes sobre tus ventas.' },
+  { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Si tu cliente quiere, puede “instalarlo” en su pantalla de inicio, pero es opcional.' },
+  { q: '¿Y si se va el internet en el restaurante?', a: 'Sigues operando. Con Leogin Escritorio la caja funciona en tu red local: toma pedidos, imprime las comandas y sincroniza todo con la nube en cuanto vuelve la conexión.' },
+  { q: '¿Puedo cambiar de plan después?', a: 'Sí, cuando quieras y sin penalización. Empiezas en el plan que te convenga hoy y subes a medida que creces.' },
+  { q: '¿Y si no hago domicilio o solo atiendo en local?', a: 'Con el “plan a tu medida” pagas solo por los canales que usas: cada canal que no necesites baja tu mensualidad.' },
+  { q: '¿Sirve si tengo varias sucursales?', a: 'Sí. Cada sucursal tiene su propio menú, su QR y su equipo, y tú ves todo consolidado en un panel de grupo. Además hay descuento por volumen desde la segunda sucursal.' },
+  { q: '¿De quién son mis datos?', a: 'Tuyos. Puedes exportar tu menú, tus pedidos y tus reportes cuando quieras desde el panel, sin pedirle permiso a nadie.' },
 ];
 
 /* Datos estructurados (JSON-LD): ficha de producto + FAQ para que Google
@@ -101,7 +120,7 @@ function structuredData(pricing: PlanPricing) {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       description:
-        'Plataforma de menús digitales QR para restaurantes con pedidos en línea, panel de administración, cocina (KDS) y programa de lealtad. Hecha en Guatemala.',
+        'Sistema para restaurantes con menú digital QR, pedidos en línea, pantalla de cocina (KDS), panel de mesero, inventario, finanzas y programa de lealtad. Hecho en Guatemala.',
       inLanguage: 'es',
       offers: PUBLIC_PLANS.map((code) => ({
         '@type': 'Offer',
@@ -126,9 +145,7 @@ function structuredData(pricing: PlanPricing) {
 export default async function LeoginLanding() {
   const pricing = await getEffectivePlanPricing();
   const demoUrl = subdomainUrl(DEMO_SLUG);
-  const ctaHref = CONTACT_WA
-    ? `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent('Hola, quiero una demo de Leogin para mi restaurante')}`
-    : `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Quiero una demo de Leogin')}`;
+  const ctaHref = contactHref();
 
   return (
     <div style={{ width: '100%' }}>
@@ -136,192 +153,249 @@ export default async function LeoginLanding() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(pricing)) }}
       />
-      {/* ── Header ──────────────────────────────────────────── */}
-      <header
-        className="glass-solid"
-        style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-          height: 58, padding: '0 18px',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}
-      >
-        <span style={{ flex: '0 0 auto' }}>
-          <LeoginLogo size={26} />
-        </span>
-        <nav aria-label="Navegación principal" style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-          <a href="#funciones" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
-            Funciones
-          </a>
-          <a href="#planes" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
-            Planes
-          </a>
-          <a href={demoUrl} className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
-            Demo
-          </a>
-          <Link href="/descargas" className="press t-mute lp-nav-section" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}>
-            Escritorio
-          </Link>
-          <Link
-            href="/login"
-            className="press"
-            style={{
-              padding: '7px 14px', borderRadius: 'var(--radius-full)',
-              fontSize: 13, fontWeight: 600, textDecoration: 'none',
-              color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-              background: 'rgba(255,255,255,0.06)',
-            }}
-          >
-            Acceder
-          </Link>
-          <Link
-            href="/registro"
-            className="press btn-accent"
-            style={{
-              padding: '7px 16px', borderRadius: 'var(--radius-full)',
-              fontSize: 13, fontWeight: 700, textDecoration: 'none', color: '#fff',
-            }}
-          >
-            Crear mi restaurante
-          </Link>
-        </nav>
-      </header>
 
-      <main className="anim-fade-up" style={{ maxWidth: 1040, margin: '0 auto', padding: '8px 18px 80px' }}>
-        {/* ── Hero ──────────────────────────────────────────── */}
-        <section style={{ position: 'relative', textAlign: 'center', padding: '60px 8px 40px' }}>
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute', inset: '-20px -20px auto', height: 360,
-              background: 'radial-gradient(60% 70% at 50% 0%, color-mix(in srgb, var(--brand-accent) 26%, transparent), transparent 70%)',
-              pointerEvents: 'none',
-            }}
-          />
-          <div className="t-kicker" style={{ fontSize: 11, marginBottom: 18 }}>
-            La plataforma de menús digitales para restaurantes
-          </div>
-          <h1 className="t-display" style={{ fontSize: 'var(--fs-display-xl)', maxWidth: 680, margin: '0 auto', lineHeight: 1.05 }}>
-            El menú de tu restaurante, <span style={{ color: 'var(--brand-accent-ink)' }}>vivo</span>.
-          </h1>
-          <p className="t-mute" style={{ fontSize: 17, lineHeight: 1.55, maxWidth: 560, margin: '20px auto 0' }}>
-            Cambia el QR que lleva a un PDF lento por un menú web rápido y espectacular —
-            con pedidos en línea, panel de administración y todo lo que tu negocio necesita.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
-            <Link
-              href="/registro"
-              className="press btn-accent"
-              style={{
-                padding: '14px 28px', borderRadius: 'var(--radius-full)',
-                fontWeight: 700, fontSize: 15.5, textDecoration: 'none', color: '#fff',
-              }}
-            >
-              Crear mi restaurante gratis
-            </Link>
-            <a
-              href={demoUrl}
-              className="press"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '14px 26px', borderRadius: 'var(--radius-full)',
-                fontWeight: 600, fontSize: 15.5, textDecoration: 'none',
-                color: 'var(--u-text)', border: '1px solid var(--u-hair-2)',
-                background: 'rgba(255,255,255,0.06)',
-              }}
-            >
-              <Icon name="grid" size={16} /> Ver demo en vivo
-            </a>
-          </div>
-          <p className="t-mute" style={{ fontSize: 13, marginTop: 16 }}>
-            {pricing.trialDays} días de prueba gratis · sin tarjeta · sin comisiones por pedido
-          </p>
+      <SiteHeader home />
 
-          {/* Tira de confianza */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 34 }}>
-            {[
-              { icon: 'bell',   label: 'Pedidos en tiempo real' },
-              { icon: 'wallet', label: 'Sin comisión por pedido' },
-              { icon: 'grid',   label: 'Sin apps que descargar' },
-              { icon: 'sparkle',label: 'Con tu propia marca' },
-            ].map((c) => (
-              <span key={c.label} className="glass-quiet" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 99, fontSize: 12.5, color: 'var(--u-text-2)' }}>
-                <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent-ink)' }} /> {c.label}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Vistazo al producto (mockup) ─────────────────── */}
-        <section style={{ marginTop: 44 }}>
-          <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', alignItems: 'center' }}>
+      <main className="anim-fade-up">
+        {/* ── Portada ───────────────────────────────────────── */}
+        <section className="lp-shell" style={{ paddingTop: 'clamp(44px, 7vw, 84px)' }}>
+          <div className="lp-hero-grid">
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 10 }}>Un vistazo</div>
-              <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
-                Así de bien se ve tu menú
-              </h2>
-              <p className="t-mute" style={{ fontSize: 14.5, lineHeight: 1.6, marginTop: 12, maxWidth: 420 }}>
-                Fotos que dan hambre, tu marca y un botón para ordenar. Tus clientes lo abren
-                con el QR, sin instalar nada.
+              <span
+                className="lp-chip"
+                style={{ marginBottom: 22, background: 'color-mix(in srgb, var(--brand-accent) 10%, #fff)', borderColor: 'color-mix(in srgb, var(--brand-accent) 24%, transparent)', color: 'var(--brand-accent-ink)', fontWeight: 600 }}
+              >
+                <Icon name="sparkle" size={14} />
+                El sistema completo para tu restaurante
+              </span>
+
+              <h1 className="lp-h1">
+                Todo tu restaurante,{' '}
+                <span style={{ color: 'var(--brand-accent-ink)' }}>en un solo sistema</span>.
+              </h1>
+
+              <p className="lp-lead" style={{ marginTop: 22, maxWidth: 560 }}>
+                Menú digital con QR, pedidos en línea, pantalla de cocina, panel de mesero,
+                inventario y corte de caja. Una mensualidad fija y cero comisión sobre lo que vendes.
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
-                {['🇬🇹 Hecho en Guatemala', 'Soporte real por WhatsApp', 'Listo el mismo día'].map((t) => (
-                  <span key={t} className="glass-quiet" style={{ fontSize: 12, color: 'var(--u-text-2)', padding: '7px 13px', borderRadius: 99 }}>{t}</span>
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
+                <Link href="/registro" className="lp-btn lp-btn-lg lp-btn-primary">
+                  Crear mi restaurante gratis
+                </Link>
+                <a href={demoUrl} className="lp-btn lp-btn-lg lp-btn-soft">
+                  <Icon name="grid" size={16} /> Ver demo en vivo
+                </a>
+              </div>
+
+              <p className="lp-body" style={{ fontSize: 13.5, marginTop: 18, color: 'var(--u-text-4)' }}>
+                Plan Básico gratis para siempre · {pricing.trialDays} días de prueba en los planes
+                con pedidos · sin tarjeta
+              </p>
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 28 }}>
+                {[
+                  { icon: 'wallet',  label: 'Sin comisión por pedido' },
+                  { icon: 'grid',    label: 'Sin apps que descargar' },
+                  { icon: 'sparkle', label: 'Con tu propia marca' },
+                  { icon: 'plug',    label: 'Aguanta sin internet' },
+                ].map((c) => (
+                  <span key={c.label} className="lp-chip">
+                    <Icon name={c.icon} size={14} style={{ color: 'var(--brand-accent-ink)' }} />
+                    {c.label}
+                  </span>
                 ))}
               </div>
             </div>
+
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <PhoneMockup />
             </div>
           </div>
         </section>
 
-        {/* ── Antes / Después ──────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            <Glass variant="quiet" style={{ padding: '22px 20px' }}>
-              <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--u-text-4)' }}>Antes</div>
-              <h3 className="t-display" style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Un PDF lento y plano</h3>
-              <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {['Tarda en abrir y se ve mal en el celular', 'Sin pedidos: el cliente llama o se va', 'Cambiar un precio es un dolor de cabeza'].map((t) => (
-                  <li key={t} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--u-text-3)' }}>
-                    <Icon name="x" size={15} style={{ color: '#f87171', flexShrink: 0, marginTop: 2 }} /> {t}
-                  </li>
-                ))}
-              </ul>
-            </Glass>
-            <Glass style={{ padding: '22px 20px', border: '1.5px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)' }}>
-              <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent-ink)' }}>Con Leogin</div>
-              <h3 className="t-display" style={{ fontSize: 17, fontWeight: 700, marginTop: 8 }}>Un menú vivo que vende</h3>
-              <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {['Abre al toque, con fotos que dan hambre', 'Pedidos en línea que llegan en tiempo real', 'Tú editas precios y fotos cuando quieras'].map((t) => (
-                  <li key={t} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--u-text-2)' }}>
-                    <Icon name="check" size={15} strokeWidth={2.6} style={{ color: '#4ade80', flexShrink: 0, marginTop: 2 }} /> {t}
-                  </li>
-                ))}
-              </ul>
-            </Glass>
+        {/* ── Tira de cifras ────────────────────────────────── */}
+        <section className="lp-shell lp-section-tight">
+          <div
+            className="lp-card"
+            style={{ padding: 'clamp(20px, 3vw, 30px)', display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))' }}
+          >
+            {PROOF.map((p) => (
+              <div key={p.label}>
+                <div
+                  className="t-mono"
+                  style={{ fontSize: 'clamp(26px, 3.4vw, 34px)', fontWeight: 800, color: 'var(--brand-accent-ink)', letterSpacing: '-0.03em', lineHeight: 1 }}
+                >
+                  {p.value}
+                </div>
+                <div className="lp-body" style={{ fontSize: 13.5, marginTop: 8, maxWidth: 220 }}>{p.label}</div>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* ── Funciones por beneficio ───────────────────────── */}
-        <section id="funciones" style={{ marginTop: 64, scrollMarginTop: 72 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Hecho para vender más y operar mejor
-          </h2>
-          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14.5, marginBottom: 30, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-            Una experiencia que enamora a tus clientes y un panel que te da el control total de tu restaurante.
-          </p>
+        {/* ── El cambio: antes / con Leogin ─────────────────── */}
+        <section id="producto" className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="El cambio"
+            title="Deja de trabajar para tu sistema"
+            lead="La mayoría de restaurantes en Guatemala siguen entre un PDF, un cuaderno y un chat de WhatsApp. Leogin junta todo eso en un solo lugar."
+          />
+          <div className="lp-split" style={{ marginTop: 34, alignItems: 'stretch' }}>
+            <div className="lp-card-quiet" style={{ padding: '26px 24px' }}>
+              <div className="lp-eyebrow" style={{ color: 'var(--u-text-4)' }}>Como está hoy</div>
+              <h3 className="lp-h3" style={{ marginTop: 12, fontSize: 19 }}>Todo suelto y a mano</h3>
+              <ul style={{ listStyle: 'none', margin: '16px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {[
+                  'Un PDF que tarda en abrir y se ve mal en el celular',
+                  'Los pedidos llegan por WhatsApp y se copian a mano',
+                  'La comanda se grita a la cocina y a veces se pierde',
+                  'El corte de caja sale en un cuaderno, sin costos ni margen',
+                  'Cambiar un precio significa rehacer el menú completo',
+                ].map((t) => (
+                  <li key={t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, color: 'var(--u-text-3)' }}>
+                    <Icon name="x" size={15} style={{ color: 'var(--c-danger)', flexShrink: 0, marginTop: 3 }} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+            <div
+              className="lp-card"
+              style={{ padding: '26px 24px', borderColor: 'color-mix(in srgb, var(--brand-accent) 40%, transparent)', boxShadow: 'var(--lp-shadow-md)' }}
+            >
+              <div className="lp-eyebrow">Con Leogin</div>
+              <h3 className="lp-h3" style={{ marginTop: 12, fontSize: 19 }}>Un solo hilo, de la mesa a la caja</h3>
+              <ul style={{ listStyle: 'none', margin: '16px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {[
+                  'Un menú web que abre al toque, con fotos que dan hambre',
+                  'El pedido entra solo y suena en tu panel al instante',
+                  'La cocina lo ve en su pantalla y la comanda se imprime sola',
+                  'Al cerrar tienes ventas, costos, margen y corte de caja',
+                  'Editas precios y fotos desde el celular, cuando quieras',
+                ].map((t) => (
+                  <li key={t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, color: 'var(--u-text-2)' }}>
+                    <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 3 }} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Centro de control ─────────────────────────────── */}
+        <section className="lp-shell lp-section">
+          <div className="lp-split">
+            <div className="lp-split-media" style={{ display: 'flex', justifyContent: 'center' }}>
+              <PanelMockup />
+            </div>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 12 }}>Para tus clientes</div>
+              <div className="lp-eyebrow">Tu centro de control</div>
+              <h2 className="lp-h2" style={{ marginTop: 14 }}>Un panel que trabaja contigo</h2>
+              <p className="lp-lead" style={{ marginTop: 16, fontSize: 16 }}>
+                Cada pedido suena y aparece al instante. La cocina lo ve en su pantalla, la comanda
+                se imprime sola y al cerrar el día tienes tus números claros — sin pasar nada a mano.
+              </p>
+              <ul style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { icon: 'bellRing', t: 'Alerta que no se ignora', d: 'Sonido, aviso de escritorio y notificación al teléfono hasta que alguien lo atienda.' },
+                  { icon: 'flame',    t: 'Cocina sincronizada',     d: 'El KDS muestra cada comanda con su cronómetro y su estado.' },
+                  { icon: 'banknote', t: 'Corte de caja al cerrar', d: 'Ventas por canal y método de pago, propinas, gastos y margen del día.' },
+                ].map((r) => (
+                  <li key={r.t} style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
+                    <span className="lp-icon lp-icon-sm"><Icon name={r.icon} size={16} /></span>
+                    <div>
+                      <div style={{ fontSize: 14.5, fontWeight: 650, color: 'var(--u-text)' }}>{r.t}</div>
+                      <div className="lp-body" style={{ fontSize: 13.5, marginTop: 3 }}>{r.d}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Funciona sin internet ─────────────────────────── */}
+        <section className="lp-shell lp-section">
+          <div className="lp-split">
+            <div>
+              <div className="lp-eyebrow">Leogin Escritorio</div>
+              <h2 className="lp-h2" style={{ marginTop: 14 }}>Si se cae el internet, tú sigues vendiendo</h2>
+              <p className="lp-lead" style={{ marginTop: 16, fontSize: 16 }}>
+                Instalas Leogin en la computadora de la caja y esa máquina se vuelve el cerebro del
+                local: recibe los pedidos por tu red, imprime las comandas y guarda todo. Cuando el
+                internet vuelve, sincroniza solo — sin pedidos perdidos ni comandas repetidas.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 22 }}>
+                {['Impresión térmica automática', 'Modo kiosco', 'Se actualiza sola', 'Windows'].map((t) => (
+                  <span key={t} className="lp-chip">{t}</span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 26 }}>
+                <Link href="/descargas" className="lp-btn lp-btn-soft">
+                  <Icon name="download" size={16} /> Descargar Leogin Escritorio
+                </Link>
+              </div>
+            </div>
+            <div className="lp-split-media" style={{ display: 'flex', justifyContent: 'center' }}>
+              <OfflineCard />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Bento de capacidades ──────────────────────────── */}
+        <section id="capacidades" className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Todo en un solo lugar"
+            title="Crece sin cambiar de sistema"
+            lead="Empiezas con el menú y activas lo demás cuando tu restaurante lo pida. Nada de migrar de plataforma a los seis meses."
+            center
+          />
+          <div className="lp-bento" style={{ marginTop: 34 }}>
+            {CAPABILITIES.map((c) => (
+              <div
+                key={c.label}
+                className={`lp-card lp-card-lift ${c.wide ? 'lp-bento-wide' : ''}`}
+                style={{ padding: '18px 18px 20px', borderRadius: 18 }}
+              >
+                <span className="lp-icon"><Icon name={c.icon} size={19} /></span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+                  <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', letterSpacing: '-0.01em' }}>
+                    {c.label}
+                  </h3>
+                  {c.soon && (
+                    <span
+                      className="t-kicker"
+                      style={{ fontSize: 8.5, letterSpacing: '0.1em', padding: '3px 7px', borderRadius: 99, color: 'var(--u-text-3)', background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}
+                    >
+                      Pronto
+                    </span>
+                  )}
+                </div>
+                <p className="lp-body" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{c.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Para quién ────────────────────────────────────── */}
+        <section className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Dos lados, un sistema"
+            title="Enamora a tus clientes y controla tu negocio"
+            center
+          />
+          <div className="lp-split" style={{ marginTop: 34, alignItems: 'start' }}>
+            <div>
+              <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para tus clientes</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {FOR_DINER.map((f) => <FeatureRow key={f.title} {...f} />)}
               </div>
             </div>
             <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 12 }}>Para ti, el dueño</div>
+              <div className="lp-eyebrow" style={{ marginBottom: 16, display: 'block' }}>Para ti, el dueño</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {FOR_OWNER.map((f) => <FeatureRow key={f.title} {...f} />)}
               </div>
@@ -329,101 +403,76 @@ export default async function LeoginLanding() {
           </div>
         </section>
 
-        {/* ── Tu centro de control (mockup del panel) ───────── */}
-        <section style={{ marginTop: 64 }}>
-          <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', alignItems: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', order: 0 }}>
-              <PanelMockup />
-            </div>
-            <div>
-              <div className="t-kicker" style={{ fontSize: 10, color: 'var(--brand-accent-ink)', marginBottom: 10 }}>Tu centro de control</div>
-              <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', lineHeight: 1.1 }}>
-                Un panel que trabaja contigo
-              </h2>
-              <p className="t-mute" style={{ fontSize: 14.5, lineHeight: 1.6, marginTop: 12, maxWidth: 440 }}>
-                Cada pedido suena y aparece al instante. La cocina lo ve en su pantalla,
-                la comanda se imprime sola y al final del día tienes tu corte de caja
-                y tus números claros — incluso si se va el internet.
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
-                {['Pedidos con sonido', 'Pantalla de cocina', 'Corte de caja', 'Aguanta sin internet'].map((t) => (
-                  <span key={t} className="glass-quiet" style={{ fontSize: 12, color: 'var(--u-text-2)', padding: '7px 13px', borderRadius: 99 }}>{t}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Todo en un solo lugar ─────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Todo tu restaurante, en un solo lugar
-          </h2>
-          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
-            Activa lo que necesites según tu plan. Crece sin cambiar de sistema.
-          </p>
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
-            {CAPABILITIES.map((c) => (
-              <div key={c.label} className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 13 }}>
-                <span style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent-ink)' }}>
-                  <Icon name={c.icon} size={16} />
-                </span>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)', lineHeight: 1.25 }}>{c.label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Cómo funciona ─────────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            De cero a tu menú en línea
-          </h2>
-          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
-            Sin que toques una línea de código.
-          </p>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+        {/* ── Cómo empezar ──────────────────────────────────── */}
+        <section className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Cómo se empieza"
+            title="De cero a tu menú en línea"
+            lead="Sin instalar nada, sin contratos y sin que toques una línea de código."
+            center
+          />
+          <div className="lp-steps" style={{ marginTop: 34 }}>
             {steps(pricing.trialDays).map((s) => (
-              <Glass key={s.n} variant="quiet" style={{ padding: '24px 20px' }}>
-                <div className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', fontWeight: 700 }}>{s.n}</div>
-                <h3 className="t-display" style={{ fontSize: 16.5, fontWeight: 700, marginTop: 10 }}>{s.title}</h3>
-                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8 }}>{s.body}</p>
-              </Glass>
+              <div key={s.n} className="lp-card" style={{ padding: '26px 22px' }}>
+                <span className="lp-step-n">{s.n}</span>
+                <h3 className="lp-h3" style={{ marginTop: 16 }}>{s.title}</h3>
+                <p className="lp-body" style={{ fontSize: 13.5, marginTop: 8 }}>{s.body}</p>
+              </div>
             ))}
           </div>
         </section>
 
         {/* ── Planes ────────────────────────────────────────── */}
-        <section id="planes" style={{ marginTop: 64, scrollMarginTop: 72 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 6 }}>
-            Planes claros, sin sorpresas
-          </h2>
-          <p className="t-mute" style={{ textAlign: 'center', fontSize: 14, marginBottom: 26 }}>
-            Empieza gratis. Sin comisiones por pedido. Cancela cuando quieras.
-          </p>
-          <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', alignItems: 'start' }}>
+        <section id="planes" className="lp-shell lp-section">
+          <SectionHead
+            eyebrow="Planes"
+            title="Precio fijo, sin sorpresas"
+            lead="Empieza gratis. No cobramos comisión por pedido ni un porcentaje de tus ventas. Cancela cuando quieras."
+            center
+          />
+          <div className="lp-cols-3" style={{ marginTop: 34, alignItems: 'stretch' }}>
             {landingPlans(pricing).map((p) => (
-              <Glass
+              <div
                 key={p.code}
+                className="lp-card"
                 style={{
-                  padding: '26px 22px',
-                  border: p.accent ? '1.5px solid color-mix(in srgb, var(--brand-accent) 60%, transparent)' : undefined,
-                  position: 'relative',
-                  boxShadow: p.accent ? '0 12px 40px color-mix(in srgb, var(--brand-accent) 18%, transparent)' : undefined,
+                  padding: '28px 24px',
+                  display: 'flex', flexDirection: 'column',
+                  ...(p.accent
+                    ? {
+                        borderColor: 'color-mix(in srgb, var(--brand-accent) 55%, transparent)',
+                        borderWidth: 1.5,
+                        boxShadow: 'var(--lp-shadow-lg)',
+                      }
+                    : {}),
                 }}
               >
-                {'badge' in p && p.badge && (
-                  <div className="t-kicker" style={{ fontSize: 9, color: 'var(--brand-accent-ink)', marginBottom: 10, letterSpacing: '0.08em' }}>
-                    {p.badge}
-                  </div>
-                )}
-                <h3 className="t-display" style={{ fontSize: 21, fontWeight: 800 }}>{p.name}</h3>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
-                  <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--brand-accent-ink)' }}>{p.price}</span>
-                  {!p.isFree && <span className="t-mute" style={{ fontSize: 13 }}>/ mes</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, minHeight: 22 }}>
+                  <h3 className="lp-h3" style={{ fontSize: 20 }}>{p.name}</h3>
+                  {p.badge && (
+                    <span
+                      className="t-kicker"
+                      style={{
+                        fontSize: 8.5, letterSpacing: '0.1em', padding: '4px 9px', borderRadius: 99,
+                        color: p.accent ? 'var(--brand-on-accent)' : 'var(--brand-accent-ink)',
+                        background: p.accent ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
+                      }}
+                    >
+                      {p.badge}
+                    </span>
+                  )}
                 </div>
-                <p className="t-mute" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{p.tagline}</p>
-                <ul style={{ listStyle: 'none', margin: '16px 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 12 }}>
+                  <span className="t-mono" style={{ fontWeight: 800, fontSize: 34, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+                    {p.price}
+                  </span>
+                  {!p.isFree && <span className="lp-body" style={{ fontSize: 13.5 }}>/ mes</span>}
+                </div>
+
+                <p className="lp-body" style={{ fontSize: 13.5, marginTop: 8, minHeight: 42 }}>{p.tagline}</p>
+
+                <ul style={{ listStyle: 'none', margin: '20px 0 24px', padding: 0, display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
                   {p.points.map((pt) => (
                     <li key={pt} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13.5 }}>
                       <Icon name="check" size={15} strokeWidth={2.6} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 2 }} />
@@ -431,165 +480,125 @@ export default async function LeoginLanding() {
                     </li>
                   ))}
                 </ul>
+
                 <Link
                   href="/registro"
-                  className={p.accent ? 'press btn-accent' : 'press'}
-                  style={{
-                    display: 'block', textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-full)',
-                    fontWeight: 700, fontSize: 14, textDecoration: 'none',
-                    color: p.accent ? '#fff' : 'var(--u-text)',
-                    border: p.accent ? 'none' : '1px solid var(--u-hair-2)',
-                    background: p.accent ? undefined : 'rgba(255,255,255,0.06)',
-                  }}
+                  className={`lp-btn ${p.accent ? 'lp-btn-primary' : 'lp-btn-soft'}`}
+                  style={{ width: '100%' }}
                 >
                   Empezar gratis
                 </Link>
-              </Glass>
+              </div>
             ))}
           </div>
 
           {/* Plan a tu medida */}
-          <Glass variant="quiet" style={{ marginTop: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
-              <Icon name="sparkle" size={20} />
-            </span>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)' }}>Plan a tu medida</div>
-              <div className="t-mute" style={{ fontSize: 13, marginTop: 2, lineHeight: 1.45 }}>
-                ¿No haces domicilio o solo atiendes en local? Pagas solo por los canales que usas — cada canal que no necesites baja tu mensualidad.
+          <div className="lp-card-quiet" style={{ marginTop: 16, padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <span className="lp-icon"><Icon name="percent" size={19} /></span>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}>Plan a tu medida</div>
+              <div className="lp-body" style={{ fontSize: 13.5, marginTop: 3 }}>
+                ¿No haces domicilio o solo atiendes en local? Pagas solo por los canales que usas:
+                cada canal que no necesites baja tu mensualidad.
               </div>
             </div>
-          </Glass>
-
-          <div style={{ textAlign: 'center', marginTop: 18 }}>
-            <Link
-              href="/planes"
-              className="t-mute"
-              style={{ fontSize: 13.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--u-text-3)' }}
-            >
-              Ver todos los planes y comparativa completa
-              <Icon name="arrowRight" size={14} />
+            <Link href="/planes" className="lp-btn lp-btn-sm lp-btn-soft">
+              Ver comparativa completa <Icon name="arrowRight" size={14} />
             </Link>
           </div>
         </section>
 
         {/* ── Preguntas frecuentes ──────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', textAlign: 'center', marginBottom: 26 }}>
-            Preguntas frecuentes
-          </h2>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', maxWidth: 880, margin: '0 auto' }}>
-            {FAQS.map((f) => (
-              <Glass key={f.q} variant="quiet" style={{ padding: '18px 18px' }}>
-                <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <Icon name="helpCircle" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0, marginTop: 1 }} />
+        <section className="lp-shell lp-section">
+          <SectionHead eyebrow="Dudas" title="Preguntas frecuentes" center />
+          <div style={{ maxWidth: 820, margin: '30px auto 0' }}>
+            {FAQS.map((f, i) => (
+              <details key={f.q} className="lp-faq" open={i === 0}>
+                <summary>
                   {f.q}
-                </h3>
-                <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 8, paddingLeft: 24 }}>{f.a}</p>
-              </Glass>
+                  <Icon name="chevronDown" size={18} className="lp-faq-mark" />
+                </summary>
+                <p className="lp-body lp-faq-body">{f.a}</p>
+              </details>
             ))}
           </div>
         </section>
 
-        {/* ── CTA final ─────────────────────────────────────── */}
-        <section style={{ marginTop: 64 }}>
-          <Glass variant="solid" style={{ padding: '40px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* ── Cierre ────────────────────────────────────────── */}
+        <section className="lp-shell lp-section" style={{ paddingBottom: 'clamp(72px, 9vw, 112px)' }}>
+          <div
+            style={{
+              position: 'relative', overflow: 'hidden', borderRadius: 28,
+              padding: 'clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px)',
+              textAlign: 'center',
+              background: 'linear-gradient(150deg, #1f1e23 0%, #17161a 55%, #241a16 100%)',
+              boxShadow: 'var(--lp-shadow-lg)',
+            }}
+          >
             <div
               aria-hidden
               style={{
-                position: 'absolute', inset: 'auto -20px -40px', height: 220,
-                background: 'radial-gradient(60% 80% at 50% 100%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)',
+                position: 'absolute', inset: 'auto -10% -55%', height: 320,
+                background: 'radial-gradient(55% 75% at 50% 100%, color-mix(in srgb, var(--brand-accent) 46%, transparent), transparent 70%)',
                 pointerEvents: 'none',
               }}
             />
-            <h2 className="t-display" style={{ fontSize: 'var(--fs-display)', position: 'relative' }}>
-              Moderniza tu restaurante hoy
-            </h2>
-            <p className="t-mute" style={{ fontSize: 15, maxWidth: 480, margin: '12px auto 0', lineHeight: 1.55, position: 'relative' }}>
-              Crea tu restaurante ahora y pruébalo gratis {pricing.trialDays} días. ¿Prefieres que te acompañemos? Escríbenos por WhatsApp.
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24, position: 'relative' }}>
-              <Link
-                href="/registro"
-                className="press btn-accent"
-                style={{
-                  display: 'inline-block',
-                  padding: '14px 30px', borderRadius: 'var(--radius-full)',
-                  fontWeight: 700, fontSize: 15, textDecoration: 'none', color: '#fff',
-                }}
+            <div style={{ position: 'relative' }}>
+              <LeoginMark size={44} />
+              <h2
+                className="lp-h2"
+                style={{ color: '#F5F3EF', marginTop: 22 }}
               >
-                Crear mi restaurante gratis
-              </Link>
-              <a
-                href={ctaHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="press"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '14px 28px', borderRadius: 'var(--radius-full)',
-                  fontWeight: 600, fontSize: 15, textDecoration: 'none',
-                  color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)',
-                }}
-              >
-                <Icon name="whatsapp" size={16} style={{ color: '#4ade80' }} /> Hablar con ventas
-              </a>
+                Moderniza tu restaurante hoy
+              </h2>
+              <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(245,243,239,0.72)', maxWidth: 520, margin: '14px auto 0' }}>
+                Crea tu restaurante en minutos y pruébalo sin pagar nada. ¿Prefieres que te
+                acompañemos en la configuración? Escríbenos por WhatsApp y lo vemos juntos.
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
+                <Link href="/registro" className="lp-btn lp-btn-lg lp-btn-primary">
+                  Crear mi restaurante gratis
+                </Link>
+                <a
+                  href={ctaHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lp-btn lp-btn-lg"
+                  style={{ background: 'rgba(245,243,239,0.10)', color: '#F5F3EF', borderColor: 'rgba(245,243,239,0.22)' }}
+                >
+                  <Icon name="whatsapp" size={17} /> Hablar con ventas
+                </a>
+              </div>
             </div>
-          </Glass>
+          </div>
         </section>
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid var(--u-hair)', padding: '28px 18px' }}>
-        <div
-          style={{
-            maxWidth: 1040, margin: '0 auto',
-            display: 'flex', flexWrap: 'wrap', gap: 16,
-            alignItems: 'center', justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <LeoginLogo size={22} />
-            <span className="t-mute" style={{ fontSize: 12.5 }}>
-              Menús interactivos para restaurantes
-            </span>
-          </div>
-          <nav aria-label="Enlaces del pie" style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
-            <a href="#funciones" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Funciones</a>
-            <Link href="/planes" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Planes</Link>
-            <a href={demoUrl} className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Demo</a>
-            <Link href="/descargas" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Escritorio</Link>
-            <Link href="/terminos" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Términos</Link>
-            <Link href="/privacidad" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Privacidad</Link>
-            <a href={ctaHref} target="_blank" rel="noopener noreferrer" className="t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>Contacto</a>
-          </nav>
-        </div>
-        <div style={{ maxWidth: 1040, margin: '16px auto 0' }}>
-          <span className="t-mute" style={{ fontSize: 12 }}>
-            © {new Date().getFullYear()} Leogin · Todos los derechos reservados
-          </span>
-        </div>
-      </footer>
+      <SiteFooter home />
     </div>
   );
 }
 
+
+
 /* ── Fila de característica con ícono ─────────────────────────── */
 function FeatureRow({ icon, title, body }: { icon: string; title: string; body: string }) {
   return (
-    <Glass variant="quiet" style={{ padding: '16px 16px', display: 'flex', gap: 13, alignItems: 'flex-start' }}>
-      <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(var(--brand-accent-rgb,99,102,241),0.1)', color: 'var(--brand-accent-ink)' }}>
-        <Icon name={icon} size={19} />
-      </span>
+    <div className="lp-card lp-card-lift" style={{ padding: '18px 18px', display: 'flex', gap: 14, alignItems: 'flex-start', borderRadius: 18 }}>
+      <span className="lp-icon"><Icon name={icon} size={19} /></span>
       <div>
-        <h3 className="t-display" style={{ fontSize: 15, fontWeight: 700 }}>{title}</h3>
-        <p className="t-mute" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{body}</p>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', letterSpacing: '-0.01em' }}>{title}</h3>
+        <p className="lp-body" style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 5 }}>{body}</p>
       </div>
-    </Glass>
+    </div>
   );
 }
 
-/* ── Mockup del panel de administración (CSS puro, sin imágenes) ── */
+/* ── Mockup del panel de administración ────────────────────────
+   La pantalla va CLARA porque el panel real va claro desde el
+   rediseño 2026-07-12: enseñar aquí una captura oscura sería
+   enseñar un producto que ya no existe. El bisel sí se queda
+   oscuro (.lp-device) para despegarlo del lienzo.               */
 function PanelMockup() {
   const kpis = [
     { label: 'Ventas hoy', value: 'Q1,240' },
@@ -597,48 +606,70 @@ function PanelMockup() {
     { label: 'Ticket prom.', value: 'Q39' },
   ];
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
-      <div aria-hidden style={{ position: 'absolute', inset: -30, background: 'radial-gradient(50% 50% at 50% 45%, color-mix(in srgb, var(--brand-accent) 18%, transparent), transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'relative', borderRadius: 18, padding: 9, background: 'linear-gradient(160deg,#2a2a2e,#161618)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 70px rgba(0,0,0,0.45)' }}>
-        <div style={{ borderRadius: 11, overflow: 'hidden', background: '#0c0c0e' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: 470 }}>
+      {/* Halo detrás del mockup. `inset: 0` y no un valor negativo: la
+          envoltura ocupa toda la columna de la rejilla, así que cualquier
+          desbordamiento se salía del viewport en móvil (lo tapaba el
+          `overflow-x: clip` de html, pero el ancho de scroll ya no cuadraba). */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(68% 62% at 50% 45%, color-mix(in srgb, var(--brand-accent) 17%, transparent), transparent 72%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div className="lp-device lp-device-desk">
+        <div className="lp-device-screen-desk" style={{ background: '#f4f4f6' }}>
           {/* Barra de ventana */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            {['#f87171', '#fbbf24', '#4ade80'].map((c) => (
-              <span key={c} style={{ width: 8, height: 8, borderRadius: 99, background: c, opacity: 0.85 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', background: '#fff', borderBottom: '1px solid rgba(23,22,26,0.08)' }}>
+            {['#ef7b6d', '#f0b429', '#4caf7d'].map((c) => (
+              <span key={c} style={{ width: 8, height: 8, borderRadius: 99, background: c }} />
             ))}
-            <span style={{ fontSize: 10, color: 'rgba(245,243,239,0.5)', marginLeft: 8, fontWeight: 600 }}>Pedidos en vivo</span>
-            <span style={{ marginLeft: 'auto', fontSize: 8.5, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.14)', padding: '3px 8px', borderRadius: 99 }}>● EN VIVO</span>
+            <span style={{ fontSize: 10.5, color: 'rgba(23,22,26,0.6)', marginLeft: 8, fontWeight: 650 }}>Pedidos en vivo</span>
+            <span style={{ marginLeft: 'auto', fontSize: 8.5, fontWeight: 800, color: '#157347', background: 'rgba(21,115,71,0.10)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>
+              ● EN VIVO
+            </span>
           </div>
+
           {/* KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7, padding: '11px 12px 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, padding: '12px 12px 0' }}>
             {kpis.map((k) => (
-              <div key={k.label} style={{ background: 'rgba(255,255,255,0.045)', borderRadius: 9, padding: '8px 9px' }}>
-                <div style={{ fontSize: 8, color: 'rgba(245,243,239,0.45)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>{k.label}</div>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: '#F5F3EF', marginTop: 3, fontFamily: 'var(--ui-font-mono)' }}>{k.value}</div>
+              <div key={k.label} style={{ background: '#fff', border: '1px solid rgba(23,22,26,0.07)', borderRadius: 10, padding: '9px 10px' }}>
+                <div style={{ fontSize: 7.5, color: 'rgba(23,22,26,0.64)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{k.label}</div>
+                <div className="t-mono" style={{ fontSize: 14, fontWeight: 800, color: '#17161a', marginTop: 4, letterSpacing: '-0.02em' }}>{k.value}</div>
               </div>
             ))}
           </div>
+
           {/* Pedido entrante */}
-          <div style={{ margin: '11px 12px', background: 'rgba(255,255,255,0.045)', border: '1px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)', borderRadius: 11, padding: '10px 12px' }}>
+          <div
+            style={{
+              margin: '12px', background: '#fff', borderRadius: 12, padding: '11px 13px',
+              border: '1.5px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)',
+              boxShadow: '0 6px 18px color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 8.5, fontWeight: 800, color: '#fff', background: 'var(--brand-accent)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>NUEVO</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#F5F3EF' }}>Mesa 4 · #128</span>
-              <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'rgba(245,243,239,0.5)' }}>hace 12 s</span>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#17161a' }}>Mesa 4 · #128</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9.5, color: 'rgba(23,22,26,0.64)' }}>hace 12 s</span>
             </div>
-            <div style={{ fontSize: 10.5, color: 'rgba(245,243,239,0.72)', marginTop: 7, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 10.5, color: 'rgba(23,22,26,0.7)', marginTop: 8, lineHeight: 1.6 }}>
               2× Tacos al pastor · 1× Burrito de res<br />1× Agua de horchata
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)' }}>Q142</span>
-              <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: '#0b0b0c', background: '#F5F3EF', padding: '5px 11px', borderRadius: 99 }}>Aceptar</span>
-              <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(245,243,239,0.75)', border: '1px solid rgba(255,255,255,0.18)', padding: '5px 11px', borderRadius: 99 }}>Imprimir</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
+              <span className="t-mono" style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-accent-ink)' }}>Q142</span>
+              <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: '#fff', background: 'var(--brand-accent)', padding: '6px 12px', borderRadius: 99 }}>Aceptar</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(23,22,26,0.72)', border: '1px solid rgba(23,22,26,0.16)', padding: '6px 12px', borderRadius: 99 }}>Imprimir</span>
             </div>
           </div>
+
           {/* Pedido en preparación */}
-          <div style={{ margin: '0 12px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 11, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 8.5, fontWeight: 800, color: '#fbbf24', background: 'rgba(251,191,36,0.13)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>EN COCINA</span>
-            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'rgba(245,243,239,0.8)' }}>Para llevar · #127</span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(245,243,239,0.5)', fontFamily: 'var(--ui-font-mono)' }}>08:41</span>
+          <div style={{ margin: '0 12px 12px', background: '#fff', border: '1px solid rgba(23,22,26,0.07)', borderRadius: 12, padding: '10px 13px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 8.5, fontWeight: 800, color: '#805600', background: 'rgba(128,86,0,0.10)', padding: '3px 8px', borderRadius: 99, letterSpacing: '0.05em' }}>EN COCINA</span>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'rgba(23,22,26,0.8)' }}>Para llevar · #127</span>
+            <span className="t-mono" style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(23,22,26,0.64)' }}>08:41</span>
           </div>
         </div>
       </div>
@@ -646,48 +677,112 @@ function PanelMockup() {
   );
 }
 
-/* ── Mockup del menú en un teléfono (CSS puro, sin imágenes) ──── */
+/* ── Mockup del menú en un teléfono ────────────────────────────
+   Esta pantalla SÍ va oscura: es el menú de un restaurante, y el
+   tema por defecto de un tenant nuevo es el oscuro (#0b0b0c).    */
 function PhoneMockup() {
   const items = [
-    { name: 'Tacos al pastor', desc: 'Con piña, cilantro y cebolla', price: 'Q45', g: 'linear-gradient(135deg,#d97706,#b45309)' },
-    { name: 'Burrito de res',  desc: 'Frijol, arroz, queso y pico',  price: 'Q52', g: 'linear-gradient(135deg,#65a30d,#3f6212)' },
+    { name: 'Tacos al pastor', desc: 'Con piña, cilantro y cebolla', price: 'Q45', g: 'linear-gradient(135deg,#e0873b,#b45309)' },
+    { name: 'Burrito de res',  desc: 'Frijol, arroz, queso y pico',  price: 'Q52', g: 'linear-gradient(135deg,#7fae2f,#3f6212)' },
+    { name: 'Horchata fría',   desc: 'Casera, con canela',           price: 'Q15', g: 'linear-gradient(135deg,#d9b48f,#8a6647)' },
   ];
   return (
     <div style={{ position: 'relative' }}>
-      <div aria-hidden style={{ position: 'absolute', inset: -30, background: 'radial-gradient(50% 50% at 50% 40%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'relative', width: 268, borderRadius: 38, padding: 10, background: 'linear-gradient(160deg,#2a2a2e,#161618)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 70px rgba(0,0,0,0.45)' }}>
-        <div style={{ borderRadius: 30, overflow: 'hidden', background: 'var(--brand-bg, #0c0c0e)', aspectRatio: '9 / 19' }}>
+      {/* Mismo criterio que en PanelMockup: halo contenido, sin inset negativo. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(72% 58% at 50% 42%, color-mix(in srgb, var(--brand-accent) 19%, transparent), transparent 72%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div className="lp-device lp-device-phone">
+        <div className="lp-device-screen-phone" style={{ background: '#0b0b0c' }}>
           {/* Portada */}
-          <div style={{ padding: '16px 16px 12px', background: 'linear-gradient(180deg, color-mix(in srgb, var(--brand-accent) 16%, transparent), transparent)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--u-text, #fff)' }}>Tu Restaurante</span>
-              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.15)', padding: '3px 8px', borderRadius: 99 }}>● Abierto</span>
+          <div style={{ padding: '18px 16px 14px', background: 'linear-gradient(180deg, rgba(217,119,87,0.22), transparent)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <span className="t-display" style={{ fontSize: 15, fontWeight: 800, color: '#F5F3EF' }}>Tu Restaurante</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#6ee7a8', background: 'rgba(110,231,168,0.14)', padding: '3px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>● Abierto</span>
             </div>
-            <div style={{ fontSize: 10.5, color: 'var(--u-text-3, #aaa)', marginTop: 3 }}>Cocina de la casa · Zona 1</div>
+            <div style={{ fontSize: 10.5, color: 'rgba(245,243,239,0.55)', marginTop: 4 }}>Cocina de la casa · Zona 1</div>
           </div>
+
           {/* Productos */}
-          <div style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ padding: '2px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
             {items.map((it) => (
-              <div key={it.name} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 8 }}>
-                <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, background: it.g }} />
+              <div key={it.name} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 8 }}>
+                <div style={{ width: 50, height: 50, borderRadius: 11, flexShrink: 0, background: it.g }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--u-text, #fff)' }}>{it.name}</div>
-                  <div style={{ fontSize: 9.5, color: 'var(--u-text-3, #999)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-accent-ink)', marginTop: 3 }}>{it.price}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#F5F3EF' }}>{it.name}</div>
+                  <div style={{ fontSize: 9.5, color: 'rgba(245,243,239,0.5)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
+                  <div className="t-mono" style={{ fontSize: 11.5, fontWeight: 800, color: '#e8a184', marginTop: 3 }}>{it.price}</div>
                 </div>
-                <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, display: 'grid', placeItems: 'center', background: 'var(--brand-accent)', color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
+                <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 9, display: 'grid', placeItems: 'center', background: '#d97757', color: '#fff', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
               </div>
             ))}
           </div>
+
           {/* Barra de carrito */}
           <div style={{ margin: '14px 12px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--brand-accent)', color: '#fff', borderRadius: 12, padding: '10px 14px' }}>
-              <span style={{ fontSize: 11.5, fontWeight: 700 }}>Ver carrito</span>
-              <span style={{ fontSize: 11.5, fontWeight: 800 }}>Q97</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#c2542f', color: '#fff', borderRadius: 13, padding: '11px 15px' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700 }}>Ver carrito · 3</span>
+              <span className="t-mono" style={{ fontSize: 11.5, fontWeight: 800 }}>Q112</span>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Tarjeta ilustrativa del modo sin internet ─────────────────── */
+function OfflineCard() {
+  const rows = [
+    { icon: 'bag',   label: 'Pedido #131 · Mesa 2', state: 'Recibido en la caja', ok: true },
+    { icon: 'print', label: 'Comanda impresa',      state: 'Impresora de cocina', ok: true },
+    { icon: 'box',   label: 'Guardado en la PC',    state: 'En cola para subir',  ok: true },
+    { icon: 'globe', label: 'Sincronizar con la nube', state: 'Al volver el internet', ok: false },
+  ];
+  return (
+    <div className="lp-card" style={{ width: '100%', maxWidth: 420, padding: '20px 20px 22px', boxShadow: 'var(--lp-shadow-md)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span className="lp-icon lp-icon-sm" style={{ background: 'rgba(154,103,0,0.12)', color: '#8a5c00' }}>
+          <Icon name="alertCircle" size={16} />
+        </span>
+        <div>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>Sin conexión a internet</div>
+          <div className="lp-body" style={{ fontSize: 12 }}>El local sigue operando en modo local</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 11,
+              padding: '11px 12px', borderRadius: 13,
+              background: r.ok ? 'rgba(21,115,71,0.06)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+              border: `1px solid ${r.ok ? 'rgba(21,115,71,0.16)' : 'var(--lp-line)'}`,
+            }}
+          >
+            <Icon name={r.icon} size={16} style={{ color: r.ok ? '#157347' : 'var(--u-text-4)', flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 650, color: 'var(--u-text)' }}>{r.label}</div>
+              <div className="lp-body" style={{ fontSize: 11.5 }}>{r.state}</div>
+            </div>
+            {r.ok
+              ? <Icon name="checkCircle" size={17} style={{ color: '#157347', flexShrink: 0 }} />
+              : <Icon name="clock" size={17} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
+          </div>
+        ))}
+      </div>
+
+      <p className="lp-body" style={{ fontSize: 12, marginTop: 16 }}>
+        Nada se pierde y nada se duplica: cada pedido lleva su propio identificador, así que al
+        volver la conexión sube una sola vez.
+      </p>
     </div>
   );
 }

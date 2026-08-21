@@ -1,10 +1,9 @@
 import Link from 'next/link';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import LeoginLogo from '@/components/leogin-logo';
+import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
 import PlanBuilder from './components/plan-builder';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, isAddonAvailable, planPriceLabel } from '@/lib/plans';
-import type { PlanCode, PlanPricing } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, isAddonAvailable, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK } from '@/lib/plans';
+import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 
@@ -25,12 +24,6 @@ function waLink(msg: string) {
   return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(msg)}`;
 }
 
-const ACCENT_BY_PLAN: Record<PlanCode, string> = {
-  BASICO: '#94a3b8',
-  ESTANDAR: '#10b981',
-  PREMIUM: '#6366f1',
-  PRO: '#a855f7',
-};
 
 const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
   { label: 'Pedidos online', key: 'hasOrders' },
@@ -90,7 +83,7 @@ function PlanFeatureRow({ value }: { value: boolean | number | string }) {
     return (
       <>
         {value
-          ? <Icon name="check" size={16} style={{ color: '#4ade80' }} />
+          ? <Icon name="check" size={16} style={{ color: 'var(--c-ok)' }} />
           : <Icon name="x" size={16} style={{ color: 'var(--u-text-4)' }} />}
         <span className="sr-only">{value ? 'Incluido' : 'No incluido'}</span>
       </>
@@ -115,54 +108,24 @@ export default async function PlanesPage() {
   const FAQS = buildFaqs(pricing);
   return (
     <div style={{ width: '100%', minHeight: '100svh' }}>
-      {/* Header */}
-      <header
-        className="glass-solid"
-        style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-          height: 56, padding: '0 18px',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}
-      >
-        <Link href="/" style={{ textDecoration: 'none', flex: '0 0 auto' }}>
-          <LeoginLogo size={26} />
-        </Link>
-        <nav style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 4, alignItems: 'center' }}>
-          <Link href="/registro" className="press" style={{
-            padding: '7px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700,
-            textDecoration: 'none', background: 'var(--brand-accent)', color: '#fff',
-          }}>
-            Empezar gratis
-          </Link>
-        </nav>
-      </header>
+      <SiteHeader />
 
       {/* Hero */}
-      <section style={{ textAlign: 'center', padding: '60px 18px 48px', maxWidth: 680, margin: '0 auto' }}>
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 14 }}>Planes y precios</div>
-        <h1 className="t-display" style={{ fontSize: 'clamp(28px, 5vw, 44px)', lineHeight: 1.08 }}>
-          Precio fijo. <em>Nunca</em> un % de tus ventas
+      <section className="lp-shell" style={{ textAlign: 'center', padding: 'clamp(48px, 7vw, 88px) 20px clamp(36px, 5vw, 56px)' }}>
+        <div className="lp-eyebrow">Planes y precios</div>
+        <h1 className="lp-h1" style={{ fontSize: 'clamp(32px, 5.2vw, 54px)', marginTop: 16, maxWidth: 760, marginInline: 'auto' }}>
+          Precio fijo. <span style={{ color: 'var(--brand-accent-ink)' }}>Nunca</span> un % de tus ventas
         </h1>
-        <p className="t-mute" style={{ fontSize: 15.5, lineHeight: 1.6, marginTop: 16, maxWidth: 540, margin: '16px auto 0' }}>
-          Elige un plan según las funciones que necesitas, no según cuánto vendes.
-          Añade solo los módulos que tu restaurante realmente usa. Sin tope de ventas,
-          sin comisión por pedido, sin cobros sorpresa.
+        <p className="lp-lead" style={{ margin: '18px auto 0', maxWidth: 600 }}>
+          Eliges plan por las funciones que necesitas, no por cuánto vendes. Añades solo los
+          módulos que tu restaurante realmente usa. Sin tope de ventas, sin comisión por pedido
+          y sin cobros sorpresa.
         </p>
-        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <Link href="/registro" style={{
-            padding: '11px 24px', borderRadius: 99, fontSize: 14, fontWeight: 700,
-            textDecoration: 'none', background: 'var(--brand-accent)', color: '#fff',
-          }}>
+        <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Link href="/registro" className="lp-btn lp-btn-primary">
             Empieza gratis · sin tarjeta
           </Link>
-          <a
-            href="#armar-plan"
-            style={{
-              padding: '11px 24px', borderRadius: 99, fontSize: 14, fontWeight: 600,
-              textDecoration: 'none', border: '1.5px solid var(--u-hair)', color: 'var(--u-text-2)',
-            }}
-          >
+          <a href="#armar-plan" className="lp-btn lp-btn-soft">
             Arma tu plan
           </a>
         </div>
@@ -178,24 +141,29 @@ export default async function PlanesPage() {
         }}>
           {PUBLIC_PLANS.map((code) => {
             const p = PLANS[code];
-            const accent = ACCENT_BY_PLAN[code];
+            const accent = PLAN_ACCENT[code];
             const included = INCLUDED_MODULES[code];
             return (
               <div
                 key={code}
-                className="glass"
+                className="lp-card"
                 style={{
-                  borderRadius: 20, padding: '24px 22px',
+                  padding: '26px 22px',
                   display: 'flex', flexDirection: 'column', gap: 18,
-                  border: p.highlight ? `2px solid ${accent}` : undefined,
-                  position: 'relative',
+                  ...(p.highlight
+                    ? { border: `1.5px solid ${accent}`, boxShadow: 'var(--lp-shadow-lg)' }
+                    : {}),
                 }}
               >
                 {p.badge && (
                   <div style={{
-                    position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
-                    fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em', padding: '4px 14px',
-                    borderRadius: 99, background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent, whiteSpace: 'nowrap',
+                    position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
+                    fontSize: 9.5, fontWeight: 800, letterSpacing: '0.1em', padding: '5px 14px',
+                    borderRadius: 99, whiteSpace: 'nowrap',
+                    background: p.highlight ? accent : '#fff',
+                    color: p.highlight ? '#fff' : PLAN_ACCENT_INK[code],
+                    border: p.highlight ? 'none' : `1px solid color-mix(in srgb, ${accent} 34%, transparent)`,
+                    boxShadow: 'var(--lp-shadow-sm)',
                   }}>
                     {p.badge}
                   </div>
@@ -242,7 +210,7 @@ export default async function PlanesPage() {
                     { label: 'Usuarios ilimitados', ok: true },
                   ]).map(({ label, ok }) => (
                     <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13.5 }}>
-                      <span style={{ color: ok ? '#4ade80' : 'var(--u-text-4)', flexShrink: 0 }}>
+                      <span style={{ color: ok ? 'var(--c-ok)' : 'var(--u-text-4)', flexShrink: 0 }}>
                         <Icon name={ok ? 'check' : 'x'} size={15} />
                       </span>
                       <span style={{ color: ok ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>{label}</span>
@@ -252,12 +220,12 @@ export default async function PlanesPage() {
 
                 <Link
                   href="/registro"
+                  className={`lp-btn ${p.highlight ? '' : 'lp-btn-soft'}`}
                   style={{
-                    display: 'block', textAlign: 'center', textDecoration: 'none',
-                    padding: '11px 0', borderRadius: 12, fontWeight: 700, fontSize: 14,
-                    background: p.highlight ? accent : 'var(--surface-3)',
-                    color: p.highlight ? '#fff' : 'var(--u-text)',
-                    marginTop: 'auto',
+                    width: '100%', marginTop: 'auto',
+                    ...(p.highlight
+                      ? { background: accent, color: '#fff', boxShadow: `0 8px 22px color-mix(in srgb, ${accent} 28%, transparent)` }
+                      : {}),
                   }}
                 >
                   {code === 'BASICO' ? 'Empezar con Básico' : `Elegir ${p.name}`}
@@ -270,29 +238,30 @@ export default async function PlanesPage() {
 
       {/* Nota de uso justo */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '0 18px 52px' }}>
-        <Glass variant="quiet" style={{ borderRadius: 16, padding: '16px 20px' }}>
+        <div className="lp-card-quiet" style={{ padding: '18px 22px' }}>
           <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
             <strong style={{ color: 'var(--u-text-2)' }}>Sin cobro por ventas:</strong>{' '}
             Todos los planes son de precio fijo, sin importar cuántos pedidos recibas ni cuánto
             factures. Subes de plan por las funciones que necesitas — nunca porque tu restaurante
             vendió más este mes.
           </p>
-        </Glass>
+        </div>
       </section>
 
       {/* Módulos a la carta */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 56px' }}>
-        <h2 className="t-display" style={{ fontSize: 22, marginBottom: 8 }}>Módulos a la carta</h2>
-        <p className="t-mute" style={{ fontSize: 14, marginBottom: 24, maxWidth: 620 }}>
-          Cada restaurante es distinto. Añade solo lo que necesitas sobre cualquier plan —
-          Premium ya los incluye todos sin costo extra.
-        </p>
+        <SectionHead
+          eyebrow="A la carta"
+          title="Módulos que activas cuando los necesitas"
+          lead="Cada restaurante es distinto. Añade solo lo que uses sobre cualquier plan — Premium ya los incluye todos sin costo extra."
+        />
+        <div style={{ height: 26 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
           {ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).map((m) => {
             const price = pricing.modulePrices[m.key] ?? 0;
             const setupFee = m.key === 'fel' ? pricing.moduleSetupFeeFel : 0;
             return (
-              <Glass key={m.key} variant="quiet" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div key={m.key} className="lp-card lp-card-lift" style={{ borderRadius: 18, padding: '17px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <Icon name={m.icon} size={17} style={{ color: 'var(--brand-accent-ink)' }} />
                   <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{m.label}</span>
@@ -302,7 +271,7 @@ export default async function PlanesPage() {
                   {fmtQ(price)}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)' }}> /mes</span>
                   {setupFee ? <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-4)' }}> + {fmtQ(setupFee)} activación</span> : null}
                 </div>
-              </Glass>
+              </div>
             );
           })}
         </div>
@@ -310,28 +279,27 @@ export default async function PlanesPage() {
 
       {/* Tabla de comparación completa */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
-        <h2 className="t-display" style={{ fontSize: 22, marginBottom: 24 }}>Comparación completa</h2>
-        <Glass variant="quiet" style={{ overflowX: 'auto', borderRadius: 18 }}>
+        <SectionHead eyebrow="Comparativa" title="Todo lado a lado" />
+        <div style={{ height: 26 }} />
+        <div className="lp-card" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5, minWidth: 620 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--u-text-4)', width: '34%' }}>Función</th>
                 {PUBLIC_PLANS.map((code) => {
                   const p = PLANS[code];
-                  const accent = ACCENT_BY_PLAN[code];
                   return (
-                    <th key={code} style={{ padding: '12px 8px', textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: p.highlight ? accent : 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
+                    <th key={code} style={{ padding: '12px 8px', textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: p.highlight ? PLAN_ACCENT_INK[code] : 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
                       {p.name}
                     </th>
                   );
                 })}
               </tr>
-              <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.02)' }}>
+              <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 3.5%, transparent)' }}>
                 <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Precio mensual</td>
                 {PUBLIC_PLANS.map((code) => {
-                  const accent = ACCENT_BY_PLAN[code];
                   return (
-                    <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: accent }}>
+                    <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13, color: PLAN_ACCENT_INK[code] }}>
                       {planPriceLabel(pricing, code)}
                     </td>
                   );
@@ -349,7 +317,7 @@ export default async function PlanesPage() {
                   </td>
                 ))}
               </tr>
-              <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'rgba(255,255,255,0.02)' }}>
+              <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 3.5%, transparent)' }}>
                 <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Usuarios del panel</td>
                 {PUBLIC_PLANS.map((code) => {
                   const p = PLANS[code];
@@ -365,7 +333,7 @@ export default async function PlanesPage() {
             </thead>
             <tbody>
               {FEATURE_ROWS.map(({ label, key }, i) => (
-                <tr key={key} style={{ borderBottom: i < FEATURE_ROWS.length - 1 ? '1px solid var(--u-hair)' : 'none', background: i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent' }}>
+                <tr key={key} style={{ borderBottom: i < FEATURE_ROWS.length - 1 ? '1px solid var(--u-hair)' : 'none', background: i % 2 === 0 ? 'color-mix(in srgb, var(--u-text) 2.5%, transparent)' : 'transparent' }}>
                   <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--u-text-3)' }}>{label}</td>
                   {PUBLIC_PLANS.map((code) => {
                     const val = PLANS[code][key];
@@ -379,27 +347,28 @@ export default async function PlanesPage() {
               ))}
             </tbody>
           </table>
-        </Glass>
+        </div>
       </section>
 
       {/* Arma tu plan */}
       <section id="armar-plan" style={{ maxWidth: 780, margin: '0 auto', padding: '0 18px 72px' }}>
-        <h2 className="t-display" style={{ fontSize: 22, marginBottom: 8 }}>Arma tu plan</h2>
-        <p className="t-mute" style={{ fontSize: 14, marginBottom: 28 }}>
-          Elige tu plan base y marca los módulos que quieres — el precio se arma solo, y nunca depende de cuánto vendas.
-        </p>
-        <Glass variant="quiet" style={{ borderRadius: 20, padding: '28px 24px' }}>
+        <SectionHead
+          eyebrow="Calculadora"
+          title="Arma tu plan"
+          lead="Elige tu plan base y marca los módulos que quieres: el precio se arma solo y nunca depende de cuánto vendas."
+        />
+        <div className="lp-card" style={{ marginTop: 26, padding: '28px 24px' }}>
           <PlanBuilder pricing={pricing} />
-        </Glass>
+        </div>
       </section>
 
       {/* Franquicias / multisucursal */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
-        <h2 className="t-display" style={{ fontSize: 22, marginBottom: 8 }}>Grupos y franquicias</h2>
-        <p className="t-mute" style={{ fontSize: 14, marginBottom: 24, maxWidth: 620 }}>
-          Cada sucursal elige el plan que necesita y paga el suyo. El panel de grupo, para
-          verlas todas juntas, se cobra una sola vez por grupo.
-        </p>
+        <SectionHead
+          eyebrow="Grupos y franquicias"
+          title="Varias sucursales, un solo panel"
+          lead="Cada sucursal elige el plan que necesita y paga el suyo. El panel de grupo, para verlas todas juntas, se cobra una sola vez por grupo."
+        />
         <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 14, lineHeight: 1.6 }}>
           El panel de grupo consolidado (ver todas tus sucursales en un solo lugar) cuesta{' '}
           {fmtQ(pricing.groupPanelFee)}/mes, una sola vez por grupo, sin importar cuántas sucursales tengas.
@@ -409,12 +378,8 @@ export default async function PlanesPage() {
           href={waLink('Hola, quiero información sobre planes para mi grupo de restaurantes / franquicia')}
           target="_blank"
           rel="noopener noreferrer"
-          className="press"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 16,
-            padding: '10px 20px', borderRadius: 99, fontWeight: 700, fontSize: 13.5,
-            textDecoration: 'none', background: 'var(--surface-3)', color: 'var(--u-text)',
-          }}
+          className="lp-btn lp-btn-soft"
+          style={{ marginTop: 18 }}
         >
           <Icon name="sparkle" size={14} />
           Hablar con ventas sobre mi franquicia
@@ -423,14 +388,15 @@ export default async function PlanesPage() {
 
       {/* FAQ */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '0 18px 72px' }}>
-        <h2 className="t-display" style={{ fontSize: 22, marginBottom: 24 }}>Preguntas frecuentes</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {FAQS.map((faq) => (
-            <details key={faq.q} className="glass" style={{ borderRadius: 16, padding: '16px 20px' }}>
-              <summary style={{ cursor: 'pointer', listStyle: 'none', fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1.4 }}>
+        <SectionHead eyebrow="Dudas" title="Preguntas frecuentes" />
+        <div style={{ marginTop: 20 }}>
+          {FAQS.map((faq, i) => (
+            <details key={faq.q} className="lp-faq" open={i === 0}>
+              <summary>
                 {faq.q}
+                <Icon name="chevronDown" size={18} className="lp-faq-mark" />
               </summary>
-              <p style={{ marginTop: 10, fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6 }}>{faq.a}</p>
+              <p className="lp-body lp-faq-body">{faq.a}</p>
             </details>
           ))}
         </div>
@@ -438,47 +404,30 @@ export default async function PlanesPage() {
 
       {/* CTA Final */}
       <section style={{ maxWidth: 600, margin: '0 auto', padding: '0 18px 80px', textAlign: 'center' }}>
-        <Glass variant="quiet" style={{ borderRadius: 24, padding: '40px 28px' }}>
-          <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.2, marginBottom: 12 }}>
-            ¿Listo para modernizar tu menú?
-          </div>
-          <p style={{ fontSize: 15, color: 'var(--u-text-3)', lineHeight: 1.6, marginBottom: 24 }}>
-            Empieza con {pricing.trialDays} días gratis. Sin tarjeta, sin compromiso.
-            Tu menú queda en vivo el mismo día.
+        <div className="lp-card" style={{ padding: 'clamp(34px, 5vw, 48px) 28px', boxShadow: 'var(--lp-shadow-md)' }}>
+          <h2 className="lp-h2" style={{ fontSize: 'clamp(24px, 3.2vw, 32px)' }}>
+            ¿Listo para modernizar tu restaurante?
+          </h2>
+          <p className="lp-lead" style={{ fontSize: 15.5, margin: '14px auto 26px', maxWidth: 440 }}>
+            Empieza con {pricing.trialDays} días gratis. Sin tarjeta, sin compromiso, y tu menú
+            queda en vivo el mismo día.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/registro" style={{
-              padding: '12px 28px', borderRadius: 99, fontSize: 15, fontWeight: 700,
-              textDecoration: 'none', background: 'var(--brand-accent)', color: '#fff',
-            }}>
+            <Link href="/registro" className="lp-btn lp-btn-primary">
               Crear mi restaurante gratis
             </Link>
             <a
               href={waLink('Hola, quiero una demo de Leogin para mi restaurante')}
               target="_blank" rel="noopener noreferrer"
-              style={{
-                padding: '12px 28px', borderRadius: 99, fontSize: 15, fontWeight: 600,
-                textDecoration: 'none', border: '1.5px solid var(--u-hair)', color: 'var(--u-text-2)',
-              }}
+              className="lp-btn lp-btn-soft"
             >
-              Hablar con ventas
+              <Icon name="whatsapp" size={16} /> Hablar con ventas
             </a>
           </div>
-        </Glass>
+        </div>
       </section>
 
-      {/* Footer mínimo */}
-      <footer style={{ textAlign: 'center', padding: '0 18px 32px', fontSize: 12.5, color: 'var(--u-text-4)' }}>
-        <Link href="/" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Leogin</Link>
-        {' · '}
-        <Link href="/" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Inicio</Link>
-        {' · '}
-        <Link href="/terminos" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Términos</Link>
-        {' · '}
-        <Link href="/privacidad" style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Privacidad</Link>
-        {' · '}
-        <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--u-text-4)', textDecoration: 'none' }}>Contacto</a>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

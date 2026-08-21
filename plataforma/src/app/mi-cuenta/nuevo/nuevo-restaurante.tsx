@@ -208,7 +208,7 @@ export default function NuevoRestaurante({
                     : '2px solid var(--u-hair-2)',
                   background: active
                     ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)'
-                    : 'rgba(255,255,255,0.03)',
+                    : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'border-color 150ms, background 150ms',
@@ -280,7 +280,7 @@ export default function NuevoRestaurante({
                       padding: '12px 12px',
                       borderRadius: 'var(--radius-lg)',
                       border: active ? '2px solid var(--brand-accent)' : '2px solid var(--u-hair-2)',
-                      background: active ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)' : 'rgba(255,255,255,0.03)',
+                      background: active ? 'rgba(var(--brand-accent-rgb,99,102,241),0.08)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
                       cursor: capped ? 'not-allowed' : 'pointer',
                       opacity: capped ? 0.45 : 1,
                       textAlign: 'left',
@@ -319,7 +319,7 @@ export default function NuevoRestaurante({
         <Field label="Dirección de tu menú" hint="Así llegarán tus clientes. Puedes cambiarla.">
           <div style={{
             display: 'flex', alignItems: 'center', gap: 0,
-            background: 'rgba(255,255,255,0.05)', border: '1px solid var(--u-hair-2)',
+            background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair-2)',
             borderRadius: 'var(--radius-md)', overflow: 'hidden',
           }}>
             <input

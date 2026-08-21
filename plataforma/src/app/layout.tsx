@@ -139,7 +139,9 @@ export async function generateViewport(): Promise<Viewport> {
     };
   }
   const slug = headersList.get('x-tenant-slug');
-  let themeColor = '#0b0b0c';
+  // Sin slug = sitio público de Leogin (landing, planes, registro…): va en
+  // claro, igual que el panel. Ver el bloque html[data-platform] de globals.css.
+  let themeColor = slug ? '#0b0b0c' : '#f4f4f6';
   if (slug === DEMO_SLUG) {
     themeColor = resolveTheme({ brand_name: 'Café Demo' }, DEMO_SLUG).config.colorBg;
   } else if (slug) {
@@ -195,7 +197,21 @@ export default async function RootLayout({
   const themeVars = resolved ? buildThemeVars(resolved.config) : undefined;
   const fontsHref = resolved ? buildFontsHref(resolved.config) : null;
   const glassIntensity = resolved?.config.glassIntensity ?? 'translucido';
-  const scheme = resolved?.config.scheme ?? 'dark';
+
+  /**
+   * SITIO PÚBLICO DE LEOGIN. Sin slug no hay restaurante que temear: son las
+   * superficies de plataforma (landing, /planes, /descargas, /login,
+   * /registro, /mi-cuenta, legales). Hasta ahora caían en el `?? 'dark'` de
+   * abajo y heredaban el tema oscuro POR RESTAURANTE de :root — o sea que la
+   * web comercial iba en negro mientras el panel, que es donde el cliente
+   * vive a diario, va en claro. Ahora declaran su propia paleta clara
+   * (html[data-platform] en globals.css).
+   *
+   * Los menús de los tenants NO cambian: en cuanto hay slug manda
+   * config.scheme, que es lo que el restaurante eligió en su tema.
+   */
+  const isPlatform = !slug;
+  const scheme = resolved?.config.scheme ?? (isPlatform ? 'light' : 'dark');
 
   // Serializar vars como :root{} para <style> en el body.
   // Un <style> en body aplica al documento completo igual que en <head>,
@@ -211,6 +227,11 @@ export default async function RootLayout({
       lang="es"
       data-glass={glassIntensity}
       data-scheme={scheme}
+      // Marca del sitio público. Separada de data-scheme porque un tenant
+      // también puede ir en claro y NO debe recibir la paleta de Leogin:
+      // su acento, su fondo y su tinta son los suyos.
+      {...(isPlatform ? { 'data-platform': '' } : {})}
+      style={isPlatform ? { colorScheme: 'light' } : undefined}
       // Lienzo del menú. Va en <html> y no en el <main> del menú a propósito:
       // así las CUATRO superficies del comensal (menú, checkout, «Mis
       // pedidos» y el seguimiento del pedido) comparten la misma columna, y

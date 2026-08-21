@@ -369,6 +369,36 @@ export function planTotal(plan: PlanCode, addons: ActivatableModuleKey[]): numbe
   return PLANS[plan].priceMonthly + planAddonCost(plan, addons);
 }
 
+/* ── Color por plan (páginas públicas) ─────────────────────────
+   Vivía duplicado en /planes/page.tsx y en el armador de planes, y las dos
+   copias tenían los tonos -400 pensados para la web ANTIGUA (fondo negro):
+   sobre el blanco del sitio claro, #94a3b8 daba 2.3:1 y #10b981 2.5:1 — el
+   precio grande del Básico y el Estándar se leían lavados. Estos son los
+   -600/-700 de la misma familia, todos por encima de 4.5:1 sobre blanco.
+
+   Premium usa el coral de Leogin en lugar de un índigo prestado: es el plan
+   destacado y es lo que ata la página al resto de la marca. */
+export const PLAN_ACCENT: Record<PlanCode, string> = {
+  BASICO: '#475569',
+  ESTANDAR: '#047857',
+  PREMIUM: '#c2542f',
+  PRO: '#6d28d9',
+};
+
+/* Misma familia, un paso más oscura, para cuando el color va como TEXTO.
+   Es la misma separación que ya existe entre --brand-accent (rellenos) y
+   --brand-accent-ink (tinta) en globals.css, y por el mismo motivo: el coral
+   de Premium da 4.56:1 sobre BLANCO PURO, pero los sitios donde se usa como
+   texto pequeño están encima de la propia tarjeta tintada al 8-12 %, y ahí
+   se cae a 3.9:1. Como relleno con texto blanco encima, PLAN_ACCENT sigue
+   siendo el bueno — no uses este. */
+export const PLAN_ACCENT_INK: Record<PlanCode, string> = {
+  BASICO: '#3f4b5c',
+  ESTANDAR: '#04624a',
+  PREMIUM: '#9c3f21',
+  PRO: '#5b21b6',
+};
+
 /* ── Grupos y franquicias ──────────────────────────────────────── */
 
 export const GROUP_PANEL_FEE = 299;

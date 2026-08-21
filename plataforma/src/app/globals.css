@@ -1597,3 +1597,314 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
 .menu-card-lazy[data-shape="fila"] {
   contain-intrinsic-height: auto 96px;  /* miniatura de 74 px + relleno */
 }
+
+/* ============================================================
+   SITIO PÚBLICO DE LEOGIN (distleogin.com) — TEMA CLARO
+   ------------------------------------------------------------
+   Las superficies de PLATAFORMA (landing, planes, descargas,
+   login, registro, mi-cuenta, legales) no tienen tenant, así que
+   antes heredaban los defaults de :root — que son el tema OSCURO
+   por restaurante ("urbano oscuro"). Resultado: la web comercial
+   iba en negro mientras el panel, que es lo que el cliente usa a
+   diario, va en claro desde el rediseño 2026-07-12.
+
+   El layout raíz pone data-platform + data-scheme="light" en <html>
+   cuando no hay slug ni área de personal, y aquí se fija la paleta.
+   Los VALORES son los mismos que html[data-admin-area][data-scheme="light"]
+   a propósito: el sitio y el panel tienen que sentirse el mismo
+   producto. El acento es el coral -600 (#c2542f) y no el coral de
+   marca (#d97757) porque el de marca sobre blanco da 2.6:1 — no
+   pasa AA ni como relleno con texto blanco encima. -600 da 4.56:1
+   como relleno y 5.9:1 ya derivado a --brand-accent-ink.
+
+   Va al FINAL del archivo a propósito: html[data-platform] tiene la
+   misma especificidad (1,1,0) que html[data-scheme="light"], y hay
+   variables (--brand-accent-ink) que se quieren poder afinar aquí.
+   ============================================================ */
+html[data-platform] {
+  --brand-bg:        #f4f4f6;
+  --brand-bg-2:      #ffffff;
+  --brand-text:      #17161a;
+  --brand-accent:    #c2542f;
+  --brand-on-accent: #ffffff;
+
+  /* Sin esto, TODO chip de icono del sitio público pintaba
+     rgba(99,102,241,...) — el índigo de respaldo de
+     `rgba(var(--brand-accent-rgb,99,102,241),...)`. La variable solo la
+     emitía buildThemeVars para tenants, así que en la landing los
+     iconos salían morados junto a un CTA coral. */
+  --brand-accent-rgb: 194, 84, 47;
+
+  /* Escala de superficie propia del sitio: tarjetas blancas sobre
+     lienzo gris, como el panel. --surface-* de :root está calibrado
+     para tinte BLANCO sobre fondo oscuro; en claro hay que invertir
+     la base o las tarjetas se aclaran en vez de destacar. */
+  --surface-base: 17, 22, 26;
+
+  --lp-card:        #ffffff;
+  --lp-card-2:      #fbfbfc;
+  --lp-line:        rgba(23, 22, 26, 0.09);
+  --lp-line-2:      rgba(23, 22, 26, 0.16);
+  --lp-shadow-sm:   0 1px 2px rgba(23, 22, 26, 0.04), 0 2px 8px rgba(23, 22, 26, 0.04);
+  --lp-shadow-md:   0 2px 4px rgba(23, 22, 26, 0.03), 0 12px 28px rgba(23, 22, 26, 0.07);
+  --lp-shadow-lg:   0 4px 8px rgba(23, 22, 26, 0.04), 0 28px 64px rgba(23, 22, 26, 0.10);
+  --lp-shadow-accent: 0 8px 24px color-mix(in srgb, var(--brand-accent) 26%, transparent);
+
+  /* Máximo del contenido y ritmo vertical entre secciones. */
+  --lp-max:  1140px;
+  --lp-gutter: 20px;
+  --lp-rhythm: clamp(72px, 9vw, 128px);
+}
+
+/* Lienzo del sitio público: un degradado cálido y quieto en vez del
+   asphalt con manchas a la deriva. La landing NO es el menú de un
+   restaurante — no necesita "atmósfera", necesita quedarse fuera del
+   camino del texto. */
+html[data-platform] .asphalt {
+  background:
+    radial-gradient(80% 55% at 50% -10%, color-mix(in srgb, var(--brand-accent) 13%, #ffffff) 0%, transparent 62%),
+    radial-gradient(60% 45% at 92% 8%,  #ffffff 0%, transparent 58%),
+    linear-gradient(180deg, #ffffff 0%, var(--brand-bg) 46%, var(--brand-bg) 100%);
+}
+html[data-platform] .asphalt::before,
+html[data-platform] .asphalt::after { display: none; }
+
+/* ── Estructura ──────────────────────────────────────────── */
+.lp-shell { width: 100%; max-width: var(--lp-max); margin: 0 auto; padding-inline: var(--lp-gutter); }
+.lp-section { margin-top: var(--lp-rhythm); scroll-margin-top: 84px; }
+.lp-section-tight { margin-top: clamp(44px, 6vw, 72px); }
+
+/* ── Tipografía del sitio ────────────────────────────────── */
+.lp-eyebrow {
+  font-family: var(--font-poster); text-transform: uppercase;
+  letter-spacing: 0.14em; font-size: 11px; line-height: 1;
+  color: var(--brand-accent-ink);
+}
+.lp-h1 {
+  font-family: var(--font-display); font-weight: 800;
+  letter-spacing: -0.035em; line-height: 1.02;
+  font-size: clamp(38px, 5.6vw, 62px);
+  color: var(--u-text); text-wrap: balance;
+}
+.lp-h2 {
+  font-family: var(--font-display); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.06;
+  font-size: clamp(27px, 3.8vw, 42px);
+  color: var(--u-text); text-wrap: balance;
+}
+.lp-h3 {
+  font-family: var(--font-display); font-weight: 700;
+  letter-spacing: -0.02em; line-height: 1.2;
+  font-size: 17px; color: var(--u-text);
+}
+.lp-lead {
+  font-size: clamp(15.5px, 1.5vw, 18.5px); line-height: 1.6;
+  color: var(--u-text-3); text-wrap: pretty;
+}
+.lp-body { font-size: 14.5px; line-height: 1.6; color: var(--u-text-3); text-wrap: pretty; }
+
+/* ── Superficies ─────────────────────────────────────────── */
+.lp-card {
+  position: relative; border-radius: 20px;
+  background: var(--lp-card);
+  border: 1px solid var(--lp-line);
+  box-shadow: var(--lp-shadow-sm);
+}
+.lp-card-quiet {
+  position: relative; border-radius: 20px;
+  background: var(--lp-card-2);
+  border: 1px solid var(--lp-line);
+}
+.lp-card-lift { transition: transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out); }
+@media (hover: hover) {
+  .lp-card-lift:hover { transform: translateY(-3px); box-shadow: var(--lp-shadow-md); }
+}
+.lp-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 999px;
+  background: var(--lp-card); border: 1px solid var(--lp-line);
+  box-shadow: var(--lp-shadow-sm);
+  font-size: 12.5px; font-weight: 550; color: var(--u-text-2);
+  white-space: nowrap;
+}
+/* Cuadro del icono: relleno de acento al 11 % + tinta de acento. */
+.lp-icon {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 12px;
+  background: color-mix(in srgb, var(--brand-accent) 11%, transparent);
+  color: var(--brand-accent-ink);
+}
+.lp-icon-sm { width: 32px; height: 32px; border-radius: 9px; }
+
+/* ── Botones ─────────────────────────────────────────────── */
+.lp-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 999px; font-weight: 650; text-decoration: none;
+  padding: 13px 24px; font-size: 15px; line-height: 1;
+  border: 1px solid transparent; cursor: pointer;
+  transition: transform 140ms var(--ease-out), box-shadow 200ms var(--ease-out),
+              background-color 160ms var(--ease-out);
+}
+.lp-btn-sm { padding: 9px 16px; font-size: 13.5px; }
+.lp-btn-lg { padding: 15px 30px; font-size: 16px; font-weight: 700; }
+.lp-btn:active { transform: translateY(1px); }
+.lp-btn-primary {
+  background: var(--brand-accent); color: var(--brand-on-accent);
+  box-shadow: var(--lp-shadow-accent);
+}
+@media (hover: hover) {
+  .lp-btn-primary:hover { background: color-mix(in srgb, var(--brand-accent) 88%, #000); }
+}
+/* Secundario. Sustituye al patrón `rgba(255,255,255,0.06)` + hairline que
+   estaba repetido por toda la plataforma y que en claro era un botón
+   BLANCO SOBRE BLANCO, prácticamente invisible. */
+.lp-btn-soft {
+  background: var(--lp-card); color: var(--u-text);
+  border-color: var(--lp-line-2); box-shadow: var(--lp-shadow-sm);
+}
+@media (hover: hover) {
+  .lp-btn-soft:hover { background: var(--lp-card-2); border-color: var(--lp-line-2); }
+}
+.lp-btn-ink {
+  background: var(--u-text); color: var(--brand-bg);
+  box-shadow: 0 8px 22px rgba(23, 22, 26, 0.22);
+}
+@media (hover: hover) {
+  .lp-btn-ink:hover { background: color-mix(in srgb, var(--u-text) 88%, #fff); }
+}
+
+/* ── Cabecera ────────────────────────────────────────────── */
+.lp-header {
+  position: sticky; top: 0; z-index: 60;
+  background: color-mix(in srgb, var(--brand-bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--lp-line);
+}
+.lp-header-inner {
+  display: flex; align-items: center; gap: 10px;
+  height: 62px; max-width: var(--lp-max); margin: 0 auto;
+  padding-inline: var(--lp-gutter);
+}
+.lp-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.lp-navlink {
+  padding: 8px 13px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 550; text-decoration: none;
+  color: var(--u-text-3);
+  transition: color 140ms var(--ease-out), background-color 140ms var(--ease-out);
+}
+@media (hover: hover) {
+  .lp-navlink:hover { color: var(--u-text); background: color-mix(in srgb, var(--u-text) 6%, transparent); }
+}
+/* Debajo de 860 px caben logo + Acceder + CTA y nada más: cinco enlaces a
+   13 px se pisaban con el CTA en cualquier teléfono. */
+@media (max-width: 860px) { .lp-navlink { display: none; } }
+@media (max-width: 560px) { .lp-nav-secondary { display: none; } }
+
+/* ── Rejillas ────────────────────────────────────────────── */
+.lp-hero-grid {
+  display: grid; gap: clamp(32px, 5vw, 64px);
+  /* El titular manda: con 50/50 el h1 de 68 px caía a cuatro líneas cortas
+     en una columna de 500 px. */
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  align-items: center;
+}
+.lp-split {
+  display: grid; gap: clamp(28px, 4.5vw, 56px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+}
+@media (max-width: 940px) {
+  .lp-hero-grid, .lp-split { grid-template-columns: minmax(0, 1fr); }
+  /* En una sola columna el texto va SIEMPRE primero: en la sección del
+     panel el mockup iba antes que el titular y en móvil abría con una
+     captura sin contexto. */
+  .lp-split > .lp-split-media { order: 2; }
+}
+.lp-cols {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
+}
+.lp-cols-3 { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 860px) { .lp-cols-3 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Bento de capacidades: 6 columnas en escritorio, 2 en móvil. */
+.lp-bento { display: grid; gap: 12px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.lp-bento > * { grid-column: span 2; }
+.lp-bento > .lp-bento-wide { grid-column: span 3; }
+@media (max-width: 900px) {
+  .lp-bento { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lp-bento > .lp-bento-wide { grid-column: span 4; }
+}
+@media (max-width: 560px) {
+  .lp-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-bento > * { grid-column: span 1; }
+  .lp-bento > .lp-bento-wide { grid-column: span 2; }
+  /* Con un número impar de tarjetas la última se queda sola a media fila,
+     con un hueco al lado. Que ocupe el ancho completo cierra la rejilla. */
+  .lp-bento > *:last-child:nth-child(odd) { grid-column: span 2; }
+}
+
+/* ── Pasos numerados ─────────────────────────────────────── */
+.lp-steps { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 860px) { .lp-steps { grid-template-columns: minmax(0, 1fr); } }
+.lp-step-n {
+  display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 999px;
+  background: var(--brand-accent); color: var(--brand-on-accent);
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 700;
+  box-shadow: var(--lp-shadow-accent);
+}
+
+/* ── Preguntas frecuentes (acordeón nativo) ──────────────── */
+.lp-faq { border-bottom: 1px solid var(--lp-line); }
+.lp-faq > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 4px; font-size: 15.5px; font-weight: 650; color: var(--u-text);
+}
+.lp-faq > summary::-webkit-details-marker { display: none; }
+.lp-faq > summary:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 8px; }
+.lp-faq-mark {
+  margin-left: auto; flex-shrink: 0; color: var(--u-text-4);
+  transition: transform 220ms var(--ease-out);
+}
+.lp-faq[open] .lp-faq-mark { transform: rotate(180deg); }
+.lp-faq-body { padding: 0 4px 20px; max-width: 68ch; }
+
+/* ── Marco de dispositivo de los mockups ─────────────────── */
+/* El bisel se queda OSCURO a propósito aunque la página sea clara: es lo
+   que separa la captura del lienzo y le da el aire de producto. */
+.lp-device {
+  position: relative;
+  background: linear-gradient(160deg, #33323a, #17161a);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 2px 6px rgba(23, 22, 26, 0.10),
+    0 30px 70px rgba(23, 22, 26, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.lp-device-phone { width: min(268px, 76vw); border-radius: 40px; padding: 10px; }
+.lp-device-screen-phone { border-radius: 31px; overflow: hidden; aspect-ratio: 9 / 19; }
+.lp-device-desk { width: 100%; max-width: 470px; border-radius: 18px; padding: 9px; }
+.lp-device-screen-desk { border-radius: 11px; overflow: hidden; }
+
+/* ── Pie ─────────────────────────────────────────────────── */
+.lp-footer-grid {
+  display: grid; gap: 32px;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 860px) { .lp-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .lp-footer-grid { grid-template-columns: minmax(0, 1fr); } }
+.lp-footer-link {
+  display: block; padding: 5px 0; font-size: 13.5px;
+  color: var(--u-text-3); text-decoration: none;
+}
+@media (hover: hover) { .lp-footer-link:hover { color: var(--u-text); } }
+
+/* Respeta "reducir movimiento": las entradas de la landing son decorativas. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-card-lift, .lp-btn { transition: none; }
+  .lp-card-lift:hover { transform: none; }
+}

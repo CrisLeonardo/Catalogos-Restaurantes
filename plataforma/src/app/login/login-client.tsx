@@ -156,7 +156,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 borderRadius: 'var(--radius-md)',
                 background: 'rgba(220,50,50,0.12)',
                 border: '1px solid rgba(220,50,50,0.25)',
-                color: '#f87171', fontSize: 13.5,
+                color: 'var(--c-danger)', fontSize: 13.5,
               }}
             >
               No pudimos completar el acceso con Google. Inténtalo otra vez o entra con tu correo.
@@ -244,7 +244,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                   borderRadius: 'var(--radius-md)',
                   background: 'rgba(220,50,50,0.12)',
                   border: '1px solid rgba(220,50,50,0.25)',
-                  color: '#f87171',
+                  color: 'var(--c-danger)',
                   fontSize: 14,
                 }}
               >

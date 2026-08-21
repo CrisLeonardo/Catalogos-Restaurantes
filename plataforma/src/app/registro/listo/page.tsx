@@ -21,8 +21,8 @@ function buildPlanInfo(pricing: PlanPricing) {
     PREMIUM: {
       name: 'Premium',
       badge: `PRUEBA ${trialDays} DÍAS`,
-      badgeColor: '#818cf8',
-      badgeBg: 'rgba(129,140,248,0.14)',
+      badgeColor: 'var(--brand-accent-ink)',
+      badgeBg: 'color-mix(in srgb, var(--brand-accent) 13%, transparent)',
       detail: `luego ${planPriceLabel(pricing, 'PREMIUM')} · sin tarjeta ni compromiso`,
       subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
       features: [
@@ -41,8 +41,8 @@ function buildPlanInfo(pricing: PlanPricing) {
     ESTANDAR: {
       name: 'Estándar',
       badge: `PRUEBA ${trialDays} DÍAS`,
-      badgeColor: '#10b981',
-      badgeBg: 'rgba(16,185,129,0.14)',
+      badgeColor: 'var(--c-ok)',
+      badgeBg: 'var(--c-ok-bg)',
       detail: `luego ${planPriceLabel(pricing, 'ESTANDAR')} · sin tarjeta ni compromiso`,
       subtitle: `Tu prueba de ${trialDays} días comienza hoy.`,
       features: [
@@ -61,8 +61,8 @@ function buildPlanInfo(pricing: PlanPricing) {
     BASICO: {
       name: 'Básico',
       badge: 'GRATIS',
-      badgeColor: '#4ade80',
-      badgeBg: 'rgba(74,222,128,0.14)',
+      badgeColor: 'var(--c-ok)',
+      badgeBg: 'var(--c-ok-bg)',
       detail: `${planPriceLabel(pricing, 'BASICO')} para siempre · hasta ${PLANS.BASICO.maxProducts} productos`,
       subtitle: 'Tu plan Básico (menú digital) es gratis para siempre.',
       features: [
@@ -111,7 +111,7 @@ export default async function RegistroListoPage({
         <div style={{ width: '100%', maxWidth: 460, textAlign: 'center' }}>
 
           {/* Ícono de éxito */}
-          <div style={{ width: 64, height: 64, borderRadius: 18, margin: '0 auto 18px', display: 'grid', placeItems: 'center', background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, margin: '0 auto 18px', display: 'grid', placeItems: 'center', background: 'var(--c-ok-bg)', color: 'var(--c-ok)', border: '1px solid var(--c-ok-line)' }}>
             <Icon name="checkCircle" size={32} />
           </div>
 
@@ -134,7 +134,7 @@ export default async function RegistroListoPage({
               target="_blank"
               rel="noopener noreferrer"
               className="press"
-              style={{ padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 14, textDecoration: 'none', color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.06)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+              style={{ padding: '13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 14, textDecoration: 'none', color: 'var(--u-text)', border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
             >
               Ver mi menú <Icon name="arrowUpRight" size={15} />
             </a>

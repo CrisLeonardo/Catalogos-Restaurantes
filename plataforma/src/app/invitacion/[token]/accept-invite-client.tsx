@@ -111,7 +111,7 @@ export default function AcceptInviteClient({
             style={{
               padding: '10px 13px', borderRadius: 'var(--radius-md)',
               background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)',
-              color: '#f87171', fontSize: 13, lineHeight: 1.45,
+              color: 'var(--c-danger)', fontSize: 13, lineHeight: 1.45,
             }}
           >
             {state.error}

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   PLANS, PUBLIC_PLANS, isModuleIncluded, planAddonCostWith, isAddonAvailable,
-  defaultPlanPricing, planPriceLabel,
+  defaultPlanPricing, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK,
 } from '@/lib/plans';
 import type { PlanCode, PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
@@ -14,13 +14,6 @@ function fmtQ(n: number) {
   return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
 }
 
-const ACCENT_BY_PLAN: Record<PlanCode, string> = {
-  BASICO: '#94a3b8',
-  ESTANDAR: '#10b981',
-  PREMIUM: '#6366f1',
-  PRO: '#a855f7',
-};
-
 /** Sugerencia inicial de módulos según el plan (los que ya trae incluidos). */
 function defaultAddonsFor(plan: PlanCode): Set<ActivatableModuleKey> {
   return new Set(ACTIVATABLE_MODULES.filter((m) => isModuleIncluded(plan, m.key)).map((m) => m.key));
@@ -30,7 +23,8 @@ export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricin
   const [plan, setPlan] = useState<PlanCode>('PREMIUM');
   const [addons, setAddons] = useState<Set<ActivatableModuleKey>>(() => defaultAddonsFor('PREMIUM'));
 
-  const accent = ACCENT_BY_PLAN[plan];
+  const accent = PLAN_ACCENT[plan];
+  const accentInk = PLAN_ACCENT_INK[plan];
   const addonList = [...addons];
   const extraCost = planAddonCostWith(pricing, plan, addonList);
   const total = pricing.prices[plan] + extraCost;
@@ -63,7 +57,7 @@ export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricin
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
           {PUBLIC_PLANS.map((code) => {
             const p = PLANS[code];
-            const a = ACCENT_BY_PLAN[code];
+            const a = PLAN_ACCENT[code];
             const isActive = code === plan;
             return (
               <button
@@ -74,7 +68,7 @@ export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricin
                   padding: '10px 12px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
                   border: `1.5px solid ${isActive ? a : 'var(--u-hair)'}`,
                   background: isActive ? `color-mix(in srgb, ${a} 12%, transparent)` : 'transparent',
-                  color: isActive ? a : 'var(--u-text-3)',
+                  color: isActive ? PLAN_ACCENT_INK[code] : 'var(--u-text-3)',
                   fontWeight: isActive ? 700 : 500, fontSize: 12.5, transition: 'all 0.15s',
                 }}
               >
@@ -117,7 +111,7 @@ export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricin
                 </span>
                 <span style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>{m.label}</div>
-                  <div style={{ fontSize: 11, color: included ? '#4ade80' : 'var(--u-text-4)', fontWeight: included ? 700 : 500 }}>
+                  <div style={{ fontSize: 11, color: included ? 'var(--c-ok)' : 'var(--u-text-4)', fontWeight: included ? 700 : 500 }}>
                     {included ? 'Incluido en tu plan' : `Q${pricing.modulePrices[m.key] ?? 0}/mes`}
                   </div>
                 </span>
@@ -139,7 +133,7 @@ export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricin
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: accent, marginBottom: 2 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentInk, marginBottom: 2 }}>
               Tu plan
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>
@@ -147,7 +141,7 @@ export default function PlanBuilder({ pricing = defaultPlanPricing() }: { pricin
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: accent, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: accentInk, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
               {fmtQ(total)}
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>por mes · precio fijo, sin importar cuánto vendas</div>

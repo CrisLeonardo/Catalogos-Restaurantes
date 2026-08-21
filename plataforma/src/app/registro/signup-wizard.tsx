@@ -231,7 +231,7 @@ export default function SignupWizard({
               className="press"
               style={{
                 flexShrink: 0, padding: '0 14px', borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--u-hair-2)', background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                 color: 'var(--u-text-3)', cursor: 'pointer',
               }}
             >
@@ -285,7 +285,7 @@ export default function SignupWizard({
               style={{
                 marginLeft: 'auto', flexShrink: 0, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 padding: '6px 12px', borderRadius: 99, border: '1px solid var(--u-hair-2)',
-                background: 'rgba(255,255,255,0.05)', color: 'var(--u-text-2)',
+                background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: 'var(--u-text-2)',
               }}
             >
               Corregir
