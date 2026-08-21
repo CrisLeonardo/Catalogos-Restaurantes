@@ -18,7 +18,61 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-export default function RecuperarClient({ expirado }: { expirado: boolean }) {
+/* El contacto de Leogin, con el mismo patrón que /planes y /admin/suscripcion:
+   WhatsApp si hay número configurado, y si no, correo — que también llega. */
+const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
+
+function contactoHref(msg: string): string {
+  if (CONTACT_WA) return `https://wa.me/${CONTACT_WA}?text=${encodeURIComponent(msg)}`;
+  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Olvidé mi contraseña de Leogin')}&body=${encodeURIComponent(msg)}`;
+}
+
+/**
+ * La pantalla cuando la contraseña se repone A MANO (no hay proveedor de
+ * correo). No es un mensaje de error ni un "vuelve luego": es la vía normal,
+ * y por eso se enseña como un botón y no como una disculpa.
+ */
+function PorContacto({ slug }: { slug: string | null }) {
+  const mensaje = slug
+    ? `Hola, olvidé la contraseña de mi panel de Leogin. Mi restaurante es "${slug}". Mi correo es: `
+    : 'Hola, olvidé la contraseña de mi panel de Leogin. Mi restaurante es: ';
+
+  return (
+    <>
+      <a
+        href={contactoHref(mensaje)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="press btn-accent"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+          padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
+          textDecoration: 'none', color: '#fff',
+        }}
+      >
+        <Icon name={CONTACT_WA ? 'whatsapp' : 'mail'} size={17} />
+        {CONTACT_WA ? 'Escribirnos por WhatsApp' : 'Escribirnos por correo'}
+      </a>
+      <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--u-text-4)', margin: 0 }}>
+        Te vamos a pedir un par de datos para confirmar que la cuenta es tuya antes de
+        cambiarla. Es a propósito: si bastara con pedirlo, cualquiera podría hacerlo.
+      </p>
+    </>
+  );
+}
+
+export default function RecuperarClient({
+  expirado,
+  porCorreo = true,
+  slug = null,
+}: {
+  expirado: boolean;
+  /** ¿Hay proveedor de correo? Si no, la contraseña se repone a mano. */
+  porCorreo?: boolean;
+  /** Restaurante desde el que se escribe, para el mensaje de contacto. */
+  slug?: string | null;
+}) {
   const [state, formAction, isPending] = useActionState(requestPasswordReset, empty);
   const sent = state && 'sent' in state;
 
@@ -29,20 +83,23 @@ export default function RecuperarClient({ expirado }: { expirado: boolean }) {
           Recupera tu contraseña
         </h1>
         <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--u-text-3)', margin: 0 }}>
-          Escribe el correo con el que entras a tu panel y te mandamos un enlace para crear
-          una contraseña nueva.
+          {porCorreo
+            ? 'Escribe el correo con el que entras a tu panel y te mandamos un enlace para crear una contraseña nueva.'
+            : 'Escríbenos y te la cambiamos en el momento. Atendemos nosotros, no un robot.'}
         </p>
         {/* Se dice ANTES de que lo intente, no después de un error: quien
             entra con el usuario de su restaurante no tiene buzón, y esta
             pantalla no puede ayudarle por mucho que lo escriba bien. */}
         <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--u-text-4)', margin: '8px 0 0' }}>
           ¿Entras con un usuario que te dio el restaurante (algo como <strong>carlos@turestaurante</strong>)
-          o con un PIN? Eso no tiene correo: pídele a la persona dueña que te lo cambie desde
-          <strong> Personal</strong>, en su panel.
+          o con un PIN? Esa no la reponemos nosotros: pídele a la persona dueña que te la cambie
+          desde <strong>Personal</strong>, en su panel.
         </p>
       </div>
 
-      {expirado && !sent && (
+      {!porCorreo && <PorContacto slug={slug} />}
+
+      {porCorreo && expirado && !sent && (
         <p
           style={{
             padding: '10px 14px', borderRadius: 'var(--radius-md)', margin: 0, fontSize: 13.5,
@@ -54,7 +111,7 @@ export default function RecuperarClient({ expirado }: { expirado: boolean }) {
         </p>
       )}
 
-      {sent ? (
+      {!porCorreo ? null : sent ? (
         <div
           style={{
             display: 'flex', gap: 10, padding: '14px 16px', borderRadius: 'var(--radius-md)',
