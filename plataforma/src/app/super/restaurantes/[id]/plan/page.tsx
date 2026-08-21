@@ -55,21 +55,11 @@ export default async function FichaPlanPage({
             Desglose de mensualidad
           </h2>
           <Glass variant="quiet" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Row label="Precio base del plan" value={fmtQ(feeBreakdown.base)} />
-            {feeBreakdown.discountApplies && (
-              <Row
-                label={`Descuento "plan a tu medida" (${feeBreakdown.channelsOff} canal${feeBreakdown.channelsOff === 1 ? '' : 'es'} desactivado${feeBreakdown.channelsOff === 1 ? '' : 's'})`}
-                value={feeBreakdown.discount > 0 ? `− ${fmtQ(feeBreakdown.discount)}` : 'Q0'}
-                color={feeBreakdown.discount > 0 ? '#4ade80' : undefined}
-              />
-            )}
-            {feeBreakdown.addonTotal > 0 && (
-              <Row label="Módulos a la carta (no incluidos en el plan)" value={`+ ${fmtQ(feeBreakdown.addonTotal)}`} />
-            )}
+            <Row label="Precio del plan" value={fmtQ(feeBreakdown.base)} />
             <div style={{ height: 1, background: 'var(--u-hair)', margin: '4px 0' }} />
             <Row label="Mensualidad calculada" value={fmtQ(feeBreakdown.final)} bold />
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '4px 0 0', lineHeight: 1.5 }}>
-              Este es el precio automático según plan + módulos activos. Si «Precio automático»
+              Precio fijo según el plan, sin descuento por canal ni módulos a la carta. Si «Precio automático»
               está apagado en la pestaña Cobro, el monto real facturado puede diferir (override manual).
             </p>
           </Glass>

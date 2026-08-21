@@ -7,20 +7,28 @@
    platform_settings, que puede sobreescribir estos precios por
    defecto sin tocar código — ver src/lib/db/billing.ts).
 
-   Modelo (desde 2026-07-12): SIN cobro por GMV/ventas. 4 planes de
-   precio fijo + 8 módulos vendibles a la carta sobre cualquier plan.
-   Ver PLAN_PLANES_PRICING_2026.md para el razonamiento completo.
+   Modelo (desde 2026-08-21): SIN cobro por GMV/ventas y SIN precio
+   variable. 4 planes de precio fijo, cada uno con su set de módulos
+   ya definido — nada de comprar módulos sueltos ni de descuento por
+   desactivar un canal. Quien quiere solo lo de entrada va a Estándar;
+   quien lo quiere todo va a Premium. (Antes hubo un modelo de "módulos
+   a la carta" + "descuento por canal"; se retiró por decisión de
+   Leonardo al bajar los precios base — dos precios variables sobre un
+   precio ya reducido era complejidad sin beneficio claro. Puede volver
+   en el futuro si hace falta, pero por ahora los planes son fijos.)
+
+   El dueño de un restaurante SIGUE pudiendo apagar un módulo o un canal
+   desde su panel por preferencia propia (no quiere verlo, no lo usa) —
+   eso es restaurants.module_settings, es puramente de visibilidad y
+   nunca fue parte del cobro. Ver src/lib/modules.ts.
 
    PAUSADO (2026-07-12, decisión de Leonardo): el plan PRO y los
    módulos "proveedores" y "fel" existen en el código y siguen
    soportados por billing/DB, pero NO se ofrecen a clientes todavía
-   (proveedores/facturación electrónica aún no están listos). Quedan
-   fuera de PUBLIC_PLANS y marcados comingSoon en ADDON_MODULES, así
-   que desaparecen de /planes, el armador y el upsell de suscripción.
-   Pro sigue seleccionable SOLO desde el panel del super admin, para
-   que Leonardo pueda asignarlo manualmente si quiere.
-   Para reactivar: agrega 'PRO' de vuelta a PUBLIC_PLANS y quita
-   comingSoon de proveedores/fel abajo.
+   (proveedores/facturación electrónica aún no están listos). Pro
+   queda fuera de PUBLIC_PLANS y solo es seleccionable desde el panel
+   del super admin, para que Leonardo pueda asignarlo manualmente.
+   Para reactivar: agrega 'PRO' de vuelta a PUBLIC_PLANS.
    ============================================================ */
 
 import type { ActivatableModuleKey } from './modules';
@@ -43,8 +51,6 @@ export interface PlanFeatures {
   hasFinance: boolean;
   /** Analítica avanzada + inventario + personal (finanzas va aparte, ver hasFinance). */
   hasAnalytics: boolean;
-  /** Participa del descuento "Plan a tu medida" por canal desactivado. */
-  hasChannelDiscount: boolean;
   /** Visitas mensuales al menú público a partir de las que se avisa (solo aviso, nunca bloquea el menú). */
   monthlyVisitWarning?: number;
   priceMonthly: number;
@@ -76,7 +82,6 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: false,
     hasFinance: false,
     hasAnalytics: false,
-    hasChannelDiscount: false,
     highlight: false,
   },
   ESTANDAR: {
@@ -96,7 +101,6 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: false,
     hasFinance: true,
     hasAnalytics: false,
-    hasChannelDiscount: false,
     highlight: false,
   },
   PREMIUM: {
@@ -118,7 +122,6 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: true,
     hasFinance: true,
     hasAnalytics: true,
-    hasChannelDiscount: true,
   },
   PRO: {
     code: 'PRO',
@@ -141,7 +144,6 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
     hasPrinting: true,
     hasFinance: true,
     hasAnalytics: true,
-    hasChannelDiscount: true,
   },
 };
 
@@ -169,62 +171,19 @@ export function nextPlan(current: PlanCode): PlanCode | null {
   return idx >= 0 && idx < PUBLIC_PLANS.length - 1 ? PUBLIC_PLANS[idx + 1] : null;
 }
 
-/* ── Módulos a la carta ────────────────────────────────────────
-   Reutilizan el mismo entitlement de ACTIVATABLE_MODULES (modules.ts):
-   Leogin activa restaurants.modules[key] = true y ESO es lo que se
-   cobra si el plan actual no lo incluye gratis. El on/off del propio
-   dueño (module_settings) no cambia el cobro, solo la visibilidad. */
-
-export interface AddonModule {
-  key: ActivatableModuleKey;
-  /** Precio mensual si se compra suelto (no incluido en el plan). */
-  price: number;
-  /** Cobro único adicional (ej. FEL: conexión con certificador). */
-  setupFee?: number;
-  /** Plan más bajo desde el que se puede añadir (por dependencias funcionales). */
-  minPlan: PlanCode;
-  /** Existe y se factura, pero no se ofrece a clientes todavía (ver nota "PAUSADO"). */
-  comingSoon?: boolean;
-}
-
-export const ADDON_MODULES: Record<ActivatableModuleKey, AddonModule> = {
-  reservaciones:  { key: 'reservaciones',  price: 99,  minPlan: 'BASICO' },
-  lista_espera:   { key: 'lista_espera',   price: 49,  minPlan: 'BASICO' },
-  llamada_mesero: { key: 'llamada_mesero', price: 49,  minPlan: 'ESTANDAR' },
-  encuestas:      { key: 'encuestas',      price: 49,  minPlan: 'ESTANDAR' },
-  cupones:        { key: 'cupones',        price: 79,  minPlan: 'ESTANDAR' },
-  loyalty:        { key: 'loyalty',        price: 99,  minPlan: 'ESTANDAR' },
-  recetas:        { key: 'recetas',        price: 79,  minPlan: 'BASICO' },
-  proveedores:    { key: 'proveedores',    price: 99,  minPlan: 'BASICO', comingSoon: true },
-  fel:            { key: 'fel',            price: 249, setupFee: 500, minPlan: 'ESTANDAR', comingSoon: true },
-};
-
-/** ¿Se le puede ofrecer este módulo a un cliente ahora mismo? */
-export function isAddonAvailable(key: ActivatableModuleKey): boolean {
-  return !ADDON_MODULES[key]?.comingSoon;
-}
-
 /* ── Precios efectivos (platform_settings puede sobreescribirlos) ──
-   Los montos de PLANS/ADDON_MODULES son los DEFAULTS de fábrica. El
-   super admin puede cambiarlos en /super/configuracion sin tocar
-   código; ese override vive en platform_settings y llega a la UI en
-   esta forma. Toda superficie que muestre un precio debe usar un
-   PlanPricing (el servidor lo obtiene con getEffectivePlanPricing()
-   de lib/db/billing; los componentes cliente lo reciben por props o
-   por usePlanPricing()). */
+   Los montos de PLANS son los DEFAULTS de fábrica. El super admin puede
+   cambiarlos en /super/configuracion sin tocar código; ese override vive
+   en platform_settings y llega a la UI en esta forma. Toda superficie
+   que muestre un precio debe usar un PlanPricing (el servidor lo obtiene
+   con getEffectivePlanPricing() de lib/db/billing; los componentes
+   cliente lo reciben por props o por usePlanPricing()). */
 
 export interface PlanPricing {
   /** Precio mensual vigente de cada plan. */
   prices: Record<PlanCode, number>;
-  /** Precio mensual vigente de cada módulo a la carta. */
-  modulePrices: Record<ActivatableModuleKey, number>;
-  /** Cobro único de activación de FEL. */
-  moduleSetupFeeFel: number;
   /** Mensualidad del panel de grupo (franquicias). */
   groupPanelFee: number;
-  /** Descuento "plan a tu medida" por método de pedido desactivado. */
-  channelDiscountPer: number;
-  channelDiscountMax: number;
   /** Días de prueba gratis del registro self-serve. */
   trialDays: number;
 }
@@ -235,13 +194,7 @@ export function defaultPlanPricing(): PlanPricing {
     prices: Object.fromEntries(
       PLAN_ORDER.map((code) => [code, PLANS[code].priceMonthly]),
     ) as Record<PlanCode, number>,
-    modulePrices: Object.fromEntries(
-      (Object.keys(ADDON_MODULES) as ActivatableModuleKey[]).map((k) => [k, ADDON_MODULES[k].price]),
-    ) as Record<ActivatableModuleKey, number>,
-    moduleSetupFeeFel: ADDON_MODULES.fel.setupFee ?? 500,
     groupPanelFee: GROUP_PANEL_FEE,
-    channelDiscountPer: 50,
-    channelDiscountMax: 2,
     trialDays: 30,
   };
 }
@@ -257,17 +210,7 @@ export function planPriceLabel(pricing: PlanPricing, code: PlanCode): string {
   return `${planPriceQ(pricing, code)} / mes`;
 }
 
-/** Costo mensual de una lista de módulos con precios vigentes (Q0 si el plan los incluye). */
-export function planAddonCostWith(pricing: PlanPricing, plan: PlanCode, addons: ActivatableModuleKey[]): number {
-  return addons.reduce((sum, key) => sum + (isModuleIncluded(plan, key) ? 0 : (pricing.modulePrices[key] ?? 0)), 0);
-}
-
-/** Total mensual con precios vigentes: plan base + módulos no incluidos. */
-export function planTotalWith(pricing: PlanPricing, plan: PlanCode, addons: ActivatableModuleKey[]): number {
-  return pricing.prices[plan] + planAddonCostWith(pricing, plan, addons);
-}
-
-/** Módulos incluidos SIN costo adicional en cada plan. */
+/** Módulos incluidos en cada plan — es lo que el plan trae, sin costo extra ni compra suelta. */
 export const INCLUDED_MODULES: Record<PlanCode, ActivatableModuleKey[]> = {
   BASICO: [],
   ESTANDAR: [],
@@ -295,8 +238,9 @@ export function isModuleIncluded(plan: PlanCode, key: ActivatableModuleKey): boo
 
    Regla única a partir de aquí: el jsonb solo puede AÑADIR sobre lo
    que el plan ya incluye, nunca quitarlo. Lo que el plan incluye se
-   entrega siempre; lo que no, se entrega si Leogin lo habilitó
-   (compra a la carta) — y eso es justo lo que se factura. */
+   entrega siempre; lo que no, solo se entrega si Leogin lo activó a
+   mano como excepción interna (no hay compra a la carta — los planes
+   son de precio fijo, ver nota de cabecera). */
 
 /** ¿Este restaurante tiene derecho al módulo? (incluido en su plan O habilitado a mano). */
 export function hasModuleEntitlement(
@@ -353,20 +297,6 @@ export function withPlanFloor(
     out[key] = true;
   }
   return out;
-}
-
-export function addonPrice(key: ActivatableModuleKey): number {
-  return ADDON_MODULES[key]?.price ?? 0;
-}
-
-/** Costo mensual de una lista de módulos sobre un plan dado (Q0 si ya vienen incluidos). */
-export function planAddonCost(plan: PlanCode, addons: ActivatableModuleKey[]): number {
-  return addons.reduce((sum, key) => sum + (isModuleIncluded(plan, key) ? 0 : addonPrice(key)), 0);
-}
-
-/** Total mensual: plan base + módulos a la carta no incluidos (sin descuentos de canal/sucursal). */
-export function planTotal(plan: PlanCode, addons: ActivatableModuleKey[]): number {
-  return PLANS[plan].priceMonthly + planAddonCost(plan, addons);
 }
 
 /* ── Color por plan (páginas públicas) ─────────────────────────

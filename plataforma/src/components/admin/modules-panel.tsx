@@ -17,45 +17,28 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, isAddonAvailable, planPriceLabel, type PlanCode, type PlanPricing } from '@/lib/plans';
+import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
-import { whenChangeApplies, chargeLabel } from '@/lib/billing-timing';
 import type { OrderType } from '@/lib/theme/defaults';
 
 const q = (n: number) => 'Q' + Math.round(n).toLocaleString('es-GT');
 
-/** ¿El plan incluye este módulo sin costo extra? */
+/** ¿El plan incluye este módulo? (si no, solo está activo por excepción manual de Leogin). */
 function includedInPlan(plan: string | null | undefined, key: ActivatableModuleKey): boolean {
   return INCLUDED_MODULES[(plan ?? 'BASICO') as PlanCode]?.includes(key) ?? false;
 }
 
-/**
- * Qué le cuesta al dueño este módulo, dicho en su idioma.
- *
- * El cambio importante frente a la versión anterior está en el caso
- * "incluido": antes solo decía "Incluido en tu plan" y, justo al lado, los
- * módulos de pago decían "si lo apagas deja de cobrarse". El dueño aprendía
- * "apagar = ahorrar" y lo aplicaba también a los incluidos, donde apagar no
- * ahorra ni un quetzal. Ahora se dice explícitamente.
- */
+/** Qué le pasa a la mensualidad del dueño si prende/apaga este módulo: nada —
+ *  los planes son de precio fijo, apagarlo solo lo esconde de su panel. */
 function modulePriceNote(
-  pricing: PlanPricing,
   plan: string | null | undefined,
   key: ActivatableModuleKey,
-  on: boolean,
-  chargeMonth: string,
 ): { title: string; detail: string; free: boolean } {
-  if (includedInPlan(plan, key)) {
-    return {
-      title: 'Incluido en tu plan',
-      detail: 'Apagarlo solo lo esconde del panel — tu mensualidad no cambia.',
-      free: true,
-    };
-  }
-  const price = pricing.modulePrices[key] ?? 0;
-  return on
-    ? { title: `${q(price)} al mes`, detail: `Si lo apagas, deja de cobrarse en ${chargeMonth}.`, free: false }
-    : { title: `${q(price)} al mes si lo enciendes`, detail: 'Apagado no se cobra.', free: false };
+  return {
+    title: includedInPlan(plan, key) ? 'Incluido en tu plan' : 'Activado para tu restaurante',
+    detail: 'Apagarlo solo lo esconde del panel — tu mensualidad no cambia.',
+    free: true,
+  };
 }
 
 /** Cada modo de pedido es su propio canal independiente — comer en local,
@@ -94,14 +77,8 @@ interface Props {
   supportWhatsapp?: string;
   /** Plan actual — determina qué tipos de pedido están disponibles. */
   planActual?: string | null;
-  /** Q de descuento por cada método de pedido desactivado (platform_settings). */
-  channelDiscountPer?: number;
-  /** Máximo de métodos descontables a la vez. */
-  channelDiscountMax?: number;
-  /** Mensualidad que se está facturando AHORA (con la regla antiabuso aplicada). */
+  /** Mensualidad que se está facturando (precio fijo del plan). */
   billedNow?: number | null;
-  /** Lo que facturará el motor de cobro el mes que viene si todo queda como está. */
-  nextPeriodFee?: number | null;
 }
 
 const BADGE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -252,14 +229,11 @@ function ManagedCard({ m, active, supportHref, priceNote }: { m: ModuleMeta; act
   );
 }
 
-/** Tarjeta "esto lo pierdes por tu plan" — no vendible a la carta (todo el panel) o
-   módulo a la carta que no tienes activo todavía. Siempre visible, nunca se oculta. */
+/** Tarjeta "esto lo pierdes por tu plan" — funciones y módulos que solo trae
+   un plan superior. Siempre visible, nunca se oculta. */
 function LockedPlanCard({ icon, label, description, priceNote, badge = 'PREMIUM', lockLabel = 'No incluido en tu plan' }: { icon: string; label: string; description: string; priceNote: string; badge?: string; lockLabel?: string }) {
   return (
     <Card className="relative flex flex-col gap-3 overflow-hidden p-4.5" style={{ opacity: 0.65 }}>
-      {/* El distintivo era el literal "PREMIUM" para todas las tarjetas, incluidas
-         las de módulos que se compran sueltos sobre cualquier plan — decía
-         "necesitas Premium" cuando en realidad bastaba con añadir el módulo. */}
       <div style={{
         position: 'absolute', top: 10, right: 10,
         fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 99,
@@ -286,20 +260,21 @@ function LockedPlanCard({ icon, label, description, priceNote, badge = 'PREMIUM'
   );
 }
 
-/** Sección siempre visible con lo que el plan actual NO incluye: funciones exclusivas
-   de Premium que no se venden sueltas (mesero, analítica/inventario/personal) y módulos
-   a la carta que aún no están activos. Oculta solo si ya tienes Premium/Pro. */
+/** Sección siempre visible con lo que el plan actual NO incluye: todo lo que
+   trae Premium y este plan no — panel de mesero, analítica/inventario/personal
+   y los módulos que no vienen en Básico/Estándar. Oculta solo si ya tienes
+   Premium/Pro (que lo incluyen todo). */
 function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modules: ModulesMap; settings: ModuleSettings }) {
   const pricing = usePlanPricing();
   const premiumLabel = planPriceLabel(pricing, 'PREMIUM');
   const f = PLANS[plan];
-  const missingAddons = ACTIVATABLE_MODULES.filter(
-    (m) => isAddonAvailable(m.key) && !INCLUDED_MODULES[plan]?.includes(m.key) && !isModuleActive(modules, settings, m.key),
+  const missingModules = ACTIVATABLE_MODULES.filter(
+    (m) => !INCLUDED_MODULES[plan]?.includes(m.key) && !isModuleActive(modules, settings, m.key),
   );
   const missingWaiter = !f.hasWaiterPanel;
   const missingAnalytics = !f.hasAnalytics;
 
-  if (!missingWaiter && !missingAnalytics && missingAddons.length === 0) return null;
+  if (!missingWaiter && !missingAnalytics && missingModules.length === 0) return null;
 
   return (
     <div>
@@ -326,17 +301,13 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
             priceNote={`Incluido en Premium (${premiumLabel})`}
           />
         )}
-        {missingAddons.map((m) => (
+        {missingModules.map((m) => (
           <LockedPlanCard
             key={m.key}
             icon={m.icon}
             label={m.label}
             description={m.description}
-            // Estos SÍ se pueden añadir sobre el plan actual: el distintivo
-            // "PREMIUM" hacía creer que había que cambiar de plan.
-            badge="A LA CARTA"
-            lockLabel="Se añade a tu plan"
-            priceNote={`${q(pricing.modulePrices[m.key] ?? 0)} al mes sobre tu plan · o gratis con Premium`}
+            priceNote={`Incluido en Premium (${premiumLabel})`}
           />
         ))}
       </div>
@@ -348,60 +319,22 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
   );
 }
 
-/* ── Mensualidad en vivo ───────────────────────────────────────
-   La pieza que faltaba. Antes el dueño tocaba interruptores y no
-   veía NADA sobre su precio: para enterarse tenía que irse a
-   /admin/suscripcion, y aun ahí el número solo reflejaba lo ya
-   facturado. Toda la explicación del cobro estaba en un párrafo
-   de 60 palabras sobre "el 75% de los días del mes".
-
-   Aquí se invierte: en vez de explicar la regla, se enseña el
-   resultado — cuánto pagas hoy, cuánto vas a pagar con lo que
-   acabas de encender/apagar, y desde qué cobro. */
-
-interface BillLine { label: string; amount: number; kind: 'base' | 'discount' | 'addon' }
-
-/**
- * Aquí conviven TRES cifras que antes se confundían en una sola:
- *
- *  · billedNow      — lo que se cobra este mes. Ya está decidido.
- *  · nextPeriodFee  — lo que cobrará el mes que viene si nada cambia. Lo
- *                     calcula el propio motor de cobro (no se estima aquí),
- *                     así que ya incorpora los cambios hechos DÍAS ATRÁS y su
- *                     regla del 75%.
- *  · total (vivo)   — lo que daría la configuración que el dueño está tocando
- *                     ahora mismo, para que el número se mueva con el dedo.
- *
- * Mezclarlas era justo lo que hacía incomprensible la pantalla: el dueño
- * apagaba algo, no veía cambiar nada, y el único texto disponible le hablaba
- * de porcentajes del ciclo.
- */
-function LiveBillCard({
-  planCode, lines, total, billedNow, nextPeriodFee, timing,
-}: {
-  planCode: PlanCode;
-  lines: BillLine[];
-  total: number;
-  billedNow: number | null;
-  nextPeriodFee: number | null;
-  timing: ReturnType<typeof whenChangeApplies>;
-}) {
-  const r = (n: number) => Math.round(n);
-  // ¿El dueño acaba de tocar algo que aún no está reflejado en la proyección?
-  const simulating = nextPeriodFee != null && r(nextPeriodFee) !== r(total);
-  const projected = nextPeriodFee ?? total;
-  const changes = billedNow != null && r(projected) !== r(billedNow);
-  const cheaper = changes && projected < (billedNow ?? 0);
+/** Tarjeta de mensualidad: los planes son de precio fijo, así que aquí no hay
+ *  nada que simular — prender o apagar un módulo o un canal nunca cambia este
+ *  número. Solo enseña el precio y manda a /admin/suscripcion para el detalle. */
+function LiveBillCard({ planCode, billedNow }: { planCode: PlanCode; billedNow: number | null }) {
+  const pricing = usePlanPricing();
+  const amount = billedNow ?? pricing.prices[planCode] ?? 0;
 
   return (
-    <Card className="p-4.5" style={{ border: changes ? '1px solid var(--c-warn-line)' : '1px solid var(--u-hair-2)' }}>
+    <Card className="p-4.5" style={{ border: '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.09em', textTransform: 'uppercase' }}>
-            Tu mensualidad de este mes
+            Tu mensualidad
           </div>
           <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 30, color: 'var(--u-text)', lineHeight: 1.1, marginTop: 4 }}>
-            {billedNow != null ? q(billedNow) : q(total)}
+            {q(amount)}
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-4)', fontFamily: 'var(--font-sans)' }}> / mes</span>
           </div>
         </div>
@@ -410,63 +343,15 @@ function LiveBillCard({
           Ver mi suscripción <Icon name="arrowRight" size={12} />
         </a>
       </div>
-
-      {/* Lo que viene, si deja las cosas como están. */}
-      {changes && (
-        <div style={{
-          marginTop: 12, padding: '10px 12px', borderRadius: 'var(--radius-md)',
-          background: cheaper ? 'var(--c-ok-bg)' : 'var(--c-warn-bg)',
-          border: `1px solid ${cheaper ? 'var(--c-ok-line)' : 'var(--c-warn-line)'}`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <Icon name={cheaper ? 'sparkle' : 'clock'} size={13} style={{ color: cheaper ? 'var(--c-ok)' : 'var(--c-warn)' }} />
-            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>
-              {simulating ? 'Con lo que acabas de cambiar pagarías' : 'Tu próximo cobro será'}
-            </span>
-            <strong style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 17, fontWeight: 800, color: cheaper ? 'var(--c-ok)' : 'var(--u-text)' }}>
-              {q(simulating ? total : projected)}
-            </strong>
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--u-text-4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 2 }}>
-          Cómo se arma
-        </div>
-        {lines.map((l, i) => (
-          <div key={`${l.label}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5 }}>
-            <span style={{ color: 'var(--u-text-3)' }}>{l.label}</span>
-            <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, color: l.kind === 'discount' ? 'var(--c-ok)' : 'var(--u-text-2)' }}>
-              {l.kind === 'discount' ? `− ${q(Math.abs(l.amount))}` : l.kind === 'addon' ? `+ ${q(l.amount)}` : q(l.amount)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* En vez del párrafo del 75%: una fecha concreta. */}
-      <div style={{
-        marginTop: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)',
-        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-        display: 'flex', gap: 8, alignItems: 'flex-start',
-      }}>
-        <Icon name="clock" size={13} style={{ color: 'var(--u-text-4)', flexShrink: 0, marginTop: 2 }} />
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-          Lo que enciendas o apagues <strong style={{ color: 'var(--u-text-2)' }}>hoy</strong> se refleja en{' '}
-          <strong style={{ color: 'var(--u-text-2)' }}>{chargeLabel(timing)}</strong>; el cobro de este mes ya no cambia.
-          {timing.nextCycle && timing.daysLeftToMakeIt > 0 && (
-            <> Te quedan {timing.daysLeftToMakeIt} día{timing.daysLeftToMakeIt !== 1 ? 's' : ''} para que entre en ese cobro; después pasaría al siguiente.</>
-          )}
-        </p>
-      </div>
-      <p style={{ fontSize: 11, color: 'var(--u-text-4)', margin: '8px 0 0', lineHeight: 1.45 }}>
-        Plan {PLANS[planCode].name}. Es tu precio automático; si tienes un precio acordado con Leogin, manda ese.
+      <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '10px 0 0', lineHeight: 1.5 }}>
+        Precio fijo del plan {PLANS[planCode].name}: prender o apagar módulos y modos de pedido
+        no cambia tu mensualidad. Si tienes un precio acordado directo con Leogin, manda ese.
       </p>
     </Card>
   );
 }
 
-export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, channelDiscountPer = 50, channelDiscountMax = 2, billedNow = null, nextPeriodFee = null }: Props) {
+export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null }: Props) {
   const router = useRouter();
   const pricing = usePlanPricing();
   const [isPending, startTransition] = useTransition();
@@ -478,12 +363,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   const [orderBusy, setOrderBusy] = useState<OrderType | null>(null);
   const [localSettings, setLocalSettings] = useState<ModuleSettings>(settings);
 
-  // Momento en que un cambio hecho AHORA se nota en el cobro. Se calcula una
-  // vez por render para que todas las frases de la pantalla digan la misma
-  // fecha (antes cada texto repetía a su manera la regla del 75%).
-  const timing = whenChangeApplies();
-  const chargeMonth = chargeLabel(timing);
-
   // Estándar: el dueño elige libremente sus modos de pedido, con tope de
   // ESTANDAR_MAX_ORDER_TYPES (2 de 3) — el 3ero requiere subir a Premium.
   const isEstandar = planActual === 'ESTANDAR';
@@ -492,8 +371,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   function toggle(key: ActivatableModuleKey, next: boolean) {
     setError(null);
     setBusyKey(key);
-    // Optimista: la mensualidad en vivo debe moverse en el mismo gesto. Si el
-    // servidor rechaza, se revierte.
+    // Optimista: el interruptor cambia al instante; si el servidor rechaza, se revierte.
     const prev = localSettings;
     setLocalSettings({ ...localSettings, [key]: { ...(localSettings[key] ?? {}), enabled: next } });
     startTransition(async () => {
@@ -547,78 +425,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
 
   const currentPlan = (planActual ?? 'BASICO') as PlanCode;
 
-  /* ── Simulador de mensualidad ────────────────────────────────
-     Réplica exacta de leogin_compute_monthly_fee (mig. 078) sobre el
-     estado que el dueño está viendo AHORA. Si cambias la fórmula en
-     SQL, cámbiala aquí: el número que se enseña y el que se factura
-     tienen que salir igual o se pierde la confianza entera. */
-  const hasChannelDiscount = PLANS[currentPlan].hasChannelDiscount;
-  const base = pricing.prices[currentPlan] ?? 0;
-  const channelsOffLive = Math.max(0, CHANNEL_META.length - localOrderTypes.length);
-  const discountedChannels = hasChannelDiscount ? Math.min(channelsOffLive, channelDiscountMax) : 0;
-  const channelDiscount = discountedChannels * channelDiscountPer;
-
-  const billedAddons = ACTIVATABLE_MODULES.filter(
-    (m) =>
-      modules?.[m.key] === true &&                    // Leogin lo habilitó
-      !includedInPlan(currentPlan, m.key) &&          // el plan no lo trae gratis
-      localSettings[m.key]?.enabled !== false,        // y el dueño lo tiene encendido
-  );
-
-  const planNet = Math.max(base - channelDiscount, 0);
-  const addonTotal = billedAddons.reduce((s, m) => s + (pricing.modulePrices[m.key] ?? 0), 0);
-  const liveTotal = Math.round(planNet + addonTotal);
-
-  const offChannelLabels = CHANNEL_META
-    .filter((c) => !localOrderTypes.includes(c.id))
-    .slice(0, discountedChannels)
-    .map((c) => c.label);
-
-  const billLines: BillLine[] = [
-    { label: `Plan ${PLANS[currentPlan].name}`, amount: base, kind: 'base' },
-    ...offChannelLabels.map((label): BillLine => ({ label: `${label} apagado`, amount: channelDiscountPer, kind: 'discount' })),
-    ...billedAddons.map((m): BillLine => ({ label: m.label, amount: pricing.modulePrices[m.key] ?? 0, kind: 'addon' })),
-  ];
-
-  /**
-   * Qué le pasa al precio si el dueño toca ESTE método de pedido.
-   *
-   * Se calcula simulando el cambio y comparando descuentos, en vez de
-   * afirmar "cada método apagado son −Q50": con el tope de 2 de 3, el
-   * tercero no descuenta nada y la frase genérica mentía.
-   */
-  function channelDelta(id: OrderType): string | null {
-    if (!hasChannelDiscount) return null;
-    const on = localOrderTypes.includes(id);
-    if (on && localOrderTypes.length === 1) return null; // el último no se puede apagar
-
-    const nextOff = on ? channelsOffLive + 1 : channelsOffLive - 1;
-    const nextDiscount = Math.min(Math.max(nextOff, 0), channelDiscountMax) * channelDiscountPer;
-    const delta = nextDiscount - channelDiscount; // + = ahorra más, − = ahorra menos
-
-    if (delta === 0) {
-      return on
-        ? `Apagarlo no baja tu precio: el descuento ya llegó a su tope de ${q(channelDiscountMax * channelDiscountPer)}.`
-        : 'Encenderlo no sube tu precio.';
-    }
-    return on
-      ? `Apagarlo: −${q(delta)} al mes`
-      : `Encenderlo: +${q(Math.abs(delta))} al mes`;
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-      {/* La mensualidad va ARRIBA del todo: es la consecuencia de cada
-         interruptor de esta pantalla y antes no se veía por ningún lado. */}
-      <LiveBillCard
-        planCode={currentPlan}
-        lines={billLines}
-        total={liveTotal}
-        billedNow={billedNow}
-        nextPeriodFee={nextPeriodFee}
-        timing={timing}
-      />
+      {/* La mensualidad va ARRIBA del todo: precio fijo del plan, no cambia
+         con lo que se prenda o apague en esta pantalla. */}
+      <LiveBillCard planCode={currentPlan} billedNow={billedNow} />
 
       <PremiumGapsSection plan={currentPlan} modules={modules} settings={localSettings} />
 
@@ -650,19 +462,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
               y cambiarlos no altera tu precio de {planPriceLabel(pricing, 'ESTANDAR')}. Para tener los tres a la vez,
               cambia a <strong style={{ color: 'var(--brand-accent-ink)' }}>Premium ({planPriceLabel(pricing, 'PREMIUM')})</strong>.{' '}
               <a href="/admin/suscripcion" style={{ color: 'var(--brand-accent-ink)', fontWeight: 700, textDecoration: 'none' }}>Actualizar →</a>
-            </p>
-          </div>
-        )}
-        {/* Premium/Pro: aquí SÍ hay ahorro. Una frase; el detalle lo lleva la
-           tarjeta de mensualidad y cada tarjeta dice su propio efecto. */}
-        {hasChannelDiscount && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 11, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)', marginBottom: 12 }}>
-            <Icon name="sparkle" size={14} style={{ color: 'var(--c-ok)', flexShrink: 0 }} />
-            <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.45 }}>
-              <strong style={{ color: 'var(--u-text-2)' }}>Pagas solo por lo que usas:</strong> si no ofreces alguno de estos
-              modos, apágalo y tu mensualidad baja {q(channelDiscountPer)}. Puedes ahorrar hasta{' '}
-              <strong style={{ color: 'var(--u-text-2)' }}>{q(channelDiscountMax * channelDiscountPer)}</strong> (siempre queda al menos un modo encendido).
-              Cada tarjeta te dice cuánto cambia tu precio antes de tocarla.
             </p>
           </div>
         )}
@@ -739,20 +538,6 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                 <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>
                   {m.description}
                 </p>
-                {/* El efecto en el precio, junto al interruptor que lo provoca.
-                   Antes vivía en un párrafo aparte que hablaba de todos los
-                   métodos a la vez y no decía qué pasaba con ESTE. */}
-                {(() => {
-                  const delta = channelDelta(m.id);
-                  if (!delta) return null;
-                  const saves = delta.startsWith('Apagarlo: −');
-                  return (
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: saves ? 'var(--c-ok)' : 'var(--u-text-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Icon name={saves ? 'sparkle' : 'helpCircle'} size={12} />
-                      {delta}
-                    </div>
-                  );
-                })()}
                 {isLast && (
                   <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Icon name="helpCircle" size={12} /> Es tu único modo activo: no se puede apagar.
@@ -810,7 +595,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                       m={m}
                       active={active}
                       supportHref={supportHref}
-                      priceNote={modulePriceNote(pricing, planActual, m.key, active, chargeMonth)}
+                      priceNote={modulePriceNote(planActual, m.key)}
                     />
                   );
                 }
@@ -823,7 +608,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                     on={on}
                     busy={busy}
                     onToggle={(next) => toggle(m.key, next)}
-                    priceNote={modulePriceNote(pricing, planActual, m.key, on, chargeMonth)}
+                    priceNote={modulePriceNote(planActual, m.key)}
                   />
                 );
               })}

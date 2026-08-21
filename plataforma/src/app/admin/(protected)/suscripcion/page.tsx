@@ -10,8 +10,6 @@ import {
 } from '@/lib/db/billing';
 import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, nextPlan, isUpgrade, isModuleIncluded, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
-import { moduleMeta, type ActivatableModuleKey } from '@/lib/modules';
-import { whenChangeApplies, chargeLabel } from '@/lib/billing-timing';
 import { rootDomainForUrls } from '@/lib/tenant';
 import { fmtMoney } from '@/lib/money';
 import { Icon } from '@/components/icons';
@@ -78,7 +76,7 @@ export default async function SuscripcionPage() {
   // La "Mensualidad" mostrada debe reflejar siempre el precio real vigente.
   // `config.monthly_fee` es una foto guardada que solo se resincroniza en el
   // próximo corte de cobro; si el restaurante está en auto_price, usamos el
-  // cálculo en vivo (mismo que "Plan a tu medida") para que nunca discrepen.
+  // precio fijo del plan (getFeeBreakdown) para que nunca discrepen.
   const displayedMonthlyFee =
     config && config.auto_price !== false && feeBreakdown ? feeBreakdown.final : config?.monthly_fee ?? 0;
 
@@ -206,9 +204,9 @@ export default async function SuscripcionPage() {
         </a>
       </Card>
 
-      {/* ── Plan a tu medida (lo que pagarás este mes, con desglose) ── */}
+      {/* ── Lo que pagarás este mes ───────────────────────────── */}
       {feeBreakdown && (
-        <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} maxOff={pricing.channelDiscountMax} />
+        <MeasureCard b={feeBreakdown} currency={currency} autoPrice={config?.auto_price !== false} />
       )}
 
       {/* ── Lo que te falta en Básico (solo BASICO) ──────────── */}
@@ -340,7 +338,7 @@ export default async function SuscripcionPage() {
       <Card className="flex flex-wrap items-center justify-between gap-3 p-3.5">
         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           <Icon name="grid" size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--u-text-4)' }} />
-          ¿Tienes 2 o más sucursales? Obtienes descuento por volumen automáticamente y un panel de grupo consolidado.
+          ¿Tienes 2 o más sucursales? Obtén un panel de grupo consolidado para verlas todas juntas.
         </div>
         <a
           href={upgradeHref(restaurantName, 'Grupo / Franquicia')}
@@ -463,81 +461,26 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
   );
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  dine_in: 'Comer en el local',
-  pickup: 'Para llevar',
-  delivery: 'A domicilio',
-};
-
-function MeasureCard({ b, currency, autoPrice, maxOff }: { b: FeeBreakdown; currency: string; autoPrice: boolean; maxOff: number }) {
-  const timing = whenChangeApplies();
-  const saving = b.discount > 0;
-  // Un método recién apagado no baja el cobro de inmediato (mig. 073/078):
-  // debe seguir apagado la mayor parte del ciclo actual antes de que el
-  // descuento entre en el próximo cobro. Estos dos avisos cubren las dos
-  // direcciones de ese desfase (vivo vs. facturado).
-  const pendingDiscount = b.discountApplies && b.channelsActiveLive < b.channelsActiveBilled;
-  const pendingLoss      = b.discountApplies && b.channelsActiveLive > b.channelsActiveBilled;
-  // Métodos que sí descuentan este ciclo, con nombre (respetando el tope).
-  const discountedKeys = b.channelsOffKeys.slice(0, b.channelsOff);
+function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
   return (
-    <Card className="p-5" style={{ border: saving ? '1px solid var(--c-ok-line)' : '1px solid var(--u-hair-2)' }}>
+    <Card className="p-5" style={{ border: '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Icon name="sparkle" size={15} style={{ color: saving ? 'var(--c-ok)' : 'var(--brand-accent)' }} />
+        <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
         <div className="t-kicker" style={{ fontSize: 9.5 }}>Lo que pagarás este mes</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
-        Tu mensualidad refleja exactamente lo que usas: cada método de pedido que desactives
-        {b.discountApplies ? ` descuenta ${fmtMoney(b.discountPer, currency)}` : ' puede descontar'}
-        {' '}(hasta {maxOff} de los {b.channelsTotal}),
-        y los módulos apagados que no vienen en tu plan dejan de cobrarse.
+        Precio fijo de tu plan: prender o apagar módulos y modos de pedido desde{' '}
+        <a href="/admin/modulos" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Módulos</a> no cambia tu mensualidad.
       </div>
-      {pendingDiscount && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)' }}>
-          <Icon name="clock" size={14} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
-          {/* Antes prometía "tu próximo cobro" sin más. Es falso pasada la
-             primera semana del mes: hay que estar apagado el 75% del ciclo, y
-             quien apaga el día 20 lo ve DOS cobros después. Ahora se dice el
-             mes concreto que resulta de la regla. */}
-          <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
-            Tienes un método de pedido apagado ahora, pero este cobro todavía no lo refleja.
-            Si lo dejas apagado, el descuento entra en <strong>{chargeLabel(timing)}</strong>.
-            Este desglose muestra lo que se te cobrará, no el estado de tu menú en este instante.
-          </p>
-        </div>
-      )}
-      {pendingLoss && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)' }}>
-          <Icon name="clock" size={14} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
-          <p style={{ fontSize: 12, color: 'var(--u-text-2)', margin: 0, lineHeight: 1.5 }}>
-            Este cobro todavía incluye el descuento de un método que ya reactivaste. Si lo dejas
-            encendido, el descuento desaparece a partir de <strong>{chargeLabel(timing)}</strong>.
-          </p>
-        </div>
-      )}
 
-      {/* Desglose */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <LineItem label={`Plan ${planLabel(b.plan)}`} value={fmtMoney(b.base, currency)} />
-        {b.discountApplies && discountedKeys.map((k) => (
-          <LineItem
-            key={k}
-            label={`${CHANNEL_LABEL[k] ?? k} desactivado`}
-            value={`− ${fmtMoney(b.discountPer, currency)}`}
-            accent="#4ade80"
-          />
-        ))}
-        {b.addonItems.map((it) => {
-          let label = it.key;
-          try { label = moduleMeta(it.key as ActivatableModuleKey).label; } catch {}
-          return <LineItem key={it.key} label={`Módulo: ${label}`} value={`+ ${fmtMoney(it.price, currency)}`} />;
-        })}
         <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
             {autoPrice ? 'Tu mensualidad' : 'Mensualidad sugerida'}
           </span>
-          <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: saving ? 'var(--c-ok)' : 'var(--u-text)' }}>
+          <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)' }}>
             {fmtMoney(b.final, currency)}
           </span>
         </div>

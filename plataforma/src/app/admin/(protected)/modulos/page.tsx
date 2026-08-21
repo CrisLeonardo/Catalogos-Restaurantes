@@ -5,7 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import ModulesPanel from '@/components/admin/modules-panel';
 import { getPlatformContactSettings } from '@/lib/actions/super-admin';
-import { getPricingSettings, getFeeBreakdown, computeNextPeriodFee } from '@/lib/db/billing';
+import { getFeeBreakdown } from '@/lib/db/billing';
 import type { ModulesMap, ModuleSettings } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
 
@@ -33,17 +33,11 @@ export default async function ModulosPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  // feeBreakdown = lo que se está facturando AHORA (con la regla antiabuso ya
-  // aplicada). El panel lo necesita para poder contrastar "lo que pagas hoy"
-  // contra "lo que pagarás con esta configuración" — antes el dueño tocaba
-  // interruptores sin ver nunca el efecto en su mensualidad.
-  const [{ data: rest }, { data: theme }, contact, pricing, feeBreakdown, nextPeriodFee] = await Promise.all([
+  const [{ data: rest }, { data: theme }, contact, feeBreakdown] = await Promise.all([
     db.from('restaurants').select('modules, module_settings, plan_actual').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('config').eq('restaurant_id', restaurantId).maybeSingle(),
     getPlatformContactSettings(),
-    getPricingSettings(),
     getFeeBreakdown(restaurantId),
-    computeNextPeriodFee(restaurantId),
   ]);
 
   const planActual = (rest?.plan_actual as string | null) ?? null;
@@ -67,10 +61,7 @@ export default async function ModulosPage() {
         orderTypes={orderTypes}
         supportWhatsapp={contact.support_whatsapp}
         planActual={planActual}
-        channelDiscountPer={pricing.channelDiscountPer}
-        channelDiscountMax={pricing.channelDiscountMax}
         billedNow={feeBreakdown?.final ?? null}
-        nextPeriodFee={nextPeriodFee}
       />
     </div>
   );

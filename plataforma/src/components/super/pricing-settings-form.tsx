@@ -1,9 +1,9 @@
 'use client';
 
 /* ============================================================
-   Precios globales del plan + reglas de cobro (mig. 035 + 072)
-   · Define el precio fijo de cada plan y de cada módulo a la carta.
-     Sin GMV: nadie paga en función de cuánto vende.
+   Precios globales del plan + reglas de cobro (mig. 035 + 072 + 120)
+   · Define el precio fijo de cada plan — sin GMV, sin módulos a la
+     carta ni descuento por canal (cada plan ya trae definido lo suyo).
    · Al guardar: recalcula la mensualidad de todos los que estén en
      modo automático Y publica los precios nuevos en la web pública
      (landing, /planes, /registro) al instante.
@@ -106,33 +106,6 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
           <Field name="plan_price_ESTANDAR" label="Estándar" value={pricing.estandar} dot={PLAN_COLORS.ESTANDAR} />
           <Field name="plan_price_PREMIUM"  label="Premium"  value={pricing.premium}  dot={PLAN_COLORS.PREMIUM} />
           <Field name="plan_price_PRO"      label="Pro"      value={pricing.pro}      dot={PLAN_COLORS.PRO} />
-        </Grid>
-      </Section>
-
-      <Section
-        title="Plan a tu medida (descuento por método de pedido)"
-        description="En Premium y Pro, cada método de pedido que el restaurante NO use (comer en local / para llevar / a domicilio) descuenta este monto de su mensualidad. El máximo fija el piso: siempre se paga al menos un método."
-      >
-        <Grid>
-          <Field name="channel_discount_per" label="Descuento por método (Q)" value={pricing.channelDiscountPer} step="1" />
-          <Field name="channel_discount_max" label="Máx. métodos descontables (de 3)" value={pricing.channelDiscountMax} step="1" />
-        </Grid>
-      </Section>
-
-      <Section
-        title="Módulos a la carta (Q/mes)"
-        description="Precio de cada módulo cuando se activa en un restaurante cuyo plan no lo incluye gratis (Premium incluye 6). Proveedores y FEL aún no se ofrecen a clientes — solo tú puedes activarlos desde la ficha."
-      >
-        <Grid>
-          <Field name="module_price_reservaciones"  label="Reservaciones"     value={pricing.modulePrices.reservaciones} />
-          <Field name="module_price_llamada_mesero" label="Llamar al mesero"  value={pricing.modulePrices.llamada_mesero} />
-          <Field name="module_price_encuestas"      label="Encuestas"         value={pricing.modulePrices.encuestas} />
-          <Field name="module_price_cupones"        label="Cupones"           value={pricing.modulePrices.cupones} />
-          <Field name="module_price_loyalty"        label="Lealtad / puntos"  value={pricing.modulePrices.loyalty} />
-          <Field name="module_price_recetas"        label="Recetas"           value={pricing.modulePrices.recetas} />
-          <Field name="module_price_proveedores"    label="Proveedores"       value={pricing.modulePrices.proveedores} />
-          <Field name="module_price_fel"            label="Factura Electrónica (FEL)" value={pricing.modulePrices.fel} />
-          <Field name="module_setup_fee_fel"        label="FEL — activación única" value={pricing.moduleSetupFeeFel} />
         </Grid>
       </Section>
 

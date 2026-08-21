@@ -7,8 +7,8 @@ import {
   updateRestaurantPlan,
   type SuperState,
 } from '@/lib/actions/super-admin';
-import { ACTIVATABLE_MODULES, type ActivatableModuleKey } from '@/lib/modules';
-import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, ADDON_MODULES, defaultPlanPricing, type PlanPricing } from '@/lib/plans';
+import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { PLANS, PLAN_ORDER, PUBLIC_PLANS, INCLUDED_MODULES, defaultPlanPricing, type PlanPricing } from '@/lib/plans';
 import type { Restaurant } from '@/types';
 import type { PlanCode } from '@/lib/plans';
 
@@ -31,7 +31,7 @@ const FEATURE_KEYS: (keyof PlanFeatures)[] = [
 
 // Flags legacy (restaurants.modules.{orders,whatsapp_notify,...}) — sin GMV
 // desde mig. 072. Se mantienen porque otras partes del código ya los leen;
-// el precio real ahora sale de plans.ts + módulos a la carta, no de aquí.
+// el precio real ahora sale de plans.ts (planes de precio fijo), no de aquí.
 const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
   BASICO:   { orders: false, whatsapp_notify: false, analitica: false, inventario: false, personal: false, finanzas: false, multi_branch: false },
   ESTANDAR: { orders: true,  whatsapp_notify: true,  analitica: false, inventario: false, personal: false, finanzas: true,  multi_branch: false },
@@ -39,10 +39,10 @@ const PLAN_PRESETS: Record<PlanCode, PlanFeatures> = {
   PRO:      { orders: true,  whatsapp_notify: true,  analitica: true,  inventario: true,  personal: true,  finanzas: true,  multi_branch: false },
 };
 
-// Qué módulos activables vienen gratis con cada plan — misma fuente que la
-// página pública /planes (INCLUDED_MODULES en plans.ts). BASICO/ESTANDAR no
-// incluyen ninguno gratis (se venden a la carta); el super admin puede
-// activarlos igual manualmente y se facturan según ADDON_MODULES.
+// Qué módulos vienen incluidos con cada plan — misma fuente que la página
+// pública /planes (INCLUDED_MODULES en plans.ts). BASICO/ESTANDAR no incluyen
+// ninguno (hay que subir a Premium); el super admin puede activar uno igual
+// como excepción manual, sin que eso cambie el precio del plan.
 const MANAGED_PRESETS: Record<PlanCode, Record<string, boolean>> = Object.fromEntries(
   PLAN_ORDER.map((code) => [
     code,
@@ -243,19 +243,16 @@ export default function PlanEditor({
           <span>
             Activa los módulos que quieres que este restaurante pueda usar. Si los <strong>activas</strong>, aparecerán en el
             panel del restaurante como <strong>encendidos</strong> y el dueño decidirá si los mantiene activos. Si los
-            <strong> dejas apagados</strong>, el restaurante no los verá ni podrá usarlos.
+            <strong> dejas apagados</strong>, el restaurante no los verá ni podrá usarlos. Los planes ya no venden módulos
+            sueltos — esto es solo para excepciones manuales (beta, cortesía) fuera de lo que el plan trae.
           </span>
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {ACTIVATABLE_MODULES.map((m) => {
             const included = INCLUDED_MODULES[plan].includes(m.key);
-            const addon = ADDON_MODULES[m.key as ActivatableModuleKey];
-            const addonPrice = pricing.modulePrices[m.key as ActivatableModuleKey] ?? addon.price;
-            const addonSetup = m.key === 'fel' ? pricing.moduleSetupFeeFel : addon.setupFee;
-            const priceNote = (included
-              ? `Incluido gratis en ${PLAN_META[plan].label}`
-              : `Q${addonPrice}/mes a la carta${addonSetup ? ` + Q${addonSetup} activación` : ''} — no incluido en ${PLAN_META[plan].label}`)
-              + (addon.comingSoon ? ' · aún no se ofrece a clientes (solo tú lo activas aquí)' : '');
+            const priceNote = included
+              ? `Incluido en ${PLAN_META[plan].label}`
+              : `No incluido en ${PLAN_META[plan].label} — excepción manual, sin costo adicional para el restaurante`;
             return (
               <ModuleRow
                 key={m.key}

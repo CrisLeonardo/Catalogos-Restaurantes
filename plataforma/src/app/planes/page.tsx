@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
-import PlanBuilder from './components/plan-builder';
-import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, isAddonAvailable, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK } from '@/lib/plans';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
@@ -34,7 +33,6 @@ const FEATURE_ROWS: { label: string; key: keyof typeof PLANS.BASICO }[] = [
   { label: 'Impresión de comandas', key: 'hasPrinting' },
   { label: 'Reportes financieros y corte de caja', key: 'hasFinance' },
   { label: 'Analítica, inventario y personal', key: 'hasAnalytics' },
-  { label: 'Descuento "plan a tu medida" por canal', key: 'hasChannelDiscount' },
 ];
 
 function buildFaqs(pricing: PlanPricing) {
@@ -48,16 +46,16 @@ function buildFaqs(pricing: PlanPricing) {
       a: 'Nada cambia en tu cobro. No hay tope de ventas ni de pedidos en ningún plan. Solo subes de plan cuando necesitas más funciones (más usuarios, panel de mesero, facturación electrónica) — nunca porque vendiste más.',
     },
     {
-      q: '¿Cómo funcionan los módulos a la carta?',
-      a: 'Reservaciones, llamar al mesero, encuestas, cupones, lealtad y recetas se pueden activar sobre cualquier plan por su precio individual. Premium ya los incluye todos sin costo extra. Activas solo lo que tu restaurante realmente usa.',
+      q: '¿Qué incluye cada plan?',
+      a: 'Cada plan ya trae definido lo suyo — no hay módulos sueltos que comprar aparte. Si solo necesitas lo básico para vender en línea, Estándar te alcanza; si quieres reservaciones, lealtad, cupones, encuestas y todo lo demás sin ir activando una cosa a la vez, Premium lo incluye todo por su precio fijo.',
     },
     {
       q: '¿Cuál es la diferencia entre Básico, Estándar y Premium?',
-      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles sin costo extra.`,
+      a: `Básico (${planPriceLabel(pricing, 'BASICO')}) es solo menú digital: tu carta con fotos, precios y QR imprimible, sin pedidos en línea. Estándar (${planPriceLabel(pricing, 'ESTANDAR')}) agrega pedidos en línea con avisos en tiempo real, reportes financieros y corte de caja, eligiendo 2 de los 3 modos (comer en local, para llevar, a domicilio). Premium (${planPriceLabel(pricing, 'PREMIUM')}) incluye los 3 modos de pedido a la vez, panel de mesero, personalización completa, analítica/inventario/personal y todos los módulos disponibles.`,
     },
     {
       q: '¿Cómo funciona Multisucursal / Franquicias?',
-      a: 'Cada sucursal paga su propio plan según lo que necesita, con descuento por volumen a partir de la 2a sucursal del grupo (10% con 2-4 sucursales, 15% con 5-9, 20% con 10+). El grupo paga además ' + `Q${pricing.groupPanelFee}/mes` + ' por el panel consolidado que muestra todas las sucursales juntas.',
+      a: 'Cada sucursal paga su propio plan completo según lo que necesita. El grupo paga además ' + `Q${pricing.groupPanelFee}/mes` + ' por el panel consolidado que muestra todas las sucursales juntas.',
     },
     {
       q: '¿Hay periodo de prueba?',
@@ -100,9 +98,6 @@ function PlanFeatureRow({ value }: { value: boolean | number | string }) {
   return <span style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600 }}>{String(value)}</span>;
 }
 
-/** Módulos realmente a la venta hoy (los comingSoon no se cuentan ni se ofrecen). */
-const sellableModuleCount = ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).length;
-
 export default async function PlanesPage() {
   const pricing = await getEffectivePlanPricing();
   const FAQS = buildFaqs(pricing);
@@ -117,16 +112,16 @@ export default async function PlanesPage() {
           Precio fijo. <span style={{ color: 'var(--brand-accent-ink)' }}>Nunca</span> un % de tus ventas
         </h1>
         <p className="lp-lead" style={{ margin: '18px auto 0', maxWidth: 600 }}>
-          Eliges plan por las funciones que necesitas, no por cuánto vendes. Añades solo los
-          módulos que tu restaurante realmente usa. Sin tope de ventas, sin comisión por pedido
-          y sin cobros sorpresa.
+          Eliges plan por las funciones que necesitas, no por cuánto vendes. Cada plan ya trae
+          definido lo suyo, sin ir activando módulos uno por uno. Sin tope de ventas, sin comisión
+          por pedido y sin cobros sorpresa.
         </p>
         <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Link href="/registro" className="lp-btn lp-btn-primary">
             Empieza gratis · sin tarjeta
           </Link>
-          <a href="#armar-plan" className="lp-btn lp-btn-soft">
-            Arma tu plan
+          <a href="#comparativa" className="lp-btn lp-btn-soft">
+            Ver comparativa
           </a>
         </div>
       </section>
@@ -188,7 +183,6 @@ export default async function PlanesPage() {
                     { label: 'Menú digital con QR imprimible', ok: true },
                     { label: `Hasta ${PLANS.BASICO.maxProducts} productos`, ok: true },
                     { label: 'Tu logo y color de marca', ok: true },
-                    { label: 'Añade módulos sueltos si los necesitas', ok: true },
                     { label: 'Pedidos en línea', ok: false },
                   ] : code === 'ESTANDAR' ? [
                     { label: 'Todo lo del Básico', ok: true },
@@ -200,11 +194,11 @@ export default async function PlanesPage() {
                     { label: 'Todo lo del Estándar', ok: true },
                     { label: 'Para llevar, comer en local y delivery', ok: true },
                     { label: 'Panel de mesero, mesas e impresión', ok: true },
-                    { label: `${included.length} módulos incluidos gratis`, ok: true },
+                    { label: `Reservaciones, lealtad, cupones y ${included.length - 3} más incluidos`, ok: true },
                     { label: 'Usuarios ilimitados', ok: true },
                   ] : [
                     { label: 'Todo lo de Premium', ok: true },
-                    { label: `${included.length} módulos incluidos gratis`, ok: true },
+                    { label: 'Facturación electrónica y proveedores incluidos', ok: true },
                     { label: 'Soporte prioritario', ok: true },
                     { label: 'Configuración asistida sin costo', ok: true },
                     { label: 'Usuarios ilimitados', ok: true },
@@ -248,37 +242,29 @@ export default async function PlanesPage() {
         </div>
       </section>
 
-      {/* Módulos a la carta */}
+      {/* Lo que incluye Premium */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 56px' }}>
         <SectionHead
-          eyebrow="A la carta"
-          title="Módulos que activas cuando los necesitas"
-          lead="Cada restaurante es distinto. Añade solo lo que uses sobre cualquier plan — Premium ya los incluye todos sin costo extra."
+          eyebrow="Incluido en Premium"
+          title="Todas estas herramientas, en un solo precio fijo"
+          lead="Sin activar módulos uno por uno ni pagar aparte por cada cosa: Premium las trae todas."
         />
         <div style={{ height: 26 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
-          {ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).map((m) => {
-            const price = pricing.modulePrices[m.key] ?? 0;
-            const setupFee = m.key === 'fel' ? pricing.moduleSetupFeeFel : 0;
-            return (
-              <div key={m.key} className="lp-card lp-card-lift" style={{ borderRadius: 18, padding: '17px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <Icon name={m.icon} size={17} style={{ color: 'var(--brand-accent-ink)' }} />
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{m.label}</span>
-                </div>
-                <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0, minHeight: 36 }}>{m.description}</p>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--brand-accent-ink)', fontFamily: 'var(--font-display)' }}>
-                  {fmtQ(price)}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--u-text-4)' }}> /mes</span>
-                  {setupFee ? <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--u-text-4)' }}> + {fmtQ(setupFee)} activación</span> : null}
-                </div>
+          {ACTIVATABLE_MODULES.filter((m) => INCLUDED_MODULES.PREMIUM.includes(m.key)).map((m) => (
+            <div key={m.key} className="lp-card lp-card-lift" style={{ borderRadius: 18, padding: '17px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <Icon name={m.icon} size={17} style={{ color: 'var(--brand-accent-ink)' }} />
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>{m.label}</span>
               </div>
-            );
-          })}
+              <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.5, margin: 0 }}>{m.description}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Tabla de comparación completa */}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
+      <section id="comparativa" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 18px 64px' }}>
         <SectionHead eyebrow="Comparativa" title="Todo lado a lado" />
         <div style={{ height: 26 }} />
         <div className="lp-card" style={{ overflowX: 'auto' }}>
@@ -304,18 +290,6 @@ export default async function PlanesPage() {
                     </td>
                   );
                 })}
-              </tr>
-              <tr style={{ borderBottom: '1px solid var(--u-hair)' }}>
-                <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Módulos incluidos gratis</td>
-                {/* El denominador era un 8 fijo, contando también los módulos
-                   que todavía no se ofrecen (comingSoon). Premium salía como
-                   "7 de 8" y parecía que faltaba uno por comprar cuando en
-                   realidad los trae TODOS los que hay a la venta. */}
-                {PUBLIC_PLANS.map((code) => (
-                  <td key={code} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>
-                    {INCLUDED_MODULES[code].filter((k) => isAddonAvailable(k)).length} de {sellableModuleCount}
-                  </td>
-                ))}
               </tr>
               <tr style={{ borderBottom: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 3.5%, transparent)' }}>
                 <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--u-text-4)' }}>Usuarios del panel</td>
@@ -347,18 +321,6 @@ export default async function PlanesPage() {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
-
-      {/* Arma tu plan */}
-      <section id="armar-plan" style={{ maxWidth: 780, margin: '0 auto', padding: '0 18px 72px' }}>
-        <SectionHead
-          eyebrow="Calculadora"
-          title="Arma tu plan"
-          lead="Elige tu plan base y marca los módulos que quieres: el precio se arma solo y nunca depende de cuánto vendas."
-        />
-        <div className="lp-card" style={{ marginTop: 26, padding: '28px 24px' }}>
-          <PlanBuilder pricing={pricing} />
         </div>
       </section>
 

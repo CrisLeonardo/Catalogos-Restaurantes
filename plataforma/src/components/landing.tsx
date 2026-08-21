@@ -3,23 +3,21 @@ import { Icon } from '@/components/icons';
 import { LeoginMark } from '@/components/leogin-logo';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
-import { PLANS, PUBLIC_PLANS, planPriceQ, isAddonAvailable, type PlanCode, type PlanPricing } from '@/lib/plans';
-import { ACTIVATABLE_MODULES } from '@/lib/modules';
+import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceQ, type PlanCode, type PlanPricing } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
 
 /* Cifras de la tira de confianza. Solo hechos verificables del producto —
    nada de "+200 restaurantes" ni promedios inventados.
 
-   El número de módulos sale de ACTIVATABLE_MODULES filtrado por
-   isAddonAvailable, igual que en /planes: los que todavía no se venden
-   (comingSoon) no se cuentan. Escrito a mano se quedaría desfasado en
-   cuanto se active o se retire uno. */
-const SELLABLE_MODULES = ACTIVATABLE_MODULES.filter((m) => isAddonAvailable(m.key)).length;
+   El número de módulos sale de INCLUDED_MODULES.PREMIUM, la misma fuente
+   que /planes: escrito a mano se quedaría desfasado en cuanto se agregue
+   o se retire uno. */
+const PREMIUM_MODULE_COUNT = INCLUDED_MODULES.PREMIUM.length;
 
 const PROOF = [
   { value: 'Q0',  label: 'El plan Básico es gratis para siempre' },
   { value: '0 %', label: 'De comisión sobre lo que vendes' },
-  { value: String(SELLABLE_MODULES), label: 'Módulos a la carta, que activas cuando los necesitas' },
+  { value: String(PREMIUM_MODULE_COUNT), label: 'Herramientas incluidas en Premium sin costo extra' },
   { value: 'Hoy', label: 'Tu menú puede quedar en vivo el mismo día' },
 ];
 
@@ -99,8 +97,7 @@ const FAQS = [
   { q: '¿Mis clientes tienen que descargar una app?', a: 'No. Todo abre con el QR en el navegador del celular, al instante. Si tu cliente quiere, puede “instalarlo” en su pantalla de inicio, pero es opcional.' },
   { q: '¿Y si se va el internet en el restaurante?', a: 'Sigues operando. Con Leogin Escritorio la caja funciona en tu red local: toma pedidos, imprime las comandas y sincroniza todo con la nube en cuanto vuelve la conexión.' },
   { q: '¿Puedo cambiar de plan después?', a: 'Sí, cuando quieras y sin penalización. Empiezas en el plan que te convenga hoy y subes a medida que creces.' },
-  { q: '¿Y si no hago domicilio o solo atiendo en local?', a: 'Con el “plan a tu medida” pagas solo por los canales que usas: cada canal que no necesites baja tu mensualidad.' },
-  { q: '¿Sirve si tengo varias sucursales?', a: 'Sí. Cada sucursal tiene su propio menú, su QR y su equipo, y tú ves todo consolidado en un panel de grupo. Además hay descuento por volumen desde la segunda sucursal.' },
+  { q: '¿Sirve si tengo varias sucursales?', a: 'Sí. Cada sucursal tiene su propio menú, su QR y su equipo, y tú ves todo consolidado en un panel de grupo.' },
   { q: '¿De quién son mis datos?', a: 'Tuyos. Puedes exportar tu menú, tus pedidos y tus reportes cuando quieras desde el panel, sin pedirle permiso a nadie.' },
 ];
 
@@ -492,16 +489,7 @@ export default async function LeoginLanding() {
             ))}
           </div>
 
-          {/* Plan a tu medida */}
-          <div className="lp-card-quiet" style={{ marginTop: 16, padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <span className="lp-icon"><Icon name="percent" size={19} /></span>
-            <div style={{ flex: 1, minWidth: 240 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}>Plan a tu medida</div>
-              <div className="lp-body" style={{ fontSize: 13.5, marginTop: 3 }}>
-                ¿No haces domicilio o solo atiendes en local? Pagas solo por los canales que usas:
-                cada canal que no necesites baja tu mensualidad.
-              </div>
-            </div>
+          <div style={{ marginTop: 16, textAlign: 'center' }}>
             <Link href="/planes" className="lp-btn lp-btn-sm lp-btn-soft">
               Ver comparativa completa <Icon name="arrowRight" size={14} />
             </Link>

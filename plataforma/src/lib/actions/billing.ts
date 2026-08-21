@@ -205,25 +205,11 @@ export async function savePricingSettings(
   const graceDays = String(Math.min(90, Math.max(0, Math.round(num(formData, 'grace_days') || 0))));
   const trialDays = String(Math.min(365, Math.max(0, Math.round(num(formData, 'trial_days') || 0))));
 
-  // Máx canales descontables: acotado 0..2 (siempre se paga ≥1 canal).
-  const channelMax = String(Math.min(2, Math.max(0, Math.round(num(formData, 'channel_discount_max') || 0))));
-
   const rows = [
     { key: 'plan_price_BASICO',        value: nonNeg('plan_price_BASICO') },
     { key: 'plan_price_ESTANDAR',      value: nonNeg('plan_price_ESTANDAR') },
     { key: 'plan_price_PREMIUM',       value: nonNeg('plan_price_PREMIUM') },
     { key: 'plan_price_PRO',           value: nonNeg('plan_price_PRO') },
-    { key: 'channel_discount_per',     value: nonNeg('channel_discount_per') },
-    { key: 'channel_discount_max',     value: channelMax },
-    { key: 'module_price_reservaciones',  value: nonNeg('module_price_reservaciones') },
-    { key: 'module_price_llamada_mesero', value: nonNeg('module_price_llamada_mesero') },
-    { key: 'module_price_encuestas',      value: nonNeg('module_price_encuestas') },
-    { key: 'module_price_cupones',        value: nonNeg('module_price_cupones') },
-    { key: 'module_price_loyalty',        value: nonNeg('module_price_loyalty') },
-    { key: 'module_price_recetas',        value: nonNeg('module_price_recetas') },
-    { key: 'module_price_proveedores',    value: nonNeg('module_price_proveedores') },
-    { key: 'module_price_fel',            value: nonNeg('module_price_fel') },
-    { key: 'module_setup_fee_fel',        value: nonNeg('module_setup_fee_fel') },
     { key: 'setup_fee_BASICO',     value: nonNeg('setup_fee_BASICO') },
     { key: 'setup_fee_ESTANDAR',   value: nonNeg('setup_fee_ESTANDAR') },
     { key: 'setup_fee_PREMIUM',    value: nonNeg('setup_fee_PREMIUM') },

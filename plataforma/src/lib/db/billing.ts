@@ -1,8 +1,7 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
-import { PLANS, ADDON_MODULES, type PlanCode, type PlanPricing } from '@/lib/plans';
-import type { ActivatableModuleKey } from '@/lib/modules';
+import { PLANS, type PlanCode, type PlanPricing } from '@/lib/plans';
 
 /**
  * Tag de caché de la configuración de precios de la plataforma.
@@ -52,21 +51,12 @@ export interface PricingSettings {
   estandar: number;
   premium: number;
   pro: number;
-  /** "Plan a tu medida": Q de descuento por cada método de pedido desactivado
-   *  (comer en local / para llevar / a domicilio — mig. 078). */
-  channelDiscountPer: number;
-  /** Máximo de métodos descontables (piso: siempre se paga al menos 1 de los 3). */
-  channelDiscountMax: number;
   /** Cobro único de configuración asistida por plan (referencia; se factura manual). */
   setupFeeBasico: number;
   setupFeeEstandar: number;
   setupFeePremium: number;
   setupFeePro: number;
   setupFeeDefault: number;
-  /** Precio mensual de cada módulo a la carta (Q). */
-  modulePrices: Record<ActivatableModuleKey, number>;
-  /** Cobro único de activación de FEL (conexión con certificador). */
-  moduleSetupFeeFel: number;
   groupPanelFee: number;
   graceDays: number;
   autoSuspend: boolean;
@@ -229,20 +219,11 @@ async function leerPricingSettings(): Promise<PricingSettings> {
     estandar:           n('plan_price_ESTANDAR', PLANS.ESTANDAR.priceMonthly),
     premium:            n('plan_price_PREMIUM',  PLANS.PREMIUM.priceMonthly),
     pro:                n('plan_price_PRO',      PLANS.PRO.priceMonthly),
-    channelDiscountPer: n('channel_discount_per', 50),
-    channelDiscountMax: n('channel_discount_max',  2),
     setupFeeBasico:     n('setup_fee_BASICO',   PLANS.BASICO.setupFee),
     setupFeeEstandar:   n('setup_fee_ESTANDAR', PLANS.ESTANDAR.setupFee),
     setupFeePremium:    n('setup_fee_PREMIUM',  PLANS.PREMIUM.setupFee),
     setupFeePro:        n('setup_fee_PRO',      PLANS.PRO.setupFee),
     setupFeeDefault:    n('setup_fee_default',  300),
-    modulePrices: Object.fromEntries(
-      (Object.keys(ADDON_MODULES) as ActivatableModuleKey[]).map((key) => [
-        key,
-        n(`module_price_${key}`, ADDON_MODULES[key].price),
-      ]),
-    ) as Record<ActivatableModuleKey, number>,
-    moduleSetupFeeFel: n('module_setup_fee_fel', ADDON_MODULES.fel.setupFee ?? 500),
     groupPanelFee:      n('group_panel_fee',    299),
     graceDays:          n('billing_grace_days',  10),
     autoSuspend:        b('billing_auto_suspend', true),
@@ -264,11 +245,7 @@ export const getEffectivePlanPricing = cache(async (): Promise<PlanPricing> => {
       PREMIUM: s.premium,
       PRO: s.pro,
     },
-    modulePrices: s.modulePrices,
-    moduleSetupFeeFel: s.moduleSetupFeeFel,
     groupPanelFee: s.groupPanelFee,
-    channelDiscountPer: s.channelDiscountPer,
-    channelDiscountMax: s.channelDiscountMax,
     trialDays: s.trialDays,
   };
 });
@@ -305,27 +282,11 @@ export async function computeNextPeriodFee(restaurantId: string): Promise<number
   return Number(data);
 }
 
-/** Desglose "Plan a tu medida" para mostrar al dueño / super admin. */
+/** Desglose de mensualidad para mostrar al dueño / super admin. Precio fijo
+ *  del plan — sin descuento por canal ni módulos a la carta (ver plans.ts). */
 export interface FeeBreakdown {
   plan: string | null;
   base: number;
-  /** Métodos de pedido activos AHORA MISMO (estado en vivo del checkout). */
-  channelsActiveLive: number;
-  /** Métodos que cuentan como activos para EL COBRO (mig. 073/078: uno
-   *  recién apagado sigue facturándose completo hasta el ciclo siguiente
-   *  — ver leogin_billed_active_channels). Puede diferir de channelsActiveLive. */
-  channelsActiveBilled: number;
-  channelsTotal: number;
-  discountApplies: boolean;
-  discountPer: number;
-  channelsOff: number;
-  /** Qué métodos se facturan como apagados ('dine_in' | 'pickup' | 'delivery'). */
-  channelsOffKeys: string[];
-  discount: number;
-  /** Costo mensual de módulos a la carta facturados este periodo. */
-  addonTotal: number;
-  /** Detalle por módulo facturado (para el desglose del dueño). */
-  addonItems: { key: string; price: number }[];
   final: number;
 }
 
@@ -336,21 +297,9 @@ export async function getFeeBreakdown(restaurantId: string): Promise<FeeBreakdow
   const d = data as Record<string, unknown>;
   if (!d.plan) return null;
   return {
-    plan:                  (d.plan as string) ?? null,
-    base:                  Number(d.base ?? 0),
-    channelsActiveLive:    Number(d.channels_active_live ?? 3),
-    channelsActiveBilled:  Number(d.channels_active_billed ?? 3),
-    channelsTotal:         Number(d.channels_total ?? 3),
-    discountApplies:       Boolean(d.discount_applies),
-    discountPer:           Number(d.discount_per ?? 0),
-    channelsOff:           Number(d.channels_off ?? 0),
-    channelsOffKeys:       Array.isArray(d.channels_off_keys) ? (d.channels_off_keys as string[]) : [],
-    discount:              Number(d.discount ?? 0),
-    addonTotal:            Number(d.addon_total ?? 0),
-    addonItems:            Array.isArray(d.addon_items)
-      ? (d.addon_items as { key: string; price: number }[]).map((it) => ({ key: String(it.key), price: Number(it.price) || 0 }))
-      : [],
-    final:                 Number(d.final ?? 0),
+    plan:  (d.plan as string) ?? null,
+    base:  Number(d.base ?? 0),
+    final: Number(d.final ?? 0),
   };
 }
 

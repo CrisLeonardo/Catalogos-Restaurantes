@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  defaultPlanPricing,
   hasModuleEntitlement,
   hasPlanFeature,
   isModuleIncluded,
   isUpgrade,
   nextPlan,
-  planAddonCostWith,
-  planTotalWith,
   withPlanFloor,
 } from './plans';
 
@@ -32,7 +29,7 @@ describe('isModuleIncluded / hasModuleEntitlement', () => {
     expect(hasModuleEntitlement('PREMIUM', {}, 'loyalty')).toBe(true);
   });
 
-  it('hasModuleEntitlement también da acceso si se compró a la carta fuera del plan', () => {
+  it('hasModuleEntitlement también da acceso si Leogin lo activó manualmente fuera del plan', () => {
     expect(hasModuleEntitlement('BASICO', { loyalty: true }, 'loyalty')).toBe(true);
   });
 
@@ -90,29 +87,6 @@ describe('hasPlanFeature', () => {
     expect(hasPlanFeature('NO_EXISTE', null, 'orders')).toBe(false);
   });
 });
-
-describe('planAddonCostWith / planTotalWith (con precios vigentes)', () => {
-  const pricing = defaultPlanPricing();
-
-  it('un módulo ya incluido en el plan cuesta Q0', () => {
-    expect(planAddonCostWith(pricing, 'PREMIUM', ['loyalty', 'reservaciones'])).toBe(0);
-  });
-
-  it('un módulo fuera del plan cobra su precio vigente', () => {
-    expect(planAddonCostWith(pricing, 'BASICO', ['loyalty'])).toBe(pricing.modulePrices.loyalty);
-  });
-
-  it('suma varios módulos no incluidos', () => {
-    const cost = planAddonCostWith(pricing, 'ESTANDAR', ['llamada_mesero', 'loyalty']);
-    expect(cost).toBe(pricing.modulePrices.llamada_mesero + pricing.modulePrices.loyalty);
-  });
-
-  it('el total es precio de plan + addons, usando SIEMPRE el pricing recibido (no el default de fábrica)', () => {
-    const override = { ...pricing, prices: { ...pricing.prices, BASICO: 0 }, modulePrices: { ...pricing.modulePrices, loyalty: 150 } };
-    expect(planTotalWith(override, 'BASICO', ['loyalty'])).toBe(150);
-  });
-});
-
 
 describe('isUpgrade / nextPlan', () => {
   it('Premium es upgrade sobre Básico', () => {
