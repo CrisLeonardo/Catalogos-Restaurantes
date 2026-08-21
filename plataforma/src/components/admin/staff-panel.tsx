@@ -191,6 +191,9 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   // Con qué credencial entra: PIN en el aparato del local (lo normal) o un
   // usuario de este restaurante (el administrador, que entra desde donde sea).
   const [access, setAccess] = useState<'pin' | 'user'>('pin');
+  // Qué plantilla está marcada — solo para resaltarla; el default 'mesero'
+  // refleja los `perms` con los que arranca el formulario.
+  const [selectedRole, setSelectedRole] = useState<string | null>(isNew ? 'mesero' : null);
   // Controlado solo para poder enseñar la credencial completa mientras se
   // escribe (`carlos` → `carlos@rincon-502`).
   const [username, setUsername] = useState('');
@@ -209,6 +212,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
     const list = preset.perms === 'gerente' ? gerentePerms : preset.perms;
     setPerms(list.filter((p) => enabledSections.includes(p)));
     setAccess(preset.access ?? 'pin');
+    setSelectedRole(preset.key);
   }
 
   const createAction = useActionState<StaffState, FormData>(createStaff, null);
@@ -254,21 +258,25 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
               <div>
                 <label style={label}>Plantilla</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {presets.map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => applyPreset(p)}
-                      className="press"
-                      style={{
-                        padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
-                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                        color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
-                      }}
-                    >
-                      <Icon name={p.icon} size={12} />{p.label}
-                    </button>
-                  ))}
+                  {presets.map((p) => {
+                    const on = selectedRole === p.key;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => applyPreset(p)}
+                        className="press"
+                        style={{
+                          padding: '7px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                          border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
+                          background: on ? 'color-mix(in srgb, var(--brand-accent) 14%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                          color: on ? 'var(--u-text)' : 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 5,
+                        }}
+                      >
+                        <Icon name={p.icon} size={12} />{p.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 8 }}>
                   Marca lo típico de ese rol para no revisar ~20 opciones — ajusta libremente las secciones de abajo después.
@@ -290,30 +298,21 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
               <div>
                 <input type="hidden" name="access_type" value={access} />
                 <label style={label}>Cómo entra *</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {([
-                    { id: 'pin' as const, title: 'Con un PIN', desc: 'En el aparato del local' },
-                    { id: 'user' as const, title: 'Con un usuario', desc: 'Desde donde sea' },
-                  ]).map((opt) => {
-                    const on = access === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setAccess(opt.id)}
-                        className="press"
-                        style={{
-                          flex: 1, textAlign: 'left', cursor: 'pointer',
-                          padding: '10px 12px', borderRadius: 11,
-                          border: `1.5px solid ${on ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
-                          background: on ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                        }}
-                      >
-                        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>{opt.title}</span>
-                        <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>{opt.desc}</span>
-                      </button>
-                    );
-                  })}
+                {/* La plantilla ya decide esto: Gerente entra con usuario,
+                    cualquier otra con PIN. Se muestra solo la que aplica —
+                    la otra desaparece en vez de dejarla ahí para escoger,
+                    que era lo confuso. */}
+                <div style={{
+                  padding: '10px 12px', borderRadius: 11,
+                  border: '1.5px solid var(--brand-accent)',
+                  background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)',
+                }}>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
+                    {access === 'user' ? 'Con un usuario' : 'Con un PIN'}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                    {access === 'user' ? 'Desde donde sea' : 'En el aparato del local'}
+                  </span>
                 </div>
               </div>
             )}
