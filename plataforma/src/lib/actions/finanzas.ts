@@ -15,6 +15,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { revalidatePath } from 'next/cache';
 import { localDateKey } from '@/lib/hours';
@@ -54,13 +55,22 @@ async function authRestaurant(restaurantId: string): Promise<{
     .eq('id', user.id)
     .single();
 
+  // Qué es esta persona EN ESTE restaurante. El perfil solo sabe de uno —y
+  // desde el modelo de membresías el dueño lo tiene en null— así que
+  // preguntárselo a él dejaba fuera al dueño de su propio negocio.
+  const efectivo = await resolveEffectiveRole(
+    { role: profile?.role ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
+
   const belongs =
     profile?.role === 'SUPER_ADMIN' ||
+    efectivo.isMember ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
     (await canActOnGroupBranch(restaurantId));
   if (!belongs) return null;
-  if (!can(profile?.role, profile?.permissions as string[] | null, 'finanzas')) return null;
+  if (!can(efectivo.role, efectivo.permissions, 'finanzas')) return null;
 
   const db = createServiceClient();
   const { data: r } = await db

@@ -5,6 +5,7 @@ import {
   staffUsernameEmail,
   parseStaffUsername,
   splitLoginIdentifier,
+  staffLoginHandle,
 } from '@/lib/staff-email';
 
 /* El usuario del restaurante es una CREDENCIAL: si el correo interno se
@@ -53,6 +54,22 @@ describe('staffUsernameEmail / parseStaffUsername', () => {
     expect(parseStaffUsername(null)).toBeNull();
     // Con la forma correcta pero basura donde va el restaurante.
     expect(parseStaffUsername('u.no-es-un-id.carlos@staff.leogin.internal')).toBeNull();
+  });
+});
+
+describe('staffLoginHandle', () => {
+  it('es la credencial que se dicta y la que se teclea: van juntas o no sirven', () => {
+    const handle = staffLoginHandle('carlos', 'rincon-502');
+    expect(handle).toBe('carlos@rincon-502');
+    // Lo que el dueño le pasa a su administrador tiene que poder escribirse
+    // tal cual en el login de la página principal, donde no hay subdominio.
+    expect(splitLoginIdentifier(handle, null)).toEqual({
+      kind: 'username', username: 'carlos', slug: 'rincon-502',
+    });
+  });
+
+  it('sin restaurante no inventa una dirección que no funcionaría', () => {
+    expect(staffLoginHandle('carlos', null)).toBe('carlos');
   });
 });
 

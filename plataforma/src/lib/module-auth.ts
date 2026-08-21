@@ -2,6 +2,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import { isModuleActive, type ActivatableModuleKey, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 
 /**
@@ -31,9 +32,17 @@ export async function authorizeModuleAction(
     if (await canActOnGroupBranch(restaurantId)) {
       // autorizado por el grupo
     } else {
-      if (profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
-      const role = profile.role as string;
-      const perms = profile.permissions as string[] | null;
+      // Qué es esta persona EN ESTE restaurante. Antes se leía del perfil, y
+      // el perfil solo sabe de uno: desde el modelo de membresías el dueño lo
+      // tiene en null, así que no podía encender ni apagar un módulo de su
+      // propio restaurante.
+      const efectivo = await resolveEffectiveRole(
+        { role: (profile.role as string | null) ?? null, permissions: (profile.permissions as string[] | null) ?? null },
+        restaurantId,
+      );
+      if (!efectivo.isMember && profile.restaurant_id !== restaurantId) return { error: 'No autorizado.' };
+      const role = efectivo.role;
+      const perms = efectivo.permissions;
       const allowed = role === 'RESTAURANT_OWNER' || (role === 'RESTAURANT_STAFF' && (perms == null || perms.includes(key)));
       if (!allowed) return { error: 'No autorizado.' };
     }

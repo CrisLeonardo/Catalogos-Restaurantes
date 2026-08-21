@@ -48,7 +48,10 @@ export default async function AdminPersonalPage() {
     getPanelAccessLog(restaurantId, 20),
     listTrustedDevices(restaurantId),
     listPendingInvitations(restaurantId),
-    db.from('restaurants').select('modules, module_settings, plan_actual, timezone').eq('id', restaurantId).single(),
+    // `slug` viene con lo demás: es la segunda mitad de la credencial del
+    // administrador (`carlos@rincon-502`), lo que hace que sirva también
+    // fuera del subdominio de este local.
+    db.from('restaurants').select('slug, modules, module_settings, plan_actual, timezone').eq('id', restaurantId).single(),
     db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
   ]);
 
@@ -119,6 +122,7 @@ export default async function AdminPersonalPage() {
       </div>
       <StaffPanel
         restaurantId={restaurantId}
+        slug={(restaurant?.slug as string | null) ?? null}
         staff={staff}
         activity={activity}
         enabledSections={enabledSections}

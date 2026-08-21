@@ -11,6 +11,16 @@ export type RestaurantUser = {
   email: string | null;
   role: Profile['role'];
   full_name: string | null;
+  /**
+   * ¿Aparece aquí por su MEMBRESÍA (migración 113) y no por
+   * `profiles.restaurant_id`? Es el caso de todo dueño del modelo nuevo.
+   *
+   * Importa para una cosa: a esta persona se le puede reponer la contraseña
+   * —que es el rescate— pero NO se le quita el acceso desde aquí. Su cuenta
+   * puede ser la de un dueño con tres restaurantes, y borrar el usuario de
+   * Auth desde la ficha de uno lo dejaría fuera de los tres.
+   */
+  viaMembership: boolean;
 };
 
 export type GlobalMetrics = {
@@ -55,25 +65,54 @@ export const getRestaurantFullById = cache(
  * Usuarios (logins) asociados a un restaurante: dueño y staff.
  * El email vive en auth.users, así que se resuelve con la Admin API
  * (service_role). El nº de usuarios por restaurante es pequeño.
+ *
+ * Se miran DOS sitios, y esto no es una optimización sino un arreglo:
+ *
+ *  · `profiles.restaurant_id` — el staff, y los dueños de antes del modelo
+ *    de membresías;
+ *  · `restaurant_members` (migración 113) — **todo dueño del modelo nuevo**.
+ *    Desde que `signup.ts` crea el perfil con `restaurant_id: null` y el
+ *    alta de restaurante no lo toca a propósito, mirar solo la primera
+ *    columna dejaba esta pantalla SIN el dueño: quien más falta hace aquí,
+ *    porque esta es la última salida cuando olvida su contraseña, no tiene
+ *    Google y el envío de correo no está configurado. Comprobado contra la
+ *    base: los restaurantes creados desde Mi cuenta salían sin dueño.
  */
 export const getRestaurantUsers = cache(
   async (restaurantId: string): Promise<RestaurantUser[]> => {
     const db = createServiceClient();
-    const { data: profiles } = await db
-      .from('profiles')
-      .select('id, role, full_name')
-      .eq('restaurant_id', restaurantId);
+    const [{ data: profiles }, { data: members }] = await Promise.all([
+      db.from('profiles').select('id, role, full_name').eq('restaurant_id', restaurantId),
+      db.from('restaurant_members').select('user_id').eq('restaurant_id', restaurantId).eq('status', 'active'),
+    ]);
 
-    if (!profiles?.length) return [];
+    const porPerfil = new Set((profiles ?? []).map((p) => p.id as string));
+    // Solo los que NO salían ya por su perfil: quien está en los dos sitios
+    // se cuenta una vez, y como lo que es (no "por membresía").
+    const soloMembresia = (members ?? [])
+      .map((m) => m.user_id as string)
+      .filter((id) => !porPerfil.has(id));
+
+    if (!porPerfil.size && !soloMembresia.length) return [];
+
+    const { data: extra } = soloMembresia.length
+      ? await db.from('profiles').select('id, role, full_name').in('id', soloMembresia)
+      : { data: [] as { id: unknown; role: unknown; full_name: unknown }[] };
+
+    const filas = [
+      ...(profiles ?? []).map((p) => ({ p, viaMembership: false })),
+      ...(extra ?? []).map((p) => ({ p, viaMembership: true })),
+    ];
 
     const users = await Promise.all(
-      profiles.map(async (p) => {
+      filas.map(async ({ p, viaMembership }) => {
         const { data } = await db.auth.admin.getUserById(p.id as string);
         return {
           id: p.id as string,
           email: data.user?.email ?? null,
           role: p.role as Profile['role'],
           full_name: (p.full_name as string | null) ?? null,
+          viaMembership,
         };
       }),
     );

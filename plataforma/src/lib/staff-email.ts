@@ -86,6 +86,32 @@ export function parseStaffUsername(
 }
 
 /**
+ * La credencial COMPLETA de un administrador, tal y como se la dicta el dueño
+ * y tal y como la escribe ella en cualquier login: `carlos@rincon-502`.
+ *
+ * No es un buzón —no recibe correo, no existe fuera de Leogin— pero se
+ * escribe igual que uno, y esa es exactamente la idea:
+ *
+ *  · **Es único en toda la plataforma.** Dos restaurantes pueden tener su
+ *    `carlos`, pero `carlos@rincon-502` y `carlos@doña-tere` son dos cosas
+ *    distintas y nunca se pisan. El usuario suelto NO identifica a nadie:
+ *    solo vale dentro del restaurante donde se escribió.
+ *  · **Se puede escribir desde cualquier parte**, incluido el login de la
+ *    página principal, donde no hay subdominio que diga de qué local
+ *    hablamos. Antes esa mitad del sistema era invisible: la credencial se
+ *    entregaba como `carlos` a secas y solo funcionaba desde la dirección
+ *    del restaurante.
+ *  · **No ocupa el correo real de nadie** (ver el bloque de arriba).
+ *
+ * `slug` es la dirección del restaurante (`rincon-502`), la misma que ya
+ * viaja en el subdominio. Sin slug se devuelve el usuario a secas: es lo
+ * único honesto que se puede enseñar.
+ */
+export function staffLoginHandle(username: string, slug: string | null | undefined): string {
+  return slug ? `${username}@${slug}` : username;
+}
+
+/**
  * Qué escribió alguien en el campo de acceso: su correo, o su usuario.
  *
  * Se separan por el PUNTO: un correo de verdad siempre lo lleva en el dominio

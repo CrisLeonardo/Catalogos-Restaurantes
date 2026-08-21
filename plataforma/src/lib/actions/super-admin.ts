@@ -557,8 +557,25 @@ export async function resetRestaurantUserPassword(
     .eq('id', userId)
     .single();
 
-  if (!prof || prof.role === 'SUPER_ADMIN' || prof.restaurant_id !== restaurantId)
-    return { error: 'No autorizado.' };
+  if (!prof || prof.role === 'SUPER_ADMIN') return { error: 'No autorizado.' };
+
+  /* Pertenecer es CUALQUIERA de las dos cosas. Con solo `restaurant_id` esto
+     rechazaba justo a quien venía a rescatar: el dueño del modelo nuevo lo
+     tiene en null y su vínculo vive en `restaurant_members` (migración 113).
+     Así que el último recurso —"llama a Leogin y que te repongan la
+     contraseña"— devolvía "No autorizado" y no quedaba ninguna salida. */
+  let pertenece = prof.restaurant_id === restaurantId;
+  if (!pertenece) {
+    const { data: member } = await db
+      .from('restaurant_members')
+      .select('user_id')
+      .eq('user_id', userId)
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'active')
+      .maybeSingle();
+    pertenece = !!member;
+  }
+  if (!pertenece) return { error: 'No autorizado.' };
 
   const { error } = await db.auth.admin.updateUserById(userId, { password });
   if (error) return { error: error.message };

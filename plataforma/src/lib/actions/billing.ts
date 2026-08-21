@@ -11,6 +11,7 @@
    ============================================================ */
 
 import { createClient } from '@/lib/supabase/server';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath, updateTag } from 'next/cache';
 import {
@@ -475,10 +476,18 @@ export async function getMyBilling(restaurantId: string): Promise<MyBilling> {
     .eq('id', user.id)
     .single();
 
+  // Qué es esta persona EN ESTE restaurante. Mirar solo el perfil dejaba
+  // fuera al dueño del modelo de membresías, que lo tiene en null; y el rol
+  // se toma también del efectivo para no abrirle esto a quien es personal de
+  // OTRO restaurante y aquí solo es mesero.
+  const efectivo = await resolveEffectiveRole(
+    { role: profile?.role ?? null, permissions: null },
+    restaurantId,
+  );
   const allowed =
     profile?.role === 'SUPER_ADMIN' ||
-    (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
-      profile?.restaurant_id === restaurantId);
+    (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(efectivo.role) &&
+      (efectivo.isMember || profile?.restaurant_id === restaurantId));
   if (!allowed) return empty;
 
   const [config, invoices] = await Promise.all([

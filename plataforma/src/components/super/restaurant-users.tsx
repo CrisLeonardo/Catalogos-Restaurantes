@@ -145,12 +145,23 @@ function UserRow({
         >
           Contraseña
         </button>
-        <DeleteButton
-          action={deleteRestaurantUser}
-          hiddenFields={{ userId: user.id, restaurantId }}
-          label="Quitar"
-          confirm={`¿Quitar el acceso de ${user.email ?? 'este usuario'}? Ya no podrá iniciar sesión.`}
-        />
+        {/* Quien aparece por su MEMBRESÍA no se quita desde aquí, y el botón
+            ni siquiera se enseña: "Quitar" borra el usuario de Auth, y esa
+            cuenta puede ser la de un dueño con tres restaurantes — lo
+            dejaría fuera de los tres desde la ficha de uno. Reponerle la
+            contraseña (el rescate) sí se puede, que es a lo que se viene. */}
+        {user.viaMembership ? (
+          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>
+            Su cuenta puede tener más locales
+          </span>
+        ) : (
+          <DeleteButton
+            action={deleteRestaurantUser}
+            hiddenFields={{ userId: user.id, restaurantId }}
+            label="Quitar"
+            confirm={`¿Quitar el acceso de ${user.email ?? 'este usuario'}? Ya no podrá iniciar sesión.`}
+          />
+        )}
       </div>
 
       {showReset && (

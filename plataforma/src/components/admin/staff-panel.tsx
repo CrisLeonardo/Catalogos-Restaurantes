@@ -17,6 +17,7 @@ import {
   type StaffState, type StaffMember, type ActivityRow,
 } from '@/lib/actions/staff';
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
+import { staffLoginHandle } from '@/lib/staff-email';
 
 /** Secciones que un gerente NO recibe con su plantilla.
     'suscripcion' es el cobro del restaurante: quién paga, cuánto y con qué
@@ -64,8 +65,12 @@ function timeAgo(iso: string): string {
 
 const SECTION_LABEL: Record<string, string> = Object.fromEntries(ADMIN_SECTIONS.map((s) => [s.key, s.label]));
 
-export default function StaffPanel({ restaurantId, staff, activity, enabledSections, isOwner = true }: {
+export default function StaffPanel({ restaurantId, slug, staff, activity, enabledSections, isOwner = true }: {
   restaurantId: string;
+  /** La dirección del restaurante (`rincon-502`). Es la segunda mitad de la
+      credencial de un administrador: sin ella, lo que el dueño le dicta
+      (`carlos`) solo funciona desde el subdominio de este local. */
+  slug: string | null;
   staff: StaffMember[];
   activity: ActivityRow[];
   /** Secciones que el restaurante realmente tiene activas — el picker de
@@ -109,7 +114,9 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
               saber cuando alguien le dice "no puedo entrar". */}
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {m.access === 'user'
-              ? `Entra con el usuario ${m.username}`
+              // La credencial ENTERA, no solo el usuario: es lo que hay que
+              // dictarle para que pueda entrar también desde leogin.
+              ? `Entra con ${staffLoginHandle(m.username ?? '', slug)}`
               : conCredencial
                 ? `Entra con ${m.email ?? 'su correo'}`
                 : 'Entra con PIN en el local'}
@@ -158,6 +165,7 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
       {editor.open && (
         <StaffModal
           restaurantId={restaurantId}
+          slug={slug}
           member={editor.member}
           enabledSections={enabledSections}
           isOwner={isOwner}
@@ -169,8 +177,9 @@ export default function StaffPanel({ restaurantId, staff, activity, enabledSecti
   );
 }
 
-function StaffModal({ restaurantId, member, enabledSections, isOwner, onClose, onSaved }: {
+function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onClose, onSaved }: {
   restaurantId: string;
+  slug: string | null;
   member: StaffMember | null;
   enabledSections: string[];
   isOwner: boolean;
@@ -182,6 +191,9 @@ function StaffModal({ restaurantId, member, enabledSections, isOwner, onClose, o
   // Con qué credencial entra: PIN en el aparato del local (lo normal) o un
   // usuario de este restaurante (el administrador, que entra desde donde sea).
   const [access, setAccess] = useState<'pin' | 'user'>('pin');
+  // Controlado solo para poder enseñar la credencial completa mientras se
+  // escribe (`carlos` → `carlos@rincon-502`).
+  const [username, setUsername] = useState('');
   const visibleSections = ADMIN_SECTIONS.filter((s) => enabledSections.includes(s.key));
   /* Un gerente da de alta a SU equipo, no a otro gerente: el servidor lo
      rechaza (ver createStaff), así que tampoco se le ofrece aquí. La
@@ -341,8 +353,32 @@ function StaffModal({ restaurantId, member, enabledSections, isOwner, onClose, o
                     autoCorrect="off"
                     spellCheck={false}
                     placeholder="Ej. carlos"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().trim())}
                     style={input}
                   />
+                  {/* La credencial se enseña ENTERA mientras se escribe. Es
+                      la diferencia entre una credencial que solo funciona
+                      desde el subdominio del local y una que se puede
+                      dictar por WhatsApp y usar desde cualquier parte: el
+                      dueño no tiene forma de adivinar que hay que pegarle
+                      la dirección del restaurante detrás. */}
+                  {username.length >= 3 && slug && (
+                    <div
+                      style={{
+                        marginTop: 8, padding: '9px 12px', borderRadius: 10,
+                        border: '1px solid var(--u-hair)',
+                        background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                      }}
+                    >
+                      <Icon name="key" size={13} />
+                      <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        Entrará escribiendo{' '}
+                        <strong style={{ color: 'var(--u-text)' }}>{staffLoginHandle(username, slug)}</strong>
+                      </span>
+                    </div>
+                  )}
                   <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6 }}>
                     Minúsculas, números, guion y guion bajo. Este usuario es solo de tu
                     restaurante: no ocupa ningún correo ni sirve en ningún otro local.
@@ -360,9 +396,10 @@ function StaffModal({ restaurantId, member, enabledSections, isOwner, onClose, o
                     style={input}
                   />
                   <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
-                    Pásale el usuario y la contraseña, y dile que entre en esta misma
-                    dirección. No aparecerá en la grilla de PIN del local, y si la
-                    olvida se la cambias tú desde su ficha.
+                    Pásale la credencial completa y la contraseña: con eso entra desde
+                    esta misma dirección <em>o</em> desde el botón «Acceder» de la
+                    página de Leogin, sin depender de tu cuenta. No aparecerá en la
+                    grilla de PIN del local, y si la olvida se la cambias tú desde su ficha.
                   </p>
                 </div>
               </>
@@ -435,7 +472,7 @@ function StaffModal({ restaurantId, member, enabledSections, isOwner, onClose, o
                       <input type="hidden" name="restaurantId" value={restaurantId} />
                       <input type="hidden" name="userId" value={member!.id} />
                       <div style={{ flex: 1 }}>
-                        <label style={label}>Nueva contraseña de {member!.username}</label>
+                        <label style={label}>Nueva contraseña de {staffLoginHandle(member!.username ?? '', slug)}</label>
                         <input name="password" type="text" minLength={8} autoComplete="off" placeholder="Mínimo 8 caracteres" style={input} />
                       </div>
                       <Button type="submit" variant="secondary" className="whitespace-nowrap">Cambiar</Button>

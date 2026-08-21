@@ -23,6 +23,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { readResetPass, RESET_COOKIE, resetCookieOptions } from '@/lib/auth/reset-session';
+import { splitLoginIdentifier } from '@/lib/staff-email';
 import { rootDomainForUrls } from '@/lib/tenant';
 
 export type ResetState = { error: string } | { sent: true } | null;
@@ -49,6 +50,20 @@ export async function requestPasswordReset(
   // evita inundar el buzón de una persona concreta.
   if (!(await rateLimit(`reset:${ip}`, 5, 15 * 60_000))) {
     return { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' };
+  }
+  // Quien entra con el usuario de su restaurante (`carlos@azucar-negra`) NO
+  // tiene buzón: su credencial se parece a un correo pero no lo es. Antes
+  // caía en el regex de abajo y se llevaba un "escribe un correo válido" —
+  // le decíamos que se había equivocado cuando lo había escrito perfecto, y
+  // se quedaba sin saber a quién pedirle ayuda. Se comprueba ANTES que el
+  // formato, y sin tocar la base de datos: no hace falta saber si ese
+  // restaurante existe para dar la respuesta correcta.
+  const comoCredencial = splitLoginIdentifier(email, headersList.get('x-tenant-slug'));
+  if (comoCredencial?.kind === 'username') {
+    return {
+      error:
+        'Ese acceso es de tu restaurante, no un correo, así que no hay buzón al que mandarte un enlace. Pídele a la persona dueña que te ponga una contraseña nueva desde Personal. Si la persona dueña eres tú, escribe aquí tu correo completo.',
+    };
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: 'Escribe un correo válido.' };

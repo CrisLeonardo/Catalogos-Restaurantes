@@ -191,25 +191,45 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                   marginBottom: 6,
                 }}
               >
-                {/* En el login de un restaurante caben DOS credenciales: el
-                    correo del dueño y el usuario que el dueño le dio a su
-                    administrador. Nombrar solo el correo dejaba a la mitad
-                    del equipo mirando un campo que creía que no era suyo. */}
-                {slug ? 'Correo o usuario' : 'Email'}
+                {/* En este campo caben DOS credenciales: el correo del dueño
+                    y el usuario que el dueño le dio a su administrador.
+                    Nombrar solo el correo dejaba a la mitad del equipo
+                    mirando un campo que creía que no era suyo.
+
+                    Y vale en los DOS sitios, no solo en el subdominio del
+                    restaurante: desde aquí —la página principal— la
+                    credencial se escribe entera (`carlos@rincon-502`), que
+                    es como se entrega. Antes esto decía "Email", con un
+                    campo `type="email"`, y el administrador se quedaba fuera
+                    sin saber por qué: su credencial funcionaba, pero la
+                    pantalla le decía que ahí solo iban correos. */}
+                Correo o usuario
               </label>
               <input
                 id="email"
                 name="email"
-                type={slug ? 'text' : 'email'}
+                /* `type="text"`, no `email`: `carlos@rincon-502` es una
+                   credencial válida y no un buzón. `inputMode="email"`
+                   conserva el teclado con @ en el teléfono, que es lo único
+                   que se quería de `type="email"`. */
+                type="text"
+                inputMode="email"
                 required
-                autoComplete={slug ? 'username' : 'email'}
+                autoComplete="username"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
                 autoFocus
-                placeholder={slug ? 'tu@email.com  ·  o tu usuario' : 'tu@email.com'}
+                placeholder={slug ? 'tu@email.com  ·  o tu usuario' : 'tu@email.com  ·  o carlos@turestaurante'}
                 style={inputStyle}
               />
+              {!slug && (
+                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 6, lineHeight: 1.5 }}>
+                  ¿Te dieron un usuario? Escríbelo con la dirección de tu
+                  restaurante detrás — <strong>carlos@turestaurante</strong> — o entra
+                  directo desde la dirección de tu local.
+                </p>
+              )}
             </div>
 
             <div>

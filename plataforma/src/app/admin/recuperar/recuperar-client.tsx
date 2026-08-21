@@ -32,6 +32,14 @@ export default function RecuperarClient({ expirado }: { expirado: boolean }) {
           Escribe el correo con el que entras a tu panel y te mandamos un enlace para crear
           una contraseña nueva.
         </p>
+        {/* Se dice ANTES de que lo intente, no después de un error: quien
+            entra con el usuario de su restaurante no tiene buzón, y esta
+            pantalla no puede ayudarle por mucho que lo escriba bien. */}
+        <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--u-text-4)', margin: '8px 0 0' }}>
+          ¿Entras con un usuario que te dio el restaurante (algo como <strong>carlos@turestaurante</strong>)
+          o con un PIN? Eso no tiene correo: pídele a la persona dueña que te lo cambie desde
+          <strong> Personal</strong>, en su panel.
+        </p>
       </div>
 
       {expirado && !sent && (
@@ -71,12 +79,21 @@ export default function RecuperarClient({ expirado }: { expirado: boolean }) {
             >
               Correo
             </label>
+            {/* `text` y no `email`: quien entra con el usuario de su
+                restaurante escribe `carlos` o `carlos@turestaurante`, y con
+                `type="email"` el navegador lo frenaba con un globo suyo
+                ("incluye un @") antes de que el servidor pudiera decirle lo
+                único útil: que su acceso se recupera por otro lado. */}
             <input
               id="reset_email"
               name="email"
-              type="email"
+              type="text"
+              inputMode="email"
               required
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="tu@email.com"
               style={inputStyle}
             />

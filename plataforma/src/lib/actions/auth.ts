@@ -24,18 +24,26 @@ export type AuthState = { error: string } | null;
  * mirar— se acepta también `usuario@direccion-del-restaurante`, para que
  * quien llegue por ahí no se quede sin poder entrar.
  *
- * Devuelve null cuando no hay forma de saber de qué restaurante se habla.
+ * Cuando no se puede, dice POR QUÉ: "no sé de qué restaurante hablas" y "ese
+ * restaurante no existe" se arreglan de formas distintas, y una sola frase
+ * para las dos manda a la persona a revisar lo que estaba bien.
  */
-async function resolveLoginEmail(entrada: string, tenantSlug: string | null): Promise<string | null> {
+type LoginEmail =
+  | { email: string }
+  | { fail: 'sin-restaurante' | 'restaurante-desconocido' };
+
+async function resolveLoginEmail(entrada: string, tenantSlug: string | null): Promise<LoginEmail> {
   const parsed = splitLoginIdentifier(entrada, tenantSlug);
-  if (!parsed) return null;
-  if (parsed.kind === 'email') return parsed.email;
+  // Usuario suelto en un sitio sin restaurante (el dominio raíz), o usuario
+  // mal escrito: en los dos casos lo que falta es la dirección del local.
+  if (!parsed) return { fail: 'sin-restaurante' };
+  if (parsed.kind === 'email') return { email: parsed.email };
 
   const db = createServiceClient();
   const { data } = await db.from('restaurants').select('id').eq('slug', parsed.slug).maybeSingle();
-  if (!data?.id) return null;
+  if (!data?.id) return { fail: 'restaurante-desconocido' };
 
-  return staffUsernameEmail(data.id as string, parsed.username);
+  return { email: staffUsernameEmail(data.id as string, parsed.username) };
 }
 
 export async function login(prevState: AuthState, formData: FormData): Promise<AuthState> {
@@ -57,13 +65,19 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   }
 
   const tenantSlug = cabeceras.get('x-tenant-slug');
-  const email = await resolveLoginEmail(entrada, tenantSlug);
-  if (!email) {
-    // Escribió un usuario suelto en un sitio sin restaurante (el dominio
-    // raíz). Decirle "usuario o contraseña incorrectos" sería mentirle: la
-    // credencial puede estar perfecta y el problema es la dirección.
-    return { error: 'Entra desde la dirección de tu restaurante, o escribe tu correo completo.' };
+  const resuelto = await resolveLoginEmail(entrada, tenantSlug);
+  if ('fail' in resuelto) {
+    // Decirle "usuario o contraseña incorrectos" sería mentirle: la
+    // credencial puede estar perfecta y lo que falta es DE QUÉ local
+    // hablamos. El mensaje enseña el formato, porque quien llega aquí
+    // normalmente ni sabe que existe.
+    return {
+      error: resuelto.fail === 'restaurante-desconocido'
+        ? 'No encontramos ese restaurante. Revisa la dirección que va después del @.'
+        : 'Falta el restaurante: escribe tu usuario con la dirección de tu local detrás, así carlos@turestaurante. Si eres el dueño, entra con tu correo completo.',
+    };
   }
+  const email = resuelto.email;
 
   const supabase = await createClient();
   const { data: signInData, error } = await supabase.auth.signInWithPassword({

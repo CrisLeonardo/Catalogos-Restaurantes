@@ -11,6 +11,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
+import { resolveEffectiveRole } from '@/lib/db/membership';
 import { can } from '@/lib/permissions';
 import { getAllCustomersForExport, type CustomerExportRow } from '@/lib/db/customers';
 import { loyaltyActive } from '@/lib/db/loyalty';
@@ -43,13 +44,22 @@ async function authAndFetch(restaurantId: string): Promise<CustomersExportData |
     .eq('id', user.id)
     .single();
 
+  // Qué es esta persona EN ESTE restaurante. El perfil solo sabe de uno —y
+  // desde el modelo de membresías el dueño lo tiene en null— así que
+  // preguntárselo a él dejaba fuera al dueño de su propio negocio.
+  const efectivo = await resolveEffectiveRole(
+    { role: profile?.role ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
+
   const belongs =
     profile?.role === 'SUPER_ADMIN' ||
+    efectivo.isMember ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
     (await canActOnGroupBranch(restaurantId));
   if (!belongs) return { error: 'No autorizado.' };
-  if (!can(profile?.role, profile?.permissions as string[] | null, 'clientes')) {
+  if (!can(efectivo.role, efectivo.permissions, 'clientes')) {
     return { error: 'No autorizado.' };
   }
 

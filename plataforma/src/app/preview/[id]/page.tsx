@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { getMenuData } from '@/lib/db/menu';
+import { getMyMembership } from '@/lib/db/membership';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
 import PreviewClient from '@/components/super/preview-client';
@@ -63,6 +64,11 @@ async function requirePreviewAccess(id: string) {
   ) {
     return;
   }
+
+  // Y por membresía (migración 113). Sin esto, el dueño del modelo nuevo no
+  // podía ver la vista previa de su propio restaurante: su perfil apunta a
+  // null y su vínculo vive en `restaurant_members`.
+  if (id !== 'new' && (await getMyMembership(id))) return;
 
   // Quien administra un grupo puede previsualizar sus sucursales (mig. 116).
   if (id !== 'new' && profile?.organization_id) {

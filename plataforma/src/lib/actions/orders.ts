@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient, createDinerClient } from '@/lib/supabase/server';
-import { canActOnRestaurant } from '@/lib/db/membership';
+import { canActOnRestaurant, resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveGroupBranchId, canActOnGroupBranch } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
@@ -736,13 +736,20 @@ export async function freeTable(
     .single();
 
   // O administra el grupo de esta sucursal, o es su propio restaurante
-  // (migración 116: ya no hay un rol que preguntar).
+  // (migración 116: ya no hay un rol que preguntar), o tiene membresía aquí
+  // — que es el caso del dueño desde el modelo de membresías, porque su
+  // `profiles.restaurant_id` nace en null y esta línea lo dejaba fuera.
+  const efectivo = await resolveEffectiveRole(
+    { role: (profile?.role as string | null) ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
   const ownsBranch = (await canActOnGroupBranch(restaurantId))
+    || efectivo.isMember
     || profile?.restaurant_id === restaurantId;
   if (
     !profile ||
     !ownsBranch ||
-    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+    !can(efectivo.role, efectivo.permissions, 'mesero')
   ) {
     return { error: 'No autorizado.' };
   }
@@ -963,11 +970,16 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     .single();
   if (!order) return { error: 'Pedido no encontrado.' };
 
+  const efectivo = await resolveEffectiveRole(
+    { role: (requester.role as string | null) ?? null, permissions: (requester.permissions as string[] | null) ?? null },
+    order.restaurant_id as string,
+  );
   const ownsBranch = (await canActOnGroupBranch(order.restaurant_id))
+    || efectivo.isMember
     || requester.restaurant_id === order.restaurant_id;
   if (
     !ownsBranch ||
-    !can(requester.role as string, requester.permissions as string[] | null, 'mesero')
+    !can(efectivo.role, efectivo.permissions, 'mesero')
   ) {
     return { error: 'No autorizado.' };
   }
@@ -1028,13 +1040,20 @@ async function assertTableAccess(restaurantId: string): Promise<{ error: string 
     .single();
 
   // O administra el grupo de esta sucursal, o es su propio restaurante
-  // (migración 116: ya no hay un rol que preguntar).
+  // (migración 116: ya no hay un rol que preguntar), o tiene membresía aquí
+  // — que es el caso del dueño desde el modelo de membresías, porque su
+  // `profiles.restaurant_id` nace en null y esta línea lo dejaba fuera.
+  const efectivo = await resolveEffectiveRole(
+    { role: (profile?.role as string | null) ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
   const ownsBranch = (await canActOnGroupBranch(restaurantId))
+    || efectivo.isMember
     || profile?.restaurant_id === restaurantId;
   if (
     !profile ||
     !ownsBranch ||
-    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+    !can(efectivo.role, efectivo.permissions, 'mesero')
   ) {
     return { error: 'No autorizado.' };
   }
@@ -1189,13 +1208,20 @@ export async function archiveAbandonedTables(restaurantId: string): Promise<{ er
     .single();
 
   // O administra el grupo de esta sucursal, o es su propio restaurante
-  // (migración 116: ya no hay un rol que preguntar).
+  // (migración 116: ya no hay un rol que preguntar), o tiene membresía aquí
+  // — que es el caso del dueño desde el modelo de membresías, porque su
+  // `profiles.restaurant_id` nace en null y esta línea lo dejaba fuera.
+  const efectivo = await resolveEffectiveRole(
+    { role: (profile?.role as string | null) ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
   const ownsBranch = (await canActOnGroupBranch(restaurantId))
+    || efectivo.isMember
     || profile?.restaurant_id === restaurantId;
   if (
     !profile ||
     !ownsBranch ||
-    !can(profile.role as string, profile.permissions as string[] | null, 'mesero')
+    !can(efectivo.role, efectivo.permissions, 'mesero')
   ) {
     return { error: 'No autorizado.' };
   }
@@ -1361,13 +1387,18 @@ async function buildOrdersExportData(
     .eq('id', user.id)
     .single();
 
+  const efectivo = await resolveEffectiveRole(
+    { role: profile?.role ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
   const allowed =
     profile?.role === 'SUPER_ADMIN' ||
+    efectivo.isMember ||
     (['RESTAURANT_OWNER', 'RESTAURANT_STAFF'].includes(profile?.role ?? '') &&
       profile?.restaurant_id === restaurantId) ||
     (await canActOnGroupBranch(restaurantId));
   if (!allowed) return { error: 'No autorizado.' };
-  if (!can(profile?.role, profile?.permissions as string[] | null, 'pedidos')) {
+  if (!can(efectivo.role, efectivo.permissions, 'pedidos')) {
     return { error: 'No autorizado.' };
   }
 
