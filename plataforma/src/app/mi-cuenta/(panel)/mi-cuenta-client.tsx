@@ -4,8 +4,6 @@ import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import LeoginLogo from '@/components/leogin-logo';
-import { logout } from '@/lib/actions/auth';
 import { enterRestaurant, type EntryState } from '@/lib/actions/mi-cuenta';
 import { roleLabel, type MembershipCard } from '@/lib/membership-roles';
 import { type PlanPricing } from '@/lib/plans';
@@ -23,15 +21,14 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function MiCuentaClient({
-  cards, pricing, accountName, accountEmail, canCreate, groupPanel,
+  cards, pricing, accountName, canCreate, groupName,
 }: {
   cards: MembershipCard[];
   pricing: PlanPricing;
   accountName: string;
-  accountEmail: string;
   canCreate: boolean;
-  /** Panel consolidado, si esta cuenta administra una cadena. */
-  groupPanel: { name: string; url: string; branchCount: number } | null;
+  /** Nombre del grupo, si esta cuenta tiene dos o más restaurantes propios. */
+  groupName: string | null;
 }) {
   /** Restaurante cuyo PIN se está pidiendo (null = ninguno). */
   const [asking, setAsking] = useState<MembershipCard | null>(null);
@@ -42,40 +39,11 @@ export default function MiCuentaClient({
   const esElPrimero = !cards.some((c) => c.role === 'OWNER');
 
   return (
-    <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
-      <header
-        className="glass-solid"
-        style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-          height: 56, padding: '0 18px', display: 'flex', alignItems: 'center', gap: 12,
-        }}
-      >
-        <LeoginLogo size={24} />
-        <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 12.5, color: 'var(--u-text-3)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {accountEmail}
-        </span>
-        <form action={logout}>
-          <button
-            type="submit"
-            className="press"
-            style={{
-              fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: '6px 12px',
-              borderRadius: 99, border: '1px solid var(--u-hair-2)',
-              background: 'transparent', color: 'var(--u-text-2)',
-            }}
-          >
-            Salir
-          </button>
-        </form>
-      </header>
-
-      <div
-        className="anim-fade-up"
-        style={{ flex: 1, width: '100%', maxWidth: 720, margin: '0 auto', padding: '38px 18px 72px' }}
-      >
-        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 12 }}>Mi cuenta</div>
+    <>
+      <div className="anim-fade-up">
+        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 12 }}>
+          {groupName ?? 'Mi cuenta'}
+        </div>
         <h1 className="t-display" style={{ fontSize: 'clamp(26px, 5vw, 36px)', lineHeight: 1.1, margin: 0 }}>
           Hola, {accountName.split(' ')[0]}
         </h1>
@@ -86,38 +54,6 @@ export default function MiCuentaClient({
               ? 'Este es tu restaurante.'
               : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`}
         </p>
-
-        {/* El panel consolidado va ARRIBA de las sucursales: quien administra
-            una cadena entra primero a mirar el conjunto y solo después baja a
-            un local concreto. */}
-        {groupPanel && (
-          <a
-            href={groupPanel.url}
-            className="press"
-            style={{ display: 'block', textDecoration: 'none', marginBottom: 12 }}
-          >
-            <Glass style={{ padding: '15px 17px', display: 'flex', alignItems: 'center', gap: 13 }}>
-              <span
-                style={{
-                  width: 42, height: 42, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center',
-                  background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
-                  color: 'var(--brand-accent-ink)',
-                }}
-              >
-                <Icon name="grid" size={19} />
-              </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 15.5, fontWeight: 700, color: 'var(--u-text)' }}>
-                  {groupPanel.name}
-                </span>
-                <span style={{ display: 'block', fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  Panel del grupo · {groupPanel.branchCount} sucursal{groupPanel.branchCount === 1 ? '' : 'es'} juntas
-                </span>
-              </span>
-              <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-            </Glass>
-          </a>
-        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cards.map((c) => (
@@ -162,7 +98,7 @@ export default function MiCuentaClient({
       </div>
 
       {asking && <EntryPinDialog card={asking} onClose={() => setAsking(null)} />}
-    </main>
+    </>
   );
 }
 

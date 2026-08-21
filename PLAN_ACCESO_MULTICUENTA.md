@@ -338,7 +338,7 @@ Las tres son decisiones tuyas; el código las soporta sin cambios de fondo.
 | **3** | "Crear otro restaurante" desde el panel, con su plan y su cobro | Bajo (técnico) / decisión comercial | ✅ **hecho** |
 | **4** | PIN atado a dispositivos vinculados + grilla directa en el aparato del local | Bajo — nace apagado, nadie se queda fuera | ✅ **hecho** |
 | **5a** | Unir las dos vistas: Mi cuenta enseña el panel del grupo y el panel del grupo enseña Mi cuenta | Bajo — solo se añaden enlaces | ✅ **hecho** |
-| **5b** | Retirar el rol `GROUP_OWNER` y dejar solo membresías | Medio — un rol con clientes vivos encima | pendiente, **en entrega aparte** |
+| **5b** | Dejar solo membresías: el consolidado se deduce de tener 2+ restaurantes propios y se muda dentro de Mi cuenta | Medio — se retira el panel de subdominio | ✅ **hecho** (ver §14) |
 
 Las fases 1 y 2 juntas son las que contestan de verdad la pregunta del cliente
 con tres locales. La 3 es la que convierte esa respuesta en ingresos.
@@ -621,3 +621,70 @@ del segundo en adelante** — que es, por cierto, lo que hacen Shopify y Square.
 Lo que sí hacía falta era que las dos vías se encontraran en vez de chocar, y
 eso ya está: quien ya administra un restaurante y cae en `/registro` no ve un
 "necesitas otro correo", ve el camino a Mi cuenta.
+
+---
+
+## 14. Fase 5b (2026-08-20): el grupo deja de ser una fila y pasa a ser un hecho
+
+El usuario lo dijo en una frase: *"ahora solo salen los restaurantes y no los
+demás apartados"*. Tenía razón, y la causa estaba en el §1 de este mismo
+documento sin terminar de arrancar.
+
+**Qué pasaba.** Todo el consolidado existía —resumen, comparativa, finanzas—
+pero solo se encendía si `profiles.organization_id` apuntaba a algo, y la fila
+de `organizations` la creaba **Leogin a mano** desde `/super/grupos`. Con el
+alta de restaurantes ya en manos del dueño (§12e), eso dejaba a casi todo el
+mundo viendo únicamente su lista de restaurantes: la puerta estaba puesta, y
+la llave se había quedado con el modelo viejo. La entrega anterior tapó la
+mitad —crear el segundo restaurante ahora arma la organización sola— pero
+seguía sin cubrir a quien ya tenía dos de antes, ni a quien se quedara sin
+ella si el insert fallaba.
+
+**El cambio de fondo:** *grupo* ya no es una fila, es **tener restaurantes
+propios**. `getMyGroupScope()` (`lib/db/group.ts`) lo deduce de las membresías
+de dueño, sin preguntarle nada a `organizations`.
+
+| | Antes | Ahora |
+|---|---|---|
+| Quién ve el consolidado | quien tuviera `organization_id` (lo ponía Leogin) | cualquiera con un restaurante propio |
+| Dónde vive | `grupo-central.dominio`, con su propio login | secciones de `/mi-cuenta`, misma sesión |
+| Cómo se llega | un enlace que saltaba de subdominio | pestañas: Restaurantes · Resumen · Comparativa · Finanzas |
+| Para qué sirve `organizations` | daba el acceso **y** la marca | solo la marca del grupo y su link único de pedidos |
+
+**Lo que se retiró**, porque describía el modelo viejo y ya no lo sostiene
+nadie: el panel de `/central` con su shell y su login (queda una redirección
+permanente a la sección equivalente de Mi cuenta, para no romper marcadores),
+"Nuevo grupo" y "crear la cuenta del jefe del grupo" en el super admin
+—`/super/grupos` se queda como vista de apoyo—, y el interruptor
+`multi_branch` del editor de planes, que decía "Panel de grupo" y no encendía
+nada.
+
+**Lo que se ganó de paso:** el link único de pedidos del grupo tiene ahora un
+botón que lo crea (`createGroupLink`), en vez de ser un ticket a Leogin; y
+`ensureOwnerOrganization` es idempotente, así que un fallo de red ya no deja a
+nadie sin grupo para siempre.
+
+**Sin migración.** El acceso no depende de ninguna columna nueva, así que esta
+entrega no tiene nada pendiente en producción. La 119 (backfill de grupos)
+sigue siendo útil —le pone marca y link a quien ya tenía varios locales— pero
+dejó de ser el requisito para que se vea el panel.
+
+### Y con un solo restaurante también
+
+Segunda corrección del usuario, el mismo día: *"quiero que muestre los datos
+aunque solo tenga un restaurante, para ver rápido cómo va"*. Tiene razón —
+mirar la marcha del negocio sin entrar al panel no es una función de cadena—,
+así que las secciones aparecen desde el **primer** restaurante propio, con
+tres matices:
+
+- **Comparativa** sigue pidiendo dos o más: con uno, el ranking es una barra
+  al 100% contra sí misma.
+- **Finanzas** respeta el plan. Es una función de pago desde Estándar
+  (§*Finanzas a Estándar*), y esta pantalla no puede ser la puerta de atrás
+  que se la regala a un BASICO: la pestaña sale con candado y lleva a su
+  suscripción, exactamente como en el menú lateral del panel. El candado se
+  repite en la acción del export (`group-finance.ts`), porque esconder un
+  botón no es una defensa.
+- Con uno solo desaparece lo que sobra: el link único del grupo (su
+  restaurante ya tiene el suyo), la tabla "por restaurante" —una fila que
+  repite los totales— y la palabra "grupo" de los títulos.

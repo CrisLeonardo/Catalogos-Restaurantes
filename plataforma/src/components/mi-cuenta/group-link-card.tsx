@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Icon } from '@/components/icons';
 
-/* Tarjeta del link público de pedidos del grupo (en /central).
+/* Tarjeta del link público de pedidos del grupo (en Mi cuenta).
    El cliente final entra a este link y lo enrutamos a su sucursal más
    cercana. Reutiliza /api/qr para generar un QR del flyer. */
 

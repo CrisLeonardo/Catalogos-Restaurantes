@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
-import { getGroupContext, getGroupReport } from '@/lib/db/group';
+import { getMyGroupScope, getGroupReport } from '@/lib/db/group';
 import DateRangeForm from '@/components/admin/date-range-form';
 
-export const metadata = { title: 'Comparativa' };
+export const metadata = { title: 'Comparativa — Leogin' };
+export const dynamic = 'force-dynamic';
 
 const money = (n: number) => `Q${n.toFixed(2)}`;
 function todayYmd(): string { return new Date().toLocaleDateString('en-CA'); }
@@ -12,23 +13,31 @@ function shiftYmd(ymd: string, days: number): string {
 }
 const isYmd = (s: string | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
-export default async function CentralComparativaPage({
+/** COMPARATIVA — quién vende más, y cuánto pesa cada uno en el total. */
+export default async function ComparativaPage({
   searchParams,
 }: { searchParams: Promise<{ from?: string; to?: string }> }) {
-  const ctx = await getGroupContext();
-  if (!ctx) redirect('/central/login');
+  const scope = await getMyGroupScope();
+  if (!scope?.isGroup) redirect('/mi-cuenta');
 
   const sp = await searchParams;
   const to = isYmd(sp.to) ? sp.to : todayYmd();
   const from = isYmd(sp.from) ? sp.from : shiftYmd(to, -29);
 
-  const report = await getGroupReport(ctx.branches, from, to);
+  const report = await getGroupReport(scope.branches, from, to);
   const maxRevenue = Math.max(...report.perBranch.map((b) => b.revenue), 1);
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div>
+        <div className="t-kicker" style={{ fontSize: 11, marginBottom: 8 }}>{scope.name}</div>
+        <h1 className="t-display" style={{ fontSize: 'clamp(22px, 4vw, 28px)', lineHeight: 1.15, margin: 0 }}>
+          Comparativa
+        </h1>
+      </div>
+
       <div className="glass" style={{ borderRadius: 16, padding: 16 }}>
-        <DateRangeForm from={from} to={to} basePath="/central/comparativa" />
+        <DateRangeForm from={from} to={to} basePath="/mi-cuenta/comparativa" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
@@ -37,9 +46,8 @@ export default async function CentralComparativaPage({
         <Kpi label="Utilidad" value={money(report.totalProfit)} />
       </div>
 
-      {/* Ranking por sucursal */}
       <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Ingreso por sucursal</div>
+        <div className="t-kicker" style={{ fontSize: 9.5 }}>Ingreso por restaurante</div>
         {report.perBranch.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
         ) : report.perBranch.map((b) => {
@@ -48,9 +56,9 @@ export default async function CentralComparativaPage({
           const m = b.revenue > 0 ? (b.profit / b.revenue) * 100 : null;
           return (
             <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{b.name}</span>
-                <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>{money(b.revenue)} · {share.toFixed(0)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, gap: 10 }}>
+                <span style={{ color: 'var(--u-text-2)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
+                <span style={{ color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>{money(b.revenue)} · {share.toFixed(0)}%</span>
               </div>
               <div style={{ height: 8, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', overflow: 'hidden' }}>
                 <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 99 }} />

@@ -14,7 +14,7 @@ import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
-import { adminUrl, subdomainUrl } from '@/lib/tenant';
+import { adminUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { getMyMemberships } from '@/lib/db/membership';
@@ -112,26 +112,25 @@ export default async function AdminProtectedLayout({
     zone = tenantData.resolved.config.zone ?? '';
     dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
   } else {
-    // Sin subdominio de restaurante: el dueño de grupo va a su panel, el resto
-    // se queda con su propio restaurante (Leogin Desktop arranca así).
-    if (await myOrganizationId()) redirect('/central');
+    // Sin subdominio de restaurante: quien tiene varios va a Mi cuenta a
+    // elegir, el resto se queda con el suyo (Leogin Desktop arranca así).
+    if (await myOrganizationId()) redirect('/mi-cuenta');
     if (profile.role !== 'SUPER_ADMIN' && !profile.restaurant_id) redirect('/admin/login');
     restaurantName = ctx.restaurant?.name ?? 'Panel admin';
   }
 
-  // Enlace "volver al grupo" (solo quien administra el grupo, dentro de una de
-  // sus sucursales). organizations no tiene RLS para ese caso → cliente de
-  // servicio. Desde la migración 116 se reconoce por la organización del
-  // perfil, no por un rol.
-  if (currentRestaurant?.organization_id
-      && (await myOrganizationId()) === currentRestaurant.organization_id) {
-    const svc = createServiceClient();
-    const { data: org } = await svc
-      .from('organizations')
-      .select('slug')
-      .eq('id', currentRestaurant.organization_id)
-      .maybeSingle();
-    if (org?.slug) groupReturnUrl = subdomainUrl(`${org.slug}-central`);
+  // Enlace "ver el conjunto": quien tiene DOS O MÁS restaurantes propios,
+  // estando dentro de uno. Antes esto dependía de que existiera una fila en
+  // `organizations` (que solo creaba Leogin) y apuntaba a otro subdominio;
+  // hoy el consolidado es una sección de Mi cuenta y lo abre cualquiera que
+  // tenga con qué compararlo.
+  //
+  // El enlace va RELATIVO a propósito: el proxy no reescribe /mi-cuenta bajo
+  // el subdominio del panel, así que funciona igual en local y en producción
+  // sin saltar a un host donde quizá no haya sesión.
+  if (currentRestaurant
+      && (await getMyMemberships()).filter((m) => m.role === 'OWNER').length > 1) {
+    groupReturnUrl = '/mi-cuenta/resumen';
   }
 
   // Aviso de correo sin confirmar: solo al DUEÑO (el personal entra por PIN

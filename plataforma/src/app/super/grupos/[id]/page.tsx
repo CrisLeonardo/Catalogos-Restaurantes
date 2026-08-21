@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { getOrganizationDetail } from '@/lib/db/super-admin';
 import { assignRestaurantToOrg, unassignRestaurant, deleteOrganization } from '@/lib/actions/super-admin';
 import { subdomainUrl } from '@/lib/tenant';
-import { GroupOwnerForm } from '@/components/super/group-forms';
 
 export const metadata = { title: 'Grupo – Super Admin' };
 
@@ -12,7 +11,10 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
   const { org, branches, available, owners } = await getOrganizationDetail(id);
   if (!org) notFound();
 
-  const panelUrl = subdomainUrl(`${org.slug}-central`);
+  // El link PÚBLICO del grupo: el que reparte al cliente a la sucursal más
+  // cercana. El panel del jefe ya no vive en un subdominio aparte — es una
+  // sección de su Mi cuenta, y solo él entra ahí.
+  const publicUrl = subdomainUrl(org.slug);
 
   const card: React.CSSProperties = { borderRadius: 16, padding: 20 };
   const sectionTitle: React.CSSProperties = { fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 };
@@ -22,8 +24,8 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
       <Link href="/super/grupos" className="press t-mute" style={{ fontSize: 13, textDecoration: 'none' }}>← Grupos</Link>
       <div>
         <h1 className="t-display" style={{ fontSize: 26 }}>{org.name}</h1>
-        <a href={panelUrl} target="_blank" rel="noopener noreferrer" className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
-          {org.slug}-central · abrir panel →
+        <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="t-mono" style={{ fontSize: 13, color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
+          {org.slug} · link de pedidos del grupo →
         </a>
       </div>
 
@@ -61,11 +63,17 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
         )}
       </div>
 
-      {/* Acceso del jefe */}
+      {/* Quién lo administra — informativo. Crear aquí una cuenta de "jefe de
+          grupo" a mano era el modelo viejo; hoy quien abre los restaurantes
+          es ya su dueño y ve el consolidado en su propia Mi cuenta. */}
       <div className="glass" style={card}>
-        <div style={sectionTitle}>Acceso del jefe (dueño de grupo)</div>
-        {owners.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+        <div style={sectionTitle}>Quién lo administra</div>
+        {owners.length === 0 ? (
+          <p style={{ fontSize: 13.5, color: 'var(--u-text-4)', margin: 0 }}>
+            Nadie tiene este grupo en su perfil todavía.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {owners.map((o) => (
               <div key={o.id} style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>
                 {o.full_name ? `${o.full_name} · ` : ''}<span className="t-mono" style={{ color: 'var(--u-text-3)' }}>{o.email}</span>
@@ -73,7 +81,6 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
             ))}
           </div>
         )}
-        <GroupOwnerForm orgId={org.id} />
       </div>
 
       {/* Eliminar */}

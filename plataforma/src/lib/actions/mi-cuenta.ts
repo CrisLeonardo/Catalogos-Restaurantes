@@ -20,6 +20,7 @@ import { isValidPin, PIN_LENGTH } from '@/lib/staff-pin-crypto';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { adminUrl } from '@/lib/tenant';
 import { slugify, validateSlug, crossSlugCollision, slugTaken, uniqueSlug } from '@/lib/slug';
+import { ensureOwnerOrganization } from '@/lib/db/organizations';
 import { withPlanFloor, ESTANDAR_MAX_ORDER_TYPES, type PlanCode } from '@/lib/plans';
 import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
@@ -33,26 +34,6 @@ async function currentUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   return user;
-}
-
-/**
- * Slug libre para un grupo nuevo (base, base-2, base-3…). El subdominio es
- * un namespace compartido con los restaurantes (ver crossSlugCollision), así
- * que hay que revisar las dos tablas, no solo `organizations`.
- */
-async function uniqueOrgSlug(db: ReturnType<typeof createServiceClient>, base: string): Promise<string> {
-  const taken = async (s: string) => {
-    const { data } = await db.from('organizations').select('id').eq('slug', s).maybeSingle();
-    return !!data || !!(await crossSlugCollision(db, s, 'organizations'));
-  };
-  const root = base || 'grupo';
-  let slug = root.slice(0, 56);
-  if (!(await taken(slug))) return slug;
-  for (let n = 2; n < 100; n++) {
-    slug = `${root.slice(0, 52)}-${n}`;
-    if (!(await taken(slug))) return slug;
-  }
-  return `${root.slice(0, 46)}-${Date.now().toString(36)}`;
 }
 
 /* ── Entrar a un restaurante ─────────────────────────────────── */
@@ -220,49 +201,27 @@ export async function createAnotherRestaurant(
 
   const db = createServiceClient();
 
-  // Si quien crea administra una cadena, el local nuevo nace DENTRO de ella:
-  // es lo que hace que aparezca solo en el panel consolidado, sin que nadie
-  // tenga que pedirle a Leogin que lo enlace a mano después. La cadena se
-  // reconoce por la organización del perfil (migración 116).
+  // Si quien crea ya tiene otro restaurante propio, el local nuevo nace
+  // DENTRO de su grupo: es lo que le da al conjunto una marca y un link
+  // único de pedidos sin pedírselo a nadie. El PANEL consolidado no depende
+  // de esto (lo dan las membresías, ver getMyGroupScope); la organización es
+  // solo la marca del grupo.
   const { data: creator } = await db
     .from('profiles')
-    .select('organization_id, full_name')
+    .select('organization_id')
     .eq('id', user.id)
     .maybeSingle();
   let organizationId = (creator?.organization_id as string | null) ?? null;
 
-  // Segundo restaurante PROPIO y todavía sin grupo: antes esto era exactamente
-  // el hueco del modelo viejo — "dueño de 2+ locales" solo existía si Leogin
-  // le armaba un grupo a mano (ver PLAN_ACCESO_MULTICUENTA.md §1 y §2). Con
-  // membresías ya no hace falta pedirlo: se crea el grupo aquí mismo, y con
-  // él aparecen solos el panel consolidado en Mi cuenta y el aviso "volver al
-  // grupo" dentro de cada sucursal — nada de eso es nuevo, solo estaba
-  // huérfano de quién lo encendiera.
   if (!organizationId && !esElPrimero) {
-    const ownedIds = memberships.filter((m) => m.role === 'OWNER').map((m) => m.restaurantId);
-    const fullName = (creator?.full_name as string | null) ?? null;
-    const orgSlug = await uniqueOrgSlug(db, slugify(fullName ?? 'grupo'));
-
-    const { data: org } = await db
-      .from('organizations')
-      .insert({
-        name: fullName ? `Restaurantes de ${fullName}` : 'Mis restaurantes',
-        slug: orgSlug,
-        contact_email: user.email ?? null,
-      })
-      .select('id')
-      .single();
-
-    // Si la creación del grupo falla por lo que sea, el restaurante se crea
-    // igual, suelto: no vale la pena tirar toda el alta por un extra que se
-    // puede resolver después a mano, igual que se resolvía antes.
-    if (org) {
-      organizationId = org.id as string;
-      if (ownedIds.length > 0) {
-        await db.from('restaurants').update({ organization_id: organizationId }).in('id', ownedIds);
-      }
-      await db.from('profiles').update({ organization_id: organizationId }).eq('id', user.id);
-    }
+    // Si falla, el restaurante se crea igual, suelto: la organización se
+    // puede armar después desde Mi cuenta (es idempotente), y no vale la
+    // pena tirar un alta que el cliente ya pagó por un extra de marca.
+    organizationId = await ensureOwnerOrganization({
+      userId: user.id,
+      email: user.email,
+      restaurantIds: memberships.filter((m) => m.role === 'OWNER').map((m) => m.restaurantId),
+    });
   }
 
   // ── Dirección (slug) ───────────────────────────────────────
@@ -355,4 +314,41 @@ export async function createAnotherRestaurant(
      que le expliquen el producto otra vez. */
   if (esElPrimero) redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
   redirect(`${adminUrl(slug)}/menu?welcome=1`);
+}
+
+/* ── El link único de pedidos del grupo ──────────────────────── */
+
+/**
+ * Arma la organización de esta persona para encender el link único de
+ * pedidos del grupo (`grupo.dominio`, que reparte al cliente a la sucursal
+ * más cercana) y la marca de los reportes consolidados.
+ *
+ * Normalmente ya existe: nace sola al crear el segundo restaurante. Esto es
+ * para quien tenía sus restaurantes de antes de ese cambio, o para quien se
+ * quedó sin ella porque el insert falló aquel día. Antes eso era un ticket a
+ * Leogin; ahora es un botón.
+ */
+export async function createGroupLink(): Promise<{ error: string } | { ok: true }> {
+  const user = await currentUser();
+  if (!user) return { error: 'No autorizado.' };
+
+  const memberships = await getMyMemberships();
+  const ownedIds = memberships.filter((m) => m.role === 'OWNER').map((m) => m.restaurantId);
+  // Un solo restaurante no es un grupo: el link del grupo llevaría a un
+  // selector de una sola sucursal, que es peor que el link del restaurante.
+  if (ownedIds.length < 2) return { error: 'Necesitas dos o más restaurantes propios.' };
+
+  if (!(await rateLimit(`group-link:${user.id}`, 5, 60 * 60_000))) {
+    return { error: 'Demasiados intentos. Espera un rato.' };
+  }
+
+  const orgId = await ensureOwnerOrganization({
+    userId: user.id,
+    email: user.email,
+    restaurantIds: ownedIds,
+  });
+  if (!orgId) return { error: 'No se pudo crear el grupo. Inténtalo de nuevo.' };
+
+  revalidatePath('/mi-cuenta', 'layout');
+  return { ok: true };
 }

@@ -86,7 +86,7 @@ describe('quien administra un grupo', () => {
     const d = decideTenantAccess(
       input({ ...go, tenantSlug: 'ajeno', tenant: { id: 'rest-b', organizationId: 'org-2' } }),
     );
-    expect(d).toEqual({ allow: false, redirectTo: '/central' });
+    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta' });
   });
 
   it('sin organización en su perfil tampoco entra', () => {
@@ -148,7 +148,7 @@ describe('varios restaurantes con una sola cuenta (migración 113)', () => {
         tenantSlug: 'ajeno',
         tenant: { id: 'rest-b', organizationId: 'org-2' },
       })),
-    ).toEqual({ allow: false, redirectTo: '/central' });
+    ).toEqual({ allow: false, redirectTo: '/mi-cuenta' });
   });
 });
 

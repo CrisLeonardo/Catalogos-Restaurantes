@@ -1,15 +1,18 @@
 'use server';
 
 /* ============================================================
-   FINANZAS DE GRUPO — export a PDF/Excel (marca de organización)
+   FINANZAS DE MI CUENTA — export a PDF/Excel
    ------------------------------------------------------------
-   Reusa getGroupContext() (mismo auth que /central/finanzas:
-   el jefe del grupo por su organización, SUPER_ADMIN por x-org-slug) y
-   re-deriva el reporte en servidor vía getGroupReport — nunca se
+   Reusa getMyGroupScope() (el mismo candado que /mi-cuenta/finanzas: los
+   restaurantes de los que esta persona es dueña, Y que su plan incluya los
+   reportes) y re-deriva el reporte en servidor vía getGroupReport — nunca se
    confía en números que mande el cliente.
+
+   El candado del plan se repite aquí a propósito: esconder el botón no es
+   una defensa, la acción es una URL más.
    ============================================================ */
 
-import { getGroupContext, getGroupReport, type GroupReport } from '@/lib/db/group';
+import { getMyGroupScope, getGroupReport, type GroupReport } from '@/lib/db/group';
 import { resolveRestaurantBranding, resolveOrganizationBranding } from '@/lib/documents/branding';
 import {
   createBrandedWorkbook, addBrandedHeader, writeStyledTable, freezeHeaderRow, autoFitColumns,
@@ -21,28 +24,43 @@ import type { DocumentBranding } from '@/lib/documents/types';
 type GroupFinanceData = {
   report: GroupReport;
   branding: DocumentBranding;
-  orgSlug: string;
+  /** Título del documento: cambia si son varios restaurantes o uno. */
+  title: string;
+  /** Para el nombre del archivo. */
+  slug: string;
 };
 
 async function authAndBuildGroupReport(from: string, to: string): Promise<GroupFinanceData | { error: string }> {
-  const ctx = await getGroupContext();
-  if (!ctx) return { error: 'No autorizado.' };
-  if (ctx.branches.length === 0) return { error: 'El grupo no tiene sucursales.' };
+  const scope = await getMyGroupScope();
+  if (!scope) return { error: 'No autorizado.' };
+  if (!scope.hasFinance) return { error: 'Tu plan no incluye los reportes financieros.' };
 
   const [report, restaurantBrand] = await Promise.all([
-    getGroupReport(ctx.branches, from, to),
+    getGroupReport(scope.branches, from, to),
     // La moneda no vive en Organization ni en el reporte de grupo: se toma
-    // de la primera sucursal (supuesto documentado: un grupo, una moneda).
-    resolveRestaurantBranding(ctx.branches[0].id),
+    // del primer restaurante (supuesto documentado: un grupo, una moneda).
+    resolveRestaurantBranding(scope.branches[0].id),
   ]);
 
-  const branding = await resolveOrganizationBranding(ctx.org, {
+  const currency = {
     symbol: restaurantBrand.currencySymbol,
     position: restaurantBrand.currencyPosition,
     locale: restaurantBrand.locale,
-  });
+  };
 
-  return { report, branding, orgSlug: ctx.org.slug };
+  // Con organización, la marca del grupo. Sin ella —el reporte ya no la
+  // exige— se toma el color del primer restaurante y el nombre del conjunto,
+  // que es lo que la persona ve en pantalla.
+  const branding: DocumentBranding = scope.org
+    ? await resolveOrganizationBranding(scope.org, currency)
+    : { ...restaurantBrand, kind: 'organization', name: scope.name, subtitle: null, logoUrl: null };
+
+  return {
+    report,
+    branding,
+    title: scope.isGroup ? 'Reporte financiero de grupo' : 'Reporte financiero',
+    slug: scope.org?.slug ?? scope.branches[0].slug,
+  };
 }
 
 /** Datos ya armados (reporte + marca de organización) para dibujar el PDF en el cliente. */
@@ -57,14 +75,14 @@ export async function exportGroupFinanceXlsx(
 ): Promise<{ xlsx?: string; filename?: string; error?: string }> {
   const data = await authAndBuildGroupReport(from, to);
   if ('error' in data) return data;
-  const { report, branding, orgSlug } = data;
+  const { report, branding, title, slug } = data;
 
   const subtitle = `${formatDateRangeLabel(from, to)} · Generado el ${longDate(new Date().toISOString())}`;
   const wb = await createBrandedWorkbook();
-  const ws = wb.addWorksheet('Finanzas de grupo');
+  const ws = wb.addWorksheet('Finanzas');
 
   const headers = ['Sucursal', 'Ingreso', 'Costo', 'Utilidad', 'Margen %', 'Pedidos', 'Ticket promedio'];
-  addBrandedHeader(ws, { branding, title: 'Reporte financiero de grupo', subtitle, columnsSpan: headers.length });
+  addBrandedHeader(ws, { branding, title, subtitle, columnsSpan: headers.length });
 
   const rows = report.perBranch.map((b) => {
     const cost = b.revenue - b.profit;
@@ -80,7 +98,8 @@ export async function exportGroupFinanceXlsx(
   const totalMargin = report.totalRevenue > 0 ? (report.totalProfit / report.totalRevenue) * 100 : 0;
   const totalTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
   const totalsRow = ws.addRow([
-    'TOTAL GRUPO', report.totalRevenue, totalCost, report.totalProfit, totalMargin, report.totalOrders, totalTicket,
+    report.perBranch.length > 1 ? 'TOTAL GRUPO' : 'TOTAL',
+    report.totalRevenue, totalCost, report.totalProfit, totalMargin, report.totalOrders, totalTicket,
   ]);
   styleTotalsRow(totalsRow);
   [2, 3, 4, 7].forEach((c) => setCurrencyCell(totalsRow.getCell(c), branding));
@@ -90,5 +109,5 @@ export async function exportGroupFinanceXlsx(
   autoFitColumns(ws);
 
   const xlsx = await workbookToBase64(wb);
-  return { xlsx, filename: `finanzas-grupo-${orgSlug}_${from}_a_${to}.xlsx` };
+  return { xlsx, filename: `finanzas-${slug}_${from}_a_${to}.xlsx` };
 }

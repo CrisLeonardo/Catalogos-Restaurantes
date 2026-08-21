@@ -630,42 +630,10 @@ export async function updateOrderTypes(
 
 /* ── Grupos / organizaciones (Fase E) ──────────────────────────────── */
 
-export async function createOrganization(
-  prevState: SuperState,
-  formData: FormData,
-): Promise<SuperState> {
-  const db = await verifySuperAdmin();
-  if (!db) return { error: 'No autorizado.' };
-
-  const name = (formData.get('name') as string)?.trim();
-  if (!name) return { error: 'El nombre del grupo es requerido.' };
-
-  const slug = (formData.get('slug') as string)?.trim().toLowerCase() || slugify(name);
-  const slugError = validateSlug(slug);
-  if (slugError) return { error: slugError };
-  const collision = await crossSlugCollision(db, slug, 'organizations');
-  if (collision) return { error: collision };
-
-  const { data: org, error } = await db
-    .from('organizations')
-    .insert({
-      name,
-      slug,
-      contact_email: (formData.get('contact_email') as string)?.trim() || null,
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    if (error.message.includes('unique') || error.message.includes('duplicate')) {
-      return { error: `El slug "${slug}" ya existe. Elige otro.` };
-    }
-    return { error: error.message };
-  }
-
-  revalidatePath('/super/grupos');
-  redirect(`/super/grupos/${org.id}`);
-}
+/* Crear un grupo a mano se retiró: nace solo cuando alguien abre su segundo
+   restaurante desde Mi cuenta (ver lib/db/organizations.ts). Lo que queda
+   aquí es mover una sucursal de grupo o deshacer uno, que sigue siendo
+   trabajo de soporte. */
 
 export async function assignRestaurantToOrg(formData: FormData) {
   const db = await verifySuperAdmin();
@@ -693,50 +661,10 @@ export async function unassignRestaurant(formData: FormData) {
   revalidatePath('/super/finanzas', 'layout');
 }
 
-export async function createGroupOwner(
-  prevState: SuperState,
-  formData: FormData,
-): Promise<SuperState> {
-  const db = await verifySuperAdmin();
-  if (!db) return { error: 'No autorizado.' };
-
-  const orgId = (formData.get('orgId') as string)?.trim();
-  const email = (formData.get('email') as string)?.trim().toLowerCase();
-  const password = (formData.get('password') as string) ?? '';
-  const fullName = (formData.get('full_name') as string)?.trim() || null;
-
-  if (!orgId) return { error: 'Grupo inválido.' };
-  if (!email || !email.includes('@')) return { error: 'Email inválido.' };
-  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' };
-
-  const { data: created, error: createErr } = await db.auth.admin.createUser({
-    email, password, email_confirm: true, user_metadata: { full_name: fullName },
-  });
-  if (createErr || !created?.user) {
-    const m = createErr?.message?.toLowerCase() ?? '';
-    if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
-      return { error: `Ya existe un usuario con el email ${email}.` };
-    }
-    return { error: createErr?.message ?? 'No se pudo crear el usuario.' };
-  }
-
-  const { error: profErr } = await db.from('profiles').upsert({
-    id: created.user.id,
-    // Sin rol propio desde la migración 116: es un dueño más, y lo que le da
-    // el grupo entero es `organization_id`.
-    role: 'RESTAURANT_OWNER',
-    organization_id: orgId,
-    restaurant_id: null,
-    full_name: fullName,
-  });
-  if (profErr) {
-    await db.auth.admin.deleteUser(created.user.id);
-    return { error: profErr.message };
-  }
-
-  revalidatePath(`/super/grupos/${orgId}`);
-  redirect(`/super/grupos/${orgId}?saved=owner`);
-}
+/* Crear a mano la cuenta del "jefe del grupo" también se retiró. Era el
+   modelo de "te creo la cuenta y te la paso": hoy quien abre los
+   restaurantes ya es su dueño, y el consolidado lo ve desde su propia Mi
+   cuenta sin credenciales aparte. */
 
 export async function deleteOrganization(formData: FormData) {
   const db = await verifySuperAdmin();

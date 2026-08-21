@@ -1,9 +1,9 @@
 import { Icon } from '@/components/icons';
 
 /**
- * Banner que aparece cuando un DUEÑO DE GRUPO está administrando una de sus
- * sucursales desde el panel admin (sin re-login). Le recuerda en qué sucursal
- * está y le da una salida de un toque de vuelta al panel del grupo.
+ * Aviso para quien tiene VARIOS restaurantes y está dentro de uno. Le
+ * recuerda en cuál está y le da una salida de un toque al consolidado de
+ * todos, que vive en Mi cuenta.
  */
 export default function GroupOwnerBanner({
   branchName,
@@ -26,7 +26,7 @@ export default function GroupOwnerBanner({
         <Icon name="box" size={17} />
       </span>
       <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>
-        Estás administrando <strong style={{ color: 'var(--u-text)' }}>{branchName}</strong> como dueño del grupo.
+        Estás administrando <strong style={{ color: 'var(--u-text)' }}>{branchName}</strong>, uno de tus restaurantes.
       </div>
       <a
         href={returnUrl}
@@ -37,7 +37,7 @@ export default function GroupOwnerBanner({
           background: 'var(--u-text)', color: 'var(--brand-bg)', textDecoration: 'none',
         }}
       >
-        <Icon name="chevronLeft" size={15} /> Volver al grupo
+        <Icon name="chevronLeft" size={15} /> Ver todos juntos
       </a>
     </div>
   );

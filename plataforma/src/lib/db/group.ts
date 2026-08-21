@@ -1,63 +1,132 @@
 import { cache } from 'react';
-import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getMyMemberships } from '@/lib/db/membership';
+import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
+import { adminUrl } from '@/lib/tenant';
 import { getOrderStats } from '@/lib/db/orders';
 import { getSalesReport, type SalesReport } from '@/lib/db/reports';
 import type { Organization, Restaurant } from '@/types';
 
 /* ============================================================
-   PANEL DE GRUPO — capa de datos (Fase E)
-   Quien administra el grupo ve consolidado de todas sus sucursales.
-   Auth: el jefe del grupo por su organization_id; SUPER_ADMIN por x-org-slug.
+   GRUPO — capa de datos del panel consolidado
+   ------------------------------------------------------------
+   "Grupo" es, desde hoy, una cosa que se deduce: **tener más de un
+   restaurante propio**. No hace falta que exista una fila en
+   `organizations`, ni que Leogin la cree, ni un rol aparte.
+
+   Antes era al revés y ahí estaba el hueco que el usuario notó: el panel
+   consolidado solo se encendía si `profiles.organization_id` estaba puesto,
+   y la única forma de ponerlo era un ticket a Leogin. Con el alta de
+   restaurantes ya en manos del dueño (Mi cuenta), eso dejaba a casi todo el
+   mundo viendo únicamente su lista de restaurantes y ningún dato junto.
+
+   La organización sigue existiendo, pero para lo que sí es suyo: la marca
+   del grupo en los reportes y el link único de pedidos (`grupo.dominio`).
+   Ver lib/db/organizations.ts.
    ============================================================ */
 
-export type GroupContext = {
-  org: Organization;
+export type GroupScope = {
+  /** Los restaurantes propios, por nombre. */
   branches: Restaurant[];
+  /** La organización, si esta cuenta ya tiene una (marca + link del grupo). */
+  org: Organization | null;
+  /** Nombre a mostrar: el del grupo, o el del restaurante si es uno solo. */
+  name: string;
   userId: string;
-  role: string;
+  /** Hay VARIOS restaurantes que comparar entre sí. Con uno no hay grupo,
+      pero sí hay resumen y finanzas: ver la marcha del negocio de un vistazo
+      no es una función de cadena. */
+  isGroup: boolean;
+  /**
+   * Al menos un restaurante propio trae los reportes financieros.
+   *
+   * Es una función de PAGO (Estándar en adelante, ver plans.ts): mirarla
+   * desde aquí no puede ser la puerta de atrás que la regala a quien está en
+   * el plan gratis. Se mide igual que el panel de cada restaurante —módulo
+   * `finanzas` efectivo y `orders` activo— porque el reporte se construye
+   * con los pedidos.
+   */
+  hasFinance: boolean;
+  /** A dónde mandar a quien no la tiene: la suscripción de su restaurante. */
+  upgradeUrl: string | null;
 };
 
-export const getGroupContext = cache(async (): Promise<GroupContext | null> => {
+/** Módulos efectivos de un restaurante (plan + lo que Leogin le habilitó). */
+function effectiveModules(b: Restaurant): Record<string, boolean> {
+  const plan = ((PLAN_ORDER as string[]).includes(b.plan_actual) ? b.plan_actual : 'BASICO') as PlanCode;
+  return withPlanFloor(plan, (b.modules as unknown as Record<string, boolean> | null) ?? {});
+}
+
+/**
+ * Qué restaurantes propios tiene quien está dentro, y bajo qué marca.
+ *
+ * Fuente de verdad: las membresías de DUEÑO. Un gerente invitado a dos
+ * sucursales no ve el consolidado de su jefe — igual que antes, pero ahora
+ * la regla se lee en un solo sitio.
+ *
+ * Se suman también los restaurantes de su organización, si tiene: los grupos
+ * que Leogin armó a mano antes de este cambio podían tener al jefe SIN
+ * membresías (solo `organization_id`), y esa gente no puede quedarse fuera
+ * de su propio panel por un detalle de cómo se dio de alta.
+ */
+export const getMyGroupScope = cache(async (): Promise<GroupScope | null> => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, organization_id')
-    .eq('id', user.id)
-    .single();
-  if (!profile) return null;
-
   const db = createServiceClient();
-  let orgId: string | null = null;
+  const [{ data: profile }, memberships] = await Promise.all([
+    db.from('profiles').select('full_name, organization_id').eq('id', user.id).maybeSingle(),
+    getMyMemberships(),
+  ]);
 
-  // Quien administra un grupo se reconoce por su organización (mig. 116).
-  if (profile.organization_id) {
-    orgId = profile.organization_id as string | null;
-  } else if (profile.role === 'SUPER_ADMIN') {
-    const slug = (await headers()).get('x-org-slug');
-    if (slug) {
-      const { data: o } = await db.from('organizations').select('id').eq('slug', slug).maybeSingle();
-      orgId = (o?.id as string) ?? null;
-    }
+  const ownedIds = memberships.filter((m) => m.role === 'OWNER').map((m) => m.restaurantId);
+  const orgId = (profile?.organization_id as string | null) ?? null;
+  if (ownedIds.length === 0 && !orgId) return null;
+
+  const [byMembership, byOrg] = await Promise.all([
+    ownedIds.length > 0
+      ? db.from('restaurants').select('*').in('id', ownedIds)
+      : Promise.resolve({ data: [] as Restaurant[] }),
+    orgId
+      ? db.from('restaurants').select('*').eq('organization_id', orgId)
+      : Promise.resolve({ data: [] as Restaurant[] }),
+  ]);
+
+  const byId = new Map<string, Restaurant>();
+  for (const r of [...(byMembership.data ?? []), ...(byOrg.data ?? [])]) {
+    byId.set((r as Restaurant).id, r as Restaurant);
   }
-  if (!orgId) return null;
+  const branches = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  if (branches.length === 0) return null;
 
-  const { data: org } = await db.from('organizations').select('*').eq('id', orgId).single();
-  if (!org) return null;
+  const { data: org } = orgId
+    ? await db.from('organizations').select('*').eq('id', orgId).maybeSingle()
+    : { data: null };
 
-  const { data: branches } = await db
-    .from('restaurants')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('name', { ascending: true });
+  const fullName = (profile?.full_name as string | null) ?? null;
+  const isGroup = branches.length >= 2;
 
-  return { org: org as Organization, branches: (branches ?? []) as Restaurant[], userId: user.id, role: profile.role };
+  const withFinance = branches.filter((b) => {
+    const mods = effectiveModules(b);
+    return mods.finanzas === true && mods.orders === true;
+  });
+
+  return {
+    branches,
+    org: (org as Organization | null) ?? null,
+    name: (org?.name as string | undefined)
+      ?? (isGroup
+        ? (fullName ? `Restaurantes de ${fullName}` : 'Mis restaurantes')
+        : branches[0].name),
+    userId: user.id,
+    isGroup,
+    hasFinance: withFinance.length > 0,
+    upgradeUrl: `${adminUrl(branches[0].slug)}/suscripcion`,
+  };
 });
 
 /* ── Dashboard consolidado ──────────────────────────────────── */

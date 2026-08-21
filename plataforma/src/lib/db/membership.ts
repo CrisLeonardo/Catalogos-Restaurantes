@@ -4,7 +4,6 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { subdomainUrl } from '@/lib/tenant';
 import { LEGACY_ROLE, type MemberRole, type Membership, type MembershipCard } from '@/lib/membership-roles';
 
 /* ============================================================
@@ -212,49 +211,9 @@ export async function getMyRestaurantCards(): Promise<MembershipCard[]> {
   return cards.sort((a, b) => rank[a.role] - rank[b.role] || a.name.localeCompare(b.name));
 }
 
-export type GroupPanel = { name: string; url: string; branchCount: number };
-
-/**
- * Panel consolidado del grupo, si esta cuenta administra una cadena.
- *
- * Es el primer paso de unir `/central` con Mi cuenta: hasta ahora el dueño de
- * una cadena tenía DOS hogares sin relación —el panel de grupo en su propio
- * subdominio y, desde la 112, la lista de sus sucursales— y nada que llevara
- * de uno al otro. El rol GROUP_OWNER se retiró en la migración 116; lo que
- * otra entrega, con sus propias pruebas (ver PLAN_ACCESO_MULTICUENTA.md §10).
- */
-export async function getMyGroupPanel(): Promise<GroupPanel | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
-
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const db = createServiceClient();
-    const { data: profile } = await db
-      .from('profiles')
-      .select('role, organization_id')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    // Solo quien administra la cadena: un gerente invitado a dos sucursales de
-    // la misma no tiene por qué ver las finanzas consolidadas de su jefe. Desde
-    // la migración 116 eso lo dice la organización del perfil, no un rol.
-    if (!profile?.organization_id) return null;
-
-    const [{ data: org }, { count }] = await Promise.all([
-      db.from('organizations').select('name, slug').eq('id', profile.organization_id as string).maybeSingle(),
-      db.from('restaurants').select('id', { count: 'exact', head: true }).eq('organization_id', profile.organization_id as string),
-    ]);
-    if (!org?.slug) return null;
-
-    return {
-      name: org.name as string,
-      url: subdomainUrl(`${org.slug as string}-central`),
-      branchCount: count ?? 0,
-    };
-  } catch {
-    return null;
-  }
-}
+/* El panel consolidado ya no vive aquí. Antes esta capa exportaba
+   `getMyGroupPanel()`, que decidía si había grupo mirando
+   `profiles.organization_id` —una fila que solo Leogin creaba— y devolvía un
+   enlace a otro subdominio. Hoy el grupo se deduce de las membresías de
+   dueño y el panel es una sección más de Mi cuenta: ver
+   `getMyGroupScope()` en lib/db/group.ts. */

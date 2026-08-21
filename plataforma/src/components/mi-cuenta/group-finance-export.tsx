@@ -1,9 +1,10 @@
 'use client';
 
-/* Exporta el consolidado financiero del grupo a Excel/PDF reales, con la
-   marca (logo/color/nombre) de la organización. El servidor re-deriva el
-   reporte (getGroupReport) y resuelve la marca — este componente solo
-   dispara la descarga y dibuja el PDF con la librería compartida. */
+/* Exporta el reporte financiero de Mi cuenta a Excel/PDF reales, con la
+   marca del negocio (la de la organización si hay grupo, la del restaurante
+   si es uno solo). El servidor re-deriva el reporte (getGroupReport),
+   resuelve la marca y comprueba el plan — este componente solo dispara la
+   descarga y dibuja el PDF con la librería compartida. */
 
 import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
@@ -39,13 +40,13 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
     startPdf(async () => {
       const res = await getGroupFinancePdfData(from, to);
       if ('error' in res) { toast.add({ title: res.error, type: 'error' }); return; }
-      const { report, branding } = res;
+      const { report, branding, title } = res;
       const money = (n: number) => formatDocMoney(n, branding);
 
       const doc = await createDoc({ format: 'a4', orientation: 'p' });
       const y = await drawPdfHeader(doc, {
         branding,
-        title: 'Reporte financiero de grupo',
+        title,
         subtitle: formatDateRangeLabel(from, to),
       });
 
@@ -71,7 +72,7 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
         startY: getLastAutoTableFinalY(doc),
         showHead: 'never',
         body: [[
-          'TOTAL GRUPO', money(report.totalRevenue), money(totalCost), money(report.totalProfit),
+          report.perBranch.length > 1 ? 'TOTAL GRUPO' : 'TOTAL', money(report.totalRevenue), money(totalCost), money(report.totalProfit),
           `${totalMargin.toFixed(1)}%`, String(report.totalOrders), money(totalTicket),
         ]],
         styles: { fontStyle: 'bold' },
@@ -79,7 +80,7 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
       });
 
       finalizePdf(doc, { branding, generatedAtLabel: longDate(new Date().toISOString()) });
-      doc.save(`finanzas-grupo_${from}_a_${to}.pdf`);
+      doc.save(`finanzas_${from}_a_${to}.pdf`);
       toast.add({ title: 'PDF descargado', type: 'success' });
     });
   }

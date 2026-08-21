@@ -18,7 +18,9 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         '/admin',
         '/super',
+        // Reenvío del panel de grupo viejo; el consolidado vive en /mi-cuenta.
         '/central',
+        '/mi-cuenta',
         '/checkout',
         '/mis-pedidos',
         '/pedido/',

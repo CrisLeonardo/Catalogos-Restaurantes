@@ -81,7 +81,11 @@ const FEATURE_LIST: { key: keyof PlanFeatures; label: string; description: strin
   { key: 'inventario',      label: 'Inventario',            description: 'Control de stock y anti-sobreventa' },
   { key: 'finanzas',        label: 'Finanzas',              description: 'Reportes, corte de caja, exportación' },
   { key: 'personal',        label: 'Personal',              description: 'Gestión de staff y permisos por sección' },
-  { key: 'multi_branch',    label: 'Multi-sucursal',        description: 'Panel de grupo y selector de sucursal' },
+  /* NO va aquí `multi_branch`. Existe en la fila (mig. 029) y se sigue
+     escribiendo por compatibilidad, pero NADIE lo lee para decidir acceso:
+     ver varios restaurantes juntos depende de tener varios restaurantes
+     propios, no del plan de uno de ellos. Un interruptor que promete
+     "Panel de grupo" y no enciende nada es peor que no tenerlo. */
 ];
 
 const VALID_PLANS = new Set<string>(ALL_PLANS);

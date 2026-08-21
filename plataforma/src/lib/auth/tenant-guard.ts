@@ -93,7 +93,7 @@ export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
   // organización del perfil, no por un rol.
   if (profileOrganizationId) {
     if (tenant.organizationId === profileOrganizationId) return { allow: true };
-    return { allow: false, redirectTo: '/central' };
+    return { allow: false, redirectTo: '/mi-cuenta' };
   }
 
   // Dueño/staff/mesero/cocina en el subdominio de OTRO restaurante: a SU panel.

@@ -108,10 +108,3 @@ export async function logout() {
   await supabase.auth.signOut({ scope: 'local' });
   redirect('/admin/login');
 }
-
-/** Logout desde el panel de grupo (vuelve al login del grupo). */
-export async function logoutGroup() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect('/central/login');
-}

@@ -18,9 +18,9 @@ type ProfileLike = {
  * (email+contraseña), getResumeSession() ("Continuar como") y
  * verifyStaffPin() (PIN) — antes estaba triplicado.
  *
- * El super admin y quien administra un grupo van a su panel propio. El resto entra a SU
- * restaurante: relativo si el subdominio actual ya es el suyo, absoluto
- * (con adminUrl) si no. Mesero puro → /mesero, si no → /menu.
+ * El super admin va a su panel propio. El resto entra a SU restaurante:
+ * relativo si el subdominio actual ya es el suyo, absoluto (con adminUrl) si
+ * no. Mesero puro → /mesero, si no → /menu.
  */
 export async function resolveStaffDestination(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -29,8 +29,6 @@ export async function resolveStaffDestination(
   suffix = '',
 ): Promise<string> {
   if (profile.role === 'SUPER_ADMIN') return '/super/restaurantes';
-  // Administra una cadena → panel del grupo (migración 116: por organización).
-  if (await myOrganizationId()) return '/central';
 
   /* Mi cuenta es la casa de la PERSONA: quien tiene restaurantes aterriza ahí
      y desde ahí entra al que quiera, tenga uno o tenga cinco.
@@ -46,6 +44,12 @@ export async function resolveStaffDestination(
   const memberships = await getMyMemberships();
   const isOwner = memberships.some((m) => m.role === 'OWNER');
   if (isOwner || memberships.length > 1) return `/mi-cuenta${suffix}`;
+
+  /* Jefe de una cadena que Leogin armó a mano antes de este cambio: tiene
+     organización pero ninguna membresía propia, así que la regla de arriba
+     no lo alcanza. Su casa es el consolidado, que hoy es una sección de Mi
+     cuenta (antes era `/central`, en otro subdominio). */
+  if (memberships.length === 0 && (await myOrganizationId())) return `/mi-cuenta/resumen`;
   if (memberships.length === 1 && !profile.restaurant_id) {
     // Perfil sin restaurante "de casa" pero con una membresía: se entra a esa.
     const { data: only } = await supabase

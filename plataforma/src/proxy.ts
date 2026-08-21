@@ -228,6 +228,9 @@ export async function proxy(request: NextRequest) {
   for (const h of INTERNAL_HEADERS) requestHeaders.delete(h);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
   if (adminSub) requestHeaders.set("x-is-admin-subdomain", "1");
+  // El subdominio del grupo ya no sirve un panel propio (se mudó a Mi
+  // cuenta), pero el header se sigue poniendo: es la marca de "vengo del
+  // subdominio del grupo" y lo lee el reenvío de /central.
   if (groupSlug) requestHeaders.set("x-org-slug", groupSlug);
   if (isAdminArea) requestHeaders.set("x-admin-area", "1");
   // Ruta pedida. Un layout no puede leer el pathname por su cuenta, y el

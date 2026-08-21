@@ -1,11 +1,21 @@
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/icons';
 import { PageHeader, EmptyState } from '@/components/super/ui';
 import { getAllOrganizations } from '@/lib/db/super-admin';
 
 export const metadata = { title: 'Grupos — Super Admin' };
+
+/**
+ * GRUPOS — vista de apoyo, ya no una herramienta de alta.
+ *
+ * Crear grupos a mano desde aquí era el modelo viejo: cada cadena nueva era
+ * un ticket para Leogin. Hoy el grupo nace solo cuando alguien abre su
+ * segundo restaurante desde Mi cuenta, y el panel consolidado no depende
+ * siquiera de que exista esta fila (lo dan las membresías de dueño). Lo que
+ * queda aquí es mirar lo que hay y, si hace falta, mover una sucursal de
+ * sitio.
+ */
 
 export default async function SuperGruposPage() {
   const orgs = await getAllOrganizations();
@@ -16,14 +26,10 @@ export default async function SuperGruposPage() {
         title="Grupos"
         subtitle={
           <>
-            Un grupo reúne varias sucursales bajo un jefe que las monitorea desde{' '}
-            <strong>slug-central.tudominio.com</strong>, con CRM financiero consolidado.
+            Se arman solos: cuando un dueño abre su segundo restaurante desde Mi cuenta,
+            nace su grupo con su link único de pedidos. El consolidado lo ve él mismo
+            en <strong>Mi cuenta</strong>, sin que aquí haya que hacer nada.
           </>
-        }
-        actions={
-          <Button render={<Link href="/super/grupos/new" />}>
-            <Icon name="plus" size={15} /> Nuevo grupo
-          </Button>
         }
       />
 
@@ -31,8 +37,7 @@ export default async function SuperGruposPage() {
         <EmptyState
           icon="users"
           title="No hay grupos todavía"
-          body="Crea un grupo cuando un cliente tenga 2 o más sucursales y quiera verlas consolidadas."
-          action={<Button size="sm" render={<Link href="/super/grupos/new" />}>Crear el primero</Button>}
+          body="Aparecerá uno en cuanto un cliente abra su segundo restaurante."
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -56,7 +61,7 @@ export default async function SuperGruposPage() {
                     {o.name}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)', marginTop: 2 }}>
-                    {o.slug}-central
+                    {o.slug}
                   </div>
                 </div>
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-3)', whiteSpace: 'nowrap' }}>
