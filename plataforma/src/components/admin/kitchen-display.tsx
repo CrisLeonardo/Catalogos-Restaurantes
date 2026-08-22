@@ -6,14 +6,12 @@ import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
 import { updateOrderStatus } from '@/lib/actions/orders';
-import { changeOperatorUser } from '@/lib/actions/operator';
 import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
 interface Props {
   restaurantId: string;
-  restaurantName: string;
   initialOrders: OrderWithItems[];
   /* Umbrales del semáforo (minutos de espera desde que entró el pedido).
      Configurables por el restaurante en Personalización → Cocina. */
@@ -23,8 +21,6 @@ interface Props {
   confirmFirst?: boolean;
   /** Esquema claro/oscuro del panel admin (cookie `admin-theme`), NO el tema del restaurante. */
   scheme?: 'light' | 'dark';
-  /** Sesión iniciada por PIN — ofrece "Cambiar de usuario" en la barra superior. */
-  isOperatorSession?: boolean;
 }
 
 /* Paletas de alto contraste — independientes del tema del restaurante, pero
@@ -122,11 +118,10 @@ const Cronometro = memo(function Cronometro({ createdMs }: { createdMs: number }
   return <>{now == null ? '··:··' : fmtElapsed(now - createdMs)}</>;
 });
 
-export default function KitchenDisplay({ restaurantId, restaurantName, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark', isOperatorSession = false }: Props) {
+export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin, redMin, confirmFirst = false, scheme = 'dark' }: Props) {
   const router = useRouter();
   const orders = initialOrders;
   const [now, setNow] = useState<number | null>(null);
-  const [isFull, setIsFull] = useState(false);
   const soundSettingsRef = useRef(loadSoundSettings());
   const C = scheme === 'light' ? C_LIGHT : C_DARK;
 
@@ -245,61 +240,36 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
      serviría de nada. */
   const refreshNow = useCallback(() => router.refresh(), [router]);
 
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().then(() => setIsFull(true)).catch(() => {});
-    } else {
-      document.exitFullscreen?.().then(() => setIsFull(false)).catch(() => {});
-    }
-  }
-
   const nuevos = orders.filter((o) => o.status === 'NEW').length;
   const clock = now == null ? '—' : new Date(now).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
 
+  // Sin header propio ni `position: fixed`: vive dentro del panel como
+  // cualquier otra pantalla (sidebar + topbar, sin envoltorio propio — igual
+  // que /admin/pedidos). El botón "Pantalla completa" del panel (shell.tsx)
+  // recrea, opcionalmente, el tablero a pantalla entera de antes.
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.bg, color: C.text, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'var(--ui-font, system-ui, sans-serif)' }}>
-      {/* Barra superior */}
-      <header style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 20px', borderBottom: `1px solid ${C.hair}`, background: C.panel }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-          <Icon name="flame" size={22} style={{ color: C.amber, flexShrink: 0 }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Cocina</div>
-            <div style={{ fontSize: 12, color: C.dim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 999, background: C.panelHi, fontWeight: 700, fontSize: 14 }}>
+    <div style={{ color: C.text, fontFamily: 'var(--ui-font, system-ui, sans-serif)', padding: 16 }}>
+      {/* Franja de estado */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '10px 16px', marginBottom: 16, borderRadius: 12, border: `1px solid ${C.hair}`, background: C.panel }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <Icon name="flame" size={18} style={{ color: C.amber, flexShrink: 0 }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 14 }}>
             <span style={{ color: orders.length > 0 ? C.green : C.dim }}>{orders.length}</span>
             <span style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>en cocina</span>
-            {nuevos > 0 && (
-              <span style={{ marginLeft: 4, padding: '2px 8px', borderRadius: 999, background: `${C.blue}22`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
-                {nuevos} nuevo{nuevos !== 1 ? 's' : ''}
-              </span>
-            )}
           </span>
-          <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 16, fontWeight: 700, color: C.dim, minWidth: 54, textAlign: 'right' }}>{clock}</span>
-          <button onClick={toggleFullscreen} title="Pantalla completa" style={iconBtnStyle(C)}>
-            <Icon name={isFull ? 'x' : 'grid'} size={17} />
-          </button>
-          {isOperatorSession ? (
-            <form action={changeOperatorUser}>
-              <button type="submit" title="Cambiar de usuario" style={iconBtnStyle(C)}>
-                <Icon name="user" size={17} />
-              </button>
-            </form>
-          ) : (
-            <a href="/admin/pedidos" title="Volver al panel" style={{ ...iconBtnStyle(C), textDecoration: 'none', display: 'grid', placeItems: 'center' }}>
-              <Icon name="chevronLeft" size={19} />
-            </a>
+          {nuevos > 0 && (
+            <span style={{ padding: '2px 8px', borderRadius: 999, background: `${C.blue}22`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
+              {nuevos} nuevo{nuevos !== 1 ? 's' : ''}
+            </span>
           )}
         </div>
-      </header>
+        <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 14, fontWeight: 700, color: C.dim, minWidth: 46, textAlign: 'right' }}>{clock}</span>
+      </div>
 
       {/* Tablero */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+      <div>
         {orders.length === 0 ? (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: C.dim }}>
+          <div style={{ minHeight: '50vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: C.dim }}>
             <Icon name="checkCircle" size={52} style={{ color: C.green }} />
             <p style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Todo al día</p>
             <p style={{ fontSize: 14 }}>{confirmFirst ? 'Los pedidos aparecen aquí al ser confirmados desde el panel.' : 'No hay pedidos pendientes en cocina.'}</p>
@@ -329,13 +299,6 @@ export default function KitchenDisplay({ restaurantId, restaurantName, initialOr
       </div>
     </div>
   );
-}
-
-function iconBtnStyle(C: Palette): React.CSSProperties {
-  return {
-    width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.hair}`,
-    background: C.panelHi, color: C.dim, cursor: 'pointer', display: 'grid', placeItems: 'center',
-  };
 }
 
 /* ── Tarjeta de pedido ──────────────────────────────────────── */

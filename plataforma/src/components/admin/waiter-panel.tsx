@@ -415,41 +415,32 @@ function HeaderMenu({ isOperatorSession }: { isOperatorSession?: boolean }) {
 
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, onAdminBack, showOrders, ordersCount, onShowOrders, isOperatorSession,
+  title, waiterName, onBack, showOrders, ordersCount, onShowOrders, isOperatorSession,
 }: {
   title: string;
   waiterName: string;
   onBack?: () => void;
-  onAdminBack?: () => void;
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
   isOperatorSession?: boolean;
 }) {
   return (
-    /* Translúcida CON desenfoque, igual que .admin-topbar: antes el fondo era
-       solo `--u-text 4%` (casi transparente y sin backdrop-filter), así que al
-       hacer scroll los platos se leían ENCIMA del título de la barra. La capa
-       de tinte va sobre una base de --brand-bg al 82% — es el desenfoque, no
-       la opacidad, lo que separa la barra del contenido. */
+    /* Ya NO es sticky: con el sidebar/topbar del panel siempre visibles
+       (rediseño 2026-08-22), pegarla a top:0 la haría pelear por el mismo
+       lugar que .admin-topbar. Vive dentro del contenido, como el
+       encabezado de cualquier otra pantalla del panel. */
     <header style={{
       background: 'linear-gradient(color-mix(in srgb, var(--u-text) 4%, transparent), color-mix(in srgb, var(--u-text) 4%, transparent)), color-mix(in srgb, var(--brand-bg) 82%, transparent)',
-      WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-      backdropFilter: 'blur(14px) saturate(140%)',
       borderBottom: '1px solid var(--u-hair)',
-      position: 'sticky', top: 0, zIndex: 200,
+      borderRadius: 16,
     }}>
       <div className="waiter-wrap" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-        {onBack ? (
+        {onBack && (
           <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="chevronLeft" size={20} />
           </button>
-        ) : onAdminBack ? (
-          <button type="button" onClick={onAdminBack} className="press glass-quiet" style={{ height: 36, padding: '0 12px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: 'var(--u-text-3)', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-            <Icon name="chevronLeft" size={15} />
-            Panel
-          </button>
-        ) : null}
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {title}
@@ -865,7 +856,6 @@ export default function WaiterPanel({
 
   const headerProps = {
     waiterName,
-    onAdminBack: () => router.push('/admin'),
     showOrders: view !== 'orders',
     ordersCount: orders.length,
     onShowOrders: () => setView('orders'),
@@ -1463,7 +1453,7 @@ export default function WaiterPanel({
       {/* Barra flotante del carrito → Revisar, con mini-carrito desplegable
           para ver/ajustar lo ya agregado sin salir del menú. */}
       {cartCount > 0 && (
-        <div style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
+        <div className="waiter-cart-bar" style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
           <div className="waiter-wrap" style={{ padding: '0 16px 12px' }}>
             {miniCartOpen && (
               <div className="glass anim-slide-up" style={{ borderRadius: 16, padding: '8px 10px', marginBottom: 8, maxHeight: '34vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>

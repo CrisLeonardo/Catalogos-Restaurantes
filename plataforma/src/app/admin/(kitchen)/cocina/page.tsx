@@ -5,7 +5,6 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getKitchenOrders } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
-import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import KitchenDisplay from '@/components/admin/kitchen-display';
 
 export const metadata = { title: 'Cocina (KDS)' };
@@ -32,15 +31,6 @@ export default async function CocinaPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  let restaurantName = 'Cocina';
-  if (slug) {
-    const tenant = await getRestaurantBySlug(slug);
-    if (tenant) restaurantName = tenant.restaurant.name;
-  } else {
-    const { data: r } = await db.from('restaurants').select('name').eq('id', restaurantId).single();
-    restaurantName = (r?.name as string | null) ?? 'Cocina';
-  }
-
   const { data: themeRow } = await db.from('restaurant_themes').select('*').eq('restaurant_id', restaurantId).single();
   const cfg = resolveTheme((themeRow as ThemeRow) ?? null).config;
   const orders = await getKitchenOrders(restaurantId, cfg.kdsConfirmFirst);
@@ -54,13 +44,11 @@ export default async function CocinaPage() {
   return (
     <KitchenDisplay
       restaurantId={restaurantId}
-      restaurantName={restaurantName}
       initialOrders={orders}
       yellowMin={cfg.kdsYellowMin}
       redMin={cfg.kdsRedMin}
       confirmFirst={cfg.kdsConfirmFirst}
       scheme={scheme}
-      isOperatorSession={!!(await cookies()).get(OPERATOR_COOKIE)?.value}
     />
   );
 }

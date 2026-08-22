@@ -1224,6 +1224,13 @@ html[data-scheme="light"] .btn-white {
   .admin-live { display: none !important; }
   /* Aire para que la tab bar no tape el final del contenido */
   .admin-content { padding: 16px 14px calc(92px + env(safe-area-inset-bottom, 0px)); }
+  /* Barra flotante del carrito del mesero (waiter-panel.tsx): `sticky bottom:0`
+     se pega al borde real de la pantalla, donde vive la tab bar inferior fija
+     del panel — mismo colchón que .admin-content de arriba, para que el botón
+     "Revisar pedido" no quede tapado. En modo "Pantalla completa" (.admin-kiosk,
+     ver shell.tsx) no hay tab bar que evitar: ahí sí va pegada al borde. */
+  .waiter-cart-bar { bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; }
+  .admin-kiosk .waiter-cart-bar { bottom: 0 !important; }
 
   /* Catálogo: cada fila se vuelve tarjeta de 2 líneas */
   .catalog-head { display: none; }

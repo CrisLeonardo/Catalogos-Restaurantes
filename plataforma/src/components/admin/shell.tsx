@@ -4,7 +4,7 @@
    se convierte en una barra inferior fija tipo app. Envuelve /admin/*.
    El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -132,6 +132,38 @@ export default function AdminShell({
 
   const pathname = preview ? '/admin/menu' : realPathname;
 
+  /* "Pantalla completa" (Cocina y Mesero, rediseño 2026-08-22): por defecto
+     ambas pantallas se ven como cualquier otra sección (sidebar + topbar);
+     este modo es la excepción que el propio usuario activa cuando quiere el
+     tablero táctil de siempre, sin chrome del panel. Vive aquí y no en
+     KitchenDisplay/WaiterPanel porque lo único que cambia es si ESTE
+     componente pinta o no su sidebar/topbar alrededor de `children` — el
+     contenido no necesita saberlo. */
+  const [kiosk, setKiosk] = useState(false);
+
+  // Cambiar de pantalla saliendo de Cocina/Mesero restaura el chrome — nadie
+  // quiere que "pantalla completa" persiga a otras secciones del panel.
+  useEffect(() => { setKiosk(false); }, [pathname]);
+
+  // El navegador puede salir de pantalla completa por su cuenta (Esc, gesto
+  // del sistema): sin este listener el panel se quedaba "atascado" sin
+  // sidebar aunque el navegador ya hubiera vuelto a modo ventana.
+  useEffect(() => {
+    const onFsChange = () => { if (!document.fullscreenElement) setKiosk(false); };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  function toggleKiosk() {
+    if (!kiosk) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      setKiosk(true);
+    } else {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      setKiosk(false);
+    }
+  }
+
   // En preview (sin rol) se muestra todo como lo ve el dueño.
   const effRole = role ?? 'RESTAURANT_OWNER';
   const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
@@ -228,13 +260,33 @@ export default function AdminShell({
   const isLive    = pathname.startsWith('/admin/pedidos');
   const isKitchen = pathname.startsWith('/admin/cocina');
   const isWaiter  = pathname.startsWith('/admin/mesero');
+  // Únicas dos pantallas táctiles con modo "pantalla completa" (ver toggleKiosk).
+  const kioskEligible = isKitchen || isWaiter;
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';
 
-  if (isWaiter) {
+  if (kiosk && kioskEligible) {
     return (
       <ToastProvider>
-        <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
+        <div className="admin-kiosk" style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
           {children}
+          {/* Salir de pantalla completa: sin sidebar, tiene que quedar SIEMPRE
+              a mano, aunque el navegador no soporte/permita la Fullscreen API
+              (Safari de iPhone, por ejemplo). */}
+          <button
+            type="button"
+            onClick={toggleKiosk}
+            title="Salir de pantalla completa"
+            aria-label="Salir de pantalla completa"
+            className="press glass"
+            style={{
+              position: 'fixed', top: 12, right: 12, zIndex: 100,
+              width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer',
+              display: 'grid', placeItems: 'center', color: 'var(--u-text)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+            }}
+          >
+            <Icon name="x" size={18} />
+          </button>
           {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
         </div>
         <Toaster />
@@ -381,6 +433,18 @@ export default function AdminShell({
             <Badge variant="accent" className="admin-live py-1.5">
               <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
             </Badge>
+          )}
+          {!preview && kioskEligible && (
+            <button
+              type="button"
+              onClick={toggleKiosk}
+              title="Pantalla completa"
+              aria-label="Pantalla completa"
+              className="glass-quiet press"
+              style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', boxShadow: 'var(--adm-shadow-xs, none)' }}
+            >
+              <Icon name="grid" size={18} />
+            </button>
           )}
           {!preview && <AdminThemeToggle />}
           {!preview && restaurantId && ordersEnabled ? (
