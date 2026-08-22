@@ -164,7 +164,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
         ...lockable(ctx, ctx.analiticaEnabled, plan.hasAnalytics, { href: '/admin/analitica', label: 'Analítica', key: 'analitica' }),
         ...lockable(ctx, ctx.finanzasEnabled, plan.hasFinance, { href: '/admin/finanzas', label: 'Finanzas', key: 'finanzas' }),
         ...(on(ctx.felActive) ? [{ href: '/admin/facturacion', label: 'Facturación', key: 'fel' }] : []),
-        ...(on(ctx.ordersEnabled) ? [{ href: '/admin/canales', label: 'Apps de delivery', key: 'canales' }] : []),
+        // Apps de delivery (Canales, Fase 5A): deshabilitado, sigue en pruebas.
         { href: '/admin/respaldo', label: 'Copia de datos', key: 'respaldo' },
       ],
     },

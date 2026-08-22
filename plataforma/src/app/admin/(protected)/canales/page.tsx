@@ -14,7 +14,14 @@ export const metadata = { title: 'Canales externos – Panel admin' };
    contratado, y no entra un solo pedido hasta que la llave exista.
    ============================================================ */
 
+// Deshabilitado a propósito: la Fase 5A sigue en pruebas y aún no se
+// lanza. El link del nav ya no aparece (ver admin-nav.ts); este redirect
+// es el respaldo para quien entre directo por la URL.
+const CANALES_HABILITADO = false;
+
 export default async function CanalesPage() {
+  if (!CANALES_HABILITADO) redirect('/admin');
+
   const ctx = await getAdminContext();
   const restaurantId = ctx?.restaurant?.id;
   if (!restaurantId) redirect('/admin');
