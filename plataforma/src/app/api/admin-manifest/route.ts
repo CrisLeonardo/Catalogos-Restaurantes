@@ -1,7 +1,5 @@
 import { NextRequest } from 'next/server';
 import { headers } from 'next/headers';
-import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { DEMO_SLUG } from '@/lib/tenant';
 
 /**
  * Manifiesto PWA del panel de administración.
@@ -14,33 +12,19 @@ import { DEMO_SLUG } from '@/lib/tenant';
  *  - Se referencia desde el <head> de las rutas /admin/* mediante
  *    generateMetadata({ manifest: '/api/admin-manifest' }) en admin/layout.tsx.
  *
+ * Nombre e ícono son SIEMPRE "Leogin" (nunca la marca del restaurante):
+ * el mismo dueño o empleado puede operar varios restaurantes, así que el
+ * ícono añadido al inicio funciona como una puerta de entrada a Leogin —
+ * no como la app de un restaurante en particular. No hay app store propia
+ * (Play Store/App Store), así que "añadir al inicio" hace de sustituto.
+ *
  * GET /api/admin-manifest
  */
 export async function GET(_request: NextRequest) {
   const headersList = await headers();
-  const slug = headersList.get('x-tenant-slug');
-
-  let name = 'Admin · Leogin';
-  let iconSrc = '/icon-512.png';
-  let iconType = 'image/png';
-
-  if (slug && slug !== DEMO_SLUG) {
-    try {
-      const data = await getRestaurantBySlug(slug);
-      if (data) {
-        name = `${data.restaurant.name} · Admin`;
-        const icon = data.resolved.config.pwaIconUrl ?? data.resolved.config.logoUrl;
-        if (icon) {
-          // ?v= hace cache-busting: cuando el ícono cambia el hash cambia → el
-          // navegador descarga el nuevo en lugar de usar el que tenía en caché.
-          iconSrc = `/api/icon/${slug}?v=${hashStr(icon)}`;
-          iconType = mimeFor(icon) ?? 'image/png';
-        }
-      }
-    } catch {
-      /* BD no disponible → nombre e ícono genéricos */
-    }
-  }
+  const name = 'Leogin';
+  const iconSrc = '/icon-512.png';
+  const iconType = 'image/png';
 
   // Cuando se sirve desde el subdominio admin.* (origen separado), las rutas
   // son relativas a ese origen: start_url='/' y scope='/'.
@@ -54,7 +38,7 @@ export async function GET(_request: NextRequest) {
   const manifest = {
     name,
     short_name: name,
-    description: 'Panel de administración del restaurante',
+    description: 'Panel de administración de Leogin',
     id: appId,
     start_url: startUrl,
     scope,
@@ -74,22 +58,4 @@ export async function GET(_request: NextRequest) {
       'Cache-Control': 'public, max-age=60, stale-while-revalidate=600',
     },
   });
-}
-
-function hashStr(s: string): string {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  }
-  return (h >>> 0).toString(36);
-}
-
-function mimeFor(url: string): string | undefined {
-  const clean = url.split('?')[0].toLowerCase();
-  if (clean.endsWith('.png')) return 'image/png';
-  if (clean.endsWith('.webp')) return 'image/webp';
-  if (clean.endsWith('.jpg') || clean.endsWith('.jpeg')) return 'image/jpeg';
-  if (clean.endsWith('.gif')) return 'image/gif';
-  if (clean.endsWith('.svg')) return 'image/svg+xml';
-  return undefined;
 }

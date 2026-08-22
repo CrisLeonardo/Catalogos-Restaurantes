@@ -19,6 +19,7 @@ import AdminThemeToggle from '@/components/admin/theme-toggle';
 import WelcomeTour from '@/components/admin/welcome-tour';
 import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
+import AdminInstallPrompt from '@/components/admin/install-prompt';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
 import { isMeseroOnly } from '@/lib/permissions';
@@ -429,6 +430,7 @@ export default function AdminShell({
         <div className="admin-topbar">
           <h1 className="t-display" style={{ fontSize: 22, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
           {!preview && helpSection && <HelpButton section={helpSection} />}
+          {!preview && <AdminInstallPrompt />}
           {isLive && (
             <Badge variant="accent" className="admin-live py-1.5">
               <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
