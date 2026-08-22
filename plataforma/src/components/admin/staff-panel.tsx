@@ -11,6 +11,9 @@ import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Section } from '@/components/ui/section';
+import { List, ListRow, ListText } from '@/components/ui/list';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ADMIN_SECTIONS } from '@/lib/permissions';
 import {
   createStaff, updateStaffPermissions, removeStaff, resetStaffPassword,
@@ -92,43 +95,39 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
     return `${labels.slice(0, 3).join(' · ')} +${labels.length - 3}`;
   }
 
-  function MemberCard({ m }: { m: StaffMember }) {
+  function MemberRow({ m }: { m: StaffMember }) {
     // La insignia dice QUÉ ES esta persona, no qué secciones tiene marcadas.
     // Con "tiene mesero" un gerente salía etiquetado como Mesero, porque su
     // plantilla incluye esa sección igual que las otras 25.
     const isMesero = m.meseroOnly;
     const conCredencial = m.access !== 'pin';
+    const credencial = m.access === 'user'
+      // La credencial ENTERA, no solo el usuario: es lo que hay que
+      // dictarle para que pueda entrar también desde leogin.
+      ? `Entra con ${staffLoginHandle(m.username ?? '', slug)}`
+      : conCredencial
+        ? `Entra con ${m.email ?? 'su correo'}`
+        : 'Entra con PIN en el local';
     return (
-      <Card key={m.id} className="p-3.5 flex items-center gap-3">
+      <ListRow key={m.id}>
         <div style={{ width: 38, height: 38, borderRadius: 99, background: isMesero ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)', display: 'grid', placeItems: 'center', color: isMesero ? 'var(--c-warn)' : 'var(--u-text)', flexShrink: 0 }}>
           <Icon name={isMesero ? 'userPlus' : 'user'} size={18} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || 'Miembro del equipo'}</span>
-            {isMesero && (
-              <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
-            )}
-          </div>
-          {/* Con qué credencial entra: es lo primero que el dueño necesita
-              saber cuando alguien le dice "no puedo entrar". */}
-          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {m.access === 'user'
-              // La credencial ENTERA, no solo el usuario: es lo que hay que
-              // dictarle para que pueda entrar también desde leogin.
-              ? `Entra con ${staffLoginHandle(m.username ?? '', slug)}`
-              : conCredencial
-                ? `Entra con ${m.email ?? 'su correo'}`
-                : 'Entra con PIN en el local'}
-          </div>
-          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {describePerms(m)}
-          </div>
-        </div>
+        <ListText
+          title={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.full_name || 'Miembro del equipo'}</span>
+              {isMesero && (
+                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', borderRadius: 99, padding: '2px 8px' }}><Icon name="userPlus" size={11} /> Mesero</span>
+              )}
+            </span>
+          }
+          desc={`${credencial} · ${describePerms(m)}`}
+        />
         <Button type="button" onClick={() => setEditor({ open: true, member: m })} variant="secondary" size="sm">
           Editar
         </Button>
-      </Card>
+      </ListRow>
     );
   }
 
@@ -137,30 +136,38 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
       {/* Personal */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Personal</div>
+          <div className="t-kicker">Personal</div>
           <Button type="button" onClick={() => setEditor({ open: true, member: null })} size="sm">
             <Icon name="plus" size={14} /> Nuevo
           </Button>
         </div>
         {staff.length === 0 ? (
-          <Card className="p-4.5 text-center" style={{ color: 'var(--u-text-3)', fontSize: 13.5 }}>
-            Sin personal. Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca <strong>Mesero</strong> para que pueda tomar pedidos en mesa desde <strong>/admin/mesero</strong>.
-          </Card>
-        ) : staff.map((m) => <MemberCard key={m.id} m={m} />)}
+          <EmptyState
+            icon="users"
+            title="Sin personal todavía"
+            desc="Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca Mesero para que pueda tomar pedidos en mesa desde /admin/mesero."
+            action={{ label: 'Agregar el primero', onClick: () => setEditor({ open: true, member: null }) }}
+          />
+        ) : (
+          <List>{staff.map((m) => <MemberRow key={m.id} m={m} />)}</List>
+        )}
       </div>
 
       {/* Bitácora */}
-      <Card className="p-4.5 flex flex-col gap-2.5">
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Actividad reciente</div>
+      <Section title="Actividad reciente">
         {activity.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin actividad registrada todavía.</div>
-        ) : activity.map((r) => (
-          <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--u-hair)', gap: 10 }}>
-            <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{describeActivity(r)}</span>
-            <span style={{ fontSize: 11, color: 'var(--u-text-4)', flexShrink: 0 }}>{timeAgo(r.created_at)}</span>
-          </div>
-        ))}
-      </Card>
+          <Card className="p-4.5" style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin actividad registrada todavía.</Card>
+        ) : (
+          <List>
+            {activity.map((r) => (
+              <ListRow key={r.id}>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-adm-text-2">{describeActivity(r)}</span>
+                <span className="shrink-0 text-[11px] text-adm-text-4">{timeAgo(r.created_at)}</span>
+              </ListRow>
+            ))}
+          </List>
+        )}
+      </Section>
 
       {editor.open && (
         <StaffModal

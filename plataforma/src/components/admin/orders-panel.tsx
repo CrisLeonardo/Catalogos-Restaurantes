@@ -11,9 +11,10 @@ import { getOrdersPdfData, exportOrdersXlsx, updateOrderStatus } from '@/lib/act
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
 import type { TicketFormat } from '@/lib/escpos';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
+import { Stat, StatGroup } from '@/components/ui/stat';
 import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import type { Order } from '@/types';
 
@@ -358,12 +359,12 @@ function OrdersPanelInner({
   return (
     <>
       {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 18 }}>
-        <Kpi label="Ventas hoy" value={fmtMoney(stats.todaySales, currency)} sub={`${stats.todayOrders} pedidos`} hero />
-        <Kpi label="Pedidos hoy" value={String(stats.todayOrders)} sub={`${activeOrders.length} en curso`} />
-        <Kpi label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} sub="por pedido" />
-        <Kpi label="En cocina" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} sub="preparándose ahora" />
-      </div>
+      <StatGroup className="mb-4.5">
+        <Stat label={`Ventas hoy (${stats.todayOrders} pedidos)`} value={fmtMoney(stats.todaySales, currency)} />
+        <Stat label={`Pedidos hoy (${activeOrders.length} en curso)`} value={String(stats.todayOrders)} />
+        <Stat label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} />
+        <Stat label="En cocina (preparándose ahora)" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} />
+      </StatGroup>
 
       {/* Board + sidebar */}
       <div className="orders-grid">
@@ -501,17 +502,6 @@ function OrdersPanelInner({
 
 /* ── Kpi card ─────────────────────────────────────────────── */
 
-function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
-  return (
-    <Card className="p-0">
-      <CardContent className="flex flex-col gap-2.5 p-5">
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-        <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.15, letterSpacing: hero ? '-0.02em' : '-0.01em' }}>{value}</div>
-        {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-      </CardContent>
-    </Card>
-  );
-}
 
 /* ── Gráfica 14 días ──────────────────────────────────────── */
 

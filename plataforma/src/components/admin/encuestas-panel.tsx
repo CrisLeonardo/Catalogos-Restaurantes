@@ -2,6 +2,7 @@
 
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
+import { Stat, StatGroup } from '@/components/ui/stat';
 import type { OrderRating, RatingsSummary } from '@/lib/db/encuestas';
 
 interface Props {
@@ -40,20 +41,11 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-        {[
-          { label: 'Promedio general', value: avgDisplay, sub: summary.total > 0 ? `${summary.total} reseñas` : 'Sin reseñas', accent: true },
-          { label: 'Este mes', value: avgMonthDisplay, sub: `${summary.thisMonth} reseñas` },
-          { label: 'Total reseñas', value: String(summary.total) },
-        ].map(({ label, value, sub, accent }) => (
-          <Card key={label} className="p-3.5">
-            <div style={{ fontSize: 26, fontWeight: 800, color: accent ? 'var(--c-warn)' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
-            {sub && <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1 }}>{sub}</div>}
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 4 }}>{label}</div>
-          </Card>
-        ))}
-      </div>
+      <StatGroup>
+        <Stat label={summary.total > 0 ? `Promedio general (${summary.total} reseñas)` : 'Promedio general (sin reseñas)'} value={avgDisplay} />
+        <Stat label={`Este mes (${summary.thisMonth} reseñas)`} value={avgMonthDisplay} />
+        <Stat label="Total reseñas" value={String(summary.total)} />
+      </StatGroup>
 
       {/* .enc-cols: lado a lado en escritorio, apilado en móvil */}
       <div className="enc-cols">

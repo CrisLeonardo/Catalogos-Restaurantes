@@ -7,6 +7,7 @@ import { saveIngredient, deleteIngredient, getIngredientMovements } from '@/lib/
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { Ingredient } from '@/lib/db/recipes';
 import type { StockMovement } from '@/lib/db/kardex';
 
@@ -221,11 +222,12 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
 
       {/* Tabla de ingredientes */}
       {initialIngredients.length === 0 && !showAdd ? (
-        <Card className="p-8 text-center">
-          <Icon name="flask" size={32} style={{ color: 'var(--u-text-4)', marginBottom: 10 }} />
-          <p style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no tienes insumos registrados.</p>
-          <p style={{ color: 'var(--u-text-4)', fontSize: 12, marginTop: 4 }}>Crea tu primer insumo para poder asignarlo a las recetas de tus platillos.</p>
-        </Card>
+        <EmptyState
+          icon="flask"
+          title="Aún no tenés insumos registrados"
+          desc="Creá el primero para poder asignarlo a las recetas de tus platillos y calcular el food cost automáticamente."
+          action={{ label: 'Agregar el primero', onClick: () => setShowAdd(true) }}
+        />
       ) : (
         /* Lista responsiva (patrón catalog/customers): grid de columnas en
            escritorio; en móvil cada fila es una tarjeta de 2 líneas (antes era

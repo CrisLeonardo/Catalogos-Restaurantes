@@ -11,7 +11,7 @@ import type { NavGroup } from '@/lib/admin-nav';
    BUSCADOR DEL PANEL (rediseño 2026-08-21, Fase 4)
    ------------------------------------------------------------
    Es la pieza que hace que reducir el menú a seis no cueste nada:
-   quien ya sabe a dónde va escribe "propina" y llega, sin recordar
+   quien ya sabe a dónde va escribe "impresora" y llega, sin recordar
    si eso vive en Ajustes o en Personal. Con treinta pantallas,
    buscar es más rápido que acordarse.
 
@@ -54,7 +54,7 @@ const ALIAS: Record<string, string> = {
   personalizar: 'colores logo tipografia marca plantilla diseno',
   qr: 'codigo qr imprimir mesa enlace',
   impresion: 'pc computadora impresora ticket wifi sin internet agente',
-  personal: 'empleados equipo permisos usuarios pin propinas',
+  personal: 'empleados equipo permisos usuarios pin',
   suscripcion: 'plan pago precio factura mensualidad',
   modulos: 'funciones activar apagar',
   ayuda: 'soporte tutoriales guias dudas',
@@ -177,7 +177,7 @@ export default function CommandSearch({ groups }: Props) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onInputKey}
-            placeholder="Buscá una pantalla: propinas, QR, inventario…"
+            placeholder="Buscá una pantalla: impresora, QR, inventario…"
             className="min-w-0 flex-1 bg-transparent text-[15px] text-adm-text outline-none placeholder:text-adm-text-4"
             autoComplete="off"
             spellCheck={false}

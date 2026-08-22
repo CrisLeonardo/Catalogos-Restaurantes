@@ -6,6 +6,9 @@ import { getAnalytics, type CountSplit, type Velocity } from '@/lib/db/analytics
 import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import { Card } from '@/components/ui/card';
+import { Section } from '@/components/ui/section';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export const metadata = { title: 'Analítica – Panel admin' };
 
@@ -60,14 +63,12 @@ export default async function AdminAnaliticaPage({
 
   if (!ordersEnabled) {
     return (
-      <Card className="p-5" style={{ maxWidth: 560 }}>
-        <div className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Analítica</div>
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
-          La analítica de operación se basa en los pedidos en línea. Activa el módulo
-          <strong> Pedidos</strong> (plan Estándar) para ver horas pico, velocidad de
-          productos, cancelaciones y tiempos.
-        </p>
-      </Card>
+      <EmptyState
+        icon="chart"
+        title="Analítica todavía no está activa"
+        desc="Se basa en los pedidos en línea. Activa el módulo Pedidos (plan Estándar) para ver horas pico, velocidad de productos, cancelaciones y tiempos."
+        action={{ href: '/admin/suscripcion', label: 'Ver planes' }}
+      />
     );
   }
 
@@ -87,14 +88,15 @@ export default async function AdminAnaliticaPage({
         <DateRangeForm from={from} to={to} basePath="/admin/analitica" />
       </Card>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Pedidos" value={String(a.validOrders)} sub={`${a.totalOrders} con cancelados`} hero />
-        <Kpi label="Cancelación" value={`${a.cancelRate.toFixed(0)}%`} sub={`${a.cancelled} cancelados`} />
-        <Kpi label="Prep. promedio" value={fmtMin(a.avgPrepMin)} sub={a.prepSamples > 0 ? `${a.prepSamples} pedidos` : 'sin datos aún'} />
-        <Kpi label="Entrega promedio" value={fmtMin(a.avgDeliveryMin)} sub={a.deliverySamples > 0 ? `${a.deliverySamples} domicilios` : 'sin datos aún'} />
-        <Kpi label="Franja pico" value={a.peakLabel ?? '–'} sub={a.busiestWeekday ? `día fuerte: ${a.busiestWeekday}` : undefined} small />
-      </div>
+      <Section title="Resumen del rango">
+        <StatGroup>
+          <Stat label={`Pedidos válidos (${a.totalOrders} con cancelados)`} value={String(a.validOrders)} />
+          <Stat label={`Cancelación (${a.cancelled})`} value={`${a.cancelRate.toFixed(0)}%`} />
+          <Stat label="Prep. promedio" value={a.prepSamples > 0 ? fmtMin(a.avgPrepMin) : 'Sin datos aún'} />
+          <Stat label="Entrega promedio" value={a.deliverySamples > 0 ? fmtMin(a.avgDeliveryMin) : 'Sin datos aún'} />
+          <Stat label={a.busiestWeekday ? `Franja pico (día fuerte: ${a.busiestWeekday})` : 'Franja pico'} value={a.peakLabel ?? '–'} />
+        </StatGroup>
+      </Section>
 
       {a.avgPrepMin == null && a.validOrders > 0 && (
         <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
@@ -105,7 +107,7 @@ export default async function AdminAnaliticaPage({
 
       {/* Mapa de calor de horas pico */}
       <Card className="flex flex-col gap-3 p-4.5">
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Horas pico · pedidos por día y hora</div>
+        <div className="t-kicker">Horas pico · pedidos por día y hora</div>
         {a.heatMax === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin pedidos en el rango.</div>
         ) : (
@@ -160,21 +162,11 @@ export default async function AdminAnaliticaPage({
   );
 }
 
-function Kpi({ label, value, sub, hero, small }: { label: string; value: string; sub?: string; hero?: boolean; small?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: small ? 17 : hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </Card>
-  );
-}
-
 function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[]; accent?: boolean }) {
   const max = rows.reduce((m, r) => Math.max(m, r.qty), 1);
   return (
     <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
+      <div className="t-kicker">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : rows.map((r, i) => (
@@ -195,7 +187,7 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
 function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; total: number }) {
   return (
     <Card className="flex flex-col gap-3 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
+      <div className="t-kicker">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : rows.map((r) => {

@@ -61,7 +61,7 @@ function ListLink({ className, ...props }: React.ComponentProps<typeof Link>) {
  *  Se encoge antes que los números y el estado, que son de ancho fijo. */
 function ListText({
   title, desc, className, ...props
-}: React.ComponentProps<'div'> & { title: React.ReactNode; desc?: React.ReactNode }) {
+}: Omit<React.ComponentProps<'div'>, 'title'> & { title: React.ReactNode; desc?: React.ReactNode }) {
   return (
     <div className={cn('min-w-0 flex-1', className)} {...props}>
       <div className="text-[14.5px] font-medium text-adm-text">{title}</div>

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Stat, StatGroup } from '@/components/ui/stat';
 import {
   saveFelSettings,
   emitInvoice,
@@ -77,17 +78,15 @@ export default function FacturacionPanel({ restaurantId, settings, estado, docum
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Facturas ante el SAT" value={String(summary.certificados)} accent />
-        <Kpi label="Monto facturado" value={money(summary.montoCertificado)} sub="Neto de notas de crédito" />
-        <Kpi label="En cola" value={String(summary.pendientes)} sub={summary.conError > 0 ? `${summary.conError} con error` : undefined} />
-        <Kpi
-          label="Modo"
+      <StatGroup>
+        <Stat label="Facturas ante el SAT" value={String(summary.certificados)} />
+        <Stat label="Monto facturado (neto de notas de crédito)" value={money(summary.montoCertificado)} />
+        <Stat label={summary.conError > 0 ? `En cola (${summary.conError} con error)` : 'En cola'} value={String(summary.pendientes)} />
+        <Stat
+          label={`Modo (${estado.esFiscal ? (settings.ambiente === 'PRUEBAS' ? 'Pruebas' : 'Producción') : 'Sin validez fiscal'})`}
           value={estado.esFiscal ? 'Certificador' : 'Interno'}
-          sub={estado.esFiscal ? (settings.ambiente === 'PRUEBAS' ? 'Pruebas' : 'Producción') : 'Sin validez fiscal'}
         />
-      </div>
+      </StatGroup>
 
       {/* El aviso más importante de la pantalla: lo que impide facturar. */}
       {estado.problemas.length > 0 && (
@@ -135,16 +134,6 @@ export default function FacturacionPanel({ restaurantId, settings, estado, docum
       {tab === 'emitir' && <EmitForm restaurantId={restaurantId} settings={settings} invoiceable={invoiceable} listo={listo} onEmitted={() => router.refresh()} onGoConfig={() => setTab('config')} />}
       {tab === 'historial' && <DocumentsList restaurantId={restaurantId} settings={settings} documents={documents} onChange={() => router.refresh()} />}
     </div>
-  );
-}
-
-function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-1 p-3.5">
-      <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-      {sub && <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{sub}</span>}
-    </Card>
   );
 }
 

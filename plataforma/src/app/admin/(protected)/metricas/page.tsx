@@ -5,6 +5,9 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats } from '@/lib/db/orders';
 import { getVisitStats } from '@/lib/actions/metrics';
 import { Card } from '@/components/ui/card';
+import { Section } from '@/components/ui/section';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export const metadata = { title: 'Métricas – Panel admin' };
 
@@ -58,24 +61,24 @@ export default async function AdminMetricasPage() {
         Visitas a tu sitio (cada apertura de la app por un dispositivo cuenta una vez por sesión).
       </p>
 
-      {/* KPIs de visitas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12 }}>
-        <Kpi label="Visitas hoy" value={String(visits.today)} sub={`${visits.uniqueToday} visitantes únicos`} hero />
-        <Kpi label="Últimos 7 días" value={String(visits.last7)} sub={`${visits.unique7} únicos`} />
-        <Kpi label="Últimos 30 días" value={String(visits.last30)} sub={`${visits.unique30} únicos`} />
-        {orderStats && (
-          <Kpi
-            label="Conversión hoy"
-            value={conversion === null ? '–' : `${conversion.toFixed(0)}%`}
-            sub={`${orderStats.todayOrders} pedidos / ${visits.today} visitas`}
-          />
-        )}
-      </div>
+      <Section title="Visitas">
+        <StatGroup>
+          <Stat label={`Hoy (${visits.uniqueToday} únicos)`} value={String(visits.today)} />
+          <Stat label={`7 días (${visits.unique7} únicos)`} value={String(visits.last7)} />
+          <Stat label={`30 días (${visits.unique30} únicos)`} value={String(visits.last30)} />
+          {orderStats && (
+            <Stat
+              label={`Conversión hoy (${orderStats.todayOrders}/${visits.today})`}
+              value={conversion === null ? '–' : `${conversion.toFixed(0)}%`}
+            />
+          )}
+        </StatGroup>
+      </Section>
 
       {/* Gráfica 14 días */}
       <Card className="flex flex-col gap-3.5 p-4.5">
         <div>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Visitas · 14 días</div>
+          <div className="t-kicker">Visitas · 14 días</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
             {visits.series14.reduce((s, d) => s + d.visits, 0)}
           </div>
@@ -109,21 +112,13 @@ export default async function AdminMetricasPage() {
       </Card>
 
       {visits.last30 === 0 && (
-        <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-          Aún no hay visitas registradas. El contador empieza a funcionar desde que
-          se activó esta función; comparte tu QR o tu enlace para ver movimiento aquí.
-        </Card>
+        <EmptyState
+          icon="chart"
+          title="Aún no hay visitas registradas"
+          desc="El contador empieza a funcionar desde que se activó esta función; comparte tu QR o tu enlace para ver movimiento aquí."
+          action={{ href: '/admin/qr', label: 'Ver mi código QR' }}
+        />
       )}
     </div>
-  );
-}
-
-function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </Card>
   );
 }

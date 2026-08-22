@@ -7,6 +7,9 @@ import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/c
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Section } from '@/components/ui/section';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import { EmptyState } from '@/components/ui/empty-state';
 import ClientesExportButton from '@/components/admin/clientes-export-button';
 import type { Customer, Order } from '@/types';
 
@@ -100,17 +103,21 @@ export default async function AdminClientesPage({
         </div>
       )}
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Clientes" value={String(total)} sub="registrados al pedir" />
-        <Kpi label="Recurrentes" value={String(recurrent)} sub="con 2+ pedidos" />
-        <Kpi label="Total histórico" value={fmtQ(totalSpent)} sub="de estos clientes" />
-      </div>
+      <Section title="Resumen">
+        <StatGroup>
+          <Stat label="Clientes registrados" value={String(total)} />
+          <Stat label="Recurrentes (2+ pedidos)" value={String(recurrent)} />
+          <Stat label="Total histórico" value={fmtQ(totalSpent)} />
+        </StatGroup>
+      </Section>
 
       {customers.length === 0 ? (
-        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
-          Aún no hay clientes. Se registran automáticamente cuando alguien hace su primer pedido.
-        </Card>
+        <EmptyState
+          icon="users"
+          title="Aún no tenés clientes"
+          desc="Se registran solos cuando alguien hace su primer pedido — no hace falta darlos de alta a mano."
+          action={{ href: '/admin/qr', label: 'Comparte tu código QR' }}
+        />
       ) : (
         <Card className="overflow-hidden p-0">
           {/* Header */}
@@ -204,15 +211,5 @@ export default async function AdminClientesPage({
         </div>
       )}
     </div>
-  );
-}
-
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </Card>
   );
 }

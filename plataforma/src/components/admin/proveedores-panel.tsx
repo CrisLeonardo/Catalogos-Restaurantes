@@ -7,6 +7,7 @@ import { saveSupplier, deleteSupplier, createPurchaseOrder, setPurchaseOrderStat
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import type { Supplier, PurchaseOrder, SupplierSummary, PurchaseableProduct, PurchaseableIngredient } from '@/lib/db/suppliers';
 
@@ -124,7 +125,12 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       )}
 
       {suppliers.length === 0 && !edit ? (
-        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no tienes proveedores registrados.</Card>
+        <EmptyState
+          icon="truck"
+          title="Aún no tenés proveedores registrados"
+          desc="Registrá a quién le comprás para llevar el control de tus órdenes de compra."
+          action={{ label: 'Agregar el primero', onClick: () => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' }) }}
+        />
       ) : (
         <Card className="overflow-hidden p-0">
           {/* En móvil se oculta "Contacto" para que nombre/teléfono/acciones
@@ -297,7 +303,12 @@ function OrdersTab({
       )}
 
       {orders.length === 0 && !creating ? (
-        <Card className="p-7 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>Aún no has creado órdenes de compra.</Card>
+        <EmptyState
+          icon="receipt"
+          title="Aún no has creado órdenes de compra"
+          desc="Una orden registra qué le pedís a un proveedor y suma el stock automáticamente al recibirla."
+          action={{ label: 'Crear la primera', onClick: () => setCreating(true) }}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {orders.map((po) => (

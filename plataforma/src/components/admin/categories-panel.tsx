@@ -9,6 +9,7 @@ import { Icon, ICON_PATHS } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { EmptyState } from '@/components/ui/empty-state';
 
 function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -142,9 +143,12 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
 
       {/* Lista */}
       {categories.length === 0 && !showNew && (
-        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
-          Sin categorías aún. Crea una para organizar tu menú.
-        </Card>
+        <EmptyState
+          icon="tag"
+          title="Sin categorías aún"
+          desc="Creá una para organizar tu menú — entradas, bebidas, postres…"
+          action={{ label: 'Crear la primera', onClick: () => setShowNew(true) }}
+        />
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   createReservation,
   updateReservationStatus,
@@ -133,20 +135,12 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-        {[
-          { label: 'Hoy', value: String(summary.today), accent: true },
-          { label: 'Pendientes', value: String(summary.pending) },
-          { label: 'Confirmadas', value: String(summary.confirmed) },
-          { label: 'Total próximas', value: String(reservations.length) },
-        ].map(({ label, value, accent }) => (
-          <Card key={label} className="p-3.5">
-            <div style={{ fontSize: 24, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2 }}>{label}</div>
-          </Card>
-        ))}
-      </div>
+      <StatGroup>
+        <Stat label="Hoy" value={String(summary.today)} />
+        <Stat label="Pendientes" value={String(summary.pending)} />
+        <Stat label="Confirmadas" value={String(summary.confirmed)} />
+        <Stat label="Total próximas" value={String(reservations.length)} />
+      </StatGroup>
 
       {error && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
@@ -199,13 +193,12 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
           </form>
         </Card>
       ) : grouped.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-3)' }}>
-          <Icon name="calendar" size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
-          <div style={{ fontSize: 14 }}>No hay reservaciones próximas</div>
-          <Button type="button" onClick={() => setTab('nueva')} className="mt-3 rounded-adm-full" size="sm">
-            Crear primera reservación
-          </Button>
-        </div>
+        <EmptyState
+          icon="calendar"
+          title="No hay reservaciones próximas"
+          desc="Las reservaciones que se agenden aparecerán aquí, agrupadas por día."
+          action={{ label: 'Crear primera reservación', onClick: () => setTab('nueva') }}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {grouped.map(([date, list]) => (

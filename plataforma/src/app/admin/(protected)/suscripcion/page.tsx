@@ -16,6 +16,9 @@ import { Icon } from '@/components/icons';
 import { createServiceClient } from '@/lib/supabase/service';
 import { Card, cardVariants } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Section } from '@/components/ui/section';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import { List, ListRow, ListText } from '@/components/ui/list';
 import { cn } from '@/lib/utils';
 import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 
@@ -378,12 +381,12 @@ export default async function SuscripcionPage() {
           </Card>
 
           {/* Detalles del plan */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-            <Kpi label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
-            {config.setup_fee > 0 && <Kpi label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
-            <Kpi label="Próximo cobro" value={nextChargeLabel(config.billing_day)} small />
-            {config.started_at && <Kpi label="Cliente desde" value={config.started_at.slice(0, 10)} small />}
-          </div>
+          <StatGroup>
+            <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
+            {config.setup_fee > 0 && <Stat label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
+            <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />
+            {config.started_at && <Stat label="Cliente desde" value={config.started_at.slice(0, 10)} />}
+          </StatGroup>
 
           <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
             Los pagos se realizan al inicio de cada mes. Cuando registremos tu pago, el cobro
@@ -391,14 +394,15 @@ export default async function SuscripcionPage() {
           </Card>
 
           {/* Historial */}
-          <Card className="flex flex-col gap-2.5 p-4.5">
-            <div className="t-kicker" style={{ fontSize: 9.5 }}>Historial de cobros</div>
+          <Section title="Historial de cobros">
             {invoices.length === 0 ? (
-              <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no hay cobros.</div>
+              <Card className="p-3.5" style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Aún no hay cobros.</Card>
             ) : (
-              invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} restaurantName={restaurantName} />)
+              <List>
+                {invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} currency={currency} restaurantName={restaurantName} />)}
+              </List>
             )}
-          </Card>
+          </Section>
         </>
       )}
 
@@ -424,19 +428,17 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
     : { label: 'Pendiente', color: 'var(--c-warn)', bg: 'var(--c-warn-bg)' };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--u-hair)' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
-          {inv.description ?? CONCEPT_LABEL[inv.concept]}
-        </div>
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>
-          {inv.status === 'PAID' && inv.paid_at
+    <ListRow>
+      <ListText
+        title={inv.description ?? CONCEPT_LABEL[inv.concept]}
+        desc={
+          inv.status === 'PAID' && inv.paid_at
             ? `Pagado el ${inv.paid_at.slice(0, 10)}${inv.payment_method ? ` · ${inv.payment_method}` : ''}`
             : inv.due_date
             ? `Vence el ${inv.due_date}`
-            : CONCEPT_LABEL[inv.concept]}
-        </div>
-      </div>
+            : CONCEPT_LABEL[inv.concept]
+        }
+      />
       <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
         {meta.label.toUpperCase()}
       </span>
@@ -457,7 +459,7 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
           }}
         />
       )}
-    </div>
+    </ListRow>
   );
 }
 
@@ -505,16 +507,5 @@ function LineItem({ label, value, accent }: { label: string; value: string; acce
       <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{label}</span>
       <span style={{ fontFamily: 'var(--ui-font-mono)', fontSize: 13.5, fontWeight: 600, color: accent ?? 'var(--u-text-2)' }}>{value}</span>
     </div>
-  );
-}
-
-function Kpi({ label, value, small }: { label: string; value: string; small?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: small ? 'var(--font-sans)' : 'var(--ui-font-mono)', fontWeight: small ? 600 : 700, fontSize: small ? 15 : 22, color: 'var(--u-text)', lineHeight: 1.15 }}>
-        {value}
-      </div>
-    </Card>
   );
 }

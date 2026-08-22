@@ -10,6 +10,9 @@ import ExportReportButton from '@/components/admin/export-report-button';
 import CashCountForm from '@/components/admin/cash-count-form';
 import CashHistoryPanel from '@/components/admin/cash-history-panel';
 import { Card } from '@/components/ui/card';
+import { Section } from '@/components/ui/section';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export const metadata = { title: 'Finanzas – Panel admin' };
 
@@ -63,14 +66,12 @@ export default async function AdminFinanzasPage({
 
   if (!ordersEnabled) {
     return (
-      <Card className="p-5" style={{ maxWidth: 560 }}>
-        <div className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Finanzas</div>
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.6, margin: 0 }}>
-          Los reportes financieros y el corte de caja se basan en los pedidos en línea.
-          Activa el módulo <strong>Pedidos</strong> (plan Estándar) para empezar a medir
-          ingresos, utilidad y margen.
-        </p>
-      </Card>
+      <EmptyState
+        icon="banknote"
+        title="Finanzas todavía no está activa"
+        desc="Los reportes financieros y el corte de caja se basan en los pedidos en línea. Activa el módulo Pedidos (plan Estándar) para empezar a medir ingresos, utilidad y margen."
+        action={{ href: '/admin/suscripcion', label: 'Ver planes' }}
+      />
     );
   }
 
@@ -97,15 +98,16 @@ export default async function AdminFinanzasPage({
         </div>
       </Card>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Ingreso" value={money(report.revenue)} sub={`${report.orders} pedidos`} hero />
-        <Kpi label="Utilidad" value={money(report.profit)} sub={report.marginPct != null ? `margen ${report.marginPct.toFixed(0)}%` : 'captura costos'} />
-        <Kpi label="Costo" value={money(report.cost)} sub="de productos vendidos" />
-        <Kpi label="Ticket promedio" value={money(report.avgTicket)} />
-        <Kpi label="Envíos" value={money(report.deliveryRevenue)} />
-        <Kpi label="Propinas" value={money(report.tips)} sub={report.tips > 0 ? 'ya incluidas en el ingreso' : undefined} />
-      </div>
+      <Section title="Resumen del rango">
+        <StatGroup>
+          <Stat label={`Ingreso (${report.orders} pedidos)`} value={money(report.revenue)} />
+          <Stat label={report.marginPct != null ? `Utilidad (margen ${report.marginPct.toFixed(0)}%)` : 'Utilidad (captura costos)'} value={money(report.profit)} />
+          <Stat label="Costo de productos vendidos" value={money(report.cost)} />
+          <Stat label="Ticket promedio" value={money(report.avgTicket)} />
+          <Stat label="Envíos" value={money(report.deliveryRevenue)} />
+          <Stat label={report.tips > 0 ? 'Propinas (incluidas en el ingreso)' : 'Propinas'} value={money(report.tips)} />
+        </StatGroup>
+      </Section>
 
       {report.marginPct == null && report.orders > 0 && (
         <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
@@ -116,7 +118,7 @@ export default async function AdminFinanzasPage({
 
       {/* Gráfica diaria */}
       <Card className="flex flex-col gap-3.5 p-4.5">
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Ingreso por día</div>
+        <div className="t-kicker">Ingreso por día</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
           {report.series.map((d, i) => {
             const h = (d.revenue / maxRevenue) * 100;
@@ -164,20 +166,10 @@ export default async function AdminFinanzasPage({
   );
 }
 
-function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </Card>
-  );
-}
-
 function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total: number }) {
   return (
     <Card className="flex flex-col gap-3 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
+      <div className="t-kicker">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : rows.map((r) => {
@@ -201,7 +193,7 @@ function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total
 function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name: string; a: string; b: string }[]; colA: string; colB: string }) {
   return (
     <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{title}</div>
+      <div className="t-kicker">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : (

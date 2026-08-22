@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { EmptyState } from '@/components/ui/empty-state';
 import { createCoupon, updateCoupon, toggleCoupon, deleteCoupon } from '@/lib/actions/cupones';
 import type { Coupon } from '@/lib/db/cupones';
 
@@ -197,11 +198,12 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
 
       {/* Lista de cupones */}
       {coupons.length === 0 && !showForm ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-3)' }}>
-          <Icon name="ticket" size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
-          <div style={{ fontSize: 14 }}>Aún no tienes cupones</div>
-          <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 4 }}>Crea tu primer código de descuento.</div>
-        </div>
+        <EmptyState
+          icon="ticket"
+          title="Aún no tenés cupones"
+          desc="Creá tu primer código de descuento para convertir visitas en pedidos."
+          action={{ label: 'Crear el primero', onClick: () => setShowForm(true) }}
+        />
       ) : coupons.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {coupons.map((c) => {

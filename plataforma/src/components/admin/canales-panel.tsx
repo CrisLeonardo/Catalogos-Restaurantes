@@ -19,6 +19,7 @@ import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { Stat, StatGroup } from '@/components/ui/stat';
 import { saveChannelMapping, deleteChannelMapping } from '@/lib/actions/channels';
 import { CHANNELS } from '@/lib/channels';
 import type { ChannelMapRow, ChannelProductOption, ChannelSummary } from '@/lib/db/channels';
@@ -96,22 +97,20 @@ export default function CanalesPanel({
       {/* Resumen: separa "configurado" de "funcionando". Un canal con
           mapeos y cero pedidos casi siempre significa que falta la llave. */}
       {conPedidos.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        <StatGroup>
           {conPedidos.map((s) => (
-            <Card key={s.channel} className="flex flex-col gap-1 p-3.5">
-              <span className="t-kicker" style={{ fontSize: 9.5 }}>{CANAL_LABEL[s.channel]}</span>
-              <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{s.pedidos}</span>
-              <span style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-                {s.pedidos === 1 ? 'pedido recibido' : 'pedidos recibidos'} · {s.mapeados} producto{s.mapeados === 1 ? '' : 's'} mapeado{s.mapeados === 1 ? '' : 's'}
-              </span>
-            </Card>
+            <Stat
+              key={s.channel}
+              label={`${CANAL_LABEL[s.channel]} (${s.mapeados} producto${s.mapeados === 1 ? '' : 's'} mapeado${s.mapeados === 1 ? '' : 's'})`}
+              value={`${s.pedidos} ${s.pedidos === 1 ? 'pedido' : 'pedidos'}`}
+            />
           ))}
-        </div>
+        </StatGroup>
       )}
 
       {/* ── Alta de mapeo ── */}
       <Card className="flex flex-col gap-3.5 p-4">
-        <div className="t-kicker" style={{ fontSize: 10.5 }}>Conectar un producto</div>
+        <div className="t-kicker">Conectar un producto</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>App</label>
