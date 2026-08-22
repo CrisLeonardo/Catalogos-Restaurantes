@@ -1,0 +1,30 @@
+{
+  "pages": [
+    { "id": "pantallas", "name": "Pantallas" },
+    { "id": "movil", "name": "En el teléfono" },
+    { "id": "sistema", "name": "Sistema y detalles" },
+    { "id": "porque", "name": "Por qué" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Hoy · claro", "page": "pantallas", "x": 0, "y": 0, "w": 1280, "h": 860 },
+    { "file": "HoyOscuro.dc.html", "title": "Hoy · oscuro", "page": "pantallas", "x": 1360, "y": 0, "w": 1280, "h": 860 },
+    { "file": "Pedidos.dc.html", "title": "Pedidos", "page": "pantallas", "x": 2720, "y": 0, "w": 1280, "h": 860 },
+    { "file": "Menu.dc.html", "title": "Menú", "page": "pantallas", "x": 0, "y": 960, "w": 1280, "h": 860 },
+    { "file": "Negocio.dc.html", "title": "Negocio · oscuro", "page": "pantallas", "x": 1360, "y": 960, "w": 1280, "h": 860 },
+    { "file": "Ajustes.dc.html", "title": "Ajustes", "page": "pantallas", "x": 2720, "y": 960, "w": 1280, "h": 860 },
+    { "file": "Movil.dc.html", "title": "En el teléfono", "page": "movil", "x": 0, "y": 0, "w": 1000, "h": 1060 },
+    { "file": "Detalles.dc.html", "title": "Las cosas pequeñas", "page": "sistema", "x": 0, "y": 0, "w": 900, "h": 2500 },
+    { "file": "Sistema.dc.html", "title": "El sistema", "page": "sistema", "x": 980, "y": 0, "w": 900, "h": 1760 },
+    { "file": "Diagnostico.dc.html", "title": "Menos es más", "page": "porque", "x": 0, "y": 0, "w": 860, "h": 1980 },
+    { "file": "Actual.dc.html", "title": "El panel de hoy", "page": "porque", "x": 940, "y": 0, "w": 1280, "h": 820 }
+  ],
+  "annotations": [
+    { "id": "nota-modos", "page": "pantallas", "x": 0, "y": -150, "w": 420, "text": "Claro y oscuro son el MISMO marcado: solo cambian las variables de color. El interruptor se queda donde está hoy, arriba a la derecha, y sigue recordando la elección de cada quien." },
+    { "id": "nota-tipo", "page": "pantallas", "x": 1360, "y": -150, "w": 420, "text": "Tipografía intacta: Unbounded en los títulos, Geist en el texto y JetBrains Mono con cifras tabulares en TODO número. Por eso las columnas de precios quedan alineadas solas." },
+    { "id": "nota-nada", "page": "pantallas", "x": 2720, "y": -150, "w": 420, "text": "Nada se pierde. Lo que antes era una entrada del menú ahora es una pestaña adentro: Pedidos guarda cocina, mesas, mesero, repartidores e historial; Menú guarda categorías, ingredientes, inventario y proveedores." },
+    { "id": "nota-ajustes", "page": "pantallas", "x": 4080, "y": 960, "w": 420, "text": "Ajustes absorbe las nueve entradas del grupo Cuenta más horarios, propinas y dispositivos. Cada fila muestra su estado a la derecha, así se ve qué falta sin entrar." },
+    { "id": "nota-movil", "page": "movil", "x": 0, "y": -150, "w": 420, "text": "En el teléfono la barra lateral se vuelve barra de pestañas abajo, al alcance del pulgar. Nada tocable baja de 44 px. No se dibuja barra de estado ni teclado falsos: eso lo pone el sistema encima." },
+    { "id": "nota-antes", "page": "porque", "x": 940, "y": -150, "w": 420, "text": "El panel actual recreado con los valores reales del código, para comparar lado a lado." }
+  ],
+  "launch": { "view": "canvas", "page": "pantallas" }
+}

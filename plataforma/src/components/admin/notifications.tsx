@@ -35,6 +35,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon } from '@/components/icons';
+import { friendlyError } from '@/lib/friendly-error';
 import {
   primeAudio,
   playOrderSound,
@@ -497,7 +498,7 @@ export default function AdminNotifications({
       }
     } catch (e) {
       setState('basic');
-      showPopup(`Error al configurar el Service Worker: ${e instanceof Error ? e.message : 'desconocido'}`, 'error');
+      showPopup(friendlyError(e), 'error');
     }
   }
 

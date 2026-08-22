@@ -419,7 +419,7 @@ export async function updateMenuLanguages(formData: FormData): Promise<void> {
     .update({ menu_languages })
     .eq('id', ctx.restaurantId);
 
-  revalidatePath('/admin/ajustes');
+  revalidatePath('/admin/ajustes/restaurante');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { isStaleBuildError, recoverFromStaleBuild } from '@/lib/stale-build';
+import { friendlyError } from '@/lib/friendly-error';
 
 export default function AdminError({
   error,
@@ -57,14 +58,14 @@ export default function AdminError({
             marginBottom: 6,
           }}
         >
-          {stale ? 'Hay una versión nueva' : 'Error en el panel'}
+          {stale ? 'Hay una versión nueva' : 'No se pudo abrir esta pantalla'}
         </h2>
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
           {stale
             ? reloading
               ? 'Estamos actualizando el panel…'
               : 'Este panel tiene una versión anterior de Leogin. Recárgalo para continuar.'
-            : error.message || 'No se pudo cargar esta sección. Intenta de nuevo.'}
+            : friendlyError(error)}
         </p>
       </div>
 

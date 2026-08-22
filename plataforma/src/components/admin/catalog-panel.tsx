@@ -3,7 +3,7 @@
 /* CatalogPanel — tabla de catálogo estilo prototipo + modal editor de platillo.
    Reemplaza CategoryManager en /admin/menu. */
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -23,6 +23,8 @@ import { getRecipeForProduct } from '@/lib/actions/recipes';
 import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { useToastManager } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import type { Category, Product, ProductOptionGroup } from '@/types';
@@ -100,7 +102,41 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
     product: null,
   });
   const router = useRouter();
-  const availForms = useRef<Record<string, HTMLFormElement | null>>({});
+  const { add: toast } = useToastManager();
+  const [, startAvail] = useTransition();
+
+  /**
+   * Marcar agotado / disponible, con DESHACER.
+   *
+   * Antes era un <form> que se enviaba solo al mover el interruptor: la acción
+   * ocurría en silencio y, si se tocaba el platillo equivocado —fácil, son
+   * filas juntas y el pulgar es ancho—, había que buscarlo y volver a moverlo.
+   * Ahora avisa qué pasó y ofrece revertirlo ahí mismo. Es el patrón que
+   * sustituye a preguntar "¿estás seguro?" antes de cada cosa: la operación es
+   * reversible, así que se hace y se deja deshacer.
+   *
+   * `silent` corta la cadena: el deshacer no lanza otro deshacer.
+   */
+  function setAvailability(id: string, name: string, next: boolean, silent = false) {
+    const fd = new FormData();
+    fd.set('restaurantId', restaurantId);
+    fd.set('id', id);
+    fd.set('is_available', String(next));
+    startAvail(async () => {
+      await toggleProductAvailability(fd);
+      if (silent) return;
+      toast({
+        title: next ? `${name} vuelve a estar disponible` : `${name} quedó marcado como agotado`,
+        description: next ? undefined : 'Tus clientes dejan de verlo en el menú.',
+        type: 'success',
+        actionProps: {
+          children: 'Deshacer',
+          onClick: () => setAvailability(id, name, !next, true),
+        },
+      });
+    });
+  }
+
 
   const atProductLimit = maxProducts != null && products.length >= maxProducts;
   const nearProductLimit = maxProducts != null && !atProductLimit && products.length >= maxProducts * 0.8;
@@ -163,11 +199,27 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
 
       {/* Tabla */}
       {list.length === 0 ? (
-        <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
-          {products.length === 0
-            ? 'No hay platillos aún. ¡Crea el primero!'
-            : 'No hay platillos en esta categoría.'}
-        </Card>
+        products.length === 0 ? (
+          // Catálogo vacío de verdad: es la primera vez del dueño, así que la
+          // pantalla enseña qué falta y trae el botón para hacerlo. Antes
+          // decía "No hay platillos aún. ¡Crea el primero!" y ahí terminaba.
+          <EmptyState
+            icon="bag"
+            title="Todavía no tenés platillos"
+            desc="Agregá el primero y tu menú queda publicado al instante: la gente ya puede verlo escaneando tu código QR."
+            action={
+              atProductLimit
+                ? { href: '/admin/suscripcion', label: 'Sube de plan para agregar' }
+                : { onClick: () => setEditor({ open: true, product: null }), label: 'Agregar el primero' }
+            }
+          />
+        ) : (
+          // Vacío por el filtro, no por falta de datos: aquí la salida es
+          // cambiar de categoría, no crear un platillo.
+          <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
+            No hay platillos en esta categoría.
+          </Card>
+        )
       ) : (
         <Card className="overflow-hidden p-0">
           {/* Header */}
@@ -279,16 +331,11 @@ export default function CatalogPanel({ restaurantId, categories, products, ingre
                     </span>
                   ) : (
                     <>
-                      <form ref={(el) => { availForms.current[p.id] = el; }} action={toggleProductAvailability}>
-                        <input type="hidden" name="restaurantId" value={restaurantId} />
-                        <input type="hidden" name="id" value={p.id} />
-                        <input type="hidden" name="is_available" value={String(!p.is_available)} />
-                        <Switch
-                          checked={p.is_available}
-                          onCheckedChange={() => availForms.current[p.id]?.requestSubmit()}
-                          aria-label={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
-                        />
-                      </form>
+                      <Switch
+                        checked={p.is_available}
+                        onCheckedChange={(next) => setAvailability(p.id, p.name, next)}
+                        aria-label={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
+                      />
                       <span style={{ fontSize: 12, color: p.is_available ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
                         {p.is_available ? 'Activo' : 'Agotado'}
                       </span>

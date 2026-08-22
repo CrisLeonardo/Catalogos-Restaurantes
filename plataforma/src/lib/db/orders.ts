@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { localDateKey } from '@/lib/hours';
-import type { Order, OrderItem, OrderVoid } from '@/types';
+import type { Order, OrderItem, OrderStatus, OrderVoid } from '@/types';
 
 export type OrderWithItems = Order & {
   items: OrderItem[];
@@ -91,6 +91,54 @@ export async function getPanelOrders(
     .sort((a, b) => orderClosedAt(b).localeCompare(orderClosedAt(a)));
 
   return { active: mapOrderRows(activeRes.data), closedToday };
+}
+
+/** Una fila de "En curso" en la pantalla Hoy: lo justo para pintarla. */
+export interface ActiveOrderPreview {
+  id: string;
+  order_number: string;
+  order_type: Order['order_type'];
+  /** En DINE_IN trae "Mesa N" (ver tableLabel en la pantalla Hoy). */
+  address: string | null;
+  customer_name: string;
+  status: OrderStatus;
+  total: number;
+  created_at: string;
+}
+
+export interface ActiveOrdersPreview {
+  /** Los más viejos primero (FIFO, igual que el panel de pedidos). */
+  orders: ActiveOrderPreview[];
+  /** Cuántos hay en curso EN TOTAL, no cuántos vienen en `orders`. */
+  total: number;
+}
+
+/**
+ * Vista corta de los pedidos en curso para la pantalla Hoy.
+ *
+ * Deliberadamente NO reusa getPanelOrders: ese trae hasta 500 pedidos con
+ * todos sus ítems y anulaciones porque el panel los necesita para trabajar.
+ * Hoy solo enseña cuatro renglones y un total, así que pide cuatro filas y
+ * el conteo — la portada del panel no debe costar lo que cuesta el panel.
+ */
+export async function getActiveOrdersPreview(
+  restaurantId: string,
+  limit = 4,
+): Promise<ActiveOrdersPreview> {
+  const db = createServiceClient();
+  const { data, count } = await db
+    .from('orders')
+    .select('id, order_number, order_type, address, customer_name, status, total, created_at',
+      { count: 'exact' })
+    .eq('restaurant_id', restaurantId)
+    .not('status', 'in', '("DELIVERED","CANCEL")')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  return {
+    orders: (data ?? []) as unknown as ActiveOrderPreview[],
+    total: count ?? (data?.length ?? 0),
+  };
 }
 
 /** Pedidos activos del mesero (para la interfaz /admin/mesero). */

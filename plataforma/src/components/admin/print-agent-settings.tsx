@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@/components/icons';
+import { friendlyError } from '@/lib/friendly-error';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -335,7 +336,7 @@ export default function PrintAgentSettings() {
         setReceipt(res.receiptTarget ?? '');
       }
     } catch (e) {
-      setMsg(`Error al cargar config: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(`No se pudo leer la configuración de la PC. ${friendlyError(e)}`);
     } finally {
       setLoading(false);
     }
@@ -359,7 +360,7 @@ export default function PrintAgentSettings() {
       setMsg('');
       await load();
     } catch (e) {
-      setMsg(`Error inesperado: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(friendlyError(e));
     } finally {
       setGenerating(false);
     }
@@ -373,7 +374,7 @@ export default function PrintAgentSettings() {
       setMsg(res.error ? `Error: ${res.error}` : '✓ Destinos guardados');
       if (!res.error) await load();
     } catch (e) {
-      setMsg(`Error inesperado: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(friendlyError(e));
     } finally {
       setSaving(false);
     }
@@ -390,7 +391,7 @@ export default function PrintAgentSettings() {
         : `✓ Prueba encolada (${role === 'kitchen' ? 'cocina' : 'caja'}). El agente la imprimirá en segundos.`
       );
     } catch (e) {
-      setMsg(`Error inesperado: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(friendlyError(e));
     }
   }
 

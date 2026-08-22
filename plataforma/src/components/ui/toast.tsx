@@ -53,6 +53,19 @@ function ToastList() {
           <BaseToast.Title className="text-[13px] font-semibold text-adm-text" />
           <BaseToast.Description className="text-[12.5px] text-adm-text-3" />
         </div>
+        {/* Acción del aviso — hoy siempre "Deshacer". Es la pieza que permite
+            dejar de preguntar "¿estás seguro?" antes de cada cosa: la acción
+            se hace y se puede revertir mientras el aviso sigue en pantalla.
+            Solo se pinta si quien lanzó el toast pasó `actionProps`. */}
+        {toast.actionProps && (
+          <BaseToast.Action
+            className={cn(
+              'shrink-0 self-center rounded-adm-md px-2.5 py-1.5 text-[12.5px] font-semibold outline-none transition-colors',
+              'text-[var(--brand-accent-ink,var(--adm-accent-500))] hover:bg-adm-card',
+              'focus-visible:ring-2 focus-visible:ring-adm-accent-500/40'
+            )}
+          />
+        )}
         <BaseToast.Close
           className="shrink-0 rounded-adm-md p-1 text-adm-text-4 outline-none transition-colors hover:bg-adm-card hover:text-adm-text"
           aria-label="Cerrar notificación"

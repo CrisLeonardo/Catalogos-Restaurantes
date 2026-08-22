@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #e58a5f; } a:hover { color: #eea17c; }
+    .c { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .c .i { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .c .i-sm { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .c .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+    .c .tk { background: #16161c; border: 1px solid rgba(245,243,239,0.09); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .c .act { height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 600; }
+    .c .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: rgba(245,243,239,0.46); font-size: 11.5px; font-weight: 500; }
+    .c .num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  </style>
+</helmet>
+<div class="c" style="width: 1280px; height: 820px; box-sizing: border-box; display: flex; flex-direction: column; background: #08080a; color: #f5f3ef; overflow: hidden">
+
+  <div style="height: 68px; flex-shrink: 0; display: flex; align-items: center; gap: 18px; padding: 0 24px; border-bottom: 1px solid rgba(245,243,239,0.08)">
+    <div style="min-width: 0">
+      <div style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: #f5f3ef; line-height: 1.2">Turno de hoy</div>
+      <div style="font-size: 12.5px; color: rgba(245,243,239,0.46); line-height: 1.2; margin-top: 2px">El Rincón · Centro · abierto desde las 11:00</div>
+    </div>
+
+    <div style="flex: 1"></div>
+
+    <div style="display: flex; align-items: baseline; gap: 22px; padding-right: 4px">
+      <div style="display: flex; align-items: baseline; gap: 7px">
+        <span class="num" style="font-size: 17px; font-weight: 600; color: #f5f3ef">Q3,480</span>
+        <span style="font-size: 12.5px; color: rgba(245,243,239,0.46)">vendido</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 7px">
+        <span class="num" style="font-size: 17px; font-weight: 600; color: #f5f3ef">24</span>
+        <span style="font-size: 12.5px; color: rgba(245,243,239,0.46)">pedidos</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 11px; border: 1px solid rgba(245,243,239,0.12); color: rgba(245,243,239,0.62)">
+      <svg class="i-sm" viewBox="0 0 24 24"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16M21 21l-4.3-4.3"></path></svg>
+      <span style="font-size: 13.5px">Buscar</span>
+    </div>
+    <div style="width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; border: 1px solid rgba(245,243,239,0.12); color: rgba(245,243,239,0.62)">
+      <svg class="i-sm" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg>
+    </div>
+    <div style="width: 40px; height: 40px; border-radius: 99px; background: rgba(245,243,239,0.10); display: grid; place-items: center; font-size: 14px; font-weight: 600">C</div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex; gap: 16px; padding: 22px 24px 18px; box-sizing: border-box">
+
+    <div class="col">
+      <div style="display: flex; align-items: center; gap: 9px; padding: 0 4px 2px">
+        <span style="width: 8px; height: 8px; border-radius: 99px; background: #e58a5f"></span>
+        <span style="font-size: 15px; font-weight: 600; color: #f5f3ef">Nuevos</span>
+        <span class="num" style="font-size: 14px; color: rgba(245,243,239,0.46)">2</span>
+      </div>
+
+      <div class="tk">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <div style="flex: 1; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #f5f3ef">Mesa 4</div>
+          <div class="num" style="font-size: 13.5px; color: #e58a5f">hace 2 min</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">2 · Carne asada</div>
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">1 · Limonada</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="num" style="flex: 1; font-size: 16px; font-weight: 600; color: #f5f3ef">Q210.00</div>
+          <div class="act" style="background: #c2603f; color: #ffffff; padding: 0 18px">Mandar a cocina</div>
+        </div>
+      </div>
+
+      <div class="tk">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <div style="flex: 1; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #f5f3ef">Llevar · Ana L.</div>
+          <div class="num" style="font-size: 13.5px; color: #e58a5f">hace 4 min</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">1 · Hamburguesa doble</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="num" style="flex: 1; font-size: 16px; font-weight: 600; color: #f5f3ef">Q95.00</div>
+          <div class="act" style="background: #c2603f; color: #ffffff; padding: 0 18px">Mandar a cocina</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div style="display: flex; align-items: center; gap: 9px; padding: 0 4px 2px">
+        <span style="width: 8px; height: 8px; border-radius: 99px; background: #fb923c"></span>
+        <span style="font-size: 15px; font-weight: 600; color: #f5f3ef">En cocina</span>
+        <span class="num" style="font-size: 14px; color: rgba(245,243,239,0.46)">3</span>
+      </div>
+
+      <div class="tk">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <div style="flex: 1; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #f5f3ef">Mesa 7</div>
+          <div class="num" style="font-size: 13.5px; color: #fb923c">9 min</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">3 · Pollo a la plancha</div>
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">3 · Sopa del día</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="num" style="flex: 1; font-size: 16px; font-weight: 600; color: #f5f3ef">Q340.00</div>
+          <div class="act" style="border: 1px solid rgba(245,243,239,0.18); color: #f5f3ef; padding: 0 18px">Marcar listo</div>
+        </div>
+      </div>
+
+      <div class="tk">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <div style="flex: 1; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #f5f3ef">Mesa 2</div>
+          <div class="num" style="font-size: 13.5px; color: #fb923c">6 min</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">2 · Tacos de res</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="num" style="flex: 1; font-size: 16px; font-weight: 600; color: #f5f3ef">Q120.00</div>
+          <div class="act" style="border: 1px solid rgba(245,243,239,0.18); color: #f5f3ef; padding: 0 18px">Marcar listo</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div style="display: flex; align-items: center; gap: 9px; padding: 0 4px 2px">
+        <span style="width: 8px; height: 8px; border-radius: 99px; background: #4ade80"></span>
+        <span style="font-size: 15px; font-weight: 600; color: #f5f3ef">Listos para entregar</span>
+        <span class="num" style="font-size: 14px; color: rgba(245,243,239,0.46)">1</span>
+      </div>
+
+      <div class="tk" style="border-color: rgba(74,222,128,0.30)">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <div style="flex: 1; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #f5f3ef">Domicilio · Zona 10</div>
+          <div class="num" style="font-size: 13.5px; color: #4ade80">listo</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; color: rgba(245,243,239,0.80)">1 · Pizza familiar</div>
+          <div style="font-size: 13.5px; color: rgba(245,243,239,0.50)">Repartidor: Luis M.</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="num" style="flex: 1; font-size: 16px; font-weight: 600; color: #f5f3ef">Q180.00</div>
+          <div class="act" style="border: 1px solid rgba(245,243,239,0.18); color: #f5f3ef; padding: 0 18px">Entregado</div>
+        </div>
+      </div>
+
+      <div style="border: 1px dashed rgba(245,243,239,0.12); border-radius: 16px; padding: 22px 16px; text-align: center">
+        <div style="font-size: 13.5px; color: rgba(245,243,239,0.42); line-height: 1.5">Lo que salga de cocina aparece aquí.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="height: 76px; flex-shrink: 0; display: flex; align-items: stretch; padding: 0 60px; border-top: 1px solid rgba(245,243,239,0.08); background: #0d0d11">
+    <div class="tab" style="color: #e58a5f">
+      <svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3.5 2"></path></svg>
+      <span style="font-weight: 600">Turno</span>
+    </div>
+    <div class="tab">
+      <svg class="i" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+      <span>Menú</span>
+    </div>
+    <div class="tab">
+      <svg class="i" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-2a4 4 0 0 0-3-3.8"></path></svg>
+      <span>Clientes</span>
+    </div>
+    <div class="tab">
+      <svg class="i" viewBox="0 0 24 24"><path d="M3 20h18M7 20v-6M12 20V8M17 20v-10"></path></svg>
+      <span>Negocio</span>
+    </div>
+    <div class="tab">
+      <svg class="i" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg>
+      <span>Más</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

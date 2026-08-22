@@ -116,13 +116,13 @@ export async function updateEntryPin(prevState: EntryPinState, formData: FormDat
 
   if (remove) {
     await setEntryPin(restaurantId, null);
-    revalidatePath('/admin/ajustes');
+    revalidatePath('/admin/ajustes/restaurante');
     return { ok: true };
   }
 
   if (!isValidPin(pin)) return { error: `El PIN debe tener ${PIN_LENGTH} dígitos.` };
   await setEntryPin(restaurantId, pin);
-  revalidatePath('/admin/ajustes');
+  revalidatePath('/admin/ajustes/restaurante');
   return { ok: true };
 }
 

@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .b { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .b .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .b .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .b .nl { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 8px; color: #17161a; font-size: 14px; font-weight: 500; }
+    .b .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: rgba(23,22,26,0.07); color: rgba(23,22,26,0.72); }
+    .b .group { background: #ffffff; border: 1px solid rgba(0,0,0,0.07); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .b .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; }
+    .b .hr { height: 1px; background: rgba(0,0,0,0.07); margin-left: 16px; }
+    .b .lbl { font-size: 12.5px; font-weight: 600; color: rgba(23,22,26,0.56); padding: 0 4px 8px; }
+    .b .num { font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+<div class="b" style="width: 1280px; height: 820px; box-sizing: border-box; display: flex; background: #f4f4f6; color: #17161a; overflow: hidden">
+
+  <div style="width: 240px; flex-shrink: 0; box-sizing: border-box; display: flex; flex-direction: column; padding: 16px 12px; background: #ebebef; border-right: 1px solid rgba(0,0,0,0.07)">
+
+    <div style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,0.86); border: 1px solid rgba(0,0,0,0.07); margin-bottom: 16px">
+      <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(23,22,26,0.50)"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16M21 21l-4.3-4.3"></path></svg>
+      <span style="font-size: 13px; color: rgba(23,22,26,0.50)">Buscar en el panel</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px">
+      <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(23,22,26,0.08); display: grid; place-items: center; flex-shrink: 0; font-size: 14px; font-weight: 600; color: #17161a">R</div>
+      <div style="min-width: 0">
+        <div style="font-size: 14px; font-weight: 600; color: #17161a; line-height: 1.2">El Rincón</div>
+        <div style="font-size: 11.5px; color: rgba(23,22,26,0.56); line-height: 1.2; margin-top: 1px">Centro · Plan Estándar</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 2px; flex: 1">
+      <div class="nl" style="background: #c2542f; color: #ffffff; font-weight: 600">
+        <span class="tile" style="background: rgba(255,255,255,0.22); color: #ffffff"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3.5 2"></path></svg></span>
+        <span>Hoy</span>
+      </div>
+      <div class="nl">
+        <span class="tile"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg></span>
+        <span style="flex: 1">Pedidos</span>
+        <span style="font-size: 12.5px; font-weight: 600; color: rgba(23,22,26,0.56)">8</span>
+      </div>
+      <div class="nl">
+        <span class="tile"><svg class="i" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"></path></svg></span>
+        <span>Menú</span>
+      </div>
+      <div class="nl">
+        <span class="tile"><svg class="i" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-2a4 4 0 0 0-3-3.8"></path></svg></span>
+        <span>Clientes</span>
+      </div>
+      <div class="nl">
+        <span class="tile"><svg class="i" viewBox="0 0 24 24"><path d="M3 20h18M7 20v-6M12 20V8M17 20v-10"></path></svg></span>
+        <span>Negocio</span>
+      </div>
+      <div class="nl">
+        <span class="tile"><svg class="i" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg></span>
+        <span>Ajustes</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px 2px; border-top: 1px solid rgba(0,0,0,0.07)">
+      <div style="width: 26px; height: 26px; border-radius: 99px; background: rgba(23,22,26,0.10); display: grid; place-items: center; flex-shrink: 0; font-size: 11.5px; font-weight: 600">C</div>
+      <div style="flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: rgba(23,22,26,0.82)">Carlos</div>
+      <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(23,22,26,0.45)"><path d="M6 9l6 6 6-6"></path></svg>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+
+    <div style="height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid rgba(0,0,0,0.07); background: rgba(244,244,246,0.80)">
+      <div style="flex: 1; font-size: 14px; font-weight: 600; color: rgba(23,22,26,0.72)">Hoy</div>
+      <div style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 14px; border-radius: 8px; background: #c2542f; color: #ffffff; font-size: 13.5px; font-weight: 600">
+        <svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+        <span>Tomar pedido</span>
+      </div>
+    </div>
+
+    <div style="padding: 30px 40px; box-sizing: border-box">
+      <div style="max-width: 720px; display: flex; flex-direction: column; gap: 26px">
+
+        <div>
+          <div style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; color: #17161a">Jueves 21 de agosto</div>
+          <div style="font-size: 14.5px; color: rgba(23,22,26,0.64); margin-top: 5px">Abierto desde las 11:00. Vas Q3,480 en 24 pedidos.</div>
+        </div>
+
+        <div>
+          <div class="lbl">Necesita tu atención</div>
+          <div class="group">
+            <div class="row">
+              <span style="width: 9px; height: 9px; border-radius: 99px; background: #d97706; flex-shrink: 0"></span>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-size: 14.5px; font-weight: 500; color: #17161a">La PC del local dejó de responder</div>
+                <div style="font-size: 13px; color: rgba(23,22,26,0.64); margin-top: 1px">Hace 20 minutos. No se imprimen comandas solas.</div>
+              </div>
+              <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(23,22,26,0.40)"><path d="M9 6l6 6-6 6"></path></svg>
+            </div>
+            <div class="hr"></div>
+            <div class="row">
+              <span style="width: 9px; height: 9px; border-radius: 99px; background: rgba(23,22,26,0.25); flex-shrink: 0"></span>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-size: 14.5px; font-weight: 500; color: #17161a">Te quedan 12 días de prueba</div>
+                <div style="font-size: 13px; color: rgba(23,22,26,0.64); margin-top: 1px">Después seguís en el plan Estándar, sin cortes.</div>
+              </div>
+              <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(23,22,26,0.40)"><path d="M9 6l6 6-6 6"></path></svg>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="lbl">Resumen del día</div>
+          <div class="group">
+            <div class="row">
+              <div style="flex: 1; font-size: 14.5px; color: #17161a">Ventas</div>
+              <div class="num" style="font-size: 15px; font-weight: 600; color: #17161a">Q3,480.00</div>
+            </div>
+            <div class="hr"></div>
+            <div class="row">
+              <div style="flex: 1; font-size: 14.5px; color: #17161a">Pedidos</div>
+              <div class="num" style="font-size: 15px; font-weight: 600; color: #17161a">24</div>
+            </div>
+            <div class="hr"></div>
+            <div class="row">
+              <div style="flex: 1; font-size: 14.5px; color: #17161a">Ticket promedio</div>
+              <div class="num" style="font-size: 15px; font-weight: 600; color: #17161a">Q145.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="lbl">En curso · 8 pedidos</div>
+          <div class="group">
+            <div class="row">
+              <div style="width: 76px; flex-shrink: 0; font-size: 14.5px; font-weight: 600; color: #17161a">Mesa 4</div>
+              <div style="flex: 1; min-width: 0; font-size: 13.5px; color: rgba(23,22,26,0.64)">3 platillos · hace 2 min</div>
+              <div style="width: 96px; flex-shrink: 0; font-size: 13.5px; color: rgba(23,22,26,0.64)">Nuevo</div>
+              <div class="num" style="width: 82px; text-align: right; flex-shrink: 0; font-size: 14.5px; font-weight: 600">Q210.00</div>
+            </div>
+            <div class="hr"></div>
+            <div class="row">
+              <div style="width: 76px; flex-shrink: 0; font-size: 14.5px; font-weight: 600; color: #17161a">Llevar</div>
+              <div style="flex: 1; min-width: 0; font-size: 13.5px; color: rgba(23,22,26,0.64)">Ana L. · hace 6 min</div>
+              <div style="width: 96px; flex-shrink: 0; font-size: 13.5px; color: rgba(23,22,26,0.64)">En cocina</div>
+              <div class="num" style="width: 82px; text-align: right; flex-shrink: 0; font-size: 14.5px; font-weight: 600">Q95.00</div>
+            </div>
+            <div class="hr"></div>
+            <div class="row">
+              <div style="width: 76px; flex-shrink: 0; font-size: 14.5px; font-weight: 600; color: #17161a">Domicilio</div>
+              <div style="flex: 1; min-width: 0; font-size: 13.5px; color: rgba(23,22,26,0.64)">Zona 10 · hace 12 min</div>
+              <div style="width: 96px; flex-shrink: 0; font-size: 13.5px; color: rgba(23,22,26,0.64)">Listo</div>
+              <div class="num" style="width: 82px; text-align: right; flex-shrink: 0; font-size: 14.5px; font-weight: 600">Q180.00</div>
+            </div>
+            <div class="hr"></div>
+            <div class="row">
+              <div style="font-size: 14px; font-weight: 600; color: #c2542f">Ver los 8 pedidos</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #d97757; } a:hover { color: #e58a5f; }
+    .now { font-family: 'Geist', -apple-system, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .now .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .now .kick { font-family: 'Anton', 'Geist', system-ui, sans-serif; font-weight: 400; text-transform: uppercase; letter-spacing: 0.14em; }
+    .now .i { width: 18px; height: 18px; flex: 0 0 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .now .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .now .i-lg { width: 19px; height: 19px; flex: 0 0 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .now .nl { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 11px; color: rgba(245,243,239,0.50); font-size: 13.5px; font-weight: 500; }
+    .now .card { background: #17171c; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.36); }
+  </style>
+</helmet>
+<div class="now" style="width: 1280px; height: 820px; box-sizing: border-box; display: flex; background: #0a0a0d; color: #f5f3ef; overflow: hidden">
+
+  <div style="width: 244px; flex-shrink: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 18px 12px; background: #131317; border-right: 1px solid rgba(245,243,239,0.10)">
+
+    <div style="display: flex; align-items: center; gap: 11px; padding-bottom: 14px">
+      <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(245,243,239,0.06); border: 1px solid rgba(245,243,239,0.10); display: grid; place-items: center; flex-shrink: 0">
+        <span class="disp" style="font-size: 18px; color: #f5f3ef">R</span>
+      </div>
+      <div style="min-width: 0">
+        <div class="disp" style="font-size: 14.5px; line-height: 1; color: #f5f3ef">El Rincón</div>
+        <div class="kick" style="font-size: 9.5px; margin-top: 3px; color: rgba(245,243,239,0.50)">Panel · Centro</div>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 4px; -webkit-mask-image: linear-gradient(180deg, #000 86%, transparent); mask-image: linear-gradient(180deg, #000 86%, transparent)">
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 4px 10px">
+        <span class="kick" style="font-size: 9.5px; color: rgba(245,243,239,0.48); flex: 1">Operación</span>
+        <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(245,243,239,0.48)"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M15 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M8.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M19 8v6M22 11h-6"></path></svg><span>Tomar pedidos</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg><span>Pedidos</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M12 3s5 4 5 8a5 5 0 0 1-10 0c0-1.6 1-3 1-3s1 1.2 1 2.4C9 7.5 12 5 12 3z"></path></svg><span>Cocina</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg><span>Mesas</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"></path></svg><span>Catálogo</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01"></path></svg><span>Categorías</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg><span>Mi PC del local</span></div>
+      <div class="nl" style="opacity: 0.55"><svg class="i" viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5V8zM3 8l9 5 9-5M12 13v10"></path></svg><span style="flex: 1">Inventario</span><svg class="i-sm" viewBox="0 0 24 24" style="width: 12px; height: 12px; flex: 0 0 12px"><path d="M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3"></path></svg></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3M7.5 15h9"></path></svg><span>Ingredientes</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M9 3v4M15 3v4"></path></svg><span>Reservaciones</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-2a4 4 0 0 0-3-3.8"></path></svg><span>Lista de espera</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7zM7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4M18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path></svg><span>Proveedores</span></div>
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 4px 10px; margin-top: 12px">
+        <span class="kick" style="font-size: 9.5px; color: rgba(245,243,239,0.48); flex: 1">Negocio</span>
+        <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(245,243,239,0.48)"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M3 20h18M7 20v-6M12 20V8M17 20v-10"></path></svg><span>Métricas</span></div>
+      <div class="nl" style="opacity: 0.55"><svg class="i" viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 1 8-8h-8V4"></path></svg><span style="flex: 1">Analítica</span><svg class="i-sm" viewBox="0 0 24 24" style="width: 12px; height: 12px; flex: 0 0 12px"><path d="M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3"></path></svg></div>
+      <div class="nl" style="opacity: 0.55"><svg class="i" viewBox="0 0 24 24"><path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1V7zM3 7l1-2h12M16.5 13h.01"></path></svg><span style="flex: 1">Finanzas</span><svg class="i-sm" viewBox="0 0 24 24" style="width: 12px; height: 12px; flex: 0 0 12px"><path d="M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3"></path></svg></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-2a4 4 0 0 0-3-3.8"></path></svg><span>Clientes</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M9 3v6M15 3v6M7 9h10v3a5 5 0 0 1-10 0V9zM12 17v4"></path></svg><span>Canales</span></div>
+      <div class="nl"><svg class="i" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-3-2V3zM9 8h6M9 12h6"></path></svg><span>Facturación</span></div>
+    </div>
+
+    <div class="nl" style="gap: 8px; margin-bottom: 4px">
+      <span style="width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0; background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,0.18)"></span>
+      <span style="font-size: 12.5px; font-weight: 600; color: rgba(245,243,239,0.74)">Plan Estándar</span>
+    </div>
+
+    <div style="border-radius: 13px; padding: 12px; display: flex; align-items: center; gap: 10px; background: rgba(245,243,239,0.04); border: 1px solid rgba(245,243,239,0.10); box-shadow: 0 1px 2px rgba(0,0,0,0.30)">
+      <div style="width: 34px; height: 34px; border-radius: 99px; background: rgba(245,243,239,0.10); display: grid; place-items: center; flex-shrink: 0">
+        <svg class="i" viewBox="0 0 24 24" style="width: 17px; height: 17px; flex: 0 0 17px"><path d="M4 21v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8"></path></svg>
+      </div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-weight: 600; font-size: 12.5px; color: #f5f3ef">Administrador</div>
+        <div style="font-size: 10.5px; color: rgba(245,243,239,0.50)">Sesión activa</div>
+      </div>
+      <svg class="i-sm" viewBox="0 0 24 24" style="color: rgba(245,243,239,0.50)"><path d="M15 4h4v16h-4M11 16l4-4-4-4M15 12H3"></path></svg>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+
+    <div style="min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 24px; border-bottom: 1px solid rgba(245,243,239,0.10); background: rgba(19,19,23,0.80)">
+      <div class="disp" style="font-size: 22px; flex: 1; color: #f5f3ef">Inicio</div>
+      <div style="width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(245,243,239,0.04); border: 1px solid rgba(245,243,239,0.10); color: #f5f3ef">
+        <svg class="i-lg" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M9.6 9.5a2.5 2.5 0 1 1 3.2 2.4c-.5.2-.8.6-.8 1.1v.5M12 17h.01"></path></svg>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(245,243,239,0.04); border: 1px solid rgba(245,243,239,0.10); color: #f5f3ef">
+        <svg class="i-lg" viewBox="0 0 24 24"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"></path></svg>
+      </div>
+      <div style="width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(245,243,239,0.04); border: 1px solid rgba(245,243,239,0.10); color: #f5f3ef">
+        <svg class="i-lg" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg>
+      </div>
+    </div>
+
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 1008px">
+
+      <div>
+        <div class="disp" style="font-size: 24px; line-height: 1.1; color: #f5f3ef">Hola, Carlos</div>
+        <div style="font-size: 13.5px; color: rgba(245,243,239,0.50); margin-top: 4px">Esto es lo que pasa hoy en El Rincón.</div>
+      </div>
+
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-color: rgba(217,119,87,0.30)">
+        <span style="width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: rgba(217,119,87,0.16); color: #d97757">
+          <svg class="i" viewBox="0 0 24 24" style="width: 17px; height: 17px; flex: 0 0 17px"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg>
+        </span>
+        <div style="flex: 1; min-width: 0">
+          <div style="font-size: 13.5px; font-weight: 700; color: #f5f3ef">Prueba gratis · 12 días restantes</div>
+          <div style="font-size: 11.5px; color: rgba(245,243,239,0.50)">Tu menú ya está en vivo. Aprovéchalo al máximo.</div>
+        </div>
+        <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+      </div>
+
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-color: rgba(251,146,60,0.40)">
+        <span style="width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: rgba(251,146,60,0.14); color: #fb923c">
+          <svg class="i" viewBox="0 0 24 24" style="width: 17px; height: 17px; flex: 0 0 17px"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 8v5M12 16h.01"></path></svg>
+        </span>
+        <div style="flex: 1; min-width: 0">
+          <div style="font-size: 13.5px; font-weight: 700; color: #f5f3ef">Tu PC principal dejó de responder</div>
+          <div style="font-size: 11.5px; color: rgba(245,243,239,0.50)">Revisa que esté encendida y con internet — mientras tanto no se imprimen comandas solas.</div>
+        </div>
+        <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+        <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 7px; color: rgba(245,243,239,0.50)">
+            <svg class="i-sm" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+            <span class="kick" style="font-size: 9.5px">Pedidos hoy</span>
+          </div>
+          <div class="disp" style="font-size: 28px; line-height: 1.1; color: #f5f3ef">24</div>
+        </div>
+        <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 7px; color: rgba(245,243,239,0.50)">
+            <svg class="i-sm" viewBox="0 0 24 24"><path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1V7zM3 7l1-2h12"></path></svg>
+            <span class="kick" style="font-size: 9.5px">Ventas hoy</span>
+          </div>
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; color: #f5f3ef; font-variant-numeric: tabular-nums">Q3,480.00</div>
+        </div>
+        <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 7px; color: rgba(245,243,239,0.50)">
+            <svg class="i-sm" viewBox="0 0 24 24"><path d="M3 20h18M7 20v-6M12 20V8M17 20v-10"></path></svg>
+            <span class="kick" style="font-size: 9.5px">Ticket promedio</span>
+          </div>
+          <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; color: #f5f3ef; font-variant-numeric: tabular-nums">Q145.00</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="kick" style="font-size: 10px; color: rgba(245,243,239,0.50); margin-bottom: 10px">Accesos rápidos</div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+
+          <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 18px">
+            <div style="width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: #c2603f; color: #ffffff">
+              <svg class="i-lg" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 14px; color: #f5f3ef">Pedidos en vivo</div>
+              <div style="font-size: 11.5px; color: rgba(245,243,239,0.50); margin-top: 2px">Atiende y avanza pedidos</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+          <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 18px">
+            <div style="width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: #131317; color: #f5f3ef">
+              <svg class="i-lg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 14px; color: #f5f3ef">Agregar platillo</div>
+              <div style="font-size: 11.5px; color: rgba(245,243,239,0.50); margin-top: 2px">Suma un producto al menú</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+          <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 18px">
+            <div style="width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: #131317; color: #f5f3ef">
+              <svg class="i-lg" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 14px; color: #f5f3ef">Mi catálogo</div>
+              <div style="font-size: 11.5px; color: rgba(245,243,239,0.50); margin-top: 2px">Edita precios y disponibilidad</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+          <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 18px">
+            <div style="width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: #131317; color: #f5f3ef">
+              <svg class="i-lg" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 14px; color: #f5f3ef">Categorías</div>
+              <div style="font-size: 11.5px; color: rgba(245,243,239,0.50); margin-top: 2px">Organiza tu menú</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+          <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 18px">
+            <div style="width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: #131317; color: #f5f3ef">
+              <svg class="i-lg" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 14px; color: #f5f3ef">Personalizar</div>
+              <div style="font-size: 11.5px; color: rgba(245,243,239,0.50); margin-top: 2px">Colores, fuentes y estilo</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+          <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 18px">
+            <div style="width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: #131317; color: #f5f3ef">
+              <svg class="i-lg" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 14px; color: #f5f3ef">Ver mi menú</div>
+              <div style="font-size: 11.5px; color: rgba(245,243,239,0.50); margin-top: 2px">Cómo lo ve tu cliente</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="width: 16px; height: 16px; flex: 0 0 16px; color: rgba(245,243,239,0.48)"><path d="M7 17L17 7M8 7h9v9"></path></svg>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

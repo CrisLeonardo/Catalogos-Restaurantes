@@ -43,7 +43,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: 'catalogo',
         path: '/admin/menu',
         title: 'Tu catálogo vive aquí',
-        desc: 'En esta sección del menú lateral encuentras todos tus platillos y bebidas. Vamos a verla.',
+        desc: 'Es la primera pestaña de Menú, en la barra de la izquierda. Ahí están todos tus platillos y bebidas. Vamos a verla.',
       },
       {
         target: 'catalogo-nuevo',
@@ -88,10 +88,10 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
     label: 'Personalización',
     steps: [
       {
-        target: 'personalizar',
+        target: 'ajustes',
         path: '/admin/personalizacion',
         title: 'La identidad de tu menú',
-        desc: 'Aquí controlas cómo se ve tu menú digital: logo, colores, tipografía, fondo y textos. El panel admin no cambia — solo lo que ven tus clientes.',
+        desc: 'Aquí controlas cómo se ve tu menú digital: logo, colores, tipografía, fondo y textos. El panel admin no cambia — solo lo que ven tus clientes. La encuentras dentro de Ajustes.',
       },
       {
         target: 'personalizar-tabs',
@@ -112,10 +112,10 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
     label: 'Código QR',
     steps: [
       {
-        target: 'qr',
+        target: 'ajustes',
         path: '/admin/qr',
         title: 'Tu puerta de entrada',
-        desc: 'El QR conecta a tus clientes con tu menú. Esta sección tiene todo lo necesario para compartirlo.',
+        desc: 'El QR conecta a tus clientes con tu menú. Está dentro de Ajustes, con todo lo necesario para compartirlo.',
       },
       {
         target: 'qr-enlace',
@@ -136,10 +136,10 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
     label: 'Perfil',
     steps: [
       {
-        target: 'perfil',
+        target: 'ajustes',
         path: '/admin/perfil',
         title: 'Los datos de tu restaurante',
-        desc: 'Nombre, dirección, WhatsApp, horarios y zona de entrega: todo lo operativo vive en el perfil.',
+        desc: 'Nombre, dirección, WhatsApp y zona de entrega: todo lo operativo vive en el perfil, dentro de Ajustes.',
       },
       {
         target: 'perfil-whatsapp',

@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .nl { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 8px; color: var(--ink); font-size: 14px; font-weight: 500; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; }
+    .sc .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+    .sc .seg > div { padding: 6px 13px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+    .sc .seg > div[data-on="1"] { background: var(--surf); color: var(--ink); font-weight: 600; box-shadow: var(--sh); }
+    .sc .btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
+
+    .sc .doc-h1 { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+    .sc .card { background: var(--surf); border: 1px solid var(--hair); border-radius: 14px; box-shadow: var(--sh); }
+    .sc .h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink3); }
+  </style>
+</helmet>
+<div class="sc" data-t="light" style="width: 900px; min-height: 2500px; background: var(--bg); color: var(--ink); padding: 52px 48px 48px; display: flex; flex-direction: column; gap: 40px">
+  <div style="display: flex; flex-direction: column; gap: 16px">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--acc-ink)">Dirección B · Claridad</div>
+    <div class="doc-h1" style="font-size: 40px; line-height: 1.05">Las cosas pequeñas</div>
+    <div style="font-size: 16px; line-height: 1.5; color: var(--ink2); max-width: 640px">Diez detalles que hoy no tienen sentido y que, arreglados, cambian más la sensación de uso que cualquier rediseño de color. Ninguno quita una función.</div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 14px">
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">01</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Al Inicio no se llega desde el menú</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">El menú lateral tiene 35 entradas y ninguna es «Inicio»: solo se entra tocando el logo.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">«Hoy» es la primera entrada del menú, siempre.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Si una pantalla existe, tiene que tener una puerta.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">02</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Cuatro avisos apilados</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">Prueba gratis, visitas, PC caída y primeros pasos, uno encima de otro, todos del mismo tamaño.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">Un solo grupo «Necesita tu atención», ordenado por urgencia, y desaparece cuando no hay nada.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Si todo grita, nada se oye.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">03</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Confirmar para todo</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">«¿Eliminar producto? Aceptar / Cancelar» — una pregunta antes de cada acción.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">La acción se hace y aparece «Platillo eliminado · Deshacer» durante unos segundos.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Deshacer respeta más al usuario que preguntarle si está seguro.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">04</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Candados vendiendo en el menú</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">Hasta cinco entradas con candado mezcladas con el trabajo diario.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">El menú solo muestra lo que tenés. Lo bloqueado aparece donde se usa, con una frase concreta de qué hace.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">El menú es para trabajar, no para vender.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">05</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Nombres del sistema, no del negocio</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">«Módulos», «Canales», «Respaldo», «Mi PC del local».</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">«Funciones», «Apps de delivery», «Copia de tus datos», «La PC del local».</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Las cosas se llaman como las llama el dueño.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">06</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Pantallas vacías sin salida</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">«No hay productos.» Y ahí termina.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">«Todavía no tenés platillos» + el botón «Agregar el primero».</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Una pantalla vacía es la mejor oportunidad de enseñar.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">07</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Guardar siempre encendido</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">El botón «Guardar» se ve igual hayas cambiado algo o no.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">Se enciende solo si hay cambios; al guardar dice «Guardado» y se apaga.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">El botón dice la verdad sobre el estado de la pantalla.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">08</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Errores técnicos</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">«Error 500» / «Failed to fetch».</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">«No se pudo guardar. Revisá tu internet e intentá otra vez.» + Reintentar.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Un error explica qué pasó y qué hacer ahora.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">09</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Tres pantallas para ver números</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">Métricas, Analítica y Finanzas, cada una con su propio inicio.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">Una sola pantalla, Negocio, con pestañas: Resumen, Analítica, Finanzas, Facturación, Canales, Respaldo.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">La misma pregunta se responde en un solo lugar.</div>
+    </div>
+    <div class="card" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <div class="mono" style="font-size: 13px; color: var(--ink4)">10</div>
+        <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Etiquetas en versalitas</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--ink4)">Hoy</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink3)">«ACCESOS RÁPIDOS» en Anton, mayúsculas y con mucho espacio entre letras.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 12px; font-weight: 600; color: var(--acc-ink)">Propuesta</div>
+          <div style="font-size: 14px; line-height: 1.5; color: var(--ink)">«Accesos rápidos» en la tipografía del panel, sin mayúsculas.</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: var(--ink4); border-top: 1px solid var(--hair); padding-top: 12px">Es el ÚNICO cambio de tipografía que propongo — decidilo vos.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":900,"height":2500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

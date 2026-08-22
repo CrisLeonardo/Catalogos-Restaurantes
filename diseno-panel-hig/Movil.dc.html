@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .nl { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 8px; color: var(--ink); font-size: 14px; font-weight: 500; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; }
+    .sc .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+    .sc .seg > div { padding: 6px 13px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+    .sc .seg > div[data-on="1"] { background: var(--surf); color: var(--ink); font-weight: 600; box-shadow: var(--sh); }
+    .sc .btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
+
+    .sc .doc-h1 { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+    .sc .card { background: var(--surf); border: 1px solid var(--hair); border-radius: 14px; box-shadow: var(--sh); }
+    .sc .h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink3); }
+  </style>
+</helmet>
+<div style="width: 1000px; height: 1060px; background: #e9e9ee; padding: 48px 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: center; gap: 44px; font-family: 'Geist', system-ui, sans-serif">
+  <div style="display: flex; flex-direction: column; gap: 14px; align-items: center">
+    <div class="sc" data-t="light" style="width: 390px; height: 844px; border-radius: 44px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0,0,0,0.22)">
+      <div style="height: 46px; flex-shrink: 0"></div>
+      <div style="flex: 1; min-height: 0; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 20px">
+        <div style="display: flex; align-items: flex-start; gap: 12px">
+          <div style="flex: 1">
+            <div class="disp" style="font-size: 26px; color: var(--ink)">Hoy</div>
+            <div style="font-size: 14px; color: var(--ink3); margin-top: 4px">Jueves 21 de agosto</div>
+          </div>
+          <div class="ghost" style="width: 44px; height: 44px; border-radius: 12px"><svg class="i" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg></div>
+        </div>
+        <div class="group">
+          <div class="row" style="padding: 15px 16px">
+            <span class="dot" style="background: var(--warn); width: 9px; height: 9px"></span>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 15px; font-weight: 500">La PC del local no responde</div>
+              <div style="font-size: 13px; color: var(--ink3); margin-top: 2px">No se imprimen comandas solas.</div>
+            </div>
+            <svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+        </div>
+        <div>
+          <div class="lbl">Resumen del día</div>
+          <div class="group">
+          <div class="row" style="padding: 14px 16px"><div style="flex: 1; font-size: 15px">Ventas</div><div class="mono" style="font-size: 15px">Q3,480.00</div></div>
+          <div class="hr"></div>
+          <div class="row" style="padding: 14px 16px"><div style="flex: 1; font-size: 15px">Pedidos</div><div class="mono" style="font-size: 15px">24</div></div>
+          <div class="hr"></div>
+          <div class="row" style="padding: 14px 16px"><div style="flex: 1; font-size: 15px">Ticket promedio</div><div class="mono" style="font-size: 15px">Q145.00</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="lbl">En curso · 8 pedidos</div>
+          <div class="group">
+          <div class="row" style="padding: 14px 16px">
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 15px; font-weight: 600">Mesa 4</div>
+              <div class="pill" style="margin-top: 3px"><span class="dot" style="background: var(--acc-ink)"></span>Nuevo · hace 2 min</div>
+            </div>
+            <div class="mono" style="font-size: 15px">Q210.00</div>
+          </div>
+          <div class="hr"></div>
+          <div class="row" style="padding: 14px 16px">
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 15px; font-weight: 600">Llevar · Ana L.</div>
+              <div class="pill" style="margin-top: 3px"><span class="dot" style="background: var(--warn)"></span>En cocina · hace 6 min</div>
+            </div>
+            <div class="mono" style="font-size: 15px">Q95.00</div>
+          </div>
+          <div class="hr"></div>
+          <div class="row" style="padding: 14px 16px"><div style="font-size: 14.5px; font-weight: 600; color: var(--acc-ink)">Ver los 8 pedidos</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="height: 74px; flex-shrink: 0; display: flex; align-items: stretch; padding-bottom: 14px; border-top: 1px solid var(--hair); background: var(--side)"><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--acc-ink); font-size: 11px; font-weight: 600"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3.5 2"></path></svg><span>Hoy</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg><span>Pedidos</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"></path></svg><span>Menú</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-2a4 4 0 0 0-3-3.8"></path></svg><span>Clientes</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span>Más</span></div></div>
+    </div>
+    <div style="font-size: 13px; color: rgba(23,22,26,0.60)">Hoy · modo claro</div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 14px; align-items: center">
+    <div class="sc" data-t="dark" style="width: 390px; height: 844px; border-radius: 44px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0,0,0,0.22)">
+      <div style="height: 46px; flex-shrink: 0"></div>
+      <div style="flex: 1; min-height: 0; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; align-items: flex-start; gap: 12px">
+          <div style="flex: 1">
+            <div class="disp" style="font-size: 26px; color: var(--ink)">Pedidos</div>
+            <div style="font-size: 14px; color: var(--ink3); margin-top: 4px">8 en curso</div>
+          </div>
+          <div class="btn" style="height: 44px; border-radius: 12px"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg><span>Nuevo</span></div>
+        </div>
+        <div><div class="seg" style="width: 100%"><div data-on="1" style="flex: 1; text-align: center">En vivo</div><div style="flex: 1; text-align: center">Cocina</div><div style="flex: 1; text-align: center">Mesas</div></div></div>
+        <div class="group" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: baseline; gap: 10px">
+            <div style="flex: 1; font-size: 18px; font-weight: 600; letter-spacing: -0.01em">Mesa 4</div>
+            <div class="pill"><span class="dot" style="background: var(--acc-ink)"></span>Nuevo</div>
+          </div>
+          <div style="font-size: 14px; color: var(--ink3); line-height: 1.45">2 Carne asada · 1 Limonada · hace 2 min</div>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <div class="mono" style="flex: 1; font-size: 17px">Q210.00</div>
+            <div class="btn" style="height: 44px; border-radius: 12px; font-size: 14.5px">Mandar a cocina</div>
+          </div>
+        </div>
+        <div class="group" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: baseline; gap: 10px">
+            <div style="flex: 1; font-size: 18px; font-weight: 600; letter-spacing: -0.01em">Llevar · Ana L.</div>
+            <div class="pill"><span class="dot" style="background: var(--acc-ink)"></span>Nuevo</div>
+          </div>
+          <div style="font-size: 14px; color: var(--ink3); line-height: 1.45">1 Hamburguesa doble · hace 4 min</div>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <div class="mono" style="flex: 1; font-size: 17px">Q95.00</div>
+            <div class="btn" style="height: 44px; border-radius: 12px; font-size: 14.5px">Mandar a cocina</div>
+          </div>
+        </div>
+      </div>
+      <div style="height: 74px; flex-shrink: 0; display: flex; align-items: stretch; padding-bottom: 14px; border-top: 1px solid var(--hair); background: var(--side)"><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3.5 2"></path></svg><span>Hoy</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--acc-ink); font-size: 11px; font-weight: 600"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg><span>Pedidos</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"></path></svg><span>Menú</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-2a4 4 0 0 0-3-3.8"></path></svg><span>Clientes</span></div><div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink4); font-size: 11px; font-weight: 500"><svg class="i" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span>Más</span></div></div>
+    </div>
+    <div style="font-size: 13px; color: rgba(23,22,26,0.60)">Pedidos · modo oscuro</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1000,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -16,33 +16,28 @@ type StepDef = {
 const STEPS: StepDef[] = [
   {
     title: '¡Bienvenido a tu panel!',
-    desc: 'Este es tu centro de control. Desde aquí gestionas tu menú, pedidos, clientes y todo lo de tu restaurante. Te mostramos las áreas clave.',
+    desc: 'Este es tu centro de control: tu menú, tus pedidos y tus clientes. Te enseñamos dónde está cada cosa en menos de un minuto.',
     target: null,
   },
   {
-    title: 'Tu navegación',
-    desc: 'Aquí encuentras todas las secciones del sistema organizadas en grupos. Explóralas para sacarle el máximo provecho a tu plataforma.',
+    title: 'Seis lugares, nada más',
+    desc: 'Todo el sistema vive en estas seis secciones. Al entrar en cualquiera aparecen sus pestañas arriba: no hay nada escondido, solo un nivel más adentro.',
     target: 'nav',
   },
   {
-    title: 'Tu catálogo de platillos',
-    desc: 'Empieza aquí: agrega tus platillos y bebidas, organízalos por categorías y ponles foto y precio. Quedan visibles en tu menú digital de inmediato.',
-    target: 'catalogo',
+    title: 'Hoy',
+    desc: 'Lo que está pasando ahora mismo: los pedidos en curso, las ventas del día y lo único que necesita tu atención. Si algo se rompe, te enteras aquí.',
+    target: 'hoy',
   },
   {
-    title: 'Tu código QR',
-    desc: 'Tu código QR ya está listo para compartir. Ponlo en las mesas o redes sociales para que tus clientes vean tu menú al instante.',
-    target: 'qr',
+    title: 'Tu menú',
+    desc: 'Empieza aquí: agrega tus platillos con foto y precio y organízalos por categorías. Quedan visibles en tu menú digital de inmediato.',
+    target: 'menu',
   },
   {
-    title: 'Ponle tu identidad',
-    desc: 'Personaliza colores, tipografía y logo para que tu menú digital se vea exactamente como tu marca.',
-    target: 'personalizar',
-  },
-  {
-    title: 'Centro de ayuda',
-    desc: 'Cuando tengas dudas, aquí encontrarás guías paso a paso de todas las funciones del sistema.',
-    target: 'ayuda',
+    title: 'Ajustes',
+    desc: 'Tu código QR, los colores de tu marca, tu equipo, tu plan y las guías paso a paso: todo lo que se configura una vez vive aquí.',
+    target: 'ajustes',
   },
 ];
 
@@ -80,18 +75,10 @@ export default function WelcomeTour({ restaurantName, preview }: Props) {
     if (!el) { setSpotRect(null); return; }
 
     const r = el.getBoundingClientRect();
-    if (r.height === 0) {
-      // Element is hidden inside a collapsed nav section — expand it first
-      const section = el.closest<HTMLElement>('[data-collapsed="1"]');
-      const toggle = section?.querySelector<HTMLButtonElement>('.admin-navgroup-toggle');
-      if (toggle) {
-        toggle.click();
-        setTimeout(() => setSpotRect(el.getBoundingClientRect()), 280);
-        return;
-      }
-      setSpotRect(null);
-      return;
-    }
+    // Ya no hay secciones plegables que expandir (el menú son seis destinos
+    // siempre visibles): si algo mide cero es que no está en pantalla, y el
+    // paso sigue sin foco en vez de señalar a la nada.
+    if (r.height === 0) { setSpotRect(null); return; }
     setSpotRect(r);
   }, []);
 

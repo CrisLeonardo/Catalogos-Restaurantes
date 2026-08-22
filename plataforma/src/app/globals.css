@@ -719,7 +719,11 @@ html[data-scheme="light"] .btn-white {
 .t-serif   { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; color: var(--u-text); }
 .t-poster  { font-family: var(--font-poster); letter-spacing: 0.01em; text-transform: uppercase; color: var(--u-text); }
 .t-kicker  { font-family: var(--font-poster); text-transform: uppercase; letter-spacing: 0.14em; color: var(--u-text-3); }
-.t-mono    { font-family: var(--ui-font-mono); font-weight: 500; letter-spacing: -0.01em; }
+/* `tabular-nums` es redundante con JetBrains Mono (ya es monoespaciada), pero
+   deja escrita la intención: los números del panel se alinean en columna, y
+   si algún día la familia mono cambia por una proporcional, las cifras no se
+   descuadran ni "bailan" al actualizarse en vivo. */
+.t-mono    { font-family: var(--ui-font-mono); font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .t-mute    { color: var(--u-text-3); }
 
 /* ============================================================
@@ -943,6 +947,30 @@ html[data-scheme="light"] .btn-white {
      adminPanelTextScale). Antes solo escalaba los navlinks. */
   zoom: var(--admin-panel-scale, 1);
 }
+/* Etiquetas de sección dentro del panel (rediseño 2026-08-21, Fase 2).
+   ------------------------------------------------------------------
+   `.t-kicker` es Anton en mayúsculas con 0.14em de espaciado entre letras,
+   pensado para una portada. Repetido como etiqueta de sección en pantallas
+   llenas de listas es el mayor generador de ruido del panel, y a los 9,5-10px
+   con que se usa se lee peor que el texto al que etiqueta.
+
+   Se reescribe AQUÍ, en una regla, en vez de tocar los 26 archivos que la
+   usan: mientras las pantallas migran a <Section> (components/ui/section.tsx)
+   esto las mantiene coherentes, y el día que la última migre se borra esta
+   regla y no queda deuda. El !important es para ganarle al `fontSize` en
+   línea que traen esas 26 llamadas — un 9,5px calculado para mayúsculas.
+
+   Alcance deliberado: SOLO el área de contenido del panel. La marca, el menú
+   público del restaurante y la barra lateral conservan Anton intacto. */
+.admin-main .t-kicker {
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  font-weight: 600;
+  font-size: 12.5px !important;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--u-text-3);
+}
+
 .admin-nav {
   display: flex; flex-direction: column; gap: 4px;
   flex: 1; min-height: 0; overflow-y: auto;
@@ -952,24 +980,83 @@ html[data-scheme="light"] .btn-white {
 .admin-nav::-webkit-scrollbar { width: 3px; }
 .admin-nav::-webkit-scrollbar-track { background: transparent; }
 .admin-nav::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--admin-panel-text) 15%, transparent); border-radius: 3px; }
-.admin-navgroup { display: flex; flex-direction: column; gap: 4px; }
-.admin-navgroup-toggle {
+/* Buscar (rediseño 2026-08-21, Fase 4). Arriba de todo en la barra lateral:
+   es lo que hace que reducir el menú a seis no le cueste nada a quien ya sabe
+   a dónde va. En móvil el atajo de teclado no aplica, así que la tecla se
+   oculta y queda solo la lupa. */
+.admin-search {
   display: flex; align-items: center; gap: 8px; width: 100%;
-  background: none; border: none; cursor: pointer; text-align: left;
-  padding: 4px 10px; margin-top: 12px; border-radius: 8px;
-  transition: background 140ms;
+  min-height: 34px; padding: 0 10px; margin-bottom: 12px;
+  border-radius: calc(9px * var(--admin-panel-radius, 1));
+  border: 1px solid var(--admin-panel-hair);
+  background: var(--admin-panel-card, color-mix(in srgb, var(--admin-panel-text) 5%, transparent));
+  color: var(--u-text-3); cursor: pointer; text-align: left;
+  font-family: inherit; font-size: calc(13px * var(--admin-panel-scale, 1));
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
 }
-/* Hover con la tinta del panel (antes blanco fijo → invisible en panel claro) */
-.admin-navgroup-toggle:hover { background: color-mix(in srgb, var(--admin-panel-text) 6%, transparent); }
-.admin-navgroup:first-child .admin-navgroup-toggle { margin-top: 0; }
-.admin-navgroup-title { color: var(--u-text-4); flex: 1; }
-.admin-navgroup-chevron { color: var(--u-text-4); transition: transform 180ms var(--ease-out); }
-.admin-navgroup[data-collapsed="1"] .admin-navgroup-chevron { transform: rotate(-90deg); }
-.admin-navgroup-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--admin-panel-accent); flex-shrink: 0; }
-/* Plegado solo en escritorio: la tab bar móvil siempre muestra todo. */
-@media (min-width: 821px) {
-  .admin-navgroup[data-collapsed="1"] .admin-navlink { display: none; }
+.admin-search:hover { color: var(--u-text); background: color-mix(in srgb, var(--admin-panel-text) 9%, transparent); }
+.admin-search-label { flex: 1; min-width: 0; }
+.admin-search-kbd {
+  flex-shrink: 0; font-family: var(--ui-font-mono); font-size: 10.5px;
+  letter-spacing: 0.02em; color: var(--u-text-4);
+  border: 1px solid var(--admin-panel-hair); border-radius: 5px;
+  padding: 1px 5px; background: transparent;
 }
+
+/* ── Barra de sección (rediseño 2026-08-21, Fase 3) ─────────────────────
+   Debajo de la barra de título: las pestañas del grupo activo, o el "volver"
+   de las pantallas hijas de Ajustes. Se pega justo bajo la barra de título
+   (top: 64px) para que al desplazar una lista larga no se pierda de vista
+   en qué pestaña se está. */
+.admin-subbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 24px;
+  border-bottom: 1px solid var(--admin-panel-hair);
+  background: color-mix(in srgb, var(--admin-panel-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+  position: sticky; top: 64px; z-index: 19;
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  --u-text:   var(--admin-panel-text);
+  --u-text-2: var(--admin-panel-text-2);
+  --u-text-3: var(--admin-panel-text-3);
+  --u-hair:   var(--admin-panel-hair);
+}
+.admin-tabs {
+  display: inline-flex; gap: 2px; padding: 2px;
+  border-radius: calc(9px * var(--admin-panel-radius, 1));
+  background: color-mix(in srgb, var(--admin-panel-text) 8%, transparent);
+  max-width: 100%; overflow-x: auto;
+  scrollbar-width: none;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 13px;
+  border-radius: calc(7px * var(--admin-panel-radius, 1));
+  font-size: calc(13.5px * var(--admin-panel-scale, 1)); font-weight: 500;
+  color: var(--u-text-2); text-decoration: none; white-space: nowrap;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.admin-tab:hover { color: var(--u-text); }
+.admin-tab[data-active="1"] {
+  background: var(--admin-panel-bg);
+  color: var(--u-text); font-weight: 600;
+  box-shadow: var(--adm-shadow-xs, none);
+}
+/* Bloqueada por plan: se ve, se lee y se puede tocar (lleva a la suscripción).
+   Atenuada, no escondida — el candado aquí informa; en la barra lateral solo
+   estorbaba. */
+.admin-tab[data-locked="1"] { opacity: 0.62; }
+.admin-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px 6px 8px;
+  border-radius: calc(8px * var(--admin-panel-radius, 1));
+  font-size: calc(13.5px * var(--admin-panel-scale, 1)); font-weight: 600;
+  color: var(--u-text-2); text-decoration: none;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.admin-back:hover { background: color-mix(in srgb, var(--admin-panel-text) 7%, transparent); color: var(--u-text); }
+
 .admin-navlink {
   position: relative;
   display: flex; align-items: center; gap: 11px; padding: 10px 12px;
@@ -1089,6 +1176,13 @@ html[data-scheme="light"] .btn-white {
   }
   .admin-brand { flex: 1; min-width: 0; }
   .admin-section { display: none; }
+  /* Buscar en móvil: cabe en la cabecera como un botón redondo junto a la
+     marca. La tecla no se enseña porque no hay teclado que la tenga. */
+  .admin-search {
+    width: 38px; min-height: 38px; margin-bottom: 0; padding: 0;
+    justify-content: center; order: 2; flex-shrink: 0; border-radius: 99px;
+  }
+  .admin-search-label, .admin-search-kbd { display: none; }
 
   /* Nav → tab bar inferior fija y scrollable en horizontal (caben todas las secciones) */
   .admin-nav {
@@ -1105,15 +1199,6 @@ html[data-scheme="light"] .btn-white {
     --u-hair:   var(--admin-panel-hair);
   }
   .admin-nav::-webkit-scrollbar { display: none; }
-  .admin-navgroup { flex-direction: row; gap: 0; }
-  .admin-navgroup-toggle { display: none; }
-  /* El panel de grupo (GroupShell) muestra el título de sección como un <div>
-     suelto (no dentro del toggle): en la tab bar móvil debe ocultarse para que
-     no robe espacio a los íconos de navegación. */
-  .admin-navgroup-title { display: none; }
-  .admin-spacer { display: none; }
-  /* En la tab bar móvil nunca se ocultan links aunque la sección esté plegada. */
-  .admin-navgroup[data-collapsed="1"] .admin-navlink { display: flex; }
   .admin-navlink {
     flex: 0 0 auto; min-width: 60px; flex-direction: column; justify-content: center; gap: 4px;
     padding: 6px 8px; border-radius: 10px; text-align: center;
@@ -1133,6 +1218,9 @@ html[data-scheme="light"] .btn-white {
   .admin-usermeta { display: none; }
 
   .admin-topbar { position: static; min-height: 54px; padding: 0 16px; }
+  /* En móvil la barra de título no está pegada arriba, así que la de sección
+     tampoco: pegarla a `top: 64px` la habría dejado flotando en medio. */
+  .admin-subbar { position: static; padding: 8px 14px; }
   .admin-live { display: none !important; }
   /* Aire para que la tab bar no tape el final del contenido */
   .admin-content { padding: 16px 14px calc(92px + env(safe-area-inset-bottom, 0px)); }

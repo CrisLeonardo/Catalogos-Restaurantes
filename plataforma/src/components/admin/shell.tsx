@@ -4,7 +4,7 @@
    se convierte en una barra inferior fija tipo app. Envuelve /admin/*.
    El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -21,36 +21,12 @@ import GuidedTourHost from '@/components/admin/guided-tour';
 import HelpButton from '@/components/admin/help-button';
 import LoginWelcomeToast from '@/components/admin/login-welcome-toast';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
-import { can, isMeseroOnly } from '@/lib/permissions';
-import { PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
-import { usePlanPricing } from '@/components/plan-pricing-context';
+import { isMeseroOnly } from '@/lib/permissions';
+import { buildNav, findGroup, type NavGroup } from '@/lib/admin-nav';
+import SectionTabs from '@/components/admin/section-tabs';
+import CommandSearch from '@/components/admin/command-search';
 
-const NAV_KEY = 'admin-nav-collapsed';
 
-/**
- * `pathname.startsWith(href)` marcaba "Personal" (/admin/personal) como activo
- * estando en "Personalizar" (/admin/personalizacion), porque un string es
- * prefijo literal del otro. Exige coincidencia exacta o límite de segmento (/).
- */
-function isActivePath(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(href + '/');
-}
-
-interface NavItem { href: string; label: string; icon: string; key: string; locked?: boolean }
-
-/**
- * Un ítem de nav que depende de un módulo activo (`enabled`) pero que además
- * es una función exclusiva de Premium (`planHasFeature`): en vez de
- * desaparecer sin explicación cuando el plan no la incluye, se muestra
- * bloqueado (candado, lleva a "Mi suscripción"). Si el plan SÍ la incluye
- * pero el módulo aún no está activo (pendiente de activación por Leogin),
- * se mantiene oculto como antes — ahí no hay nada que "vender".
- */
-function lockableNavItem(preview: boolean, enabled: boolean, planHasFeature: boolean, item: Omit<NavItem, 'locked'>): NavItem[] {
-  if (preview || enabled) return [item];
-  if (!planHasFeature) return [{ ...item, locked: true }];
-  return [];
-}
 
 /**
  * Puntito que aparece en el enlace del menú mientras esa pantalla se está
@@ -132,44 +108,6 @@ const PLAN_NAMES: Record<string, string> = {
   BASICO: 'Básico', ESTANDAR: 'Estándar', PREMIUM: 'Premium', PRO: 'Pro',
 };
 
-const NAV_DEFAULT: Record<string, boolean> = { Cuenta: true };
-const readNav = (raw: string | null): Record<string, boolean> => {
-  if (!raw) return NAV_DEFAULT;
-  try { return JSON.parse(raw) as Record<string, boolean>; } catch { return NAV_DEFAULT; }
-};
-
-/**
- * Lee un valor de localStorage de forma SSR-safe vía useSyncExternalStore.
- * En el servidor (y primer render) devuelve `serverDefault`; en el cliente
- * sincroniza con localStorage sin llamar setState dentro de un efecto (evita
- * renders en cascada). Las escrituras disparan el evento `ls:<key>` para
- * notificar a los suscriptores. El snapshot se cachea para devolver la MISMA
- * referencia mientras el string crudo no cambie (requisito de useSyncExternalStore).
- */
-function usePersisted<T>(key: string, read: (raw: string | null) => T, serverDefault: T): T {
-  const cache = useRef<{ raw: string | null; val: T; init: boolean }>({ raw: null, val: serverDefault, init: false });
-  const getSnapshot = useCallback((): T => {
-    let raw: string | null = null;
-    try { raw = localStorage.getItem(key); } catch { /* no-op */ }
-    if (!cache.current.init || raw !== cache.current.raw) {
-      cache.current = { raw, val: read(raw), init: true };
-    }
-    return cache.current.val;
-  }, [key, read]);
-  const subscribe = useCallback((cb: () => void) => {
-    const evt = `ls:${key}`;
-    window.addEventListener('storage', cb);
-    window.addEventListener(evt, cb);
-    return () => { window.removeEventListener('storage', cb); window.removeEventListener(evt, cb); };
-  }, [key]);
-  return useSyncExternalStore(subscribe, getSnapshot, () => serverDefault);
-}
-
-/** Persiste un valor y notifica a los suscriptores de `usePersisted`. */
-function writePersisted(key: string, value: string): void {
-  try { localStorage.setItem(key, value); } catch { /* no-op */ }
-  window.dispatchEvent(new Event(`ls:${key}`));
-}
 
 export default function AdminShell({
   restaurantName, restaurantId, ordersEnabled = false,
@@ -183,10 +121,6 @@ export default function AdminShell({
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
-  const pricing = usePlanPricing();
-  // Secciones del nav plegadas: se leen de localStorage de forma SSR-safe
-  // (sin setState en efecto). 'Cuenta' arranca plegada.
-  const collapsed = usePersisted(NAV_KEY, readNav, NAV_DEFAULT);
 
   // En móvil, centra el ítem activo de la barra inferior al navegar (la barra
   // scrollea en horizontal y así el usuario siempre ve dónde está).
@@ -196,95 +130,27 @@ export default function AdminShell({
     el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   }, [realPathname]);
 
-  function toggleSection(title: string) {
-    writePersisted(NAV_KEY, JSON.stringify({ ...collapsed, [title]: !collapsed[title] }));
-  }
-
   const pathname = preview ? '/admin/menu' : realPathname;
 
   // En preview (sin rol) se muestra todo como lo ve el dueño.
   const effRole = role ?? 'RESTAURANT_OWNER';
   const showStaff = canManageStaff ?? effRole !== 'RESTAURANT_STAFF';
-  const allow = (key: string) => can(effRole, permissions ?? null, key);
-  /* "Personal" NO es una sección delegable: no está en ADMIN_SECTIONS, así
-     que no puede aparecer en la lista de permisos de nadie —a propósito, para
-     que un gerente no pueda darse permisos a sí mismo repartiéndola. Su
-     llave es el ROL, y esa ya se aplicó al armar el elemento.
-
-     Sin esta excepción el gerente quedaba en la peor de las dos posturas: la
-     pantalla lo deja entrar (es él quien da de alta a su equipo) pero el menú
-     no la enseñaba, así que solo llegaba escribiendo la URL. */
-  const allowNav = (key: string) => (key === 'personal' ? showStaff : allow(key));
   const roleLabel = effRole === 'SUPER_ADMIN' ? 'Super Admin'
     : isMeseroOnly(effRole, permissions ?? null) ? 'Mesero'
     : effRole === 'RESTAURANT_STAFF' ? 'Personal'
     : 'Administrador';
 
-  const on = (flag: boolean) => preview || flag;
-
-  // BASICO y ESTANDAR no incluyen panel de mesero (toma de pedidos por staff)
-  const planFeatures = PLANS[(planActual ?? 'BASICO') as PlanCode] ?? PLANS.BASICO;
-  const hasWaiterPanel = planActual !== 'BASICO' && planActual !== 'ESTANDAR';
-  const hasAnalyticsPlan = planFeatures.hasAnalytics;
-  const hasFinancePlan = planFeatures.hasFinance;
-  // Mesas (config de mesas/QR) también se habilita si el restaurante ya
-  // tiene "comer en local" activo (ESTANDAR puede elegirlo entre sus 2 modos), no solo por plan.
-  const mesasAccessible = hasWaiterPanel || dineInEnabled;
-
-  const sections: { title: string; items: NavItem[] }[] = [
-    {
-      title: 'Operación',
-      items: [
-        ...(on(ordersEnabled) ? lockableNavItem(preview, hasWaiterPanel, hasWaiterPanel, { href: '/admin/mesero', label: 'Tomar pedidos', icon: 'userPlus', key: 'mesero' }) : []),
-        ...(on(ordersEnabled)    ? [{ href: '/admin/pedidos',   label: 'Pedidos',     icon: 'list',  key: 'pedidos'   }] : []),
-        ...(on(ordersEnabled)    ? [{ href: '/admin/cocina',    label: 'Cocina',      icon: 'flame', key: 'cocina'    }] : []),
-        ...(on(ordersEnabled) ? lockableNavItem(preview, mesasAccessible, mesasAccessible, { href: '/admin/mesas', label: 'Mesas', icon: 'grid', key: 'mesas' }) : []),
-        { href: '/admin/menu',        label: 'Catálogo',    icon: 'bag',   key: 'catalogo'   },
-        { href: '/admin/categorias',  label: 'Categorías',  icon: 'tag',   key: 'categorias' },
-        // Una sola entrada: "Impresión", "Sin internet" y "Leogin Desktop" eran
-        // tres secciones para una misma cosa (la PC del local) y el dueño tenía
-        // que recorrerlas todas para entenderla. Ver /admin/mi-pc.
-        ...(on(ordersEnabled)    ? [{ href: '/admin/mi-pc', label: 'Mi PC del local', icon: 'monitor', key: 'impresion' }] : []),
-        ...lockableNavItem(preview, inventarioEnabled, hasAnalyticsPlan, { href: '/admin/inventario',   label: 'Inventario',   icon: 'box',   key: 'inventario'   }),
-        ...(on(ingredientesEnabled) ? [{ href: '/admin/ingredientes', label: 'Ingredientes', icon: 'flask', key: 'ingredientes' }] : []),
-        ...(on(reservacionesActive) ? [{ href: '/admin/reservaciones', label: 'Reservaciones', icon: 'calendar', key: 'reservaciones' }] : []),
-        ...(on(listaEsperaActive) ? [{ href: '/admin/lista-espera', label: 'Lista de espera', icon: 'users', key: 'lista_espera' }] : []),
-        ...(on(proveedoresActive) ? [{ href: '/admin/proveedores', label: 'Proveedores', icon: 'truck', key: 'proveedores' }] : []),
-      ],
-    },
-    {
-      title: 'Negocio',
-      items: [
-        { href: '/admin/metricas', label: 'Métricas', icon: 'chart', key: 'metricas' },
-        ...lockableNavItem(preview, analiticaEnabled, hasAnalyticsPlan, { href: '/admin/analitica',   label: 'Analítica', icon: 'dashboard', key: 'analitica'   }),
-        ...lockableNavItem(preview, finanzasEnabled, hasFinancePlan, { href: '/admin/finanzas',    label: 'Finanzas',  icon: 'wallet',    key: 'finanzas'    }),
-        ...(on(ordersEnabled)      ? [{ href: '/admin/clientes',    label: 'Clientes',  icon: 'users',     key: 'clientes'    }] : []),
-        // Canales externos va con los pedidos: si el restaurante no vende
-        // en línea, mapear productos de PedidosYa no le sirve de nada.
-        ...(on(ordersEnabled)      ? [{ href: '/admin/canales',     label: 'Canales',   icon: 'plug',      key: 'canales'     }] : []),
-        ...(on(felActive)          ? [{ href: '/admin/facturacion', label: 'Facturación', icon: 'receipt',   key: 'fel'         }] : []),
-        ...(on(loyaltyActive)      ? [{ href: '/admin/lealtad',     label: 'Lealtad',    icon: 'star',      key: 'lealtad'     }] : []),
-        ...(on(encuestasActive)    ? [{ href: '/admin/encuestas',   label: 'Encuestas',  icon: 'thumbsUp',  key: 'encuestas'   }] : []),
-        ...(on(cuponesActive)      ? [{ href: '/admin/cupones',     label: 'Cupones',    icon: 'ticket',    key: 'cupones'     }] : []),
-        { href: '/admin/respaldo', label: 'Respaldo', icon: 'download', key: 'respaldo' },
-      ],
-    },
-    {
-      title: 'Cuenta',
-      items: [
-        { href: '/admin/suscripcion',   label: 'Mi suscripción', icon: 'wallet',    key: 'suscripcion' },
-        ...(showStaff ? [{ href: '/admin/modulos', label: 'Módulos', icon: 'grid', key: 'modulos' }] : []),
-        { href: '/admin/personalizacion', label: 'Personalizar', icon: 'sparkle',   key: 'personalizar' },
-        { href: '/admin/perfil',        label: 'Perfil',         icon: 'user',      key: 'perfil'      },
-        { href: '/admin/ajustes',       label: 'Ajustes',        icon: 'settings',  key: 'ajustes'     },
-        ...(showStaff ? lockableNavItem(preview, personalEnabled, hasAnalyticsPlan, { href: '/admin/personal', label: 'Personal', icon: 'userPlus', key: 'personal' }) : []),
-        { href: '/admin/qr',            label: 'QR',             icon: 'image',      key: 'qr'          },
-        { href: '/admin/ayuda',         label: 'Ayuda',          icon: 'helpCircle', key: 'ayuda'       },
-      ],
-    },
-  ]
-    .map((s) => ({ ...s, items: s.items.filter((it) => allowNav(it.key)) }))
-    .filter((s) => s.items.length > 0);
+  // Los seis destinos, ya filtrados por módulos, plan y permisos.
+  // La lógica vive en lib/admin-nav.ts porque de ella cuelgan dos cosas: la
+  // barra lateral y las pestañas de cada sección.
+  const groups = buildNav({
+    role, permissions,
+    ordersEnabled, analiticaEnabled, inventarioEnabled, ingredientesEnabled,
+    personalEnabled, finanzasEnabled, felActive, proveedoresActive, loyaltyActive,
+    reservacionesActive, listaEsperaActive, encuestasActive, cuponesActive,
+    dineInEnabled, planActual, showStaff, preview,
+  });
+  const activeGroup = findGroup(groups, pathname);
 
   const TITLES: Record<string, string> = {
     '/admin/mesero': 'Tomar pedidos',
@@ -294,18 +160,19 @@ export default function AdminShell({
     '/admin/inventario': 'Inventario',
     '/admin/ingredientes': 'Ingredientes',
     '/admin/clientes': 'Clientes',
-    '/admin/canales': 'Canales externos',
+    '/admin/canales': 'Apps de delivery',
     '/admin/metricas': 'Métricas',
     '/admin/analitica': 'Analítica',
     '/admin/finanzas': 'Finanzas',
     '/admin/personalizacion': 'Personalizar sitio',
-    '/admin/personal': 'Personal',
+    '/admin/personal': 'Personal y permisos',
     '/admin/suscripcion': 'Mi suscripción',
     '/admin/menu/productos': 'Producto',
-    '/admin/menu': 'Catálogo',
+    '/admin/menu': 'Platillos',
     '/admin/perfil': 'Perfil',
+    '/admin/ajustes/restaurante': 'Horarios y preferencias',
     '/admin/ajustes': 'Ajustes',
-    '/admin/mi-pc': 'Mi PC del local',
+    '/admin/mi-pc': 'La PC del local',
     '/admin/qr': 'Código QR',
     '/admin/ayuda': 'Centro de ayuda',
     '/admin/reservaciones': 'Reservaciones',
@@ -313,11 +180,19 @@ export default function AdminShell({
     '/admin/encuestas': 'Encuestas',
     '/admin/cupones': 'Cupones',
     '/admin/lealtad': 'Lealtad',
-    '/admin/modulos': 'Módulos',
-    '/admin/respaldo': 'Respaldo de datos',
+    '/admin/modulos': 'Funciones',
+    '/admin/respaldo': 'Copia de tus datos',
   };
+  /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
+     pestaña activa dice la pantalla ("Platillos"): antes ambos decían lo
+     mismo, dos veces, a diez píxeles de distancia. En una pantalla más honda
+     —editar un platillo, por ejemplo— no hay pestaña que la nombre, así que
+     ahí el título vuelve a ser el de la pantalla. */
+  const onTab = !!activeGroup && activeGroup.items.some((it) => pathname === it.href);
   const title = pathname === '/admin'
-    ? 'Inicio'
+    ? 'Hoy'
+    : onTab && activeGroup && !activeGroup.index
+    ? activeGroup.label
     : Object.entries(TITLES).find(([p]) => pathname.startsWith(p))?.[1] ?? 'Panel';
 
   const HELP_SECTIONS: Record<string, string> = {
@@ -345,6 +220,11 @@ export default function AdminShell({
   };
   const helpSection = Object.entries(HELP_SECTIONS).find(([p]) => pathname.startsWith(p))?.[1] ?? null;
 
+  // Secciones con portada (Ajustes): sus pantallas hijas no llevan fila de
+  // pestañas —serían nueve— sino un "volver" explícito, como cualquier vista
+  // de detalle de una lista de ajustes.
+  const backToIndex = !!activeGroup?.index && pathname !== activeGroup.href;
+
   const isLive    = pathname.startsWith('/admin/pedidos');
   const isKitchen = pathname.startsWith('/admin/cocina');
   const isWaiter  = pathname.startsWith('/admin/mesero');
@@ -362,37 +242,22 @@ export default function AdminShell({
     );
   }
 
-  function renderLink(n: NavItem) {
-    const active = isActivePath(pathname, n.href);
-    if (n.locked) {
-      return (
-        <Link
-          key={n.href}
-          href="/admin/suscripcion"
-          className="admin-navlink press"
-          data-active="0"
-          data-tour-step={n.key}
-          title={`${n.label} requiere Premium (${planPriceLabel(pricing, 'PREMIUM')})`}
-          style={{ opacity: 0.55 }}
-        >
-          <Icon name={n.icon} size={18} />
-          <span className="nav-label">{n.label}</span>
-          <Icon name="key" size={12} style={{ marginLeft: 'auto', flexShrink: 0 }} />
-        </Link>
-      );
-    }
+  /** Un destino de la barra lateral. Seis en total, sin candados: lo que el
+   *  plan no incluye se enseña dentro de su sección, no aquí. */
+  function renderGroup(g: NavGroup) {
+    const active = activeGroup?.key === g.key;
     if (preview) {
       return (
-        <div key={n.href} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={n.key} style={{ cursor: 'default' }}>
-          <Icon name={n.icon} size={18} />
-          <span className="nav-label">{n.label}</span>
+        <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={g.key} style={{ cursor: 'default' }}>
+          <Icon name={g.icon} size={18} />
+          <span className="nav-label">{g.label}</span>
         </div>
       );
     }
     return (
-      <Link key={n.href} href={n.href} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={n.key}>
-        <Icon name={n.icon} size={18} />
-        <span className="nav-label">{n.label}</span>
+      <Link key={g.key} href={g.href} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={g.key}>
+        <Icon name={g.icon} size={18} />
+        <span className="nav-label">{g.label}</span>
         <NavPending />
       </Link>
     );
@@ -428,28 +293,27 @@ export default function AdminShell({
           );
         })()}
 
-        {/* Nav: secciones colapsables en escritorio; barra inferior scrollable en móvil.
-            data-collapsed oculta los links (solo ≥821px vía CSS) sin afectar la tab bar. */}
+        {/* Buscar: con seis destinos y treinta pantallas, escribir el nombre es
+            más rápido que recordar en qué sección quedó. Se abre también con
+            ⌘K / Ctrl+K desde cualquier pantalla (ver command-search.tsx). */}
+        {!preview && (
+          <button
+            type="button"
+            className="admin-search press"
+            onClick={() => window.dispatchEvent(new Event('admin:search'))}
+            title="Buscar en el panel (Ctrl+K)"
+          >
+            <Icon name="search" size={15} />
+            <span className="admin-search-label">Buscar</span>
+            <kbd className="admin-search-kbd">Ctrl K</kbd>
+          </button>
+        )}
+
+        {/* Nav: seis destinos. En escritorio es la barra lateral; en móvil la
+            misma lista se convierte en la barra inferior fija (ver globals.css).
+            Ya no hay secciones plegables: con seis ítems no hay nada que plegar. */}
         <nav className="admin-nav" data-tour-step="nav">
-          {sections.map((s) => {
-            const isCollapsed = !!collapsed[s.title];
-            const hasActive = s.items.some((it) => isActivePath(pathname, it.href));
-            return (
-              <div key={s.title} className="admin-navgroup" data-collapsed={isCollapsed ? '1' : '0'}>
-                <button
-                  type="button"
-                  onClick={() => toggleSection(s.title)}
-                  className="admin-navgroup-toggle"
-                  aria-expanded={!isCollapsed}
-                >
-                  <span className="t-kicker admin-navgroup-title" style={{ fontSize: 9.5 }}>{s.title}</span>
-                  {hasActive && isCollapsed && <span className="admin-navgroup-dot" aria-hidden />}
-                  <Icon name="chevronDown" size={13} className="admin-navgroup-chevron" />
-                </button>
-                {s.items.map(renderLink)}
-              </div>
-            );
-          })}
+          {groups.map(renderGroup)}
         </nav>
 
         {/* Plan badge — link to /admin/suscripcion, hides its label on mobile bottom bar */}
@@ -530,6 +394,19 @@ export default function AdminShell({
             </span>
           )}
         </div>
+        {activeGroup && !preview && backToIndex && (
+          <div className="admin-subbar">
+            <Link href={activeGroup.href} className="admin-back press">
+              <Icon name="chevronLeft" size={15} />
+              {activeGroup.label}
+            </Link>
+          </div>
+        )}
+        {activeGroup && !backToIndex && (
+          <div className="admin-subbar">
+            <SectionTabs group={activeGroup} pathname={pathname} preview={preview} />
+          </div>
+        )}
         <div className="admin-content">{children}</div>
       </div>
       {!preview && restaurantId && ordersEnabled && (
@@ -550,6 +427,7 @@ export default function AdminShell({
         // tiempo. Solo se mutea en modo cocina (por diseño: ver notifications.tsx).
         <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
       )}
+      {!preview && <CommandSearch groups={groups} />}
       <WelcomeTour restaurantName={restaurantName} preview={preview} />
       {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
       {/* Tours guiados del centro de ayuda ("Ver en mi panel") — el host vive

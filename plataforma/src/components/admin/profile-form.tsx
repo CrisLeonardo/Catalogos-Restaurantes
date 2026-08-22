@@ -5,6 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { updateRestaurantInfo, type RestaurantState } from '@/lib/actions/restaurant';
+import { useFormDirty } from '@/lib/use-form-dirty';
+import { friendlyError } from '@/lib/friendly-error';
 import type { Restaurant } from '@/types';
 
 interface ProfileFormProps {
@@ -16,6 +18,13 @@ const empty: RestaurantState = null;
 
 export default function ProfileForm({ restaurantId, restaurant }: ProfileFormProps) {
   const [infoState, infoAction, infoIsPending] = useActionState(updateRestaurantInfo, empty);
+  /* El botón solo se enciende si de verdad cambiaste algo. La confirmación de
+     guardado no se maneja aquí: esta acción termina en redirect a
+     `?saved=1` y la propia pantalla pinta el aviso "Cambios guardados
+     correctamente" (ver perfil/page.tsx). Tras el redirect el formulario se
+     monta de nuevo, limpio, y el botón vuelve solo a "Sin cambios". */
+  const { ref: infoRef, dirty: infoDirty } = useFormDirty();
+
   const [whatsappVal, setWhatsappVal] = useState(restaurant.whatsapp_number ?? '');
   const [ordersWaEnabled, setOrdersWaEnabled] = useState(restaurant.orders_whatsapp_enabled !== false);
 
@@ -62,7 +71,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
       {/* ── Información del restaurante ─────────────────────── */}
       <section>
         <h2 style={sectionTitle}>Información</h2>
-        <form action={infoAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form ref={infoRef} action={infoAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <input type="hidden" name="restaurantId" value={restaurantId} />
           <input type="hidden" name="orders_whatsapp" value="" />
 
@@ -157,10 +166,17 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
             />
           </Card>
 
-          {infoState?.error && <ErrorMsg msg={infoState.error} />}
+          {infoState?.error && <ErrorMsg msg={friendlyError(infoState.error)} />}
 
-          <Button type="submit" disabled={infoIsPending || !!whatsappErr} size="lg" className="w-full rounded-adm-full">
-            {infoIsPending ? 'Guardando…' : 'Guardar información'}
+          {/* El botón dice la verdad sobre el estado de la pantalla: apagado
+              si no hay nada que guardar, y "Guardado" cuando acaba. */}
+          <Button
+            type="submit"
+            disabled={infoIsPending || !!whatsappErr || !infoDirty}
+            size="lg"
+            className="w-full rounded-adm-full"
+          >
+            {infoIsPending ? 'Guardando…' : infoDirty ? 'Guardar información' : 'Sin cambios que guardar'}
           </Button>
         </form>
       </section>

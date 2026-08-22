@@ -24,6 +24,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { friendlyError } from '@/lib/friendly-error';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -108,7 +109,7 @@ export default function MainPcSwitch({ onChanged }: { onChanged?: () => void }) 
       setMsg({ text: 'Listo. En unos segundos aquí dirá «Conectada».' });
       pollUntilLive();
     } catch (e) {
-      setMsg({ text: e instanceof Error ? e.message : String(e), bad: true });
+      setMsg({ text: friendlyError(e), bad: true });
     } finally {
       setBusy(false);
     }
@@ -132,7 +133,7 @@ export default function MainPcSwitch({ onChanged }: { onChanged?: () => void }) 
       await load();
       onChanged?.();
     } catch (e) {
-      setMsg({ text: e instanceof Error ? e.message : String(e), bad: true });
+      setMsg({ text: friendlyError(e), bad: true });
     } finally {
       setBusy(false);
     }

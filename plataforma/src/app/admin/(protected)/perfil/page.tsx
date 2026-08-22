@@ -91,7 +91,7 @@ export default async function AdminPerfilPage({
           punteros para quien las busca en Perfil por costumbre. */}
       <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 24, paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <Link
-          href="/admin/ajustes"
+          href="/admin/ajustes/restaurante"
           className={cn(cardVariants({ variant: 'interactive' }), 'flex items-center gap-3 p-3.5 no-underline text-inherit')}
         >
           <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
