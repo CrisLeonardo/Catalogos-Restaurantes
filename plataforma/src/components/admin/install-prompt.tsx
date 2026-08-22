@@ -16,6 +16,7 @@
    ============================================================ */
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -268,9 +269,14 @@ export default function AdminInstallPrompt() {
       >
         <Icon name="download" size={18} />
       </Button>
-      {open && (
+      {open && typeof document !== 'undefined' && createPortal(
+        // Portal a <body>: si este overlay quedara anidado dentro de
+        // .admin-topbar (que tiene backdrop-filter), ese ancestro se
+        // convierte en el "containing block" del position:fixed y el
+        // inset:0 se calcula contra la topbar (64px) en vez de la pantalla
+        // completa — la hoja terminaba recortada arriba, medio tapada por
+        // la cabecera. Desde <body> no hay ese problema.
         <div
-          className="anim-slide-up"
           onClick={close}
           style={{
             position: 'fixed', inset: 0, zIndex: 300,
@@ -279,7 +285,7 @@ export default function AdminInstallPrompt() {
             padding: '0 12px calc(16px + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460 }}>
+          <div onClick={(e) => e.stopPropagation()} className="anim-slide-up" style={{ width: '100%', maxWidth: 460 }}>
             <Glass style={{ padding: '18px 16px', borderRadius: 'var(--radius-xl)' }}>
               {platform === 'ios' ? (
                 <IOSSteps onDismiss={close} />
@@ -288,7 +294,8 @@ export default function AdminInstallPrompt() {
               )}
             </Glass>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

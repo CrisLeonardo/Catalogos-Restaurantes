@@ -52,7 +52,8 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
             Acceder
           </Link>
           <Link href="/registro" className="lp-btn lp-btn-sm lp-btn-primary" style={{ marginLeft: 6 }}>
-            Crear mi restaurante
+            <span className="lp-cta-full">Crear mi restaurante</span>
+            <span className="lp-cta-short">Crear cuenta</span>
           </Link>
         </nav>
       </div>

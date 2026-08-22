@@ -1899,7 +1899,20 @@ html[data-platform] .asphalt::after { display: none; }
 /* Debajo de 860 px caben logo + Acceder + CTA y nada más: cinco enlaces a
    13 px se pisaban con el CTA en cualquier teléfono. */
 @media (max-width: 860px) { .lp-navlink { display: none; } }
-@media (max-width: 560px) { .lp-nav-secondary { display: none; } }
+/* Antes, debajo de 560px también se ocultaba "Acceder" (.lp-nav-secondary)
+   para que solo quedara el CTA — pero eso dejaba SIN botón de login visible
+   en cualquier celular (560px cubre casi todos). En vez de esconderlo,
+   aquí se angosta todo (logo sin wordmark, botones más compactos, CTA con
+   texto corto) para que quepan los tres elementos. */
+.lp-cta-short { display: none; }
+@media (max-width: 560px) {
+  .lp-header-inner { gap: 6px; }
+  .lp-nav { gap: 6px; }
+  .lp-header-inner .t-display { display: none; } /* wordmark "Leogin": queda solo el ícono */
+  .lp-nav .lp-btn-sm { padding: 8px 12px; font-size: 12.5px; }
+  .lp-cta-full { display: none; }
+  .lp-cta-short { display: inline; }
+}
 
 /* ── Rejillas ────────────────────────────────────────────── */
 .lp-hero-grid {

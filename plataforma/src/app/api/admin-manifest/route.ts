@@ -27,13 +27,19 @@ export async function GET(_request: NextRequest) {
   const iconType = 'image/png';
 
   // Cuando se sirve desde el subdominio admin.* (origen separado), las rutas
-  // son relativas a ese origen: start_url='/' y scope='/'.
-  // Desde el subdominio del catálogo (acceso directo a /admin/) usamos
-  // id/start_url/scope='/admin/' para distinguirlo del catálogo (id='/').
+  // son relativas a ese origen: scope='/'. Desde el subdominio del catálogo
+  // (acceso directo a /admin/) usamos id/scope='/admin/' para distinguirlo
+  // del catálogo (id='/').
   const isAdminSub = headersList.get('x-is-admin-subdomain') === '1';
   const appId       = isAdminSub ? '/' : '/admin/';
-  const startUrl    = isAdminSub ? '/' : '/admin/';
   const scope       = isAdminSub ? '/' : '/admin/';
+  // start_url SIEMPRE cae en /login, nunca en la raíz: el ícono "Leogin"
+  // añadido al inicio es una puerta de entrada, no el dashboard del último
+  // restaurante abierto. Así sirve igual para el dueño con varios
+  // restaurantes (elige cuál abrir) y para el empleado (su PIN/cuenta) —
+  // si ya hay sesión viva, /admin/login ofrece "Continuar como {nombre}"
+  // en vez de forzar un login desde cero (ver admin/login/page.tsx).
+  const startUrl    = isAdminSub ? '/login' : '/admin/login';
 
   const manifest = {
     name,
