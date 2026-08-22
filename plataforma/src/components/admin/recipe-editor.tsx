@@ -179,7 +179,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                   fontSize: 12.5,
                   color: l.ingredient_cost <= 0 ? 'var(--c-warn)' : 'var(--u-text-2)',
                   textAlign: 'right',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--ui-font-mono)',
                   fontWeight: 500,
                 }}
                 title={l.ingredient_cost <= 0 ? 'Este insumo tiene costo 0 — actualízalo en Ingredientes' : undefined}
@@ -220,7 +220,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
               </span>
             )}
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Costo total:</span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent-ink)', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)' }}>
               Q {totalCost.toFixed(2)}
             </span>
           </div>
@@ -280,7 +280,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
                 color: 'var(--u-text-3)',
                 whiteSpace: 'nowrap',
                 border: '1px solid var(--u-hair)',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--ui-font-mono)',
               }}>
                 {parseFloat(selQty).toFixed(selectedIng.unit === 'g' || selectedIng.unit === 'ml' ? 0 : 2)} {selectedIng.unit}
               </div>

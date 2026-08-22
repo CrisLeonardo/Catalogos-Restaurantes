@@ -35,6 +35,42 @@ interface ProductFormProps {
 
 const emptyState: ProductState = null;
 
+/** Etiquetas rápidas — el resto se agrega como texto libre. */
+const PRESET_TAGS = [
+  { id: 'hot',  label: 'Picante',   icon: 'flame'   },
+  { id: 'new',  label: 'Nuevo',     icon: 'sparkle' },
+  { id: 'fav',  label: 'Favorito',  icon: 'star'    },
+  { id: 'veg',  label: 'Vegano',    icon: 'leaf'    },
+] as const;
+
+/** Ícono del patrón de marca cuando el platillo no tiene foto. */
+const PRODUCT_ICONS = [
+  { id: 'utensils',  label: 'General',   keywords: ['comida', 'food', 'menu', 'plato', 'general'] },
+  { id: 'coffee',    label: 'Café',      keywords: ['cafe', 'coffee', 'expreso', 'latte', 'capuchino', 'americano', 'bebida', 'drink', 'moca', 'mocha'] },
+  { id: 'bagel',     label: 'Bagel',     keywords: ['bagel', 'rosquilla'] },
+  { id: 'croissant', label: 'Croissant', keywords: ['croissant', 'medialuna'] },
+  { id: 'ice',       label: 'Frío',      keywords: ['frio', 'helado', 'smoothie', 'shake', 'frape', 'batido', 'granizado', 'frozen', 'nieve'] },
+  { id: 'cookie',    label: 'Galleta',   keywords: ['galleta', 'cookie', 'postre', 'dulce', 'pastel', 'cake', 'torta', 'muffin', 'brownie', 'dessert'] },
+  { id: 'flame',     label: 'Picante',   keywords: ['picante', 'hot', 'spicy', 'salsa', 'chile', 'habanero', 'jalap'] },
+  { id: 'leaf',      label: 'Veggie',    keywords: ['vegano', 'veggie', 'vegetariano', 'ensalada', 'salad', 'fresco', 'saludable', 'green', 'organico'] },
+  { id: 'milk',      label: 'Leche',     keywords: ['leche', 'lacteo', 'dairy', 'milk', 'yogur', 'yogurt', 'queso', 'cheese'] },
+  { id: 'wheat',     label: 'Pan',       keywords: ['pan', 'panaderia', 'pizza', 'pasta', 'harina', 'trigo', 'bread', 'empanada', 'wrap', 'taco', 'baguette'] },
+  { id: 'star',      label: 'Favorito',  keywords: ['favorito', 'especial', 'premium', 'top', 'mejor', 'star', 'signature'] },
+  { id: 'sparkle',   label: 'Especial',  keywords: ['nuevo', 'new', 'novedad', 'fresh', 'especial', 'destacado', 'temporada', 'seasonal'] },
+];
+
+function fold(s: string) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function suggestIconFromName(name: string): string {
+  const n = fold(name);
+  for (const icon of PRODUCT_ICONS) {
+    if (icon.keywords.some((kw) => n.includes(kw))) return icon.id;
+  }
+  return 'utensils';
+}
+
 /** Encabezado de sección: título + explicación corta de para qué sirve. */
 function SectionHead({ title, hint }: { title: string; hint?: string }) {
   return (
@@ -45,6 +81,41 @@ function SectionHead({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
+/** Interruptor visual compartido por "Disponible" y "Platillo activo". */
+function ToggleSwitch({ checked, onChange, ariaLabel }: { checked: boolean; onChange: () => void; ariaLabel: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      style={{
+        width: 44,
+        height: 26,
+        borderRadius: 999,
+        border: 'none',
+        cursor: 'pointer',
+        background: checked ? 'var(--brand-accent)' : 'var(--u-hair-2)',
+        position: 'relative',
+        transition: 'background 200ms',
+        flexShrink: 0,
+      }}
+      aria-label={ariaLabel}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: checked ? 21 : 3,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          background: '#fff',
+          transition: 'left 200ms',
+        }}
+      />
+    </button>
+  );
+}
+
 export default function ProductForm({ restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe }: ProductFormProps) {
   const isEdit = Boolean(product);
   const action = isEdit ? updateProduct : createProduct;
@@ -52,9 +123,24 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [state, formAction, isPending] = useActionState(action, emptyState);
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
+  const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
   const [loyaltyPtsVal, setLoyaltyPtsVal] = useState<string>(product?.loyalty_points != null ? String(product.loyalty_points) : '');
+  const [tags, setTags] = useState<string[]>(product?.tags ?? []);
+  const [customTagInput, setCustomTagInput] = useState('');
+  const [icon, setIcon] = useState<string>(product?.icon ?? '');
+  const [iconSearch, setIconSearch] = useState('');
+
+  function toggleTag(id: string) {
+    setTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+  function addCustomTag() {
+    const t = customTagInput.trim();
+    if (!t || tags.includes(t)) { setCustomTagInput(''); return; }
+    setTags((prev) => [...prev, t]);
+    setCustomTagInput('');
+  }
   // Si hay receta → costo auto; null = usar manual
   const [recipeCost, setRecipeCost] = useState<number | null>(
     initialRecipe && initialRecipe.length > 0
@@ -98,9 +184,12 @@ export default function ProductForm({ restaurantId, categories, product, default
       <input type="hidden" name="restaurantId" value={restaurantId} />
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
       <input type="hidden" name="image_url" value={imageUrl} />
+      <input type="hidden" name="icon" value={icon} />
       <input type="hidden" name="is_available" value={String(isAvailable)} />
+      <input type="hidden" name="is_active" value={String(isActive)} />
       <input type="hidden" name="options" value={JSON.stringify(cleanOptions(options))} />
       <input type="hidden" name="dietary_tags" value={dietaryTags.join(',')} />
+      <input type="hidden" name="tags" value={tags.join(',')} />
 
       <div className="pform-grid">
         {/* ══ Columna principal ══ */}
@@ -193,17 +282,71 @@ export default function ProductForm({ restaurantId, categories, product, default
                 Se muestran solo si activas el selector de idioma en Ajustes → Idiomas del menú. Sin traducción, el comensal ve el español.
               </span>
               <div>
-                <label htmlFor="tags" style={labelStyle}>Etiquetas</label>
-                <input
-                  id="tags"
-                  name="tags"
-                  type="text"
-                  defaultValue={product?.tags?.join(', ') ?? ''}
-                  placeholder="Picante, Favorito, Nuevo"
-                  style={inputStyle}
-                />
-                <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 4, display: 'block' }}>
-                  Separadas por coma — aparecen como sellos sobre la foto del platillo.
+                <label style={labelStyle}>Etiquetas</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {PRESET_TAGS.map((t) => {
+                    const on = tags.includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className="press"
+                        onClick={() => toggleTag(t.id)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                          border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
+                          background: on ? 'var(--u-text)' : 'transparent',
+                          color: on ? 'var(--brand-bg)' : 'var(--u-text)',
+                          fontWeight: 600, fontSize: 12,
+                        }}
+                      >
+                        <Icon name={t.icon} size={12} /> {t.label}
+                      </button>
+                    );
+                  })}
+                  {tags.filter((t) => !PRESET_TAGS.some((p) => p.id === t)).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="press"
+                      onClick={() => setTags((prev) => prev.filter((x) => x !== t))}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                        border: '1px solid transparent',
+                        background: 'var(--u-text)', color: 'var(--brand-bg)',
+                        fontWeight: 600, fontSize: 12,
+                      }}
+                    >
+                      {t} <Icon name="x" size={10} />
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type="text"
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
+                    placeholder="Etiqueta personalizada…"
+                    maxLength={30}
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addCustomTag}
+                    className="press"
+                    style={{
+                      padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)',
+                      background: 'transparent', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 6, display: 'block' }}>
+                  Aparecen como sellos sobre la foto del platillo.
                 </span>
               </div>
             </div>
@@ -374,6 +517,52 @@ export default function ProductForm({ restaurantId, categories, product, default
             />
           </Glass>
 
+          {/* ── Ícono del patrón (fallback sin foto) ── */}
+          <Glass variant="quiet" style={{ padding: 18 }}>
+            <SectionHead title="Ícono del patrón" hint="Se usa como fondo si el platillo no tiene foto." />
+            <input
+              type="text"
+              value={iconSearch}
+              onChange={(e) => {
+                const v = e.target.value;
+                setIconSearch(v);
+                const suggested = v.trim() ? suggestIconFromName(v) : '';
+                if (suggested && v.trim()) setIcon(suggested);
+              }}
+              placeholder="Buscar (ej: pizza, café, helado…)"
+              style={{ ...inputStyle, marginBottom: 10 }}
+            />
+            <div className="u-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+              {PRODUCT_ICONS.filter((opt) => {
+                if (!iconSearch.trim()) return true;
+                const q = fold(iconSearch);
+                return fold(opt.label).includes(q) || opt.keywords.some((kw) => kw.includes(q));
+              }).map((opt) => {
+                const on = icon === opt.id || (!icon && opt.id === 'utensils');
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => { setIcon(icon === opt.id ? '' : opt.id); setIconSearch(''); }}
+                    title={opt.label}
+                    className="press"
+                    style={{
+                      flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                      padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 56,
+                      border: `1.5px solid ${on ? 'var(--u-text)' : 'var(--u-hair-2)'}`,
+                      background: on ? 'var(--u-text)' : 'transparent',
+                      color: on ? 'var(--brand-bg)' : 'var(--u-text-3)',
+                      transition: 'all 140ms',
+                    }}
+                  >
+                    <Icon name={opt.id} size={18} />
+                    <span style={{ fontSize: 9.5, fontWeight: 600 }}>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Glass>
+
           <Glass variant="quiet" style={{ padding: '14px 18px' }}>
             <div
               style={{
@@ -389,35 +578,25 @@ export default function ProductForm({ restaurantId, categories, product, default
                   {isAvailable ? 'Visible en el menú' : 'Oculto en el menú'}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAvailable(!isAvailable)}
-                style={{
-                  width: 44,
-                  height: 26,
-                  borderRadius: 999,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: isAvailable ? 'var(--brand-accent)' : 'var(--u-hair-2)',
-                  position: 'relative',
-                  transition: 'background 200ms',
-                  flexShrink: 0,
-                }}
-                aria-label="Disponibilidad"
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 3,
-                    left: isAvailable ? 21 : 3,
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    transition: 'left 200ms',
-                  }}
-                />
-              </button>
+              <ToggleSwitch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} ariaLabel="Disponibilidad" />
+            </div>
+          </Glass>
+
+          {/* ── Activar / desactivar (oculto permanente, distinto de "Disponible") ── */}
+          <Glass
+            variant="quiet"
+            style={{ padding: '14px 18px', borderColor: !isActive ? 'var(--c-danger-line)' : undefined }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>
+                  {isActive ? 'Platillo activo' : 'Platillo desactivado'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
+                  Desactivado → no aparece en el menú hasta que lo reactives
+                </div>
+              </div>
+              <ToggleSwitch checked={isActive} onChange={() => setIsActive(!isActive)} ariaLabel="Platillo activo" />
             </div>
           </Glass>
         </div>

@@ -17,7 +17,7 @@ import {
   type ModulesMap,
   type ModuleSettings,
 } from '@/lib/modules';
-import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
+import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, PUBLIC_PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
 
@@ -268,8 +268,17 @@ function PremiumGapsSection({ plan, modules, settings }: { plan: PlanCode; modul
   const pricing = usePlanPricing();
   const premiumLabel = planPriceLabel(pricing, 'PREMIUM');
   const f = PLANS[plan];
+  // Solo se anuncian módulos que algún plan A LA VENTA realmente incluye —
+  // "proveedores" y "fel" son exclusivos de Pro, que está pausado (aún no
+  // están listos, ver nota "PAUSADO" en plans.ts) y no se ofrece a clientes.
+  // Sin este filtro, un dueño en Premium veía esas dos tarjetas anunciadas
+  // como "Incluido en Premium" cuando en realidad ni Premium las trae ni Pro
+  // se puede contratar todavía.
   const missingModules = ACTIVATABLE_MODULES.filter(
-    (m) => !INCLUDED_MODULES[plan]?.includes(m.key) && !isModuleActive(modules, settings, m.key),
+    (m) =>
+      !INCLUDED_MODULES[plan]?.includes(m.key) &&
+      !isModuleActive(modules, settings, m.key) &&
+      PUBLIC_PLANS.some((p) => INCLUDED_MODULES[p]?.includes(m.key)),
   );
   const missingWaiter = !f.hasWaiterPanel;
   const missingAnalytics = !f.hasAnalytics;

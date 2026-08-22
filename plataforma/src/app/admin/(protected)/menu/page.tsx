@@ -3,8 +3,6 @@ import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
-import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { getIngredients, type Ingredient } from '@/lib/db/recipes';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import CatalogPanel from '@/components/admin/catalog-panel';
 import ProductosExportButton from '@/components/admin/productos-export-button';
@@ -37,21 +35,12 @@ export default async function AdminMenuPage() {
     getAdminMenu(restaurantId),
     db
       .from('restaurants')
-      .select('modules, module_settings, plan_actual')
+      .select('plan_actual')
       .eq('id', restaurantId)
       .single(),
   ]);
 
   const maxProducts = rest?.plan_actual ? PLANS[rest.plan_actual as PlanCode]?.maxProducts : undefined;
-
-  // Módulo de recetas: si está activo, traemos los insumos para que el editor
-  // de platillo permita armar la receta y costear automáticamente.
-  const recetasActive = isModuleActive(
-    rest?.modules as ModulesMap,
-    rest?.module_settings as ModuleSettings,
-    'recetas',
-  );
-  const ingredients: Ingredient[] = recetasActive ? await getIngredients(restaurantId) : [];
 
   return (
     <div className="anim-fade-up">
@@ -64,8 +53,6 @@ export default async function AdminMenuPage() {
         restaurantId={restaurantId}
         categories={categories}
         products={products}
-        ingredients={ingredients}
-        recetasActive={recetasActive}
         maxProducts={maxProducts}
       />
     </div>

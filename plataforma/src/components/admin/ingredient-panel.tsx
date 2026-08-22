@@ -284,12 +284,12 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
                   {/* Línea meta — solo visible en móvil (las columnas se ocultan) */}
                   <div className="ing-meta-mobile" style={{ color: 'var(--u-text-3)', fontSize: 12 }}>
                     <span>{ing.unit}</span>
-                    <span style={{ fontFamily: 'monospace', color: 'var(--u-text-2)' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</span>
+                    <span style={{ fontFamily: 'var(--ui-font-mono)', color: 'var(--u-text-2)' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</span>
                     {usageChip}
                   </div>
                 </div>
                 <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{ing.unit}</div>
-                <div className="ing-col-desk" style={{ fontFamily: 'monospace' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</div>
+                <div className="ing-col-desk" style={{ fontFamily: 'var(--ui-font-mono)' }}>Q {Number(ing.cost_per_unit).toFixed(4)}</div>
                 <div className="ing-col-desk" style={{ color: 'var(--u-text-3)' }}>{usageChip ?? '—'}</div>
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignSelf: 'start' }}>
                   <Button
