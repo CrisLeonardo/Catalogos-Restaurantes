@@ -16,7 +16,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
-import LogoutButton from '@/components/admin/logout-button';
 import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
@@ -65,8 +64,6 @@ interface Props {
       responde, antes de encolar el pedido en este dispositivo. */
   hubUrl: string | null;
   hubToken: string | null;
-  /** Sesión iniciada por PIN — el menú ⋮ ofrece "Cambiar de usuario" en vez de "Salir". */
-  isOperatorSession?: boolean;
 }
 
 /** Objetivo de un modal de anulación en curso: null = cerrado. */
@@ -378,44 +375,9 @@ function ProductOptionsModal({
   );
 }
 
-/* Menú ⋮ del encabezado: hoy solo trae "Salir", pero queda listo para más
-   opciones futuras del mesero sin competir por espacio con la navegación. */
-function HeaderMenu({ isOperatorSession }: { isOperatorSession?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onDocClick);
-    return () => document.removeEventListener('pointerdown', onDocClick);
-  }, [open]);
-
-  return (
-    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="press glass-quiet"
-        aria-label="Más opciones"
-        style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}
-      >
-        <Icon name="more" size={19} />
-      </button>
-      {open && (
-        <div className="glass anim-pop" style={{ position: 'absolute', right: 0, top: 46, zIndex: 210, minWidth: 160, borderRadius: 14, padding: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-          <LogoutButton variant="menu-item" isOperatorSession={isOperatorSession} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, showOrders, ordersCount, onShowOrders, isOperatorSession,
+  title, waiterName, onBack, showOrders, ordersCount, onShowOrders,
 }: {
   title: string;
   waiterName: string;
@@ -423,7 +385,6 @@ function WaiterHeader({
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
-  isOperatorSession?: boolean;
 }) {
   return (
     /* Ya NO es sticky: con el sidebar/topbar del panel siempre visibles
@@ -452,7 +413,6 @@ function WaiterHeader({
             <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
           </button>
         )}
-        <HeaderMenu isOperatorSession={isOperatorSession} />
       </div>
     </header>
   );
@@ -465,7 +425,7 @@ export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
   tableCount, tipEnabled, tipPercent, currency, floorPlan,
-  hubUrl, hubToken, isOperatorSession = false,
+  hubUrl, hubToken,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<View>('tables');
@@ -859,7 +819,6 @@ export default function WaiterPanel({
     showOrders: view !== 'orders',
     ordersCount: orders.length,
     onShowOrders: () => setView('orders'),
-    isOperatorSession,
   };
 
   /* ════════════════ VISTA: MIS PEDIDOS ════════════════ */
