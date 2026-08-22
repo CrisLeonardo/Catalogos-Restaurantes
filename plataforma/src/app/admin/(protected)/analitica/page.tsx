@@ -107,7 +107,7 @@ export default async function AdminAnaliticaPage({
 
       {/* Mapa de calor de horas pico */}
       <Card className="flex flex-col gap-3 p-4.5">
-        <div className="t-kicker">Horas pico · pedidos por día y hora</div>
+        <div className="adm-label">Horas pico · pedidos por día y hora</div>
         {a.heatMax === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin pedidos en el rango.</div>
         ) : (
@@ -166,7 +166,7 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
   const max = rows.reduce((m, r) => Math.max(m, r.qty), 1);
   return (
     <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker">{title}</div>
+      <div className="adm-label">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : rows.map((r, i) => (
@@ -187,7 +187,7 @@ function VelocityTable({ title, rows, accent }: { title: string; rows: Velocity[
 function SplitCard({ title, rows, total }: { title: string; rows: CountSplit[]; total: number }) {
   return (
     <Card className="flex flex-col gap-3 p-4.5">
-      <div className="t-kicker">{title}</div>
+      <div className="adm-label">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : rows.map((r) => {

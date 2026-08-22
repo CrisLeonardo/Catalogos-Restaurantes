@@ -110,7 +110,7 @@ export default function CanalesPanel({
 
       {/* ── Alta de mapeo ── */}
       <Card className="flex flex-col gap-3.5 p-4">
-        <div className="t-kicker">Conectar un producto</div>
+        <div className="adm-label">Conectar un producto</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>App</label>
@@ -203,7 +203,7 @@ export default function CanalesPanel({
       )}
 
       <Card className="flex flex-col gap-2 p-4">
-        <div className="t-kicker" style={{ fontSize: 10.5 }}>Cómo se conectan los pedidos</div>
+        <div className="adm-label">Cómo se conectan los pedidos</div>
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.6 }}>
           Las apps externas no hablan con Leogin directamente: un conector en el medio (lo arma Leogin
           o tu integrador) recibe el pedido y lo empuja a <code style={{ fontFamily: 'var(--ui-font-mono)' }}>POST /api/v1/orders</code>{' '}

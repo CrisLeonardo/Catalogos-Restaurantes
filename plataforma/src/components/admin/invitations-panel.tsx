@@ -34,7 +34,7 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
   return (
     <Card className="p-4.5 flex flex-col gap-3.5" style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Invitaciones pendientes</div>
+        <div className="adm-label">Invitaciones pendientes</div>
       </div>
 
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>

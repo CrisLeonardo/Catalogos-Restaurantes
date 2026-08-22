@@ -125,7 +125,7 @@ export default function CashCountForm({
 
       {/* Header */}
       <div>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Arqueo de caja · hoy</div>
+        <div className="adm-label">Arqueo de caja · hoy</div>
         <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 4 }}>
           {summary.orders} pedidos · venta total {money(summary.totalSales)}
         </div>

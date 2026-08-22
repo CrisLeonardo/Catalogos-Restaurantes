@@ -42,7 +42,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
   return (
     <Card className="p-4.5 flex flex-col gap-3" style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>PIN de entrada</div>
+        <div className="adm-label">PIN de entrada</div>
         {hasPin && (
           <span className="chip chip-ok" style={{ flexShrink: 0 }}>
             <Icon name="key" size={11} /> Activo

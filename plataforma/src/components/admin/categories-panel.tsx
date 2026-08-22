@@ -209,7 +209,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16,
+                    fontWeight: 600, fontSize: 15.5,
                     color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}
                 >
@@ -299,7 +299,7 @@ function NewCategoryForm({
 
   return (
     <Card data-tour-step="categorias-nueva" className="p-4.5">
-      <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Nueva categoría</div>
+      <div className="adm-label" style={{ marginBottom: 12 }}>Nueva categoría</div>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <input type="hidden" name="icon" value={iconValue} />

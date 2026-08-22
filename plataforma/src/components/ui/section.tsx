@@ -26,7 +26,7 @@ function Section({ title, action, className, children, ...props }: Props) {
   return (
     <section className={cn('min-w-0', className)} {...props}>
       <div className="mb-2 flex items-baseline gap-3 px-1">
-        <h3 className="flex-1 text-[12.5px] font-semibold text-adm-text-3">{title}</h3>
+        <h3 className="adm-label flex-1">{title}</h3>
         {action && (
           <Link
             href={action.href}

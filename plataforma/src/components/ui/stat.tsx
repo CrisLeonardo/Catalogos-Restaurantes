@@ -31,13 +31,31 @@ function StatGroup({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
+/** Un número puede pedir atención (existencias bajas, algo agotado). El color
+ *  va en el VALOR, no en el fondo: tiñe el dato, no la tarjeta entera. */
+type StatTone = 'warn' | 'danger';
+
+const TONE_COLOR: Record<StatTone, string> = {
+  warn: 'var(--c-warn)',
+  danger: 'var(--c-danger)',
+};
+
 function Stat({
-  label, value, className, ...props
-}: Omit<React.ComponentProps<'div'>, 'children'> & { label: React.ReactNode; value: React.ReactNode }) {
+  label, value, tone, className, ...props
+}: Omit<React.ComponentProps<'div'>, 'children'> & {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  tone?: StatTone;
+}) {
   return (
     <div data-slot="stat" className={cn('px-5.5 py-4.5', className)} {...props}>
       <div className="text-[13.5px] text-adm-text-3">{label}</div>
-      <div className="t-mono mt-1.5 text-[28px] leading-tight font-semibold text-adm-text">{value}</div>
+      <div
+        className="t-mono mt-1.5 text-[28px] leading-tight font-semibold text-adm-text"
+        style={tone ? { color: TONE_COLOR[tone] } : undefined}
+      >
+        {value}
+      </div>
     </div>
   );
 }

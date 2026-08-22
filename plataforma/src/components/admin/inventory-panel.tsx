@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { adjustStock, saveInventory, getProductMovements } from '@/lib/actions/inventory';
 import { Card } from '@/components/ui/card';
+import { Stat, StatGroup } from '@/components/ui/stat';
 import { Button } from '@/components/ui/button';
 import type { Category, Product } from '@/types';
 import type { StockMovement } from '@/lib/db/kardex';
@@ -60,12 +61,14 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Resumen */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Summary label="Con control" value={String(tracked.length)} />
-        <Summary label="Stock bajo" value={String(low)} tone={low > 0 ? 'warn' : undefined} />
-        <Summary label="Agotados" value={String(out)} tone={out > 0 ? 'bad' : undefined} />
-      </div>
+      {/* Resumen: una sola tarjeta en columnas, con los números en la mono
+          del panel — antes eran tres tarjetas sueltas con el número en la
+          tipografía de titulares. */}
+      <StatGroup>
+        <Stat label="Con control" value={String(tracked.length)} />
+        <Stat label="Stock bajo" value={String(low)} tone={low > 0 ? 'warn' : undefined} />
+        <Stat label="Agotados" value={String(out)} tone={out > 0 ? 'danger' : undefined} />
+      </StatGroup>
 
       {/* Filtro de categorías */}
       <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto' }}>
@@ -104,16 +107,6 @@ export default function InventoryPanel({ restaurantId, categories, products }: P
         </Card>
       )}
     </div>
-  );
-}
-
-function Summary({ label, value, tone }: { label: string; value: string; tone?: 'warn' | 'bad' }) {
-  const color = tone === 'bad' ? 'var(--c-danger)' : tone === 'warn' ? 'var(--c-warn)' : 'var(--u-text)';
-  return (
-    <Card className="flex flex-col gap-1.5 p-4.5">
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color, lineHeight: 1 }}>{value}</div>
-    </Card>
   );
 }
 
@@ -157,7 +150,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
     <div style={{ padding: '12px 16px', borderBottom: last ? 'none' : '1px solid var(--u-hair)', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {product.name}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
@@ -232,7 +225,7 @@ const inputStyle: React.CSSProperties = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label className="t-kicker" style={{ fontSize: 9.5 }}>{label}</label>
+      <label className="adm-label">{label}</label>
       {children}
     </div>
   );

@@ -73,7 +73,7 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
 function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <Card className="flex flex-col gap-1 p-3.5">
-      <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
+      <span className="adm-label">{label}</span>
       <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
     </Card>
   );
@@ -191,7 +191,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Card className="flex flex-col gap-3 p-4">
-        <div className="t-kicker" style={{ fontSize: 10.5 }}>{editingId ? 'Editar recompensa' : 'Nueva recompensa'}</div>
+        <div className="adm-label">{editingId ? 'Editar recompensa' : 'Nueva recompensa'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>Producto del menú</label>
@@ -279,7 +279,7 @@ function MembersTab({ restaurantId, accounts, customers, settings }: { restauran
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Card className="flex flex-col gap-3 p-4">
-        <div className="t-kicker" style={{ fontSize: 10.5 }}>Asignar / restar puntos manualmente</div>
+        <div className="adm-label">Asignar / restar puntos manualmente</div>
         {/* .admin-form-3: 3 columnas en escritorio, apilado en móvil (antes
             columnas fijas que aplastaban el selector de cliente). */}
         <div className="admin-form-3">

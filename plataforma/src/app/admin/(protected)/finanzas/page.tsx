@@ -118,7 +118,7 @@ export default async function AdminFinanzasPage({
 
       {/* Gráfica diaria */}
       <Card className="flex flex-col gap-3.5 p-4.5">
-        <div className="t-kicker">Ingreso por día</div>
+        <div className="adm-label">Ingreso por día</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
           {report.series.map((d, i) => {
             const h = (d.revenue / maxRevenue) * 100;
@@ -169,7 +169,7 @@ export default async function AdminFinanzasPage({
 function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total: number }) {
   return (
     <Card className="flex flex-col gap-3 p-4.5">
-      <div className="t-kicker">{title}</div>
+      <div className="adm-label">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : rows.map((r) => {
@@ -193,7 +193,7 @@ function SplitCard({ title, rows, total }: { title: string; rows: Split[]; total
 function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name: string; a: string; b: string }[]; colA: string; colB: string }) {
   return (
     <Card className="flex flex-col gap-2 p-4.5">
-      <div className="t-kicker">{title}</div>
+      <div className="adm-label">{title}</div>
       {rows.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : (

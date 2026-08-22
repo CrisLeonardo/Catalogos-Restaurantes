@@ -96,7 +96,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <div className="t-kicker" style={{ fontSize: 10.5 }}>Métodos de pago</div>
+      <div className="adm-label">Métodos de pago</div>
 
       <Toggle label="Pago con tarjeta" value={patch.acceptsCard} onChange={(v) => set('acceptsCard', v)} />
       <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
@@ -108,7 +108,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
 
       {patch.orderTypes.includes('dine_in') && (
         <>
-          <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Preferencias de servicio</div>
+          <div className="adm-label" style={{ paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Preferencias de servicio</div>
           <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
             El cliente elige una al ordenar (ej. &quot;entrada primero&quot;), para comer en local.
           </p>
@@ -119,7 +119,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         </>
       )}
 
-      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Propina</div>
+      <div className="adm-label" style={{ paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Propina</div>
       <Toggle label="Habilitar propina" value={patch.tipEnabled} onChange={(v) => set('tipEnabled', v)} />
       {patch.tipEnabled && (
         <>
@@ -142,7 +142,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         </>
       )}
 
-      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Confirmación automática</div>
+      <div className="adm-label" style={{ paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Confirmación automática</div>
       <Toggle label="Confirmar pedidos automáticamente" value={patch.autoConfirmEnabled} onChange={(v) => set('autoConfirmEnabled', v)} />
       {patch.autoConfirmEnabled && (
         <>
@@ -153,7 +153,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         </>
       )}
 
-      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cocina (KDS)</div>
+      <div className="adm-label" style={{ paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cocina (KDS)</div>
       <Toggle
         label="Pedidos solo al confirmar"
         value={patch.kdsConfirmFirst}
@@ -170,7 +170,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
       <NumberCtl label="Pasar a ámbar a los (min)" value={patch.kdsYellowMin} min={1} max={120} onChange={(v) => set('kdsYellowMin', Math.min(v, patch.kdsRedMin - 1))} />
       <NumberCtl label="Pasar a rojo a los (min)" value={patch.kdsRedMin} min={2} max={240} onChange={(v) => set('kdsRedMin', Math.max(v, patch.kdsYellowMin + 1))} />
 
-      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Moneda y formato</div>
+      <div className="adm-label" style={{ paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Moneda y formato</div>
       <Field label="Símbolo de moneda">
         <input type="text" value={patch.currencySymbol} onChange={(e) => set('currencySymbol', e.target.value)} style={{ ...inputStyle, maxWidth: 100 }} />
       </Field>

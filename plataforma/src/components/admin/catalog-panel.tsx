@@ -179,8 +179,8 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             {(['Platillo', 'Precio', 'Disponible', ''] as const).map((h, i) => (
               <div
                 key={i}
-                className="t-kicker"
-                style={{ fontSize: 9.5, textAlign: i === 1 ? 'right' : 'left' }}
+                className="adm-label"
+                style={{ textAlign: i === 1 ? 'right' : 'left' }}
               >
                 {h}
               </div>
@@ -227,7 +227,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
-                        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                        fontWeight: 600, fontSize: 14.5,
                         color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}
                     >

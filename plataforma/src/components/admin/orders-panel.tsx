@@ -417,7 +417,7 @@ function OrdersPanelInner({
                         {orders.length}
                       </span>
                     </h2>
-                    <span className="t-kicker" style={{ fontSize: 10 }}>{stage.hint}</span>
+                    <span className="adm-label">{stage.hint}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12 }}>
                     {orders.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
@@ -436,7 +436,7 @@ function OrdersPanelInner({
                     {servedOpen.length}
                   </span>
                 </h2>
-                <span className="t-kicker" style={{ fontSize: 10 }}>Se cierran al liberar la mesa</span>
+                <span className="adm-label">Se cierran al liberar la mesa</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12, opacity: 0.8 }}>
                 {servedOpen.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
@@ -513,8 +513,8 @@ function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; tota
   return (
     <Card className="mb-3 flex flex-col gap-4 p-5">
       <div>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Ventas · 14 días</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
+        <div className="adm-label">Ventas · 14 días</div>
+        <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, fontVariantNumeric: 'tabular-nums', fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
           {fmtMoney(totalLast14, currency, 0)}
         </div>
       </div>

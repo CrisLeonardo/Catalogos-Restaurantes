@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
+import { Stat, StatGroup } from '@/components/ui/stat';
 import { Button } from '@/components/ui/button';
 import {
   addToWaitlist,
@@ -91,18 +92,14 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-        {[
-          { label: 'Esperando', value: String(summary.waiting), accent: true },
-          { label: 'Avisados', value: String(summary.notified) },
-          { label: 'Espera promedio hoy', value: summary.avgWaitMinutesToday != null ? `${summary.avgWaitMinutesToday} min` : '—' },
-        ].map(({ label, value, accent }) => (
-          <Card key={label} className="p-3.5">
-            <div style={{ fontSize: 24, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{value}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2 }}>{label}</div>
-          </Card>
-        ))}
-      </div>
+      <StatGroup>
+        <Stat label="Esperando" value={String(summary.waiting)} />
+        <Stat label="Avisados" value={String(summary.notified)} />
+        <Stat
+          label="Espera promedio hoy"
+          value={summary.avgWaitMinutesToday != null ? `${summary.avgWaitMinutesToday} min` : '—'}
+        />
+      </StatGroup>
 
       {error && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>
@@ -206,7 +203,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
 
       {tab === 'cola' && recent.length > 0 && (
         <div>
-          <div className="t-kicker" style={{ fontSize: 10.5, marginBottom: 10 }}>Hoy más temprano</div>
+          <div className="adm-label" style={{ marginBottom: 10 }}>Hoy más temprano</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recent.slice(0, 8).map((w) => (
               <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', fontSize: 12.5, color: 'var(--u-text-3)' }}>

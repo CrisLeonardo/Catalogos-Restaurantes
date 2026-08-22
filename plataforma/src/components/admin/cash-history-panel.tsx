@@ -217,7 +217,7 @@ export default function CashHistoryPanel({
   return (
     <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Cortes recientes</div>
+        <div className="adm-label">Cortes recientes</div>
         {history.length > 0 && <CashHistoryExportButton restaurantId={restaurantId} />}
       </div>
       {history.length === 0 ? (

@@ -947,27 +947,32 @@ html[data-scheme="light"] .btn-white {
      adminPanelTextScale). Antes solo escalaba los navlinks. */
   zoom: var(--admin-panel-scale, 1);
 }
-/* Etiquetas de sección dentro del panel (rediseño 2026-08-21, Fase 2).
+/* Etiqueta de sección del panel (rediseño 2026-08-21).
    ------------------------------------------------------------------
-   `.t-kicker` es Anton en mayúsculas con 0.14em de espaciado entre letras,
-   pensado para una portada. Repetido como etiqueta de sección en pantallas
-   llenas de listas es el mayor generador de ruido del panel, y a los 9,5-10px
-   con que se usa se lee peor que el texto al que etiqueta.
+   Es el rótulo que va encima de una lista, una tarjeta o un grupo de
+   campos: "Necesita tu atención", "Datos del emisor", "Cortes recientes".
 
-   Se reescribe AQUÍ, en una regla, en vez de tocar los 26 archivos que la
-   usan: mientras las pantallas migran a <Section> (components/ui/section.tsx)
-   esto las mantiene coherentes, y el día que la última migre se borra esta
-   regla y no queda deuda. El !important es para ganarle al `fontSize` en
-   línea que traen esas 26 llamadas — un 9,5px calculado para mayúsculas.
+   Sustituye a `.t-kicker` DENTRO del panel. Aquella era Anton en
+   mayúsculas con 0.14em de espaciado, pensada para una portada; repetida
+   como rótulo en pantallas llenas de listas era el mayor generador de
+   ruido, y a los 9,5-10px con que se usaba se leía peor que el texto al
+   que etiquetaba. `.t-kicker` sigue viva y sin tocar para el menú del
+   restaurante, la marca de la barra lateral y el súper admin.
 
-   Alcance deliberado: SOLO el área de contenido del panel. La marca, el menú
-   público del restaurante y la barra lateral conservan Anton intacto. */
-.admin-main .t-kicker {
+   El tamaño va AQUÍ, no en cada llamada: durante la migración hubo que
+   sostener esto con un `!important` porque las 51 llamadas traían su
+   propio `fontSize` en línea. Ya no: se les quitó a todas, y por eso
+   esta regla es una regla normal.
+
+   `<Section>` (components/ui/section.tsx) usa esta misma clase, así que
+   un rótulo suelto y uno de sección no pueden desalinearse. */
+.adm-label {
   font-family: var(--admin-panel-font, var(--ui-font-sans));
   font-weight: 600;
-  font-size: 12.5px !important;
+  font-size: calc(12.5px * var(--admin-panel-scale, 1));
   text-transform: none;
   letter-spacing: 0;
+  line-height: 1.35;
   color: var(--u-text-3);
 }
 

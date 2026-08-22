@@ -136,7 +136,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
       {/* Personal */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="t-kicker">Personal</div>
+          <div className="adm-label">Personal</div>
           <Button type="button" onClick={() => setEditor({ open: true, member: null })} size="sm">
             <Icon name="plus" size={14} /> Nuevo
           </Button>

@@ -185,7 +185,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
 
       {/* ── Configuración ── */}
       <Card className="flex flex-col gap-3.5 p-4.5">
-        <div className="t-kicker" style={{ fontSize: 10.5 }}>Configuración</div>
+        <div className="adm-label">Configuración</div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
           <div>

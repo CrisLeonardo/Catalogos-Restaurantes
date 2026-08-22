@@ -134,13 +134,10 @@ export default async function SuscripcionPage() {
               : '1px solid color-mix(in srgb, var(--brand-accent) 32%, transparent)',
           }}
         >
-          <div className="t-kicker" style={{
-            fontSize: 9.5,
-            color: trialLeft <= 3 ? 'var(--c-danger)' : trialLeft <= 7 ? '#fb923c' : 'var(--brand-accent)',
-          }}>
+          <div className="adm-label" style={{ color: trialLeft <= 3 ? 'var(--c-danger)' : trialLeft <= 7 ? '#fb923c' : 'var(--brand-accent)' }}>
             Prueba gratis
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 28, color: 'var(--u-text)', lineHeight: 1.1, marginTop: 4 }}>
+          <div className="t-mono" style={{ fontWeight: 600, fontSize: 28, color: 'var(--u-text)', lineHeight: 1.1, marginTop: 4 }}>
             {trialLeft} día{trialLeft !== 1 ? 's' : ''} restante{trialLeft !== 1 ? 's' : ''}
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.5 }}>
@@ -164,7 +161,7 @@ export default async function SuscripcionPage() {
       <Card className="p-5">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
-            <div className="t-kicker" style={{ fontSize: 9.5 }}>Tu plan actual</div>
+            <div className="adm-label">Tu plan actual</div>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.1 }}>
               {planInfo?.name ?? planLabel(currentPlan)}
             </div>
@@ -218,7 +215,7 @@ export default async function SuscripcionPage() {
           className="p-5"
           style={{ border: '1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent)' }}
         >
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent-ink)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
+          <div className="adm-label" style={{ color: 'var(--brand-accent-ink)' }}>Con Premium ({planPriceLabel(pricing, 'PREMIUM')}) desbloqueas</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 19, color: 'var(--u-text)', marginTop: 4, lineHeight: 1.15 }}>
             Todo lo que falta en tu plan actual
           </div>
@@ -272,7 +269,7 @@ export default async function SuscripcionPage() {
       {/* ── Actualizar plan (Estándar/Premium en adelante) ───── */}
       {nextPlanInfo && currentPlan !== 'BASICO' && (
         <Card className="p-5">
-          <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--brand-accent-ink)' }}>
+          <div className="adm-label" style={{ color: 'var(--brand-accent-ink)' }}>
             Siguiente plan disponible
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--u-text)', marginTop: 4 }}>
@@ -300,7 +297,7 @@ export default async function SuscripcionPage() {
         if (higherPlans.length === 0) return null;
         return (
           <Card className="flex flex-col gap-3 p-4">
-            <div className="t-kicker" style={{ fontSize: 9.5, color: 'var(--u-text-4)' }}>
+            <div className="adm-label" style={{ color: 'var(--u-text-4)' }}>
               Más opciones de upgrade
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
@@ -360,10 +357,10 @@ export default async function SuscripcionPage() {
             className="p-5"
             style={{ border: hasOverdue ? '1px solid var(--c-danger-line)' : pendingTotal > 0 ? '1px solid var(--c-warn-line)' : '1px solid var(--c-ok-line)' }}
           >
-            <div className="t-kicker" style={{ fontSize: 9.5 }}>Estado de cuenta</div>
+            <div className="adm-label">Estado de cuenta</div>
             {pendingTotal > 0 ? (
               <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
+                <div className="t-mono" style={{ fontWeight: 600, fontSize: 30, color: hasOverdue ? 'var(--c-danger)' : 'var(--c-warn)', lineHeight: 1, marginTop: 4 }}>
                   {fmtMoney(pendingTotal, currency)}
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>
@@ -468,7 +465,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
     <Card className="p-5" style={{ border: '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent)' }} />
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Lo que pagarás este mes</div>
+        <div className="adm-label">Lo que pagarás este mes</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Precio fijo de tu plan: prender o apagar módulos y modos de pedido desde{' '}

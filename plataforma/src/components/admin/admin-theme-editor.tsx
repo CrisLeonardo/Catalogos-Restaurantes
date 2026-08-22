@@ -618,7 +618,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               ]],
             ] as [keyof ThemeContent, string, [string, string][]][]).map(([section, label, fields]) => (
               <Glass key={section} variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div className="t-kicker" style={{ fontSize: 10.5 }}>{label}</div>
+                <div className="adm-label">{label}</div>
                 {fields.map(([key, fieldLabel]) => (
                   <TextCtl
                     key={key}
@@ -741,7 +741,7 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
           background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left',
         }}
       >
-        <span className="t-kicker" style={{ fontSize: 10.5 }}>{title}</span>
+        <span className="adm-label">{title}</span>
         <Icon name="chevronDown" size={16} style={{ color: 'var(--u-text-3)', transition: 'transform 180ms var(--ease-out)', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
       </button>
       {open && children}

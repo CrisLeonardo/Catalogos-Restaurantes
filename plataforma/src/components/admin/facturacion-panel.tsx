@@ -208,11 +208,11 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
   const pideResolucion = p.regimen_isr === 'SIMPLIFICADO_PAGO_DIRECTO' || p.regimen_iva === 'PEQUENO_ELECTRONICO';
 
   const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 };
-  const seccion: React.CSSProperties = { fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' };
+  const seccion: React.CSSProperties = { paddingTop: 4, borderTop: '1px solid var(--u-hair)' };
 
   return (
     <Card className="flex flex-col gap-3.5 p-4">
-      <div className="t-kicker" style={{ fontSize: 10.5 }}>Datos del emisor</div>
+      <div className="adm-label">Datos del emisor</div>
       <div style={grid}>
         <Fila label="NIT emisor">
           <input style={inputStyle} value={p.nit_emisor} onChange={(e) => set('nit_emisor', e.target.value)} placeholder="3602978-5" />
@@ -247,7 +247,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         rechaza las facturas.
       </p>
 
-      <div className="t-kicker" style={seccion}>Tu régimen fiscal</div>
+      <div className="adm-label" style={seccion}>Tu régimen fiscal</div>
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0 }}>
         Esto decide las leyendas legales que salen impresas en cada factura y si tu cliente puede usarla como
         crédito fiscal. <strong>Confírmalo con tu contador</strong>: aparece en tu constancia del RTU.
@@ -283,7 +283,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
 
       {estado.frases.length > 0 && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)' }}>
-          <div className="t-kicker" style={{ fontSize: 9.5, marginBottom: 6 }}>Lo que dirá tu factura</div>
+          <div className="adm-label" style={{ marginBottom: 6 }}>Lo que dirá tu factura</div>
           {estado.frases.map((f) => (
             <div key={f} style={{ fontSize: 13, color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)' }}>· {f}</div>
           ))}
@@ -293,7 +293,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         </div>
       )}
 
-      <div className="t-kicker" style={seccion}>Cómo cobra y factura tu caja</div>
+      <div className="adm-label" style={seccion}>Cómo cobra y factura tu caja</div>
       <div style={grid}>
         <Fila label="Precios de la carta">
           <Select
@@ -316,7 +316,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         />
       </div>
 
-      <div className="t-kicker" style={seccion}>Certificador</div>
+      <div className="adm-label" style={seccion}>Certificador</div>
       <div style={grid}>
         <Fila label="Proveedor">
           <Select options={PROVIDERS.map((pv) => ({ value: pv, label: PROVIDER_META[pv].label }))}
@@ -473,7 +473,7 @@ function EmitForm({ restaurantId, settings, invoiceable, listo, onEmitted, onGoC
         </div>
       )}
 
-      <div className="t-kicker" style={{ fontSize: 10.5, paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cliente</div>
+      <div className="adm-label" style={{ paddingTop: 4, borderTop: '1px solid var(--u-hair)' }}>Cliente</div>
       <div style={grid}>
         <Fila label={extranjero ? 'Pasaporte / documento' : 'NIT o DPI'}>
           <input

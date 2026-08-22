@@ -123,7 +123,7 @@ export default async function AdminClientesPage({
           {/* Header */}
           <div className="customers-head" style={{ padding: '10px 18px', borderBottom: '1px solid var(--u-hair)' }}>
             {['Cliente', 'Pedidos', 'Total', 'Frecuencia', 'Último'].map((h) => (
-              <div key={h} className="t-kicker" style={{ fontSize: 9.5 }}>{h}</div>
+              <div key={h} className="adm-label">{h}</div>
             ))}
           </div>
 

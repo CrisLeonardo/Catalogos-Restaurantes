@@ -126,11 +126,11 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12 }}>
           <Card className="flex items-center gap-2 px-4.5 py-2.5">
-            <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--brand-accent-ink)', fontFamily: 'var(--font-display)' }}>{active}</span>
+            <span className="t-mono" style={{ fontWeight: 600, fontSize: 20, color: 'var(--brand-accent-ink)' }}>{active}</span>
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>activos</span>
           </Card>
           <Card className="flex items-center gap-2 px-4.5 py-2.5">
-            <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{coupons.length}</span>
+            <span className="t-mono" style={{ fontWeight: 600, fontSize: 20, color: 'var(--u-text)' }}>{coupons.length}</span>
             <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>total</span>
           </Card>
         </div>

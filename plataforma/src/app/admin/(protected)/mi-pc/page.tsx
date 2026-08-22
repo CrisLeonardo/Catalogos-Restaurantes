@@ -154,13 +154,13 @@ export default async function AdminMiPcPage() {
 
       {/* ── 1. El interruptor ────────────────────────────────── */}
       <Card className="p-4.5" id="pc-principal">
-        <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Paso 1 · La PC principal</div>
+        <div className="adm-label" style={{ marginBottom: 12 }}>Paso 1 · La PC principal</div>
         <MainPcSwitch />
       </Card>
 
       {/* ── 2. Impresoras ────────────────────────────────────── */}
       <Card className="p-4.5">
-        <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Paso 2 · Dónde imprime</div>
+        <div className="adm-label" style={{ marginBottom: 12 }}>Paso 2 · Dónde imprime</div>
         {connected ? (
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
@@ -193,7 +193,7 @@ export default async function AdminMiPcPage() {
 
       {/* ── 3. Respaldo sin internet ─────────────────────────── */}
       <Card className="p-4.5">
-        <div className="t-kicker" style={{ fontSize: 10, marginBottom: 12 }}>Paso 3 · Si se cae el internet</div>
+        <div className="adm-label" style={{ marginBottom: 12 }}>Paso 3 · Si se cae el internet</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <span style={{
             width: 9, height: 9, borderRadius: 99, flexShrink: 0,

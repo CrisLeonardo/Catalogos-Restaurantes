@@ -65,7 +65,7 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
 function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <Card className="flex flex-col gap-1 p-3.5">
-      <span className="t-kicker" style={{ fontSize: 9.5 }}>{label}</span>
+      <span className="adm-label">{label}</span>
       <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
     </Card>
   );

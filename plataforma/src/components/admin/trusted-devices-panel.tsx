@@ -50,7 +50,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
   return (
     <Card className="p-4.5 flex flex-col gap-3.5" style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Dispositivos del local</div>
+        <div className="adm-label">Dispositivos del local</div>
         {requiresTrusted && (
           <span className="chip chip-ok" style={{ flexShrink: 0 }}>
             <Icon name="key" size={11} /> PIN protegido
