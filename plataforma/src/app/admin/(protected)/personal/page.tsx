@@ -105,7 +105,10 @@ export default async function AdminPersonalPage() {
   const enabledSections = ADMIN_SECTIONS.map((s) => s.key).filter((k) => GATES[k] ?? true);
 
   return (
-    <div className="anim-fade-up">
+    /* El espaciado entre bloques vive AQUÍ, no en un `marginTop: 16` que cada
+       panel se ponía por su cuenta: así el primero no llevaba margen, el
+       último sí, y añadir un bloque en medio obligaba a recordarlo. */
+    <div className="anim-fade-up flex flex-col gap-6">
       <StaffPanel
         restaurantId={restaurantId}
         slug={(restaurant?.slug as string | null) ?? null}

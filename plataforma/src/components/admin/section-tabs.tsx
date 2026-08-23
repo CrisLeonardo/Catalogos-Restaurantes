@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 import { Icon } from '@/components/icons';
@@ -30,10 +31,25 @@ interface Props {
 }
 
 export default function SectionTabs({ group, pathname, preview = false }: Props) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  /* En un teléfono cinco pestañas no caben (484 px de pestañas en 347 px de
+     barra), así que la fila se desplaza. Sin esto se podía aterrizar en
+     "Proveedores" con la pestaña activa fuera de cuadro: la pantalla decía
+     una cosa y la barra enseñaba otra. Solo se toca el scroll HORIZONTAL de
+     la propia fila — nunca el de la página. */
+  useEffect(() => {
+    const box = ref.current;
+    if (!box || box.scrollWidth <= box.clientWidth) return;
+    const active = box.querySelector<HTMLElement>('[data-active="1"]');
+    if (!active) return;
+    box.scrollLeft = active.offsetLeft - (box.clientWidth - active.offsetWidth) / 2;
+  }, [pathname]);
+
   if (group.index || group.items.length < 2) return null;
 
   return (
-    <div className="admin-tabs" role="tablist" aria-label={group.label}>
+    <div className="admin-tabs" role="tablist" aria-label={group.label} ref={ref}>
       {group.items.map((it) => {
         const active = isActivePath(pathname, it.href);
         const content = (

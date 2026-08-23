@@ -3,14 +3,19 @@
 /* Conmutador claro/oscuro del área de personal (admin y panel de grupo).
    El panel usa 2 temas FIJOS (ver globals.css `html[data-admin-area]`): la
    elección vive en la cookie `admin-theme`, que el layout raíz lee en SSR
-   para pintar el tema correcto sin flash. Aquí solo se alterna en vivo. */
+   para pintar el tema correcto sin flash. Aquí solo se alterna en vivo.
+
+   La LÓGICA vive en `useAdminScheme` y el botón es solo una de sus caras: en
+   móvil el interruptor no cabe en la barra de título y se enseña como una
+   fila del menú "⋯" (ver admin-more-menu.tsx). Son el mismo interruptor, no
+   dos copias que se puedan desincronizar. */
 
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 
 const THEME_COOKIE = 'admin-theme';
 
-export default function AdminThemeToggle() {
+export function useAdminScheme() {
   // El SSR ya pintó el tema correcto; aquí solo se sincroniza el botón.
   const [scheme, setScheme] = useState<'light' | 'dark'>('light');
   useEffect(() => {
@@ -31,6 +36,12 @@ export default function AdminThemeToggle() {
     const domain = root && !root.includes('localhost') ? `; domain=.${root.split(':')[0]}` : '';
     document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax${domain}`;
   }
+
+  return { scheme, toggle };
+}
+
+export default function AdminThemeToggle() {
+  const { scheme, toggle } = useAdminScheme();
 
   return (
     <button

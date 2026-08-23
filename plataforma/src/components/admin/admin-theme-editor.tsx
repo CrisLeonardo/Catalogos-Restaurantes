@@ -4,7 +4,7 @@
    Tabs bien organizadas, paletas de color, controles orientados al negocio.
    No incluye: plantillas, CSS propio, pedidos/moneda (esos van en /admin/perfil). */
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -96,12 +96,36 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
   const previewState = useMemo(() => ({ config, content, customCss }), [config, content, customCss]);
   useThemePreviewChannel(restaurantId, previewState);
 
+  /* Las siete pestañas no caben en un teléfono (708 px de pestañas en 347 px
+     de fila), así que la fila se desplaza. Sin esto se podía estar en
+     "Textos" con su pestaña fuera de cuadro. Igual que en section-tabs.tsx:
+     solo se toca el scroll HORIZONTAL de la fila, nunca el de la página. */
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = tabsRef.current;
+    if (!box || box.scrollWidth <= box.clientWidth) return;
+    const active = box.querySelector<HTMLElement>('[data-active="1"]');
+    if (!active) return;
+    box.scrollLeft = active.offsetLeft - (box.clientWidth - active.offsetWidth) / 2;
+  }, [tab]);
+
+  /* ¿Hay algo sin publicar? Se compara contra la foto con la que abrió la
+     pantalla, no con una bandera que se enciende al primer toque: quien mueve
+     un color y lo devuelve a su sitio no dejó nada pendiente. */
+  const dirty = useMemo(
+    () =>
+      JSON.stringify(config) !== JSON.stringify(initialConfig) ||
+      JSON.stringify(content) !== JSON.stringify(initialContent) ||
+      customCss !== initialCss,
+    [config, content, customCss, initialConfig, initialContent, initialCss],
+  );
+
   function save() {
     setMsg(null);
     start(async () => {
       const res = await saveAdminRestaurantTheme({ restaurantId, config, content, customCss, resetCustomCss: cssWasReset });
       if (res.error) setMsg(`Error: ${res.error}`);
-      else { setMsg('Guardado ✓'); router.refresh(); }
+      else { setMsg('Publicado'); router.refresh(); }
     });
   }
 
@@ -130,28 +154,24 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
     <div className="theme-editor-layout">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
 
-        {/* ── Tabs ── */}
-        <div data-tour-step="personalizar-tabs" style={{
-          display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 16,
-          padding: '6px', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', borderRadius: 14,
-          border: '1px solid var(--u-hair)',
-        }}>
+        {/* ── Pestañas ──
+            Usan `.admin-tabs`, el MISMO control segmentado que la barra de
+            sección del panel, en vez del que este editor se dibujaba aparte:
+            siete botones de 35 px que envolvían a tres filas en el teléfono y
+            que en activo se pintaban con el negro del texto, un contraste que
+            no aparece en ninguna otra pantalla del panel. */}
+        <div ref={tabsRef} className="admin-tabs adm-tabs-wide" data-tour-step="personalizar-tabs" role="tablist" style={{ marginBottom: 16 }}>
           {TABS.map(({ key, label, icon }) => {
             const on = tab === key;
             return (
               <button
                 key={key}
                 type="button"
+                role="tab"
+                aria-selected={on}
                 onClick={() => setTab(key)}
-                className="press"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-                  border: 'none',
-                  background: on ? 'var(--u-text)' : 'transparent',
-                  color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)',
-                  transition: 'all 150ms',
-                }}
+                className="admin-tab press"
+                data-active={on ? '1' : '0'}
               >
                 <Icon name={icon} size={14} />
                 <span>{label}</span>
@@ -635,39 +655,40 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         {/* (La apariencia del panel admin ya no se edita aquí: el panel usa 2
             temas fijos claro/oscuro que se alternan desde la barra superior.) */}
 
-        {/* ── Guardar ── */}
-        <div style={{
-          position: 'sticky', bottom: 0,
-          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
-          flexWrap: 'wrap',
-          /* Velo que tapa el contenido al hacer scroll. OJO: --u-bg no existe
-             (bug histórico: la barra quedaba transparente); el fondo sólido
-             efectivo del contenido lo emite buildAdminPanelVars. */
-          background: 'linear-gradient(to top, var(--admin-content-bg-solid, var(--brand-bg)) 70%, transparent)',
-          marginTop: 14,
-        }}>
-          <button
-            onClick={save}
-            disabled={isPending}
-            className="press btn-accent"
-            data-tour-step="personalizar-guardar"
-            style={{ padding: '13px 28px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
-          >
-            {isPending ? 'Guardando…' : 'Guardar cambios'}
-          </button>
-          <a
-            href={`/preview/${restaurantId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="press"
-            style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '12px 16px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
-          >
-            Ver sitio ↗
-          </a>
-          {msg && (
-            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger, #f87171)' : 'var(--c-ok, #4ade80)' }}>{msg}</span>
-          )}
-        </div>
+        {/* ── Guardar ──
+            `.adm-savebar`, la misma barra que usan las demás pantallas de
+            ajustes, en vez de un velo en degradado propio. Y solo aparece si
+            hay algo sin publicar: un "Guardar cambios" permanente no dice
+            nada, y en esta pantalla —donde todo se ve en vivo en la vista
+            previa— la pregunta real es justamente "¿esto ya está publicado?". */}
+        {(dirty || isPending || msg) && (
+          <div className="adm-savebar" style={{ marginTop: 14 }}>
+            <span
+              className="flex-1 text-[13px]"
+              style={{ color: msg?.startsWith('Error') ? 'var(--c-danger)' : msg ? 'var(--c-ok)' : 'var(--u-text-3)' }}
+            >
+              {msg ?? (isPending ? 'Publicando…' : 'Cambios sin publicar')}
+            </span>
+            <a
+              href={`/preview/${restaurantId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="press adm-desk-only"
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '11px 16px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
+            >
+              Ver sitio ↗
+            </a>
+            <button
+              onClick={save}
+              disabled={isPending}
+              className="press btn-accent"
+              data-tour-step="personalizar-guardar"
+              style={{ padding: '12px 24px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 14, border: 'none', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1, flexShrink: 0 }}
+            >
+              {isPending ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Panel de vista previa ── */}

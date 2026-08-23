@@ -26,6 +26,7 @@ import { isMeseroOnly } from '@/lib/permissions';
 import { buildNav, findGroup, type NavGroup } from '@/lib/admin-nav';
 import SectionTabs from '@/components/admin/section-tabs';
 import CommandSearch from '@/components/admin/command-search';
+import AdminMoreMenu from '@/components/admin/admin-more-menu';
 
 
 
@@ -123,13 +124,10 @@ export default function AdminShell({
 }: Props) {
   const realPathname = usePathname();
 
-  // En móvil, centra el ítem activo de la barra inferior al navegar (la barra
-  // scrollea en horizontal y así el usuario siempre ve dónde está).
-  useEffect(() => {
-    if (typeof window === 'undefined' || window.innerWidth > 820) return;
-    const el = document.querySelector('.admin-nav [data-active="1"]');
-    el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  }, [realPathname]);
+  /* Ya no hace falta centrar el ítem activo al navegar: la barra inferior
+     dejó de scrollear en horizontal (los seis destinos se reparten el ancho,
+     ver globals.css). Una barra de pestañas que se desplaza esconde destinos
+     y ninguna app la tiene así. */
 
   const pathname = preview ? '/admin/menu' : realPathname;
 
@@ -203,7 +201,9 @@ export default function AdminShell({
     '/admin/menu/productos': 'Producto',
     '/admin/menu': 'Platillos',
     '/admin/perfil': 'Perfil',
-    '/admin/ajustes/restaurante': 'Horarios y preferencias',
+    '/admin/ajustes/restaurante': 'Horarios',
+    '/admin/ajustes/entrega': 'Zona de entrega',
+    '/admin/ajustes/pedidos': 'Pedidos y cobro',
     '/admin/ajustes': 'Ajustes',
     '/admin/mi-pc': 'La PC del local',
     '/admin/qr': 'Código QR',
@@ -257,6 +257,12 @@ export default function AdminShell({
   // pestañas —serían nueve— sino un "volver" explícito, como cualquier vista
   // de detalle de una lista de ajustes.
   const backToIndex = !!activeGroup?.index && pathname !== activeGroup.href;
+  /* La barra de sección solo existe si tiene algo que enseñar. En "Hoy" (que
+     no tiene pestañas por diseño) y en la portada de Ajustes se pintaba igual:
+     17 px de barra vacía con su línea debajo, que en un teléfono es una banda
+     entera de armazón que no dice nada. */
+  const showTabs = !!activeGroup && !backToIndex && !activeGroup.index && activeGroup.items.length >= 2;
+  const showSubbar = backToIndex || showTabs;
 
   const isLive    = pathname.startsWith('/admin/pedidos');
   const isKitchen = pathname.startsWith('/admin/cocina');
@@ -337,7 +343,9 @@ export default function AdminShell({
               </div>
             </>
           );
-          const brandStyle = { display: 'flex', alignItems: 'center', gap: 11 } as const;
+          // display/align/gap viven en `.admin-brand` (globals.css): en móvil la
+          // barra lateral se apaga entera y un display en línea lo impediría.
+          const brandStyle = {} as const;
           // Fuera de preview la marca es un enlace al Inicio del panel (logo → home).
           return preview ? (
             <div className="admin-brand" style={brandStyle}>{brandInner}</div>
@@ -398,11 +406,8 @@ export default function AdminShell({
         {!preview && hasMultipleRestaurants && (
           <a
             href="/mi-cuenta"
-            className="press glass-quiet"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 9, borderRadius: 13,
-              padding: '10px 12px', marginBottom: 8, textDecoration: 'none',
-            }}
+            className="press glass-quiet admin-switch-restaurant"
+            style={{ borderRadius: 13, padding: '10px 12px', marginBottom: 8, textDecoration: 'none' }}
           >
             <Icon name="grid" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
@@ -412,7 +417,7 @@ export default function AdminShell({
           </a>
         )}
 
-        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12 }}>
           <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 10%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="user" size={17} />
           </div>
@@ -428,9 +433,14 @@ export default function AdminShell({
 
       <div className="admin-main">
         <div className="admin-topbar">
-          <h1 className="t-display" style={{ fontSize: 22, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
-          {!preview && helpSection && <HelpButton section={helpSection} />}
-          {!preview && <AdminInstallPrompt />}
+          <h1 className="t-display" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
+          {/* Ayuda, instalar y tema: en escritorio viven aquí; en el teléfono
+              caben tres cosas en la barra de título y no cinco, así que se
+              recogen en el menú "⋯" (ver .adm-desk-only en globals.css). */}
+          <div className="adm-desk-only">
+            {!preview && helpSection && <HelpButton section={helpSection} />}
+            {!preview && <AdminInstallPrompt />}
+          </div>
           {isLive && (
             <Badge variant="accent" className="admin-live py-1.5">
               <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--adm-accent-500, var(--u-text))', boxShadow: '0 0 8px var(--adm-accent-500, var(--u-text))', animation: 'pulse-ring 2s infinite' }} /> En vivo
@@ -448,29 +458,42 @@ export default function AdminShell({
               <Icon name="grid" size={18} />
             </button>
           )}
-          {!preview && <AdminThemeToggle />}
+          {!preview && <span className="adm-desk-only"><AdminThemeToggle /></span>}
           {!preview && restaurantId && ordersEnabled ? (
             <AdminNotifications
               restaurantId={restaurantId}
               kitchenMode={isKitchen}
             />
           ) : (
-            <span className="glass-quiet" style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', display: 'grid', placeItems: 'center', color: 'var(--u-text)', boxShadow: 'var(--adm-shadow-xs, none)' }}>
+            <span className="glass-quiet adm-desk-only" style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', display: 'grid', placeItems: 'center', color: 'var(--u-text)', boxShadow: 'var(--adm-shadow-xs, none)' }}>
               <Icon name="bell" size={19} />
             </span>
           )}
+          {/* Solo móvil: recoge lo que en escritorio está repartido entre la
+              barra lateral (buscar, plan, cambiar de restaurante, sesión) y
+              esta misma barra (ayuda, tema). */}
+          {!preview && (
+            <AdminMoreMenu
+              restaurantName={restaurantName}
+              roleLabel={roleLabel}
+              planLabel={planActual ? (PLAN_NAMES[planActual] ?? planActual) : null}
+              planColor={planActual ? (PLAN_COLORS[planActual] ?? '#94a3b8') : undefined}
+              hasMultipleRestaurants={hasMultipleRestaurants}
+              helpSection={helpSection}
+              isOperatorSession={isOperatorSession}
+            />
+          )}
         </div>
-        {activeGroup && !preview && backToIndex && (
+        {activeGroup && showSubbar && (
           <div className="admin-subbar">
-            <Link href={activeGroup.href} className="admin-back press">
-              <Icon name="chevronLeft" size={15} />
-              {activeGroup.label}
-            </Link>
-          </div>
-        )}
-        {activeGroup && !backToIndex && (
-          <div className="admin-subbar">
-            <SectionTabs group={activeGroup} pathname={pathname} preview={preview} />
+            {backToIndex ? (
+              <Link href={activeGroup.href} className="admin-back press">
+                <Icon name="chevronLeft" size={15} />
+                {activeGroup.label}
+              </Link>
+            ) : (
+              <SectionTabs group={activeGroup} pathname={pathname} preview={preview} />
+            )}
           </div>
         )}
         <div className="admin-content">{children}</div>

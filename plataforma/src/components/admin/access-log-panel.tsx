@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card';
-import { Icon } from '@/components/icons';
+import { Section } from '@/components/ui/section';
 import { describeDevice, type AccessRow } from '@/lib/auth/access-log';
 
 const METHOD_LABEL: Record<string, string> = {
@@ -33,13 +33,11 @@ export default function AccessLogPanel({
   timezone: string;
 }) {
   return (
-    <Card style={{ marginTop: 16, padding: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}>
-        <Icon name="key" size={17} style={{ color: 'var(--brand-accent-ink)' }} />
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', margin: 0 }}>
-          Últimos accesos al panel
-        </h2>
-      </div>
+    /* Este bloque era el cuarto tratamiento distinto de encabezado de la
+       pantalla: icono + <h2> de 15 px en negrita, mientras sus tres vecinos
+       usaban `.adm-label`. Ahora es un <Section> como todos. */
+    <Section title="Últimos accesos al panel">
+      <Card style={{ padding: 18 }}>
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: '0 0 14px', lineHeight: 1.5 }}>
         Cada vez que alguien entra a tu panel queda anotado aquí. Si ves un acceso que no
         reconoces, cambia tu contraseña.
@@ -88,6 +86,7 @@ export default function AccessLogPanel({
           ))}
         </div>
       )}
-    </Card>
+      </Card>
+    </Section>
   );
 }

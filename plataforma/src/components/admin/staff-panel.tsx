@@ -133,14 +133,17 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
-      {/* Personal */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="adm-label">Personal</div>
+      {/* Personal. Va en <Section> como todo lo demás de esta pantalla: antes
+          este rótulo era un div suelto y el de al lado ("Actividad reciente")
+          un <Section>, dos tratamientos distintos en el MISMO componente. */}
+      <Section
+        title="Personal"
+        aside={
           <Button type="button" onClick={() => setEditor({ open: true, member: null })} size="sm">
             <Icon name="plus" size={14} /> Nuevo
           </Button>
-        </div>
+        }
+      >
         {staff.length === 0 ? (
           <EmptyState
             icon="users"
@@ -151,7 +154,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
         ) : (
           <List>{staff.map((m) => <MemberRow key={m.id} m={m} />)}</List>
         )}
-      </div>
+      </Section>
 
       {/* Bitácora */}
       <Section title="Actividad reciente">

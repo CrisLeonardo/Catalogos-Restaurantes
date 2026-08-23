@@ -1,11 +1,30 @@
 'use client';
 
+/* ============================================================
+   COPIA DE TUS DATOS (/admin/respaldo)
+   ------------------------------------------------------------
+   Una pantalla de un solo botón. Lo único que había que arreglar
+   era la forma de lo que rodea al botón: "Incluye 4 hojas" era un
+   <p> en negrita y las cuatro hojas una lista con "·" escritos a
+   mano dentro de la misma tarjeta. Ahora es lo que es —cuatro
+   cosas enumerables— y se dibuja como se dibuja una enumeración
+   en el resto del panel: un grupo con nombre y sus filas.
+   ============================================================ */
+
 import { useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { exportBackupXlsx } from '@/lib/actions/backup';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { List, ListRow, ListText } from '@/components/ui/list';
+import { Section, SectionNote } from '@/components/ui/section';
 import { useToastManager } from '@/components/ui/toast';
+
+const HOJAS = [
+  { icon: 'bag', label: 'Catálogo', desc: 'Todos tus platillos, con precio, costo y existencias.' },
+  { icon: 'grid', label: 'Categorías', desc: 'Tu menú tal como está organizado hoy.' },
+  { icon: 'users', label: 'Clientes', desc: 'Nombre, contacto, dirección y su historial de compra.' },
+  { icon: 'receipt', label: 'Pedidos', desc: 'Hasta los últimos 5.000, con sus productos y totales.' },
+];
 
 export default function RespaldoPanel({ restaurantId }: { restaurantId: string }) {
   const [pending, start] = useTransition();
@@ -30,33 +49,40 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
-      <p style={{ fontSize: 13.5, color: 'var(--u-text-3)' }}>
-        Descarga una copia completa de tus datos en un solo archivo Excel — pensada para respaldo o portabilidad,
-        no para leer en el panel (para reportes del día a día usa las secciones de Catálogo, Clientes o Pedidos).
+    <div className="flex max-w-[640px] flex-col gap-6">
+      <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
+        Una copia completa de lo tuyo en un solo archivo de Excel, para guardarla
+        donde quieras. Para los reportes del día a día están Catálogo, Clientes y
+        Pedidos.
       </p>
 
-      <Card className="flex flex-col gap-4 p-5">
-        <div>
-          <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Incluye 4 hojas</p>
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--u-text-2)' }}>
-            <li>· Catálogo — todos tus platillos, precio, costo y stock</li>
-            <li>· Categorías — tu menú tal como está organizado</li>
-            <li>· Clientes — nombre, contacto, dirección y su historial de compra</li>
-            <li>· Pedidos — hasta los últimos 5,000 pedidos, con productos y totales</li>
-          </ul>
-        </div>
+      <Section title="Qué te llevás">
+        <List>
+          {HOJAS.map((h) => (
+            <ListRow key={h.label}>
+              <span
+                className="grid size-7 shrink-0 place-items-center rounded-adm-md"
+                style={{ background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)' }}
+              >
+                <Icon name={h.icon} size={16} />
+              </span>
+              <ListText title={h.label} desc={h.desc} />
+            </ListRow>
+          ))}
+        </List>
+        <SectionNote>
+          Una hoja por cada cosa, dentro del mismo archivo.
+        </SectionNote>
+      </Section>
 
-        <Button onClick={download} disabled={pending} className="self-start rounded-adm-full">
-          {pending
-            ? 'Generando…'
-            : <><Icon name="download" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} /> Descargar respaldo completo (.xlsx)</>}
-        </Button>
-      </Card>
+      <Button onClick={download} disabled={pending} className="self-start rounded-adm-full">
+        <Icon name="download" size={15} />
+        {pending ? 'Generando…' : 'Descargar la copia (.xlsx)'}
+      </Button>
 
-      <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
-        Este archivo incluye datos personales de tus clientes — guárdalo con el mismo cuidado que cualquier otro
-        documento sensible de tu negocio.
+      <p className="text-[12.5px] leading-snug" style={{ color: 'var(--u-text-4)' }}>
+        El archivo lleva datos personales de tus clientes: guardalo con el mismo
+        cuidado que cualquier otro documento sensible de tu negocio.
       </p>
     </div>
   );

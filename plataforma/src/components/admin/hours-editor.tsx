@@ -237,7 +237,9 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                   onClick={() => toggleDay(day)}
                   className="press"
                   style={{
-                    width: 110, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
+                    // 44 px de alto: es el interruptor de "abro / no abro" de
+                    // cada día y se toca en el teléfono; a 37 px se falla.
+                    width: 110, minHeight: 44, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                     background: d.on ? 'color-mix(in srgb, var(--u-text) 8%, transparent)' : 'transparent',
                     border: `1px solid ${d.on ? 'var(--u-hair-2)' : 'var(--u-hair)'}`,

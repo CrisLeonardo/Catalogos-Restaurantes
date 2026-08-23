@@ -8,6 +8,7 @@ import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
+import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { getDeviceId, describeThisDevice } from '@/lib/device-id';
 import { trustCurrentDevice, forgetDevice, setTrustedDevicePolicy, type DeviceState } from '@/lib/actions/devices';
@@ -48,16 +49,15 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
     || null;
 
   return (
-    <Card className="p-4.5 flex flex-col gap-3.5" style={{ marginTop: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div className="adm-label">Dispositivos del local</div>
-        {requiresTrusted && (
-          <span className="chip chip-ok" style={{ flexShrink: 0 }}>
-            <Icon name="key" size={11} /> PIN protegido
-          </span>
-        )}
-      </div>
-
+    <Section
+      title="Dispositivos del local"
+      aside={requiresTrusted ? (
+        <span className="chip chip-ok" style={{ flexShrink: 0 }}>
+          <Icon name="key" size={11} /> PIN protegido
+        </span>
+      ) : undefined}
+    >
+      <Card className="p-4.5 flex flex-col gap-3.5">
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         Estos son los aparatos que tu restaurante reconoce como suyos. Se apuntan solos
         cada vez que alguien entra con su PIN, así que la lista se llena sin que hagas nada.
@@ -172,6 +172,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
       </form>
 
       {error && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{error}</div>}
-    </Card>
+      </Card>
+    </Section>
   );
 }

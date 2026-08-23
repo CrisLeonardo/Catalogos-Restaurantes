@@ -27,22 +27,11 @@ export default async function QRPage() {
 
   return (
     <div style={{ maxWidth: 400, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 20,
-            fontWeight: 700,
-            color: 'var(--u-text)',
-            marginBottom: 4,
-          }}
-        >
-          Código QR
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>
-          Comparte el acceso directo a tu menú
-        </p>
-      </div>
+      {/* El título ya lo pone la barra de arriba ("Código QR"). */}
+      <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginBottom: 20 }}>
+        Ponelo en las mesas y en el mostrador: quien lo escanea entra directo a
+        tu menú.
+      </p>
 
       {restaurantId ? (
         <QRDisplay restaurantName={restaurantName} restaurantId={restaurantId} />

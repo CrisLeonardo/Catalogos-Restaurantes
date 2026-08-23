@@ -9,6 +9,7 @@ import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
+import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { updateEntryPin, type EntryPinState } from '@/lib/actions/mi-cuenta';
 
@@ -40,16 +41,15 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
   }, [state, router]);
 
   return (
-    <Card className="p-4.5 flex flex-col gap-3" style={{ marginTop: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div className="adm-label">PIN de entrada</div>
-        {hasPin && (
-          <span className="chip chip-ok" style={{ flexShrink: 0 }}>
-            <Icon name="key" size={11} /> Activo
-          </span>
-        )}
-      </div>
-
+    <Section
+      title="PIN de entrada"
+      aside={hasPin ? (
+        <span className="chip chip-ok" style={{ flexShrink: 0 }}>
+          <Icon name="key" size={11} /> Activo
+        </span>
+      ) : undefined}
+    >
+      <Card className="p-4.5 flex flex-col gap-3">
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         {hasPin
           ? 'Al abrir este restaurante desde Mi cuenta se pide este PIN. Se recuerda 12 horas en cada aparato, no se pregunta a cada rato.'
@@ -101,6 +101,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
       {state && 'error' in state && (
         <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{state.error}</div>
       )}
-    </Card>
+      </Card>
+    </Section>
   );
 }

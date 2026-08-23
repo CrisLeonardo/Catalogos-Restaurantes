@@ -165,7 +165,13 @@ export function buildNav(ctx: NavContext): NavGroup[] {
         ...lockable(ctx, ctx.finanzasEnabled, plan.hasFinance, { href: '/admin/finanzas', label: 'Finanzas', key: 'finanzas' }),
         ...(on(ctx.felActive) ? [{ href: '/admin/facturacion', label: 'Facturación', key: 'fel' }] : []),
         // Apps de delivery (Canales, Fase 5A): deshabilitado, sigue en pruebas.
-        { href: '/admin/respaldo', label: 'Copia de datos', key: 'respaldo' },
+        /* "Copia de datos" ESTABA aquí y también en la portada de Ajustes, y
+           esa duplicación se notaba: quien tocaba la fila de Ajustes aterrizaba
+           en una pantalla titulada "Negocio", con la fila de pestañas de
+           Negocio y sin el "volver a Ajustes" — había perdido su sitio sin
+           haber ido a ninguna parte. Vive en Ajustes, que es donde encaja: las
+           pestañas de Negocio son todas pantallas de NÚMEROS, y descargar tus
+           datos no es un reporte, es algo de tu cuenta. */
       ],
     },
     {
@@ -176,7 +182,13 @@ export function buildNav(ctx: NavContext): NavGroup[] {
       index: true,
       items: [
         { href: '/admin/perfil', label: 'Perfil del negocio', key: 'perfil' },
-        { href: '/admin/ajustes/restaurante', label: 'Horarios y preferencias', key: 'ajustes' },
+        { href: '/admin/ajustes/restaurante', label: 'Horarios', key: 'ajustes' },
+        ...(on(ctx.ordersEnabled)
+          ? [
+              { href: '/admin/ajustes/entrega', label: 'Zona de entrega', key: 'ajustes' },
+              { href: '/admin/ajustes/pedidos', label: 'Pedidos y cobro', key: 'ajustes' },
+            ]
+          : []),
         { href: '/admin/personalizacion', label: 'Personalizar el sitio', key: 'personalizar' },
         { href: '/admin/qr', label: 'Código QR', key: 'qr' },
         ...(on(ctx.ordersEnabled) ? [{ href: '/admin/mi-pc', label: 'La PC del local', key: 'impresion' }] : []),
@@ -185,6 +197,7 @@ export function buildNav(ctx: NavContext): NavGroup[] {
           : []),
         { href: '/admin/suscripcion', label: 'Mi suscripción', key: 'suscripcion' },
         ...(ctx.showStaff ? [{ href: '/admin/modulos', label: 'Funciones', key: 'modulos' }] : []),
+        { href: '/admin/respaldo', label: 'Copia de tus datos', key: 'respaldo' },
         { href: '/admin/ayuda', label: 'Ayuda y tutoriales', key: 'ayuda' },
       ],
     },

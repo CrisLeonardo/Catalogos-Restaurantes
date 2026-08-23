@@ -57,15 +57,36 @@ function ListLink({ className, ...props }: React.ComponentProps<typeof Link>) {
   );
 }
 
+/** Fila que HACE algo en vez de navegar (lanzar el tour, abrir un diálogo).
+ *  Es un <button> de verdad —no un div con onClick— para que responda al
+ *  teclado y se anuncie como lo que es. Se ve igual que `ListLink`: en una
+ *  lista, que una fila lleve a otra pantalla o dispare una acción no cambia
+ *  cómo se toca. */
+function ListButton({ className, ...props }: React.ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      data-slot="list-button"
+      className={cn(
+        rowClass,
+        'cursor-pointer bg-transparent text-inherit transition-colors hover:bg-adm-card-hover',
+        'focus-visible:ring-2 focus-visible:ring-adm-accent-500/40 focus-visible:outline-none',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
 /** Celda de texto de una fila: título y, si hace falta, una línea de apoyo.
  *  Se encoge antes que los números y el estado, que son de ancho fijo. */
 function ListText({
   title, desc, className, ...props
 }: Omit<React.ComponentProps<'div'>, 'title'> & { title: React.ReactNode; desc?: React.ReactNode }) {
   return (
-    <div className={cn('min-w-0 flex-1', className)} {...props}>
+    <div data-slot="list-text" className={cn('min-w-0 flex-1', className)} {...props}>
       <div className="text-[14.5px] font-medium text-adm-text">{title}</div>
-      {desc && <div className="mt-0.5 text-[13px] leading-snug text-adm-text-3">{desc}</div>}
+      {desc && <div data-slot="list-desc" className="mt-0.5 text-[13px] leading-snug text-adm-text-3">{desc}</div>}
     </div>
   );
 }
@@ -106,4 +127,4 @@ function StatusPill({ tone = 'neutral', children, className }: {
   );
 }
 
-export { List, ListRow, ListLink, ListText, StatusDot, StatusPill, type Tone };
+export { List, ListRow, ListLink, ListButton, ListText, StatusDot, StatusPill, type Tone };

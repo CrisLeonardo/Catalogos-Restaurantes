@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
+import SiteMenu from '@/components/site-menu';
 import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
 
 /**
@@ -55,6 +56,9 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
             <span className="lp-cta-full">Crear mi restaurante</span>
             <span className="lp-cta-short">Crear cuenta</span>
           </Link>
+          {/* En el teléfono los cinco enlaces de arriba se ocultan; aquí es a
+              donde se van (antes no iban a ningún sitio). */}
+          <SiteMenu home={home} demoUrl={demoUrl} />
         </nav>
       </div>
     </header>

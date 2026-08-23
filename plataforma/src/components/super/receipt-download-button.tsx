@@ -28,8 +28,9 @@ export default function ReceiptDownloadButton({ data }: { data: ReceiptData }) {
       }}
       title="Descargar comprobante en PDF"
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        // 40 px: esta fila del historial de cobros tambien se lee en el telefono.
+        minHeight: 40, padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 600,
         border: '1px solid var(--adm-border, var(--u-hair-2))',
         background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
         color: 'var(--brand-accent-ink)', cursor: busy ? 'wait' : 'pointer', whiteSpace: 'nowrap',

@@ -198,7 +198,8 @@ export default async function SuscripcionPage() {
           href={planesUrl}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}
+          className="adm-action-link"
+          style={{ marginTop: 10, fontSize: 12.5 }}
         >
           Ver comparativa completa de planes <Icon name="arrowUpRight" size={13} />
         </a>
@@ -344,7 +345,8 @@ export default async function SuscripcionPage() {
           href={upgradeHref(restaurantName, 'Grupo / Franquicia')}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ fontSize: 12.5, color: 'var(--brand-accent-ink)', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+          className="adm-action-link"
+          style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}
         >
           Hablar con Leogin →
         </a>
@@ -468,8 +470,8 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
         <div className="adm-label">Lo que pagarás este mes</div>
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
-        Precio fijo de tu plan: prender o apagar módulos y modos de pedido desde{' '}
-        <a href="/admin/modulos" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Módulos</a> no cambia tu mensualidad.
+        Precio fijo de tu plan: prender o apagar funciones y modos de pedido desde{' '}
+        <a href="/admin/modulos" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a> no cambia tu mensualidad.
       </div>
 
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -491,8 +493,8 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
         </div>
       )}
 
-      <a href="/admin/modulos" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 14, fontSize: 12.5, color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 700 }}>
-        Gestionar mis métodos de pedido y módulos <Icon name="arrowRight" size={13} />
+      <a href="/admin/modulos" className="adm-action-link" style={{ marginTop: 10, fontSize: 12.5 }}>
+        Gestionar mis modos de pedido y funciones <Icon name="arrowRight" size={13} />
       </a>
     </Card>
   );

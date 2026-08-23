@@ -3,27 +3,35 @@ import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
-import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
-import CollapsibleCard from '@/components/admin/collapsible-card';
-import DesktopServerSettings from '@/components/admin/desktop-server-settings';
 import HoursEditor from '@/components/admin/hours-editor';
-import RestaurantLocationEditor from '@/components/admin/restaurant-location-editor';
-import OrdersCurrencyEditor from '@/components/admin/orders-currency-editor';
-import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
 
-export const metadata = { title: 'Horarios y preferencias – Panel admin' };
+export const metadata = { title: 'Horarios – Panel admin' };
 
-export default async function AdminPreferenciasPage() {
+/* ============================================================
+   /admin/ajustes/restaurante — Horarios
+   ------------------------------------------------------------
+   Esta pantalla se llamaba "Horarios y preferencias" y era cinco
+   acordeones: este dispositivo, horario, mapa de entrega, idiomas
+   y un quinto —"Pedidos y moneda"— que por dentro tenía tarjeta,
+   propina, confirmación automática, semáforo de cocina, moneda,
+   locale y animaciones. Trece ajustes sin relación detrás de un
+   título que no los nombraba, y cuatro de los cinco plegados: la
+   pantalla abría sin enseñar nada.
+
+   Ahora cada cosa tiene su pantalla y la portada de Ajustes las
+   lista. Aquí queda SOLO el horario. La ruta no se movió: los
+   tours guiados y los enlaces viejos siguen valiendo.
+   ============================================================ */
+
+export default async function AdminHorariosPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
 
   let restaurantId: string | null = null;
 
   if (ctx.profile.role === 'SUPER_ADMIN') {
-    const headersList = await headers();
-    const slug = headersList.get('x-tenant-slug');
+    const slug = (await headers()).get('x-tenant-slug');
     if (slug) {
       const tenantData = await getRestaurantBySlug(slug);
       restaurantId = tenantData?.restaurant.id ?? null;
@@ -43,73 +51,13 @@ export default async function AdminPreferenciasPage() {
 
   if (!restaurant) redirect('/admin/login');
 
-  const db = createServiceClient();
-  const { data: themeRow } = await db
-    .from('restaurant_themes')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .maybeSingle();
-
-  const resolved = resolveTheme((themeRow as ThemeRow) ?? null);
-
   return (
-    <div className="anim-fade-up">
-      <h1
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 700,
-          fontSize: 22,
-          marginBottom: 24,
-        }}
-      >
-        Ajustes
-      </h1>
-
-      <CollapsibleCard title="Este dispositivo" icon="monitor" storageKey="ajustes-dispositivo" defaultOpen>
-        <DesktopServerSettings />
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Horario y pedidos" icon="clock" storageKey="ajustes-horario" defaultOpen={false}>
-        <HoursEditor restaurant={restaurant as Restaurant} />
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        title="Mapa de entrega (por radio)"
-        icon="mapPin"
-        storageKey="ajustes-mapa"
-        defaultOpen={false}
-        subtitle="Activa esto para que el cliente vea un mapa interactivo en el checkout y coloque su pin. El pedido se rechaza si el pin cae fuera del radio."
-      >
-        <RestaurantLocationEditor restaurant={restaurant as Restaurant} />
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Idiomas del menú" icon="globe" storageKey="ajustes-idiomas" defaultOpen={false}>
-        <MenuLanguagesEditor restaurant={restaurant as Restaurant} />
-      </CollapsibleCard>
-
-      <CollapsibleCard title="Pedidos y moneda" icon="wallet" storageKey="ajustes-pedidos" defaultOpen={false}>
-        <OrdersCurrencyEditor
-          restaurantId={restaurantId}
-          config={{
-            orderTypes: resolved.config.orderTypes,
-            dineInTableCount: resolved.config.dineInTableCount,
-            dineInCourseOptions: resolved.config.dineInCourseOptions,
-            tipEnabled: resolved.config.tipEnabled,
-            tipPercent: resolved.config.tipPercent,
-            tipOrderTypes: resolved.config.tipOrderTypes,
-            acceptsCard: resolved.config.acceptsCard,
-            currencySymbol: resolved.config.currencySymbol,
-            currencyPosition: resolved.config.currencyPosition,
-            locale: resolved.config.locale,
-            animations: resolved.config.animations,
-            kdsYellowMin: resolved.config.kdsYellowMin,
-            kdsRedMin: resolved.config.kdsRedMin,
-            kdsConfirmFirst: resolved.config.kdsConfirmFirst,
-            autoConfirmEnabled: resolved.config.autoConfirmEnabled,
-            autoConfirmMinutes: resolved.config.autoConfirmMinutes,
-          }}
-        />
-      </CollapsibleCard>
+    <div className="anim-fade-up max-w-[720px]">
+      <p className="mb-5 text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
+        Cuándo abrís cada día, y el interruptor para dejar de recibir pedidos
+        sin cerrar tu menú.
+      </p>
+      <HoursEditor restaurant={restaurant as Restaurant} />
     </div>
   );
 }

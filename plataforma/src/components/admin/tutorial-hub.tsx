@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { List, ListButton, ListText } from '@/components/ui/list';
 import { startGuidedTour } from '@/components/admin/guided-tour';
 import { getGuidedTour } from '@/lib/tutorial/tours';
 import type { PlatformContactSettings } from '@/lib/actions/super-admin';
@@ -71,35 +72,14 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 860 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <h2 className="t-display" style={{ fontSize: 22, lineHeight: 1.1 }}>
-            Centro de ayuda
-          </h2>
-          <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
-            Guía completa de tu sistema, adaptada a tu plan{plan ? ` ${getPlanDisplayName(plan)}` : ''}.
-            Las secciones con <strong style={{ color: 'var(--u-text-2)' }}>guía interactiva</strong> te
-            muestran cada paso señalándolo en tu propio panel.
-          </p>
-        </div>
-
-        {/* Botón tour — reinicia el tour borrando la flag y redirige al dashboard */}
-        <Button
-          type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined') {
-              window.localStorage.removeItem('leogin_tour_completed');
-              window.location.href = '/admin';
-            }
-          }}
-          variant="secondary"
-          className="shrink-0"
-        >
-          <Icon name="sparkle" size={16} />
-          Ver tour de bienvenida
-        </Button>
-      </div>
+      {/* Entradilla. El título lo pone la barra de arriba ("Centro de ayuda");
+          repetirlo aquí a 22 px solo empujaba hacia abajo el buscador, que es
+          lo que de verdad se usa en esta pantalla. */}
+      <p style={{ fontSize: 14, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        Guía completa de tu sistema, adaptada a tu plan{plan ? ` ${getPlanDisplayName(plan)}` : ''}.
+        Las secciones con <strong style={{ color: 'var(--u-text-2)' }}>guía interactiva</strong> te
+        muestran cada paso señalándolo en tu propio panel.
+      </p>
 
       {/* Barra de búsqueda */}
       <div style={{ position: 'relative' }}>
@@ -138,6 +118,35 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
           </button>
         )}
       </div>
+
+      {/* El tour, como primera fila y no como botón peleando con el titular:
+          es un destino ("empezá por aquí"), y de fila se lee y se toca igual
+          que todo lo demás de esta pantalla. Se esconde mientras se busca,
+          porque entonces lo único que importa son los resultados. */}
+      {!isSearching && (
+        <List>
+          <ListButton
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.localStorage.removeItem('leogin_tour_completed');
+                window.location.href = '/admin';
+              }
+            }}
+          >
+            <span
+              className="grid size-7 shrink-0 place-items-center rounded-adm-md"
+              style={{ background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)' }}
+            >
+              <Icon name="sparkle" size={16} />
+            </span>
+            <ListText
+              title="Ver el tour de bienvenida"
+              desc="Un repaso guiado del panel, señalando cada cosa en su sitio."
+            />
+            <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+          </ListButton>
+        </List>
+      )}
 
       {/* Resultados vacíos */}
       {isSearching && filteredSections.length === 0 && (

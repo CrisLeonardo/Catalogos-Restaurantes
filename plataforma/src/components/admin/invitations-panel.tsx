@@ -10,6 +10,7 @@
 
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
+import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { revokeInvitation } from '@/lib/actions/invitations';
 import type { PendingInvitation } from '@/lib/auth/invitations';
@@ -32,11 +33,8 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
 }) {
 
   return (
-    <Card className="p-4.5 flex flex-col gap-3.5" style={{ marginTop: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div className="adm-label">Invitaciones pendientes</div>
-      </div>
-
+    <Section title="Invitaciones pendientes">
+      <Card className="p-4.5 flex flex-col gap-3.5">
       <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         Enlaces que enviaste antes y siguen vivos. Quien los abra entrará con normalidad.
         Si ya no quieres que entre, revócalo aquí. Para dar acceso a alguien nuevo,
@@ -80,6 +78,7 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
         </div>
       )}
 
-    </Card>
+      </Card>
+    </Section>
   );
 }
