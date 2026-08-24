@@ -347,12 +347,25 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   markUrl: null,
   pwaIconUrl: null,
 
-  colorBg: '#0b0b0c',
-  colorBg2: '#141416',
-  colorText: '#F5F3EF',
+  /* TEMA CLARO POR DEFECTO (2026-08-24, a peticion del usuario). Antes el
+     arranque era carbon oscuro. El sistema ya estaba preparado: el bloque
+     `html[data-scheme="light"]` de globals.css recalcula las tintas
+     secundarias al 82/72/64 % —porque la misma opacidad NO da el mismo
+     contraste en los dos modos: 0.48 pasa 4.6:1 en oscuro y se queda en 3.1:1
+     en claro— y oscurece el acento un 24 % cuando hace de TEXTO.
+
+     Los blancos son CALIDOS y no grises: el acento coral (#D97757) sobre un
+     blanco azulado se ensucia. `onAccent` sigue siendo tinta oscura sobre el
+     coral (6.2:1); en blanco se quedaria en 3.1:1 y no pasa AA para texto.
+
+     OJO al alcance: esto solo cambia a los restaurantes que NUNCA eligieron
+     colores. El que tenga su paleta guardada la conserva tal cual. */
+  colorBg: '#FAF8F5',
+  colorBg2: '#F1ECE5',
+  colorText: '#1A1613',
   colorAccent: '#D97757',
   onAccent: '#0b0b0c',
-  scheme: 'dark',
+  scheme: 'light',
 
   fontDisplay: 'Unbounded',
   fontPoster: 'Anton',
