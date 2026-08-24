@@ -29,7 +29,25 @@ export default function OfflineSupport() {
       // defecto ('/') sigue igual que siempre.
       const prefix = getStableLinkPrefix();
       const options = prefix ? { scope: `${prefix}/` } : undefined;
-      navigator.serviceWorker.register('/sw.js', options).catch(() => {});
+      navigator.serviceWorker.register('/sw.js', options).then((reg) => {
+        // El SW nuevo ya se activa solo (skipWaiting + clients.claim en
+        // sw.js), pero una pestaña que quedó abierta desde antes no se
+        // entera: sigue corriendo el JS viejo en memoria aunque el SW ya
+        // cambió de dueño. `controllerchange` es el aviso de que eso pasó
+        // — recargar es lo único que trae el bundle nuevo a esa pestaña.
+        // Guardia contra doble disparo: el evento puede llegar más de una
+        // vez si hay varias pestañas del mismo origen.
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (reloaded) return;
+          reloaded = true;
+          window.location.reload();
+        });
+        // El navegador solo revisa si hay un sw.js nuevo al navegar; en una
+        // PWA instalada que rara vez navega (se reabre desde el ícono y ya)
+        // eso puede tardar. Forzar la revisión ahora adelanta el aviso.
+        reg.update().catch(() => {});
+      }).catch(() => {});
     }
 
     setOnline(navigator.onLine);

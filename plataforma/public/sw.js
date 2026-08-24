@@ -9,7 +9,7 @@
    Ver plataforma/docs/ARQUITECTURA_OFFLINE.md.
    ============================================================ */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `leogin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `leogin-pages-${CACHE_VERSION}`;
 const CACHE_NAMES = [STATIC_CACHE, PAGES_CACHE];
