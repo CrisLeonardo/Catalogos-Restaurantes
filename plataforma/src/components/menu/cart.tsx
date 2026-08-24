@@ -18,8 +18,10 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
   const config = useThemeConfig();
   if (count === 0 || cartIconHidden) return null;
 
+  // Mismo tope que la barra inferior: fija + centrada no puede superar el ancho
+  // de maqueta (ver el comentario largo en bottom-nav.tsx).
   return (
-    <div style={{ position: 'fixed', bottom: 68, left: 0, right: 0, zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: 68, left: 0, right: 0, maxWidth: '100vw', zIndex: 40, display: 'flex', justifyContent: 'center', padding: '0 16px 16px', pointerEvents: 'none' }}>
       <Glass
         interactive
         onClick={onOpen}

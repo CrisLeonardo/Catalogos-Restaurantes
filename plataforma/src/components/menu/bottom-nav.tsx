@@ -30,6 +30,14 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
       aria-label="Navegación principal"
       style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
+        /* `maxWidth: 100vw` no sobra: un elemento FIJO se dimensiona contra el
+           viewport VISUAL, que no siempre es el de MAQUETA (`vw`). Cuando no
+           coinciden, `left/right: 0` puede dar una barra mas ancha que la
+           pagina, y una barra mas ancha que la pagina desborda el documento —
+           y un documento desbordado hace que el movil se aleje para que quepa
+           todo, que es como se ve la carta "hecha para otras dimensiones".
+           Con este tope la barra no puede pasarse, pase lo que pase. */
+        maxWidth: '100vw',
         display: 'flex', justifyContent: 'center',
         padding: `8px 12px calc(12px + env(safe-area-inset-bottom, 0px))`,
         pointerEvents: 'none',
