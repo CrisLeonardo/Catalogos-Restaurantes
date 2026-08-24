@@ -6,7 +6,9 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Glass } from '@/components/glass';
+import { List, ListRow, ListText } from '@/components/ui/list';
+import { Section as UiSection, SectionNote } from '@/components/ui/section';
+import { Switch } from '@/components/ui/switch';
 import { Icon } from '@/components/icons';
 import ImageUpload from '@/components/admin/image-upload';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
@@ -57,15 +59,25 @@ interface Props {
   ownerTemplates: RestaurantThemeTemplate[];
 }
 
-type Tab = 'plantillas' | 'identidad' | 'visual' | 'portada' | 'catalogo' | 'fuentes' | 'textos';
+/* ── Las cinco pestañas ──────────────────────────────────────
+   Eran SIETE (Plantillas · Identidad · Visual · Portada · Catálogo ·
+   Tipografía · Textos), 708 px de fila en un teléfono de 347. Y estaban
+   ordenadas por parecido técnico, no por el orden en que se toman las
+   decisiones: «Visual» (fondo, vidrio, grano, marca de agua) salía TERCERA,
+   antes que decidir siquiera cómo se recorre la carta.
+
+   Ahora van en el orden real: de qué parto → quién soy → cómo se ve mi
+   carta → qué dice → los remates. «Avanzado» junta lo que antes eran
+   «Visual» y «Tipografía»: fondo, vidrio, esquinas y familias tipográficas.
+   No se perdió ni un control; bajaron un nivel, igual que hicimos con los
+   35 destinos del menú lateral. */
+type Tab = 'diseno' | 'marca' | 'menu' | 'textos' | 'avanzado';
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'plantillas', label: 'Plantillas', icon: 'grid'  },
-  { key: 'identidad', label: 'Identidad',  icon: 'sparkle' },
-  { key: 'visual',    label: 'Visual',     icon: 'image'   },
-  { key: 'portada',   label: 'Portada',    icon: 'phone'   },
-  { key: 'catalogo',  label: 'Catálogo',   icon: 'grid'    },
-  { key: 'fuentes',   label: 'Tipografía', icon: 'tag'     },
-  { key: 'textos',    label: 'Textos',     icon: 'list'    },
+  { key: 'diseno',   label: 'Diseño',   icon: 'grid'    },
+  { key: 'marca',    label: 'Marca',    icon: 'sparkle' },
+  { key: 'menu',     label: 'Menú',     icon: 'phone'   },
+  { key: 'textos',   label: 'Textos',   icon: 'list'    },
+  { key: 'avanzado', label: 'Avanzado', icon: 'image'   },
 ];
 
 /* ── Componente principal ─────────────────────────────────── */
@@ -80,7 +92,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
   // anterior, la plantilla salía como mezcla ilegible (fondo/texto viejos +
   // tarjetas del esquema nuevo) tanto en la vista previa como al publicar.
   const [customCss, setCustomCss] = useState(initialCss);
-  const [tab, setTab] = useState<Tab>('plantillas');
+  const [tab, setTab] = useState<Tab>('diseno');
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [appliedTpl, setAppliedTpl] = useState<string | null>(null);
@@ -180,17 +192,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
           })}
         </div>
 
-        {/* ── Tab: Plantillas ── */}
-        {tab === 'plantillas' && (
+        {/* ── Tab: Diseño (punto de partida: estructura × paleta) ── */}
+        {tab === 'diseno' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Glass variant="quiet" style={{ padding: 16 }}>
-              <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
-                Elige un punto de partida y luego afínalo en las demás pestañas.
-                Tu logo, nombre, textos y configuración de pedidos <strong style={{ color: 'var(--u-text-2)' }}>se conservan</strong> —
-                la plantilla solo cambia colores, tipografía, portada y estilo.
-                Nada se publica hasta que toques «Guardar cambios».
-              </p>
-            </Glass>
+            <SectionNote className="px-1">
+              Elige un punto de partida y luego afínalo en las demás pestañas.
+              Tu logo, nombre, textos y configuración de pedidos <strong className="text-adm-text-2">se conservan</strong> —
+              la plantilla solo cambia colores, tipografía, portada y estilo.
+              Nada se publica hasta que toques «Guardar cambios».
+            </SectionNote>
             <OwnerTemplates
               restaurantId={restaurantId}
               currentConfig={config}
@@ -205,9 +215,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 "Clásico" le enseñaría 22 diseños que no son el suyo. */}
             <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} />
             {appliedTpl && (
-              <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Icon name="checkCircle" size={16} style={{ color: 'var(--c-ok)', flexShrink: 0 }} />
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+              <div
+                role="status"
+                className="flex items-start gap-2.5 rounded-adm-lg px-4 py-3"
+                style={{ background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}
+              >
+                <span style={{ color: 'var(--c-ok)', flexShrink: 0, marginTop: 1 }}>
+                  <Icon name="checkCircle" size={16} />
+                </span>
+                <span className="text-[12.5px] leading-relaxed text-adm-text-2">
                   Plantilla aplicada. Revísala en la vista previa y pulsa <strong>Guardar cambios</strong> para publicarla,
                   o sigue personalizando en las otras pestañas.
                   {cssWasReset && (
@@ -215,13 +231,13 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                     se desactivó para que la plantilla se vea fiel (se elimina al guardar).</>
                   )}
                 </span>
-              </Glass>
+              </div>
             )}
           </div>
         )}
 
-        {/* ── Tab: Identidad ── */}
-        {tab === 'identidad' && (
+        {/* ── Tab: Marca ── */}
+        {tab === 'marca' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Logos e imágenes">
               <Field label="Logo principal (portada y encabezado)">
@@ -229,15 +245,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               </Field>
               <Field label="Ícono de app instalada (PWA)">
                 <ImageUpload restaurantId={restaurantId} currentUrl={config.pwaIconUrl} folder="pwa-icon" mode="icon" bgColor={config.colorBg} onUpload={(u) => setC('pwaIconUrl', u)} />
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.5 }}>
+                <Note>
                   Aparece en la pantalla de inicio cuando el cliente instala la app. Se adapta automáticamente al color de fondo del tema.
-                </p>
+                </Note>
               </Field>
               <Field label="Marca de agua (watermark de fondo)">
                 <ImageUpload restaurantId={restaurantId} currentUrl={config.markUrl} folder="mark" bgColor={config.colorBg} onUpload={(u) => setC('markUrl', u)} />
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, lineHeight: 1.5 }}>
+                <Note>
                   Ícono pequeño que rota en el fondo cuando activas el watermark. Si no se sube, usa el logo.
-                </p>
+                </Note>
               </Field>
             </Section>
 
@@ -248,9 +264,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             </Section>
 
             <Section title="Colores de marca">
-              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 4 }}>
+              <Note>
                 Paletas listas para aplicar de un toque — siempre puedes ajustar los colores individualmente después.
-              </p>
+              </Note>
               {/* Paletas */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                 {PALETTES.map((p) => (
@@ -319,8 +335,8 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
           </div>
         )}
 
-        {/* ── Tab: Visual ── */}
-        {tab === 'visual' && (
+        {/* ── Tab: Avanzado · fondo, vidrio y forma ── */}
+        {tab === 'avanzado' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Fondo del sitio">
               <Segmented
@@ -365,9 +381,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             </Section>
 
             <Section title="Estilo de tarjetas (glass)">
-              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2 }}>
+              <Note>
                 Las tarjetas de producto, el carrito y los modales usan este estilo de cristal.
-              </p>
+              </Note>
               <Segmented
                 label="Estilo"
                 value={config.glassIntensity}
@@ -375,9 +391,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 onChange={(v) => setC('glassIntensity', v as ThemeConfig['glassIntensity'])}
               />
               <Slider label="Cantidad de glass" value={config.glassAmount ?? 100} min={0} max={100} step={1} onChange={(v) => setC('glassAmount', v)} />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4 }}>
+              <Note>
                 100 % = efecto completo · 0 % = sólido puro (sin blur ni transparencia)
-              </p>
+              </Note>
               <Slider label="Redondeo de esquinas" value={config.cornerRadius} min={0.4} max={1.8} step={0.1} onChange={(v) => setC('cornerRadius', v)} />
               <Toggle label="Brillo que sigue al cursor" value={config.sheen} onChange={(v) => setC('sheen', v)} />
               <Toggle label="Animaciones del menú" value={config.animations} onChange={(v) => setC('animations', v)} />
@@ -386,12 +402,13 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         )}
 
         {/* ── Tab: Portada ── */}
-        {tab === 'portada' && (
+        {/* ── Tab: Menú · la portada y la carta, en el orden en que se ven ── */}
+        {tab === 'menu' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Portada del menú">
-              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 4 }}>
+              <Note>
                 La portada es lo primero que ve el cliente al abrir el menú QR.
-              </p>
+              </Note>
               <Segmented
                 label="Estilo de portada"
                 value={config.portadaVariant}
@@ -402,9 +419,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 ]}
                 onChange={(v) => setC('portadaVariant', v as ThemeConfig['portadaVariant'])}
               />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+              <Note>
                 {PORTADA_HINT[config.portadaVariant] ?? ''}
-              </p>
+              </Note>
               {config.portadaVariant !== 'none' && (
                 <>
                   <Toggle label="Mostrar logo" value={config.portadaShowLogo} onChange={(v) => setC('portadaShowLogo', v)} />
@@ -420,24 +437,16 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               />
             </Section>
 
-            <Section title="Textos de portada">
-              <TextCtl label="Título (vacío = nombre del restaurante)" value={content.portada.title} onChange={(v) => setT('portada', 'title', v)} />
-              <TextCtl label="Subtítulo (vacío = tagline)" value={content.portada.subtitle} onChange={(v) => setT('portada', 'subtitle', v)} />
-              <TextCtl label="Texto del botón" value={content.portada.cta} onChange={(v) => setT('portada', 'cta', v)} />
-              <TextCtl label="Badge 'Abierto'" value={content.portada.badgeOpen} onChange={(v) => setT('portada', 'badgeOpen', v)} />
-              <TextCtl label="Badge 'Cerrado'" value={content.portada.badgeClosed} onChange={(v) => setT('portada', 'badgeClosed', v)} />
-            </Section>
           </div>
         )}
 
-        {/* ── Tab: Catálogo ── */}
-        {tab === 'catalogo' && (
+        {tab === 'menu' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Estructura del menú">
-              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 2, lineHeight: 1.5 }}>
+              <Note>
                 Esto no toca los colores: cambia cómo está <em>armado</em> el menú. Es lo que
                 hace que tu carta no se parezca a la del restaurante de al lado.
-              </p>
+              </Note>
 
               <Segmented
                 label="Cómo se recorre la carta"
@@ -445,9 +454,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 options={[['chips', 'Píldoras'], ['secciones', 'Secciones'], ['acordeon', 'Acordeón'], ['portadas', 'Portadas']]}
                 onChange={(v) => setC('catalogNav', v as ThemeConfig['catalogNav'])}
               />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+              <Note>
                 {NAV_HINT[config.catalogNav] ?? ''}
-              </p>
+              </Note>
 
               <Segmented
                 label="Forma de cada platillo"
@@ -455,9 +464,9 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 options={[['tarjeta', 'Tarjeta'], ['fila', 'Fila'], ['texto', 'Texto'], ['mosaico', 'Mosaico'], ['carrusel', 'Carrusel']]}
                 onChange={(v) => setC('cardStyle', v as ThemeConfig['cardStyle'])}
               />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+              <Note>
                 {CARD_HINT[config.cardStyle] ?? ''}
-              </p>
+              </Note>
 
               <Segmented
                 label="Ancho de la página"
@@ -465,11 +474,11 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 options={[['movil', 'Columna de móvil'], ['ancho', 'Ancho'], ['revista', 'Revista']]}
                 onChange={(v) => setC('layoutWidth', v as ThemeConfig['layoutWidth'])}
               />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+              <Note>
                 Cuando compartes el menú por link se abre también en tablet y computadora.
                 «Columna de móvil» lo deja en 460 px siempre; las otras dos aprovechan la
                 pantalla en vez de dejar dos franjas vacías a los lados.
-              </p>
+              </Note>
 
               {/* Las columnas solo mandan en la columna de móvil: en lienzos anchos
                   se reparten por ancho disponible o cada tarjeta saldría enorme. */}
@@ -483,10 +492,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               )}
 
               {config.cardStyle === 'texto' ? (
-                <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', lineHeight: 1.5, margin: 0 }}>
+                <Note>
                   La forma «Texto» no muestra ninguna imagen, así que el arte de productos no
                   aplica aquí.
-                </p>
+                </Note>
               ) : (
                 <Segmented
                   label="Arte de productos"
@@ -502,10 +511,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
               <Toggle label="Etiquetas (Picante, Nuevo, Veggie…)" value={config.showTags} onChange={(v) => setC('showTags', v)} />
               <Toggle label="Favoritos como tarjeta destacada" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -4, lineHeight: 1.5 }}>
+              <Note>
                 Los productos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
                 (máximo 3), para guiar al cliente hacia tus platillos estrella.
-              </p>
+              </Note>
             </Section>
 
             <Section title="Textos del menú">
@@ -524,7 +533,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               </div>
             </Section>
 
-            <Section title="Checkout y pago" defaultOpen={false}>
+            <Section title="Checkout y pago">
               <Segmented
                 label="Color del estado activo (tabs / opciones)"
                 value={config.checkoutActiveColor}
@@ -539,20 +548,20 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 options={SHADOW_OPTIONS}
                 onChange={(v) => setC('checkoutTextShadow', v as ThemeConfig['checkoutTextShadow'])}
               />
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
+              <Note>
                 La sombra hace que el texto resalte sobre fondos vivos o con imagen. El glass distingue las opciones de pago con cualquier paleta.
-              </p>
+              </Note>
             </Section>
           </div>
         )}
 
         {/* ── Tab: Fuentes ── */}
-        {tab === 'fuentes' && (
+        {tab === 'avanzado' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Section title="Tipografía">
-              <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 4 }}>
+              <Note>
                 Las fuentes se cargan desde Google Fonts. Úsalas para dar personalidad a tu menú.
-              </p>
+              </Note>
               <FontCtl label="Titulares y encabezados" role="display" value={config.fontDisplay} onChange={(v) => setC('fontDisplay', v)} />
               <FontCtl label="Kickers y etiquetas grandes" role="poster" value={config.fontPoster} onChange={(v) => setC('fontPoster', v)} />
               <FontCtl label="Texto del cuerpo" role="body" value={config.fontBody} onChange={(v) => setC('fontBody', v)} />
@@ -566,13 +575,18 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
         {/* ── Tab: Textos ── */}
         {tab === 'textos' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Glass variant="quiet" style={{ padding: 16 }}>
-              <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.6 }}>
-                Personaliza cada texto que ve el cliente. Deja en blanco para usar el texto por defecto.
-              </p>
-            </Glass>
+            <SectionNote className="px-1">
+              Personaliza cada texto que ve el cliente. Deja en blanco para usar el texto por defecto.
+            </SectionNote>
 
             {([
+              ['portada', 'Portada', [
+                ['title', 'Título (vacío = nombre del restaurante)'],
+                ['subtitle', 'Subtítulo (vacío = tagline)'],
+                ['cta', 'Texto del botón'],
+                ['badgeOpen', 'Badge "Abierto"'],
+                ['badgeClosed', 'Badge "Cerrado"'],
+              ]],
               ['product', 'Producto', [
                 ['add', 'Botón "Agregar"'],
                 ['soldOut', 'Agotado'],
@@ -637,8 +651,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 ['back', 'Volver al menú'],
               ]],
             ] as [keyof ThemeContent, string, [string, string][]][]).map(([section, label, fields]) => (
-              <Glass key={section} variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div className="adm-label">{label}</div>
+              <Section key={section} title={label}>
                 {fields.map(([key, fieldLabel]) => (
                   <TextCtl
                     key={key}
@@ -647,7 +660,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                     onChange={(v) => setT(section, key, v)}
                   />
                 ))}
-              </Glass>
+              </Section>
             ))}
           </div>
         )}
@@ -731,42 +744,65 @@ const PORTADA_HINT: Record<string, string> = {
   none: 'Sin ninguna cabecera: el menú arranca en seco.',
 };
 
-function Section({ title, children, defaultOpen = true }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
-  const storageKey = `admin-theme-sec:${title}`;
-  const [open, setOpen] = useState(defaultOpen);
+/* ════════════════════════════════════════════════════════════
+   PIEZAS DEL EDITOR
+   ------------------------------------------------------------
+   Antes esta pantalla se dibujaba sus propios Section, Field, Toggle,
+   Segmented y Slider: quintos primos de los del panel, parecidos pero
+   nunca iguales. Y su `Section` era un ACORDEON con memoria en
+   localStorage — el mismo patron que se saco de Ajustes el 22 de agosto,
+   por el mismo motivo: un ajuste plegado es un ajuste que no existe.
 
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey);
+   Ahora todo sale de `components/ui`. Un grupo = <Section> + <List>, y
+   cada control es una FILA de esa lista: etiqueta a la izquierda, control
+   a la derecha. Los controles que no caben al lado de su etiqueta (una
+   fila de pildoras, un deslizador, un campo de texto) se apilan debajo,
+   pero siguen siendo una fila de la misma lista.
+   ════════════════════════════════════════════════════════════ */
 
-    if (stored !== null) setOpen(stored === '1');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function toggle() {
-    setOpen((prev) => {
-      const next = !prev;
-      try { localStorage.setItem(storageKey, next ? '1' : '0'); } catch {}
-      return next;
-    });
-  }
-
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: open ? 12 : 0 }}>
-      <button
-        type="button"
-        onClick={toggle}
-        className="press"
-        aria-expanded={open}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-          background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left',
-        }}
-      >
-        <span className="adm-label">{title}</span>
-        <Icon name="chevronDown" size={16} style={{ color: 'var(--u-text-3)', transition: 'transform 180ms var(--ease-out)', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
-      </button>
-      {open && children}
-    </Glass>
+    <UiSection title={title}>
+      <List>{children}</List>
+    </UiSection>
+  );
+}
+
+/** La letra pequena que explica un grupo. No es un control, asi que no se
+    pinta como una fila con divisoria: va dentro de la lista pero callada. */
+function Note({ children }: { children: ReactNode }) {
+  return (
+    <div className="px-4 py-3 text-[12.5px] leading-snug text-adm-text-3">{children}</div>
+  );
+}
+
+/** Fila de control. `stacked` la parte en dos alturas cuando el control es
+    ancho (pildoras, deslizador, campo de texto): la etiqueta arriba y el
+    control debajo, sin salirse de la lista. */
+function Row({
+  label, hint, children, stacked = false,
+}: {
+  label?: string;
+  hint?: string;
+  children: ReactNode;
+  stacked?: boolean;
+}) {
+  if (stacked) {
+    return (
+      <ListRow className="flex-col items-stretch gap-2">
+        {label && (
+          <div className="text-[14.5px] font-medium text-adm-text">{label}</div>
+        )}
+        {hint && <div className="-mt-1 text-[12.5px] leading-snug text-adm-text-3">{hint}</div>}
+        {children}
+      </ListRow>
+    );
+  }
+  return (
+    <ListRow>
+      <ListText title={label} desc={hint} />
+      {children}
+    </ListRow>
   );
 }
 
@@ -803,12 +839,7 @@ function ContrastHint({ text, actionLabel, onFix }: { text: string; actionLabel:
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 500 }}>{label}</label>
-      {children}
-    </div>
-  );
+  return <Row label={label} stacked>{children}</Row>;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -832,55 +863,91 @@ const optionStyle: React.CSSProperties = {
 
 function TextCtl({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <Field label={label}>
+    <Row label={label} stacked>
       <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
-    </Field>
+    </Row>
   );
 }
 
 function ColorCtl({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }} />
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', flex: 1 }}>{label}</span>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12, padding: '6px 8px' }} />
-    </div>
+    <ListRow>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        style={{ width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, background: 'transparent' }}
+      />
+      <ListText title={label} />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={`${label} en hexadecimal`}
+        style={{ ...inputStyle, width: 96, fontFamily: 'var(--ui-font-mono)', fontSize: 12.5, padding: '7px 9px' }}
+      />
+    </ListRow>
   );
 }
 
+/* El interruptor de aqui era un <button> con dos <span> dentro: sin <input>
+   real, sin estado anunciado y sin soporte de teclado propio. `Switch` (Base
+   UI) es el mismo que usa el resto del panel. */
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-      <span style={{ fontSize: 13.5, color: 'var(--u-text-2)' }}>{label}</span>
-      <button type="button" onClick={() => onChange(!value)} className="press" style={{ width: 42, height: 25, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 3, background: value ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 14%, transparent)', display: 'flex', justifyContent: value ? 'flex-end' : 'flex-start', transition: 'background 180ms', flexShrink: 0 }}>
-        <span style={{ width: 19, height: 19, borderRadius: 99, background: value ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text)' }} />
-      </button>
-    </div>
+    <Row label={label}>
+      <Switch checked={value} onCheckedChange={onChange} />
+    </Row>
   );
 }
 
-function Segmented({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void }) {
+/* `role="radiogroup"`: eran botones sueltos, asi que una lectura asistida
+   leia siete botones sin decir que son alternativas de la MISMA decision ni
+   cual esta elegida. */
+function Segmented({ label, hint, value, options, onChange }: { label: string; hint?: string; value: string; options: [string, string][]; onChange: (v: string) => void }) {
   return (
-    <Field label={label}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <Row label={label} hint={hint} stacked>
+      <div role="radiogroup" aria-label={label} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {options.map(([val, lbl]) => {
           const on = value === val;
           return (
-            <button key={val} type="button" onClick={() => onChange(val)} className="press" style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--u-text)' : 'color-mix(in srgb, var(--u-text) 5%, transparent)', color: on ? 'var(--admin-content-bg-solid, var(--brand-bg))' : 'var(--u-text-3)', transition: 'all 150ms' }}>
+            <button
+              key={val}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(val)}
+              className="press"
+              style={{ padding: '9px 14px', minHeight: 38, borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--adm-border)'}`, background: on ? 'var(--adm-accent-500)' : 'transparent', color: on ? 'var(--c-on-solid)' : 'var(--u-text-2)', transition: 'all 150ms' }}
+            >
               {lbl}
             </button>
           );
         })}
       </div>
-    </Field>
+    </Row>
   );
 }
 
 function Slider({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
   return (
-    <Field label={`${label} · ${value % 1 === 0 ? value : value.toFixed(2)}`}>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--brand-accent)' }} />
-    </Field>
+    <ListRow className="flex-col items-stretch gap-2">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 text-[14.5px] font-medium text-adm-text">{label}</div>
+        {/* El valor en la mono con cifras tabulares: al arrastrar, el numero
+            no baila de ancho. Es la regla del panel para todas las cifras. */}
+        <span className="t-mono text-[13px] text-adm-text-2">
+          {value % 1 === 0 ? value : value.toFixed(2)}
+        </span>
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ width: '100%', accentColor: 'var(--adm-accent-500)' }}
+      />
+    </ListRow>
   );
 }
 
@@ -888,11 +955,11 @@ function FontCtl({ label, role, value, onChange }: { label: string; role: 'displ
   const opts = fontsForRole(role);
   const has = opts.some((o) => o.family === value);
   return (
-    <Field label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...selectStyle, cursor: 'pointer' }}>
+    <Row label={label}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} style={{ ...selectStyle, cursor: 'pointer', width: 'auto', maxWidth: 190 }}>
         {!has && <option value={value} style={optionStyle}>{value}</option>}
         {opts.map((o) => <option key={o.family} value={o.family} style={optionStyle}>{o.label}</option>)}
       </select>
-    </Field>
+    </Row>
   );
 }

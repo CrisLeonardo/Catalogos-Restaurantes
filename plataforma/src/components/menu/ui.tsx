@@ -10,6 +10,60 @@ import { Icon } from '@/components/icons';
 import { usePrice, useThemeConfig, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 
+/* ── Superficie de una pieza de la carta ──────────────────────
+   Sustituye a `Glass` en los platillos. El motivo está explicado a fondo en
+   globals.css (sección «MENÚ DEL COMENSAL · KIT»): el vidrio se reserva para
+   lo que flota por encima de la carta, no para cada tarjeta.
+
+   Conserva TODO lo que `Glass` aportaba a una tarjeta clicable, que era su
+   parte menos vistosa y la más importante: rol de botón, foco por teclado,
+   Enter/Espacio y un nombre accesible corto. Sin esto, una tarjeta se anuncia
+   concatenando su contenido entero ("Mocha Negra Espresso doble, cacao 70%…
+   26.00 Agregar") y el botón «Agregar» de dentro queda anidado en otro
+   control. */
+export function MenuSurface({
+  className = '',
+  style,
+  children,
+  onClick,
+  ariaLabel,
+  unavailable = false,
+}: {
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+  onClick?: () => void;
+  ariaLabel?: string;
+  /** Agotado: se puede mirar, no pedir — deja de ser clicable. */
+  unavailable?: boolean;
+}) {
+  const clickable = Boolean(onClick) && !unavailable;
+  return (
+    <div
+      className={`m-surface ${clickable ? 'press' : ''} ${className}`}
+      data-clickable={clickable ? '1' : undefined}
+      data-unavailable={unavailable ? '1' : undefined}
+      onClick={clickable ? onClick : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? ariaLabel : undefined}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ── Precio (moneda configurable) ─────────────────────────── */
 
 export function Price({
@@ -26,8 +80,13 @@ export function Price({
   const { symbol, position, format } = usePrice();
   const config = useThemeConfig();
   const sz = size * roleSize(config, 'price');
+  /* El simbolo de moneda salia a 9,24 px con un precio de 14: es el unico
+     texto del menu que seguia por debajo del piso. Se subordina por PROPORCION
+     y no por hacerlo diminuto, con el mismo piso de 12 px que el resto; y la
+     opacidad sube de 0,6 a 0,75, que a 0,6 sobre el fondo se quedaba corta de
+     contraste. */
   const sym = (
-    <span style={{ fontSize: sz * 0.66, opacity: 0.6, margin: position === 'prefix' ? '0 1px 0 0' : '0 0 0 1px' }}>
+    <span style={{ fontSize: `max(12px, ${(sz * 0.72).toFixed(2)}px)`, opacity: 0.75, margin: position === 'prefix' ? '0 1px 0 0' : '0 0 0 1px' }}>
       {symbol}
     </span>
   );
@@ -54,20 +113,23 @@ const TAG_MAP: Record<string, { icon: string }> = {
 
 export function Tag({ label, small = false }: { label: string; small?: boolean }) {
   const meta = TAG_MAP[label.toLowerCase().trim()];
-  const config = useThemeConfig();
-  const sz = (small ? 9.5 : 10.5) * roleSize(config, 'tag');
+  /* Estaban a 9,5 y 10,5 px. «Picante» es justo el dato por el que alguien
+     decide NO pedir un plato, y era el texto más pequeño de la carta. Pasan al
+     piso del menú (12 px), que sigue multiplicando por el rol `tag` del tema.
+     El `small` ya no cambia el tamaño de la letra —no había margen debajo del
+     piso— sino el relleno: sigue habiendo una etiqueta más discreta. */
   return (
     <span
       className="ct-tag"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: small ? '2px 7px' : '3px 9px', borderRadius: 999,
+        padding: small ? '3px 8px' : '4px 10px', borderRadius: 'var(--m-r-pill)',
         background: 'var(--surface-strong)', border: '1px solid var(--u-hair-2)',
-        fontSize: sz,
+        fontSize: 'calc(var(--m-fs-xs) * var(--t-tag-size, 1))',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      {meta && <Icon name={meta.icon} size={small ? 9 : 10} />}
+      {meta && <Icon name={meta.icon} size={small ? 11 : 12} />}
       {label}
     </span>
   );
@@ -140,18 +202,38 @@ export function QtyStepper({
   onPlus: () => void;
   size?: 'md' | 'lg';
 }) {
-  const d = size === 'lg' ? 40 : 30;
-  const r = size === 'lg' ? 13 : 9;
-  const ic = size === 'lg' ? 18 : 14;
+  /* Los botones medían 30 px en la talla normal. Es el control que más se toca
+     de todo el pedido —subir y bajar cantidades en el carrito— y era la pieza
+     más pequeña de la pantalla: quitar uno por error y tener que volver a
+     sumarlo es la clase de fricción que hace abandonar un carrito.
+     Ahora 44 px (40 en la talla chica, que ya va dentro de una fila con su
+     propio margen de toque alrededor). */
+  const d = size === 'lg' ? 48 : 40;
+  const ic = size === 'lg' ? 20 : 17;
   const btn: CSSProperties = {
-    width: d, height: d, borderRadius: r, border: 'none',
+    width: d, height: d, borderRadius: 'var(--m-r-sm)', border: 'none',
     background: 'var(--surface-2)', color: 'var(--u-text)',
     cursor: 'pointer', display: 'grid', placeItems: 'center',
   };
   return (
-    <div className="glass-quiet" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: 4, borderRadius: r + 5 }}>
+    <div
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 2, padding: 3,
+        borderRadius: 'var(--m-r-md)',
+        background: 'var(--surface-1)', border: '1px solid var(--u-hair)',
+      }}
+    >
       <button className="press" onClick={onMinus} style={btn} aria-label="Quitar uno"><Icon name="minus" size={ic} /></button>
-      <div className="t-mono" style={{ minWidth: size === 'lg' ? 34 : 26, textAlign: 'center', fontSize: size === 'lg' ? 17 : 14, fontWeight: 600, color: 'var(--u-text)' }}>{value}</div>
+      <div
+        className="t-mono"
+        style={{
+          minWidth: size === 'lg' ? 34 : 28, textAlign: 'center',
+          fontSize: size === 'lg' ? 'var(--m-fs-lg)' : 'var(--m-fs-md)',
+          fontWeight: 600, color: 'var(--u-text)',
+        }}
+      >
+        {value}
+      </div>
       <button className="press" onClick={onPlus} style={btn} aria-label="Agregar uno"><Icon name="plus" size={ic} /></button>
     </div>
   );
@@ -200,9 +282,9 @@ export function Field({
   const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label htmlFor={id} className="t-kicker" style={{ fontSize: 11.5, cursor: 'pointer' }}>{label}</label>
+      <label htmlFor={id} className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', cursor: 'pointer' }}>{label}</label>
       {hint && (
-        <p id={hintId} style={{ fontSize: 11.5, color: 'var(--u-text-3)', margin: '-2px 0 0', lineHeight: 1.4 }}>{hint}</p>
+        <p id={hintId} style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', margin: '-2px 0 0', lineHeight: 1.4 }}>{hint}</p>
       )}
       <div style={{ position: 'relative' }}>
         {icon && (
@@ -226,7 +308,7 @@ export function Field({
           style={{
             width: '100%', padding: icon ? '14px 14px 14px 40px' : '14px 14px',
             minHeight: 48,
-            borderRadius: 'var(--radius-lg)', color: 'var(--u-text)', fontSize: 16, outline: 'none',
+            borderRadius: 'var(--radius-lg)', color: 'var(--u-text)', fontSize: 'var(--m-fs-lg)', outline: 'none',
             background: 'var(--surface-2)', border: `1px solid ${border}`,
             transition: 'border-color 150ms',
             boxShadow: focused ? '0 0 0 4px var(--surface-2)' : 'none',
@@ -234,7 +316,7 @@ export function Field({
         />
       </div>
       {error && (
-        <div id={errorId} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--c-danger)' }}>
+        <div id={errorId} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger)' }}>
           <Icon name="alertCircle" size={13} />{error}
         </div>
       )}

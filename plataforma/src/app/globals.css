@@ -114,6 +114,71 @@
   --ease-out:   cubic-bezier(0.4, 0, 0.2, 1);
   --ease-entry: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* ══════════════════════════════════════════════════════════
+     ESCALA DEL MENÚ DEL COMENSAL (--m-*)
+     ----------------------------------------------------------
+     Por qué existe: el catálogo público tenía 511 estilos en línea con
+     20 espaciados distintos (0…26 px), 15 radios distintos y 188 tamaños
+     de letra escritos a mano. El problema no era el desorden — era que
+     el editor de personalización PROMETE controles que el menú no
+     obedecía:
+
+       · «Esquinas» (config.cornerRadius) movía 20 de 106 redondeos → 19 %.
+       · «Escala de texto» (config.fontScale) movía 12 de 188 tamaños → 6 %.
+
+     Estas variables son el puente. Todo lo que dibuja el menú del
+     comensal mide desde aquí, así que mover un control del editor mueve
+     la carta entera y no un rincón.
+
+     Los valores viven en :root (y no en .menu-canvas) porque el carrito,
+     la hoja de producto y el checkout se pintan en portales fuera de ese
+     contenedor.
+     ══════════════════════════════════════════════════════════ */
+
+  /* Esquinas — derivadas del control del dueño. Una píldora NO escala:
+     redondear un círculo "un poco menos" solo lo deforma. */
+  --corner-scale: 1;
+  --m-r-xs:   calc(6px  * var(--corner-scale));   /* etiquetas, badges */
+  --m-r-sm:   calc(10px * var(--corner-scale));   /* arte pequeño, chips */
+  --m-r-md:   calc(14px * var(--corner-scale));   /* filas, botones */
+  --m-r-lg:   calc(18px * var(--corner-scale));   /* tarjetas de platillo */
+  --m-r-xl:   calc(24px * var(--corner-scale));   /* hojas, portadas */
+  --m-r-pill: 999px;
+
+  /* Espaciado — seis pasos. Los 20 valores sueltos que había caben todos
+     aquí redondeando al paso más cercano; nadie va a echar de menos la
+     diferencia entre 11 y 12 px, y sí se nota que dos tarjetas hermanas
+     respiren distinto. */
+  --m-sp-1: 4px;
+  --m-sp-2: 8px;
+  --m-sp-3: 12px;
+  --m-sp-4: 16px;
+  --m-sp-5: 24px;
+  --m-sp-6: 32px;
+
+  /* Tipografía — escala de verdad, multiplicada por el control del dueño.
+     PISO DE 12 px: el comensal lee con el teléfono en la mano, a veces con
+     poca luz y casi siempre de pie. Los 9,5 px del badge «No disponible»
+     y los 10,5 px de las etiquetas son la misma deuda que el panel ya
+     saldó cuando .t-kicker (9,5 px) pasó a .adm-label.
+     El `max()` protege el piso incluso con la escala al 0,85. */
+  --m-fs-xs:  max(12px, calc(12px * var(--font-scale)));
+  --m-fs-sm:  max(12px, calc(13px * var(--font-scale)));
+  --m-fs-md:  calc(15px * var(--font-scale));
+  --m-fs-lg:  calc(17px * var(--font-scale));
+  --m-fs-xl:  calc(20px * var(--font-scale));
+  --m-fs-2xl: calc(26px * var(--font-scale));
+
+  /* Área táctil mínima. No es decorativa: es el ancho del dedo. */
+  --m-tap: 44px;
+
+  /* Alto de la barra inferior flotante (ver NAV_HEIGHT en bottom-nav.tsx).
+     Está aquí porque la barra es FIJA: tapa esos píxeles en todas las
+     pantallas, así que cualquier cosa que quiera medirse «hasta abajo» tiene
+     que descontarlos. Sin este token, `100svh` en el héroe significaba una
+     pantalla entera menos una barra que nadie estaba restando. */
+  --m-nav-h: 68px;
+
   /* ── Panel admin (sobreescritos por buildThemeVars) ──────── */
   --admin-panel-bg:      #0c0c0e;
   --admin-panel-accent:  #D97757;
@@ -1523,6 +1588,244 @@ html[data-scheme="light"] .btn-white {
 html { overflow-x: clip; }
 
 /* ============================================================
+   MENÚ DEL COMENSAL · KIT
+   ------------------------------------------------------------
+   Las piezas con las que está dibujada la carta. Antes cada una llevaba su
+   medida escrita en línea dentro del JSX (511 bloques `style={{…}}`), así que
+   dos tarjetas hermanas podían tener 18 y 16 px de esquina sin que nadie lo
+   decidiera. Aquí todo mide desde la escala --m-* de :root.
+
+   DECISIÓN DE FONDO DE ESTE REDISEÑO — el vidrio deja de estar en todo.
+   Cada tarjeta de platillo era un `Glass` con `backdrop-filter: blur(13px)`.
+   Cuando TODO flota, nada destaca: una rejilla de 20 platillos son 20 capas
+   de desenfoque compitiendo, y el ojo no encuentra dónde posarse. Además, en
+   un teléfono de gama media esas 20 capas se pagan en cada scroll.
+
+   Ahora el vidrio se reserva para lo que de verdad está POR ENCIMA de la
+   carta —la barra inferior, la barra del carrito, las hojas, el índice
+   pegajoso, el badge de la portada— y el platillo se apoya en una superficie
+   mate que sale de la misma paleta (`--surface-*`, que ya multiplica por el
+   `surfaceTint` del dueño). Las paletas del dueño siguen mandando; los
+   controles de vidrio también, sobre las piezas que flotan, que es donde el
+   efecto siempre quiso leerse.
+   ============================================================ */
+
+/* ── Superficie de una pieza de la carta ──────────────────────
+   `--m-surface-hover` existe aparte porque en un aparato táctil no hay hover:
+   el realce se lo lleva :active, y ahí tiene que notarse más. */
+.m-surface {
+  position: relative;
+  background: var(--surface-2);
+  border: 1px solid var(--u-hair);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, calc(0.18 * var(--card-shadow, 1)));
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.m-surface[data-clickable="1"] { cursor: pointer; }
+@media (hover: hover) {
+  .m-surface[data-clickable="1"]:hover {
+    background: var(--surface-3);
+    border-color: var(--u-hair-2);
+  }
+}
+.m-surface[data-clickable="1"]:active { background: var(--surface-strong); }
+/* Agotado: se ve, no se pide. La opacidad NO baja de 0.72 — por debajo, la
+   descripción deja de pasar el contraste mínimo y el plato es ilegible en vez
+   de "no disponible". */
+.m-surface[data-unavailable="1"] { opacity: 0.72; cursor: default; }
+
+/* ── Tarjeta de platillo (rejilla) ────────────────────────── */
+.m-tile {
+  border-radius: var(--m-r-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.m-tile-art {
+  position: relative;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.m-tile-body {
+  padding: var(--m-sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sp-2);
+  flex: 1;
+}
+
+/* ── Fila de platillo (lista) ─────────────────────────────── */
+.m-row {
+  border-radius: var(--m-r-lg);
+  padding: var(--m-sp-2);
+  display: flex;
+  gap: var(--m-sp-3);
+  align-items: center;
+}
+.m-row-art {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--m-r-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--surface-1);
+}
+.m-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sp-1);
+}
+
+/* ── Nombre y precio: la jerarquía de una carta ───────────────
+   El nombre del plato es lo que se lee primero y el precio lo que se consulta
+   después. Estaban empatados (14,5 px el nombre contra 15 px el precio, y el
+   precio además en mono, que pesa más), así que el ojo entraba por la cifra.
+   Se separan un paso: el plato manda. */
+/* OJO con el orden de la cascada: estas clases se declaran DESPUÉS de las
+   .ct-* de rol, así que cualquier propiedad que repitan aquí (color,
+   line-height, familia…) le ganaría a la tipografía que el tema define por
+   rol y dejaría muerto ese control. Por eso estas clases fijan SOLO el
+   tamaño, y lo hacen multiplicando por el multiplicador del rol
+   (--t-<rol>-size) igual que hacía `roleSize()` en el JSX. Con la diferencia
+   de que ahora alcanza a los 188 tamaños del menú y no a 12. */
+.m-name {
+  font-size: calc(var(--m-fs-md) * var(--t-productName-size, 1));
+}
+.m-tile .m-name { flex: 1; }
+.m-desc {
+  font-size: calc(var(--m-fs-xs) * var(--t-productDesc-size, 1));
+}
+.m-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-sp-2);
+}
+.m-strike {
+  text-decoration: line-through;
+  text-decoration-color: var(--surface-strike);
+}
+
+/* ── Badge «No disponible» ────────────────────────────────────
+   Estaba a 9,5 px. Es exactamente la deuda que el panel saldó al jubilar
+   .t-kicker: el dato que más importa —que ese plato HOY no está— era el texto
+   más pequeño de la pantalla. */
+.m-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-sp-1);
+  padding: 4px 9px;
+  border-radius: var(--m-r-pill);
+  font-size: calc(var(--m-fs-xs) * var(--t-tag-size, 1));
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+/* Sobre una superficie mate (fila y texto) el velo negro no pega: ahí el badge
+   se dibuja con la propia paleta. */
+.m-badge-quiet {
+  background: var(--surface-3);
+  color: var(--u-text-2);
+  border: 1px solid var(--u-hair);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* Esquina del arte donde viven etiquetas y badge. */
+.m-art-corner {
+  position: absolute;
+  top: var(--m-sp-2);
+  left: var(--m-sp-2);
+  display: flex;
+  gap: var(--m-sp-1);
+  flex-wrap: wrap;
+  max-width: calc(100% - var(--m-sp-4));
+}
+
+/* ── Píldora de categoría ─────────────────────────────────── */
+.m-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-sp-1);
+  padding: 0 var(--m-sp-4);
+  min-height: var(--m-tap);
+  border-radius: var(--m-r-pill);
+  cursor: pointer;
+  font-size: calc(var(--m-fs-sm) * var(--t-body-size, 1));
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--u-text-2);
+  border: 1px solid var(--u-hair);
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+.m-chip[data-active="1"] {
+  background: var(--u-text);
+  color: var(--brand-bg);
+  border-color: transparent;
+}
+.m-chip[data-dim="1"] { opacity: 0.55; }
+
+/* ── Encabezado de sección ────────────────────────────────── */
+.m-sec {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sp-3);
+  padding-bottom: var(--m-sp-2);
+  border-bottom: 1px solid var(--u-hair);
+}
+.m-sec-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sp-3);
+  width: 100%;
+  padding: var(--m-sp-3) var(--m-sp-4);
+  min-height: 52px;
+  border-radius: var(--m-r-md);
+  cursor: pointer;
+  background: var(--surface-2);
+  border: 1px solid var(--u-hair);
+  color: var(--u-text);
+}
+.m-sec-count {
+  font-size: calc(var(--m-fs-xs) * var(--t-price-size, 1));
+  color: var(--u-text-4);
+  flex-shrink: 0;
+}
+
+/* ── Aviso dentro de la carta (fuera de horario, etc.) ────── */
+.m-note {
+  display: flex;
+  gap: var(--m-sp-3);
+  align-items: center;
+  margin-top: var(--m-sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--u-hair);
+  border-radius: var(--m-r-md);
+  padding: var(--m-sp-3) var(--m-sp-4);
+  font-size: calc(var(--m-fs-sm) * var(--t-body-size, 1));
+  color: var(--u-text-2);
+  line-height: 1.45;
+}
+
+/* ── Objetivo táctil ──────────────────────────────────────────
+   Regla, no sugerencia: cualquier cosa tocable dentro del menú mide al menos
+   el ancho de un dedo. */
+.m-tap {
+  min-width: var(--m-tap);
+  min-height: var(--m-tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ============================================================
    LIENZO DEL MENÚ
    ------------------------------------------------------------
    Ancho del menú del comensal según el ajuste del dueño («Columna de móvil»,
@@ -1578,10 +1881,40 @@ html { overflow-x: clip; }
    un motivo muy concreto: un estilo en línea le gana a cualquier regla de
    hoja de estilos, así que mientras el `padding: 40px` estuvo en línea, la
    media query de pantalla baja no tenía forma de recortarlo. */
+/* El ASOMO. Medido en un teléfono de 375×812 con la portada por defecto: el
+   contenido del héroe terminaba en el píxel 631 y el pliegue caía en el 812
+   — 181 px de nada — y la carta empezaba EXACTAMENTE en el pliegue. El
+   resultado es una primera pantalla que parece el final de la página: nada
+   asoma, así que nada invita a bajar.
+
+   La solución no es recortar el héroe (es el momento de marca del
+   restaurante, y quien no lo quiere ya tiene la portada «Directo»), sino
+   gastar ese hueco muerto: el héroe cede 56 px y con eso el titular de la
+   carta asoma por debajo del pliegue. Un trozo de contenido real dice
+   «sigue» mucho mejor que una flecha parpadeando, y no ocupa sitio propio.
+
+   Y se descuenta ADEMÁS la barra inferior (--m-nav-h). Al primer intento el
+   asomo quedó en el píxel 780 con la barra flotante empezando en el 752: el
+   trozo que asomaba estaba justo DEBAJO de la barra, o sea invisible. Es la
+   misma cuenta que faltaba en el `100svh` original — la barra es fija y tapa
+   68 px en toda pantalla, así que «una pantalla entera» nunca lo fue.
+
+   Va en `min-height` y no en el `style` del componente porque un estilo en
+   línea le gana a la media query de pantalla baja (ver el comentario de
+   arriba: el teléfono en horizontal ya se peleó una vez por esto). */
 .menu-hero {
-  min-height: 100svh;
+  /* `display` y `flex-direction` viven aquí y NO en el `style` del componente:
+     en línea le ganarían a la media query que recoloca el héroe a dos columnas
+     en el teléfono en horizontal. */
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - 56px - var(--m-nav-h));
   gap: 22px;
-  padding: 40px 8px;
+  /* El relleno de abajo RESERVA la barra inferior. El héroe centra su
+     contenido, así que sin esta reserva lo centraba respecto a una caja que
+     la barra tapaba por abajo: el botón «Ver el menú» acababa más cerca de
+     la barra de lo que parecía, y en pantalla baja directamente debajo. */
+  padding: 40px 8px calc(24px + var(--m-nav-h));
 }
 .menu-hero.is-stack  { gap: 18px; }
 .menu-hero.is-ticket { gap: 0; }
@@ -1598,13 +1931,59 @@ html { overflow-x: clip; }
    es esta. Que el héroe crezca con su contenido y apriete: en 390 px de alto
    no sobra un solo píxel si el botón tiene que verse sin desplazar. */
 @media (max-height: 620px) {
-  .menu-hero { min-height: auto; padding: 24px 8px; gap: 14px; }
-  .menu-hero.is-stack  { gap: 12px; }
+  .menu-hero { min-height: auto; padding: 18px 8px calc(12px + var(--m-nav-h)); gap: 12px; }
+  .menu-hero.is-stack  { gap: 10px; }
   .menu-hero.is-ticket { gap: 0; }
+  /* El logo del héroe medía `min(168px, 26svh)` EN LÍNEA, y un estilo en línea
+     le gana a cualquier media query — así que en un teléfono en horizontal
+     esta regla no tenía forma de recortarlo y el botón se iba por debajo del
+     pliegue. Ahora el tope viaja en `--m-hero-logo` y aquí sí se puede
+     apretar. Misma trampa que con `.admin-brand` en el panel el 22-08. */
+  .menu-hero { --m-hero-logo: 88px; }
   /* La de foto a sangre no: su contenido son cuatro líneas al pie, así que
      con `auto` la foto se quedaría en una tira de 250 px. `100svh` nunca
      recorta —si el contenido pide más, crece— así que aquí es seguro. */
   .menu-hero-bleed { min-height: 100svh; }
+}
+
+/* ── El héroe A DOS COLUMNAS en el teléfono en horizontal ─────
+   Apretar píxeles no bastaba y la cuenta explica por qué: una portada es una
+   composición VERTICAL (logo, nombre, lema, estado, botón) y en horizontal
+   quedan 390 px de alto, de los cuales la barra inferior fija se lleva 68.
+   Con el logo recortado a 88 px el botón seguía cayendo en el 379 y la barra
+   empieza en el 330. Para que cupiera había que dejar el logo en unos 40 px,
+   o sea renunciar al momento de marca que ES la portada.
+
+   Lo que sobra en horizontal no es alto: es ANCHO (844 px casi vacíos). Así
+   que el logo se va a una columna propia a la izquierda y el nombre, el lema,
+   el estado y el botón se apilan a su derecha.
+
+   Solo la portada «Spotlight» (la de por defecto). Las demás tienen
+   composiciones que no admiten esto: «Poster» vive de su ritmo vertical,
+   «Comanda» es un recibo angosto por definición y «Foto a sangre» es una
+   imagen a pantalla completa con el texto al pie.
+
+   `min-width: 640px` deja fuera un teléfono estrecho en vertical: dos
+   columnas en 375 px de ancho serían dos columnas de nada. */
+@media (max-height: 620px) and (min-width: 640px) {
+  .menu-hero.is-spotlight {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    justify-content: center;
+    align-items: center;
+    column-gap: 28px;
+    row-gap: 10px;
+    text-align: left;
+  }
+  /* El logo ocupa las dos filas de su columna. Si el dueño lo apagó, las otras
+     dos piezas se quedan solas en la columna derecha y siguen bien. */
+  .menu-hero.is-spotlight .menu-hero-mark { grid-row: 1 / 3; }
+  .menu-hero.is-spotlight .menu-hero-text,
+  .menu-hero.is-spotlight .menu-hero-cta { grid-column: 2; }
+  .menu-hero.is-spotlight .menu-hero-cta { align-items: flex-start; max-width: 380px; }
+  /* Aquí sí cabe un logo mayor: lo que faltaba era alto, no ancho. */
+  .menu-hero.is-spotlight { --m-hero-logo: 150px; }
 }
 
 /* ── Hojas del comensal (producto, carrito, avisos) ───────────

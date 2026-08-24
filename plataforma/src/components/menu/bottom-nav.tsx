@@ -40,7 +40,7 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
         style={{
           pointerEvents: 'auto',
           width: '100%', maxWidth: 460,
-          borderRadius: 22,
+          borderRadius: 'var(--m-r-xl)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-around',
           padding: '4px 6px',
           height: 48,
@@ -65,7 +65,7 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
               <span
                 style={{
                   display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  padding: '5px 14px', borderRadius: 14,
+                  padding: '5px 14px', borderRadius: 'var(--m-r-md)',
                   background: isActive ? 'var(--u-text)' : 'transparent',
                   color: isActive ? 'var(--brand-bg)' : 'var(--u-text-3)',
                   transition: 'background 160ms, color 160ms',
@@ -75,7 +75,7 @@ export default function BottomNav({ active, ordersEnabled, loyaltyOn, onSelectMe
                 <Icon name={tab.icon} size={18} />
                 {/* 9,5px es demasiado pequeño para leerse de un vistazo con el
                    teléfono en la mano y el brazo estirado. */}
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em' }}>{tab.label}</span>
+                <span style={{ fontSize: 'var(--m-fs-xs)', fontWeight: 700, letterSpacing: '0.02em' }}>{tab.label}</span>
               </span>
             </button>
           );

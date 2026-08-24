@@ -12,10 +12,8 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
-import { Glass } from '@/components/glass';
-import { roleSize } from '@/lib/theme/resolve';
 import { Icon, ICON_PATHS } from '@/components/icons';
-import { Tag } from '@/components/menu/ui';
+import { MenuSurface, Tag } from '@/components/menu/ui';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
@@ -139,19 +137,19 @@ function PointsPrice({ cost, size = 15, dim = false }: { cost: number; size?: nu
 function RedeemControl({ inCart, affordable, soldOut }: { inCart: boolean; affordable: boolean; soldOut: boolean }) {
   if (inCart) {
     return (
-      <span className="t-mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 12 }}>
+      <span className="t-mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 'var(--m-r-pill)', background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 'var(--m-fs-xs)' }}>
         <Icon name="check" size={11} strokeWidth={3} /> En carrito
       </span>
     );
   }
   if (soldOut) {
-    return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--u-text-4)' }}>Agotado</span>;
+    return <span style={{ fontSize: 'var(--m-fs-xs)', fontWeight: 700, color: 'var(--u-text-4)' }}>Agotado</span>;
   }
   if (!affordable) {
-    return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--u-text-4)' }}>Te faltan puntos</span>;
+    return <span style={{ fontSize: 'var(--m-fs-xs)', fontWeight: 700, color: 'var(--u-text-4)' }}>Te faltan puntos</span>;
   }
   return (
-    <span className="btn-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 99, fontWeight: 700, fontSize: 12.5 }}>
+    <span className="btn-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 'var(--m-r-pill)', fontWeight: 700, fontSize: 'var(--m-fs-sm)' }}>
       <Icon name="gift" size={13} /> Canjear
     </span>
   );
@@ -163,27 +161,28 @@ function RewardTile({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuRe
   const affordable = balance == null || balance >= r.points_cost;
   const canTap = ordersEnabled && !soldOut && (affordable || inCart);
   return (
-    <Glass
-      interactive={canTap}
-      onClick={() => canTap && onToggle(r)}
-      style={{ borderRadius: 18, overflow: 'hidden', cursor: canTap ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', height: '100%', opacity: soldOut ? 0.6 : 1 }}
+    <MenuSurface
+      className="m-tile"
+      unavailable={soldOut}
+      onClick={canTap ? () => onToggle(r) : undefined}
+      ariaLabel={`Canjear ${r.title}`}
     >
-      <div style={{ position: 'relative', aspectRatio: '1.25', background: 'var(--surface-1)', overflow: 'hidden' }}>
+      <div className="m-tile-art" style={{ aspectRatio: '1.25' }}>
         <RewardArt r={r} icon={pickIcon(r.icon)} />
         {config.showTags && r.tags && r.tags.length > 0 && (
-          <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <div className="m-art-corner">
             {r.tags.slice(0, 2).map((t) => <Tag key={t} label={t} small />)}
           </div>
         )}
       </div>
-      <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1 }}>{r.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <div className="m-tile-body">
+        <div className="ct-product-name m-name">{r.title}</div>
+        <div className="m-foot">
           <PointsPrice cost={r.points_cost} dim={!affordable && !inCart} />
           {ordersEnabled && <RedeemControl inCart={inCart} affordable={affordable} soldOut={soldOut} />}
         </div>
       </div>
-    </Glass>
+    </MenuSurface>
   );
 }
 
@@ -193,20 +192,20 @@ function RewardRow({ r, balance, inCart, ordersEnabled, onToggle }: { r: MenuRew
   const affordable = balance == null || balance >= r.points_cost;
   const canTap = ordersEnabled && !soldOut && (affordable || inCart);
   return (
-    <Glass interactive={canTap} onClick={() => canTap && onToggle(r)} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: canTap ? 'pointer' : 'default', opacity: soldOut ? 0.6 : 1 }}>
-      <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-1)', position: 'relative' }}>
+    <MenuSurface className="m-row" unavailable={soldOut} onClick={canTap ? () => onToggle(r) : undefined} ariaLabel={`Canjear ${r.title}`}>
+      <div className="m-row-art">
         <RewardArt r={r} icon={pickIcon(r.icon)} scale={0.9} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="ct-product-name" style={{ fontSize: 15.5 * roleSize(config, 'productName') }}>{r.title}</div>
+      <div className="m-row-body">
+        <div style={{ display: 'flex', gap: 'var(--m-sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="ct-product-name m-name">{r.title}</div>
           {config.showTags && r.tags?.[0] && <Tag label={r.tags[0]} small />}
         </div>
-        {r.description && <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{r.description}</div>}
+        {r.description && <div className="line-clamp-2 ct-product-desc m-desc">{r.description}</div>}
         <PointsPrice cost={r.points_cost} dim={!affordable && !inCart} />
       </div>
       {ordersEnabled && <RedeemControl inCart={inCart} affordable={affordable} soldOut={soldOut} />}
-    </Glass>
+    </MenuSurface>
   );
 }
 
@@ -268,57 +267,57 @@ function RewardsMenu({
       <main className="themed-type" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 460, margin: '0 auto', padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(88px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }} aria-label="Volver al menú">
+          <button onClick={onClose} className="press m-tap" style={{ borderRadius: 'var(--m-r-sm)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', color: 'var(--u-text)', cursor: 'pointer' }} aria-label="Volver al menú">
             <Icon name="chevronLeft" size={20} />
           </button>
           <div>
-            <div className="t-kicker" style={{ fontSize: 11 }}>Programa de lealtad</div>
-            <h1 className="t-display" style={{ fontSize: 26, lineHeight: 1 }}>Recompensas</h1>
+            <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>Programa de lealtad</div>
+            <h1 className="t-display" style={{ fontSize: 'var(--m-fs-2xl)', lineHeight: 1 }}>Recompensas</h1>
           </div>
         </div>
 
         {/* Tarjeta de saldo / identidad (estilo "tarjeta de puntos") */}
-        <Glass style={{ borderRadius: 20, padding: '18px 20px', marginBottom: 18, background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 75%)' }}>
+        <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4) var(--m-sp-5)', marginBottom: 'var(--m-sp-4)', background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), var(--surface-2) 75%)' }}>
           {loyaltyLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, opacity: 0.6 }}>
-              <div style={{ width: '40%', height: 10, borderRadius: 6, background: 'var(--surface-2)' }} />
-              <div style={{ width: '55%', height: 30, borderRadius: 8, background: 'var(--surface-2)' }} />
+              <div style={{ width: '40%', height: 10, borderRadius: 'var(--m-r-xs)', background: 'var(--surface-2)' }} />
+              <div style={{ width: '55%', height: 30, borderRadius: 'var(--m-r-sm)', background: 'var(--surface-2)' }} />
             </div>
           ) : identified ? (
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <div className="t-kicker" style={{ fontSize: 10 }}>Tus puntos{loyalty?.name ? ` · ${loyalty.name.split(' ')[0]}` : ''}</div>
+                <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>Tus puntos{loyalty?.name ? ` · ${loyalty.name.split(' ')[0]}` : ''}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 42, fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.9 }}>{fmtPts(balance ?? 0)}</span>
-                  <span className="t-mute" style={{ fontSize: 15 }}>{(balance ?? 0) === 1 ? 'punto' : 'puntos'}</span>
+                  <span style={{ fontSize: 'calc(42px * var(--font-scale))', fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.9 }}>{fmtPts(balance ?? 0)}</span>
+                  <span className="t-mute" style={{ fontSize: 'var(--m-fs-md)' }}>{(balance ?? 0) === 1 ? 'punto' : 'puntos'}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 <Icon name="gift" size={30} style={{ color: 'var(--brand-accent-ink)' }} />
-                {loggedIn && <button onClick={signOut} disabled={busy} className="press" style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>}
+                {loggedIn && <button onClick={signOut} disabled={busy} className="press" style={{ background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 'var(--m-fs-xs)', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>}
               </div>
             </div>
           ) : loggedIn ? (
             <div>
-              <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Recupera tu historial</div>
-              <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
+              <div className="t-display" style={{ fontSize: 'var(--m-fs-lg)', fontWeight: 700 }}>Recupera tu historial</div>
+              <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
                 ¿Ya habías pedido antes? Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) para enlazar tu historial a esta cuenta.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--m-r-md)', padding: '11px 13px', minHeight: 'var(--m-tap)', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }} />
                 <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="Total de tu pedido más reciente (Q)"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--radius-md)', padding: '11px 13px', color: 'var(--u-text)', fontSize: 15, outline: 'none' }} />
-                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--m-r-md)', padding: '11px 13px', minHeight: 'var(--m-tap)', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }} />
+                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer' }}>
                   {busy ? '…' : 'Enlazar'}
                 </button>
               </div>
-              <button onClick={signOut} disabled={busy} className="press" style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>
+              <button onClick={signOut} disabled={busy} className="press" style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 'var(--m-fs-xs)', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>
             </div>
           ) : (
             <div>
-              <div className="t-display" style={{ fontSize: 17, fontWeight: 700 }}>Mira y canjea tus puntos</div>
-              <p className="t-mute" style={{ fontSize: 13, marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
+              <div className="t-display" style={{ fontSize: 'var(--m-fs-lg)', fontWeight: 700 }}>Mira y canjea tus puntos</div>
+              <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
                 {googleAuthEnabled
                   ? 'Inicia sesión con Google para ver tu saldo y canjear tus puntos.'
                   : 'El programa de lealtad estará disponible muy pronto.'}
@@ -326,14 +325,14 @@ function RewardsMenu({
               {googleAuthEnabled && <GoogleSignInButton full returnTab="fidelidad" />}
             </div>
           )}
-          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: msg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{msg}</p>}
-        </Glass>
+          {msg && <p style={{ fontSize: 'var(--m-fs-sm)', marginTop: 10, color: msg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{msg}</p>}
+        </div>
 
         {/* Catálogo de canje (mismas tarjetas del menú, precio en puntos) */}
         {rewards.length === 0 ? (
-          <Glass variant="quiet" style={{ borderRadius: 16, padding: '36px 20px', textAlign: 'center', color: 'var(--u-text-3)', fontSize: 14 }}>
+          <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-6) var(--m-sp-5)', textAlign: 'center', color: 'var(--u-text-3)', fontSize: 'var(--m-fs-md)' }}>
             Aún no hay recompensas disponibles. ¡Sigue acumulando puntos en cada pedido!
-          </Glass>
+          </div>
         /* Sigue la forma del catálogo: las formas "de lista" (fila y carta
            impresa) se leen mejor apiladas; el resto va en rejilla. */
         ) : config.cardStyle !== 'fila' && config.cardStyle !== 'texto' ? (
@@ -354,7 +353,7 @@ function RewardsMenu({
           </div>
         )}
 
-        <p className="t-mute" style={{ fontSize: 11.5, textAlign: 'center', lineHeight: 1.5, marginTop: 18 }}>
+        <p className="t-mute" style={{ fontSize: 'var(--m-fs-xs)', textAlign: 'center', lineHeight: 1.5, marginTop: 18 }}>
           Toca una recompensa para agregarla a tu pedido. Los puntos se descuentan al confirmar.
         </p>
       </main>

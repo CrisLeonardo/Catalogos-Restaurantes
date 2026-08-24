@@ -9,7 +9,6 @@ import { Icon } from '@/components/icons';
 import { Price, QtyStepper, PrimaryButton, ctaClass } from '@/components/menu/ui';
 import { useCart } from '@/lib/cart-context';
 import { useThemeContent, useThemeConfig, useText } from '@/lib/theme/context';
-import { roleSize } from '@/lib/theme/resolve';
 import { useTenantPrefix } from '@/lib/tenant-client';
 
 /* Barra inferior fija con el resumen del carrito. */
@@ -25,13 +24,15 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
         interactive
         onClick={onOpen}
         className="anim-slide-up"
-        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 17, padding: '12px 14px 12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        style={{ pointerEvents: 'auto', width: '100%', maxWidth: 460, borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-3) var(--m-sp-3) var(--m-sp-3) var(--m-sp-5)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="t-kicker" style={{ fontSize: 10.5 }}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* 10,5 px para decir cuantos productos llevas, justo encima de un
+              precio de 18: el dato que confirma el pedido era ilegible. */}
+          <span className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>{count} {count === 1 ? content.cart.itemsOne : content.cart.itemsMany}</span>
           <Price amount={total} size={18} />
         </div>
-        <span className={ctaClass(config.ctaStyle)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 18px', borderRadius: 13, fontWeight: 600, fontSize: 14 }}>
+        <span className={ctaClass(config.ctaStyle)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 18px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-md)', fontWeight: 600, fontSize: 'var(--m-fs-sm)' }}>
           {content.cart.barCta} <Icon name="arrowRight" size={16} />
         </span>
       </Glass>
@@ -43,7 +44,6 @@ export function CartBar({ onOpen, cartIconHidden }: { onOpen: () => void; cartIc
 export function CartPanel({ onClose }: { onClose: () => void }) {
   const { items, updateQuantity, removeItem, total, pointsToRedeem } = useCart();
   const content = useThemeContent();
-  const config = useThemeConfig();
   const titleT = useText('heading', 'cartTitle');
   const checkoutHref = useTenantPrefix('/checkout');
 
@@ -72,34 +72,38 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h2 className="t-display" style={{ ...titleT.vars, fontSize: 26 * titleT.size }}>{content.cart.title}</h2>
-          <button onClick={onClose} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }} aria-label="Cerrar">
-            <Icon name="x" size={18} />
+          {/* Media 34 px. Cerrar una hoja a pantalla completa no puede ser el
+              objetivo mas dificil de acertar de la pantalla. */}
+          <button onClick={onClose} className="press m-tap" style={{ borderRadius: 'var(--m-r-sm)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', color: 'var(--u-text)', cursor: 'pointer' }} aria-label="Cerrar">
+            <Icon name="x" size={19} />
           </button>
         </div>
 
         {items.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '50px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
             <Icon name="bag" size={48} strokeWidth={1.3} style={{ color: 'var(--u-text-4)' }} />
-            <p className="t-mute" style={{ fontSize: 15 }}>{content.cart.empty}</p>
+            <p className="t-mute" style={{ fontSize: 'var(--m-fs-md)' }}>{content.cart.empty}</p>
             <PrimaryButton onClick={onClose}>{content.cart.emptyCta}</PrimaryButton>
           </div>
         ) : (
           <>
-            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-2)', marginBottom: 'var(--m-sp-4)' }}>
+              {/* La hoja del carrito YA es vidrio. Cada linea era otro vidrio
+                  encima: dos desenfoques apilados que solo lavan el texto. */}
               {items.map((item) => (
-                <Glass key={item.lineId} variant="quiet" style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div key={item.lineId} className="m-surface m-row">
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="ct-product-name" style={{ fontSize: 14 * roleSize(config, 'productName'), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <div className="ct-product-name m-name" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {item.rewardId && <Icon name="gift" size={14} style={{ color: 'var(--brand-accent-ink)' }} />}
                       {item.name}
                     </div>
                     {item.options && item.options.length > 0 && (
-                      <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.35 }}>
+                      <div style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.4 }}>
                         {item.options.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(' · ')}
                       </div>
                     )}
                     {item.rewardId ? (
-                      <div style={{ marginTop: 3, fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>
+                      <div style={{ marginTop: 3, fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--brand-accent-ink)' }}>
                         Gratis · {(item.pointsCost ?? 0).toLocaleString('es-GT')} pts
                       </div>
                     ) : (
@@ -109,11 +113,11 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                   {item.rewardId ? (
                     <button
                       onClick={() => removeItem(item.lineId)}
-                      className="press glass-quiet"
-                      style={{ width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text-3)', cursor: 'pointer', flexShrink: 0 }}
+                      className="press m-tap"
+                      style={{ borderRadius: 'var(--m-r-sm)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', color: 'var(--u-text-3)', cursor: 'pointer' }}
                       aria-label="Quitar recompensa"
                     >
-                      <Icon name="trash" size={16} />
+                      <Icon name="trash" size={17} />
                     </button>
                   ) : (
                     <QtyStepper
@@ -122,19 +126,19 @@ export function CartPanel({ onClose }: { onClose: () => void }) {
                       onPlus={() => updateQuantity(item.lineId, item.quantity + 1)}
                     />
                   )}
-                </Glass>
+                </div>
               ))}
             </div>
 
-            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 14 }}>
+            <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 'var(--m-sp-4)' }}>
               {pointsToRedeem > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: 'var(--brand-accent-ink)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--m-sp-2)', fontSize: 'var(--m-fs-sm)', color: 'var(--brand-accent-ink)', fontWeight: 600 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={14} /> Puntos a canjear</span>
                   <span>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--u-text)' }}>{content.cart.total}</span>
+                <span style={{ fontWeight: 700, fontSize: 'var(--m-fs-lg)', color: 'var(--u-text)' }}>{content.cart.total}</span>
                 <Price amount={total} size={22} />
               </div>
               <PrimaryButton href={checkoutHref} onClick={onClose} size="lg" full iconRight="arrowRight">{content.cart.checkout}</PrimaryButton>

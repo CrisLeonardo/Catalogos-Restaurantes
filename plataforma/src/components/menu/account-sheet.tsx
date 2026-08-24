@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
@@ -18,7 +17,7 @@ const DeliveryMap = dynamic(() => import('@/components/delivery-map'), {
       height: 220, borderRadius: 'var(--radius-lg)',
       background: 'var(--surface-1)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: 'var(--u-text-4)', fontSize: 13,
+      color: 'var(--u-text-4)', fontSize: 'var(--m-fs-sm)',
     }}>
       Cargando mapa…
     </div>
@@ -40,13 +39,18 @@ interface Props {
 
 const fmtPts = (n: number) => n.toLocaleString('es-GT');
 
+/* 15 px: Safari en iPhone amplía la página entera al enfocar un campo de menos
+   de 16, así que «Mi cuenta» daba el mismo salto que daba el checkout. El piso
+   es ABSOLUTO y no la escala del tema: con fontScale a 0,85 cualquier paso de
+   la escala vuelve a caer por debajo de 16 y el zoom regresa. */
 const inputStyle: React.CSSProperties = {
   background: 'var(--surface-2)',
   border: '1px solid var(--u-hair)',
-  borderRadius: 12,
+  borderRadius: 'var(--m-r-md)',
   padding: '11px 13px',
+  minHeight: 'var(--m-tap)',
   color: 'var(--u-text)',
-  fontSize: 15,
+  fontSize: 'max(16px, var(--m-fs-md))',
   outline: 'none',
   width: '100%',
   boxSizing: 'border-box',
@@ -218,57 +222,57 @@ export default function AccountSheet({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
           <button
             onClick={onClose}
-            className="press glass-quiet"
-            style={{ width: 40, height: 40, borderRadius: 13, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer', flexShrink: 0 }}
+            className="press m-tap"
+            style={{ borderRadius: 'var(--m-r-md)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }}
             aria-label="Volver"
           >
             <Icon name="chevronLeft" size={20} />
           </button>
           <div>
-            <div className="t-kicker" style={{ fontSize: 11 }}>Perfil</div>
-            <h1 className="t-display" style={{ fontSize: 26, lineHeight: 1 }}>Mi cuenta</h1>
+            <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>Perfil</div>
+            <h1 className="t-display" style={{ fontSize: 'var(--m-fs-2xl)', lineHeight: 1 }}>Mi cuenta</h1>
           </div>
         </div>
 
         {/* Tarjeta de puntos */}
         {loyaltyOn && balance != null && (
-          <Glass style={{ borderRadius: 18, padding: '16px 18px', background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 75%)' }}>
-            <div className="t-kicker" style={{ fontSize: 10 }}>Tus puntos de fidelidad</div>
+          <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', background: 'linear-gradient(135deg, color-mix(in srgb, var(--brand-accent) 22%, transparent), var(--surface-2) 75%)' }}>
+            <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)' }}>Tus puntos de fidelidad</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-              <span style={{ fontSize: 36, fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.95 }}>{fmtPts(balance)}</span>
-              <span className="t-mute" style={{ fontSize: 14 }}>{balance === 1 ? 'punto' : 'puntos'}</span>
+              <span style={{ fontSize: 'calc(36px * var(--font-scale))', fontWeight: 800, color: 'var(--brand-accent-ink)', lineHeight: 0.95 }}>{fmtPts(balance)}</span>
+              <span className="t-mute" style={{ fontSize: 'var(--m-fs-md)' }}>{balance === 1 ? 'punto' : 'puntos'}</span>
             </div>
-          </Glass>
+          </div>
         )}
 
         {/* Sesión con Google */}
         {googleAuthEnabled && (
-          <Glass variant="quiet" style={{ borderRadius: 16, padding: '14px 16px' }}>
+          <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)' }}>
             {accountLoading ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0.6 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 99, background: 'var(--surface-2)', flexShrink: 0 }} />
+                <div style={{ width: 38, height: 38, borderRadius: 'var(--m-r-pill)', background: 'var(--surface-2)', flexShrink: 0 }} />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ width: '55%', height: 12, borderRadius: 6, background: 'var(--surface-2)' }} />
-                  <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'var(--surface-2)' }} />
+                  <div style={{ width: '55%', height: 12, borderRadius: 'var(--m-r-xs)', background: 'var(--surface-2)' }} />
+                  <div style={{ width: '35%', height: 10, borderRadius: 'var(--m-r-xs)', background: 'var(--surface-2)' }} />
                 </div>
               </div>
             ) : loggedIn && identified ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {account?.avatarUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={account.avatarUrl} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
+                  <img src={account.avatarUrl} alt="" style={{ width: 38, height: 38, borderRadius: 'var(--m-r-pill)', flexShrink: 0 }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 700, fontSize: 'var(--m-fs-md)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {account?.name ?? account?.email}
                   </div>
-                  <div className="t-mute" style={{ fontSize: 12 }}>Cuenta de Google</div>
+                  <div className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Cuenta de Google</div>
                 </div>
                 <button
                   onClick={handleSignOut}
                   disabled={signingOut}
                   className="press"
-                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--u-hair)', borderRadius: 999, padding: '6px 12px', color: 'var(--u-text-3)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--u-hair)', borderRadius: 'var(--m-r-pill)', padding: '6px 12px', color: 'var(--u-text-3)', fontSize: 'var(--m-fs-xs)', fontWeight: 600, cursor: 'pointer' }}
                 >
                   <Icon name="logOut" size={13} /> Salir
                 </button>
@@ -278,16 +282,16 @@ export default function AccountSheet({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                   {account?.avatarUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={account.avatarUrl} alt="" style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0 }} />
+                    <img src={account.avatarUrl} alt="" style={{ width: 38, height: 38, borderRadius: 'var(--m-r-pill)', flexShrink: 0 }} />
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 700, fontSize: 'var(--m-fs-md)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {account?.name ?? account?.email}
                     </div>
-                    <div className="t-mute" style={{ fontSize: 12 }}>Cuenta de Google</div>
+                    <div className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Cuenta de Google</div>
                   </div>
                 </div>
-                <p className="t-mute" style={{ fontSize: 12.5, marginBottom: 10, lineHeight: 1.5 }}>
+                <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 10, lineHeight: 1.5 }}>
                   ¿Ya habías pedido antes? Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) y enlazamos tu historial y tus datos a esta cuenta.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -309,27 +313,27 @@ export default function AccountSheet({
                     onClick={handleLink}
                     disabled={linkBusy}
                     className="press btn-accent"
-                    style={{ padding: '11px 18px', borderRadius: 12, fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer' }}
+                    style={{ padding: '11px 18px', borderRadius: 'var(--m-r-md)', fontWeight: 600, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer' }}
                   >
                     {linkBusy ? '…' : 'Enlazar'}
                   </button>
                 </div>
                 {linkMsg && (
-                  <p style={{ fontSize: 12.5, marginTop: 8, color: linkMsg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{linkMsg}</p>
+                  <p style={{ fontSize: 'var(--m-fs-sm)', marginTop: 8, color: linkMsg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{linkMsg}</p>
                 )}
                 <button
                   onClick={handleSignOut}
                   disabled={signingOut}
                   className="press"
-                  style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 11.5, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 'var(--m-fs-xs)', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
                 >
                   Cerrar sesión
                 </button>
               </>
             ) : (
               <>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>Accede con Google</div>
-                <p className="t-mute" style={{ fontSize: 12.5, marginBottom: 12, lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 600, fontSize: 'var(--m-fs-md)', marginBottom: 6 }}>Accede con Google</div>
+                <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 12, lineHeight: 1.5 }}>
                   {loyaltyOn
                     ? 'Inicia sesión para ver y usar tus puntos de fidelidad en cualquier dispositivo.'
                     : 'Guarda tus datos y encuentra tus pedidos en cualquier dispositivo.'}
@@ -337,28 +341,28 @@ export default function AccountSheet({
                 <GoogleSignInButton full returnTab="cuenta" />
               </>
             )}
-          </Glass>
+          </div>
         )}
 
         {/* Formulario de datos */}
-        <Glass variant="quiet" style={{ borderRadius: 16, padding: '16px' }}>
-          <div className="t-kicker" style={{ fontSize: 10.5, marginBottom: 12 }}>Mis datos</div>
+        <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)' }}>
+          <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', marginBottom: 12 }}>Mis datos</div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label className="t-mute" style={{ fontSize: 12 }}>Nombre</label>
+              <label className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Nombre</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre completo" style={inputStyle} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label className="t-mute" style={{ fontSize: 12 }}>Teléfono</label>
+              <label className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Teléfono</label>
               <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)" style={inputStyle} />
             </div>
 
             {/* Dirección de entrega — se usa para autocompletar tus pedidos a domicilio */}
             {geoActive ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label className="t-mute" style={{ fontSize: 12 }}>Tu ubicación de entrega</label>
+                <label className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Tu ubicación de entrega</label>
                 {/* Se espera a que cargue el perfil (local/cuenta) antes de montar el
                    mapa: el pin inicial solo se lee UNA vez al montar Leaflet, así que
                    montarlo antes de saber lat/lng guardados lo dejaría siempre en el
@@ -367,7 +371,7 @@ export default function AccountSheet({
                   <div style={{
                     height: 220, borderRadius: 'var(--radius-lg)', background: 'var(--surface-1)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--u-text-4)', fontSize: 13,
+                    color: 'var(--u-text-4)', fontSize: 'var(--m-fs-sm)',
                   }}>
                     Cargando mapa…
                   </div>
@@ -390,7 +394,7 @@ export default function AccountSheet({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label className="t-mute" style={{ fontSize: 12 }}>Dirección de entrega</label>
+                <label className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Dirección de entrega</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     value={address}
@@ -403,12 +407,12 @@ export default function AccountSheet({
                     onClick={getLocation}
                     disabled={locating}
                     title="Usar mi ubicación actual"
-                    className="press glass-quiet"
-                    style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}
+                    className="press m-surface"
+                    style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 'var(--m-r-md)', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}
                     aria-label="Obtener mi ubicación"
                   >
                     {locating
-                      ? <span style={{ fontSize: 13, fontWeight: 700 }}>…</span>
+                      ? <span style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700 }}>…</span>
                       : <Icon name="mapPin" size={18} />
                     }
                   </button>
@@ -417,12 +421,12 @@ export default function AccountSheet({
             )}
           </div>
 
-          {msg && <p style={{ fontSize: 12.5, marginTop: 10, color: 'var(--c-danger)', lineHeight: 1.4 }}>{msg}</p>}
+          {msg && <p style={{ fontSize: 'var(--m-fs-sm)', marginTop: 10, color: 'var(--c-danger)', lineHeight: 1.4 }}>{msg}</p>}
 
           <button
             onClick={handleSave}
             className="press btn-accent"
-            style={{ marginTop: 14, width: '100%', padding: '13px 18px', borderRadius: 14, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            style={{ marginTop: 14, width: '100%', padding: '13px 18px', borderRadius: 'var(--m-r-md)', fontWeight: 700, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           >
             {saved
               ? <><Icon name="check" size={16} strokeWidth={2.5} /> Datos guardados</>
@@ -430,12 +434,12 @@ export default function AccountSheet({
             }
           </button>
 
-          <p className="t-mute" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5, marginTop: 8 }}>
+          <p className="t-mute" style={{ fontSize: 'var(--m-fs-xs)', textAlign: 'center', lineHeight: 1.5, marginTop: 8 }}>
             {loggedIn && identified
               ? 'Estos datos vienen de tu cuenta y se actualizan solos con tu próximo pedido. Lo que cambies aquí es solo para este dispositivo.'
               : 'Tus datos se guardan en este dispositivo y se usan para agilizar tus pedidos.'}
           </p>
-        </Glass>
+        </div>
 
         {/* Cómo llegar: ubicación exacta del restaurante en Google Maps */}
         {restaurantLat != null && restaurantLng != null && (
@@ -446,17 +450,17 @@ export default function AccountSheet({
             className="press"
             style={{
               display: 'flex', alignItems: 'center', gap: 13,
-              padding: '14px 16px', borderRadius: 16,
+              padding: '14px 16px', borderRadius: 'var(--m-r-lg)',
               background: 'var(--surface-1)', border: '1px solid var(--u-hair)',
               textDecoration: 'none', color: 'var(--u-text)',
             }}
           >
-            <span style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--surface-2)', color: 'var(--u-text-2)' }}>
+            <span style={{ width: 40, height: 40, borderRadius: 'var(--m-r-md)', display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--surface-2)', color: 'var(--u-text-2)' }}>
               <Icon name="mapPin" size={20} />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>Cómo llegar</div>
-              <div className="t-mute" style={{ fontSize: 12 }}>Ver ubicación en el mapa</div>
+              <div style={{ fontWeight: 600, fontSize: 'var(--m-fs-md)' }}>Cómo llegar</div>
+              <div className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Ver ubicación en el mapa</div>
             </div>
             <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           </a>
@@ -471,17 +475,17 @@ export default function AccountSheet({
             className="press"
             style={{
               display: 'flex', alignItems: 'center', gap: 13,
-              padding: '14px 16px', borderRadius: 16,
+              padding: '14px 16px', borderRadius: 'var(--m-r-lg)',
               background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.22)',
               textDecoration: 'none', color: 'var(--u-text)',
             }}
           >
-            <span style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'rgba(37,211,102,0.15)', color: '#25D366' }}>
+            <span style={{ width: 40, height: 40, borderRadius: 'var(--m-r-md)', display: 'grid', placeItems: 'center', flexShrink: 0, background: 'rgba(37,211,102,0.15)', color: '#25D366' }}>
               <Icon name="whatsapp" size={22} />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>Contactar al restaurante</div>
-              <div className="t-mute" style={{ fontSize: 12 }}>Enviar mensaje por WhatsApp</div>
+              <div style={{ fontWeight: 600, fontSize: 'var(--m-fs-md)' }}>Contactar al restaurante</div>
+              <div className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Enviar mensaje por WhatsApp</div>
             </div>
             <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
           </a>

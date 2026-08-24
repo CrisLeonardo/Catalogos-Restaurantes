@@ -6,11 +6,14 @@
 
 import Image from 'next/image';
 import type { CSSProperties } from 'react';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 
+/* El botón de la portada BAJA a la carta; no navega a ninguna parte. Su flecha
+   apuntaba a la derecha, que es el gesto de "siguiente pantalla". En un hero
+   que ocupa el 100 % del alto y donde nada más insinúa que haya contenido
+   debajo, la flecha es la única pista de hacia dónde hay que ir. */
 function scrollToMenu() {
   document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -38,9 +41,12 @@ function BrandMark({ size = 96, cssSize }: { size?: number; cssSize?: string }) 
     );
   }
   const initial = config.brandName.trim().charAt(0).toUpperCase() || '·';
+  /* Era un `.glass` con su desenfoque y su brillo. Un monograma ES la marca del
+     restaurante: no es un panel que flota sobre nada, y el vidrio lo dejaba
+     pareciendo un botón gigante. Superficie mate de la misma paleta. */
   return (
     <div
-      className="glass"
+      className="m-surface"
       style={{
         width: box, height: box, borderRadius: '28%', display: 'grid', placeItems: 'center',
         fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: `calc(${box} * 0.42)`, color: 'var(--u-text)',
@@ -63,15 +69,15 @@ function OpenBadge({ isOpen, onDark = false }: { isOpen: boolean; onDark?: boole
   return (
     <span
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 13px', borderRadius: 999,
+        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 13px', borderRadius: 'var(--m-r-pill)',
         background: onDark ? 'rgba(255,255,255,0.16)' : 'var(--surface-3)',
         border: `1px solid ${onDark ? 'rgba(255,255,255,0.26)' : 'var(--u-hair-2)'}`,
         backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-        fontSize: 12, fontWeight: 600, color: onDark ? 'rgba(255,255,255,0.92)' : 'var(--u-text-2)',
+        fontSize: 'var(--m-fs-xs)', fontWeight: 600, color: onDark ? 'rgba(255,255,255,0.92)' : 'var(--u-text-2)',
       }}
     >
       {config.portadaShowStatus && (
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: dotColor, boxShadow: `0 0 8px ${dotColor}`, animation: config.animations && isOpen ? 'pulse-ring 2.2s infinite' : undefined }} />
+        <span style={{ width: 7, height: 7, borderRadius: 'var(--m-r-pill)', background: dotColor, boxShadow: `0 0 8px ${dotColor}`, animation: config.animations && isOpen ? 'pulse-ring 2.2s infinite' : undefined }} />
       )}
       {text}
     </span>
@@ -83,8 +89,14 @@ function OpenBadge({ isOpen, onDark = false }: { isOpen: boolean; onDark?: boole
    pantalla es baja (móvil en horizontal) y un tope en escritorio, donde 900 px
    de héroe para un logo y un botón dejaban la carta entera bajo el pliegue.
    No están aquí porque un estilo en línea le gana a la media query. */
+/* OJO: aquí NO va `display` ni `flexDirection`. Un estilo en línea le gana a
+   cualquier media query, y mientras estuvieron aquí la regla que recoloca el
+   héroe a dos columnas en horizontal no tenía forma de aplicarse (el navegador
+   seguía diciendo `display: flex`). Viven en `.menu-hero` en globals.css.
+   Es la misma trampa que ya mordió con `.admin-brand` en el panel y con el
+   tamaño del logo de esta misma portada. */
 const heroWrap: CSSProperties = {
-  position: 'relative', display: 'flex', flexDirection: 'column',
+  position: 'relative',
   alignItems: 'center', justifyContent: 'center', textAlign: 'center',
 };
 
@@ -122,7 +134,11 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   /* ── Spotlight ── */
   if (config.portadaVariant === 'spotlight') {
     return (
-      <section className="menu-hero" style={heroWrap}>
+      /* Las tres piezas llevan clase propia para que el teléfono EN HORIZONTAL
+         pueda recolocarlas a dos columnas (ver `.menu-hero.is-spotlight` en
+         globals.css). Con `nth-child` no valdría: el logo es opcional, así que
+         el orden de los hijos cambia según la configuración del dueño. */
+      <section className="menu-hero is-spotlight" style={heroWrap}>
         <div
           aria-hidden
           style={{
@@ -132,19 +148,19 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           }}
         />
         {config.portadaShowLogo && (
-          <div className={anim ? 'anim-pop' : ''} style={{ animation: anim ? 'bob 5s ease-in-out infinite' : undefined }}>
-            <BrandMark size={168} cssSize="min(168px, 26svh)" />
+          <div className={`menu-hero-mark ${anim ? 'anim-pop' : ''}`} style={{ animation: anim ? 'bob 5s ease-in-out infinite' : undefined }}>
+            <BrandMark size={168} cssSize="min(var(--m-hero-logo, 168px), 26svh)" />
           </div>
         )}
-        <div className={anim ? 'anim-fade-up' : ''}>
+        <div className={`menu-hero-text ${anim ? 'anim-fade-up' : ''}`}>
           <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(12, 40, 60, 13)})` }}>{title}</h1>
           {subtitle && (
-            <p className="t-serif" style={{ ...subT.vars, fontSize: 19 * subT.size, marginTop: 12 }}>{subtitle}</p>
+            <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-xl) * ${subT.size})`, marginTop: 'var(--m-sp-3)' }}>{subtitle}</p>
           )}
         </div>
-        <div className={anim ? 'anim-fade-up' : ''} style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', width: '100%', maxWidth: 320 }}>
+        <div className={`menu-hero-cta ${anim ? 'anim-fade-up' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-3)', alignItems: 'center', width: '100%', maxWidth: 320 }}>
           {config.portadaShowBadge && <OpenBadge isOpen={isOpen} />}
-          <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta" style={{ marginTop: 4 }}>
+          <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta" style={{ marginTop: 4 }}>
             {content.portada.cta}
           </PrimaryButton>
         </div>
@@ -161,13 +177,13 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
           {config.portadaShowLogo && <BrandMark size={46} />}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div className="t-poster" style={{ fontSize: 14, letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{content.portada.posterKicker}</div>
+          <div className="t-poster" style={{ fontSize: 'var(--m-fs-sm)', letterSpacing: '0.3em', color: 'var(--u-text-3)' }}>{content.portada.posterKicker}</div>
           <div className="t-poster" style={{ fontSize: heroSize(22, 56, 104, 24), lineHeight: 0.84, marginTop: 6 }}>{title}</div>
           {subtitle && (
-            <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 20, color: 'var(--u-text-2)', marginTop: 18 }}>{subtitle}</p>
+            <p className="t-serif" style={{ fontStyle: 'italic', fontSize: 'var(--m-fs-xl)', color: 'var(--u-text-2)', marginTop: 'var(--m-sp-4)' }}>{subtitle}</p>
           )}
         </div>
-        <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
+        <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
       </section>
     );
   }
@@ -208,7 +224,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
             el titular — si no, el nombre acaba pegado al canto de la pantalla. */}
         <div className="menu-canvas" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 13 }}>
           {config.portadaShowLogo && (
-            <div className={anim ? 'anim-pop' : ''}><BrandMark size={74} cssSize="min(74px, 16svh)" /></div>
+            <div className={anim ? 'anim-pop' : ''}><BrandMark size={74} cssSize="min(var(--m-hero-logo, 74px), 16svh)" /></div>
           )}
           <div className={anim ? 'anim-fade-up' : ''}>
             <h1
@@ -218,14 +234,14 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
               {title}
             </h1>
             {subtitle && (
-              <p className="t-serif" style={{ ...subT.vars, fontSize: (wideCanvas ? 22 : 18) * subT.size, color: 'rgba(255,255,255,0.88)', marginTop: 10, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
+              <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-${wideCanvas ? 'xl' : 'lg'}) * ${subT.size})`, color: 'rgba(255,255,255,0.88)', marginTop: 'var(--m-sp-3)', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
                 {subtitle}
               </p>
             )}
           </div>
           {config.portadaShowBadge && <OpenBadge isOpen={isOpen} onDark />}
           <div style={{ width: '100%', maxWidth: 340, marginTop: 4 }}>
-            <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">
+            <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">
               {content.portada.cta}
             </PrimaryButton>
           </div>
@@ -259,14 +275,14 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
             // grande para que no quede como un sello perdido en medio.
             position: 'relative', width: '100%', maxWidth: 330,
             background: 'var(--surface-2)', border: '1px solid var(--u-hair)',
-            padding: '26px 22px 24px', borderRadius: 3,
+            padding: '26px 22px 24px', borderRadius: 'var(--m-r-xs)',
             boxShadow: '0 20px 44px rgba(0,0,0,0.26)',
           }}
         >
           <div aria-hidden style={notch('top')} />
           <div aria-hidden style={notch('bottom')} />
 
-          <div className="t-mono" style={{ fontSize: 10.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
+          <div className="t-mono" style={{ fontSize: 'var(--m-fs-xs)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--u-text-3)', textAlign: 'center' }}>
             {content.portada.posterKicker}
           </div>
 
@@ -284,7 +300,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
             {title}
           </h1>
           {subtitle && (
-            <p className="t-serif" style={{ ...subT.vars, fontSize: 15 * subT.size, textAlign: 'center', marginTop: 8 }}>
+            <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-md) * ${subT.size})`, textAlign: 'center', marginTop: 'var(--m-sp-2)' }}>
               {subtitle}
             </p>
           )}
@@ -296,7 +312,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
               <OpenBadge isOpen={isOpen} />
             </div>
           )}
-          <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">
+          <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">
             {content.portada.cta}
           </PrimaryButton>
 
@@ -325,7 +341,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * clamp(22px, 6.5vw, 30px))` }}>{title}</h1>
           {subtitle && (
-            <p className="t-serif" style={{ ...subT.vars, fontSize: 14 * subT.size, marginTop: 3 }}>{subtitle}</p>
+            <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-sm) * ${subT.size})`, marginTop: 3 }}>{subtitle}</p>
           )}
           {config.portadaShowBadge && (
             <div style={{ marginTop: 9 }}><OpenBadge isOpen={isOpen} /></div>
@@ -344,23 +360,23 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
   return (
     <section className="menu-hero is-stack" style={{ ...heroWrap, justifyContent: 'flex-start' }}>
       <div className={anim ? 'anim-fade-up' : ''} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 6 }}>
-        {config.portadaShowLogo && <BrandMark size={92} cssSize="min(92px, 16svh)" />}
+        {config.portadaShowLogo && <BrandMark size={92} cssSize="min(var(--m-hero-logo, 92px), 16svh)" />}
         <h1 className="t-display" style={{ ...titleT.vars, fontSize: `calc(${titleT.size} * ${heroSize(9, 30, 40, 11)})` }}>{title}</h1>
-        {subtitle && <p className="t-serif" style={{ ...subT.vars, fontSize: 17 * subT.size }}>{subtitle}</p>}
+        {subtitle && <p className="t-serif" style={{ ...subT.vars, fontSize: `calc(var(--m-fs-lg) * ${subT.size})` }}>{subtitle}</p>}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 360, flex: 1, justifyContent: 'center' }}>
         {feats.map((f, i) => (
-          <Glass key={i} style={{ padding: '15px 16px', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 13 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)' }}>
+          <div key={i} className="m-surface" style={{ padding: 'var(--m-sp-4)', borderRadius: 'var(--m-r-lg)', display: 'flex', alignItems: 'center', gap: 'var(--m-sp-3)' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 'var(--m-r-sm)', display: 'grid', placeItems: 'center', background: 'var(--surface-3)', color: 'var(--u-text)', flexShrink: 0 }}>
               <Icon name={f.i} size={20} />
             </div>
-            <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--u-text)', textAlign: 'left' }}>{f.t}</span>
-          </Glass>
+            <span style={{ fontSize: 'var(--m-fs-md)', fontWeight: 500, color: 'var(--u-text)', textAlign: 'left' }}>{f.t}</span>
+          </div>
         ))}
       </div>
       <div style={{ width: '100%', maxWidth: 360 }}>
         {config.portadaShowBadge && <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><OpenBadge isOpen={isOpen} /></div>}
-        <PrimaryButton size="lg" full iconRight="arrowRight" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
+        <PrimaryButton size="lg" full iconRight="arrowDown" onClick={scrollToMenu} elementKey="portadaCta">{content.portada.cta}</PrimaryButton>
       </div>
     </section>
   );

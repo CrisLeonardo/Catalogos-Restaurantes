@@ -19,10 +19,9 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Glass } from '@/components/glass';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
-import { Price, Tag, ctaClass } from '@/components/menu/ui';
+import { MenuSurface, Price, Tag, ctaClass } from '@/components/menu/ui';
 import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { roleSize } from '@/lib/theme/resolve';
 import { LAYOUT_MIN_COL, type CardStyle, type LayoutWidth } from '@/lib/theme/defaults';
@@ -291,7 +290,20 @@ export default function Catalog({
     sectionEls.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const kicker = content.catalog.kicker || [config.brandName, config.zone].filter(Boolean).join(' · ');
+  /* Medido en un teléfono de 375×812: el hero decía «Azúcar Negra», y 12 px
+     más abajo este rótulo repetía «AZÚCAR NEGRA · EL MENÚ» — justo debajo de
+     un botón que acababa de decir «Ver el menú». Tres veces la misma palabra
+     antes del primer platillo. Es la misma deuda que el panel saldó el 22-08
+     al quitar los títulos que reescribían lo que ya decía la barra.
+
+     La regla respeta al dueño: si él ESCRIBIÓ su rótulo, se pinta siempre —
+     puede decir algo que la portada no dice («Cocina de mercado, zona 10»).
+     Solo se calla el rótulo AUTOMÁTICO (nombre · zona) y solo cuando hay una
+     portada que ya presentó la marca. Sin portada ('none') este rótulo es la
+     única identidad de la página y se queda. */
+  const autoKicker = [config.brandName, config.zone].filter(Boolean).join(' · ');
+  const brandAlreadyShown = config.portadaVariant !== 'none';
+  const kicker = content.catalog.kicker || (brandAlreadyShown ? '' : autoKicker);
 
   /* En tablet/escritorio el buscador sube a la misma línea del título: un campo
      de 1.000 px de ancho bajo el encabezado es lo que delata a un menú pensado
@@ -318,7 +330,7 @@ export default function Catalog({
         onChange={(e) => setQuery(e.target.value)}
         placeholder={content.catalog.searchPlaceholder}
         className="glass-quiet ct-body"
-        style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 13, border: 'none', color: 'var(--u-text)', fontSize: 16, outline: 'none', background: 'var(--surface-2)' }}
+        style={{ width: '100%', padding: '13px 14px 13px 42px', minHeight: 46, borderRadius: 'var(--m-r-md)', border: 'none', color: 'var(--u-text)', fontSize: 'var(--m-fs-lg)', outline: 'none', background: 'var(--surface-2)' }}
       />
     </div>
   ) : null;
@@ -346,7 +358,9 @@ export default function Catalog({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
-          <div className="t-kicker" style={{ ...kickerT.vars, fontSize: 12 * kickerT.size }}>{kicker}</div>
+          {kicker && (
+            <div className="t-kicker" style={{ ...kickerT.vars, fontSize: `calc(var(--m-fs-xs) * ${kickerT.size})` }}>{kicker}</div>
+          )}
           {/* El titular crece con el lienzo: 44 px que mandan en un teléfono se
               quedan cortos en una página de revista de 1.120 px. */}
           <h2 className="t-poster" style={{ ...headingT.vars, fontSize: `calc(${headingT.size} * clamp(34px, 11vw, ${width === 'revista' ? 64 : width === 'ancho' ? 52 : 44}px))`, marginTop: 2 }}>
@@ -356,7 +370,7 @@ export default function Catalog({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flex: wide ? '1 1 260px' : '0 0 auto' }}>
           {wide && searchBox}
           {available.length > 1 && (
-            <div className="glass-quiet" style={{ display: 'inline-flex', padding: 3, borderRadius: 999, flexShrink: 0 }}>
+            <div className="glass-quiet" style={{ display: 'inline-flex', padding: 3, borderRadius: 'var(--m-r-pill)', flexShrink: 0 }}>
               {available.map((l) => (
                 <button
                   key={l}
@@ -366,8 +380,8 @@ export default function Catalog({
                   // "ES"/"EN" a secas no dice nada a quien no ve el contexto.
                   aria-label={l === 'en' ? 'Ver el menú en inglés' : 'Ver el menú en español'}
                   style={{
-                    padding: '8px 14px', minHeight: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
-                    fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
+                    padding: '0 16px', minHeight: 'var(--m-tap)', minWidth: 'var(--m-tap)', borderRadius: 'var(--m-r-pill)', border: 'none', cursor: 'pointer',
+                    fontSize: 'var(--m-fs-sm)', fontWeight: 700, letterSpacing: '0.02em',
                     background: locale === l ? 'var(--u-text)' : 'transparent',
                     color: locale === l ? 'var(--brand-bg)' : 'var(--u-text-3)',
                   }}
@@ -445,9 +459,9 @@ export default function Catalog({
           className="press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 14,
-            padding: '10px 15px', minHeight: 44, borderRadius: 99, cursor: 'pointer',
+            padding: '10px 15px', minHeight: 44, borderRadius: 'var(--m-r-pill)', cursor: 'pointer',
             background: 'var(--surface-2)', border: '1px solid var(--u-hair)', color: 'var(--u-text-2)',
-            fontWeight: 600, fontSize: 13.5,
+            fontWeight: 600, fontSize: 'var(--m-fs-sm)',
           }}
         >
           <Icon name="chevronLeft" size={15} /> {content.catalog.allLabel}
@@ -476,20 +490,20 @@ export default function Catalog({
           <Icon name={query.trim() ? 'search' : 'utensils'} size={26} style={{ color: 'var(--u-text-4)' }} />
           {query.trim() ? (
             <>
-              <p className="t-mute" style={{ fontSize: 14.5, margin: 0, lineHeight: 1.5 }}>
+              <p className="t-mute" style={{ fontSize: 'var(--m-fs-md)', margin: 0, lineHeight: 1.5 }}>
                 No encontramos nada con <strong style={{ color: 'var(--u-text-2)' }}>“{query.trim()}”</strong>.
               </p>
-              <p className="t-mute" style={{ fontSize: 12.5, margin: 0 }}>Revisa cómo se escribe o mira el menú completo.</p>
+              <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', margin: 0 }}>Revisa cómo se escribe o mira el menú completo.</p>
               <button
                 onClick={() => { setQuery(''); setActiveCat(null); }}
                 className={`press ${ctaClass(config.ctaStyle)}`}
-                style={{ marginTop: 4, padding: '12px 20px', minHeight: 44, borderRadius: 99, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                style={{ marginTop: 4, padding: '12px 20px', minHeight: 44, borderRadius: 'var(--m-r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: 'var(--m-fs-md)' }}
               >
                 Ver todo el menú
               </button>
             </>
           ) : (
-            <p className="t-mute" style={{ fontSize: 14, margin: 0 }}>{content.catalog.empty}</p>
+            <p className="t-mute" style={{ fontSize: 'var(--m-fs-md)', margin: 0 }}>{content.catalog.empty}</p>
           )}
         </div>
       ) : (
@@ -536,7 +550,7 @@ export default function Catalog({
       {/* Disponibles más tarde — solo en la vista "Todos" (sin búsqueda) */}
       {activeCat === null && !searching && upcoming.length > 0 && (
         <div style={{ marginTop: 26 }}>
-          <div className="t-kicker" style={{ fontSize: 10.5, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="clock" size={13} /> Disponibles más tarde
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -550,16 +564,16 @@ export default function Catalog({
                   className="press glass-quiet"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
-                    padding: '11px 14px', borderRadius: 14, border: '1px solid var(--u-hair)',
+                    padding: '11px 14px', borderRadius: 'var(--m-r-md)', border: '1px solid var(--u-hair)',
                     background: 'var(--surface-2)', color: 'var(--u-text)', cursor: 'pointer',
                   }}
                 >
-                  <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', color: 'var(--u-text-2)' }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 'var(--m-r-sm)', flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', color: 'var(--u-text-2)' }}>
                     <Icon name={config.showCategoryIcons ? (catIcon.get(c.id) ?? 'utensils') : 'clock'} size={17} />
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{localize(c.name, c.name_en)}</span>
-                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--m-fs-md)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{localize(c.name, c.name_en)}</span>
+                    <span style={{ display: 'block', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-4)', marginTop: 1 }}>
                       {reopen ? `Se sirve ${reopen}` : win ? `Horario: ${win}` : 'Fuera de horario'}
                     </span>
                   </span>
@@ -814,20 +828,13 @@ function CategoryChip({ label, icon, active, unavailable = false, onClick }: { l
   return (
     <button
       onClick={onClick}
-      className="press"
+      className="press m-chip"
       // aria-pressed: sin esto, quien navega con lectura asistida no sabe qué
       // categoría está filtrando — el resaltado es solo visual.
       aria-pressed={active}
       title={unavailable ? 'Disponible en otro horario' : undefined}
-      style={{
-        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
-        padding: '11px 16px', minHeight: 44, borderRadius: 99, cursor: 'pointer',
-        background: active ? 'var(--u-text)' : 'var(--surface-2)',
-        color: active ? 'var(--brand-bg)' : 'var(--u-text-2)',
-        border: `1px solid ${active ? 'transparent' : 'var(--u-hair)'}`,
-        fontWeight: 600, fontSize: 13.5, opacity: dim ? 0.55 : 1,
-        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-      }}
+      data-active={active ? '1' : undefined}
+      data-dim={dim ? '1' : undefined}
     >
       {dim ? <Icon name="clock" size={14} /> : icon && <Icon name={icon} size={15} />}
       {label}
@@ -855,7 +862,7 @@ function SectionHeader({
         {label}
       </span>
       {locked && <Icon name="clock" size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
-      <span className="t-mono" style={{ fontSize: 11.5, color: 'var(--u-text-4)', flexShrink: 0 }}>{count}</span>
+      <span className="t-mono m-sec-count">{count}</span>
       {collapsible && (
         <Icon
           name="chevronDown"
@@ -870,20 +877,15 @@ function SectionHeader({
     return (
       <button
         onClick={onToggle}
-        className="press"
+        className="press m-sec-btn"
         aria-expanded={open}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-          padding: '13px 15px', minHeight: 52, borderRadius: 'var(--radius-lg)', cursor: 'pointer',
-          background: 'var(--surface-2)', border: '1px solid var(--u-hair)', color: 'var(--u-text)',
-        }}
       >
         {inner}
       </button>
     );
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 8, borderBottom: '1px solid var(--u-hair)' }}>
+    <div className="m-sec">
       {inner}
     </div>
   );
@@ -901,14 +903,10 @@ function LockedNote({
   return (
     <div
       role="status"
-      style={{
-        display: 'flex', gap: 10, alignItems: 'center', marginTop: 10,
-        background: 'var(--surface-2)', border: '1px solid var(--u-hair)',
-        borderRadius: 14, padding: '11px 14px',
-      }}
+      className="m-note"
     >
       <span style={{ color: 'var(--u-text-3)', flexShrink: 0 }}><Icon name="clock" size={17} /></span>
-      <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.45 }}>
+      <div>
         <strong style={{ color: 'var(--u-text)' }}>{localize(cat.name, cat.name_en)}</strong>{' '}
         {reopen ? `se sirve ${reopen}.` : win ? `se sirve de ${win}.` : 'no está disponible ahora.'}{' '}
         Puedes verlo, pero aún no pedirlo.
@@ -945,42 +943,41 @@ function CategoryCovers({
   const cols = width === 'revista' ? 3 : width === 'ancho' ? 2 : 1;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, marginTop: 18 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 'var(--m-sp-3)', marginTop: 'var(--m-sp-4)' }}>
       {shown.map((c, i) => {
         const locked = catAvail.get(c.id) === false;
         const n = counts.get(c.id) ?? 0;
         return (
-          <Glass
+          <MenuSurface
             key={c.id}
-            interactive
             onClick={() => onPick(c.id)}
             ariaLabel={`Ver ${localize(c.name, c.name_en)}`}
-            className={config.animations ? 'anim-fade-up' : ''}
+            className={`m-tile ${config.animations ? 'anim-fade-up' : ''}`}
             style={{
-              borderRadius: 20, overflow: 'hidden', cursor: 'pointer', opacity: locked ? 0.75 : 1,
+              borderRadius: 'var(--m-r-xl)', opacity: locked ? 0.75 : 1,
               animationDelay: config.animations ? `${Math.min(i, 8) * 45}ms` : undefined,
             }}
           >
-            <div style={{ position: 'relative', aspectRatio: cols === 1 ? '2.6' : '1.6', background: 'var(--surface-1)', overflow: 'hidden' }}>
+            <div className="m-tile-art" style={{ aspectRatio: cols === 1 ? '2.6' : '1.6' }}>
               <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
                 <BrandPattern icon={catIcon.get(c.id) ?? 'utensils'} seed={seedFromString(c.id)} iconScale={1.5} />
               </div>
               <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.18) 55%, rgba(0,0,0,0) 80%)' }} />
               <div style={{ position: 'absolute', left: 16, right: 16, bottom: 13, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="t-poster" style={{ fontSize: 23, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1.05 }}>
+                  <div className="t-poster" style={{ fontSize: 'var(--m-fs-2xl)', color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1.05 }}>
                     {localize(c.name, c.name_en)}
                   </div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.82)', marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                  <div style={{ fontSize: 'var(--m-fs-xs)', color: 'rgba(255,255,255,0.82)', marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                     {locked ? 'Disponible en otro horario' : `${n} ${n === 1 ? 'platillo' : 'platillos'}`}
                   </div>
                 </div>
-                <span style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)', color: '#fff' }}>
+                <span style={{ width: 38, height: 38, borderRadius: 'var(--m-r-pill)', flexShrink: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)', color: '#fff' }}>
                   <Icon name={locked ? 'clock' : 'chevronRight'} size={18} />
                 </span>
               </div>
             </div>
-          </Glass>
+          </MenuSurface>
         );
       })}
     </div>
@@ -1029,7 +1026,7 @@ function AddControl({ p, qty, onAdd, quiet = false }: { p: ProdItem; qty: number
         // de cambiar en silencio.
         role="status"
         aria-label={`${qty} ${qty === 1 ? 'unidad' : 'unidades'} de ${p.name} en tu pedido`}
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 44, minHeight: 44, padding: '5px 12px', borderRadius: 99, background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 13 }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 44, minHeight: 44, padding: '5px 12px', borderRadius: 'var(--m-r-pill)', background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 700, fontSize: 'var(--m-fs-sm)' }}
       >
         <Icon name="check" size={12} strokeWidth={3} />{qty}
       </span>
@@ -1041,7 +1038,7 @@ function AddControl({ p, qty, onAdd, quiet = false }: { p: ProdItem; qty: number
         className="press"
         onClick={(e) => { e.stopPropagation(); onAdd(p, e.currentTarget); }}
         style={{
-          width: 44, height: 44, borderRadius: 99, cursor: 'pointer', display: 'grid', placeItems: 'center',
+          width: 44, height: 44, borderRadius: 'var(--m-r-pill)', cursor: 'pointer', display: 'grid', placeItems: 'center',
           flexShrink: 0, background: 'transparent', border: '1px solid var(--u-hair-2)', color: 'var(--u-text-2)',
         }}
         aria-label={`Agregar ${p.name} a tu pedido`}
@@ -1056,7 +1053,7 @@ function AddControl({ p, qty, onAdd, quiet = false }: { p: ProdItem; qty: number
       // que se lavaba con paletas claras e ignoraba la opción del editor).
       className={`press ${ctaClass(config.ctaStyle)}`}
       onClick={(e) => { e.stopPropagation(); onAdd(p, e.currentTarget); }}
-      style={{ width: 44, height: 44, borderRadius: 13, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+      style={{ width: 44, height: 44, borderRadius: 'var(--m-r-md)', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}
       aria-label={`Agregar ${p.name} a tu pedido`}
     >
       <Icon name="plus" size={19} strokeWidth={2.4} />
@@ -1101,36 +1098,27 @@ function ProductTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, on
   const name = useLocalized(p.name, p.name_en);
   const unavail = forceUnavailable || isUnavailable(p);
   return (
-    <Glass
-      interactive={!unavail}
-      onClick={() => !unavail && onOpen(p)}
-      ariaLabel={`Ver ${name}`}
-      style={{ borderRadius: 18, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', height: '100%', opacity: unavail ? 0.72 : 1 }}
-    >
-      <div style={{ position: 'relative', aspectRatio: '1.25', background: 'var(--surface-1)', overflow: 'hidden' }}>
+    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+      <div className="m-tile-art" style={{ aspectRatio: '1.25' }}>
         <ProductArt p={p} icon={icon} />
         {config.showTags && p.tags && p.tags.length > 0 && !unavail && (
-          <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <div className="m-art-corner">
             {p.tags.slice(0, 2).map((t) => <Tag key={t} label={t} small />)}
           </div>
         )}
         {unavail && (
-          <div style={{ position: 'absolute', top: 8, left: 8 }}>
-            <span style={{ display: 'inline-block', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'var(--badge-bg)', color: 'var(--badge-text)', letterSpacing: '0.04em', backdropFilter: 'blur(4px)' }}>
-              No disponible
-            </span>
-          </div>
+          <div className="m-art-corner"><span className="m-badge">No disponible</span></div>
         )}
       </div>
-      <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), flex: 1, textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{name}</div>
+      <div className="m-tile-body">
+        <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>{name}</div>
         <DietaryBadges keys={p.dietary_tags} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Price amount={displayPrice(p)} size={15} muted={unavail} />
+        <div className="m-foot">
+          <Price amount={displayPrice(p)} size={14} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
-    </Glass>
+    </MenuSurface>
   );
 }
 
@@ -1151,37 +1139,26 @@ function MosaicTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const unavail = forceUnavailable || isUnavailable(p);
   const ratio = mosaicRatio(p);
   return (
-    <Glass
-      interactive={!unavail}
-      onClick={() => !unavail && onOpen(p)}
-      ariaLabel={`Ver ${name}`}
-      style={{ borderRadius: 18, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}
-    >
-      <div style={{ position: 'relative', aspectRatio: String(ratio), background: 'var(--surface-1)', overflow: 'hidden' }}>
+    <MenuSurface className="m-tile" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+      <div className="m-tile-art" style={{ aspectRatio: String(ratio) }}>
         <ProductArt p={p} icon={icon} scale={1.15} />
         {config.showTags && p.tags?.[0] && !unavail && (
-          <div style={{ position: 'absolute', top: 8, left: 8 }}><Tag label={p.tags[0]} small /></div>
+          <div className="m-art-corner"><Tag label={p.tags[0]} small /></div>
         )}
         {unavail && (
-          <div style={{ position: 'absolute', top: 8, left: 8 }}>
-            <span style={{ display: 'inline-block', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'var(--badge-bg)', color: 'var(--badge-text)', letterSpacing: '0.04em', backdropFilter: 'blur(4px)' }}>
-              No disponible
-            </span>
-          </div>
+          <div className="m-art-corner"><span className="m-badge">No disponible</span></div>
         )}
       </div>
-      <div style={{ padding: '11px 13px 13px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-        <div className="ct-product-name" style={{ fontSize: 14.5 * roleSize(config, 'productName'), textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{name}</div>
-        {description && (
-          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{description}</div>
-        )}
+      <div className="m-tile-body">
+        <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>{name}</div>
+        {description && <div className="line-clamp-2 ct-product-desc m-desc">{description}</div>}
         <DietaryBadges keys={p.dietary_tags} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <Price amount={displayPrice(p)} size={15} muted={unavail} />
+        <div className="m-foot">
+          <Price amount={displayPrice(p)} size={14} muted={unavail} />
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
-    </Glass>
+    </MenuSurface>
   );
 }
 
@@ -1204,13 +1181,14 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
   const unavail = forceUnavailable || isUnavailable(p);
   const wideFeat = width !== 'movil';
   return (
-    <Glass
-      interactive={!unavail}
-      onClick={() => !unavail && onOpen(p)}
+    <MenuSurface
+      className="m-tile"
+      style={{ borderRadius: 'var(--m-r-xl)' }}
+      unavailable={unavail}
+      onClick={() => onOpen(p)}
       ariaLabel={`Ver ${name}`}
-      style={{ borderRadius: 22, overflow: 'hidden', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}
     >
-      <div style={{ position: 'relative', aspectRatio: String(FEATURED_RATIO[width] ?? 1.85), background: 'var(--surface-1)', overflow: 'hidden' }}>
+      <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
         <ProductArt p={p} icon={icon} scale={1.35} />
         <div
           aria-hidden
@@ -1220,9 +1198,9 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
           <span
             className="ct-tag"
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 999,
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 'var(--m-r-pill)',
               background: 'var(--brand-accent)', color: 'var(--brand-on-accent)',
-              fontSize: 10.5 * roleSize(config, 'tag'), fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+              fontSize: 'calc(var(--m-fs-xs) * var(--t-tag-size, 1))', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
             }}
           >
             <Icon name="star" size={11} /> {content.tags.fav}
@@ -1248,7 +1226,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
           {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
         </div>
       </div>
-    </Glass>
+    </MenuSurface>
   );
 }
 
@@ -1258,24 +1236,22 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   const description = useLocalized(p.description ?? '', p.description_en);
   const unavail = forceUnavailable || isUnavailable(p);
   return (
-    <Glass interactive={!unavail} onClick={() => !unavail && onOpen(p)} ariaLabel={`Ver ${name}`} style={{ borderRadius: 16, padding: 10, display: 'flex', gap: 13, alignItems: 'center', cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.72 : 1 }}>
-      <div style={{ width: 74, height: 74, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-1)', position: 'relative' }}>
+    <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
+      <div className="m-row-art">
         <ProductArt p={p} icon={icon} scale={0.9} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="ct-product-name" style={{ fontSize: 15.5 * roleSize(config, 'productName'), textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}>{name}</div>
-          {unavail && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>No disponible</span>}
+      <div className="m-row-body">
+        <div style={{ display: 'flex', gap: 'var(--m-sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>{name}</div>
+          {unavail && <span className="m-badge m-badge-quiet">No disponible</span>}
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
         </div>
-        {description && (
-          <div className="line-clamp-2 ct-product-desc" style={{ fontSize: 12 * roleSize(config, 'productDesc') }}>{description}</div>
-        )}
+        {description && <div className="line-clamp-2 ct-product-desc m-desc">{description}</div>}
         <DietaryBadges keys={p.dietary_tags} size={12} />
-        <Price amount={displayPrice(p)} size={15} muted={unavail} />
+        <Price amount={displayPrice(p)} size={14} muted={unavail} />
       </div>
       {ordersEnabled && !unavail && <AddControl p={p} qty={qty} onAdd={onAdd} />}
-    </Glass>
+    </MenuSurface>
   );
 }
 
@@ -1299,35 +1275,36 @@ function TextRow({ p, qty, ordersEnabled, forceUnavailable = false, onAdd, onOpe
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(p); }
       }}
       className="press"
+      data-unavailable={unavail ? '1' : undefined}
       style={{
-        display: 'flex', alignItems: 'flex-start', gap: 12,
-        padding: '14px 2px', borderBottom: '1px solid var(--u-hair)',
-        cursor: unavail ? 'default' : 'pointer', opacity: unavail ? 0.62 : 1,
+        display: 'flex', alignItems: 'flex-start', gap: 'var(--m-sp-3)',
+        padding: 'var(--m-sp-4) 2px', borderBottom: '1px solid var(--u-hair)',
+        cursor: unavail ? 'default' : 'pointer',
+        /* 0.62 dejaba la descripcion por debajo del contraste minimo: el plato
+           se leia como "borroso" y no como "hoy no esta". */
+        opacity: unavail ? 0.72 : 1,
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-          <span
-            className="ct-product-name"
-            style={{ fontSize: 16 * roleSize(config, 'productName'), textDecoration: unavail ? 'line-through' : 'none', textDecorationColor: 'var(--surface-strike)' }}
-          >
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--m-sp-2)' }}>
+          <span className={`ct-product-name m-name ${unavail ? 'm-strike' : ''}`}>
             {name}
           </span>
           {/* El filete punteado es lo que hace legible el par nombre→precio sin
               una foto de por medio: el ojo lo sigue de un lado al otro. */}
           <span aria-hidden style={{ flex: 1, minWidth: 12, alignSelf: 'flex-end', marginBottom: 5, borderBottom: '1px dotted var(--u-hair-2)' }} />
-          <Price amount={displayPrice(p)} size={15} muted={unavail} />
+          <Price amount={displayPrice(p)} size={14} muted={unavail} />
         </div>
         {description && (
-          <div className="ct-product-desc" style={{ fontSize: 12.5 * roleSize(config, 'productDesc'), marginTop: 4, maxWidth: '46em' }}>
+          <div className="ct-product-desc m-desc" style={{ marginTop: 'var(--m-sp-1)', maxWidth: '46em' }}>
             {description}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: description ? 6 : 5, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--m-sp-2)', marginTop: 'var(--m-sp-2)', flexWrap: 'wrap' }}>
           <DietaryBadges keys={p.dietary_tags} size={12} />
           {config.showTags && !unavail && p.tags?.[0] && <Tag label={p.tags[0]} small />}
           {unavail && (
-            <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--u-text-4)', border: '1px solid var(--u-hair)' }}>
+            <span className="m-badge m-badge-quiet">
               No disponible
             </span>
           )}

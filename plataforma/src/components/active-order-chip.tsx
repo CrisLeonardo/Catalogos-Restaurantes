@@ -127,7 +127,9 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
         // página. En el teléfono los dos cantos coinciden y sale 16 px igual.
         left: 'max(16px, calc(50% - var(--menu-max, 460px) / 2 + var(--menu-pad, 16px)))',
         zIndex: 70, display: 'flex', alignItems: 'center', gap: 10,
-        padding: '11px 18px', borderRadius: 99, textDecoration: 'none',
+        // Es el atajo al seguimiento del pedido EN CURSO: se toca con el
+        // telefono en la mano y con prisa, y media 41 px de alto.
+        padding: '0 18px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-pill)', textDecoration: 'none',
         maxWidth: 'calc(100vw - 210px)', whiteSpace: 'nowrap',
         transition: 'bottom 200ms var(--ease-out)',
       }}
@@ -139,7 +141,7 @@ export default function ActiveOrderChip({ restaurantId }: { restaurantId: string
           animation: 'pulse-ring 2.2s infinite',
         }}
       />
-      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <span style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {active.orderNumber} · {label}
       </span>
       <Icon name="chevronRight" size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />

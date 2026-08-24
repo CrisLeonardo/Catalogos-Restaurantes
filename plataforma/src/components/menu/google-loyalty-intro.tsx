@@ -37,18 +37,18 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
       <div style={{ width: '100%', maxWidth: 420, pointerEvents: 'auto' }}>
         <Glass
           style={{
-            borderRadius: 22, padding: '26px 22px', width: '100%',
+            borderRadius: 'var(--m-r-xl)', padding: '26px 22px', width: '100%',
             marginBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
         >
           <div style={{
-            width: 52, height: 52, borderRadius: 16, display: 'grid', placeItems: 'center',
+            width: 52, height: 52, borderRadius: 'var(--m-r-lg)', display: 'grid', placeItems: 'center',
             background: 'color-mix(in srgb, var(--brand-accent) 18%, transparent)', marginBottom: 14,
           }}>
             <Icon name="star" size={26} style={{ color: 'var(--brand-accent-ink)' }} />
           </div>
-          <h2 className="t-display" style={{ fontSize: 20, marginBottom: 8 }}>Gana puntos con cada pedido</h2>
-          <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.55, marginBottom: 20 }}>
+          <h2 className="t-display" style={{ fontSize: 'var(--m-fs-xl)', marginBottom: 8 }}>Gana puntos con cada pedido</h2>
+          <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', lineHeight: 1.55, marginBottom: 20 }}>
             Para acumular y usar tus puntos de fidelidad necesitas iniciar sesión con tu cuenta de Google.
             Así te reconocemos en cualquier dispositivo, sin crear otra contraseña.
           </p>
@@ -59,7 +59,7 @@ export default function GoogleLoyaltyIntro({ onClose }: { onClose: () => void })
             className="press t-mute"
             style={{
               display: 'block', width: '100%', textAlign: 'center', marginTop: 12,
-              background: 'none', border: 'none', fontSize: 13, cursor: 'pointer', padding: '6px 0',
+              background: 'none', border: 'none', fontSize: 'var(--m-fs-sm)', cursor: 'pointer', padding: '6px 0',
             }}
           >
             Ahora no

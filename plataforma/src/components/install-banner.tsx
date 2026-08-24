@@ -240,7 +240,7 @@ function AndroidBanner({
         <button
           onClick={onDismiss}
           style={{
-            flex: 1, padding: '11px 12px', borderRadius: 'var(--radius-lg)',
+            flex: 1, padding: '12px', minHeight: 'var(--m-tap)', borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--u-hair-2)', background: 'transparent',
             color: 'var(--u-text-3)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
@@ -251,7 +251,7 @@ function AndroidBanner({
           onClick={onInstall}
           className="btn-accent"
           style={{
-            flex: 2, padding: '11px 12px', borderRadius: 'var(--radius-lg)',
+            flex: 2, padding: '12px', minHeight: 'var(--m-tap)', borderRadius: 'var(--radius-lg)',
             fontSize: 14, fontWeight: 700, cursor: 'pointer',
           }}
         >

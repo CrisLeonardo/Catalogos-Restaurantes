@@ -60,7 +60,7 @@ export default function GoogleSignInButton({ label = 'Continuar con Google', ful
         width: full ? '100%' : undefined,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
         padding: '12px 18px', borderRadius: 'var(--radius-full)',
-        background: '#fff', color: '#1f2937', fontWeight: 600, fontSize: 14.5,
+        background: '#fff', color: '#1f2937', fontWeight: 600, fontSize: 'var(--m-fs-md)',
         border: '1px solid rgba(0,0,0,0.12)', cursor: loading ? 'wait' : 'pointer',
         opacity: loading ? 0.75 : 1, boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
       }}

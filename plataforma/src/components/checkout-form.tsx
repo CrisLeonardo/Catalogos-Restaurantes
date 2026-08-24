@@ -28,7 +28,7 @@ const DeliveryMap = dynamic(() => import('./delivery-map'), {
       height: 280, borderRadius: 'var(--radius-lg)',
       background: 'var(--surface-1)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: 'var(--u-text-4)', fontSize: 13,
+      color: 'var(--u-text-4)', fontSize: 'var(--m-fs-sm)',
     }}>
       Cargando mapa…
     </div>
@@ -732,11 +732,11 @@ export default function CheckoutForm({
   if (items.length === 0 && step !== 'success' && step !== 'queued') {
     return (
       <main className="themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-        <Glass style={{ padding: '32px 24px', textAlign: 'center', maxWidth: 380, width: '100%' }}>
+        <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-6) var(--m-sp-5)', textAlign: 'center', maxWidth: 380, width: '100%' }}>
           <Icon name="bag" size={44} strokeWidth={1.3} style={{ color: 'var(--u-text-4)', margin: '0 auto 16px' }} />
           <h2 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 10 }}>{content.cart.empty}</h2>
           <PrimaryButton href={tp('/')}>{content.cart.emptyCta}</PrimaryButton>
-        </Glass>
+        </div>
       </main>
     );
   }
@@ -754,19 +754,19 @@ export default function CheckoutForm({
           </div>
           <div>
             <h1 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 8 }}>Sin conexión</h1>
-            <p style={{ fontSize: 14, color: 'var(--u-text-2)', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', lineHeight: 1.5 }}>
               Tu pedido se guardó. Se enviará solo en cuanto vuelva la señal —
               no cierres esta pantalla.
             </p>
           </div>
           {error && (
-            <p style={{ fontSize: 13, color: 'var(--c-danger, #ff6b6b)' }}>{error}</p>
+            <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)' }}>{error}</p>
           )}
           <button
             onClick={retryQueued}
             disabled={isPending}
             className="btn-accent press"
-            style={{ padding: '13px 28px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: isPending ? 0.7 : 1 }}
+            style={{ padding: '13px 28px', borderRadius: 'var(--radius-lg)', fontSize: 'var(--m-fs-md)', fontWeight: 700, cursor: 'pointer', opacity: isPending ? 0.7 : 1 }}
           >
             {isPending ? 'Reintentando…' : 'Reintentar ahora'}
           </button>
@@ -794,9 +794,9 @@ export default function CheckoutForm({
           </div>
           <div>
             <h2 className="t-display" style={{ ...confirmTitleT.vars, fontSize: 30 * confirmTitleT.size }}>{content.confirmation.title}</h2>
-            <p className="t-serif" style={{ fontSize: 17, marginTop: 8 }}>{subtitle}</p>
+            <p className="t-serif" style={{ fontSize: 'var(--m-fs-lg)', marginTop: 8 }}>{subtitle}</p>
           </div>
-          <Glass style={{ borderRadius: 18, padding: 18, width: '100%', display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-3)' }}>
             <Row k={content.confirmation.orderNo} v={orderNumber || '—'} />
             <Row k={content.confirmation.type} v={typeLabel} />
             {type === 'DINE_IN' && coursePreference && (
@@ -809,14 +809,14 @@ export default function CheckoutForm({
                 v={snapshotPayment === 'CARD' ? content.checkout.payCard : content.checkout.payCash}
               />
             )}
-          </Glass>
+          </div>
           {waUrl && (
             <div style={{ width: '100%' }}>
               <a href={waUrl} target="_blank" rel="noopener noreferrer" className="press"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px 24px', borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: 14, textDecoration: 'none', color: '#fff', background: '#25D366', boxShadow: '0 4px 16px rgba(37,211,102,0.35)' }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px 24px', borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: 'var(--m-fs-md)', textDecoration: 'none', color: '#fff', background: '#25D366', boxShadow: '0 4px 16px rgba(37,211,102,0.35)' }}>
                 <Icon name="whatsapp" size={18} /> Enviar pedido por WhatsApp
               </a>
-              <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 7, textAlign: 'center' }}>
+              <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 7, textAlign: 'center' }}>
                 Si WhatsApp no se abrió solo, toca el botón para confirmar con el restaurante.
               </p>
             </div>
@@ -827,7 +827,7 @@ export default function CheckoutForm({
             </PrimaryButton>
           )}
           {kiosk && (
-            <p style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', lineHeight: 1.6, margin: 0 }}>
               Guarda tu número de pedido{orderNumber ? ` (${orderNumber})` : ''} — te llamaremos
               al mostrador cuando esté listo.
             </p>
@@ -835,8 +835,8 @@ export default function CheckoutForm({
 
           {/* Encuesta de satisfacción */}
           {encuestasActive && !ratingSent && (
-            <Glass style={{ borderRadius: 18, padding: 18, width: '100%', display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', textAlign: 'center' }}>
+            <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4)', width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--m-sp-3)', textAlign: 'left' }}>
+              <div style={{ fontSize: 'var(--m-fs-md)', fontWeight: 700, color: 'var(--u-text)', textAlign: 'center' }}>
                 ¿Cómo fue tu experiencia?
               </div>
               {/* Estrellas */}
@@ -851,7 +851,11 @@ export default function CheckoutForm({
                       onMouseEnter={() => setRatingHover(s)}
                       onMouseLeave={() => setRatingHover(0)}
                       onClick={() => setRatingValue(s)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 28, lineHeight: 1 }}
+                      /* Medían 32 px: acertar la estrella de al lado le da al
+                         restaurante una opinión que el comensal no quiso dar,
+                         y una encuesta no tiene deshacer. El dibujo sigue
+                         siendo de 28 px; lo que crece es la zona que se toca. */
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, minWidth: 'var(--m-tap)', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
                       aria-label={`${s} estrella${s !== 1 ? 's' : ''}`}
                     >
                       <svg width={28} height={28} viewBox="0 0 24 24"
@@ -875,8 +879,8 @@ export default function CheckoutForm({
                   rows={2}
                   style={{
                     background: 'var(--surface-1)', border: '1px solid var(--u-hair)',
-                    borderRadius: 10, padding: '10px 12px', color: 'var(--u-text)',
-                    fontSize: 13, resize: 'none', width: '100%', outline: 'none',
+                    borderRadius: 'var(--m-r-sm)', padding: 'var(--m-sp-3)', color: 'var(--u-text)',
+                    fontSize: 'max(16px, var(--m-fs-md))', resize: 'none', width: '100%', outline: 'none',
                     fontFamily: 'inherit',
                   }}
                 />
@@ -905,9 +909,9 @@ export default function CheckoutForm({
                     });
                   }}
                   style={{
-                    padding: '11px', borderRadius: 12, border: 'none',
+                    padding: '11px', borderRadius: 'var(--m-r-md)', border: 'none',
                     background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)',
-                    fontWeight: 700, fontSize: 14, cursor: ratingPending ? 'default' : 'pointer',
+                    fontWeight: 700, fontSize: 'var(--m-fs-md)', cursor: ratingPending ? 'default' : 'pointer',
                     opacity: ratingPending ? 0.7 : 1,
                   }}
                 >
@@ -915,14 +919,14 @@ export default function CheckoutForm({
                 </button>
               )}
               {ratingError && (
-                <p role="alert" style={{ fontSize: 12.5, color: 'var(--c-danger)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
+                <p role="alert" style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger)', margin: 0, textAlign: 'center', lineHeight: 1.45 }}>
                   {ratingError}
                 </p>
               )}
-            </Glass>
+            </div>
           )}
           {encuestasActive && ratingSent && (
-            <p style={{ fontSize: 14, color: 'var(--c-ok)', fontWeight: 600, textAlign: 'center' }}>
+            <p style={{ fontSize: 'var(--m-fs-md)', color: 'var(--c-ok)', fontWeight: 600, textAlign: 'center' }}>
               ¡Gracias por tu calificación! ⭐
             </p>
           )}
@@ -932,16 +936,16 @@ export default function CheckoutForm({
               <PrimaryButton href={tp('/')} full iconRight="arrowRight">
                 Hacer otro pedido
               </PrimaryButton>
-              <p className="t-mute" style={{ fontSize: 11.5, margin: 0 }}>
+              <p className="t-mute" style={{ fontSize: 'var(--m-fs-xs)', margin: 0 }}>
                 La pantalla volverá al menú automáticamente.
               </p>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <Link href={tp('/mis-pedidos')} className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+              <Link href={tp('/mis-pedidos')} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 600, textDecoration: 'none', padding: '0 12px', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center' }}>
                 Mis pedidos
               </Link>
-              <Link href={tp('/')} className="press t-mute" style={{ fontSize: 13.5, fontWeight: 600, textDecoration: 'none', padding: '6px 10px' }}>
+              <Link href={tp('/')} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 600, textDecoration: 'none', padding: '0 12px', minHeight: 'var(--m-tap)', display: 'inline-flex', alignItems: 'center' }}>
                 {content.confirmation.again}
               </Link>
             </div>
@@ -955,66 +959,69 @@ export default function CheckoutForm({
   return (
     <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       <div style={{ marginBottom: 20 }}>
-        <Link href={tp('/')} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <Link href={tp('/')} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', minHeight: 'var(--m-tap)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Icon name="chevronLeft" size={16} /> {restaurantName}
         </Link>
         <h1 className="t-display" style={{ ...checkoutTitleT.vars, fontSize: 28 * checkoutTitleT.size }}>{content.checkout.title}</h1>
       </div>
 
       {/* Resumen */}
-      <Glass style={{ padding: '16px 18px', marginBottom: 18 }}>
+      {/* El resumen no flota sobre nada: es el contenido de la página. Los
+          interruptores de vidrio que SÍ hay en el checkout (opciones de pago
+          y campos del formulario) son del dueño y se respetan tal cual. */}
+      <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-4) var(--m-sp-4)', marginBottom: 'var(--m-sp-4)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((item) => (
             <div key={item.lineId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 'var(--m-fs-md)', color: 'var(--u-text-2)', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 {item.rewardId && <Icon name="gift" size={13} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />}
                 <span>
                   {item.quantity}× {item.name}
                   {item.options && item.options.length > 0 && (
-                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                    <span style={{ display: 'block', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 1 }}>
                       {item.options.map((o) => o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName).join(' · ')}
                     </span>
                   )}
                 </span>
               </span>
               {item.rewardId
-                ? <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', whiteSpace: 'nowrap' }}>{(item.pointsCost ?? 0).toLocaleString('es-GT')} pts</span>
+                ? <span style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--brand-accent-ink)', whiteSpace: 'nowrap' }}>{(item.pointsCost ?? 0).toLocaleString('es-GT')} pts</span>
                 : <Price amount={item.price * item.quantity} size={13.5} muted />}
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
             {(deliveryFee > 0 || discount > 0 || tipAmount > 0) && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>{content.cart.subtotal}</span>
                 <Price amount={total} size={13.5} muted />
               </div>
             )}
             {deliveryFee > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>{content.cart.shipping}</span>
                 <Price amount={deliveryFee} size={13.5} muted />
               </div>
             )}
             {discount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--c-ok)' }}>Descuento{appliedCoupon ? ` · ${appliedCoupon.code}` : ''}</span>
-                <span style={{ fontSize: 13.5, color: 'var(--c-ok)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)' }}>Descuento{appliedCoupon ? ` · ${appliedCoupon.code}` : ''}</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)', fontWeight: 600 }}>−{formatPrice(discount, config)}</span>
               </div>
             )}
             {tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>Propina ({config.tipPercent}%)</span>
                 <Price amount={tipAmount} size={13.5} muted />
               </div>
             )}
             {pointsToRedeem > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 13, color: 'var(--brand-accent-ink)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={13} /> Recompensas (puntos a usar)</span>
-                <span style={{ fontSize: 13.5, color: 'var(--brand-accent-ink)', fontWeight: 600 }}>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--brand-accent-ink)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="gift" size={13} /> Recompensas (puntos a usar)</span>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--brand-accent-ink)', fontWeight: 600 }}>{pointsToRedeem.toLocaleString('es-GT')} pts</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>
+              <span style={{ fontSize: 'var(--m-fs-lg)', fontWeight: 700, color: 'var(--u-text)' }}>{content.cart.total}</span>
               <Price amount={finalTotal} size={20} />
             </div>
           </div>
@@ -1023,10 +1030,10 @@ export default function CheckoutForm({
           {hasCoupons && <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
             {appliedCoupon ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--c-ok)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="checkCircle" size={15} /> Cupón {appliedCoupon.code} aplicado
                 </span>
-                <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponMsg(''); }} className="press t-mute" style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
+                <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponMsg(''); }} className="press t-mute" style={{ fontSize: 'var(--m-fs-sm)', minHeight: 'var(--m-tap)', padding: '0 8px', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'var(--u-text-3)' }}>
                   Quitar
                 </button>
               </div>
@@ -1036,44 +1043,46 @@ export default function CheckoutForm({
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   placeholder="¿Tienes un cupón?"
-                  style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 13.5, outline: 'none', textTransform: 'uppercase' }}
+                  style={{ flex: 1, minHeight: 'var(--m-tap)', background: 'var(--surface-2)', border: '1px solid var(--u-hair)', borderRadius: 'var(--radius-lg)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none', textTransform: 'uppercase' }}
                 />
-                <button type="button" onClick={applyCoupon} disabled={couponChecking || !couponCode.trim()} className="press glass-quiet" style={{ padding: '10px 16px', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', opacity: couponChecking || !couponCode.trim() ? 0.6 : 1 }}>
+                <button type="button" onClick={applyCoupon} disabled={couponChecking || !couponCode.trim()} className="press" style={{ padding: '0 18px', minHeight: 'var(--m-tap)', background: 'var(--surface-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--u-hair)', cursor: 'pointer', fontSize: 'var(--m-fs-sm)', fontWeight: 600, color: 'var(--u-text)', opacity: couponChecking || !couponCode.trim() ? 0.6 : 1 }}>
                   {couponChecking ? '…' : 'Aplicar'}
                 </button>
               </div>
             )}
-            {couponMsg && <p style={{ fontSize: 12, color: 'var(--c-danger)', marginTop: 7 }}>{couponMsg}</p>}
+            {couponMsg && <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger)', marginTop: 7 }}>{couponMsg}</p>}
           </div>}
 
           {/* Propina — obligatoria cuando el restaurante la habilita. */}
           {tipAvailable && (
             <div style={{ borderTop: '1px solid var(--u-hair)', paddingTop: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="sparkle" size={15} style={{ color: 'var(--brand-accent-ink)' }} />
                   Propina ({config.tipPercent}%)
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--u-text)' }}>
+                <span style={{ fontSize: 'var(--m-fs-sm)', fontWeight: 700, color: 'var(--u-text)' }}>
                   +{formatPrice(tipAmount, config)}
                 </span>
               </div>
             </div>
           )}
         </div>
-      </Glass>
+      </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tipo de pedido */}
         {typeOptions.length > 1 && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.typeLabel}</label>
-            <div className="glass-quiet" style={{ display: 'flex', padding: 4, borderRadius: 14, marginTop: 6 }}>
+            <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.typeLabel}</label>
+            <div className="glass-quiet" style={{ display: 'flex', padding: 4, borderRadius: 'var(--m-r-md)', marginTop: 'var(--m-sp-2)' }}>
               {typeOptions.map((o) => {
                 const on = type === o.id;
                 return (
                   <button key={o.id} type="button" onClick={() => setType(o.id)} className="press"
-                    style={{ flex: 1, padding: '10px 6px', borderRadius: 11, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: on ? activeBg : 'transparent', color: on ? activeText : 'var(--u-text-2)', fontWeight: 600, fontSize: 12.5, transition: 'all 160ms', whiteSpace: 'nowrap' }}>
+                    /* Es la PRIMERA decisión del checkout (a domicilio / para
+                       llevar / en el local) y medía 40 px de alto. */
+                    style={{ flex: 1, padding: '0 6px', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-sm)', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: on ? activeBg : 'transparent', color: on ? activeText : 'var(--u-text-2)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', transition: 'all 160ms', whiteSpace: 'nowrap' }}>
                     <Icon name={o.icon} size={15} />{o.label}
                   </button>
                 );
@@ -1085,7 +1094,7 @@ export default function CheckoutForm({
         <FormSection glass={config.checkoutFormGlass}>
 
         {welcomeBack && (
-          <div className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 12.5, color: 'var(--u-text-2)' }}>
+          <div className="glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 'var(--radius-lg)', fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)' }}>
             <Icon name="checkCircle" size={15} style={{ flexShrink: 0, color: 'var(--u-text-3)' }} />
             ¡Hola de nuevo, {name.split(' ')[0]}! Completamos tus datos por ti.
           </div>
@@ -1110,7 +1119,7 @@ export default function CheckoutForm({
           error={(tried || phone.trim().length > 0) && errs.phone}
         />
         {phone.trim().length > 0 && !errs.phone && (
-          <p style={{ fontSize: 11.5, color: 'var(--c-ok)', marginTop: -12 }}>
+          <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-ok)', marginTop: -12 }}>
             Número válido ✓
           </p>
         )}
@@ -1118,38 +1127,38 @@ export default function CheckoutForm({
         {/* ── DINE_IN: mesa asignada por QR (solo lectura) ── */}
         {type === 'DINE_IN' && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.mesa}</label>
+            <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.mesa}</label>
             {tableNumber ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 13, marginTop: 8,
-                padding: '13px 16px', borderRadius: 14,
+                padding: '13px 16px', borderRadius: 'var(--m-r-md)',
                 background: 'var(--surface-1)',
                 border: '1px solid var(--u-hair-2)',
               }}>
                 <div style={{
-                  width: 46, height: 46, borderRadius: 11, flexShrink: 0,
+                  width: 46, height: 46, borderRadius: 'var(--m-r-sm)', flexShrink: 0,
                   display: 'grid', placeItems: 'center',
                   background: activeBg, color: activeText,
-                  fontWeight: 700, fontSize: 22,
+                  fontWeight: 700, fontSize: 'var(--m-fs-2xl)',
                 }}>
                   {tableNumber}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)' }}>Mesa {tableNumber}</div>
-                  <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>{content.checkout.mesaDetected}</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--m-fs-md)', color: 'var(--u-text)' }}>Mesa {tableNumber}</div>
+                  <div style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-3)', marginTop: 2 }}>{content.checkout.mesaDetected}</div>
                 </div>
               </div>
             ) : (
               <div style={{
-                marginTop: 8, padding: '12px 14px', borderRadius: 14,
+                marginTop: 8, padding: '12px 14px', borderRadius: 'var(--m-r-md)',
                 background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
-                fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5,
+                fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)', lineHeight: 1.5,
               }}>
                 {content.checkout.mesaNotFound}
               </div>
             )}
             {tried && errs.table && (
-              <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 7 }}>{errs.table}</p>
+              <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger, #ff6b6b)', marginTop: 7 }}>{errs.table}</p>
             )}
           </div>
         )}
@@ -1157,7 +1166,7 @@ export default function CheckoutForm({
         {/* ── DINE_IN: preferencia de servicio ── */}
         {type === 'DINE_IN' && config.dineInCourseOptions.length > 0 && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
+            <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.courseLabel} <span style={{ color: 'var(--u-text-4)', fontWeight: 400 }}>(opcional)</span></label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 7 }}>
               {['', ...config.dineInCourseOptions].map((opt) => {
                 const on = coursePreference === opt;
@@ -1168,8 +1177,8 @@ export default function CheckoutForm({
                     onClick={() => setCoursePreference(opt)}
                     className="press"
                     style={{
-                      padding: '8px 13px', borderRadius: 99, cursor: 'pointer',
-                      fontWeight: 600, fontSize: 12.5,
+                      padding: '8px 13px', borderRadius: 'var(--m-r-pill)', cursor: 'pointer',
+                      fontWeight: 600, fontSize: 'var(--m-fs-sm)',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
                       background: on ? activeBg : 'var(--surface-1)',
                       color: on ? activeText : 'var(--u-text-2)',
@@ -1187,7 +1196,7 @@ export default function CheckoutForm({
         {/* ── DELIVERY: zona de cobertura ── */}
         {type === 'DELIVERY' && zonesActive && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>Zona de entrega</label>
+            <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>Zona de entrega</label>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 6 }}>
               {[...deliveryZones.map((z) => z.nombre), NO_ZONE].map((z) => {
                 const isOther = z === NO_ZONE;
@@ -1200,8 +1209,8 @@ export default function CheckoutForm({
                     onClick={() => setZone(z)}
                     className="press"
                     style={{
-                      padding: '9px 14px', borderRadius: 99, cursor: 'pointer',
-                      fontWeight: 600, fontSize: 13,
+                      padding: '9px 14px', borderRadius: 'var(--m-r-pill)', cursor: 'pointer',
+                      fontWeight: 600, fontSize: 'var(--m-fs-sm)',
                       border: `1px solid ${on ? 'transparent' : 'var(--u-hair-2)'}`,
                       background: on ? activeBg : 'var(--surface-1)',
                       color: on ? activeText : isOther ? 'var(--u-text-4)' : 'var(--u-text-2)',
@@ -1214,10 +1223,10 @@ export default function CheckoutForm({
               })}
             </div>
             {tried && errs.zone && !outOfZone && (
-              <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.zone}</p>
+              <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.zone}</p>
             )}
             {outOfZone && (
-              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', fontSize: 13, color: 'var(--u-text-2)', lineHeight: 1.5, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+              <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 'var(--radius-lg)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', lineHeight: 1.5, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
                 <Icon name="mapPin" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }} />
                 <span>Por ahora el delivery no llega a tu zona.
                 {typeOptions.some((o) => o.id === 'PICKUP') && (
@@ -1227,7 +1236,7 @@ export default function CheckoutForm({
                       type="button"
                       onClick={() => setType('PICKUP')}
                       className="press"
-                      style={{ display: 'block', marginTop: 8, padding: '8px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 600, fontSize: 12.5 }}
+                      style={{ display: 'block', marginTop: 8, padding: '8px 14px', borderRadius: 'var(--m-r-pill)', border: 'none', cursor: 'pointer', background: 'var(--u-text)', color: 'var(--brand-bg)', fontWeight: 600, fontSize: 'var(--m-fs-sm)' }}
                     >
                       Cambiar a {content.checkout.pickup}
                     </button>
@@ -1242,10 +1251,10 @@ export default function CheckoutForm({
         {/* ── DELIVERY: mapa interactivo ── */}
         {type === 'DELIVERY' && !outOfZone && geoActive && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>
+            <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>
               Tu ubicación de entrega
             </label>
-            <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '4px 0 8px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-4)', margin: '4px 0 8px', lineHeight: 1.5 }}>
               Arrastra el pin azul hasta tu puerta exacta. Si cae fuera del área
               naranja, el restaurante no puede llegar ahí.
             </p>
@@ -1265,7 +1274,7 @@ export default function CheckoutForm({
               <div style={{
                 height: 280, borderRadius: 'var(--radius-lg)', background: 'var(--surface-1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--u-text-4)', fontSize: 13,
+                color: 'var(--u-text-4)', fontSize: 'var(--m-fs-sm)',
               }}>
                 Cargando mapa…
               </div>
@@ -1273,7 +1282,7 @@ export default function CheckoutForm({
             {geoDistanceKm !== null && (
               <div style={{
                 marginTop: 8, display: 'flex', alignItems: 'center', gap: 7,
-                fontSize: 12.5,
+                fontSize: 'var(--m-fs-sm)',
                 color: geoOutOfRange ? 'var(--c-danger, #f87171)' : 'var(--c-ok, #4ade80)',
               }}>
                 <Icon
@@ -1288,7 +1297,7 @@ export default function CheckoutForm({
               </div>
             )}
             {tried && errs.geo && (
-              <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.geo}</p>
+              <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{errs.geo}</p>
             )}
           </div>
         )}
@@ -1314,7 +1323,7 @@ export default function CheckoutForm({
         {/* Pago — solo DELIVERY y PICKUP; en DINE_IN el mesero lo maneja */}
         {type !== 'DINE_IN' && (
           <div>
-            <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.payLabel}</label>
+            <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.payLabel}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
               {/* Efectivo */}
               <PayOption
@@ -1347,8 +1356,8 @@ export default function CheckoutForm({
             {/* Efectivo con cambio — solo DELIVERY + CASH */}
             {type === 'DELIVERY' && paymentMethod === 'CASH' && (
               <div style={{ marginTop: 12 }}>
-                <label className="t-kicker" style={{ fontSize: 10.5, textShadow: labelShadow }}>{content.checkout.cashAmountLabel}</label>
-                <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '3px 0 8px', lineHeight: 1.5 }}>
+                <label className="t-kicker" style={{ fontSize: 'var(--m-fs-xs)', textShadow: labelShadow }}>{content.checkout.cashAmountLabel}</label>
+                <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-4)', margin: '3px 0 8px', lineHeight: 1.5 }}>
                   {content.checkout.cashAmountSub}
                 </p>
                 <input
@@ -1365,22 +1374,23 @@ export default function CheckoutForm({
                     border: `1px solid ${tried && !cashAmountValid ? 'var(--c-danger, #ff6b6b)' : 'var(--u-hair)'}`,
                     borderRadius: 'var(--radius-lg)',
                     padding: '12px 14px',
+                    minHeight: 'var(--m-tap)',
                     color: 'var(--u-text)',
-                    fontSize: 15,
+                    fontSize: 'max(16px, var(--m-fs-md))',
                     fontWeight: 600,
                     outline: 'none',
                   }}
                 />
                 {tried && !cashAmountValid && (
-                  <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>
+                  <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>
                     {cashAmount.trim() ? `El monto mínimo es ${formatPrice(finalTotal, config)}` : 'Ingresa el monto con el que pagarás'}
                   </p>
                 )}
                 {cashAmountErr && !tried && (
-                  <p style={{ fontSize: 12, color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{cashAmountErr}</p>
+                  <p style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--c-danger, #ff6b6b)', marginTop: 6 }}>{cashAmountErr}</p>
                 )}
                 {cashAmount.trim() !== '' && cashAmountNum >= finalTotal && (
-                  <p style={{ fontSize: 12.5, color: 'var(--c-ok)', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-ok)', marginTop: 7, display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Icon name="check" size={13} strokeWidth={3} />
                     Cambio que recibirás: <strong>{formatPrice(cashAmountNum - finalTotal, config)}</strong>
                   </p>
@@ -1391,7 +1401,7 @@ export default function CheckoutForm({
         )}
 
         {error && (
-          <p style={{ fontSize: 13, color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
+          <p style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--c-danger, #ff6b6b)', background: 'color-mix(in srgb, var(--c-danger, #ff6b6b) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #ff6b6b) 20%, transparent)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>{error}</p>
         )}
 
         <PrimaryButton size="lg" full iconRight="arrowRight" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: 4 }}>
@@ -1415,22 +1425,22 @@ function PayOption({ icon, label, sublabel, selected, onClick, activeBg, activeT
       onClick={onClick}
       className={`press${glass ? ' glass-quiet' : ''}`}
       style={{
-        display: 'flex', alignItems: 'center', gap: 13,
-        padding: 15, borderRadius: 14, width: '100%', textAlign: 'left', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 'var(--m-sp-3)',
+        padding: 'var(--m-sp-4)', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-md)', width: '100%', textAlign: 'left', cursor: 'pointer',
         border: `1.5px solid ${selected ? activeBg : (glass ? 'var(--u-hair-2)' : 'var(--u-hair-2)')}`,
         background: glass ? undefined : (selected ? 'var(--surface-2)' : 'var(--surface-1)'),
         boxShadow: selected ? `0 0 0 1.5px ${activeBg}, 0 8px 22px rgba(0,0,0,0.28)` : undefined,
         transition: 'all 160ms',
       }}
     >
-      <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center', background: selected ? activeBg : 'var(--surface-3)', color: selected ? activeText : 'var(--u-text)', transition: 'all 160ms' }}>
+      <div style={{ width: 42, height: 42, borderRadius: 'var(--m-r-md)', flexShrink: 0, display: 'grid', placeItems: 'center', background: selected ? activeBg : 'var(--surface-3)', color: selected ? activeText : 'var(--u-text)', transition: 'all 160ms' }}>
         <Icon name={icon} size={20} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', textShadow }}>{label}</div>
-        <div style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 2, textShadow }}>{sublabel}</div>
+        <div style={{ fontWeight: 700, fontSize: 'var(--m-fs-md)', color: 'var(--u-text)', textShadow }}>{label}</div>
+        <div style={{ fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-2)', marginTop: 2, textShadow }}>{sublabel}</div>
       </div>
-      <span style={{ width: 22, height: 22, borderRadius: 99, flexShrink: 0, border: `2px solid ${selected ? activeBg : 'var(--u-hair-2)'}`, background: selected ? activeBg : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
+      <span style={{ width: 22, height: 22, borderRadius: 'var(--m-r-pill)', flexShrink: 0, border: `2px solid ${selected ? activeBg : 'var(--u-hair-2)'}`, background: selected ? activeBg : 'transparent', display: 'grid', placeItems: 'center', transition: 'all 160ms' }}>
         {selected && <Icon name="check" size={12} strokeWidth={3} style={{ color: activeText }} />}
       </span>
     </button>
@@ -1450,7 +1460,7 @@ function FormSection({ glass, children }: { glass: boolean; children: React.Reac
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, color: 'var(--u-text-3)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-3)' }}>
       <span>{k}</span>
       <span className="t-mono" style={{ color: 'var(--u-text-2)' }}>{v}</span>
     </div>

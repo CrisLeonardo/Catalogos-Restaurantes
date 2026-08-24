@@ -223,7 +223,7 @@ export default function MenuClient({
           style={{
             position: 'fixed', top: 'calc(8px + env(safe-area-inset-top, 0px))', left: '50%',
             transform: 'translateX(-50%)', zIndex: 60, pointerEvents: 'none',
-            padding: '4px 12px', borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+            padding: '4px 12px', borderRadius: 'var(--m-r-pill)', fontSize: 'var(--m-fs-xs)', fontWeight: 700,
             letterSpacing: '0.08em', textTransform: 'uppercase',
             background: 'color-mix(in srgb, var(--u-text) 10%, transparent)',
             color: 'var(--u-text-3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
@@ -272,9 +272,9 @@ export default function MenuClient({
             display: 'flex', justifyContent: 'center',
           }}
         >
-          <Glass style={{ width: '100%', maxWidth: 420, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Glass style={{ width: '100%', maxWidth: 420, borderRadius: 'var(--m-r-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <Icon name="alertCircle" size={18} style={{ color: 'var(--c-danger, #f87171)', flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, flex: 1, lineHeight: 1.4 }}>
+            <span style={{ fontSize: 'var(--m-fs-sm)', flex: 1, lineHeight: 1.4 }}>
               No pudimos completar el inicio de sesión con Google. Intenta de nuevo.
             </span>
             <button

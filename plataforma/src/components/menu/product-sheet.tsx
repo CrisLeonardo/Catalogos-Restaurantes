@@ -6,7 +6,6 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { Tag, QtyStepper, PrimaryButton, Price } from '@/components/menu/ui';
@@ -179,14 +178,14 @@ export default function ProductSheet({
         <button
           onClick={onClose}
           className="press glass-quiet"
-          style={{ position: 'absolute', top: 16, right: 16, zIndex: 2, width: 34, height: 34, borderRadius: 11, border: 'none', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }}
+          style={{ position: 'absolute', top: 'var(--m-sp-4)', right: 'var(--m-sp-4)', zIndex: 2, minWidth: 'var(--m-tap)', minHeight: 'var(--m-tap)', borderRadius: 'var(--m-r-sm)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', color: 'var(--u-text)', cursor: 'pointer' }}
           aria-label="Cerrar"
         >
           <Icon name="x" size={18} />
         </button>
 
         {/* Hero */}
-        <div style={{ borderRadius: 22, overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
+        <div style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
           {usePhoto ? (
             <Image src={product.image_url!} alt={name} fill style={{ objectFit: 'cover' }} sizes="460px" />
           ) : (
@@ -204,7 +203,7 @@ export default function ProductSheet({
         <div style={{ padding: '18px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h2 className="t-display" style={{ ...titleT.vars, fontSize: 28 * titleT.size }}>{name}</h2>
           {description && (
-            <p className="t-serif" style={{ fontSize: 17, lineHeight: 1.4 }}>{description}</p>
+            <p className="t-serif" style={{ fontSize: 'var(--m-fs-lg)', lineHeight: 1.4 }}>{description}</p>
           )}
           {product.dietary_tags && product.dietary_tags.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -215,8 +214,8 @@ export default function ProductSheet({
                   <span
                     key={k}
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999,
-                      background: 'var(--surface-2)', border: '1px solid var(--u-hair)', fontSize: 12, color: 'var(--u-text-2)',
+                      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 'var(--m-r-pill)',
+                      background: 'var(--surface-2)', border: '1px solid var(--u-hair)', fontSize: 'var(--m-fs-xs)', color: 'var(--u-text-2)',
                     }}
                   >
                     <span aria-hidden>{t.icon}</span> {locale === 'en' ? t.labelEn : t.label}
@@ -227,10 +226,10 @@ export default function ProductSheet({
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
             {[{ i: 'clock', t: content.product.prepTime }, { i: 'flame', t: content.product.fresh }].map((x, k) => (
-              <Glass key={k} variant="quiet" style={{ borderRadius: 12, padding: '10px 13px', display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+              <div key={k} className="m-surface" style={{ borderRadius: 'var(--m-r-md)', padding: 'var(--m-sp-3)', display: 'flex', alignItems: 'center', gap: 'var(--m-sp-2)', flex: 1 }}>
                 <Icon name={x.i} size={16} style={{ color: 'var(--u-text-2)' }} />
-                <span style={{ fontSize: 12.5, color: 'var(--u-text-2)', fontWeight: 500 }}>{x.t}</span>
-              </Glass>
+                <span style={{ fontSize: 'var(--m-fs-sm)', color: 'var(--u-text-2)', fontWeight: 500 }}>{x.t}</span>
+              </div>
             ))}
           </div>
 

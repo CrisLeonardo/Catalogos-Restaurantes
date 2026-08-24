@@ -295,6 +295,14 @@ export function buildThemeVars(config: ThemeConfig): Record<string, string> {
     '--radius-xl': `${20 * cr}px`,
     '--radius-2xl': `${28 * cr}px`,
 
+    /* El multiplicador de esquinas EN CRUDO. Las cuatro variables de arriba ya
+       vienen resueltas a píxeles, así que una escala nueva no podía derivarse
+       de ellas sin volver a dividir. El menú del comensal construye sus propios
+       radios (--m-r-*) a partir de este número: hasta ahora 86 de los 106
+       redondeos del menú estaban escritos a mano (18, 16, 13, 12…) y el
+       control «Esquinas» del editor solo movía el 19 % de ellos. */
+    '--corner-scale': String(cr),
+
     '--bg-overlay-opacity': String(config.bgOverlayOpacity ?? 1),
     '--watermark-opacity': String(config.watermarkOpacity ?? 0.04),
     '--watermark-size': `${config.watermarkSize ?? 78}svmin`,

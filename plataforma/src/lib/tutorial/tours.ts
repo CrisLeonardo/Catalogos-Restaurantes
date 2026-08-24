@@ -97,7 +97,7 @@ export const GUIDED_TOURS: GuidedTourDef[] = [
         target: 'personalizar-tabs',
         path: '/admin/personalizacion',
         title: 'Todo organizado en pestañas',
-        desc: 'Identidad (logo y nombre), Color, Tipografía, Fondo, Portada, Catálogo… explóralas: cada cambio se refleja en la vista previa antes de guardar.',
+        desc: 'Diseño (de dónde partes), Marca (logo, nombre y colores), Menú (portada y carta), Textos y Avanzado. Cada cambio se refleja en la vista previa antes de guardar.',
       },
       {
         target: 'personalizar-guardar',
