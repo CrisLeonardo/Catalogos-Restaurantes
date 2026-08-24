@@ -638,20 +638,31 @@ body {
    config.ambientGlow = true). El asphalt ya trae los suyos vía ::before/::after
    arriba; esta capa es la misma animación pero como elemento aparte, para que
    el glow no dependa de backgroundType === 'asphalt'. */
+/* MISMO BUG QUE `.asphalt`, EN LA COPIA (2026-08-24). Esta capa se creó como
+   "la misma animación pero como elemento aparte", y por eso heredó también el
+   `svmax` sin topar. Cuando `.asphalt` se arregló, ESTA regla se quedó atrás:
+   los restaurantes con fondo sólido/degradado/imagen + `ambientGlow` seguían
+   alejando la página en el teléfono, y el fondo "Asphalt" ya no.
+   Medido en 375x812 sobre el sitio en vivo: el círculo salía 487 px de ancho
+   desde `left: -81 px`, o sea llegaba al píxel 406 de una pantalla de 375.
+   REGLA: estas dos reglas son gemelas — lo que se toque en una va en la otra. */
 .ambient-glow {
   position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  contain: layout paint;
 }
 .ambient-glow::before, .ambient-glow::after {
   content: ''; position: absolute; border-radius: 50%;
   filter: blur(60px); opacity: 0.5; mix-blend-mode: screen;
 }
 .ambient-glow::before {
-  width: 60svmax; height: 60svmax; left: -10svmax; top: -20svmax;
+  width: min(60svmax, 90vw); height: min(60svmax, 90svh);
+  left: max(-10svmax, -20vw); top: max(-20svmax, -30svh);
   background: radial-gradient(circle, rgba(255,255,255,0.10), transparent 60%);
   animation: drift-a 26s var(--ease-out) infinite alternate;
 }
 .ambient-glow::after {
-  width: 50svmax; height: 50svmax; right: -8svmax; bottom: -16svmax;
+  width: min(50svmax, 80vw); height: min(50svmax, 80svh);
+  right: max(-8svmax, -16vw); bottom: max(-16svmax, -24svh);
   background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 60%);
   animation: drift-b 32s var(--ease-out) infinite alternate;
 }
