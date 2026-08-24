@@ -629,9 +629,14 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
      canto derecho de la pantalla. Con mínimo 0 la rejilla no puede
      desbordar, pase lo que pase dentro de las piezas. */
   const wide = width !== 'movil';
+  /* En lienzo ancho el reparto lo hace `auto-fill` con un ancho minimo, asi que
+     se puede seguir declarando aqui. En TELEFONO no: las columnas tienen que
+     poder recortarse por media query cuando la pantalla no da, y un estilo EN
+     LINEA le gana a cualquier media query. Ahi el numero viaja en `data-cols`
+     y quien pinta la rejilla es `.m-grid` en globals.css. */
   const gridCols = wide
     ? `repeat(auto-fill, minmax(${LAYOUT_MIN_COL[width]}px, 1fr))`
-    : `repeat(${config.catalogColumns}, minmax(0, 1fr))`;
+    : undefined;
 
   const fade = (i: number) => ({
     className: anim ? 'anim-fade-up' : '',
@@ -780,7 +785,15 @@ function Items({ items, locked, card, width, featuredIds, catIcon, ordersEnabled
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 12, marginTop: 12 }}>
+    /* `data-cols` lleva al CSS las columnas que pidio el dueno, que es quien
+       puede recortarlas cuando la pantalla no da para tantas (ver `.m-grid` en
+       globals.css). El ajuste del dueno es un TECHO: la pantalla lo baja, nunca
+       lo sube — la misma regla que ya aplica `canvasComposition`. */
+    <div
+      className="m-grid"
+      data-cols={wide ? undefined : config.catalogColumns}
+      style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 'var(--m-sp-3)', marginTop: 'var(--m-sp-3)' }}
+    >
       {items.map((p, i) => {
         const featured = featuredIds.has(p.id);
         const attrs = featured ? fade(i) : fadeLazy(i, 'tarjeta');

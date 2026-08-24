@@ -1634,12 +1634,27 @@ html { overflow-x: clip; }
 .m-surface[data-unavailable="1"] { opacity: 0.72; cursor: default; }
 
 /* ── Tarjeta de platillo (rejilla) ────────────────────────── */
+/* SIN `height: 100%`. Esto costo encontrarlo y es la causa de que la carta
+   "no cuadre" en el telefono:
+
+   `.menu-card-lazy` (el envoltorio) usa `content-visibility: auto` con una
+   altura RESERVADA (`contain-intrinsic-height`) para que la barra de
+   desplazamiento no de saltos. Con `height: 100%` la tarjeta resolvia su
+   altura contra esa reserva, asi que la RESERVA pasaba a ser la altura real y
+   ya no se soltaba nunca. Medido en un telefono de 360 px: las tarjetas
+   necesitaban 220-241 px y todas median 280 — entre 39 y 60 px de aire muerto
+   por tarjeta. Y como el nombre llevaba `flex: 1`, ese hueco se metia DENTRO
+   del nombre, dejando el precio y el boton de agregar flotando lejos del
+   platillo. Comprobado: poniendo la reserva en 240 las tarjetas median 240
+   exactas, y en 230, 230 — el numero mandaba sobre el contenido.
+
+   Ahora la tarjeta mide lo que mide su contenido y la reserva vuelve a ser
+   solo lo que decia ser: una estimacion para que no salte el scroll. */
 .m-tile {
   border-radius: var(--m-r-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 .m-tile-art {
   position: relative;
@@ -1694,7 +1709,9 @@ html { overflow-x: clip; }
 .m-name {
   font-size: calc(var(--m-fs-md) * var(--t-productName-size, 1));
 }
-.m-tile .m-name { flex: 1; }
+/* El hueco, si la tarjeta llega a crecer, cae ENTRE el nombre y el pie y no
+   dentro del nombre (que es lo que separaba el precio del platillo). */
+.m-foot { margin-top: auto; }
 .m-desc {
   font-size: calc(var(--m-fs-xs) * var(--t-productDesc-size, 1));
 }
@@ -1745,6 +1762,52 @@ html { overflow-x: clip; }
   gap: var(--m-sp-1);
   flex-wrap: wrap;
   max-width: calc(100% - var(--m-sp-4));
+}
+
+/* ── La rejilla de la carta ───────────────────────────────────
+   ESTO ES LA RESPONSIVIDAD QUE FALTABA. En el teléfono la rejilla usaba
+   SIEMPRE el número de columnas que eligió el dueño, sin mirar cuánto mide la
+   pantalla. Medido en un teléfono de 360 px de ancho: el lienzo son 328 px, y
+   con tres columnas cada tarjeta se queda en 101 px — el nombre del platillo
+   parte en cinco líneas y la carta deja de leerse. En uno de 320 px son 88 px.
+
+   `canvas.ts` ya dice la regla y hasta la aplica al mosaico («decidir la
+   maqueta solo con la configuración daba un mosaico de tres columnas de 106 px
+   con los nombres cortados»); la rejilla normal se había quedado sin ella.
+
+   Aquí se aplica igual: **el ajuste del dueño es un TECHO y la pantalla solo
+   puede bajarlo**. Va en CSS y no en React a propósito — así vale desde el
+   primer pintado, sin el salto de maqueta que provoca medir la ventana al
+   hidratar (misma decisión que documenta canvas.ts).
+
+   Los cortes salen de la cuenta, no del catálogo de teléfonos: con 16 px de
+   relleno a cada lado y 12 px de hueco, una tarjeta no baja de ~150 px hasta
+   los 480 px de ventana con 3 columnas, ni hasta los 330 con 2. */
+/* `minmax(0, 1fr)` y no `1fr`: `1fr` es en realidad `minmax(auto, 1fr)` y ese
+   `auto` es el minimo de CONTENIDO, asi que basta una pieza que declare un
+   ancho minimo para que la columna se plante en el y la rejilla se salga de la
+   pagina. Con minimo 0 no puede desbordar pase lo que pase dentro. */
+.m-grid[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.m-grid[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* TRES COLUMNAS NO CABEN EN EL LIENZO DEL TELÉFONO, y no es cuestión del
+   tamaño de la pantalla: el lienzo «Columna de móvil» está topado en 460 px
+   (--menu-max), así que por grande que sea el teléfono la cuenta es siempre
+   460 − 32 de relleno − 24 de huecos = 404, entre 3 = **135 px por tarjeta**.
+   Medido a 540 px de ventana: 134,66 px. A ese ancho el nombre del platillo
+   parte en tres o cuatro líneas y la foto es un sello.
+
+   Por eso el recorte va por LIENZO y no por ventana (que es lo que tenía yo
+   al principio, y por eso a 540 px seguían saliendo tres columnas de 135).
+   El ajuste del dueño no se pierde: sus 3 columnas siguen valiendo en los
+   lienzos «Ancho» y «Revista», y el mosaico las usa igual. */
+html[data-canvas="movil"] .m-grid[data-cols="3"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 330px) {
+  /* Y en los teléfonos más estrechos que se siguen vendiendo, ni dos: a 138 px
+     una tarjeta con foto, nombre y precio es un sello, no un platillo. */
+  .m-grid[data-cols="2"],
+  .m-grid[data-cols="3"] { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── Píldora de categoría ─────────────────────────────────── */
@@ -2173,7 +2236,10 @@ button:focus-visible { outline: 2px solid color-mix(in srgb, var(--u-text, #ffff
      único que se buscaba, para que la barra de desplazamiento no dé saltos—
      se queda intacta. */
   contain-intrinsic-width: auto none;
-  contain-intrinsic-height: auto 280px;   /* data-shape="tarjeta": foto + texto */
+  /* 280 px era el alto de la tarjeta ANTES de que las piezas midieran desde la
+     escala --m-*. Medido despues: 220-241 px. Una reserva 40-60 px mas alta
+     que la realidad es justo lo que descuadraba la carta. */
+  contain-intrinsic-height: auto 230px;   /* data-shape="tarjeta": foto + texto */
 
   /* OJO, esto no es decorativo: content-visibility trae contención de
      PINTADO, que recorta a sus propios bordes todo lo que pinte de más lo de
