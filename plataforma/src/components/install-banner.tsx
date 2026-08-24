@@ -201,7 +201,7 @@ function AndroidBanner({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Cabecera */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           {/* Ícono de app */}
           <div style={{
             width: 48, height: 48, borderRadius: 14, flexShrink: 0,
@@ -324,6 +324,7 @@ export default function InstallBanner({ brandName }: Props) {
         bottom: 0,
         left: 0,
         right: 0,
+        maxWidth: '100vw',
         zIndex: 200,
         padding: '0 12px calc(16px + env(safe-area-inset-bottom, 0px))',
       }}

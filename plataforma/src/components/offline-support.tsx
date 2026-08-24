@@ -72,6 +72,7 @@ export default function OfflineSupport() {
         top: 0,
         left: 0,
         right: 0,
+        maxWidth: '100vw',
         zIndex: 400,
         display: 'flex',
         alignItems: 'center',
