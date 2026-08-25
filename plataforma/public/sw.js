@@ -9,11 +9,22 @@
    Ver plataforma/docs/ARQUITECTURA_OFFLINE.md.
    ============================================================ */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `leogin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `leogin-pages-${CACHE_VERSION}`;
 const CACHE_NAMES = [STATIC_CACHE, PAGES_CACHE];
 const OFFLINE_URL = '/offline.html';
+
+/* El proxy (proxy.ts §3) reescribe SLUG-admin.dominio/algo → /admin/algo y
+   SLUG-central.dominio/algo → /central/algo del lado del servidor: es
+   transparente para el navegador, así que el `pathname` que ve ESTE fetch
+   nunca lleva el prefijo "/admin" ni "/central" cuando el panel vive en su
+   propio subdominio (el patrón de producción desde la migración a *-admin).
+   Sin esto, `isBackofficePath('/pedidos')` daba `false` en ese subdominio —
+   el candado de "nunca cachear el back-office" tenía un agujero del tamaño
+   de la app entera ahí. Se calcula una sola vez: el host del Service Worker
+   no cambia durante su vida. */
+const BACKOFFICE_HOST = /^[a-z0-9-]+-(admin|central)(\.|$)/i.test(self.location.hostname);
 
 const PRECACHE_ASSETS = [
   '/icon-192.png',
@@ -48,7 +59,10 @@ self.addEventListener('activate', (event) => {
     veces o se confunda al mesero). Esas pantallas ya reconectan Realtime
     con su propio backoff; ver notifications.tsx / orders-panel.tsx. */
 function isBackofficePath(pathname) {
-  return pathname.startsWith('/admin') || pathname.startsWith('/super') || pathname.startsWith('/central');
+  return BACKOFFICE_HOST
+    || pathname.startsWith('/admin')
+    || pathname.startsWith('/super')
+    || pathname.startsWith('/central');
 }
 
 function isStaticAsset(pathname) {

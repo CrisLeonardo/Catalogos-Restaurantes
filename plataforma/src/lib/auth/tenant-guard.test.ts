@@ -164,4 +164,15 @@ describe('casos borde', () => {
       redirectTo: 'https://restaurante-a-admin.leogin.online/menu',
     });
   });
+
+  it('slug que no resuelve y sin restaurante propio: a Mi cuenta, nunca a la portada', () => {
+    // Dueño de grupo sin restaurante personal, o una lectura que falló justo
+    // en este request — de cualquier forma sigue autenticado. Mandarlo a "/"
+    // se leía como sesión perdida (y en el subdominio admin, "/" ni siquiera
+    // es la portada: el proxy lo reescribe de vuelta a este mismo panel).
+    const d = decideTenantAccess(
+      input({ tenantSlug: 'no-existe', tenant: null, ownSlug: null, profileRestaurantId: null }),
+    );
+    expect(d).toEqual({ allow: false, redirectTo: '/mi-cuenta' });
+  });
 });

@@ -70,8 +70,12 @@ export function decideTenantAccess(input: TenantGuardInput): TenantDecision {
 
   if (!tenantSlug) return { allow: true };
 
-  // El subdominio no corresponde a ningún restaurante legible: a la portada.
-  if (!tenant) return { allow: false, redirectTo: ownSlug ? `${adminUrlFor(ownSlug)}/menu` : '/' };
+  // El subdominio no corresponde a ningún restaurante legible: si tiene un
+  // restaurante propio, a SU panel; si no (dueño de grupo sin restaurante
+  // personal, o una lectura que falló justo ahora), a Mi cuenta — nunca a la
+  // portada de mercadeo. Ya está autenticado: mandarlo a la portada pública
+  // se lee como si la sesión se hubiera perdido, cuando sigue viva.
+  if (!tenant) return { allow: false, redirectTo: ownSlug ? `${adminUrlFor(ownSlug)}/menu` : '/mi-cuenta' };
 
   // Su propio restaurante: el caso normal, sin importar el rol.
   if (profileRestaurantId && profileRestaurantId === tenant.id) {

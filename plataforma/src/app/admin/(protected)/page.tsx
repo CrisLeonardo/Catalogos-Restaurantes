@@ -8,6 +8,7 @@ import { getOrderStats, getActiveOrdersPreview, type ActiveOrderPreview } from '
 import { getHoyWidgets } from '@/lib/db/hoy';
 import { getBillingConfig, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
 import { getVisitStats } from '@/lib/actions/metrics';
+import { subdomainUrl } from '@/lib/tenant';
 import { PLANS, withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { isModuleActive } from '@/lib/modules';
 import { Icon } from '@/components/icons';
@@ -215,6 +216,11 @@ export default async function AdminHomePage() {
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
   const brandName = restaurant?.name ?? 'tu restaurante';
 
+  // El menú público vive en el subdominio SIN "-admin": un href="/" relativo
+  // se reescribe de vuelta a "/admin/" en ese subdominio (ver proxy.ts §3),
+  // así que "Ver mi menú" reabría el propio panel en vez del catálogo.
+  const menuUrl = slug ? subdomainUrl(slug) : '/';
+
   // Fecha de hoy en la zona del restaurante, no en la del servidor.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
@@ -267,17 +273,25 @@ export default async function AdminHomePage() {
   return (
     <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
 
-      {/* Cabecera: el título y las dos únicas acciones que no están en el menú */}
+      {/* Cabecera: el título y las dos únicas acciones que no están en el menú.
+          El bloque del título lleva un mínimo (no min-w-0): sin él, flexbox
+          nunca manda los botones al siguiente renglón —los dos caben "a la
+          fuerza" en la misma línea— y en un teléfono el título y la fecha
+          terminan encogidos a una columna de ~50px, una palabra por renglón.
+          El mínimo obliga el salto ANTES de llegar a eso, igual que el truco
+          ya usado en sales-widgets.tsx. Los botones también envuelven
+          (flex-wrap) por si acaso en una pantalla muy angosta (~320px)
+          tampoco entran juntos. */}
       <div className="flex flex-wrap items-end gap-4">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[190px] flex-1">
           <h2 className="t-display" style={{ fontSize: 26, lineHeight: 1.15 }}>Hoy</h2>
           <p style={{ fontSize: 14.5, color: 'var(--u-text-3)', marginTop: 6 }}>
             {today} · {brandName}
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <a
-            href="/"
+            href={menuUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
