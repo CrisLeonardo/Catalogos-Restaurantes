@@ -5,7 +5,7 @@ import { getDeviceId } from '@/lib/device-id';
 import { Glass } from '@/components/glass';
 import { LeoginMark } from '@/components/leogin-logo';
 import { Icon } from '@/components/icons';
-import { login, type AuthState } from '@/lib/actions/auth';
+import { login, logout, type AuthState } from '@/lib/actions/auth';
 import type { ResumeSession } from '@/lib/auth/resume';
 import StaffPinLogin from '@/components/admin/staff-pin-login';
 import GoogleStaffButton from '@/components/auth/google-staff-button';
@@ -39,7 +39,14 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
   // turno. Quien entra con correo sigue teniendo su formulario a un toque.
   // (Sin `resume`: si el aparato ya trae una sesión viva, "Continuar como…"
   // es el camino más corto y no conviene taparlo con la grilla.)
-  const openInPin = pinTrusted && !!restaurantId && !resume;
+  //
+  // Excepción: en el aparato del local, una sesión de rol ALTO (dueño, super
+  // admin) nunca tapa la grilla — el servidor ya se encarga de no devolverla
+  // (getResumeSession con pinTrusted, ver resume.ts), esto es cinturón y
+  // tirantes. STAFF/WAITER sí sigue tapando la grilla con su propio atajo:
+  // ya aparece ahí mismo, así que no hay nada nuevo que esconder.
+  // Checklist 2026-08-25 §1.
+  const openInPin = pinTrusted && !!restaurantId && !(resume && resume.lowPrivilege);
   const [mode, setMode] = useState<'password' | 'pin'>(openInPin ? 'pin' : 'password');
   const [state, formAction, isPending] = useActionState(login, emptyState);
 
@@ -142,6 +149,28 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
             <p className="t-mute" style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>
               Ya tienes una sesión iniciada — o entra con otra cuenta:
             </p>
+            {/* Antes la única salida era seguir de largo hacia el formulario
+                de abajo, que no cierra la sesión vieja: alguien que agarra
+                el aparato después seguía viendo este mismo "Continuar como".
+                Checklist 2026-08-25 §3 — cerrar tiene que ser tan fácil como
+                continuar. */}
+            <form action={logout} style={{ marginTop: 6, textAlign: 'center' }}>
+              <button
+                type="submit"
+                className="press"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '4px 8px',
+                  color: 'var(--u-text-4)',
+                  fontSize: 12,
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                }}
+              >
+                No soy yo · cerrar esta sesión
+              </button>
+            </form>
           </Glass>
         )}
 

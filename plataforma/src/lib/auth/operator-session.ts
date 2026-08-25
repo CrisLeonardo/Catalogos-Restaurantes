@@ -56,7 +56,20 @@ export async function writeOperatorCookie(profileId: string): Promise<void> {
     sameSite: 'lax',
     secure: !!OPERATOR_COOKIE_DOMAIN,
     path: '/',
-    maxAge: OPERATOR_WINDOW_MS / 1000,
+    // OJO (bug real, encontrado 2026-08-25 arreglando el checklist de login
+    // compartido): el `maxAge` de la cookie NO es lo que hace cumplir la
+    // ventana de inactividad — eso lo decide `isOperatorSessionStale()`
+    // comparando el reloj de adentro. Si `maxAge` fuera igual a
+    // `OPERATOR_WINDOW_MS` (como estaba antes), el navegador BORRARÍA la
+    // cookie justo cuando toca detectarla como vencida, y una cookie
+    // ausente se lee como "todavía no hay marca" (línea de arriba) en vez
+    // de "llevaba vencida" — el candado nunca llegaba a dispararse. Mismo
+    // bug que tenía `session-activity.ts` antes de corregirlo; ver
+    // CHECKLIST_LOGIN_COMPARTIDO_2026-08-25.md. Por eso vive mucho más que
+    // la ventana: solo es la limpieza de basura del navegador si el
+    // aparato queda cerrado para siempre, nunca el mecanismo que cierra
+    // sesión.
+    maxAge: 24 * 60 * 60,
     ...(OPERATOR_COOKIE_DOMAIN ? { domain: OPERATOR_COOKIE_DOMAIN } : {}),
   });
 }

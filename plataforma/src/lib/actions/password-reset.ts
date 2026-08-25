@@ -23,6 +23,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendEmail, emailEnabled } from '@/lib/email';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { readResetPass, RESET_COOKIE, resetCookieOptions } from '@/lib/auth/reset-session';
+import { writeSessionActivity } from '@/lib/auth/session-activity';
 import { splitLoginIdentifier } from '@/lib/staff-email';
 import { rootDomainForUrls } from '@/lib/tenant';
 
@@ -145,6 +146,9 @@ export async function setNewPassword(
 
   // El pase es de un solo uso.
   store.set(RESET_COOKIE, '', { ...resetCookieOptions(), maxAge: 0 });
+
+  // Arranca el reloj de inactividad (checklist 2026-08-25 §2).
+  await writeSessionActivity(user.id);
 
   const { data: profile } = await supabase
     .from('profiles')

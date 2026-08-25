@@ -4,6 +4,7 @@ import { myOrganizationId } from '@/lib/db/admin';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
+import { isLowPrivilegeRole, shouldHideResume } from '@/lib/auth/resume-policy';
 
 /**
  * Sesión de personal ya iniciada, lista para "Continuar como {nombre}" en las
@@ -19,9 +20,22 @@ import { resolveStaffDestination } from '@/lib/auth/destination';
  *
  * Devuelve null si no hay sesión utilizable — el login se muestra normal.
  */
-export type ResumeSession = { name: string; url: string };
+export type ResumeSession = {
+  name: string;
+  url: string;
+  /**
+   * STAFF/WAITER: es quien ya aparece en la grilla de PIN, así que su propio
+   * atajo de "Continuar como" no abre ningún hueco nuevo en el aparato del
+   * local. OWNER/SUPER_ADMIN (o cualquier otro rol que NO entra por PIN):
+   * `false` — es la sesión que este helper esconde en un aparato de
+   * confianza (ver `pinTrusted` abajo).
+   */
+  lowPrivilege: boolean;
+};
 
-export async function getResumeSession(): Promise<ResumeSession | null> {
+export async function getResumeSession(
+  opts: { restaurantId?: string | null; pinTrusted?: boolean } = {},
+): Promise<ResumeSession | null> {
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -40,6 +54,14 @@ export async function getResumeSession(): Promise<ResumeSession | null> {
     .single();
   if (!profile) return null;
 
+  const lowPrivilege = isLowPrivilegeRole(profile.role as string);
+  // Aparato de confianza del local: la grilla de PIN manda para cualquier
+  // sesión de rol alto (dueño, super admin), sin importar de qué restaurante
+  // sea esa sesión vieja — es la protección del §1-2 del checklist de
+  // 2026-08-25. Regla centralizada en resume-policy.ts (con sus tests) para
+  // que esta comprobación y la de login-client.tsx no puedan desincronizarse.
+  if (shouldHideResume(!!opts.pinTrusted, profile.role as string)) return null;
+
   const name = (profile.full_name as string | null) || user.email || 'tu cuenta';
   // Sin restaurante propio solo siguen el super admin y quien administra una
   // cadena (que entra por su organización, no por su restaurant_id).
@@ -54,5 +76,5 @@ export async function getResumeSession(): Promise<ResumeSession | null> {
   // resolveStaffDestination cae a /admin/login cuando no pudo resolver el
   // restaurante (perfil huérfano) — ahí no hay nada útil que "continuar".
   if (url === '/admin/login') return null;
-  return { name, url };
+  return { name, url, lowPrivilege };
 }

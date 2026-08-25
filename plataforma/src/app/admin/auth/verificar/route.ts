@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveStaffDestination } from '@/lib/auth/destination';
+import { writeSessionActivity } from '@/lib/auth/session-activity';
 
 /**
  * Aterrizaje del enlace "confirma tu correo" (ver lib/auth/email-verification.ts).
@@ -21,6 +22,9 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash: token });
   if (error || !data.user) return failed;
+
+  // Arranca el reloj de inactividad (checklist 2026-08-25 §2).
+  await writeSessionActivity(data.user.id);
 
   const db = createServiceClient();
   await db

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createOAuthCallbackClient } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
+import { writeSessionActivity } from '@/lib/auth/session-activity';
 
 export const runtime = 'nodejs';
 
@@ -83,6 +84,10 @@ export async function GET(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return fail('exchangeCodeForSession no dio error pero getUser() no devolvió usuario');
+
+  // Arranca el reloj de inactividad (checklist 2026-08-25 §2) desde ya,
+  // cubra o no restaurante todavía — igual que login() con correo.
+  await writeSessionActivity(user.id);
 
   const { data: profile, error: perfilErr } = await supabase
     .from('profiles')

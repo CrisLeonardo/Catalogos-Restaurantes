@@ -11,11 +11,13 @@ import GroupOwnerBanner from '@/components/admin/group-owner-banner';
 import VerifyEmailBanner from '@/components/admin/verify-email-banner';
 import MainPcBanner from '@/components/admin/main-pc-banner';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
+import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
 import { adminUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
+import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
@@ -61,6 +63,12 @@ export default async function AdminProtectedLayout({
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role, ctx.userId)) {
+    redirect('/admin/logout-operator');
+  }
+  // Checklist 2026-08-25 §2: la sesión de correo/Google (dueño, super admin,
+  // o staff que entró por ahí en vez de PIN) también vence a los 30 min sin
+  // actividad — antes no tenía ningún límite.
+  if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, ctx.userId)) {
     redirect('/admin/logout-operator');
   }
 
@@ -232,6 +240,7 @@ export default async function AdminProtectedLayout({
       )}
       {localServerState && <MainPcBanner state={localServerState} />}
       {isOperatorSession && <OperatorHeartbeat profileId={ctx.userId} />}
+      <SessionHeartbeat />
       {children}
     </AdminShell>
     </PlanPricingProvider>

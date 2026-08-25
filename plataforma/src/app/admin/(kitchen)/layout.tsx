@@ -7,11 +7,13 @@ import { can } from '@/lib/permissions';
 import type { ModulesMap } from '@/lib/modules';
 import { adminUrl } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
+import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import AdminShell from '@/components/admin/shell';
 import OfflineSupport from '@/components/offline-support';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
+import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Cocina (KDS)' };
@@ -45,6 +47,10 @@ export default async function KitchenLayout({ children }: { children: React.Reac
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
+    redirect('/admin/logout-operator');
+  }
+  // Checklist 2026-08-25 §2 — ver (protected)/layout.tsx.
+  if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
     redirect('/admin/logout-operator');
   }
 
@@ -133,6 +139,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     >
       <OfflineSupport />
       {isOperatorSession && <OperatorHeartbeat profileId={user.id} />}
+      <SessionHeartbeat />
       {children}
     </AdminShell>
   );

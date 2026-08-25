@@ -7,11 +7,13 @@ import { can } from '@/lib/permissions';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
+import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import { adminUrl } from '@/lib/tenant';
 import AdminShell from '@/components/admin/shell';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
+import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,6 +42,10 @@ export default async function WaiterLayout({ children }: { children: React.React
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
+    redirect('/admin/logout-operator');
+  }
+  // Checklist 2026-08-25 §2 — ver (protected)/layout.tsx.
+  if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
     redirect('/admin/logout-operator');
   }
 
@@ -140,6 +146,7 @@ export default async function WaiterLayout({ children }: { children: React.React
       isOperatorSession={isOperatorSession}
     >
       {isOperatorSession && <OperatorHeartbeat profileId={user.id} />}
+      <SessionHeartbeat />
       {children}
     </AdminShell>
   );

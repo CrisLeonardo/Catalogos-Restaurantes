@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { getMyGroupScope } from '@/lib/db/group';
 import LeoginLogo from '@/components/leogin-logo';
 import { logout } from '@/lib/actions/auth';
+import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
+import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
 import MiCuentaNav from './mi-cuenta-nav';
 
@@ -34,6 +37,14 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login');
 
+  // Checklist 2026-08-25 §2 — ver /admin/(protected)/layout.tsx. Mi cuenta
+  // (dueño de grupo, o dueño con varios restaurantes) tampoco tenía ningún
+  // candado de inactividad.
+  const cookieStore = await cookies();
+  if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
+    redirect('/admin/logout-operator');
+  }
+
   const scope = await getMyGroupScope();
 
   /* El Toaster va aquí porque los avisos de las secciones consolidadas
@@ -42,6 +53,7 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
      panel viejo; al mudarse aquí se vino con él. */
   return (
     <ToastProvider>
+    <SessionHeartbeat />
     <main style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
       <header
         className="glass-solid"

@@ -47,13 +47,6 @@ export default async function AdminLoginPage({
     }
   }
 
-  let resume = null;
-  try {
-    resume = await getResumeSession();
-  } catch {
-    /* sin sesión utilizable → login normal */
-  }
-
   // Fallback del hub local (Fase 2 offline): si el PIN falla por conectividad
   // intermitente justo al enviarlo, staff-pin-login.tsx reintenta contra el
   // hub con esto — nunca abre sesión por sí solo, solo identifica al operador.
@@ -77,6 +70,14 @@ export default async function AdminLoginPage({
     } catch {
       /* sin BD → se deja como estaba */
     }
+  }
+
+  // pinTrusted tiene que estar resuelto ANTES de esto — ver /login/page.tsx.
+  let resume = null;
+  try {
+    resume = await getResumeSession({ restaurantId, pinTrusted });
+  } catch {
+    /* sin sesión utilizable → login normal */
   }
 
   return (

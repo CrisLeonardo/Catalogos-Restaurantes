@@ -303,9 +303,28 @@ en hora pico. Por eso:
 - Y **no se deja encender con la lista vacía**: es el error más caro que se
   puede cometer en esa pantalla, y el más fácil.
 
-Y una nota sobre el dueño: mantener siempre visible **"Continuar como {nombre}"**
-(ya existe, `lib/auth/resume.ts`). Ese es el camino corto real para el 90% de los
+Y una nota sobre el dueño: mantener visible **"Continuar como {nombre}"**
+(ya existe, `lib/auth/resume.ts`) es el camino corto real para el 90% de los
 ingresos, más que cualquier proveedor de identidad.
+
+**Corrección (2026-08-25):** "siempre visible" era la parte que estaba mal —
+en el aparato **de confianza del local**, "Continuar como {nombre}" para un
+rol alto (dueño, super admin) es EXACTAMENTE el hueco que el PIN existe para
+tapar: un mesero que agarrara ese aparato entraba como dueño con un solo
+toque, sin PIN ni contraseña, y la sesión no caducaba por inactividad como sí
+lo hace el PIN. Ver `CHECKLIST_LOGIN_COMPARTIDO_2026-08-25.md` (raíz del
+repo) para el detalle completo, ya implementado y verificado con datos
+reales. Queda así:
+- **Aparato de confianza del local:** la grilla de PIN manda siempre para
+  roles altos — "Continuar como" se esconde (`resume-policy.ts`,
+  `shouldHideResume`). STAFF/WAITER no se esconde: ya está en esa misma
+  grilla, así que no hay nada nuevo que tapar.
+- **Cualquier otro aparato** (el celular del dueño, por ejemplo):
+  "Continuar como {nombre}" se sigue ofreciendo igual que siempre — el atajo
+  de arriba sigue siendo válido ahí.
+- Además, la sesión de correo/Google ahora sí caduca por inactividad (30
+  min, igual que el PIN) — antes podía seguir viva días
+  (`lib/auth/session-activity.ts`).
 
 ---
 

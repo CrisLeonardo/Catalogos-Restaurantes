@@ -32,13 +32,6 @@ export default async function LoginPage({
     }
   }
 
-  let resume = null;
-  try {
-    resume = await getResumeSession();
-  } catch {
-    /* sin sesión utilizable → login normal */
-  }
-
   let hubUrl: string | null = null;
   let hubToken: string | null = null;
   // Candado de dispositivos (migración 112): decidido en el servidor para que
@@ -61,6 +54,17 @@ export default async function LoginPage({
     } catch {
       /* sin BD → se deja como estaba: el PIN conserva sus otras defensas */
     }
+  }
+
+  // pinTrusted tiene que estar resuelto ANTES de esto: en un aparato de
+  // confianza del local, getResumeSession() esconde las sesiones de rol alto
+  // (checklist 2026-08-25 §2) — sin el orden correcto ofrecería "Continuar
+  // como Dueño" en el mostrador igual que antes del arreglo.
+  let resume = null;
+  try {
+    resume = await getResumeSession({ restaurantId, pinTrusted });
+  } catch {
+    /* sin sesión utilizable → login normal */
   }
 
   return (

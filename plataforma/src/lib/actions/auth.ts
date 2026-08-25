@@ -8,6 +8,7 @@ import { headers } from 'next/headers';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
+import { writeSessionActivity } from '@/lib/auth/session-activity';
 
 export type AuthState = { error: string } | null;
 
@@ -95,6 +96,11 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     .single();
 
   if (!profile) redirect('/admin/login');
+
+  // Arranca el reloj de inactividad (checklist 2026-08-25 §2) desde este
+  // mismo login, en vez de esperar a que el heartbeat del panel la escriba
+  // en el próximo render — igual que el PIN escribe su marca al validar.
+  await writeSessionActivity(signInData.user.id);
 
   // Bitácora de accesos (migración 109): el dueño la ve en /admin/personal.
   await logPanelAccess({
