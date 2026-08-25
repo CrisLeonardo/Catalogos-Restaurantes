@@ -73,6 +73,10 @@ export default async function MeseroPage() {
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
       tipEnabled={resolvedConfig ? tipAppliesToType(resolvedConfig, 'DINE_IN') : false}
+      tipEnabledPickup={resolvedConfig ? tipAppliesToType(resolvedConfig, 'PICKUP') : false}
+      // "Para llevar" en el panel de mesero solo si el restaurante acepta ese
+      // tipo de pedido (misma configuración que el menú público).
+      pickupEnabled={resolvedConfig ? resolvedConfig.orderTypes.includes('pickup') : true}
       tipPercent={resolvedConfig?.tipPercent ?? 10}
       currency={{
         symbol: resolvedConfig?.currencySymbol ?? 'Q',

@@ -144,10 +144,39 @@ export interface FloorLevel {
   name: string;     // "Planta baja", "Segundo nivel", "Terraza"…
 }
 
+/* Referencias fijas del salón: la barra, la recepción, la cocina, la
+   entrada. No son mesas —no se pueden pedir ni ocupar—, son los puntos
+   por los que una persona sabe dónde está parada. Un plano de círculos
+   flotando en gris no le dice a un mesero nuevo cuál es la mesa 4; el
+   mismo plano con la barra dibujada, sí. */
+export type FixtureKind =
+  | 'bar'         // barra
+  | 'reception'   // recepción / anfitrión
+  | 'cashier'     // caja
+  | 'kitchen'     // cocina
+  | 'entrance'    // entrada
+  | 'restroom'    // baños
+  | 'wall';       // muro / división
+
+export interface FloorFixture {
+  id: string;
+  level: string;    // id del nivel al que pertenece
+  kind: FixtureKind;
+  x: number;        // 0..1 centro horizontal relativo al lienzo
+  y: number;        // 0..1 centro vertical relativo al lienzo
+  w: number;        // 0..1 ancho relativo al lienzo
+  h: number;        // 0..1 alto relativo al lienzo
+  /** Texto propio ("Barra fría"); vacío = el nombre por defecto del tipo. */
+  label?: string;
+}
+
 export interface FloorPlan {
   enabled: boolean;       // false = cuadrícula automática (comportamiento clásico)
   levels: FloorLevel[];   // 1..3 niveles
   tables: FloorTable[];   // mesas colocadas; las no colocadas caen en "otras mesas"
+  /** Referencias fijas del salón. Opcional: los planos guardados antes de
+      que existieran siguen siendo válidos tal cual (sin migración). */
+  fixtures?: FloorFixture[];
 }
 
 export interface ThemeConfig {
@@ -440,6 +469,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
     enabled: false,
     levels: [{ id: 'l1', name: 'Planta baja' }],
     tables: [],
+    fixtures: [],
   },
 
   typography: DEFAULT_TYPOGRAPHY,

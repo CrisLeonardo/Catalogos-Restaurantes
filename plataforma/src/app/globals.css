@@ -2162,6 +2162,41 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 .waiter-wrap { width: 100%; max-width: 960px; margin-inline: auto; }
 .waiter-wrap-narrow { width: 100%; max-width: 720px; margin-inline: auto; }
 
+/* Acolchado lateral del panel de mesero.
+   ------------------------------------------------------------
+   Vive aquí y no en línea porque en el teléfono se suma al de
+   .admin-content (14 px por lado): 30 px por lado en una pantalla
+   de 393 px son 60 px —el 15 %— gastados en aire, y eran justo los
+   que impedían que la rejilla de platos partiera en dos columnas.
+   En pantallas grandes el aire sí ayuda y se conserva. */
+.waiter-pad { padding-inline: 16px; }
+@media (max-width: 640px) {
+  .waiter-pad { padding-inline: 2px; }
+  /* En kiosco no hay .admin-content que acolche: el aire lo pone él. */
+  .admin-kiosk .waiter-pad { padding-inline: 12px; }
+}
+
+/* Rejilla de platos (paso 2). En el teléfono son SIEMPRE dos columnas:
+   tomar una orden es buscar un plato entre docenas, y con una sola
+   columna caben tres y medio por pantalla. De 641 px para arriba la
+   rejilla se acomoda sola (4-5 columnas en tablet/PC). */
+.waiter-menu-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+}
+@media (max-width: 640px) {
+  .waiter-menu-grid { gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Rejilla de mesas (paso 1, sin plano del salón): mismo criterio. */
+.waiter-tables-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
+@media (max-width: 640px) {
+  .waiter-tables-grid { gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 /* Hoja modal: pegada abajo en móvil, tarjeta centrada en escritorio. */
 .waiter-sheet-scrim { display: flex; justify-content: center; align-items: flex-end; }
 .waiter-sheet { border-radius: 20px 20px 0 0; }

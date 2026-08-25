@@ -33,6 +33,41 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/* ── Borrador del pedido en curso ──────────────────────────────
+   El carrito vive en memoria: hasta ahora, tocar "Menú" o "Negocio" en la
+   barra inferior del panel desmontaba esta pantalla y se llevaba por delante
+   una orden de doce platos sin decir una palabra. Se guarda en el propio
+   aparato (no en la nube: es un borrador, no un pedido) y caduca en 6 h —
+   un turno—, para que nadie se encuentre mañana con el carrito de anoche. */
+const DRAFT_TTL_MS = 6 * 60 * 60 * 1000;
+
+interface OrderDraft {
+  cart: CartLine[];
+  tableNumber: number | null;
+  takeaway: boolean;
+  guestName: string;
+  notes: string;
+  savedAt: number;
+}
+
+function draftKey(restaurantId: string, waiterId: string): string {
+  return `leogin:waiter-draft:${restaurantId}:${waiterId}`;
+}
+
+function readDraft(restaurantId: string, waiterId: string): OrderDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(restaurantId, waiterId));
+    if (!raw) return null;
+    const d = JSON.parse(raw) as OrderDraft;
+    if (!Array.isArray(d.cart) || d.cart.length === 0) return null;
+    if (!d.savedAt || Date.now() - d.savedAt > DRAFT_TTL_MS) {
+      localStorage.removeItem(draftKey(restaurantId, waiterId));
+      return null;
+    }
+    return d;
+  } catch { return null; }
+}
+
 /* ── Tipos locales ────────────────────────────────────────── */
 interface CartLine {
   lineId: string;
@@ -56,7 +91,13 @@ interface Props {
   /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal por su cuenta). */
   occupiedSince: Record<number, TableOccupancy>;
   tableCount: number;
+  /** Propina para pedidos en mesa (DINE_IN). */
   tipEnabled: boolean;
+  /** Propina para pedidos PARA LLEVAR (PICKUP) — puede estar configurada
+      distinta a la de mesa, y el mesero ahora puede tomar ambos. */
+  tipEnabledPickup: boolean;
+  /** El restaurante acepta pedidos para llevar (config.orderTypes). */
+  pickupEnabled: boolean;
   tipPercent: number;
   currency: PanelCurrency;
   floorPlan: FloorPlan | null;
@@ -396,7 +437,7 @@ function WaiterHeader({
       borderBottom: '1px solid var(--u-hair)',
       borderRadius: 16,
     }}>
-      <div className="waiter-wrap" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+      <div className="waiter-wrap waiter-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
         {onBack && (
           <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="chevronLeft" size={20} />
@@ -424,7 +465,7 @@ type View = 'tables' | 'menu' | 'review' | 'orders' | 'bill';
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince,
-  tableCount, tipEnabled, tipPercent, currency, floorPlan,
+  tableCount, tipEnabled, tipEnabledPickup, pickupEnabled, tipPercent, currency, floorPlan,
   hubUrl, hubToken,
 }: Props) {
   const router = useRouter();
@@ -433,6 +474,11 @@ export default function WaiterPanel({
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartLine[]>([]);
   const [tableNumber, setTableNumber] = useState<number | null>(null);
+  /* Pedido PARA LLEVAR: el mesero levanta la orden sin mesa (mostrador,
+     barra, alguien que entra y pide para llevar). Antes el paso 1 era un
+     muro: sin número de mesa no había forma de seguir, aunque el pedido
+     fuera perfectamente válido. Va como PICKUP, no como DINE_IN. */
+  const [takeaway, setTakeaway] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [notes, setNotes] = useState('');
   const [tableToFree, setTableToFree] = useState<number | null>(null);
@@ -451,6 +497,12 @@ export default function WaiterPanel({
   const [queuedCount, setQueuedCount] = useState(0);
   const retryingQueueRef = useRef(false);
 
+  /* ── Borrador y salida protegida ──────────────────────────── */
+  /** Pedido sin enviar que quedó de una visita anterior (ver readDraft). */
+  const [draft, setDraft] = useState<OrderDraft | null>(null);
+  /** Destino al que el mesero intentó salir con el carrito lleno. */
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
   /* ── Anulación (motivo + aprobación) ─────────────────────── */
   const [voidTarget, setVoidTarget] = useState<VoidTarget | null>(null);
 
@@ -465,6 +517,70 @@ export default function WaiterPanel({
   /* ── Archivar mesas abandonadas (>24h) ────────────────────── */
   const [archiving, startArchive] = useTransition();
   const [archiveMsg, setArchiveMsg] = useState<string | null>(null);
+
+  /* Al entrar: ¿quedó un pedido sin enviar de la última vez? No se restaura
+     solo —aparecer con platos que uno no acaba de tocar asusta más de lo que
+     ayuda—: se ofrece en el paso 1 y el mesero decide. */
+  useEffect(() => {
+    setDraft(readDraft(restaurantId, waiterId));
+  }, [restaurantId, waiterId]);
+
+  /* Guardar el borrador en cuanto cambie algo del pedido. */
+  useEffect(() => {
+    const key = draftKey(restaurantId, waiterId);
+    try {
+      if (cart.length === 0) { localStorage.removeItem(key); return; }
+      const d: OrderDraft = { cart, tableNumber, takeaway, guestName, notes, savedAt: Date.now() };
+      localStorage.setItem(key, JSON.stringify(d));
+    } catch { /* modo privado / cuota llena: el borrador es un extra, no un requisito */ }
+  }, [cart, tableNumber, takeaway, guestName, notes, restaurantId, waiterId]);
+
+  /* Salir del panel con el carrito lleno pide confirmación. El disparador
+     real son los seis destinos de la barra inferior, que están a un dedo del
+     botón "Revisar pedido". Se intercepta en fase de CAPTURA para llegar
+     antes que el <Link> de Next. */
+  useEffect(() => {
+    if (cart.length === 0) return;
+    function onClick(e: MouseEvent) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const a = target?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!a) return;
+      if (a.target && a.target !== '_self') return;
+      const href = a.getAttribute('href') ?? '';
+      // Solo navegación interna que SAQUE de esta pantalla.
+      if (!href.startsWith('/') || href.startsWith('/admin/mesero')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingHref(href);
+    }
+    // Cerrar la pestaña o recargar: aviso del navegador (el único posible ahí).
+    function onBeforeUnload(e: BeforeUnloadEvent) { e.preventDefault(); e.returnValue = ''; }
+    document.addEventListener('click', onClick, true);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [cart.length]);
+
+  /** Retoma el borrador guardado y lleva al mesero donde lo dejó. */
+  function resumeDraft() {
+    if (!draft) return;
+    setCart(draft.cart);
+    setTableNumber(draft.tableNumber);
+    setTakeaway(draft.takeaway);
+    setGuestName(draft.guestName);
+    setNotes(draft.notes);
+    setDraft(null);
+    setView('menu');
+  }
+
+  /** Descarta el borrador guardado (y su copia en el aparato). */
+  function discardDraft() {
+    try { localStorage.removeItem(draftKey(restaurantId, waiterId)); } catch { /* nada que limpiar */ }
+    setDraft(null);
+  }
 
   async function loadTableBill(n: number) {
     setBillTable(n);
@@ -696,7 +812,13 @@ export default function WaiterPanel({
 
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
   const subtotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
-  const tipAmount = tipEnabled && subtotal > 0 ? Math.round(subtotal * tipPercent) / 100 : 0;
+  /* La propina depende del TIPO de pedido: el restaurante puede cobrarla en
+     mesa y no para llevar. El servidor la recalcula igual (computeTip), esto
+     es solo lo que ve el mesero antes de enviar. */
+  const tipApplies = takeaway ? tipEnabledPickup : tipEnabled;
+  /** A dónde va este pedido: "Mesa 4" o "Para llevar". */
+  const destLabel = takeaway ? 'Para llevar' : `Mesa ${tableNumber}`;
+  const tipAmount = tipApplies && subtotal > 0 ? Math.round(subtotal * tipPercent) / 100 : 0;
   const total = subtotal + tipAmount;
 
   function resetOrder() {
@@ -704,6 +826,7 @@ export default function WaiterPanel({
     setGuestName('');
     setNotes('');
     setTableNumber(null);
+    setTakeaway(false);
     setSubmitError(null);
     setMiniCartOpen(false);
   }
@@ -711,15 +834,23 @@ export default function WaiterPanel({
   /* Selecciona una mesa: ocupada → diálogo; libre → al menú. */
   function selectTable(n: number) {
     if (occupiedSet.has(n)) { setTableToFree(n); }
-    else { setTableNumber(n); setSearch(''); setView('menu'); }
+    else { setTakeaway(false); setTableNumber(n); setSearch(''); setView('menu'); }
+  }
+
+  /** Arranca un pedido sin mesa (para llevar / mostrador). */
+  function startTakeaway() {
+    setTakeaway(true);
+    setTableNumber(null);
+    setSearch('');
+    setView('menu');
   }
 
   async function handleSubmit() {
-    if (!tableNumber) { setSubmitError('Selecciona la mesa primero.'); return; }
+    if (!tableNumber && !takeaway) { setSubmitError('Elige la mesa o toca «Para llevar».'); return; }
     if (cart.length === 0) { setSubmitError('El carrito está vacío.'); return; }
     setSubmitError(null);
 
-    const finalName = guestName.trim() || `Mesa ${tableNumber}`;
+    const finalName = guestName.trim() || (takeaway ? 'Para llevar' : `Mesa ${tableNumber}`);
     const clientId = crypto.randomUUID();
 
     const input = {
@@ -742,11 +873,13 @@ export default function WaiterPanel({
       customer: {
         name: finalName,
         phone: '',
-        type: 'DINE_IN' as const,
-        tableNumber,
+        // Para llevar es PICKUP: no ocupa mesa, no entra al plano del salón y
+        // el flujo de estados del pedido es el de mostrador, no el de mesa.
+        type: (takeaway ? 'PICKUP' : 'DINE_IN') as 'PICKUP' | 'DINE_IN',
+        ...(takeaway ? {} : { tableNumber: tableNumber as number }),
         notes: notes.trim() || undefined,
       },
-      tipAccepted: tipEnabled && subtotal > 0,
+      tipAccepted: tipApplies && subtotal > 0,
     };
 
     startSubmit(async () => {
@@ -821,13 +954,51 @@ export default function WaiterPanel({
     onShowOrders: () => setView('orders'),
   };
 
+  /* Aviso de salida con pedido a medias. Se pinta en todas las vistas del
+     panel porque el toque que lo dispara —la barra inferior— está siempre
+     ahí. Ojo: el pedido NO se pierde aunque se salga (queda de borrador en
+     el aparato), pero salir sin querer con la comanda a medio tomar es de
+     todos modos lo peor que le puede pasar a un mesero en hora pico. */
+  const exitGuard = pendingHref === null ? null : (
+    <div onClick={() => setPendingHref(null)} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+      <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 420, padding: '22px 20px 28px' }}>
+        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
+          Tienes un pedido a medias
+        </div>
+        <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
+          {cartCount} {cartCount === 1 ? 'plato' : 'platos'} para {destLabel.toLowerCase()}, sin enviar a cocina.
+          Si sales ahora se guarda como borrador y lo puedes retomar al volver.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 20 }}>
+          <button
+            type="button"
+            onClick={() => setPendingHref(null)}
+            className="press btn-accent"
+            style={{ width: '100%', padding: '14px', borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}
+          >
+            Seguir con el pedido
+          </button>
+          <button
+            type="button"
+            onClick={() => { const href = pendingHref; setPendingHref(null); if (href) router.push(href); }}
+            className="press glass-quiet"
+            style={{ width: '100%', padding: '13px', borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)' }}
+          >
+            Salir de todos modos
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   /* ════════════════ VISTA: MIS PEDIDOS ════════════════ */
   if (view === 'orders') {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-        <WaiterHeader {...headerProps} title="Mis pedidos" onBack={() => setView(tableNumber ? 'menu' : 'tables')} />
+        <WaiterHeader {...headerProps} title="Mis pedidos" onBack={() => setView(tableNumber || takeaway ? 'menu' : 'tables')} />
+        {exitGuard}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap-narrow" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <button type="button" onClick={() => { setView('tables'); }} className="press btn-accent" style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
               ＋ Nuevo pedido
             </button>
@@ -973,6 +1144,10 @@ export default function WaiterPanel({
     const planTables = planEnabled
       ? (floorPlan?.tables ?? []).filter((t) => t.level === activeLevel && t.n <= tableCount)
       : [];
+    // Referencias del salón de este nivel (barra, recepción, cocina…).
+    const planFixtures = planEnabled
+      ? (floorPlan?.fixtures ?? []).filter((f) => f.level === activeLevel)
+      : [];
     const placedNums = new Set((floorPlan?.tables ?? []).filter((t) => t.n <= tableCount).map((t) => t.n));
     const otherTables = planEnabled
       ? Array.from({ length: tableCount }, (_, i) => i + 1).filter((n) => !placedNums.has(n))
@@ -981,8 +1156,9 @@ export default function WaiterPanel({
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title={restaurantName} />
+        {exitGuard}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap" style={{ padding: '18px 16px 40px' }}>
+          <div className="waiter-wrap waiter-pad" style={{ padding: '18px 0 40px' }}>
             <div style={{ fontSize: 13, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Paso 1 de 3</div>
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)', marginBottom: 4 }}>Elige la mesa</div>
             <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -993,6 +1169,53 @@ export default function WaiterPanel({
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--c-warn-line)', border: '1px solid var(--c-warn-line)' }} /> Con pedido activo
               </span>
             </div>
+
+            {/* Borrador rescatado: el pedido que se estaba tomando la última
+                vez y nunca salió a cocina (ver readDraft). */}
+            {draft && cart.length === 0 && (
+              <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, marginBottom: 14, border: '1px solid color-mix(in srgb, var(--c-warn) 35%, transparent)' }}>
+                <Icon name="alertCircle" size={17} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 170 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+                    Pedido sin enviar
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                    {draft.cart.reduce((n, l) => n + l.quantity, 0)} platos para {draft.takeaway ? 'llevar' : `la mesa ${draft.tableNumber}`}
+                  </div>
+                </div>
+                <button type="button" onClick={resumeDraft} className="press btn-accent" style={{ padding: '9px 15px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  Retomar
+                </button>
+                <button type="button" onClick={discardDraft} className="press glass-quiet" style={{ padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--u-text-3)' }}>
+                  Descartar
+                </button>
+              </div>
+            )}
+
+            {/* Pedido sin mesa. Va ARRIBA del plano y no escondido al final:
+                quien entra a pedir para llevar no debería tener que buscar
+                cómo decirlo entre veinte mesas. */}
+            {pickupEnabled && (
+              <button
+                type="button"
+                onClick={startTakeaway}
+                className="press glass"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 15px', marginBottom: 16, borderRadius: 14,
+                  border: '1.5px dashed var(--u-hair-2)', cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
+                  <Icon name="bag" size={19} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Para llevar · sin mesa</span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Mostrador, barra o alguien que pasa a recoger</span>
+                </span>
+                <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+              </button>
+            )}
 
             {abandonedCount > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, marginBottom: 14, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
@@ -1040,7 +1263,7 @@ export default function WaiterPanel({
                 )}
 
                 {/* Mapa del salón (zoom + paneo) */}
-                <FloorMap tables={planTables} occupied={occupiedSet} occupiedSince={occupiedSince} now={now} onSelect={selectTable} />
+                <FloorMap tables={planTables} fixtures={planFixtures} occupied={occupiedSet} occupiedSince={occupiedSince} now={now} onSelect={selectTable} />
 
                 {/* Otras mesas (sin ubicar en el plano) */}
                 {otherTables.length > 0 && (
@@ -1055,7 +1278,7 @@ export default function WaiterPanel({
                 )}
               </>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))', gap: 12 }}>
+              <div className="waiter-tables-grid">
                 {Array.from({ length: tableCount }, (_, i) => i + 1).map((n) => (
                   <TableToken key={n} n={n} occupied={occupiedSet.has(n)} since={occupiedSince[n]?.since} waiterName={occupiedSince[n]?.waiterName} now={now} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />
                 ))}
@@ -1131,8 +1354,9 @@ export default function WaiterPanel({
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title={`Cuenta · Mesa ${billTable}`} onBack={() => { setView('tables'); setBillTable(null); setBillOrders(null); }} />
+        {exitGuard}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap-narrow" style={{ padding: '16px' }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '16px 0' }}>
             {billLoading && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Cargando cuenta…</div>
             )}
@@ -1182,9 +1406,10 @@ export default function WaiterPanel({
   if (view === 'review') {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-        <WaiterHeader {...headerProps} title={`Revisar · Mesa ${tableNumber}`} onBack={() => setView('menu')} />
+        <WaiterHeader {...headerProps} title={`Revisar · ${destLabel}`} onBack={() => setView('menu')} />
+        {exitGuard}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap-narrow" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Orden ({cartCount})</div>
               {cart.length === 0 ? (
@@ -1227,7 +1452,7 @@ export default function WaiterPanel({
 
             <div>
               <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Nombre / referencia (opcional)</div>
-              <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder={`Mesa ${tableNumber}`} style={inputStyle} />
+              <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder={takeaway ? 'Nombre de quien recoge' : `Mesa ${tableNumber}`} style={inputStyle} />
             </div>
 
             <div>
@@ -1241,14 +1466,14 @@ export default function WaiterPanel({
             rgba(0,0,0,0.35) fijo: en modo claro quedaba una franja oscura con
             texto oscuro encima — ilegible). */}
         <div style={{ borderTop: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--brand-bg) 82%, transparent)', backdropFilter: 'blur(16px)' }}>
-          <div className="waiter-wrap-narrow" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {tipEnabled && tipAmount > 0 && (
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {tipApplies && tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Subtotal</span>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{money(subtotal, currency)}</span>
               </div>
             )}
-            {tipEnabled && tipAmount > 0 && (
+            {tipApplies && tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({tipPercent}%)</span>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{money(tipAmount, currency)}</span>
@@ -1282,10 +1507,11 @@ export default function WaiterPanel({
   /* ════════════════ VISTA: MENÚ (agregar platos) ════════════════ */
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-      <WaiterHeader {...headerProps} title={`Mesa ${tableNumber}`} onBack={() => setView('tables')} />
+      <WaiterHeader {...headerProps} title={destLabel} onBack={() => setView('tables')} />
+      {exitGuard}
 
       {/* Buscador */}
-      <div className="waiter-wrap" style={{ width: '100%', padding: '12px 16px 6px', flexShrink: 0 }}>
+      <div className="waiter-wrap waiter-pad" style={{ width: '100%', padding: '12px 0 6px', flexShrink: 0 }}>
         <div style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-4)', display: 'grid', placeItems: 'center' }}>
             <Icon name="search" size={17} />
@@ -1306,7 +1532,7 @@ export default function WaiterPanel({
 
       {/* Categorías (ocultas al buscar) */}
       {!query && (
-        <div className="waiter-wrap" style={{ width: '100%', display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 16px 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
+        <div className="waiter-wrap waiter-pad" style={{ width: '100%', display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 0 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
           <button
             type="button"
             onClick={() => setActiveCat(null)}
@@ -1345,13 +1571,13 @@ export default function WaiterPanel({
 
       {/* Productos */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div className="waiter-wrap" style={{ padding: '4px 16px 96px' }}>
+        <div className="waiter-wrap waiter-pad" style={{ padding: '4px 0 96px' }}>
           {visibleProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
               {query ? 'Ningún plato coincide con tu búsqueda.' : 'Sin productos disponibles en esta categoría.'}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(172px, 1fr))', gap: 14 }}>
+            <div className="waiter-menu-grid">
               {visibleProducts.map((p) => {
                 const qty = cartQtyOf(p.id);
                 const hasOptions = ((p.options as ProductOptionGroup[] | null) ?? []).length > 0;
@@ -1364,8 +1590,11 @@ export default function WaiterPanel({
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProductTap(p); } }}
                     className="press glass"
                     style={{
-                      borderRadius: 14, padding: '14px 14px 12px', position: 'relative', cursor: 'pointer',
-                      display: 'flex', flexDirection: 'column', gap: 7,
+                      // Acolchado ajustado a la columna angosta del teléfono
+                      // (dos por fila): con 14 px por lado el nombre de un
+                      // plato de tres palabras se partía en tres renglones.
+                      borderRadius: 14, padding: '12px 12px 11px', position: 'relative', cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', gap: 6,
                       border: qty > 0 ? '1.5px solid var(--brand-accent)' : '1.5px solid transparent',
                     }}
                   >
@@ -1413,7 +1642,7 @@ export default function WaiterPanel({
           para ver/ajustar lo ya agregado sin salir del menú. */}
       {cartCount > 0 && (
         <div className="waiter-cart-bar" style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
-          <div className="waiter-wrap" style={{ padding: '0 16px 12px' }}>
+          <div className="waiter-wrap waiter-pad" style={{ padding: '0 0 12px' }}>
             {miniCartOpen && (
               <div className="glass anim-slide-up" style={{ borderRadius: 16, padding: '8px 10px', marginBottom: 8, maxHeight: '34vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {cart.map((line) => (

@@ -153,9 +153,19 @@ export default function AdminShell({
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
+  /* En un teléfono/tablet NO se pide la Fullscreen API. Android responde a
+     ella con su propio aviso del sistema ("Deslice hacia abajo desde la parte
+     superior…"): una caja gris encima de la app, con texto cortado, que el
+     mesero lee como un error de Leogin y que la web no puede estilizar ni
+     ocultar. El modo inmersivo de esta app no lo necesita: .admin-kiosk ya es
+     `fixed; inset: 0` y tapa todo el chrome del panel. En escritorio sí se
+     pide, que es donde esconder la barra del navegador vale algo (la tablet
+     de Cocina con teclado y ratón incluida) y donde el aviso no existe. */
   function toggleKiosk() {
+    const isTouch = typeof window !== 'undefined'
+      && window.matchMedia?.('(pointer: coarse)').matches;
     if (!kiosk) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
+      if (!isTouch) document.documentElement.requestFullscreen?.().catch(() => {});
       setKiosk(true);
     } else {
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});

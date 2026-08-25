@@ -633,11 +633,23 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     .single();
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
+  /* Tipo de pedido del mesero: en mesa (DINE_IN) o para llevar (PICKUP).
+     Antes estaba QUEMADO en 'DINE_IN', así que un pedido de mostrador se
+     guardaba como si ocupara una mesa —y aparecía como tal en el plano del
+     salón y en "liberar mesa"—. DELIVERY no se acepta por esta vía: exige
+     dirección, zona y costo de envío que este panel no pide. */
+  const waiterOrderType: 'DINE_IN' | 'PICKUP' = customer.type === 'PICKUP' ? 'PICKUP' : 'DINE_IN';
+
   const subtotal = verifiedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const tip = computeTip(themeConfig, customer.type, tipAccepted, subtotal);
+  // La propina se calcula con el tipo YA normalizado: si no, un cliente
+  // manipulado podía mandar type: 'DELIVERY' y cobrar (o evitar) la propina
+  // de un tipo de pedido distinto al que se guarda.
+  const tip = computeTip(themeConfig, waiterOrderType, tipAccepted, subtotal);
   const total = Math.max(0, subtotal + tip);
 
-  const address = customer.tableNumber !== undefined ? `Mesa ${customer.tableNumber}` : null;
+  const address = waiterOrderType === 'DINE_IN' && customer.tableNumber !== undefined
+    ? `Mesa ${customer.tableNumber}`
+    : null;
   const notes = customer.coursePreference
     ? `[Servicio: ${customer.coursePreference}]${customer.notes ? ` · ${customer.notes}` : ''}`
     : (customer.notes ?? null);
@@ -646,7 +658,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     p_restaurant_id:  restaurantId,
     p_customer_name:  customer.name,
     p_customer_phone: customer.phone || '00000000',
-    p_order_type:     'DINE_IN',
+    p_order_type:     waiterOrderType,
     p_address:        address,
     p_delivery_zone:  null,
     p_delivery_lat:   null,
@@ -695,7 +707,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   notifyNewOrder(
     restaurantId,
     order,
-    `${order.order_number} · ${customer.name} · Mesa ${customer.tableNumber ?? '?'}`,
+    `${order.order_number} · ${customer.name} · ${address ?? 'Para llevar'}`,
     '🛎 Nuevo pedido (mesero)',
   );
 

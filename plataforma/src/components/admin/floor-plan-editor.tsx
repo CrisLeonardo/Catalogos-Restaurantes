@@ -10,7 +10,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
-import type { FloorPlan, FloorTable } from '@/lib/theme/defaults';
+import type { FloorPlan, FloorTable, FloorFixture, FixtureKind } from '@/lib/theme/defaults';
+import { FIXTURE_META, FIXTURE_KINDS, fixtureLabel } from '@/components/admin/floor-map';
 
 const MAX_LEVELS = 3;
 const VIRT_W = 1000;
@@ -19,6 +20,13 @@ const MAX_USER_ZOOM = 4;
 
 function uid(): string {
   return `l${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Id de una referencia del salón (prefijo propio, para no confundirlo con
+ *  el de un nivel). Vive fuera del componente: llamar a Math.random() en el
+ *  cuerpo de un componente es impuro y el linter de React lo rechaza. */
+function fxid(): string {
+  return `f${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -42,7 +50,10 @@ function unplacedTables(count: number, tables: FloorTable[]): number[] {
 
 interface Transform { s: number; x: number; y: number; base: number }
 
-type GestureMode = 'none' | 'drag' | 'pan' | 'pinch';
+type GestureMode = 'none' | 'drag' | 'pan' | 'pinch' | 'fdrag' | 'fresize';
+
+/** Tamaño mínimo de una referencia, en fracción del lienzo. */
+const MIN_FIXTURE = 0.05;
 
 export default function FloorPlanEditor({
   tableCount,
@@ -57,12 +68,15 @@ export default function FloorPlanEditor({
   const [activeLevel, setActiveLevel] = useState<string>(value.levels[0]?.id ?? 'l1');
   const [renaming, setRenaming] = useState<string | null>(null);
   const [dragN, setDragN] = useState<number | null>(null);
+  /** Referencia (barra, recepción…) seleccionada: se le puede cambiar el
+      nombre o quitar desde la fila de abajo del lienzo. */
+  const [selectedFx, setSelectedFx] = useState<string | null>(null);
 
   // ── Zoom / paneo ──
   const [t, setT] = useState<Transform>({ s: 1, x: 0, y: 0, base: 1 });
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const gesture = useRef<{ mode: GestureMode; n: number | null; lastDist: number; lastMid: { x: number; y: number } | null; last: { x: number; y: number } | null }>({
-    mode: 'none', n: null, lastDist: 0, lastMid: null, last: null,
+  const gesture = useRef<{ mode: GestureMode; n: number | null; fid: string | null; lastDist: number; lastMid: { x: number; y: number } | null; last: { x: number; y: number } | null }>({
+    mode: 'none', n: null, fid: null, lastDist: 0, lastMid: null, last: null,
   });
 
   const levels = value.levels.length > 0 ? value.levels : [{ id: 'l1', name: 'Planta baja' }];
@@ -70,6 +84,9 @@ export default function FloorPlanEditor({
 
   const tablesOnLevel = value.tables.filter((tb) => tb.level === active && tb.n <= tableCount);
   const tray = unplacedTables(tableCount, value.tables.filter((tb) => tb.n <= tableCount));
+  const fixtures = value.fixtures ?? [];
+  const fixturesOnLevel = fixtures.filter((f) => f.level === active);
+  const selected = fixturesOnLevel.find((f) => f.id === selectedFx) ?? null;
 
   function patch(p: Partial<FloorPlan>) {
     onChange({ ...value, ...p });
@@ -91,7 +108,11 @@ export default function FloorPlanEditor({
   function removeLevel(id: string) {
     if (levels.length <= 1) return;
     const remaining = levels.filter((l) => l.id !== id);
-    patch({ levels: remaining, tables: value.tables.filter((tb) => tb.level !== id) });
+    patch({
+      levels: remaining,
+      tables: value.tables.filter((tb) => tb.level !== id),
+      fixtures: fixtures.filter((f) => f.level !== id),
+    });
     if (active === id) setActiveLevel(remaining[0].id);
   }
 
@@ -115,6 +136,36 @@ export default function FloorPlanEditor({
 
   function moveTable(n: number, x: number, y: number) {
     setTables(value.tables.map((tb) => (tb.n === n ? { ...tb, x, y } : tb)));
+  }
+
+  /* ── Referencias del salón (barra, recepción, cocina…) ── */
+  function setFixtures(next: FloorFixture[]) {
+    patch({ fixtures: next });
+  }
+
+  function addFixture(kind: FixtureKind) {
+    const meta = FIXTURE_META[kind];
+    const id = fxid();
+    // Nace en el centro del nivel: de ahí se arrastra a su lugar real.
+    setFixtures([...fixtures, { id, level: active, kind, x: 0.5, y: 0.5, w: meta.w, h: meta.h }]);
+    setSelectedFx(id);
+  }
+
+  function moveFixture(id: string, x: number, y: number) {
+    setFixtures(fixtures.map((f) => (f.id === id ? { ...f, x, y } : f)));
+  }
+
+  function resizeFixture(id: string, w: number, h: number) {
+    setFixtures(fixtures.map((f) => (f.id === id ? { ...f, w, h } : f)));
+  }
+
+  function removeFixture(id: string) {
+    setFixtures(fixtures.filter((f) => f.id !== id));
+    if (selectedFx === id) setSelectedFx(null);
+  }
+
+  function renameFixture(id: string, label: string) {
+    setFixtures(fixtures.map((f) => (f.id === id ? { ...f, label } : f)));
   }
 
   /* ── Zoom / paneo (mismo modelo que el visor del mesero) ── */
@@ -220,20 +271,38 @@ export default function FloorPlanEditor({
     pointers.current.set(e.pointerId, p);
 
     if (pointers.current.size === 1) {
-      const tokenAttr = (e.target as HTMLElement).closest('[data-token]')?.getAttribute('data-token');
-      if (tokenAttr) {
+      const el = e.target as HTMLElement;
+      // El orden importa: la manija de tamaño vive DENTRO de la referencia,
+      // así que hay que preguntar por ella primero o nunca se alcanzaría.
+      const handleAttr = el.closest('[data-fx-handle]')?.getAttribute('data-fx-handle');
+      const fxAttr = el.closest('[data-fixture]')?.getAttribute('data-fixture');
+      const tokenAttr = el.closest('[data-token]')?.getAttribute('data-token');
+      if (handleAttr) {
+        gesture.current.mode = 'fresize';
+        gesture.current.fid = handleAttr;
+        gesture.current.n = null;
+        setSelectedFx(handleAttr);
+      } else if (fxAttr) {
+        gesture.current.mode = 'fdrag';
+        gesture.current.fid = fxAttr;
+        gesture.current.n = null;
+        setSelectedFx(fxAttr);
+      } else if (tokenAttr) {
         gesture.current.mode = 'drag';
         gesture.current.n = Number(tokenAttr);
+        gesture.current.fid = null;
         setDragN(gesture.current.n);
       } else {
         gesture.current.mode = 'pan';
         gesture.current.n = null;
+        gesture.current.fid = null;
       }
       gesture.current.last = p;
     } else if (pointers.current.size === 2) {
       const pts = [...pointers.current.values()];
       gesture.current.mode = 'pinch';
       gesture.current.n = null;
+      gesture.current.fid = null;
       gesture.current.lastDist = dist(pts[0], pts[1]);
       gesture.current.lastMid = mid(pts[0], pts[1]);
       setDragN(null);
@@ -264,6 +333,24 @@ export default function FloorPlanEditor({
       const wx = clamp((p.x - t.x) / t.s / VIRT_W, 0.05, 0.95);
       const wy = clamp((p.y - t.y) / t.s / VIRT_H, 0.06, 0.94);
       moveTable(gesture.current.n, wx, wy);
+    } else if (gesture.current.mode === 'fdrag' && gesture.current.fid) {
+      const wx = clamp((p.x - t.x) / t.s / VIRT_W, 0.02, 0.98);
+      const wy = clamp((p.y - t.y) / t.s / VIRT_H, 0.02, 0.98);
+      moveFixture(gesture.current.fid, wx, wy);
+    } else if (gesture.current.mode === 'fresize' && gesture.current.fid) {
+      const f = fixtures.find((fx) => fx.id === gesture.current.fid);
+      if (f) {
+        // La manija es la esquina inferior derecha: el ancho/alto es el doble
+        // de lo que el dedo se aleja del centro (la referencia crece a los
+        // dos lados, así no se le escapa el centro al arrastrar).
+        const wx = (p.x - t.x) / t.s / VIRT_W;
+        const wy = (p.y - t.y) / t.s / VIRT_H;
+        resizeFixture(
+          f.id,
+          clamp((wx - f.x) * 2, MIN_FIXTURE, 0.98),
+          clamp((wy - f.y) * 2, MIN_FIXTURE, 0.98),
+        );
+      }
     } else if (gesture.current.mode === 'pan') {
       panBy(p.x - last.x, p.y - last.y);
     }
@@ -277,6 +364,7 @@ export default function FloorPlanEditor({
     if (pointers.current.size === 0) {
       gesture.current.mode = 'none';
       gesture.current.n = null;
+      gesture.current.fid = null;
       gesture.current.last = null;
       gesture.current.lastMid = null;
       setDragN(null);
@@ -284,6 +372,7 @@ export default function FloorPlanEditor({
       // De pellizco a paneo con el dedo que queda.
       const [pt] = [...pointers.current.values()];
       gesture.current.mode = 'pan';
+      gesture.current.fid = null;
       gesture.current.last = pt;
       gesture.current.lastMid = null;
     }
@@ -414,11 +503,78 @@ export default function FloorPlanEditor({
                 pointerEvents: 'none',
               }}
             />
-            {tablesOnLevel.length === 0 && (
+            {tablesOnLevel.length === 0 && fixturesOnLevel.length === 0 && (
               <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--u-text-4)', fontSize: 13, textAlign: 'center', padding: 20, pointerEvents: 'none' }}>
                 Toca una mesa de abajo para colocarla aquí,<br />luego arrástrala a su lugar con el dedo.
               </div>
             )}
+
+            {/* Referencias del salón. Se dibujan DEBAJO de las mesas (van
+                antes en el orden) porque son el fondo del local: la mesa
+                siempre tiene que quedar encima y ser la que se toca. */}
+            {fixturesOnLevel.map((f) => {
+              const meta = FIXTURE_META[f.kind];
+              const wall = f.kind === 'wall';
+              const on = selectedFx === f.id;
+              const w = f.w * VIRT_W * t.s;
+              const h = f.h * VIRT_H * t.s;
+              const sx = f.x * VIRT_W * t.s + t.x;
+              const sy = f.y * VIRT_H * t.s + t.y;
+              const tight = h < 46;
+              return (
+                <div
+                  key={f.id}
+                  data-fixture={f.id}
+                  style={{
+                    position: 'absolute',
+                    left: sx, top: sy, width: w, height: h,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: wall ? 4 : 12,
+                    border: `2px ${on ? 'solid' : wall ? 'none' : 'solid'} ${on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 16%, transparent)'}`,
+                    background: wall
+                      ? 'color-mix(in srgb, var(--u-text) 22%, transparent)'
+                      : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
+                    color: 'var(--u-text-3)',
+                    display: 'flex', flexDirection: tight ? 'row' : 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: tight ? 8 : 4,
+                    cursor: 'grab', userSelect: 'none', touchAction: 'none', overflow: 'visible',
+                    zIndex: 0,
+                  }}
+                >
+                  <span style={{ display: 'flex', flexDirection: tight ? 'row' : 'column', alignItems: 'center', gap: tight ? 8 : 4, pointerEvents: 'none', overflow: 'hidden', maxWidth: '100%' }}>
+                    {!wall && <Icon name={meta.icon} size={Math.max(13, Math.min(28, h * 0.32))} />}
+                    {!wall && (
+                      <span style={{ fontSize: Math.max(10, Math.min(20, h * 0.24)), fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                        {fixtureLabel(f)}
+                      </span>
+                    )}
+                  </span>
+
+                  {on && (
+                    <>
+                      {/* Quitar */}
+                      <span
+                        role="button"
+                        aria-label={`Quitar ${fixtureLabel(f)}`}
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); removeFixture(f.id); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') removeFixture(f.id); }}
+                        style={{ position: 'absolute', top: -11, right: -11, width: 24, height: 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                      >
+                        <Icon name="x" size={12} />
+                      </span>
+                      {/* Manija de tamaño (esquina inferior derecha) */}
+                      <span
+                        data-fx-handle={f.id}
+                        aria-label={`Cambiar tamaño de ${fixtureLabel(f)}`}
+                        style={{ position: 'absolute', bottom: -11, right: -11, width: 24, height: 24, borderRadius: 7, background: 'var(--brand-accent)', border: '2px solid var(--brand-bg)', cursor: 'nwse-resize', touchAction: 'none' }}
+                      />
+                    </>
+                  )}
+                </div>
+              );
+            })}
             {tablesOnLevel.map((tb) => {
               const dragging = dragN === tb.n;
               const sx = tb.x * VIRT_W * t.s + t.x;
@@ -474,7 +630,55 @@ export default function FloorPlanEditor({
           </div>
 
           <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: -6, textAlign: 'center' }}>
-            Pellizca o usa + / − para acercar el plano · arrastra el piso para moverte · arrastra una mesa para colocarla
+            Pellizca o usa + / − para acercar · arrastra el piso para moverte · arrastra una mesa o una referencia para colocarla
+          </div>
+
+          {/* Referencias del salón */}
+          <div>
+            <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              Referencias del salón
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
+              La barra, la recepción o la cocina le dan al mesero un punto de referencia para ubicar las mesas. Tócalas para agregarlas y arrástralas a su lugar.
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {FIXTURE_KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => addFixture(k)}
+                  className="press"
+                  title={`Agregar ${FIXTURE_META[k].label.toLowerCase()} a ${levels.find((l) => l.id === active)?.name ?? 'este nivel'}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 99, cursor: 'pointer', border: '1px dashed var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600 }}
+                >
+                  <Icon name={FIXTURE_META[k].icon} size={14} /> {FIXTURE_META[k].label}
+                </button>
+              ))}
+            </div>
+
+            {/* Referencia seleccionada: nombre propio y quitar. Un local puede
+                tener dos barras ("Barra fría" / "Barra de café") y el número
+                de mesa no ayuda a distinguirlas. */}
+            {selected && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
+                <Icon name={FIXTURE_META[selected.kind].icon} size={15} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+                <input
+                  value={selected.label ?? ''}
+                  onChange={(e) => renameFixture(selected.id, e.target.value)}
+                  placeholder={FIXTURE_META[selected.kind].label}
+                  aria-label="Nombre de la referencia"
+                  style={{ flex: 1, minWidth: 130, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 10, padding: '9px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeFixture(selected.id)}
+                  className="press"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--c-danger-line, var(--u-hair-2))', background: 'transparent', color: 'var(--c-danger)', fontSize: 13, fontWeight: 600 }}
+                >
+                  <Icon name="trash" size={14} /> Quitar
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Bandeja: mesas sin ubicar */}

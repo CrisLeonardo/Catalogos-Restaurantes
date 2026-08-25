@@ -8,7 +8,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
-import type { FloorTable } from '@/lib/theme/defaults';
+import type { FloorTable, FloorFixture, FixtureKind } from '@/lib/theme/defaults';
+import type { IconName } from '@/components/icons';
 import type { TableOccupancy } from '@/lib/db/orders';
 
 /** Primer nombre — las mesas son chicas, no hay lugar para el nombre completo. */
@@ -21,6 +22,27 @@ const VIRT_W = 1000;
 const VIRT_H = 625;
 const MAX_USER_ZOOM = 4;
 const TAP_THRESHOLD = 7;
+
+/* Referencias fijas del salón: nombre, ícono y tamaño inicial (relativo al
+   lienzo). Lo comparten el visor del mesero y el editor del dueño, para que
+   la barra que el dueño coloca sea exactamente la barra que el mesero ve. */
+export const FIXTURE_META: Record<FixtureKind, { label: string; icon: IconName; w: number; h: number }> = {
+  bar:       { label: 'Barra',     icon: 'coffee',     w: 0.34, h: 0.10 },
+  reception: { label: 'Recepción', icon: 'bellRing',   w: 0.18, h: 0.12 },
+  cashier:   { label: 'Caja',      icon: 'wallet',     w: 0.15, h: 0.10 },
+  kitchen:   { label: 'Cocina',    icon: 'utensils',   w: 0.24, h: 0.16 },
+  entrance:  { label: 'Entrada',   icon: 'arrowRight', w: 0.16, h: 0.08 },
+  restroom:  { label: 'Baños',     icon: 'users',      w: 0.14, h: 0.12 },
+  wall:      { label: 'Muro',      icon: 'minus',      w: 0.30, h: 0.03 },
+};
+
+/** Orden en que se ofrecen en el editor. */
+export const FIXTURE_KINDS: FixtureKind[] = ['bar', 'reception', 'cashier', 'kitchen', 'entrance', 'restroom', 'wall'];
+
+/** Nombre visible de una referencia (el propio del dueño o el del tipo). */
+export function fixtureLabel(f: FloorFixture): string {
+  return (f.label ?? '').trim() || FIXTURE_META[f.kind].label;
+}
 
 function clamp(v: number, min: number, max: number): number {
   return v < min ? min : v > max ? max : v;
@@ -101,12 +123,16 @@ interface Transform { s: number; x: number; y: number; base: number }
 
 export default function FloorMap({
   tables,
+  fixtures = [],
   occupied,
   occupiedSince,
   now,
   onSelect,
 }: {
   tables: FloorTable[];
+  /** Referencias fijas de este nivel (barra, recepción…). Se dibujan como
+      parte del salón: escalan con el zoom y no se pueden tocar. */
+  fixtures?: FloorFixture[];
   occupied: Set<number>;
   /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal). */
   occupiedSince?: Record<number, TableOccupancy>;
@@ -311,6 +337,47 @@ export default function FloorMap({
               Este nivel no tiene mesas colocadas.
             </div>
           )}
+
+          {/* Referencias del salón. Van DENTRO del mundo virtual (no como los
+              pines de mesa, que tienen tamaño fijo en pantalla): son parte de
+              la arquitectura del local, así que crecen y encogen con el plano.
+              `pointerEvents: none` — el dedo encima de la barra debe seguir
+              paneando el plano, no chocar contra ella. */}
+          {fixtures.map((f) => {
+            const meta = FIXTURE_META[f.kind];
+            const wall = f.kind === 'wall';
+            const w = f.w * VIRT_W;
+            const h = f.h * VIRT_H;
+            const tight = h < 46;
+            return (
+              <div
+                key={f.id}
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  left: f.x * VIRT_W, top: f.y * VIRT_H,
+                  width: w, height: h,
+                  transform: 'translate(-50%, -50%)',
+                  borderRadius: wall ? 4 : 12,
+                  border: wall ? 'none' : '2px solid color-mix(in srgb, var(--u-text) 16%, transparent)',
+                  background: wall
+                    ? 'color-mix(in srgb, var(--u-text) 22%, transparent)'
+                    : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
+                  color: 'var(--u-text-3)',
+                  display: 'flex', flexDirection: tight ? 'row' : 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: tight ? 8 : 4,
+                  pointerEvents: 'none', overflow: 'hidden',
+                }}
+              >
+                {!wall && <Icon name={meta.icon} size={Math.max(14, Math.min(30, h * 0.34))} />}
+                {!wall && (
+                  <span style={{ fontSize: Math.max(11, Math.min(22, h * 0.26)), fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                    {fixtureLabel(f)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Pines de mesa: tamaño FIJO en pantalla (como pines de mapa) → siempre
