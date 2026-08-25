@@ -91,7 +91,9 @@ export async function enterRestaurant(prevState: EntryState, formData: FormData)
     headers: await headers(),
   });
 
-  redirect(`${adminUrl(rest.slug as string)}/menu`);
+  // La portada del panel es Hoy: entrar desde Mi cuenta abre el mismo sitio
+  // que abre el login, no el catálogo.
+  redirect(`${adminUrl(rest.slug as string)}`);
 }
 
 /* ── El PIN de entrada, desde el panel del restaurante ────────── */
@@ -313,7 +315,7 @@ export async function createAnotherRestaurant(
      adelante se entra directo al panel: quien abre su tercer local no necesita
      que le expliquen el producto otra vez. */
   if (esElPrimero) redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
-  redirect(`${adminUrl(slug)}/menu?welcome=1`);
+  redirect(`${adminUrl(slug)}?welcome=1`);
 }
 
 /* ── El link único de pedidos del grupo ──────────────────────── */

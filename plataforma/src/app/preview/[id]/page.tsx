@@ -81,7 +81,7 @@ async function requirePreviewAccess(id: string) {
     if (branch?.organization_id === profile.organization_id) return;
   }
 
-  redirect('/admin/menu');
+  redirect('/admin');
 }
 
 export default async function PreviewPage({

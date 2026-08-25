@@ -10,12 +10,12 @@ export const metadata = { title: 'Ingredientes – Panel admin' };
 export default async function AdminIngredientesPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'ingredientes')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'ingredientes')) redirect('/admin');
 
   // El módulo de recetas debe estar ACTIVO (entitlement + on del restaurante),
   // igual que el resto de módulos — no basta con tener el permiso.
   const mod = await resolveModuleContext('recetas');
-  if (!mod.ok) redirect('/admin/menu');
+  if (!mod.ok) redirect('/admin');
   const restaurantId = mod.restaurantId;
 
   const [ingredients, usageCounts] = await Promise.all([

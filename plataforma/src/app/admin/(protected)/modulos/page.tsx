@@ -17,7 +17,7 @@ export default async function ModulosPage() {
 
   // Activar módulos es decisión de propietario (o Leogin).
   if (ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
-    redirect('/admin/menu');
+    redirect('/admin');
   }
 
   let restaurantId: string | null = null;

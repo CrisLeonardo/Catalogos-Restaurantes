@@ -78,6 +78,13 @@ export interface CustomersSummary {
   totalCustomers: number;
   recurrentCount: number;
   totalSpent: number;
+  /** Cuántos han pedido alguna vez. Es el denominador honesto de "vuelven":
+   *  quien se registró y nunca pidió no decidió no volver, no ha venido. */
+  buyersCount: number;
+  /** Gasto medio POR PEDIDO de quien ya volvió, y de quien solo vino una vez.
+   *  null cuando no hay de ese grupo con qué promediar. */
+  avgTicketRecurrent: number | null;
+  avgTicketOneTime: number | null;
 }
 
 /** KPIs globales (no por página): total de clientes, recurrentes y gasto histórico. */
@@ -99,10 +106,35 @@ export async function getCustomersSummary(restaurantId: string): Promise<Custome
     perCustomer.set(cid, curr);
     totalSpent += Number(o.total);
   }
-  let recurrentCount = 0;
-  for (const v of perCustomer.values()) if (v.orders > 1) recurrentCount++;
+  /* Del mismo mapa que ya estaba armado salen tres cifras más, sin una sola
+     consulta extra: cuántos han comprado alguna vez, y cuánto gasta POR
+     PEDIDO quien vuelve frente a quien vino una sola vez.
 
-  return { totalCustomers: count ?? 0, recurrentCount, totalSpent };
+     Esa comparación es la que decide si vale la pena montar lealtad, cupones
+     o encuestas — y hasta ahora había que deducirla a ojo recorriendo la
+     lista de clientes. */
+  let recurrentCount = 0;
+  let recPedidos = 0, recGasto = 0;
+  let unaPedidos = 0, unaGasto = 0;
+  for (const v of perCustomer.values()) {
+    if (v.orders > 1) {
+      recurrentCount++;
+      recPedidos += v.orders;
+      recGasto += v.spent;
+    } else {
+      unaPedidos += v.orders;
+      unaGasto += v.spent;
+    }
+  }
+
+  return {
+    totalCustomers: count ?? 0,
+    recurrentCount,
+    totalSpent,
+    buyersCount: perCustomer.size,
+    avgTicketRecurrent: recPedidos > 0 ? recGasto / recPedidos : null,
+    avgTicketOneTime: unaPedidos > 0 ? unaGasto / unaPedidos : null,
+  };
 }
 
 export async function getCustomerOrders(

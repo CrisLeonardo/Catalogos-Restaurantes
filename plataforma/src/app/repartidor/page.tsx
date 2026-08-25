@@ -23,7 +23,7 @@ export const metadata = { title: 'Mis entregas – Leogin' };
 export default async function RepartidorPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'reparto')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'reparto')) redirect('/admin');
 
   const driver = await getDriverByProfile(ctx.profile.id);
   if (!driver || !driver.activo) {

@@ -42,7 +42,7 @@ export default async function AdminFinanzasPage({
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect('/admin');
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';

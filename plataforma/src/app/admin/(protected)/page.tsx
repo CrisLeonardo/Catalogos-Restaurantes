@@ -5,9 +5,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getOrderStats, getActiveOrdersPreview, type ActiveOrderPreview } from '@/lib/db/orders';
+import { getHoyWidgets } from '@/lib/db/hoy';
 import { getBillingConfig, isOnTrial, trialDaysLeft } from '@/lib/db/billing';
 import { getVisitStats } from '@/lib/actions/metrics';
-import { PLANS } from '@/lib/plans';
+import { PLANS, withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
+import { isModuleActive } from '@/lib/modules';
 import { Icon } from '@/components/icons';
 import { can } from '@/lib/permissions';
 import { STATUS_LABEL_SHORT } from '@/lib/order-status';
@@ -18,6 +20,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { List, ListLink, ListText, StatusDot, StatusPill, type Tone } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
+import {
+  agoLabel, HouseWidget, OnlineWidget, RatingsWidget, StockWidget,
+} from '@/components/admin/hoy-widgets';
+import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { OrderStatus, Restaurant } from '@/types';
 
@@ -85,13 +91,6 @@ function orderLabel(o: ActiveOrderPreview): string {
   return o.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio';
 }
 
-function agoLabel(iso: string, now: number): string {
-  const mins = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return 'recién';
-  if (mins < 60) return `hace ${mins} min`;
-  return `hace ${Math.round(mins / 60)} h`;
-}
-
 export default async function AdminHomePage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
@@ -106,8 +105,22 @@ export default async function AdminHomePage() {
     if (data) { restaurant = data.restaurant; resolved = data.resolved; }
   }
 
-  const modules = restaurant?.modules as Record<string, boolean> | null;
-  const ordersEnabled = modules?.orders === true;
+  /* Módulos activos, con el MISMO criterio que el menú lateral: el plan manda
+     sobre la bandera del jsonb (withPlanFloor) y un módulo activable necesita
+     además que el restaurante lo tenga encendido (isModuleActive).
+
+     Antes esta pantalla miraba `modules.orders` a pelo. Eso bastaba mientras
+     solo decidía si pintar tres cifras, pero con los widgets significa que un
+     restaurante cuyo plan incluye pedidos y tiene la bandera atrasada vería
+     media portada vacía — justo la incoherencia que withPlanFloor existe para
+     evitar en el nav. */
+  const planActual = (restaurant?.plan_actual as string | null) ?? null;
+  const mod = withPlanFloor(
+    ((PLAN_ORDER as string[]).includes(planActual ?? '') ? planActual : 'BASICO') as PlanCode,
+    (restaurant?.modules as Record<string, boolean> | null) ?? {},
+  );
+  const modSettings = restaurant?.module_settings ?? null;
+  const ordersEnabled = mod.orders === true;
   const timezone = restaurant?.timezone ?? 'America/Guatemala';
   const restaurantId = restaurant?.id ?? profile.restaurant_id ?? null;
   const allow = (key: string) => can(profile.role, profile.permissions, key);
@@ -119,6 +132,37 @@ export default async function AdminHomePage() {
       : null,
   ]);
 
+  /* Visitas al menú. Se piden SIEMPRE y una sola vez: las usan el aviso del
+     plan gratuito (más abajo) y el widget "Tu menú en línea". Antes solo se
+     pedían en los planes con tope de visitas. */
+  const visitStats = restaurantId ? await getVisitStats(restaurantId, timezone) : null;
+
+  /* ── Los widgets ────────────────────────────────────────────
+     Cada uno se pide solo si su módulo está activo Y quien mira tiene
+     permiso para esa sección: enseñarle a un cajero sin acceso a inventario
+     que se está acabando la carne es filtrarle datos por la portada.
+     getHoyWidgets lanza en paralelo lo que quede y devuelve null en lo que
+     no tenga nada que decir; abajo, un null es un bloque que no se pinta. */
+  const widgets = restaurantId
+    ? await getHoyWidgets(
+        restaurantId,
+        timezone,
+        {
+          orders: ordersEnabled && !!stats,
+          dineIn: (resolved?.config.orderTypes.includes('dine_in') ?? false) && allow('mesas'),
+          waitlist: isModuleActive(mod, modSettings, 'lista_espera') && allow('lista_espera'),
+          reservations: isModuleActive(mod, modSettings, 'reservaciones') && allow('reservaciones'),
+          inventory: mod.inventario === true && allow('inventario'),
+          surveys: isModuleActive(mod, modSettings, 'encuestas') && allow('encuestas'),
+        },
+        {
+          tableCount: resolved?.config.dineInTableCount ?? 0,
+          todayOrders: stats?.todayOrders ?? 0,
+          visits: visitStats,
+        },
+      )
+    : null;
+
   // ── Prueba gratis ───────────────────────────────────────────
   const billing = restaurantId ? await getBillingConfig(restaurantId) : null;
   const onTrial = isOnTrial(billing);
@@ -126,9 +170,6 @@ export default async function AdminHomePage() {
 
   // ── Aviso de visitas del plan gratuito (solo aviso, nunca bloquea el menú) ──
   const visitWarningLimit = restaurant?.plan_actual ? PLANS[restaurant.plan_actual].monthlyVisitWarning : undefined;
-  const visitStats = visitWarningLimit && restaurantId
-    ? await getVisitStats(restaurantId, timezone)
-    : null;
   const visitWarning = !!visitStats && !!visitWarningLimit && visitStats.last30 >= visitWarningLimit;
 
   // ── Onboarding guiado (solo el dueño, primera vez) ──────────
@@ -330,6 +371,50 @@ export default async function AdminHomePage() {
             </ListLink>
           </List>
         </Section>
+      )}
+
+      {/* ── Los widgets ──────────────────────────────────────────
+          Van DEBAJO de los tres bloques de siempre y en orden fijo de
+          urgencia: lo que se rompe arriba, lo que sirve para decidir en
+          medio, lo que se mira una vez por semana abajo. El orden no cambia
+          entre restaurantes, así que se aprende una sola vez.
+
+          Cada uno se pinta solo si trae algo; el `null` lo decidió ya
+          lib/db/hoy.ts. Un martes a las diez de la mañana esta zona está
+          entera vacía, y así debe ser. */}
+
+      {/* 4 · Se está acabando — arriba del resto porque es lo único de aquí
+             que cuesta dinero si no se ve: un agotado sigue en el menú y el
+             pedido entra igual. */}
+      {widgets?.stock && (
+        <StockWidget data={widgets.stock} canSeeInventory={allow('inventario')} />
+      )}
+
+      {/* 5 · La casa */}
+      {widgets?.house && (
+        <HouseWidget data={widgets.house} now={now} canSeeTables={allow('mesas')} />
+      )}
+
+      {/* 6 · Cómo va el día — la misma pieza que usa Pedidos */}
+      {stats && stats.series.length > 0 && stats.totalLast14 > 0 && (
+        <SalesTrendWidget
+          series={stats.series}
+          totalLast14={stats.totalLast14}
+          todaySales={stats.todaySales}
+          pace={widgets?.pace ?? null}
+          money={fmt}
+        />
+      )}
+
+      {/* 7 · Lo que más sale hoy */}
+      {stats && stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
+
+      {/* 8 · Tu menú en línea */}
+      {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}
+
+      {/* 9 · Lo que dicen tus clientes — semanal, no diario: por eso, último. */}
+      {widgets?.ratings && (
+        <RatingsWidget data={widgets.ratings} now={now} canSeeSurveys={allow('encuestas')} />
       )}
 
       {/* Qué incluye subir de plan. Vive al FINAL a propósito: es una oferta,

@@ -98,7 +98,7 @@ export default async function ResumenPage() {
             {/* `adminUrl` y no un subdominio a mano: el panel no vive en el
                 mismo sitio en local que en producción. */}
             <a
-              href={`${adminUrl(b.slug)}/menu`}
+              href={adminUrl(b.slug)}
               className="press glass-quiet"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, fontSize: 12, color: 'var(--u-text-2)', textDecoration: 'none', whiteSpace: 'nowrap' }}
             >

@@ -15,7 +15,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
 import { Stat, StatGroup } from '@/components/ui/stat';
-import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
+import type { OrderWithItems, OrderStats, DayPace } from '@/lib/db/orders';
+import { TimesWidget, type TimesData } from '@/components/admin/times-widget';
+import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
 import type { Order } from '@/types';
 
 /** Tipo de servicio tal como lo guarda la tabla `orders` (no confundir con el
@@ -28,6 +30,10 @@ interface Props {
   restaurantId:   string;
   restaurantName: string;
   stats:          OrderStats;
+  /** null cuando hoy no hubo pedidos cerrados suficientes para medir. */
+  times?:         TimesData | null;
+  /** Con qué comparar el día. null si no hay días iguales anteriores. */
+  pace?:          DayPace | null;
   currency:       PanelCurrency;
   timezone:       string;
   /** Umbrales del semáforo de cocina (Personalización → Cocina). */
@@ -89,7 +95,7 @@ const TYPE_FILTERS: { id: 'ALL' | ServiceType; label: string; icon: string }[] =
 ];
 
 function OrdersPanelInner({
-  activeOrders, closedToday, restaurantId, restaurantName, stats, currency, timezone,
+  activeOrders, closedToday, restaurantId, restaurantName, stats, times, pace, currency, timezone,
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
   autoConfirmEnabled = false, autoConfirmMinutes = 1,
@@ -366,6 +372,15 @@ function OrdersPanelInner({
         <Stat label="En cocina (preparándose ahora)" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} />
       </StatGroup>
 
+      {/* Cuánto se está tardando hoy. Va justo debajo de las cifras del día
+          porque contesta la otra mitad de la misma pregunta: cuánto se vendió
+          y cuánto se hizo esperar a la gente por ello. */}
+      {times && (
+        <div className="mb-4.5">
+          <TimesWidget data={times} />
+        </div>
+      )}
+
       {/* Board + sidebar */}
       <div className="orders-grid">
         {/* Left: tablero de pedidos por etapa */}
@@ -472,8 +487,19 @@ function OrdersPanelInner({
 
         {/* Right: gráfica + top + export */}
         <aside style={{ width: '100%', minWidth: 0 }}>
-          <SalesChart series={stats.series} totalLast14={stats.totalLast14} currency={currency} />
-          {stats.topToday.length > 0 && <TopToday items={stats.topToday} />}
+          {/* Las MISMAS dos piezas que pinta la portada Hoy. Antes esta
+              pantalla tenía sus propias copias, con el aspecto anterior al
+              rediseño. */}
+          <div className="mb-3 flex flex-col gap-3">
+            <SalesTrendWidget
+              series={stats.series}
+              totalLast14={stats.totalLast14}
+              todaySales={stats.todaySales}
+              pace={pace ?? null}
+              money={(n) => fmtMoney(n, currency)}
+            />
+            {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
+          </div>
           <div className="mt-3 flex gap-2">
             <Button
               onClick={downloadExcel}
@@ -497,78 +523,5 @@ function OrdersPanelInner({
         </aside>
       </div>
     </>
-  );
-}
-
-/* ── Kpi card ─────────────────────────────────────────────── */
-
-
-/* ── Gráfica 14 días ──────────────────────────────────────── */
-
-import type { DaySale, TopProduct } from '@/lib/db/orders';
-
-function SalesChart({ series, totalLast14, currency }: { series: DaySale[]; totalLast14: number; currency: PanelCurrency }) {
-  const max = Math.max(...series.map((d) => d.total), 1);
-
-  return (
-    <Card className="mb-3 flex flex-col gap-4 p-5">
-      <div>
-        <div className="adm-label">Ventas · 14 días</div>
-        <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, fontVariantNumeric: 'tabular-nums', fontSize: 24, color: 'var(--u-text)', marginTop: 4, lineHeight: 1 }}>
-          {fmtMoney(totalLast14, currency, 0)}
-        </div>
-      </div>
-
-      {/* Barras */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120 }}>
-        {series.map((day, i) => {
-          const h = max > 0 ? (day.total / max) * 100 : 0;
-          return (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-              <div
-                style={{
-                  width: '100%',
-                  height: `${Math.max(h, day.total > 0 ? 6 : 2)}%`,
-                  minHeight: 2,
-                  borderRadius: '4px 4px 0 0',
-                  background: day.isToday ? 'var(--adm-accent-500, var(--u-text))' : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
-                  transition: 'height 400ms var(--ease-entry)',
-                }}
-                title={`${day.label}: ${fmtMoney(day.total, currency)}`}
-              />
-              <span
-                className="t-mono"
-                style={{ fontSize: 8.5, color: day.isToday ? 'var(--adm-accent-500, var(--u-text))' : 'var(--u-text-4)', fontWeight: day.isToday ? 700 : 500 }}
-              >
-                {day.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
-/* ── Top de hoy ───────────────────────────────────────────── */
-
-function TopToday({ items }: { items: TopProduct[] }) {
-  return (
-    <Card className="flex flex-col gap-3.5 p-5">
-      <div className="t-poster" style={{ fontSize: 15 }}>Top de hoy</div>
-      {items.map((item, i) => (
-        <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="t-mono" style={{ width: 18, color: 'var(--u-text-4)', fontSize: 12, flexShrink: 0 }}>
-            {i + 1}
-          </span>
-          <span style={{ flex: 1, fontSize: 12.5, color: 'var(--u-text)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {item.name}
-          </span>
-          <span className="t-mono" style={{ fontSize: 11.5, color: 'var(--u-text-3)', flexShrink: 0 }}>
-            {item.qty}×
-          </span>
-        </div>
-      ))}
-    </Card>
   );
 }

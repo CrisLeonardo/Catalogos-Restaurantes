@@ -13,7 +13,7 @@ export default async function AdminListaEsperaPage() {
   // Delegable como permiso propio (ver PLAN_AUDITORIA_LANZAMIENTO.md Fase 3):
   // a diferencia de otros módulos activables, este SÍ respeta permissions[]
   // para que el dueño pueda dárselo a un host/mesero sin abrir el resto del panel.
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'lista_espera')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'lista_espera')) redirect('/admin');
 
   const mc = await resolveModuleContext('lista_espera');
   if (!mc.ok) redirect('/admin/modulos');

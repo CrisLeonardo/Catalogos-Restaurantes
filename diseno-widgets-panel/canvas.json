@@ -1,0 +1,28 @@
+{
+  "pages": [
+    { "id": "hoy", "name": "Hoy" },
+    { "id": "widgets", "name": "Los widgets" },
+    { "id": "movil", "name": "En el teléfono" },
+    { "id": "otras", "name": "Otras pantallas" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Hoy · jueves ocupado", "page": "hoy", "x": 0, "y": 0, "w": 1280, "h": 1330 },
+    { "file": "HoyOscuro.dc.html", "title": "Hoy · la noche, en oscuro", "page": "hoy", "x": 1360, "y": 0, "w": 1280, "h": 1120 },
+    { "file": "HoyTranquilo.dc.html", "title": "Hoy · martes tranquilo", "page": "hoy", "x": 2720, "y": 0, "w": 1280, "h": 850 },
+    { "file": "Catalogo.dc.html", "title": "Los seis widgets", "page": "widgets", "x": 0, "y": 0, "w": 880, "h": 1800 },
+    { "file": "Anatomia.dc.html", "title": "Anatomía y reglas", "page": "widgets", "x": 960, "y": 0, "w": 900, "h": 1290 },
+    { "file": "Movil.dc.html", "title": "En el teléfono", "page": "movil", "x": 0, "y": 0, "w": 1000, "h": 1600 },
+    { "file": "Otras.dc.html", "title": "Fuera de Hoy", "page": "otras", "x": 0, "y": 0, "w": 900, "h": 980 }
+  ],
+  "annotations": [
+    { "id": "nota-orden", "page": "hoy", "x": 0, "y": -170, "w": 420, "text": "Los tres bloques de arriba son los que YA existen y no se tocan: atención, resumen y en curso. Los widgets entran DEBAJO, nunca por delante de un aviso." },
+    { "id": "nota-noche", "page": "hoy", "x": 1360, "y": -170, "w": 420, "text": "Mismo panel a las nueve de la noche. Ya no hay bloque de avisos: no hay nada roto y desaparece entero. Aparece \"Se está acabando\" y ya no está \"Lo que más sale\", porque a esa hora ya no se decide qué preparar. Claro y oscuro son el MISMO marcado: solo cambian las variables de color." },
+    { "id": "nota-tranquilo", "page": "hoy", "x": 2720, "y": -170, "w": 420, "text": "Este es el tablero que prueba la regla: martes, diez de la mañana, cero pedidos. Tres bloques y la pantalla termina. Un tablero configurable habría dejado seis tarjetas vacías." },
+    { "id": "nota-datos", "page": "widgets", "x": 0, "y": -150, "w": 420, "text": "Cinco de los seis salen de consultas que el panel YA hace en /admin. La serie de 14 días y el top de hoy los calcula getOrderStats y hoy se descartan sin usarse: ese widget no cuesta ni una consulta más." },
+    { "id": "nota-basico", "page": "widgets", "x": 960, "y": -150, "w": 420, "text": "Hueco que esto tapa: en el plan Básico (sin pedidos en línea) la portada Hoy se ve HOY completamente vacía, porque el resumen del día depende del módulo de pedidos. Con \"Tu menú en línea\" ya no." },
+    { "id": "nota-cifras", "page": "movil", "x": 0, "y": -170, "w": 420, "text": "Detalle CORREGIDO al construirlo: StatGroup repartía las columnas con auto-fit y le ponía borde izquierdo a todo hijo que no fuera el primero, así que la tercera cifra, al bajar sola al segundo renglón del teléfono, arrastraba una rayita suelta a su izquierda. Ahora la rejilla lleva el número EXACTO de columnas y reglas de divisoria distintas para teléfono y escritorio." },
+    { "id": "nota-compartida", "page": "otras", "x": 0, "y": -300, "w": 420, "text": "La gráfica de 14 días y \"Lo que más sale hoy\" son UNA sola pieza compartida con Hoy. Pedidos tenía sus propias copias, con el aspecto anterior al rediseño; se borraron. Ojo al construirla: vive en la columna de Hoy (~970 px) y en la de Pedidos (300 px), así que no puede usar puntos de ruptura — en una columna de 300 px dentro de un monitor grande, cualquier media query dice \"escritorio\". Lo que manda es el ancho del CONTENEDOR." },
+    { "id": "nota-otras", "page": "otras", "x": 480, "y": -300, "w": 420, "text": "La tentación es poner un widget en cada pantalla. Negocio y Ajustes no llevan: Negocio ES el tablero de números, y en Ajustes cada fila ya muestra su estado a la derecha." }
+  ],
+  "launch": { "view": "canvas", "page": "hoy" }
+}

@@ -30,6 +30,7 @@ import { useScreenTier } from '@/lib/theme/use-screen-tier';
 import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHours } from '@/lib/hours';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
+import { isUnavailable } from '@/lib/product-availability';
 import type { Category, Product } from '@/types';
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
@@ -37,19 +38,6 @@ type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'descr
   is_available?: boolean | null;
   unavailable_at?: string | null;
 };
-
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-
-function isAutoRestored(p: ProdItem): boolean {
-  if (p.is_available !== false) return false;
-  if (!p.unavailable_at) return false;
-  return Date.now() - new Date(p.unavailable_at).getTime() >= TWELVE_HOURS_MS;
-}
-
-function isUnavailable(p: ProdItem): boolean {
-  if (p.is_available !== false) return false;
-  return !isAutoRestored(p);
-}
 
 /** Precio base + suma de todos los priceDelta de grupos tipo combo (incluidos por defecto).
     Si un componente tiene variantes, se suma también la primera (es la que

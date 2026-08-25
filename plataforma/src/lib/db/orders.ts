@@ -251,6 +251,23 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
 export type DaySale    = { label: string; total: number; isToday: boolean };
 export type TopProduct = { name: string; qty: number };
 
+/**
+ * Cómo va el día COMPARADO con los días iguales anteriores.
+ *
+ * La comparación honesta de un día a medias no es contra el total de otro
+ * día, es contra lo que ese otro día llevaba A ESTA MISMA HORA: a la una de
+ * la tarde un jueves normal lleva un tercio de lo que cerrará. Por eso
+ * `typicalSoFar` suma solo los pedidos anteriores a la hora local actual.
+ */
+export interface DayPace {
+  /** Cuántos días iguales (mismo día de la semana) se pudieron promediar. */
+  samples: number;
+  /** Lo que un día igual llevaba a esta hora, en promedio. */
+  typicalSoFar: number;
+  /** Con lo que un día igual terminó, en promedio. */
+  typicalFullDay: number;
+}
+
 export interface OrderStats {
   series:   DaySale[];
   topToday: TopProduct[];
@@ -346,5 +363,119 @@ export async function getOrderStats(
     todaySales,
     todayOrders,
     todayTicket: todayOrders > 0 ? todaySales / todayOrders : 0,
+  };
+}
+
+/* ============================================================
+   CÓMO VA EL DÍA — comparación contra los días iguales
+   ------------------------------------------------------------
+   Un total suelto no dice nada: Q3,480 puede ser un jueves
+   flojo o el mejor martes del mes. Lo que informa es la
+   comparación, y la comparación honesta de un día a medias no
+   es contra el TOTAL de otro día —a la una de la tarde nadie
+   lleva lo que cerrará— sino contra lo que ese otro día
+   llevaba A ESTA MISMA HORA.
+
+   Se piden solo los CUATRO días iguales anteriores (los cuatro
+   jueves pasados si hoy es jueves), acotados por rango exacto,
+   no cinco semanas de pedidos para tirar el 80 %.
+   ============================================================ */
+
+/** Minutos transcurridos del día local en la zona del restaurante. */
+function localMinutesOfDay(date: Date, timezone: string): number {
+  try {
+    const hhmm = date.toLocaleTimeString('en-GB', {
+      timeZone: timezone, hour12: false, hour: '2-digit', minute: '2-digit',
+    });
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  } catch {
+    return date.getHours() * 60 + date.getMinutes();
+  }
+}
+
+/**
+ * Instante UTC en que empieza un día local ("YYYY-MM-DD") de una zona.
+ *
+ * Se deduce del desfase que esa zona tenía en ese momento en vez de
+ * codificarlo: Guatemala no cambia de hora, pero el panel ya se vende fuera
+ * y una constante -6 sería una bomba de tiempo.
+ */
+function zonedDayStart(dateKey: string, timezone: string): Date {
+  const guess = new Date(`${dateKey}T00:00:00Z`);
+  try {
+    const asLocal = new Date(guess.toLocaleString('en-US', { timeZone: timezone }));
+    const asUtc = new Date(guess.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return new Date(guess.getTime() + (asUtc.getTime() - asLocal.getTime()));
+  } catch {
+    return guess;
+  }
+}
+
+export interface DayPace {
+  /** Cuántos días iguales se pudieron promediar (0 = no hay con qué comparar). */
+  samples: number;
+  /** Lo que un día igual llevaba a esta hora, en promedio. */
+  typicalSoFar: number;
+  /** Con cuánto cerró un día igual, en promedio. */
+  typicalFullDay: number;
+}
+
+export async function getDayPace(
+  restaurantId: string,
+  timezone: string = 'America/Guatemala',
+): Promise<DayPace | null> {
+  const now = new Date();
+  const cutoffMinutes = localMinutesOfDay(now, timezone);
+
+  // Los cuatro días iguales anteriores, con sus bordes exactos en UTC.
+  const ventanas: { key: string; from: Date; to: Date }[] = [];
+  for (let semanas = 1; semanas <= 4; semanas++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - semanas * 7);
+    const key = localDateKey(d, timezone);
+    const from = zonedDayStart(key, timezone);
+    const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+    ventanas.push({ key, from, to });
+  }
+
+  const db = createServiceClient();
+  const { data } = await db
+    .from('orders')
+    .select('created_at, total')
+    .eq('restaurant_id', restaurantId)
+    .neq('status', 'CANCEL')
+    .or(ventanas
+      .map((v) => `and(created_at.gte.${v.from.toISOString()},created_at.lt.${v.to.toISOString()})`)
+      .join(','))
+    .limit(2000);
+
+  if (!data || data.length === 0) return null;
+
+  const soFar = new Map<string, number>();
+  const fullDay = new Map<string, number>();
+  for (const o of data) {
+    const at = new Date(o.created_at as string);
+    const key = localDateKey(at, timezone);
+    const monto = Number(o.total);
+    fullDay.set(key, (fullDay.get(key) ?? 0) + monto);
+    if (localMinutesOfDay(at, timezone) <= cutoffMinutes) {
+      soFar.set(key, (soFar.get(key) ?? 0) + monto);
+    }
+  }
+
+  // Solo cuentan los días que de verdad tuvieron movimiento: promediar
+  // incluyendo un lunes que el local estuvo cerrado hunde la referencia y
+  // hace que cualquier día parezca extraordinario.
+  const diasConVenta = ventanas.map((v) => v.key).filter((k) => (fullDay.get(k) ?? 0) > 0);
+  if (diasConVenta.length === 0) return null;
+
+  const media = (m: Map<string, number>) =>
+    diasConVenta.reduce((s, k) => s + (m.get(k) ?? 0), 0) / diasConVenta.length;
+
+  return {
+    samples: diasConVenta.length,
+    typicalSoFar: media(soFar),
+    typicalFullDay: media(fullDay),
   };
 }

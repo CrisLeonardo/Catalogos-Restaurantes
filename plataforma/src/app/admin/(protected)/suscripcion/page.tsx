@@ -51,7 +51,7 @@ function upgradeHref(restaurantName: string, targetPlan: string): string {
 export default async function SuscripcionPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'suscripcion')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'suscripcion')) redirect('/admin');
 
   let restaurantId: string | null = null;
   let restaurantName = 'mi restaurante';

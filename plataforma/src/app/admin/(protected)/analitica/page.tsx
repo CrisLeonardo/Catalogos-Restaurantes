@@ -39,7 +39,7 @@ export default async function AdminAnaliticaPage({
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'analitica')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'analitica')) redirect('/admin');
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';

@@ -79,7 +79,7 @@ async function currentStaffAccount(): Promise<{
         .eq('id', profile.restaurant_id as string)
         .maybeSingle();
       restaurantName = (rest?.name as string | null) ?? null;
-      panelUrl = rest?.slug ? `${adminUrl(rest.slug as string)}/menu` : null;
+      panelUrl = rest?.slug ? adminUrl(rest.slug as string) : null;
     }
     return { email: user.email, fullName, hasProfile: true, restaurantName, panelUrl };
   } catch {

@@ -20,7 +20,7 @@ export const metadata = { title: 'Respaldo de datos – Panel admin' };
 export default async function AdminRespaldoPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'respaldo')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'respaldo')) redirect('/admin');
 
   let restaurantId: string | null = null;
 

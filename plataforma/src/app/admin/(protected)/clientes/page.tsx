@@ -7,7 +7,7 @@ import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/c
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Section } from '@/components/ui/section';
+import { Section, SectionNote } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import ClientesExportButton from '@/components/admin/clientes-export-button';
@@ -93,6 +93,17 @@ export default async function AdminClientesPage({
 
   const totalSpent = summary.totalSpent;
   const recurrent = summary.recurrentCount;
+
+  /* Cuántos vuelven, en porcentaje, y cuánto más gasta el que vuelve.
+     El denominador son los que HAN PEDIDO, no los registrados: quien se dio
+     de alta y nunca pidió no decidió no volver — todavía no ha venido, y
+     meterlo en el reparto hunde el porcentaje sin querer decir nada.
+     Y por debajo de cinco compradores no se enseña: "vuelve el 0%" calculado
+     sobre una persona no es un dato, es una coincidencia con forma de dato. */
+  const vuelvenPct = summary.buyersCount >= 5
+    ? Math.round((recurrent / summary.buyersCount) * 100)
+    : null;
+  const { avgTicketRecurrent, avgTicketOneTime } = summary;
   const pageHref = (p: number) => `/admin/clientes?page=${p}`;
 
   return (
@@ -107,8 +118,15 @@ export default async function AdminClientesPage({
         <StatGroup>
           <Stat label="Clientes registrados" value={String(total)} />
           <Stat label="Recurrentes (2+ pedidos)" value={String(recurrent)} />
+          {vuelvenPct !== null && <Stat label="De los que piden, vuelven" value={`${vuelvenPct}%`} />}
           <Stat label="Total histórico" value={fmtQ(totalSpent)} />
         </StatGroup>
+        {avgTicketRecurrent !== null && avgTicketOneTime !== null && (
+          <SectionNote>
+            Quien vuelve gasta {fmtQ(avgTicketRecurrent)} por pedido; quien vino una sola vez,{' '}
+            {fmtQ(avgTicketOneTime)}.
+          </SectionNote>
+        )}
       </Section>
 
       {customers.length === 0 ? (

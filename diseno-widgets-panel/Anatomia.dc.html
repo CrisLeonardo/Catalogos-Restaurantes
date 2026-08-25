@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; --dang:#b91c1c; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; --dang:#f87171; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .nl { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 8px; color: var(--ink); font-size: 14px; font-weight: 500; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; min-height: 44px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .hrf { height: 1px; background: var(--hair); }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; display: flex; align-items: baseline; gap: 12px; }
+    .sc .lbl > span:first-child { flex: 1; }
+    .sc .act { font-weight: 600; color: var(--acc-ink); }
+    .sc .btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
+    .sc .ttl { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+    .sc .sub { font-size: 13px; color: var(--ink3); margin-top: 1px; line-height: 1.35; }
+    .sc .stat3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .sc .stat3 > div { padding: 16px 20px; }
+    .sc .stat3 > div + div { border-left: 1px solid var(--hair); }
+    .sc .snum { font-size: 26px; color: var(--ink); margin-top: 5px; line-height: 1.1; }
+    .sc .slab { font-size: 13px; color: var(--ink3); }
+    .sc .spark { display: flex; align-items: flex-end; }
+    .sc .spark > i { display: block; border-radius: 3px 3px 1px 1px; background: color-mix(in srgb, var(--ink) 13%, transparent); }
+    .sc .spark[data-fill="1"] > i { flex: 1; min-width: 4px; }
+    .sc .spark > i[data-on="1"] { background: var(--acc); }
+    .sc .track { height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 9%, transparent); overflow: hidden; }
+    .sc .track > i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
+    .sc .tables { display: grid; grid-template-columns: repeat(6, 10px); gap: 5px; flex-shrink: 0; }
+    .sc .tables > i { display: block; width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--hair2); }
+    .sc .tables > i[data-on="1"] { background: var(--acc); border-color: var(--acc); }
+    .sc .cap { font-size: 12.5px; color: var(--ink3); line-height: 1.45; padding: 9px 4px 0; }
+    .sc .cap b { color: var(--ink2); font-weight: 600; }
+    .sc .when { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--ink3); line-height: 1.45; padding: 9px 4px 0; }
+    .sc .when b { color: var(--ink2); font-weight: 600; }
+  </style>
+</helmet>
+<div class="sc" data-t="light" style="width: 900px; min-height: 1290px; background: var(--bg); color: var(--ink); padding: 40px 52px">
+  <div class="disp" style="font-size: 24px; line-height: 1.15">Anatomía y reglas</div>
+  <div style="font-size: 14px; color: var(--ink3); margin-top: 8px; max-width: 620px; line-height: 1.5">
+    Un widget no es una pieza nueva: es un bloque del panel, con el mismo rótulo, la misma tarjeta
+    agrupada y las mismas filas que ya usan Pedidos, Menú y Ajustes. Por eso no se ve como un injerto.
+  </div>
+
+  <div style="margin-top: 30px; padding: 0 14px"><div style="position: relative">
+  <div><div class="lbl"><span>La casa</span><span class="act">Ver mesas</span></div><div class="group"><div class="row"><div class="tables"><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i></i><i></i><i></i><i></i><i></i></div><div style="flex: 1; min-width: 0"><div class="ttl">7 de 12 mesas ocupadas</div><div class="sub">La 4 lleva abierta 1 h 20 min.</div></div><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div><div class="hr"></div><div class="row"><div class="mono" style="width: 44px; flex-shrink: 0; font-size: 19px; color: var(--ink)">3</div><div style="flex: 1; min-width: 0"><div class="ttl">Grupos esperando mesa</div><div class="sub">El primero de la fila llegó hace 14 min.</div></div><span class="act" style="font-size: 13.5px">Ver la fila</span></div><div class="hr"></div><div class="row"><div class="mono" style="width: 44px; flex-shrink: 0; font-size: 14px; color: var(--ink2)">19:00</div><div style="flex: 1; min-width: 0"><div class="ttl">Familia Pérez · 4 personas</div><div class="sub">Y 1 reserva más hoy.</div></div><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div></div>
+  <div style="position: absolute; left: -14px; top: 0; bottom: 0; width: 3px; background: var(--acc); border-radius: 2px; opacity: 0.5"></div>
+</div></div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 26px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--hair)">
+    <div><div style="font-size: 12.5px; font-weight: 600; color: var(--ink2)">Rótulo</div><div style="font-size: 12.5px; color: var(--ink3); line-height: 1.5; margin-top: 3px">12,5 px, peso 600, <span class="mono" style="font-size: 11.5px">--ink3</span>. La clase <b style="color: var(--ink2)">.adm-label</b>, sin mayúsculas ni espaciado.</div></div>
+    <div><div style="font-size: 12.5px; font-weight: 600; color: var(--ink2)">Tarjeta</div><div style="font-size: 12.5px; color: var(--ink3); line-height: 1.5; margin-top: 3px">Radio 12 px, borde de un pelo, sombra <span class="mono" style="font-size: 11.5px">--adm-shadow-sm</span>. Es <b style="color: var(--ink2)">&lt;List&gt;</b> tal cual.</div></div>
+    <div><div style="font-size: 12.5px; font-weight: 600; color: var(--ink2)">Filas</div><div style="font-size: 12.5px; color: var(--ink3); line-height: 1.5; margin-top: 3px">44 px mínimo, 13/16 de relleno, divisoria puesta por el contenedor y sangrada 16 px.</div></div>
+    <div><div style="font-size: 12.5px; font-weight: 600; color: var(--ink2)">Columna guía</div><div style="font-size: 12.5px; color: var(--ink3); line-height: 1.5; margin-top: 3px">Lo de la izquierda de cada fila mide siempre lo mismo dentro del widget: 71 px aquí. Así las filas se leen en columna.</div></div>
+    <div><div style="font-size: 12.5px; font-weight: 600; color: var(--ink2)">Separación</div><div style="font-size: 12.5px; color: var(--ink3); line-height: 1.5; margin-top: 3px">24 px entre bloques, los mismos que ya separan “Resumen del día” de “En curso”.</div></div>
+    <div><div style="font-size: 12.5px; font-weight: 600; color: var(--ink2)">Ancho</div><div style="font-size: 12.5px; color: var(--ink3); line-height: 1.5; margin-top: 3px">El de la columna de contenido, con tope en 1040 px. Un widget nunca es media columna.</div></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 34px; margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--hair)"><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">1</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Un widget aparece solo cuando tiene algo que decir</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">Sin datos no hay tarjeta vacía: no hay tarjeta. Es la misma regla que ya sigue “Necesita tu atención”, que desaparece entero cuando no hay avisos.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">2</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Nadie lo configura</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">No hay pantalla de “personalizar Hoy”, ni arrastrar, ni marcar casillas. El restaurante que compra Leogin no quiere armar un tablero, quiere abrir el panel y ver cómo va el día.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">3</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Un widget, una pregunta</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">¿Vamos bien? ¿Qué preparo? ¿Cómo está la sala? ¿Qué se está acabando? Si un widget contesta dos preguntas, son dos widgets — o ninguno.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">4</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Máximo una acción</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">La misma regla que ya tiene <b>Section</b>: un enlace a la derecha del rótulo. Si hace falta un segundo, es que la sección está haciendo demasiado.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">5</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">El color va en el dato, no en la tarjeta</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">Ninguna tarjeta se tiñe de ámbar ni de rojo. Se tiñe la cifra o el punto, como ya hace <b>Stat</b> con <b>tone</b>. Cinco tarjetas de colores compiten entre ellas y pierde el ojo.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">6</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Todo número en mono tabular</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">JetBrains Mono con <b>tabular-nums</b>, igual que el resto del panel: las cifras se alinean solas y no bailan al actualizarse en vivo.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">7</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Orden fijo por urgencia</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">Lo que se rompe, arriba. Lo que sirve para decidir, en medio. Lo que se mira una vez por semana, abajo. El orden no cambia entre restaurantes, así que se aprende una sola vez.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">8</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">En el teléfono es la misma pieza</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">No hay una versión móvil aparte: el mismo bloque a lo ancho, con las tres columnas de cifras reducidas a dos —y la impar ocupando el renglón entero, sin medio hueco— y el resto igual. Ninguna fila baja de 44 px.</div></div></div><div style="display: flex; gap: 12px"><div class="mono" style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 99px; background: var(--acc); color: #fff; font-size: 11px; display: grid; place-items: center">9</div><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; font-weight: 600; color: var(--ink)">Manda el ancho del CONTENEDOR, no el de la pantalla</div><div style="font-size: 13px; color: var(--ink3); margin-top: 2px; line-height: 1.5">La gráfica de 14 días vive en la columna de Hoy (~970 px) y también en la de Pedidos (300 px). Un punto de ruptura no sirve: en esa columna estrecha, dentro de un monitor grande, cualquier media query diría “escritorio”. Se resuelve con mínimos y salto de renglón — y los mínimos van en las DOS columnas, porque si una puede encogerse hasta cero el navegador siempre “encuentra sitio” y acaba recortando el texto en vez de bajarlo.</div></div></div></div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":900,"height":1290}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -26,7 +26,7 @@ export default async function SuperLayout({
     .eq('id', user.id)
     .single();
 
-  if (profile?.role !== 'SUPER_ADMIN') redirect('/admin/menu');
+  if (profile?.role !== 'SUPER_ADMIN') redirect('/admin');
 
   return <SuperShell>{children}</SuperShell>;
 }

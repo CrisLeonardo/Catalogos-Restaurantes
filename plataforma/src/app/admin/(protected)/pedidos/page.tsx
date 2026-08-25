@@ -4,10 +4,20 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getPanelOrders, getOrderStats } from '@/lib/db/orders';
+import { getPanelOrders, getOrderStats, getDayPace, orderClosedAt } from '@/lib/db/orders';
+import type { TimesData } from '@/components/admin/times-widget';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import OrdersPanel from '@/components/admin/orders-panel';
 import { getDrivers } from '@/lib/db/drivers';
+
+/** Cómo se nombra un pedido en una frase: la mesa si la hay, si no el canal. */
+function orderShortLabel(type: string, address: string | null): string {
+  if (type === 'DINE_IN') {
+    const m = address?.match(/Mesa\s+(\d+)/i);
+    return m ? `la Mesa ${m[1]}` : 'un pedido en local';
+  }
+  return type === 'PICKUP' ? 'un pedido para llevar' : 'un domicilio';
+}
 
 export default async function PedidosPage() {
   const supabase = await createClient();
@@ -32,7 +42,7 @@ export default async function PedidosPage() {
     restaurantId = profile.restaurant_id;
   }
 
-  if (!restaurantId) redirect('/admin/menu');
+  if (!restaurantId) redirect('/admin');
 
   // Zona horaria + moneda reales del restaurante (KPIs y montos honestos).
   const db = createServiceClient();
@@ -47,11 +57,51 @@ export default async function PedidosPage() {
   const agentKitchen = !!(agent?.kitchen_target);
   const agentReceipt = !!(agent?.receipt_target);
 
-  const [panelOrders, stats, drivers] = await Promise.all([
+  const [panelOrders, stats, drivers, pace] = await Promise.all([
     getPanelOrders(restaurantId, timezone),
     getOrderStats(restaurantId, timezone),
     getDrivers(restaurantId),
+    // Con qué comparar el día. Es la misma pieza que la portada Hoy, así que
+    // también necesita su referencia; la consulta va acotada a los cuatro
+    // días iguales anteriores.
+    getDayPace(restaurantId, timezone),
   ]);
+
+  /* ── Tiempos de hoy ──────────────────────────────────────────
+     Cuánto se tardó de verdad hoy, de que entra el pedido a que se entrega.
+     La cocina no sabe si va lenta hasta que alguien se queja, y ese número no
+     estaba en ninguna pantalla.
+
+     Sin consulta nueva: se calcula sobre los pedidos que YA se cargaron para
+     pintar el historial del día. Los cancelados quedan fuera —el tiempo de un
+     pedido que nunca se sirvió no mide a la cocina— y también los que salen
+     por debajo de un minuto, que en la práctica son cierres a mano de algo
+     que ya se había entregado. */
+  const SLOW_MINUTES = 30;
+  const duraciones = panelOrders.closedToday
+    .filter((o) => o.status === 'DELIVERED')
+    .map((o) => (new Date(orderClosedAt(o)).getTime() - new Date(o.created_at).getTime()) / 60_000)
+    .filter((m) => m >= 1 && m < 24 * 60);
+
+  let times: TimesData | null = null;
+  if (duraciones.length >= 3) {
+    const slow = duraciones.filter((m) => m > SLOW_MINUTES).length;
+    // El peor del día solo se nombra si de verdad se pasó: señalar "el más
+    // lento fue de 12 minutos" en un día bueno es ruido con forma de alarma.
+    const peorMin = Math.max(...duraciones);
+    const peor = panelOrders.closedToday.find(
+      (o) => o.status === 'DELIVERED'
+        && Math.abs((new Date(orderClosedAt(o)).getTime() - new Date(o.created_at).getTime()) / 60_000 - peorMin) < 0.01,
+    );
+    times = {
+      avgTotal: Math.round(duraciones.reduce((a, b) => a + b, 0) / duraciones.length),
+      slow,
+      sample: duraciones.length,
+      worst: peorMin > SLOW_MINUTES && peor
+        ? { label: orderShortLabel(peor.order_type, peor.address), minutes: Math.round(peorMin) }
+        : null,
+    };
+  }
 
   // Solo los activos: un repartidor dado de baja no debe poder recibir
   // entregas nuevas, aunque siga siendo el responsable de las que ya hizo.
@@ -79,6 +129,8 @@ export default async function PedidosPage() {
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
       drivers={activeDrivers}
+      times={times}
+      pace={pace}
     />
   );
 }

@@ -336,7 +336,7 @@ export async function acceptInvitation(prevState: AcceptState, formData: FormDat
     meta: { accepted: true, role: invitation.role },
   });
 
-  redirect(`${adminUrl(invitation.restaurantSlug)}/menu?welcome=1`);
+  redirect(`${adminUrl(invitation.restaurantSlug)}?welcome=1`);
 }
 
 /**

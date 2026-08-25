@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; --dang:#b91c1c; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; --dang:#f87171; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .nl { display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 8px; color: var(--ink); font-size: 14px; font-weight: 500; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; min-height: 44px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .hrf { height: 1px; background: var(--hair); }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; display: flex; align-items: baseline; gap: 12px; }
+    .sc .lbl > span:first-child { flex: 1; }
+    .sc .act { font-weight: 600; color: var(--acc-ink); }
+    .sc .btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
+    .sc .ttl { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+    .sc .sub { font-size: 13px; color: var(--ink3); margin-top: 1px; line-height: 1.35; }
+    .sc .stat3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .sc .stat3 > div { padding: 16px 20px; }
+    .sc .stat3 > div + div { border-left: 1px solid var(--hair); }
+    .sc .snum { font-size: 26px; color: var(--ink); margin-top: 5px; line-height: 1.1; }
+    .sc .slab { font-size: 13px; color: var(--ink3); }
+    .sc .spark { display: flex; align-items: flex-end; }
+    .sc .spark > i { display: block; border-radius: 3px 3px 1px 1px; background: color-mix(in srgb, var(--ink) 13%, transparent); }
+    .sc .spark[data-fill="1"] > i { flex: 1; min-width: 4px; }
+    .sc .spark > i[data-on="1"] { background: var(--acc); }
+    .sc .track { height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 9%, transparent); overflow: hidden; }
+    .sc .track > i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
+    .sc .tables { display: grid; grid-template-columns: repeat(6, 10px); gap: 5px; flex-shrink: 0; }
+    .sc .tables > i { display: block; width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--hair2); }
+    .sc .tables > i[data-on="1"] { background: var(--acc); border-color: var(--acc); }
+    .sc .cap { font-size: 12.5px; color: var(--ink3); line-height: 1.45; padding: 9px 4px 0; }
+    .sc .cap b { color: var(--ink2); font-weight: 600; }
+    .sc .when { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--ink3); line-height: 1.45; padding: 9px 4px 0; }
+    .sc .when b { color: var(--ink2); font-weight: 600; }
+  </style>
+</helmet>
+<div class="sc" data-t="light" style="width: 880px; min-height: 1800px; background: var(--bg); color: var(--ink); padding: 40px">
+  <div class="disp" style="font-size: 24px; line-height: 1.15">Los seis widgets de Hoy</div>
+  <div style="font-size: 14px; color: var(--ink3); margin-top: 8px; max-width: 640px; line-height: 1.5">
+    En orden de aparición. Ninguno se configura y ninguno se pinta vacío: si no tiene nada que decir,
+    ese día no existe. Un jueves lleno se ven tres o cuatro; un martes a las diez de la mañana, uno.
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 28px; margin-top: 26px"><div><div><div class="lbl"><span>Cómo va el día</span></div><div class="group">
+  <div class="row" style="align-items: flex-end; gap: 24px; padding: 16px">
+    <div style="min-width: 140px; flex: 1">
+      <div style="font-size: 13px; color: var(--ink3)">Últimos 14 días</div>
+      <div class="mono" style="font-size: 20px; color: var(--ink); margin-top: 4px; line-height: 1">Q98,280.00</div>
+    </div>
+    <div style="width: 340px; max-width: 340px; min-width: 260px; flex: 2">
+      <div class="spark" style="height: 96px; gap: 3px"><i style="height: 48px; width: 21px"></i><i style="height: 59px; width: 21px"></i><i style="height: 72px; width: 21px"></i><i style="height: 66px; width: 21px"></i><i style="height: 77px; width: 21px"></i><i style="height: 93px; width: 21px"></i><i style="height: 84px; width: 21px"></i><i style="height: 51px; width: 21px"></i><i style="height: 58px; width: 21px"></i><i style="height: 70px; width: 21px"></i><i style="height: 67px; width: 21px"></i><i style="height: 79px; width: 21px"></i><i style="height: 96px; width: 21px"></i><i data-on="1" style="height: 34px; width: 21px"></i></div>
+      <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--ink4)"><span>hace 14 días</span><span>hoy</span></div>
+    </div>
+  </div>
+  <div class="hrf"></div>
+  <div class="row" style="padding: 11px 16px; min-height: 0">
+    <div style="font-size: 13.5px; color: var(--ink2); line-height: 1.45">Un día como hoy a esta hora va en <span class="mono">Q2,940.00</span>. Vas <span class="mono" style="color: var(--ok)">18%</span> arriba.</div>
+  </div>
+</div></div><div class="when"><span style="flex-shrink: 0; color: var(--ink4)">Aparece</span><span><b>Siempre que haya pedidos en los últimos 14 días.</b> Contesta “¿vamos bien?” sin abrir Negocio. No repite el total de hoy —lo tiene justo arriba, en “Resumen del día”—: lo que añade es con qué compararlo, y la comparación es contra lo que un día igual llevaba A ESTA HORA, no contra su cierre. La gráfica sale de <b>getOrderStats</b>, que ya la calculaba y la tiraba a la basura.</span></div></div><div><div><div class="lbl"><span>Lo que más sale hoy</span></div><div class="group"><div class="row" style="padding: 11px 16px; min-height: 44px; gap: 12px"><div style="flex: 2; min-width: 0; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Carne asada</div><div class="track" style="flex: 1; max-width: 160px; min-width: 32px"><i style="width: 100%"></i></div><div class="mono" style="width: 28px; text-align: right; flex-shrink: 0; font-size: 14px; color: var(--ink)">14</div></div><div class="hr"></div><div class="row" style="padding: 11px 16px; min-height: 44px; gap: 12px"><div style="flex: 2; min-width: 0; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Pollo a la plancha</div><div class="track" style="flex: 1; max-width: 160px; min-width: 32px"><i style="width: 79%"></i></div><div class="mono" style="width: 28px; text-align: right; flex-shrink: 0; font-size: 14px; color: var(--ink)">11</div></div><div class="hr"></div><div class="row" style="padding: 11px 16px; min-height: 44px; gap: 12px"><div style="flex: 2; min-width: 0; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Hamburguesa doble</div><div class="track" style="flex: 1; max-width: 160px; min-width: 32px"><i style="width: 64%"></i></div><div class="mono" style="width: 28px; text-align: right; flex-shrink: 0; font-size: 14px; color: var(--ink)">9</div></div><div class="hr"></div><div class="row" style="padding: 11px 16px; min-height: 44px; gap: 12px"><div style="flex: 2; min-width: 0; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Sopa del día</div><div class="track" style="flex: 1; max-width: 160px; min-width: 32px"><i style="width: 43%"></i></div><div class="mono" style="width: 28px; text-align: right; flex-shrink: 0; font-size: 14px; color: var(--ink)">6</div></div></div></div><div class="when"><span style="flex-shrink: 0; color: var(--ink4)">Aparece</span><span><b>Cuando ya hubo al menos un pedido hoy.</b> Sirve para decidir qué preparar en la siguiente tanda. <b>topToday</b> también sale ya calculado de la misma consulta.</span></div></div><div><div><div class="lbl"><span>La casa</span><span class="act">Ver mesas</span></div><div class="group"><div class="row"><div class="tables"><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i data-on="1"></i><i></i><i></i><i></i><i></i><i></i></div><div style="flex: 1; min-width: 0"><div class="ttl">7 de 12 mesas ocupadas</div><div class="sub">La 4 lleva abierta 1 h 20 min.</div></div><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div><div class="hr"></div><div class="row"><div class="mono" style="width: 44px; flex-shrink: 0; font-size: 19px; color: var(--ink)">3</div><div style="flex: 1; min-width: 0"><div class="ttl">Grupos esperando mesa</div><div class="sub">El primero de la fila llegó hace 14 min.</div></div><span class="act" style="font-size: 13.5px">Ver la fila</span></div><div class="hr"></div><div class="row"><div class="mono" style="width: 44px; flex-shrink: 0; font-size: 14px; color: var(--ink2)">19:00</div><div style="flex: 1; min-width: 0"><div class="ttl">Familia Pérez · 4 personas</div><div class="sub">Y 1 reserva más hoy.</div></div><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div></div><div class="when"><span style="flex-shrink: 0; color: var(--ink4)">Aparece</span><span><b>Con “comer en local” activo, y solo las filas que tengan algo: mesas ocupadas, gente esperando, reservas de hoy.</b> Tres módulos en un widget y no tres widgets: quien mira la sala tiene una sola pregunta.</span></div></div><div><div><div class="lbl"><span>Se está acabando</span><span class="act">Ver inventario</span></div><div class="group"><div class="row"><span class="dot" style="background: var(--dang); width: 9px; height: 9px"></span><div style="flex: 1; min-width: 0"><div class="ttl">Limonada natural</div><div class="sub">Sin existencias. Se marcó agotado solo.</div></div><div class="mono" style="font-size: 15px; color: var(--dang)">0</div></div><div class="hr"></div><div class="row"><span class="dot" style="background: var(--warn); width: 9px; height: 9px"></span><div style="flex: 1; min-width: 0"><div class="ttl">Carne asada</div><div class="sub">Quedan pocas. Avisas por debajo de 6.</div></div><div class="mono" style="font-size: 15px; color: var(--warn)">3</div></div></div></div><div class="when"><span style="flex-shrink: 0; color: var(--ink4)">Aparece</span><span><b>Con inventario activo y al menos un platillo bajo o agotado.</b> Habla de EXISTENCIAS, no de si el platillo se ve en el menú: son dos preguntas distintas —lo marcado agotado vuelve solo a las doce horas— y la segunda la contesta el widget de la pantalla Menú.</span></div></div><div><div><div class="lbl"><span>Lo que dicen tus clientes</span><span class="act">Ver encuestas</span></div><div class="group"><div class="row" style="align-items: center"><div style="width: 112px; flex-shrink: 0"><div class="mono" style="font-size: 28px; color: var(--ink); line-height: 1">4.6</div><div style="font-size: 13px; color: var(--ink3); margin-top: 4px">de 5 · 23 esta semana</div></div><div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><div style="display: flex; align-items: center; gap: 8px"><div class="mono" style="width: 10px; font-size: 11.5px; color: var(--ink4)">5</div><div class="track" style="flex: 1; height: 6px"><i style="width: 74%"></i></div></div><div style="display: flex; align-items: center; gap: 8px"><div class="mono" style="width: 10px; font-size: 11.5px; color: var(--ink4)">4</div><div class="track" style="flex: 1; height: 6px"><i style="width: 17%"></i></div></div><div style="display: flex; align-items: center; gap: 8px"><div class="mono" style="width: 10px; font-size: 11.5px; color: var(--ink4)">3</div><div class="track" style="flex: 1; height: 6px"><i style="width: 9%"></i></div></div><div style="display: flex; align-items: center; gap: 8px"><div class="mono" style="width: 10px; font-size: 11.5px; color: var(--ink4)">2</div><div class="track" style="flex: 1; height: 6px"><i style="width: 0%"></i></div></div><div style="display: flex; align-items: center; gap: 8px"><div class="mono" style="width: 10px; font-size: 11.5px; color: var(--ink4)">1</div><div class="track" style="flex: 1; height: 6px"><i style="width: 0%"></i></div></div></div></div><div class="hr"></div><div class="row"><div style="flex: 1; min-width: 0"><div style="font-size: 13.5px; color: var(--ink2); line-height: 1.45">«Todo riquísimo, pero la espera se hizo larga.»</div><div class="sub">Mesa 7 · hace 4 h · 3 estrellas</div></div></div></div></div><div class="when"><span style="flex-shrink: 0; color: var(--ink4)">Aparece</span><span><b>Con encuestas activas y 3 o más opiniones en la semana.</b> Semanal, no diario: por eso va abajo. Con menos de tres el widget no aparece — una sola opinión no dice nada y ocuparía el mismo espacio que un dato de verdad.</span></div></div><div><div><div class="lbl"><span>Tu menú en línea</span></div><div class="group">
+  <div class="stat3"><div><div class="slab">Visitas hoy</div><div class="mono snum">318</div></div><div><div class="slab">Personas distintas</div><div class="mono snum">214</div></div><div><div class="slab">Piden</div><div class="mono snum">8%</div></div></div>
+  <div class="hrf"></div>
+  <div class="row" style="padding: 11px 16px; min-height: 0">
+    <div style="font-size: 13.5px; color: var(--ink2); line-height: 1.45">Un día normal recibe <span class="mono">240</span> visitas. Hoy vas <span class="mono" style="color: var(--ok)">32%</span> arriba.</div>
+  </div>
+</div></div><div class="when"><span style="flex-shrink: 0; color: var(--ink4)">Aparece</span><span><b>Siempre que el menú haya recibido visitas hoy.</b> En el plan Básico —sin pedidos en línea— este es el <b>único</b> widget que aparece, y sin él esa portada se ve completamente vacía. La columna “Piden” solo sale si hay pedidos.</span></div></div></div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":880,"height":1800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

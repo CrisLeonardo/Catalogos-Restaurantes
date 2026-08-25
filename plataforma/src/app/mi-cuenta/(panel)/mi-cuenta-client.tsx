@@ -123,7 +123,7 @@ function TeamLink({ card }: { card: MembershipCard }) {
 
      `adminUrl()` es el mismo ayudante que usa el servidor para esto, y ya
      trae la raíz del panel — la página se le pega detrás (`/personal`), sin
-     repetir `/admin`, igual que hace resolveStaffDestination con `/menu`. */
+     repetir `/admin`, igual que hace resolveStaffDestination. */
   const href = `${adminUrl(card.slug)}/personal`;
   return (
     <a

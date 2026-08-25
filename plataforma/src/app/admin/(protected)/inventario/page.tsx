@@ -17,7 +17,7 @@ export const metadata = { title: 'Inventario – Panel admin' };
 export default async function AdminInventarioPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'inventario')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'inventario')) redirect('/admin');
 
   let restaurantId: string | null = null;
 

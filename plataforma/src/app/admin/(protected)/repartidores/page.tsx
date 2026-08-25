@@ -21,7 +21,7 @@ export const metadata = { title: 'Repartidores – Panel admin' };
 export default async function AdminRepartidoresPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'repartidores')) redirect('/admin/menu');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'repartidores')) redirect('/admin');
 
   let restaurantId: string | null = null;
 

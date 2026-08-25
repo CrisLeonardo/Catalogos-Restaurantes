@@ -20,7 +20,13 @@ type ProfileLike = {
  *
  * El super admin va a su panel propio. El resto entra a SU restaurante:
  * relativo si el subdominio actual ya es el suyo, absoluto (con adminUrl) si
- * no. Mesero puro → /mesero, si no → /menu.
+ * no. Mesero puro → /mesero, si no → /admin, que es "Hoy".
+ *
+ * Antes el personal aterrizaba en /admin/menu. Eso venía de cuando la portada
+ * del panel no existía: se entraba al catálogo porque era lo primero que había
+ * que llenar. Con el rediseño la portada ES "Hoy" —lo que necesita atención,
+ * los números del día y los pedidos en curso— y entrar directo al catálogo se
+ * lee como si el panel se hubiera abierto en la pantalla equivocada.
  */
 export async function resolveStaffDestination(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -59,8 +65,8 @@ export async function resolveStaffDestination(
       .single();
     if (only?.slug) {
       return only.slug === tenantSlug
-        ? `/admin/menu${suffix}`
-        : `${adminUrl(only.slug as string)}/menu${suffix}`;
+        ? `/admin${suffix}`
+        : `${adminUrl(only.slug as string)}${suffix}`;
     }
   }
 
@@ -78,9 +84,10 @@ export async function resolveStaffDestination(
     .single();
   if (!rest?.slug) return '/admin/login';
 
-  const mesero = isMeseroOnly(profile.role, profile.permissions);
-  const page = mesero ? 'mesero' : 'menu';
+  // El mesero puro tiene su propia pantalla; cualquier otro rol entra por Hoy
+  // (la raíz del panel), no por una sección suelta.
+  const page = isMeseroOnly(profile.role, profile.permissions) ? '/mesero' : '';
 
-  if (rest.slug === tenantSlug) return `/admin/${page}${suffix}`;
-  return `${adminUrl(rest.slug)}/${page}${suffix}`;
+  if (rest.slug === tenantSlug) return `/admin${page}${suffix}`;
+  return `${adminUrl(rest.slug)}${page}${suffix}`;
 }

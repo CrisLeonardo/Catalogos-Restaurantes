@@ -28,7 +28,7 @@ export default async function AdminPersonalPage() {
   // escondiendo la pantalla.
   const isManager = ctx.memberRole === 'MANAGER';
   if (!isManager && ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
-    redirect('/admin/menu');
+    redirect('/admin');
   }
 
   let restaurantId: string | null = null;
