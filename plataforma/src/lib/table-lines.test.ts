@@ -2,11 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { groupTableLines } from './table-lines';
 import type { OrderWithItems } from './db/orders';
 
-function item(id: string, name: string, quantity: number, price = 100) {
+type ItemStub = {
+  id: string; name_snapshot: string; quantity: number; price_snapshot: number; subtotal: number;
+  options_snapshot?: { choice: string }[];
+  note?: string;
+};
+
+function item(id: string, name: string, quantity: number, price = 100): ItemStub {
   return { id, name_snapshot: name, quantity, price_snapshot: price, subtotal: quantity * price };
 }
 
-function pedido(status: string, items: ReturnType<typeof item>[], voids: unknown[] = []) {
+function pedido(status: string, items: ItemStub[], voids: unknown[] = []) {
   return { status, items, voids } as unknown as OrderWithItems;
 }
 
@@ -89,5 +95,24 @@ describe('groupTableLines', () => {
 
   it('una mesa sin comandas no revienta', () => {
     expect(groupTableLines([])).toEqual([]);
+  });
+
+  it('NO junta el mismo plato si uno se pidió con opciones distintas', () => {
+    // Dos carnes asadas no son lo mismo si una va sin cebolla: quien las
+    // lleva a la mesa necesita saber cuál es cuál.
+    const lines = groupTableLines([
+      pedido('PREP', [
+        { ...item('a', 'Carne asada', 2), options_snapshot: [{ choice: 'Término medio' }] },
+        { ...item('b', 'Carne asada', 1), options_snapshot: [{ choice: 'Bien cocida' }], note: 'sin cebolla' },
+      ]),
+    ]);
+    expect(lines).toHaveLength(2);
+    expect(lines.map((l) => l.detalle).sort())
+      .toEqual(['Bien cocida · sin cebolla', 'Término medio']);
+  });
+
+  it('un plato pedido tal cual no arrastra detalle', () => {
+    const lines = groupTableLines([pedido('PREP', [item('a', 'Sopa', 1)])]);
+    expect(lines[0].detalle).toBe('');
   });
 });

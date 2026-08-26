@@ -635,6 +635,28 @@ async function resolveStableLinkTenant(
  *  · NO se usa upgrade-insecure-requests: rompería la impresión local por
  *    ws://localhost en producción.
  */
+/**
+ * Nuestros dominios como destino válido de un formulario: cada ROOT_DOMAIN
+ * configurado y sus subdominios. En local queda `http://` porque el dev
+ * server no habla TLS; en producción solo `https://`.
+ */
+function selfFormTargets(): string {
+  const roots = (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase().split(":")[0])
+    .filter(Boolean);
+  const out: string[] = [];
+  for (const root of roots) {
+    const local = root.includes("localhost") || root.startsWith("127.");
+    const proto = local ? "http" : "https";
+    out.push(`${proto}://${root}`, `${proto}://*.${root}`);
+    // Los subdominios *.localhost se sirven por http en el puerto del dev
+    // server; el comodín de puerto evita tener que saber cuál es.
+    if (local) out.push(`http://${root}:*`, `http://*.${root}:*`);
+  }
+  return out.join(" ");
+}
+
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV !== 'production';
 
@@ -684,7 +706,24 @@ function buildCsp(nonce: string): string {
     "frame-src 'self'",
     "frame-ancestors 'self'",
     "base-uri 'self'",
-    "form-action 'self'",
+
+    // form-action: 'self' NO alcanza, y es una trampa medida, no teórica.
+    //
+    // Los formularios de esta app terminan a menudo en OTRO subdominio
+    // nuestro: el login del dominio raíz manda al panel del restaurante
+    // (`<slug>-admin.<dominio>`), y entrar a un local desde Mi cuenta hace lo
+    // mismo. Mientras la página ya hidrató da igual —React envía la acción
+    // por fetch, que no mira form-action— pero antes de hidratar el navegador
+    // hace un POST de formulario de verdad, y ahí Chrome vuelve a comprobar
+    // form-action en el redirect: con `'self'` a secas lo BLOQUEA y el botón
+    // simplemente no hace nada. En un teléfono lento, "no hace nada" es
+    // exactamente lo que pasa el primer segundo de cada visita.
+    //
+    // Se listan nuestros propios dominios (los mismos de
+    // NEXT_PUBLIC_ROOT_DOMAIN, con comodín de subdominio), no `https:`: la
+    // gracia de esta directiva es que un formulario inyectado no pueda
+    // mandarse los datos a un tercero.
+    `form-action 'self' ${selfFormTargets()}`,
     "object-src 'none'",
   ].join('; ');
 }

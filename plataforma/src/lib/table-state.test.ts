@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  tableState, tablesWithState, needsAttention, fmtMin,
+  tableState, tablesWithState, needsAttention, fmtMin, fmtMinShort,
   READY_ALERT_MIN, UNPAID_ALERT_MIN, UNACCEPTED_ALERT_MIN, ABANDONED_HOURS,
   type TableState,
 } from './table-state';
@@ -200,5 +200,28 @@ describe('fmtMin', () => {
     expect(fmtMin(42)).toBe('42 min');
     expect(fmtMin(60)).toBe('1 h');
     expect(fmtMin(130)).toBe('2 h 10 min');
+  });
+});
+
+describe('fmtMinShort — el ancho de una ficha de mesa', () => {
+  it('por debajo de la hora dice los minutos', () => {
+    expect(fmtMinShort(0)).toBe('0 min');
+    expect(fmtMinShort(42)).toBe('42 min');
+  });
+
+  it('pasada la hora tira los minutos: en una ficha no caben y no cambian nada', () => {
+    expect(fmtMinShort(60)).toBe('1 h');
+    expect(fmtMinShort(220)).toBe('3 h');
+  });
+
+  it('pasado el día cuenta días', () => {
+    expect(fmtMinShort(60 * 24)).toBe('1 d');
+    expect(fmtMinShort(60 * 50)).toBe('2 d');
+  });
+
+  it('nunca parte en dos renglones: cinco caracteres como mucho más la unidad', () => {
+    for (const m of [0, 1, 59, 60, 61, 599, 1439, 1440, 100000]) {
+      expect(fmtMinShort(m).length).toBeLessThanOrEqual(7);
+    }
   });
 });

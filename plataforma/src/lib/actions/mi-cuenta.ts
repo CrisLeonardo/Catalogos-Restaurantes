@@ -38,7 +38,12 @@ async function currentUser() {
 
 /* ── Entrar a un restaurante ─────────────────────────────────── */
 
-export type EntryState = { error: string } | null;
+/**
+ * `url` = entra aquí, y hazlo con una navegación de DOCUMENTO desde el
+ * cliente. No es un `redirect()` del servidor a propósito: ver la nota larga
+ * al final de `enterRestaurant`.
+ */
+export type EntryState = { error: string } | { url: string } | null;
 
 /**
  * Abre un restaurante desde Mi cuenta.
@@ -93,7 +98,31 @@ export async function enterRestaurant(prevState: EntryState, formData: FormData)
 
   // La portada del panel es Hoy: entrar desde Mi cuenta abre el mismo sitio
   // que abre el login, no el catálogo.
-  redirect(`${adminUrl(rest.slug as string)}`);
+  //
+  // Y se DEVUELVE la URL en vez de hacer `redirect()`. Esto no es un capricho
+  // de estilo: era el bug.
+  //
+  // El panel de un restaurante vive en `<slug>-admin.<dominio>` y su portada
+  // es la raíz de ese host, `/`. Pero `/` solo significa "el panel" gracias
+  // al rewrite del proxy (proxy.ts §3, `/` → `/admin/`). Sin ese rewrite, `/`
+  // es src/app/page.tsx sin tenant, o sea la PORTADA COMERCIAL de Leogin.
+  //
+  // Mi cuenta se sirve TAMBIÉN dentro del subdominio del panel (el proxy la
+  // excluye del rewrite a propósito, para que "Cambiar de restaurante"
+  // funcione desde dentro; y en Leogin Desktop la ventana vive siempre ahí).
+  // En ese caso el destino de este redirect tiene EL MISMO host que la página
+  // actual, y ahí Next deja de tratarlo como una salida a otro sitio: lo
+  // resuelve por dentro de la app (getAppRelativeRedirectUrl → fetch interno
+  // con `next: { internal: 1 }`), que NO pasa por el proxy. Resultado medido:
+  //
+  //   POST 303 /mi-cuenta  ·  x-action-redirect: https://<slug>-admin…;push
+  //   → la pantalla que llega es «Leogin — Menús digitales para restaurantes»
+  //     dentro del marco del panel, con /planes y /registro dando 404.
+  //
+  // El dueño pulsaba su restaurante y aterrizaba en la web de ventas de
+  // Leogin. Una navegación de documento desde el cliente siempre pasa por el
+  // proxy, así que siempre llega al panel.
+  return { url: adminUrl(rest.slug as string) };
 }
 
 /* ── El PIN de entrada, desde el panel del restaurante ────────── */
@@ -130,7 +159,7 @@ export async function updateEntryPin(prevState: EntryPinState, formData: FormDat
 
 /* ── Crear otro restaurante ──────────────────────────────────── */
 
-export type NewRestaurantState = { error: string } | null;
+export type NewRestaurantState = { error: string } | { url: string } | null;
 
 /**
  * Crea un restaurante para la cuenta que ya está dentro. EL ÚNICO sitio
@@ -314,8 +343,14 @@ export async function createAnotherRestaurant(
      qué hacer ahora—, que es la que antes cerraba el registro. Del segundo en
      adelante se entra directo al panel: quien abre su tercer local no necesita
      que le expliquen el producto otra vez. */
+  //
+  // El primero sigue con `redirect()` porque su destino es una ruta de ESTE
+  // sitio (`/registro/listo`) y no la raíz de otro host: no puede caer en la
+  // trampa de abajo. El resto entra al panel del local nuevo, y ese destino
+  // sí es la raíz de otro host — se devuelve para que navegue el cliente, por
+  // el mismo motivo que `enterRestaurant` (ver la nota allí).
   if (esElPrimero) redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
-  redirect(`${adminUrl(slug)}?welcome=1`);
+  return { url: `${adminUrl(slug)}?welcome=1` };
 }
 
 /* ── El link único de pedidos del grupo ──────────────────────── */

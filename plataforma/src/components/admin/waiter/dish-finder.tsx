@@ -151,12 +151,18 @@ export default function DishFinder({
     }
   }
 
+  /* Campo y lista comparten caja mientras hay algo que enseñar: es lo que
+     hace que la lista se lea como parte de lo que estás escribiendo y no
+     como una tarjeta suelta debajo (ver `.wp-finder` en globals.css). */
+  const abierto = results.length > 0;
+
   return (
     <section>
       <Label aside={<span className="wp-wide-only" style={{ fontSize: 12.5, color: 'var(--u-text-4)' }}>no hace falta tocar nada</span>}>
         Agregar sin salir de aquí
       </Label>
 
+      <div className="wp-finder" data-open={abierto ? '1' : '0'}>
       <div className="wp-find">
         <Icon name="search" size={17} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
         {/* La cantidad interpretada, visible: si escribiste "3 lim" tiene
@@ -193,7 +199,7 @@ export default function DishFinder({
         )}
       </div>
 
-      <div style={{ marginTop: 8 }}>
+      <div className="wp-finder-res" style={{ marginTop: 8 }}>
         {results.length === 0 ? (
           <div style={{ padding: '18px 6px', fontSize: 13.5, color: 'var(--u-text-3)', textAlign: 'center' }}>
             Ningún plato disponible se llama «{term}».
@@ -206,12 +212,7 @@ export default function DishFinder({
               return (
                 <div key={p.id}>
                   {i > 0 && <Hr />}
-                  <div
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px 9px 16px', minHeight: 56,
-                      background: resaltado ? 'color-mix(in srgb, var(--adm-accent-500) 8%, transparent)' : 'none',
-                    }}
-                  >
+                  <div className="wp-res" data-on={resaltado ? '1' : '0'}>
                     <button
                       type="button"
                       onClick={() => agregar(p)}
@@ -223,6 +224,10 @@ export default function DishFinder({
                         {catName.get(p.category_id ?? '') ?? 'Sin categoría'}
                       </span>
                     </button>
+                    {/* Qué agrega Enter, dicho en el propio renglón. El tinte
+                        solo no basta: quien no lo distingue tiene que poder
+                        VER cuál es. Se apaga solo donde no hay teclado. */}
+                    {resaltado && <Key>↵</Key>}
                     <Mono size={14} color="var(--u-text-2)">{money(p.price)}</Mono>
                     {enCarrito > 0 ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -247,31 +252,7 @@ export default function DishFinder({
         )}
       </div>
 
-      {/* Los atajos se enseñan aquí, junto a lo que hacen, y no en una
-          ayuda aparte: así el mesero que empieza con el ratón se los va
-          aprendiendo solo. En pantalla táctil no se pintan. */}
-      <div className="wp-wide-only" style={{ marginTop: 14 }}>
-        <Label>Sin soltar el teclado</Label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '2px 28px' }}>
-          <Atajo teclas={['↑', '↓']} que="Moverse entre resultados" />
-          <Atajo teclas={['Enter']} que="Agregar y seguir escribiendo" />
-          <Atajo teclas={['3', 'l', 'i', 'm']} que="Tres limonadas de una vez" />
-          <Atajo teclas={['/']} que="Volver al buscador" />
-          <Atajo teclas={['Ctrl', 'M']} que="Cambiar de mesa" />
-          <Atajo teclas={['Ctrl', 'Enter']} que="Enviar a cocina" />
-        </div>
       </div>
     </section>
-  );
-}
-
-function Atajo({ teclas, que }: { teclas: string[]; que: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 4px' }}>
-      <span style={{ display: 'inline-flex', gap: 3, width: 104, flexShrink: 0 }}>
-        {teclas.map((k, i) => <Key key={i}>{k}</Key>)}
-      </span>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>{que}</span>
-    </div>
   );
 }

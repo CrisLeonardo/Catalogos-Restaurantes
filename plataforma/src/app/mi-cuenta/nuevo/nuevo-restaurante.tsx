@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -119,6 +119,14 @@ export default function NuevoRestaurante({
   const PLAN_CARDS = buildPlanCards(pricing, esElPrimero);
   const trialDays = pricing.trialDays;
   const [state, formAction, isPending] = useActionState<NewRestaurantState, FormData>(createAnotherRestaurant, null);
+  // El local nuevo se abre con una navegación de documento, no con el
+  // `redirect()` del servidor: su panel es la raíz de otro host y esa raíz
+  // solo es el panel si la petición pasa por el proxy. Mismo motivo —y mismo
+  // bug— que al entrar desde Mi cuenta; ver `enterRestaurant`.
+  useEffect(() => {
+    if (state && 'url' in state) window.location.assign(state.url);
+  }, [state]);
+  const actionError = state && 'error' in state ? state.error : null;
 
   const [step, setStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<PlanOption>('PREMIUM');
@@ -403,7 +411,7 @@ export default function NuevoRestaurante({
         </Glass>
       </div>
 
-      {(stepError || state?.error) && <ErrorBox>{stepError ?? state?.error}</ErrorBox>}
+      {(stepError || actionError) && <ErrorBox>{stepError ?? actionError}</ErrorBox>}
 
       <WizardNav
         step={step}

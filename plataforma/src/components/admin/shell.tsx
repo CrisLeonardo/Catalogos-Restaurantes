@@ -154,6 +154,30 @@ export default function AdminShell({
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
+  /* Esc sale del modo servicio, que es lo que anuncia su propia barra.
+     Cuando el navegador SÍ concedió pantalla completa esto ya pasaba solo
+     (Esc la cierra y salta `fullscreenchange`), pero en tablet no se pide
+     —Android contesta con un aviso del sistema que parece un error nuestro—
+     y ahí la tecla no hacía nada.
+
+     Dos guardas, y las dos hacen falta: si alguien de dentro ya atendió el
+     Esc (el buscador lo usa para vaciarse, los diálogos para cerrarse) no se
+     toca, y escribiendo en un campo tampoco. Sin esto, borrar la búsqueda
+     con Esc te echaba de la pantalla en hora pico. */
+  useEffect(() => {
+    if (!kiosk) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      toggleKiosk();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kiosk]);
+
   /* En un teléfono/tablet NO se pide la Fullscreen API. Android responde a
      ella con su propio aviso del sistema ("Deslice hacia abajo desde la parte
      superior…"): una caja gris encima de la app, con texto cortado, que el
@@ -324,26 +348,43 @@ export default function AdminShell({
   if (kiosk && kioskEligible) {
     return (
       <ToastProvider>
-        <div className="admin-kiosk" style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
-          <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
-          {/* Salir de pantalla completa: sin sidebar, tiene que quedar SIEMPRE
-              a mano, aunque el navegador no soporte/permita la Fullscreen API
-              (Safari de iPhone, por ejemplo). */}
-          <button
-            type="button"
-            onClick={toggleKiosk}
-            title="Salir de pantalla completa"
-            aria-label="Salir de pantalla completa"
-            className="press glass"
-            style={{
-              position: 'fixed', top: 12, right: 12, zIndex: 100,
-              width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer',
-              display: 'grid', placeItems: 'center', color: 'var(--u-text)',
-              boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
-            }}
-          >
-            <Icon name="x" size={18} />
-          </button>
+        <div className="admin-kiosk" style={{ position: 'fixed', inset: 0, background: 'var(--brand-bg)', zIndex: 0 }}>
+          {/* La barra del modo servicio (lienzo `diseno-pedidos-mesas/PC.dc.html`).
+              Antes aquí no había nada y el contenido arrancaba pegado al canto de
+              la pantalla, con una «X» flotante como única salida — montada encima
+              de los botones de la barra del panel. Cuatro cosas y ninguna más: de
+              quién es la pantalla, en qué modo está, qué hora es y cómo se sale. */}
+          <div className="wp-servicebar">
+            <span style={{
+              display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)',
+            }}>
+              <Icon name="monitor" size={14} />
+            </span>
+            <span className="wp-servicebar-name">{restaurantName}</span>
+            <span className="wp-servicebar-mode">Modo servicio</span>
+            <span style={{ flex: 1 }} />
+            <ServiceClock />
+            <button
+              type="button"
+              onClick={toggleKiosk}
+              title="Salir del modo servicio"
+              className="press"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
+                height: 32, padding: '0 11px', borderRadius: 8, cursor: 'pointer',
+                border: '1px solid var(--adm-border-2)', background: 'none',
+                color: 'var(--u-text-2)', fontSize: 13, fontWeight: 500,
+              }}
+            >
+              <Icon name="x" size={14} />
+              <span>Salir</span>
+              <kbd className="wp-key">Esc</kbd>
+            </button>
+          </div>
+          <div className="admin-kiosk-body">
+            <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
+          </div>
           {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
           {avisosFlotantes}
         </div>
@@ -562,4 +603,25 @@ export default function AdminShell({
     <Toaster />
     </ToastProvider>
   );
+}
+
+/* ── El reloj del modo servicio ────────────────────────────────
+   Sale en el lienzo y no es adorno: una tablet a pantalla completa tapa el
+   reloj del sistema, y la hora es lo primero que mira quien apunta "mesa 6,
+   12:41" en la comanda o cierra el turno.
+
+   Empieza vacío y se llena al montar, a propósito: el HTML del servidor no
+   puede saber la hora del local sin desajustarse con el del navegador en el
+   primer pintado. */
+function ServiceClock() {
+  const [hora, setHora] = useState('');
+  useEffect(() => {
+    const pinta = () => setHora(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    pinta();
+    // Al filo del minuto y no cada segundo: el reloj enseña hh:mm, así que
+    // sesenta repintados por minuto serían cincuenta y nueve de más.
+    const id = setInterval(pinta, 15000);
+    return () => clearInterval(id);
+  }, []);
+  return <span className="wp-servicebar-clock" suppressHydrationWarning>{hora}</span>;
 }

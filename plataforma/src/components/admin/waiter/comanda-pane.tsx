@@ -20,7 +20,9 @@
 import { Icon } from '@/components/icons';
 import DishFinder from '@/components/admin/waiter/dish-finder';
 import { Group, Hr, Key, Label, Mono, Pill, Row } from '@/components/admin/waiter/pieces';
+import { useServiceMode } from '@/components/admin/service-mode';
 import { groupTableLines } from '@/lib/table-lines';
+import { tableTimeline } from '@/lib/table-timeline';
 import type { TableState } from '@/lib/table-state';
 import type { Category, Product } from '@/types';
 import type { OrderWithItems } from '@/lib/db/orders';
@@ -100,6 +102,8 @@ export default function ComandaPane({
 
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
   const hayCarrito = cartCount > 0;
+  const eventos = tableOrders ? tableTimeline(tableOrders) : [];
+  const servicio = useServiceMode();
 
   return (
     <div className="wp-pane">
@@ -189,17 +193,22 @@ export default function ComandaPane({
                 {lineas.map((l, i) => (
                   <div key={`${l.name}-${l.estado}`}>
                     {i > 0 && <Hr />}
-                    <Row
-                      title={`${l.qty} · ${l.name}`}
-                      right={
-                        <>
-                          <Pill color={l.color} align="flex-end">{l.estado}</Pill>
-                          <div style={{ marginTop: 3 }}>
-                            <Mono size={13.5} color="var(--u-text-2)">{money(l.amount)}</Mono>
-                          </div>
-                        </>
-                      }
-                    />
+                    {/* Tres columnas en la tablet, apilado en el teléfono: lo
+                        decide `.wp-line` en CSS, no dos marcados distintos. */}
+                    <div className="wp-line">
+                      <div className="wp-line-main">
+                        <div className="wp-line-ttl">{l.qty} · {l.name}</div>
+                        {l.detalle && <div className="wp-line-sub">{l.detalle}</div>}
+                      </div>
+                      <div className="wp-line-right">
+                        <div className="wp-line-state">
+                          <Pill color={l.color}>{l.estado}</Pill>
+                        </div>
+                        <div className="wp-line-amt">
+                          <Mono size={13.5} color="var(--u-text-2)">{money(l.amount)}</Mono>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 <Hr full />
@@ -285,6 +294,30 @@ export default function ComandaPane({
           autoFocus={focoBuscador}
         />
 
+        {/* ── Cómo va la mesa ───────────────────────────────────
+            La sección del lienzo que se había quedado sin construir. No
+            consulta nada nuevo: las marcas de tiempo de estado ya viajaban
+            en cada pedido y no las leía nadie. Contesta lo que un mesero
+            pregunta en voz alta veinte veces por turno — ¿ya pidieron el
+            postre?, ¿cuánto llevan esperando?, ¿quién los atendió? */}
+        {esMesa && eventos.length > 0 && (
+          <section>
+            <Label>Cómo va la mesa</Label>
+            <Group>
+              {eventos.map((e, i) => (
+                <div key={`${e.at}-${i}`}>
+                  {i > 0 && <Hr />}
+                  <div className="wp-ev" data-pend={e.pendiente ? '1' : '0'}>
+                    <span className="wp-ev-h">{hora(e.at)}</span>
+                    <span className="wp-ev-t">{e.text}</span>
+                    {e.who && <span className="wp-ev-w">{e.who}</span>}
+                  </div>
+                </div>
+              ))}
+            </Group>
+          </section>
+        )}
+
         {/* ── Cerrar la mesa ────────────────────────────────────── */}
         {esMesa && onLiberar && !hayCarrito && (
           <section>
@@ -303,6 +336,15 @@ export default function ComandaPane({
             </Group>
           </section>
         )}
+
+        {/* ── Sin soltar el teclado ─────────────────────────────
+            En el lienzo la chuleta sale SOLO en la lámina de PC, pegada al
+            pie. Estaba puesta en medio del panel, encima de la comanda, en
+            los tres anchos: una tablet táctil dedicaba media pantalla a seis
+            atajos que ahí no se pueden pulsar. Ahora vive al fondo, se
+            despliega sola en modo servicio (donde la PC es la herramienta) y
+            en el resto es una línea que se abre si te interesa. */}
+        <KeyHelp abierta={!!servicio?.active} />
       </div>
 
       {/* ── La barra de abajo ─────────────────────────────────────
@@ -375,4 +417,41 @@ function aviso(tono: 'danger' | 'ok'): React.CSSProperties {
   };
 }
 
+/** "12:41". La hora local del aparato, que es la del local. */
+function hora(iso: string): string {
+  const t = new Date(iso);
+  return Number.isFinite(t.getTime())
+    ? t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
+}
 
+/* ── La chuleta de teclado ─────────────────────────────────────
+   Todo atajo tiene su botón: el teclado acelera, no manda. Por eso esto
+   puede estar plegado sin que se pierda nada, y por eso no se pinta donde
+   no hay teclado que anunciar (`.wp-keyhelp`, media query de puntero). */
+function KeyHelp({ abierta }: { abierta: boolean }) {
+  return (
+    <details className="wp-keyhelp" open={abierta}>
+      <summary>Sin soltar el teclado</summary>
+      <div className="wp-keyhelp-grid">
+        <Atajo teclas={['↑', '↓']} que="Moverse entre resultados" />
+        <Atajo teclas={['Enter']} que="Agregar y seguir escribiendo" />
+        <Atajo teclas={['3', 'l', 'i', 'm']} que="Tres limonadas de una vez" />
+        <Atajo teclas={['/']} que="Volver al buscador" />
+        <Atajo teclas={['Ctrl', 'M']} que="Cambiar de mesa" />
+        <Atajo teclas={['Ctrl', 'Enter']} que="Enviar a cocina" />
+      </div>
+    </details>
+  );
+}
+
+function Atajo({ teclas, que }: { teclas: string[]; que: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 4px' }}>
+      <span style={{ display: 'inline-flex', gap: 3, width: 104, flexShrink: 0 }}>
+        {teclas.map((k, i) => <Key key={i}>{k}</Key>)}
+      </span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--u-text-2)' }}>{que}</span>
+    </div>
+  );
+}

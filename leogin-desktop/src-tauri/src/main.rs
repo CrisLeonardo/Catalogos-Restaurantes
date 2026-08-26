@@ -66,7 +66,20 @@ const BUNDLED_AGENT_VERSION: &str = "resources/agent-version.txt";
 /// plataforma/src/lib/actions/auth.ts) ya resuelve `profile.restaurant_id` y
 /// redirige sola al subdominio correcto tras autenticar. Mismo dominio raíz
 /// que NEXT_PUBLIC_ROOT_DOMAIN en producción.
-const CENTRAL_LOGIN_URL: &str = "https://leogin.online/admin/login";
+/// OJO: esta constante NO es solo "por dónde se entra". `is_panel_location()`
+/// saca de aquí el dominio raíz para reconocer el panel de un restaurante
+/// (`<slug>-admin.<raíz>`), y `detect_resolved_panel()` solo adopta un panel
+/// que reconozca. Cuando la web migró a distleogin.com esto se quedó en
+/// leogin.online: la web redirige (301) y el login parecía funcionar, pero
+/// `strip_suffix(".leogin.online")` ya nunca casaba con el panel real, así
+/// que esta PC no adoptaba NADA — volvía a pedir cuenta en cada arranque y
+/// "cambiar de restaurante" no persistía jamás. Si el dominio vuelve a
+/// cambiar, esta línea cambia con él.
+const CENTRAL_LOGIN_URL: &str = "https://distleogin.com/admin/login";
+
+/// Dominios raíz que la plataforma ya no usa para nuevas instalaciones pero
+/// sigue sirviendo (redirect 301). Ver `is_panel_location`.
+const RAICES_ANTERIORES: &[&str] = &["leogin.online"];
 
 /// `CENTRAL_LOGIN_URL`, salvo que `LEOGIN_CENTRAL_LOGIN_URL` la sobreescriba
 /// (mismo patrón que `LEOGIN_UPDATE_URL` para el updater) — SOLO para pruebas
@@ -853,7 +866,11 @@ fn is_panel_location(url: &Url, central: &Url) -> bool {
         return false;
     }
     // Producción: subdominio dedicado <slug>-admin.<root del login central>.
-    if let Some(root) = central.host_str().map(|h| h.trim_start_matches("www.")) {
+    // Se acepta también el dominio ANTERIOR: la web lo mantiene vivo con un
+    // 301 y hay PCs instaladas que todavía guardan un panel con esa forma;
+    // no reconocerlo las obliga a volver a vincularse sin motivo.
+    let raiz_central = central.host_str().map(|h| h.trim_start_matches("www.").to_string());
+    for root in raiz_central.iter().map(|s| s.as_str()).chain(RAICES_ANTERIORES.iter().copied()) {
         if let Some(sub) = host.strip_suffix(&format!(".{root}")) {
             if !sub.is_empty() && sub.ends_with("-admin") {
                 return true;

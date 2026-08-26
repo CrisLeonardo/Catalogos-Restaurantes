@@ -731,7 +731,10 @@ export default function WaiterPanel({
   /* ── Medidas del armazón ───────────────────────────────────── */
   const wpRef = useRef<HTMLDivElement | null>(null);
   const hayBanners = !!draft || queuedCount > 0 || abandonedCount > 0 || !!archiveMsg || !!aviso;
-  usePaneHeight(wpRef, [hayBanners]);
+  /* Entrar o salir del modo servicio mueve el armazón medio panel hacia
+     arriba sin disparar `resize`: si no se vuelve a medir aquí, el alto se
+     queda con el del otro modo y el armazón sale cortado o corto. */
+  usePaneHeight(wpRef, [hayBanners, servicio?.active]);
 
   const fmt = useCallback((n: number) => money(n, currency), [currency]);
 
@@ -844,11 +847,18 @@ export default function WaiterPanel({
         {selection.kind === 'none' ? (
           <div className="wp-pane">
             <div className="wp-top">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--u-text)' }}>Sala</span>
-                <span style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginLeft: 10 }}>{waiterName}</span>
+              {/* El lienzo pone aquí el día, y no es adorno: esta pantalla se
+                  queda puesta horas en una tablet sobre el mostrador, que tapa
+                  el reloj del sistema. Decía solo el nombre del mesero, que ya
+                  está en la esquina de al lado. */}
+              <div className="wp-top-title">
+                <b>Sala</b>
+                <span>{fechaLarga(now)}{waiterName ? ` · ${waiterName}` : ''}</span>
               </div>
-              {servicio && (
+              {/* Solo para ENTRAR. Una vez dentro, salir es cosa de la barra
+                  de arriba, que además dice con qué tecla: dos botones para
+                  lo mismo en la misma pantalla es uno de más. */}
+              {servicio && !servicio.active && (
                 <button
                   type="button"
                   onClick={servicio.toggle}
@@ -861,7 +871,7 @@ export default function WaiterPanel({
                   }}
                 >
                   <Icon name="monitor" size={15} />
-                  <span className="wp-wide-only">{servicio.active ? 'Salir del modo servicio' : 'Modo servicio'}</span>
+                  <span className="wp-wide-only">Modo servicio</span>
                 </button>
               )}
               {pickupEnabled && (
@@ -1100,4 +1110,15 @@ function BannerBtn({ children, onClick, primary = false, disabled = false }: {
       {children}
     </button>
   );
+}
+
+/** "Jueves 26 de agosto". Vacío mientras no hay reloj, para que el primer
+    pintado del servidor y el del navegador digan lo mismo. */
+function fechaLarga(now: number | null): string {
+  if (now == null) return '';
+  const d = new Date(now)
+    .toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })
+    // "miércoles, 26 de agosto" → "Miércoles 26 de agosto", como el lienzo.
+    .replace(',', '');
+  return d.charAt(0).toUpperCase() + d.slice(1);
 }

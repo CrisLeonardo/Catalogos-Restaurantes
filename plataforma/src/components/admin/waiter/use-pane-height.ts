@@ -35,7 +35,11 @@ export function usePaneHeight(
         getComputedStyle(document.documentElement).getPropertyValue('--admin-panel-scale').trim() || '1',
       ) || 1;
       const top = node.getBoundingClientRect().top / escala;
-      const alto = window.innerHeight / escala - top - 24; // 24 = respiro inferior
+      /* Dentro del panel se deja un respiro bajo la tarjeta; a pantalla
+         completa NO, porque ahí el armazón no es una tarjeta en una página:
+         es la pantalla, y 24 px de nada por debajo se ven como un corte. */
+      const respiro = node.closest('.admin-kiosk') ? 0 : 24;
+      const alto = window.innerHeight / escala - top - respiro;
       if (alto > 320) node.style.setProperty('--wp-h', `${Math.round(alto)}px`);
       else node.style.removeProperty('--wp-h');
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
@@ -102,6 +102,26 @@ export default function MiCuentaClient({
   );
 }
 
+/**
+ * Entrar al panel que devolvió la acción, con una navegación de DOCUMENTO.
+ *
+ * `window.location.assign` y no un `redirect()` del servidor ni
+ * `router.push()`: el panel de un restaurante vive en la RAÍZ de
+ * `<slug>-admin.<dominio>`, y esa raíz solo es el panel porque el proxy la
+ * reescribe a `/admin/`. Cualquier salto que no sea una petición de
+ * documento de verdad se salta el proxy — y entonces `/` es la portada
+ * comercial de Leogin. Pasaba justo aquí: Mi cuenta también se sirve dentro
+ * del subdominio del panel (y en Leogin Desktop es el único sitio donde se
+ * sirve), así que el destino tenía el mismo host que la página actual y Next
+ * lo resolvía por dentro, sin proxy. Ver la nota larga en
+ * `enterRestaurant` (lib/actions/mi-cuenta.ts).
+ */
+function useEnterPanel(state: EntryState) {
+  useEffect(() => {
+    if (state && 'url' in state) window.location.assign(state.url);
+  }, [state]);
+}
+
 /* ── Una tarjeta de restaurante ──────────────────────────────── */
 
 /**
@@ -143,6 +163,11 @@ function TeamLink({ card }: { card: MembershipCard }) {
 
 function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () => void }) {
   const [state, formAction, isPending] = useActionState<EntryState, FormData>(enterRestaurant, null);
+  useEnterPanel(state);
+  // La acción ya terminó pero la navegación todavía no ha pintado: sin esto la
+  // tarjeta volvía a verse pulsable durante ese hueco, y en un teléfono lento
+  // eso son dos entradas y dos líneas en la bitácora de accesos.
+  const entrando = !!state && 'url' in state;
 
   // Con candado, el PIN se pide en un diálogo aparte; sin candado, un solo
   // envío entra directo. La diferencia se decide aquí para que el que no
@@ -166,12 +191,18 @@ function RestaurantRow({ card, onAskPin }: { card: MembershipCard; onAskPin: () 
   return (
     <form action={formAction}>
       <input type="hidden" name="restaurantId" value={card.restaurantId} />
-      <button type="submit" disabled={isPending} className="press" style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}>
-        <RowBody card={card} pending={isPending} />
+      <button type="submit" disabled={isPending || entrando} className="press" style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}>
+        <RowBody card={card} pending={isPending || entrando} />
       </button>
       {state && 'error' in state && (
         <p style={{ fontSize: 12.5, color: 'var(--c-danger)', margin: '6px 0 0' }}>{state.error}</p>
       )}
+      {/* Sin JavaScript el formulario de arriba no lleva a ninguna parte: la
+          acción devuelve la URL en vez de redirigir (ver useEnterPanel). Un
+          enlace normal es la salida, y no cuesta nada tenerla. */}
+      <noscript>
+        <a href={adminUrl(card.slug)} style={{ fontSize: 12.5 }}>Entrar a {card.name}</a>
+      </noscript>
       <TeamLink card={card} />
     </form>
   );
@@ -233,6 +264,7 @@ function RowBody({ card, pending }: { card: MembershipCard; pending: boolean }) 
 
 function EntryPinDialog({ card, onClose }: { card: MembershipCard; onClose: () => void }) {
   const [state, formAction, isPending] = useActionState<EntryState, FormData>(enterRestaurant, null);
+  useEnterPanel(state);
 
   return (
     <Backdrop onClose={onClose}>

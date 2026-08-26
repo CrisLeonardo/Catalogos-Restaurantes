@@ -91,6 +91,24 @@ function minutosDesde(iso: string | null | undefined, now: number): number | nul
   return (now - t) / 60000;
 }
 
+/**
+ * Lo mismo en el ancho de una ficha de mesa: "18 min", "2 h", "1 d".
+ *
+ * A partir de la hora se tiran los minutos a propósito. En la lista "Te
+ * necesitan ahora" hay sitio para "Lista hace 3 h 40 min", pero en una ficha
+ * de 108 px eso son dos renglones — y con `grid-auto-rows: 1fr` un renglón
+ * de más en UNA ficha engorda las cuarenta. Además el minuto exacto no
+ * cambia nada: pasada la hora, lo que el mesero hace es lo mismo.
+ */
+export function fmtMinShort(min: number): string {
+  const m = Math.max(0, Math.floor(min));
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} h`;
+  const d = Math.floor(h / 24);
+  return `${d} d`;
+}
+
 /** "18 min", "2 h 10 min". Igual que el temporizador del mapa del salón. */
 export function fmtMin(min: number): string {
   const m = Math.max(0, Math.floor(min));
@@ -165,7 +183,7 @@ export function tableState(
   if (occ.status === 'READY' && readyMin != null && readyMin >= READY_ALERT_MIN) {
     // Aquí el reloj SÍ entra en la ficha: "Lista" a secas no distingue el
     // plato que acaba de salir del que lleva veinte minutos enfriándose.
-    return atencion('lista', `Lista hace ${fmtMin(readyMin)}`, occ.readySince, `Lista ${fmtMin(readyMin)}`);
+    return atencion('lista', `Lista hace ${fmtMin(readyMin)}`, occ.readySince, `Lista ${fmtMinShort(readyMin)}`);
   }
 
   // 4. Cocina que no ha visto la comanda.
@@ -182,9 +200,10 @@ export function tableState(
   // 6. Nada urgente: la mesa cuenta qué está pasando, sin color.
   const estado = STATUS_LABEL[occ.status];
   const tiempo = fmtMin(abiertaMin);
-  if (occ.status === 'SERVED') return abierta(`Servida · ${tiempo}`, `Servida · ${tiempo}`);
-  if (estado && occ.status !== 'PREP') return abierta(`${estado} · ${tiempo}`, tiempo);
-  return abierta(`${platos} · ${tiempo}`, tiempo);
+  const corto = fmtMinShort(abiertaMin);
+  if (occ.status === 'SERVED') return abierta(`Servida · ${tiempo}`, `Servida ${corto}`);
+  if (estado && occ.status !== 'PREP') return abierta(`${estado} · ${tiempo}`, corto);
+  return abierta(`${platos} · ${tiempo}`, corto);
 }
 
 /** Todas las mesas del salón, ya resueltas y ordenadas por urgencia. */

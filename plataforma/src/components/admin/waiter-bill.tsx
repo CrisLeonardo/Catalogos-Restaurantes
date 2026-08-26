@@ -25,6 +25,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import { Group, Hr, Mono, Seg } from '@/components/admin/waiter/pieces';
 import {
   buildBillLines, computeSplit, countUnassignedLines, UNASSIGNED_ID,
   type BillAssignment, type BillLine, type SplitMode,
@@ -110,9 +111,15 @@ function money(n: number, c: PanelCurrency): string {
 
    Es lo único que se le tocó a la cuenta: el reparto por persona y por
    platos está probado y no se reescribe, solo cambió de sitio. */
+/* Cobrar es un MODO del panel derecho, no una pantalla aparte, así que
+   habla el mismo idioma que la comanda de al lado: etiqueta de sección en
+   versalitas (`.adm-label`), tarjeta con filas separadas por un pelo de
+   línea, e importes en monoespaciada. Antes esta pantalla venía del diseño
+   viejo —tarjetas `.glass`, totales de 34 px, píldoras de colores— y era lo
+   que hacía que cobrar pareciese otra aplicación. */
 const KICKER: React.CSSProperties = {
-  fontSize: 12.5, color: 'var(--u-text-3)', fontWeight: 600,
-  letterSpacing: 0, marginBottom: 8,
+  fontSize: 12.5, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+  color: 'var(--u-text-3)', padding: '0 4px 8px',
 };
 
 const MODE_TABS: { id: SplitMode; label: string; hint: string }[] = [
@@ -298,57 +305,24 @@ export default function WaiterBill({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* ── Total y desglose ─────────────────────────────── */}
-      <div className="glass" style={{ borderRadius: 16, padding: '16px 16px 14px' }}>
-        <div style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 600 }}>Total de la mesa</div>
-        <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--u-text)', lineHeight: 1.1, marginTop: 2 }}>
-          {money(breakdown.grandTotal, currency)}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--u-hair)' }}>
-          <Row label={`Consumo · ${liveLines.length} plato${liveLines.length === 1 ? '' : 's'}`} value={money(breakdown.items, currency)} />
-          {breakdown.tip > 0 && <Row label="Propina" value={money(breakdown.tip, currency)} />}
-          {breakdown.delivery > 0 && <Row label="Envío" value={money(breakdown.delivery, currency)} />}
-          {breakdown.discount > 0 && <Row label="Descuento" value={`−${money(breakdown.discount, currency)}`} accent />}
-          {breakdown.orderCount > 1 && (
-            <Row label={`${breakdown.orderCount} rondas de pedidos`} value="" />
-          )}
-        </div>
-      </div>
-
       {/* ── Modo de cobro ────────────────────────────────── */}
       <div>
         <div style={KICKER}>¿Cómo van a pagar?</div>
-        <div style={{ display: 'flex', gap: 7 }}>
-          {MODE_TABS.map((t) => {
-            const on = mode === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setMode(t.id)}
-                className="press"
-                style={{
-                  flex: 1, padding: '11px 6px', borderRadius: 12, cursor: 'pointer', lineHeight: 1.25,
-                  border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                  background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-                  color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
-                  fontSize: 12.5, fontWeight: 700,
-                }}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 8, lineHeight: 1.5 }}>
+        <Seg
+          value={mode}
+          onChange={setMode}
+          ariaLabel="Cómo se reparte la cuenta"
+          options={MODE_TABS.map((t) => ({ value: t.id, label: t.label }))}
+        />
+        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5, padding: '0 4px' }}>
           {MODE_TABS.find((t) => t.id === mode)?.hint}
         </div>
       </div>
 
       {/* ── Partes iguales: solo el contador ─────────────── */}
       {mode === 'equal' && (
-        <div className="glass" style={{ borderRadius: 16, padding: '16px' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textAlign: 'center' }}>
+        <Group style={{ padding: 16 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)', textAlign: 'center' }}>
             ¿Entre cuántas personas?
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 12 }}>
@@ -358,13 +332,13 @@ export default function WaiterBill({
             </span>
             <StepBtn label="+" onClick={() => setPeopleCount(peopleIds.length + 1)} disabled={peopleIds.length >= 30} />
           </div>
-          <div style={{ textAlign: 'center', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--u-hair)' }}>
-            <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>Le toca a cada quien</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--brand-accent-ink)', letterSpacing: '-0.02em' }}>
-              {money(split.people[0]?.total ?? 0, currency)}
+          <div style={{ textAlign: 'center', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--adm-border)' }}>
+            <div style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Le toca a cada quien</div>
+            <div style={{ marginTop: 3 }}>
+              <Mono size={26} color="var(--brand-accent-ink)">{money(split.people[0]?.total ?? 0, currency)}</Mono>
             </div>
           </div>
-        </div>
+        </Group>
       )}
 
       {/* ── Cada quien lo suyo: personas + platos ────────── */}
@@ -473,10 +447,11 @@ export default function WaiterBill({
         <div style={KICKER}>
           {mode === 'byItem' ? `Platos · tocando asignas a ${label(safeActive)}` : 'Platos de la mesa'}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          {liveLines.map((line) => (
+        <Group>
+          {liveLines.map((line, i) => (
             <LineCard
               key={line.itemId}
+              primera={i === 0}
               line={line}
               currency={currency}
               interactive={mode === 'byItem'}
@@ -492,96 +467,120 @@ export default function WaiterBill({
             />
           ))}
           {voidedLines.map((line) => (
-            <div key={line.itemId} className="glass" style={{ borderRadius: 12, padding: '9px 12px', opacity: 0.45 }}>
-              <div style={{ fontSize: 13, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
-                {line.voidedQuantity}× {line.name}
+            <div key={line.itemId}>
+              <Hr />
+              <div style={{ padding: '10px 16px', opacity: 0.55 }}>
+                <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', textDecoration: 'line-through' }}>
+                  {line.voidedQuantity} · {line.name}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>Anulado · no se cobra</div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--c-danger)', fontWeight: 600, marginTop: 2 }}>Anulado · no se cobra</div>
             </div>
           ))}
-        </div>
+        </Group>
       </div>
 
       {/* ── Cobro ────────────────────────────────────────── */}
       <div>
         <div style={KICKER}>Cobro</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Group>
           {shares.map((s, i) => {
             const isPaid = paid.includes(s.personId);
             const name = mode === 'single' ? 'Cuenta completa' : label(s.personId);
             return (
-              <div
-                key={s.personId}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12,
-                  background: isPaid ? 'color-mix(in srgb, var(--c-ok, #4ade80) 9%, transparent)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-                  border: `1px solid ${isPaid ? 'color-mix(in srgb, var(--c-ok, #4ade80) 28%, transparent)' : 'transparent'}`,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => togglePaid(s.personId)}
-                  aria-label={isPaid ? `Marcar ${name} como no cobrado` : `Marcar ${name} como cobrado`}
-                  className="press"
-                  style={{
-                    width: 26, height: 26, flexShrink: 0, borderRadius: 8, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                    border: `1px solid ${isPaid ? 'var(--c-ok, #4ade80)' : 'var(--u-hair)'}`,
-                    background: isPaid ? 'var(--c-ok, #4ade80)' : 'transparent',
-                    color: isPaid ? '#0b0b0c' : 'var(--u-text-4)',
-                  }}
-                >
-                  {isPaid && <Icon name="check" size={14} strokeWidth={3} />}
-                </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--u-text)', textDecoration: isPaid ? 'line-through' : 'none' }}>
-                    {name}
+              <div key={s.personId}>
+                {i > 0 && <Hr />}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', minHeight: 52,
+                  background: isPaid ? 'color-mix(in srgb, var(--c-ok) 8%, transparent)' : undefined,
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => togglePaid(s.personId)}
+                    aria-label={isPaid ? `Marcar ${name} como no cobrado` : `Marcar ${name} como cobrado`}
+                    className="press"
+                    style={{
+                      width: 22, height: 22, flexShrink: 0, borderRadius: 7, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                      border: isPaid ? 'none' : '1.5px solid var(--adm-border-2)',
+                      background: isPaid ? 'var(--c-ok)' : 'transparent',
+                      color: '#ffffff',
+                    }}
+                  >
+                    {isPaid && <Icon name="check" size={13} strokeWidth={3} />}
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)', textDecoration: isPaid ? 'line-through' : 'none' }}>
+                      {name}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
+                      {isPaid ? 'Cobrado' : mode === 'single'
+                        ? 'Toda la mesa'
+                        : mode === 'byItem'
+                          ? `Consumo ${money(s.items, currency)}${s.extras !== 0 ? ` + ${money(s.extras, currency)}` : ''}`
+                          : `Parte ${i + 1} de ${shares.length}`}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-                    {isPaid ? 'Cobrado' : mode === 'single'
-                      ? 'Toda la mesa'
-                      : mode === 'byItem'
-                        ? `Consumo ${money(s.items, currency)}${s.extras !== 0 ? ` + ${money(s.extras, currency)}` : ''}`
-                        : `Parte ${i + 1} de ${shares.length}`}
-                  </div>
+                  <Mono size={15} color={isPaid ? 'var(--u-text-3)' : 'var(--u-text)'}>{money(s.total, currency)}</Mono>
+                  <button
+                    type="button"
+                    disabled={printing}
+                    onClick={() => print(mode === 'single' ? null : s.personId)}
+                    aria-label={`Imprimir ticket de ${name}`}
+                    title="Imprimir este ticket"
+                    className="press"
+                    style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 9, border: '1px solid var(--adm-border-2)', background: 'none', cursor: printing ? 'wait' : 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', opacity: printing ? 0.5 : 1 }}
+                  >
+                    <Icon name="print" size={15} />
+                  </button>
                 </div>
-                <span style={{ fontSize: 17, fontWeight: 800, color: isPaid ? 'var(--u-text-3)' : 'var(--u-text)', flexShrink: 0 }}>
-                  {money(s.total, currency)}
-                </span>
-                <button
-                  type="button"
-                  disabled={printing}
-                  onClick={() => print(mode === 'single' ? null : s.personId)}
-                  aria-label={`Imprimir ticket de ${name}`}
-                  title="Imprimir este ticket"
-                  className="press glass-quiet"
-                  style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 9, border: 'none', cursor: printing ? 'wait' : 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', opacity: printing ? 0.5 : 1 }}
-                >
-                  <Icon name="print" size={15} />
-                </button>
               </div>
             );
           })}
 
           {split.unassigned && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, border: '1px dashed color-mix(in srgb, var(--c-warn, #f59e0b) 40%, transparent)' }}>
-              <Icon name="alertCircle" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, color: 'var(--u-text-2)' }}>Sin asignar</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-warn)' }}>
-                {money(split.unassigned.total, currency)}
-              </span>
-            </div>
+            <>
+              <Hr />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', minHeight: 44 }}>
+                <Icon name="alertCircle" size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: 'var(--u-text-2)' }}>Sin asignar</span>
+                <Mono size={15} color="var(--c-warn)">{money(split.unassigned.total, currency)}</Mono>
+              </div>
+            </>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderTop: '1px solid var(--u-hair)', marginTop: 2 }}>
-            <span style={{ fontSize: 13, color: allPaid ? 'var(--c-ok, #4ade80)' : 'var(--u-text-3)', fontWeight: allPaid ? 700 : 400 }}>
-              {allPaid ? '✓ Todo cobrado' : 'Falta cobrar'}
+          <Hr full />
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
+            background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+          }}>
+            <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: allPaid ? 'var(--c-ok)' : 'var(--u-text)' }}>
+              {allPaid ? 'Todo cobrado' : 'Falta cobrar'}
             </span>
-            {!allPaid && (
-              <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--u-text)' }}>{money(pendingTotal, currency)}</span>
-            )}
+            {!allPaid && <Mono size={17}>{money(pendingTotal, currency)}</Mono>}
           </div>
-        </div>
+        </Group>
       </div>
+
+      {/* ── Lo que se cobra ──────────────────────────────
+          En el lienzo el desglose va al FINAL, pegado al botón de cobrar,
+          y no como un titular de 34 px arriba del todo. Es el orden en que
+          se usa: primero se decide cómo se reparte y qué platos entran,
+          y el número solo importa al final. */}
+      <Group>
+        <BillRow label={`Consumo · ${liveLines.length} plato${liveLines.length === 1 ? '' : 's'}`} value={money(breakdown.items, currency)} />
+        {breakdown.tip > 0 && <><Hr /><BillRow label="Propina" value={money(breakdown.tip, currency)} /></>}
+        {breakdown.delivery > 0 && <><Hr /><BillRow label="Envío" value={money(breakdown.delivery, currency)} /></>}
+        {breakdown.discount > 0 && <><Hr /><BillRow label="Descuento" value={`−${money(breakdown.discount, currency)}`} accent /></>}
+        {breakdown.orderCount > 1 && <><Hr /><BillRow label={`${breakdown.orderCount} rondas de pedidos`} value="" /></>}
+        <Hr full />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+          background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+        }}>
+          <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: 'var(--u-text)' }}>Total de la mesa</span>
+          <Mono size={20}>{money(breakdown.grandTotal, currency)}</Mono>
+        </div>
+      </Group>
 
       {printMsg && (
         <div style={{
@@ -593,17 +592,30 @@ export default function WaiterBill({
         </div>
       )}
 
-      {/* ── Acciones ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* ── Acciones ─────────────────────────────────────
+          Como en el lienzo: la advertencia a la izquierda y las dos
+          acciones a la derecha, en la misma fila. Eran dos botones
+          gordos apilados a todo lo ancho, del diseño anterior. */}
+      <div className="wp-billact">
+        <p className="wp-billact-note">
+          {allPaid
+            ? 'Todo cobrado. Al liberar, la mesa vuelve a estar disponible.'
+            : `Quedan ${money(pendingTotal, currency)} sin cobrar en esta mesa.`}
+        </p>
         <button
           type="button"
           disabled={printing}
           onClick={() => print(null)}
-          className="press glass-quiet"
-          style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: printing ? 'wait' : 'pointer', fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', opacity: printing ? 0.6 : 1 }}
+          className="press"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0,
+            height: 40, padding: '0 16px', borderRadius: 11, cursor: printing ? 'wait' : 'pointer',
+            border: '1px solid var(--adm-border-2)', background: 'none',
+            color: 'var(--u-text-2)', fontWeight: 600, fontSize: 14, opacity: printing ? 0.6 : 1,
+          }}
         >
-          <Icon name="print" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 7 }} />
-          {printing ? 'Enviando…' : 'Imprimir la cuenta completa'}
+          <Icon name="print" size={15} />
+          {printing ? 'Enviando…' : 'Imprimir'}
         </button>
         <button
           type="button"
@@ -611,8 +623,8 @@ export default function WaiterBill({
           onClick={onFreeTable}
           className={allPaid ? 'press btn-accent' : 'press'}
           style={allPaid
-            ? { padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }
-            : { padding: '14px', borderRadius: 14, cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)' }}
+            ? { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, height: 40, padding: '0 18px', borderRadius: 11, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1 }
+            : { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, height: 40, padding: '0 18px', borderRadius: 11, cursor: 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1, border: '1px solid color-mix(in srgb, var(--c-danger) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger) 8%, transparent)', color: 'var(--c-danger)' }}
         >
           {freeing ? 'Liberando…' : (
             <>
@@ -628,11 +640,11 @@ export default function WaiterBill({
 
 /* ── Piezas ───────────────────────────────────────────────── */
 
-function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function BillRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5 }}>
-      <span style={{ color: 'var(--u-text-3)' }}>{label}</span>
-      <span style={{ color: accent ? 'var(--c-ok, #4ade80)' : 'var(--u-text-2)', fontWeight: 600 }}>{value}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', minHeight: 40 }}>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-3)' }}>{label}</span>
+      <Mono size={14} color={accent ? 'var(--c-ok)' : 'var(--u-text-2)'}>{value}</Mono>
     </div>
   );
 }
@@ -655,8 +667,15 @@ function StepBtn({ label, onClick, disabled }: { label: string; onClick: () => v
   );
 }
 
+/* Una linea de la cuenta.
+   ------------------------------------------------------------------
+   En el lienzo la casilla de "esto lo paga esta persona" va a la
+   IZQUIERDA, delante del nombre del plato, como en cualquier lista que
+   se marca. Estaba al final del renglon, detras del importe y pegada al
+   boton rojo de anular: donde nadie la busca, y a un dedo de anular el
+   plato por error. */
 function LineCard({
-  line, currency, interactive, claimedBy, activeId, labelOf, onTap, onVoid,
+  line, currency, interactive, claimedBy, activeId, labelOf, onTap, onVoid, primera,
 }: {
   line: BillLine;
   currency: PanelCurrency;
@@ -666,37 +685,49 @@ function LineCard({
   labelOf: (id: string) => string;
   onTap: () => void;
   onVoid: () => void;
+  primera: boolean;
 }) {
   const mine = interactive && claimedBy.includes(activeId);
   const shared = claimedBy.length > 1;
 
   return (
+    <>
+    {!primera && <Hr />}
     <div
       onClick={interactive ? onTap : undefined}
-      className={interactive ? 'glass press' : 'glass'}
+      className={interactive ? 'press' : undefined}
       style={{
-        borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10,
+        padding: '11px 12px 11px 16px', display: 'flex', alignItems: 'center', gap: 12, minHeight: 52,
         cursor: interactive ? 'pointer' : 'default',
-        border: `1px solid ${mine ? 'var(--brand-accent)' : 'transparent'}`,
-        background: mine ? 'color-mix(in srgb, var(--brand-accent) 8%, transparent)' : undefined,
+        background: mine ? 'color-mix(in srgb, var(--adm-accent-500) 8%, transparent)' : undefined,
       }}
     >
+      {interactive && (
+        <span style={{
+          width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center',
+          border: mine ? 'none' : '1.5px solid var(--adm-border-2)',
+          background: mine ? 'var(--adm-accent-500)' : 'transparent',
+          color: '#ffffff',
+        }}>
+          {mine && <Icon name="check" size={13} strokeWidth={3} />}
+        </span>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
-          {line.quantity}× {line.name}
+        <div style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
+          {line.quantity} · {line.name}
         </div>
         {line.options && (
-          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{line.options}</div>
+          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>{line.options}</div>
         )}
         {line.voidedQuantity > 0 && (
-          <div style={{ fontSize: 11, color: 'var(--c-danger)', fontWeight: 600, marginTop: 2 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 600, marginTop: 1 }}>
             {line.voidedQuantity} anulada{line.voidedQuantity === 1 ? '' : 's'}
           </div>
         )}
         {interactive && (
           <div style={{
-            fontSize: 11.5, marginTop: 3, fontWeight: claimedBy.length === 0 ? 700 : 600,
-            color: claimedBy.length === 0 ? 'var(--c-warn, #f59e0b)' : 'var(--brand-accent)',
+            fontSize: 12.5, marginTop: 2, fontWeight: 600,
+            color: claimedBy.length === 0 ? 'var(--c-warn)' : 'var(--brand-accent-ink)',
           }}>
             {claimedBy.length === 0
               ? 'Sin asignar'
@@ -706,31 +737,20 @@ function LineCard({
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-        <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
-          {money(line.lineTotal, currency)}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <Mono>{money(line.lineTotal, currency)}</Mono>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onVoid(); }}
           title="Anular este plato"
           aria-label={`Anular ${line.name}`}
           className="press"
-          style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+          style={{ width: 26, height: 26, borderRadius: 8, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
         >
-          <Icon name="x" size={11} />
+          <Icon name="x" size={12} />
         </button>
-        {interactive && (
-          <span style={{
-            width: 24, height: 24, borderRadius: 99, flexShrink: 0, display: 'grid', placeItems: 'center',
-            border: `1px solid ${mine ? 'var(--brand-accent)' : 'var(--u-hair)'}`,
-            background: mine ? 'var(--brand-accent)' : 'transparent',
-            color: 'var(--brand-on-accent, #fff)',
-          }}>
-            {mine && <Icon name="check" size={13} strokeWidth={3} />}
-          </span>
-        )}
       </div>
     </div>
+    </>
   );
 }

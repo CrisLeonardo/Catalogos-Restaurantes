@@ -427,6 +427,13 @@ html[data-admin-area] {
   --adm-bg:         #0a0a0d;  /* fondo de página */
   --adm-bg-2:       #131317;  /* sidebar / topbar */
   --adm-card:       #17171c;  /* tarjetas */
+  /* El riel de Tomar pedidos. Tiene token propio y no reusa --adm-bg-2
+     porque ahí lo que manda es otra cosa: el riel tiene que separarse del
+     panel de al lado Y dejar que las fichas de mesa (--adm-card) floten
+     encima. En claro --adm-bg-2 es blanco puro, o sea el MISMO color de la
+     ficha: doce tarjetas blancas sobre fondo blanco, que era justo lo que
+     hacía que el salón se viera plano y vacío. */
+  --wp-side:        #101014;
   --adm-card-hover: #1c1c22;
   --adm-overlay:    #1f1f26;  /* modales / popovers / dropdowns */
   --adm-border:     rgba(255, 255, 255, 0.08);
@@ -512,6 +519,9 @@ html[data-admin-area][data-scheme="light"] {
   --adm-bg:         #f4f4f6;
   --adm-bg-2:       #ffffff;
   --adm-card:       #ffffff;
+  /* Ver la nota del tema oscuro: en claro el riel va un punto MÁS oscuro
+     que el panel, para que la ficha blanca tenga sobre qué destacar. */
+  --wp-side:        #ebebef;
   --adm-card-hover: #f7f7f9;
   --adm-overlay:    #ffffff;
   --adm-border:     rgba(0, 0, 0, 0.08);
@@ -2220,7 +2230,7 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 .wp-rail {
   display: flex; flex-direction: column;
   width: 100%; min-height: 0; flex-shrink: 0;
-  background: var(--adm-bg-2);
+  background: var(--wp-side);
 }
 .wp-pane { display: none; flex-direction: column; min-width: 0; min-height: 0; }
 
@@ -2279,7 +2289,15 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em; font-size: 12.5px; color: var(--u-text-2);
 }
-.wp-mesa-st { margin-top: auto; font-size: 12px; line-height: 1.35; color: var(--u-text-3); }
+/* Una sola línea, SIEMPRE. Con `grid-auto-rows: 1fr` todas las fichas miden
+   lo que la más alta, así que una etiqueta que partía en dos renglones
+   ("Lista 3 h 40 min") engordaba la rejilla ENTERA y dejaba el salón en la
+   mitad de la pantalla. La abreviatura corta la escribe table-state.ts;
+   esto es el cinturón por si aun así se pasa. */
+.wp-mesa-st {
+  margin-top: auto; font-size: 12px; line-height: 1.35; color: var(--u-text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
 
 /* Libre: sin fondo, sin sombra y con el borde punteado. Una mesa
    vacía no es información, es sitio disponible — que no grite. */
@@ -2441,17 +2459,136 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   .wp-wide-only  { display: block; }
 }
 
+/* ── Una línea de la comanda ───────────────────────────────────
+   "3 · Cold Brew · En cocina · Q72.00". En el lienzo el ancho y el
+   teléfono la reparten distinto y por buenas razones:
+
+   · en el teléfono el estado se apila ENCIMA del importe, porque a
+     lo ancho no caben los dos sin recortar el nombre del plato;
+   · en la tablet van en columnas fijas, y esa es la diferencia que
+     hace legible una mesa de doce renglones: los estados se leen
+     en vertical de un vistazo y los importes cuadran por la coma.
+
+   Hasta ahora el código pintaba la versión de teléfono en los dos
+   anchos, así que la tablet perdía justo lo que la hace útil. */
+.wp-line { display: flex; align-items: center; gap: 14px; padding: 12px 16px; min-height: 44px; }
+.wp-line-main { flex: 1; min-width: 0; }
+.wp-line-ttl { font-size: 14.5px; font-weight: 500; color: var(--u-text); }
+.wp-line-sub { font-size: 13px; color: var(--u-text-3); margin-top: 1px; line-height: 1.35; }
+.wp-line-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.wp-line-amt { text-align: right; }
+@media (min-width: 1024px) {
+  .wp-line { padding: 13px 18px; }
+  .wp-line-right { flex-direction: row; align-items: center; gap: 0; }
+  .wp-line-state { width: 122px; flex-shrink: 0; }
+  .wp-line-amt { width: 96px; flex-shrink: 0; }
+}
+
+/* ── El buscador y sus resultados son UN control ───────────────
+   En el lienzo el campo y la lista comparten caja: el campo pierde
+   su esquina de abajo y la lista su borde de arriba, de modo que lo
+   que se ve es un desplegable, no dos tarjetas sueltas separadas
+   por un hueco. La diferencia importa porque dice a quién obedece
+   la lista: a lo que estás escribiendo. */
+.wp-finder { border-radius: 12px; transition: box-shadow 160ms; }
+.wp-finder:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--adm-accent-500) 16%, transparent); }
+/* El anillo lo pinta el conjunto, no el campo: si no, quedaría un halo
+   a media caja con la lista colgando por fuera. */
+.wp-finder .wp-find:focus-within { box-shadow: none; }
+.wp-finder[data-open="1"] .wp-find { border-radius: 12px 12px 0 0; border-bottom-color: transparent; }
+.wp-finder[data-open="1"] .wp-finder-res { margin-top: 0; }
+.wp-finder[data-open="1"] .wp-finder-res > .wp-group {
+  border-radius: 0 0 12px 12px; border-top: none; box-shadow: none;
+}
+.wp-finder[data-open="1"] .wp-find { border-color: var(--adm-accent-500); }
+.wp-finder[data-open="1"] .wp-finder-res > .wp-group { border-color: var(--adm-accent-500); }
+
+/* El resultado que se agrega con Enter. Va teñido Y lleva dibujada la
+   tecla: quien no distingue el tinte tiene que poder ver cuál es. */
+.wp-res { display: flex; align-items: center; gap: 12px; padding: 9px 12px 9px 16px; min-height: 56px; }
+.wp-res[data-on="1"] { background: color-mix(in srgb, var(--adm-accent-500) 8%, transparent); }
+
+/* ── Cómo va la mesa ───────────────────────────────────────────
+   La historia del turno, una hora por renglón. La construye
+   lib/table-timeline.ts a partir de marcas de tiempo que los
+   pedidos ya traían y que no leía nadie. */
+.wp-ev { display: flex; align-items: center; gap: 14px; padding: 10px 16px; min-height: 40px; }
+@media (min-width: 1024px) { .wp-ev { padding: 11px 18px; } }
+.wp-ev-h {
+  width: 52px; flex-shrink: 0;
+  font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em; font-size: 13px; color: var(--u-text-3);
+}
+.wp-ev-t { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.4; color: var(--u-text-2); }
+.wp-ev-w { flex-shrink: 0; font-size: 13px; color: var(--u-text-4); }
+.wp-ev[data-pend="1"] .wp-ev-t { color: var(--brand-accent-ink); font-weight: 500; }
+
+/* ── Acciones del cobro ────────────────────────────────────────
+   La advertencia y las dos acciones en una fila, como el lienzo. En el
+   teléfono se apilan, porque tres cosas en fila a 375 px no caben sin
+   recortar el importe. */
+.wp-billact { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.wp-billact-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--u-text-3); }
+@media (min-width: 720px) {
+  .wp-billact { flex-direction: row; align-items: center; gap: 14px; }
+  .wp-billact-note { flex: 1; min-width: 0; }
+}
+
+/* ── La chuleta de teclado ─────────────────────────────────────
+   Vive al PIE del panel (`margin-top: auto`), como en la lámina de PC del
+   lienzo, y solo donde hay teclado. Antes se pintaba en medio del panel en
+   los tres anchos: en una tablet táctil eran seis atajos impulsables
+   ocupando el sitio de la comanda. */
+.wp-keyhelp { display: none; margin-top: auto; padding-top: 14px; }
+@media (min-width: 1024px) and (pointer: fine) { .wp-keyhelp { display: block; } }
+.wp-keyhelp > summary {
+  list-style: none; cursor: pointer;
+  padding: 0 4px 8px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--u-text-3);
+}
+.wp-keyhelp > summary::-webkit-details-marker { display: none; }
+.wp-keyhelp > summary::after { content: ' ▸'; letter-spacing: 0; }
+.wp-keyhelp[open] > summary::after { content: ' ▾'; }
+.wp-keyhelp > summary:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 2px; border-radius: 6px; }
+.wp-keyhelp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 2px 28px; }
+
 /* ── Modo servicio ─────────────────────────────────────────────
    A pantalla completa el armazón ya no es una tarjeta dentro del
    panel: es la pantalla. Sin borde, sin radio y sin techo. */
+.admin-kiosk { display: flex; flex-direction: column; }
+/* Cocina también vive aquí dentro y su tablero SÍ se desplaza entero: el
+   contenedor sigue siendo el que hace scroll, no la barra. */
+.admin-kiosk-body { flex: 1; min-height: 0; overflow-y: auto; }
+/* Sin borde, sin radio y sin techo — pero el ALTO lo sigue midiendo
+   `usePaneHeight` en `--wp-h`. Antes esto ponía `100dvh` a pelo, que ya no
+   vale en cuanto hay una barra arriba (o un aviso, o el `zoom` del dueño):
+   dejaba el armazón 46 px por debajo del canto de la pantalla. */
 .admin-kiosk .wp {
-  height: 100dvh; min-height: 0;
   border: none; border-radius: 0; box-shadow: none;
 }
-/* A pantalla completa, el armazón llega al canto derecho — y ahí vive la
-   «X» flotante con la que se sale (shell.tsx, `position: fixed`). Sin este
-   hueco se montaba encima del último botón de la barra y lo recortaba. */
-.admin-kiosk .wp-top { padding-right: 64px; }
+
+/* La barra del modo servicio. Antes aquí no había NADA: el riel
+   arrancaba pegado al canto de la pantalla y la única forma de
+   salir era una «X» flotante que se montaba encima de los botones
+   de la barra del panel (de ahí el `padding-right: 64px` que había
+   que compensar). El lienzo pide una barra de verdad: de quién es
+   la pantalla, qué modo es, qué hora y cómo se sale. */
+.wp-servicebar {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  height: 46px; padding: 0 14px 0 16px;
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--wp-side);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+}
+.wp-servicebar-name { font-size: 14px; font-weight: 600; color: var(--u-text); }
+.wp-servicebar-mode { font-size: 13.5px; color: var(--u-text-3); }
+@media (max-width: 599px) { .wp-servicebar-mode { display: none; } }
+.wp-servicebar-clock {
+  font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em; font-size: 13.5px; color: var(--u-text-3);
+}
 
 /* Hoja modal: pegada abajo en móvil, tarjeta centrada en escritorio. */
 .waiter-sheet-scrim { display: flex; justify-content: center; align-items: flex-end; }

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import MenuShell from '@/components/menu-shell';
 import LeoginLanding from '@/components/landing';
 import BranchSelector from '@/components/branch-selector';
@@ -10,7 +10,7 @@ import { getMenuDataCached } from '@/lib/db/menu';
 import { resolveTheme } from '@/lib/theme/resolve';
 import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
-import { DEMO_SLUG, rootDomainForUrls } from '@/lib/tenant';
+import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain } from '@/lib/tenant';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
 import { getLoyaltySettings, getPublicRewards } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
@@ -104,8 +104,24 @@ export default async function Home({
   const rawMesa = typeof params.mesa === 'string' ? params.mesa : undefined;
   const initialMesa = rawMesa ? (parseInt(rawMesa, 10) || undefined) : undefined;
 
-  // Dominio raíz → landing comercial de Leogin
-  if (!slug) return <LeoginLanding />;
+  // Dominio raíz → landing comercial de Leogin.
+  //
+  // Con una excepción que existe por un fallo real: `x-tenant-slug` lo pone
+  // el proxy, así que "no hay slug" puede significar dos cosas muy distintas
+  // —estamos en el dominio raíz, o esta petición NO PASÓ POR EL PROXY—. Lo
+  // segundo ocurre cuando Next resuelve por dentro un redirect al mismo host
+  // (los `redirect()` de una server action; ver la nota en enterRestaurant):
+  // ahí llega `/` del subdominio del panel sin ninguna cabecera nuestra, y
+  // esta línea le enseñaba al dueño la web de VENTAS de Leogin dentro del
+  // marco de su panel. La cabecera `host` sí sobrevive a ese camino, así que
+  // sirve para distinguirlos: si venimos de un host de panel, `/` es el
+  // panel y no hay portada que pintar.
+  if (!slug) {
+    const host = (await headers()).get('host');
+    if (isAdminSubdomain(host)) redirect('/admin');
+    if (isGroupSubdomain(host)) redirect('/mi-cuenta/resumen');
+    return <LeoginLanding />;
+  }
 
   // Subdominio `demo` → menú de ejemplo (Café Demo, sin BD)
   if (slug === DEMO_SLUG) {
