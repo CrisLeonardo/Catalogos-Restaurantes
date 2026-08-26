@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; --dang:#b91c1c; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; --dang:#f87171; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-lg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; min-height: 44px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .hrf { height: 1px; background: var(--hair); }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; display: flex; align-items: baseline; gap: 12px; }
+    .sc .lbl > span:first-child { flex: 1; }
+    .sc .act { font-weight: 600; color: var(--acc-ink); }
+    .sc .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+    .sc .seg > div { padding: 6px 13px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+    .sc .seg > div[data-on="1"] { background: var(--surf); color: var(--ink); font-weight: 600; box-shadow: var(--sh); }
+    .sc .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; background: currentColor; }
+    .sc .ttl { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+    .sc .sub { font-size: 13px; color: var(--ink3); margin-top: 1px; line-height: 1.35; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+
+    .sc .mesa { border-radius: 14px; border: 1px solid var(--hair); background: var(--surf); box-shadow: var(--sh); padding: 11px 12px 10px; display: flex; flex-direction: column; gap: 3px; min-height: 96px; }
+    .sc .mesa .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-size: 21px; line-height: 1.1; color: var(--ink); }
+    .sc .mesa .st { font-size: 12px; color: var(--ink3); line-height: 1.35; margin-top: auto; }
+    .sc .mesa .amt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink2); letter-spacing: -0.02em; }
+    .sc .mesa[data-s="libre"] { background: transparent; border-style: dashed; box-shadow: none; }
+    .sc .mesa[data-s="libre"] .n { color: var(--ink4); }
+    .sc .mesa[data-s="libre"] .st { color: var(--ink4); }
+    .sc .mesa[data-s="atencion"] { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc), var(--sh); }
+    .sc .mesa[data-s="atencion"] .st { color: var(--acc-ink); font-weight: 600; }
+
+    .sc .ph { width: 390px; height: 844px; border-radius: 44px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0,0,0,0.20); flex-shrink: 0; }
+    .sc .ph-status { height: 46px; flex-shrink: 0; }
+    .sc .tb { height: 74px; flex-shrink: 0; display: flex; align-items: stretch; padding-bottom: 14px; border-top: 1px solid var(--hair); background: var(--side); }
+    .sc .tb > div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--ink4); }
+    .sc .tb > div[data-on="1"] { color: var(--acc-ink); font-weight: 600; }
+    .sc .bar { flex-shrink: 0; border-top: 1px solid var(--hair); background: color-mix(in srgb, var(--bg) 86%, transparent); padding: 12px 16px 22px; }
+    .sc .cta { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 52px; padding: 0 18px; border-radius: 14px; background: var(--acc); color: #ffffff; font-size: 15.5px; font-weight: 600; }
+    .sc .step { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--hair2); display: grid; place-items: center; color: var(--ink2); flex-shrink: 0; }
+    .sc .cap { font-size: 13px; color: rgba(23,22,26,0.55); text-align: center; max-width: 390px; line-height: 1.45; }
+
+    .sc .doc-h1 { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+    .sc .card { background: var(--surf); border: 1px solid var(--hair); border-radius: 14px; box-shadow: var(--sh); }
+    .sc .h2 { font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink3); }
+    .sc .body { font-size: 15px; line-height: 1.55; color: var(--ink2); }
+    .sc .num { width: 25px; height: 25px; border-radius: 99px; flex-shrink: 0; display: grid; place-items: center; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+<div class="sc" data-t="light" style="width: 880px; min-height: 2060px; background: var(--bg); color: var(--ink); padding: 56px 52px 52px; display: flex; flex-direction: column; gap: 38px">
+  <div>
+    <div class="doc-h1" style="font-size: 40px; line-height: 1.08; color: var(--ink)">Tres direcciones</div>
+    <div style="font-size: 17px; line-height: 1.5; color: var(--ink3); margin-top: 14px; max-width: 640px">No son tres estilos del mismo dibujo: cada una decide algo distinto sobre cuál es el objeto principal de la pantalla. Esa decisión es la que hay que tomar; el resto se deriva sola.</div>
+  </div>
+  <div class="card" style="padding: 24px 26px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <div class="mono" style="font-size: 15px; color: var(--acc-ink)">A</div>
+      <div style="flex: 1; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink)">La sala</div>
+      <div style="font-size: 13px; color: var(--ink3)">Esfuerzo medio</div>
+    </div>
+    <div class="body" style="font-size: 15.5px">El objeto principal es la MESA. Un pedido no es un formulario que se llena: es algo que se le va agregando a una mesa que ya está abierta. Se abre la sala, se toca una mesa, se agregan platos, se cierra. No hay pasos porque no hay un principio ni un final que numerar.</div>
+    <div class="hrf"></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px">
+      <div><div class="h2" style="margin-bottom: 7px">Qué gana</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Es como piensa el mesero: en el salón, no en formularios. La mesa se convierte en el expediente completo —qué pidieron, en qué va cada plato, cuánto llevan, cuánto deben— y el estado del salón por fin se lee de un vistazo.</div></div>
+      <div><div class="h2" style="margin-bottom: 7px">Qué cuesta</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Para llevar y domicilio quedan de segunda clase: viven en un grupo aparte porque no son mesas. Un local que hace más llevar que salón lo va a sentir raro.</div></div>
+      <div><div class="h2" style="margin-bottom: 7px">Le queda a</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Restaurantes de mesa y mantel, donde el salón es el negocio.</div></div>
+    </div>
+  </div>
+  <div class="card" style="padding: 24px 26px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <div class="mono" style="font-size: 15px; color: var(--acc-ink)">B</div>
+      <div style="flex: 1; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink)">La comanda</div>
+      <div style="font-size: 13px; color: var(--ink3)">Esfuerzo bajo</div>
+    </div>
+    <div class="body" style="font-size: 15.5px">El objeto principal es el PEDIDO. Mesa, llevar y domicilio son un campo del mismo objeto. Nueva comanda abre UNA pantalla —destino, platos, nota— editable en su sitio, como redactar un correo. La sala es una pestaña, no la casa.</div>
+    <div class="hrf"></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px">
+      <div><div class="h2" style="margin-bottom: 7px">Qué gana</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Un solo camino para los tres tipos de pedido, y exactamente la misma lista, las mismas filas y los mismos estados que el dueño ya ve en Pedidos. Es la opción que menos idioma nuevo inventa y la que más código comparte con el panel.</div></div>
+      <div><div class="h2" style="margin-bottom: 7px">Qué cuesta</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Se pierde la lectura espacial del salón. Con seis mesas encima hay que leer nombres en una lista en vez de mirar el mapa. Y agregar un plato a una mesa que ya comió sigue siendo «otra comanda».</div></div>
+      <div><div class="h2" style="margin-bottom: 7px">Le queda a</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Locales mixtos: mucho llevar, mucho domicilio, salón mediano.</div></div>
+    </div>
+  </div>
+  <div class="card" style="padding: 24px 26px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <div class="mono" style="font-size: 15px; color: var(--acc-ink)">C</div>
+      <div style="flex: 1; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink)">Dos paneles</div>
+      <div style="font-size: 13px; color: var(--ink3)">Esfuerzo alto</div>
+    </div>
+    <div class="body" style="font-size: 15.5px">El objeto principal son LOS DOS a la vez. En tablet: sala a la izquierda, comanda de la mesa a la derecha, siempre visible. Buscar y agregar un plato no navega a ninguna parte. En teléfono se pliega y es exactamente la Opción A.</div>
+    <div class="hrf"></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px">
+      <div><div class="h2" style="margin-bottom: 7px">Qué gana</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Cero navegación en el momento de más presión. La comanda nunca desaparece, así que nunca hay que preguntarse qué llevás agregado. Es lo que hace un punto de venta serio, con el idioma del panel nuevo en vez del idioma de un TPV de los noventa.</div></div>
+      <div><div class="h2" style="margin-bottom: 7px">Qué cuesta</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Solo brilla en tablet. En teléfono es la Opción A, así que en la práctica se mantienen dos disposiciones. Es la más cara de las tres y la que más tarda en salir.</div></div>
+      <div><div class="h2" style="margin-bottom: 7px">Le queda a</div><div style="font-size: 14px; line-height: 1.5; color: var(--ink2)">Locales que ya tienen tablet en el salón o en la barra.</div></div>
+    </div>
+  </div>
+  <div class="h2" style="margin-bottom: -20px">Lo que las tres comparten</div>
+  <div class="card">
+    <div style="display: flex; gap: 16px; padding: 18px 20px">
+      <div class="num">1</div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35">Un solo idioma visual</div>
+        <div class="body" style="margin-top: 6px">Grupos con pelo de 1 px, filas de 44 px mínimo, Geist 500/600, Unbounded solo en el título grande, JetBrains Mono con cifras tabulares en todo número. Los mismos tokens del panel, claro y oscuro. Se acaban los pesos 800 sueltos y las versalitas.</div>
+      </div>
+    </div>
+    <div class="hrf"></div>
+    <div style="display: flex; gap: 16px; padding: 18px 20px">
+      <div class="num">2</div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35">El color solo lo usa lo que te necesita</div>
+        <div class="body" style="margin-top: 6px">Una mesa libre no dice nada. Una mesa con gente se ve en tinta normal, con una línea que dice qué está pasando. Solo se pinta de acento la que te necesita ahora: pidió la cuenta, o tiene un plato listo esperando desde hace rato. Tres pesos, no cinco colores.</div>
+      </div>
+    </div>
+    <div class="hrf"></div>
+    <div style="display: flex; gap: 16px; padding: 18px 20px">
+      <div class="num">3</div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35">Se acaban las bandas apiladas</div>
+        <div class="body" style="margin-top: 6px">Como mucho una línea arriba de la lista. El borrador rescatado deja de ser una tarjeta con dos botones y pasa a ser una fila más. Las mesas abandonadas se archivan solas y se cuentan en Ajustes, no le gritan al mesero en hora pico.</div>
+      </div>
+    </div>
+    <div class="hrf"></div>
+    <div style="display: flex; gap: 16px; padding: 18px 20px">
+      <div class="num">4</div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35">Iconos SVG, nunca glifos</div>
+        <div class="body" style="margin-top: 6px">Ni ＋ ni ⚠ ni ● ni →. El mismo juego de trazo de 1.8 px que usa el panel, en rejilla de 17 y 14 px.</div>
+      </div>
+    </div>
+    <div class="hrf"></div>
+    <div style="display: flex; gap: 16px; padding: 18px 20px">
+      <div class="num">5</div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35">Liberar una mesa deja de estar junto a agregar platos</div>
+        <div class="body" style="margin-top: 6px">Cerrar y cobrar es una cosa. Liberar sin cobrar es otra, vive al final, aparte, y queda anotado quién lo hizo — el PIN ya existe en el código de anulaciones.</div>
+      </div>
+    </div>
+    <div class="hrf"></div>
+    <div style="display: flex; gap: 16px; padding: 18px 20px">
+      <div class="num">6</div>
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35">«Mesas» pasa a significar una sola cosa</div>
+        <div class="body" style="margin-top: 6px">El estado del salón se vuelve una pestaña de Pedidos en el panel del dueño (como ya lo promete el rediseño) y la casa del mesero en su teléfono. La configuración —cantidad de mesas, códigos QR, plano, propina— se va a Ajustes → Salón, que es lo que siempre fue.</div>
+      </div>
+    </div>
+  </div>
+  <div class="h2" style="margin-bottom: -20px">La decisión · 25 de agosto de 2026</div>
+  <div class="card" style="padding: 24px 26px; border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc)">
+    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px">
+      <div class="mono" style="font-size: 15px; color: var(--acc-ink)">C</div>
+      <div style="flex: 1; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink)">Dos paneles</div>
+    </div>
+    <div class="body" style="font-size: 15.5px; max-width: 700px">Elegida, asumiendo que tarda más en construirse. Vale aclarar qué implica: <b style="color: var(--ink); font-weight: 600">C no descarta A</b> — en el teléfono, C <i>es</i> A, así que las pantallas de A se construyen igual; lo que se gana al ir directo a C es diseñarlas junto con la tablet desde el principio, en vez de rehacerlas después.<br><br>Y lo que se acepta al elegirla: <b style="color: var(--ink); font-weight: 600">C solo brilla si hay tablet en el salón o en la barra.</b> En un local que solo tiene teléfonos, C y A son exactamente lo mismo, y todo el trabajo de la columna doble queda esperando un aparato que no está. Eso no la hace mala elección: la hace una apuesta a que la tablet llega.</div>
+  </div>
+  <div style="font-size: 13.5px; color: var(--ink3); line-height: 1.55; max-width: 660px">Las reglas, los seis estados de mesa y lo que hay que construir por debajo están en la página <b style="color: var(--ink2); font-weight: 600">Opción C a fondo</b>.</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":880,"height":2060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

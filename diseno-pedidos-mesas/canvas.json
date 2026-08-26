@@ -1,0 +1,37 @@
+{
+  "pages": [
+    { "id": "tamanos", "name": "Los tres tamaños" },
+    { "id": "cfondo", "name": "Opción C a fondo" },
+    { "id": "opciones", "name": "Las tres opciones" },
+    { "id": "problema", "name": "Qué no encaja hoy" },
+    { "id": "mesas", "name": "Mesas en el panel" }
+  ],
+  "artboards": [
+    { "file": "Adaptacion.dc.html", "title": "Un diseño, tres tamaños", "page": "tamanos", "x": 0, "y": 0, "w": 980, "h": 2500 },
+    { "file": "CTelefono.dc.html", "title": "1 · Teléfono", "page": "tamanos", "x": 1060, "y": 0, "w": 1370, "h": 1030 },
+    { "file": "OpcionC.dc.html", "title": "2 · Tablet", "page": "tamanos", "x": 2510, "y": 0, "w": 1720, "h": 1000 },
+    { "file": "PC.dc.html", "title": "3 · PC · modo servicio", "page": "tamanos", "x": 4310, "y": 0, "w": 1520, "h": 1080 },
+    { "file": "PCTeclado.dc.html", "title": "PC · del papel al sistema", "page": "tamanos", "x": 5910, "y": 0, "w": 980, "h": 1900 },
+    { "file": "CSala.dc.html", "title": "C · Sin nada elegido", "page": "cfondo", "x": 0, "y": 0, "w": 1354, "h": 1134 },
+    { "file": "CCobrar.dc.html", "title": "C · Cobrar y dividir", "page": "cfondo", "x": 1434, "y": 0, "w": 1354, "h": 1134 },
+    { "file": "CLlevar.dc.html", "title": "C · Para llevar", "page": "cfondo", "x": 2868, "y": 0, "w": 1354, "h": 1134 },
+    { "file": "COscuro.dc.html", "title": "C · De noche", "page": "cfondo", "x": 0, "y": 1240, "w": 1354, "h": 1114 },
+    { "file": "CReglas.dc.html", "title": "Cómo se construye", "page": "cfondo", "x": 1434, "y": 1240, "w": 900, "h": 2600 },
+    { "file": "Main.dc.html", "title": "A · La sala", "page": "opciones", "x": 0, "y": 0, "w": 1370, "h": 1030 },
+    { "file": "OpcionB.dc.html", "title": "B · La comanda", "page": "opciones", "x": 1450, "y": 0, "w": 1370, "h": 1030 },
+    { "file": "Comparar.dc.html", "title": "Comparar las tres", "page": "opciones", "x": 2900, "y": 0, "w": 880, "h": 2060 },
+    { "file": "Actual.dc.html", "title": "El mesero de hoy", "page": "problema", "x": 0, "y": 0, "w": 1370, "h": 1030 },
+    { "file": "Diagnostico.dc.html", "title": "Lo que no encaja", "page": "problema", "x": 1450, "y": 0, "w": 880, "h": 2120 },
+    { "file": "Mesas.dc.html", "title": "Pedidos › Mesas", "page": "mesas", "x": 0, "y": 0, "w": 1280, "h": 860 }
+  ],
+  "annotations": [
+    { "id": "nota-tamanos", "page": "tamanos", "x": 0, "y": -250, "w": 480, "text": "Tus clientes tienen teléfono, tablet, PC o nada. Así que no se elige un aparato: se hace UNA interfaz que se acomoda al que haya.\n\nLos tres de la derecha son el mismo diseño a tres anchos. Tablet y PC comparten todo el marcado; lo único que las separa es la capa de teclado." },
+    { "id": "nota-pc", "page": "tamanos", "x": 4310, "y": -250, "w": 480, "text": "El caso que faltaba: el local que apunta en libreta y teclea en la caja. Hoy ve la pantalla del teléfono estirada y centrada en 960 px (globals.css:2162), con 480 px de aire a los lados.\n\nCon teclado, esa misma comanda entra en catorce pulsaciones y cero clics." },
+    { "id": "nota-c-elegida", "page": "cfondo", "x": 0, "y": -230, "w": 460, "text": "Las pantallas que faltaban para construir C: qué muestra el panel derecho sin nada elegido, cómo se cobra y se divide, cómo entra un pedido para llevar y cómo se ve de noche.\n\n«Cómo se construye» es el artboard que hay que leer antes de escribir código." },
+    { "id": "nota-eje", "page": "opciones", "x": 0, "y": -210, "w": 440, "text": "El histórico de la decisión. Las tres hablan el idioma del panel nuevo; lo que cambia es cuál es el objeto principal: la MESA (A), el PEDIDO (B) o los dos a la vez (C).\n\nGanó C — y al llegar la PC resultó ser además el layout ancho de todos." },
+    { "id": "nota-comparar", "page": "opciones", "x": 2900, "y": -210, "w": 440, "text": "Lo que gana y lo que cuesta cada una, las seis reglas que las tres comparten, y al final la decisión con lo que implica." },
+    { "id": "nota-actual", "page": "problema", "x": 0, "y": -210, "w": 440, "text": "Esto NO es una caricatura: está recreado con los valores reales de waiter-panel.tsx y floor-map.tsx —pesos 800, vidrio con blur de 13 px, radios 14/16, los glifos ＋ ⚠ ● → y el halo de color de las mesas ocupadas." },
+    { "id": "nota-mesas", "page": "mesas", "x": 0, "y": -210, "w": 440, "text": "Hoy «Mesas» es una pantalla de ajustes con nombre de pantalla de operación. Aquí vive lo que está pasando en el salón; la configuración (cantidad, QR, plano, propina) se va a Ajustes › Salón." }
+  ],
+  "launch": { "view": "canvas", "page": "tamanos" }
+}
