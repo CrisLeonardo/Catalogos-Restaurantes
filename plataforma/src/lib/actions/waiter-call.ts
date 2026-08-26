@@ -84,11 +84,23 @@ export async function callWaiter(
   // Solo dos valores posibles: lo que venga del cliente no entra crudo.
   const motivo: CallReason = reason === 'bill' ? 'bill' : 'call';
 
-  const { error } = await db.from('waiter_calls').insert({
-    restaurant_id: restaurantId,
-    table_number: table,
-    reason: motivo,
-  });
+  /* La columna `reason` es de la migración 122. Si el código llega a un
+     entorno donde esa migración todavía no corrió, el insert falla y el
+     comensal se queda SIN poder llamar al mesero — una función que ya
+     existía y que no tiene por qué caerse por una mejora. Así que se
+     intenta con motivo y, si la columna no está, se reintenta sin ella:
+     se pierde el detalle, no el servicio. */
+  const base = { restaurant_id: restaurantId, table_number: table };
+  let { error } = await db.from('waiter_calls').insert({ ...base, reason: motivo });
+
+  // PGRST204 = PostgREST no encuentra la columna en su caché de esquema, que
+  // es exactamente el síntoma de "la migración todavía no corrió aquí".
+  // Comprobado contra el error real: "Could not find the 'reason' column of
+  // 'waiter_calls' in the schema cache". Se mira el código Y que hable de
+  // `reason`, para no tragarse por accidente otro fallo de esquema.
+  if (error && error.code === 'PGRST204' && /reason/i.test(error.message ?? '')) {
+    ({ error } = await db.from('waiter_calls').insert(base));
+  }
 
   if (error) return { error: error.message };
 
@@ -116,6 +128,8 @@ export async function getPendingWaiterCalls(restaurantId: string): Promise<Waite
   const db = createServiceClient();
   const { data, error } = await db
     .from('waiter_calls')
+    // `reason` puede no existir todavía (migración 122): PostgREST devuelve
+    // error y `data` llega null, que aquí ya se trata como "sin llamadas".
     .select('id, table_number, created_at, reason')
     .eq('restaurant_id', restaurantId)
     .is('resolved_at', null)
