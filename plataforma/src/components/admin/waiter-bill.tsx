@@ -100,9 +100,19 @@ function money(n: number, c: PanelCurrency): string {
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 
+/* El rótulo de cada bloque de la cuenta.
+   ------------------------------------------------------------------
+   Era Anton-style: 11 px, negrita 700, MAYÚSCULAS y 0.05em de espaciado.
+   Funcionaba cuando esto era una pantalla aparte; desde que la cuenta
+   vive DENTRO del panel derecho (rediseño 2026-08-26), quedaba al lado
+   de los rótulos del resto —12,5 px, peso 600, sin mayúsculas— y se
+   notaban las dos épocas en la misma pantalla.
+
+   Es lo único que se le tocó a la cuenta: el reparto por persona y por
+   platos está probado y no se reescribe, solo cambió de sitio. */
 const KICKER: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700,
-  textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10,
+  fontSize: 12.5, color: 'var(--u-text-3)', fontWeight: 600,
+  letterSpacing: 0, marginBottom: 8,
 };
 
 const MODE_TABS: { id: SplitMode; label: string; hint: string }[] = [

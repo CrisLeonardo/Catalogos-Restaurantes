@@ -1,0 +1,51 @@
+/* El pedido que se está apuntando y todavía no ha salido a cocina.
+   ------------------------------------------------------------------
+   El tipo y sus tres ayudantes viven aquí porque los comparten el
+   orquestador (waiter-panel.tsx), la hoja de opciones del plato y el
+   panel de la comanda. */
+
+import type { PanelCurrency } from '@/components/admin/order-card';
+
+export interface CartLine {
+  lineId: string;
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  options: {
+    groupId: string; groupName: string;
+    choiceId: string; choiceName: string;
+    priceDelta: number;
+    variantId?: string; variantName?: string;
+  }[];
+  /** Nota libre para ESTE plato ("sin cebolla"), distinta de la nota
+      general del pedido. */
+  note?: string;
+}
+
+let _lineSeq = 0;
+
+/** Id único y estable para cada línea. No usa Date.now() porque dos
+    platos agregados en el mismo milisegundo compartirían id, y el
+    segundo desaparecería de la lista al re-renderizar. */
+export function newLineId(productId: string): string {
+  _lineSeq += 1;
+  return `${productId}-${_lineSeq}`;
+}
+
+/** Un importe tal como lo escribe este restaurante (símbolo, posición
+    y separadores de su país). */
+export function money(n: number, c: PanelCurrency): string {
+  let num: string;
+  try { num = n.toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  catch { num = n.toFixed(2); }
+  return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
+}
+
+/** Cómo se lee una línea debajo de su nombre: las opciones elegidas y,
+    al final, la nota para cocina. */
+export function lineDetail(l: CartLine): string {
+  const partes = l.options.map((o) => o.variantName ?? o.choiceName);
+  if (l.note) partes.push(l.note);
+  return partes.join(' · ');
+}

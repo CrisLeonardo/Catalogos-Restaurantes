@@ -4,11 +4,12 @@
    se convierte en una barra inferior fija tipo app. Envuelve /admin/*.
    El nav se agrupa en secciones (escritorio) y se filtra por permisos. */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/icons';
+import { ServiceModeContext } from '@/components/admin/service-mode';
 import { Badge } from '@/components/ui/badge';
 import LogoutButton from '@/components/admin/logout-button';
 import AdminNotifications from '@/components/admin/notifications';
@@ -279,13 +280,21 @@ export default function AdminShell({
   const isWaiter  = pathname.startsWith('/admin/mesero');
   // Únicas dos pantallas táctiles con modo "pantalla completa" (ver toggleKiosk).
   const kioskEligible = isKitchen || isWaiter;
+  /* El cable con la pantalla de dentro: el boton "Modo servicio" del
+     panel de mesero enciende ESTE estado. Se memoriza para no re-montar
+     todo el arbol de contenido en cada render del armazon. */
+  const servicio = useMemo(
+    () => ({ active: kiosk && kioskEligible, toggle: toggleKiosk }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kiosk, kioskEligible],
+  );
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';
 
   if (kiosk && kioskEligible) {
     return (
       <ToastProvider>
         <div className="admin-kiosk" style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--brand-bg)', zIndex: 0 }}>
-          {children}
+          <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
           {/* Salir de pantalla completa: sin sidebar, tiene que quedar SIEMPRE
               a mano, aunque el navegador no soporte/permita la Fullscreen API
               (Safari de iPhone, por ejemplo). */}
@@ -506,7 +515,9 @@ export default function AdminShell({
             )}
           </div>
         )}
-        <div className="admin-content">{children}</div>
+        <div className="admin-content">
+          <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
+        </div>
       </div>
       {!preview && restaurantId && ordersEnabled && (
         // Alerta de pedido nuevo, visible en TODO el panel (no solo en

@@ -183,6 +183,12 @@ export function buildNav(ctx: NavContext): NavGroup[] {
       items: [
         { href: '/admin/perfil', label: 'Perfil del negocio', key: 'perfil' },
         { href: '/admin/ajustes/restaurante', label: 'Horarios', key: 'ajustes' },
+        /* Cómo está armado el salón: cuántas mesas, sus QR, el plano por
+           niveles y la propina. Salió de Pedidos › Mesas en el rediseño de
+           2026-08-26, donde ahora vive solo lo que ESTÁ PASANDO. Conserva la
+           llave 'mesas' a propósito: quien podía configurar el salón sigue
+           pudiendo, sin tocar el modelo de permisos. */
+        ...lockable(ctx, mesasAccessible, mesasAccessible, { href: '/admin/ajustes/salon', label: 'Salón', key: 'mesas' }),
         ...(on(ctx.ordersEnabled)
           ? [
               { href: '/admin/ajustes/entrega', label: 'Zona de entrega', key: 'ajustes' },

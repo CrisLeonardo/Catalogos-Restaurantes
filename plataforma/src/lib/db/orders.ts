@@ -215,10 +215,32 @@ export async function getKitchenOrders(
   });
 }
 
-/** Mesa ocupada: desde cuándo (created_at del pedido más antiguo, si hay
-    varios acumulados) y quién la atiende — mesero que tomó el pedido, o
-    `null` si el comensal ordenó por su cuenta (QR en mesa, sin mesero). */
-export type TableOccupancy = { since: string; waiterName: string | null };
+/** Mesa ocupada. Además del "desde cuándo" y el "quién atiende" de siempre,
+    ahora carga lo que la ficha de mesa necesita mostrar sin pedir nada más:
+    qué estado manda, cuántos platos hay, cuánto lleva y los relojes que
+    disparan un aviso (ver lib/table-state.ts). */
+export type TableOccupancy = {
+  /** created_at del pedido más antiguo, si hay varios acumulados. */
+  since: string;
+  /** Mesero que tomó el pedido, o `null` si el comensal ordenó por su cuenta. */
+  waiterName: string | null;
+  /** Estado que MANDA en la mesa: el menos avanzado de sus pedidos. Una mesa
+      con un plato servido y otro en cocina sigue siendo "en cocina". */
+  status: OrderStatus;
+  /** Platos en la mesa, sumando todos los pedidos activos. */
+  itemCount: number;
+  /** Lo que lleva consumido la mesa. */
+  total: number;
+  /** Si TODOS sus pedidos están servidos, cuándo se sirvió el último. Es lo
+      que permite avisar de la mesa que ya comió y nadie cobró. */
+  servedAt: string | null;
+  /** El READY más viejo sin entregar, si lo hay: el plato que lleva rato en
+      la barra esperando que alguien lo lleve. */
+  readySince: string | null;
+};
+
+/** Cuál de dos estados "manda" en la mesa: el menos avanzado. */
+const STATUS_RANK: Record<string, number> = { NEW: 0, PREP: 1, READY: 2, TRANSIT: 2, SERVED: 3 };
 
 /** Mesas con un pedido DINE_IN activo (no entregado/cancelado). Se usa para
     marcar mesas ocupadas + su temporizador + quién atiende en el panel del
@@ -228,7 +250,7 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
   const db = createServiceClient();
   const { data } = await db
     .from('orders')
-    .select('address, created_at, waiter:profiles!orders_waiter_id_fkey(full_name)')
+    .select('address, created_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
     .not('status', 'in', '("DELIVERED","CANCEL")')
@@ -236,14 +258,86 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
     .limit(200);
 
   const result: Record<number, TableOccupancy> = {};
+  /** Mesas donde algún pedido NO está servido: no pueden reportar servedAt. */
+  const sinServir = new Set<number>();
+
   for (const row of (data ?? []) as (Record<string, unknown>)[]) {
-    const { address, created_at, waiter } = row as {
-      address: string | null; created_at: string; waiter?: { full_name: string | null } | null;
+    const { address, created_at, status, total, served_at, ready_at, items, waiter } = row as {
+      address: string | null; created_at: string; status: OrderStatus;
+      total: number | string | null; served_at: string | null; ready_at: string | null;
+      items?: { quantity: number }[] | null;
+      waiter?: { full_name: string | null } | null;
     };
     const m = address?.match(/Mesa\s+(\d+)/i);
     if (!m) continue;
     const n = Number(m[1]);
-    if (!(n in result)) result[n] = { since: created_at, waiterName: waiter?.full_name ?? null }; // orden ascendente → el primero es el más antiguo
+    const platos = (items ?? []).reduce((s, it) => s + (it.quantity ?? 0), 0);
+
+    const prev = result[n];
+    if (!prev) {
+      // Orden ascendente → el primero que vemos es el más antiguo.
+      result[n] = {
+        since: created_at,
+        waiterName: waiter?.full_name ?? null,
+        status,
+        itemCount: platos,
+        total: Number(total ?? 0),
+        servedAt: status === 'SERVED' ? served_at : null,
+        readySince: status === 'READY' ? ready_at : null,
+      };
+    } else {
+      prev.itemCount += platos;
+      prev.total += Number(total ?? 0);
+      if ((STATUS_RANK[status] ?? 0) < (STATUS_RANK[prev.status] ?? 0)) prev.status = status;
+      if (status === 'SERVED' && served_at && (!prev.servedAt || served_at > prev.servedAt)) prev.servedAt = served_at;
+      if (status === 'READY' && ready_at && (!prev.readySince || ready_at < prev.readySince)) prev.readySince = ready_at;
+    }
+    if (status !== 'SERVED') sinServir.add(n);
+  }
+
+  // servedAt solo tiene sentido si la mesa ENTERA está servida: si queda algo
+  // en cocina, la mesa no está esperando que la cobren, está esperando comida.
+  for (const n of sinServir) {
+    const occ = result[Number(n)];
+    if (occ) occ.servedAt = null;
+  }
+  return result;
+}
+
+/** Llamada del comensal pendiente en una mesa (migración 048 + 122). */
+export type TableCall = { reason: 'call' | 'bill'; since: string };
+
+/** Llamadas sin resolver, por mesa. La más reciente de cada mesa gana, y
+    "pide la cuenta" pesa más que "llamar al mesero" aunque sea más vieja:
+    cobrar libera la mesa, traer una salsa no. */
+export async function getPendingTableCalls(restaurantId: string): Promise<Record<number, TableCall>> {
+  const db = createServiceClient();
+  const pedir = (cols: string) => db
+    .from('waiter_calls')
+    .select(cols)
+    .eq('restaurant_id', restaurantId)
+    .is('resolved_at', null)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  /* `reason` es de la migración 122. Donde todavía no corrió, pedirla tumba
+     la consulta entera y el salón se quedaría sin ver NINGUNA llamada — peor
+     que antes de la mejora. Si falta la columna se reintenta sin ella y todas
+     las llamadas cuentan como genéricas, que es justo lo que eran. */
+  const conMotivo = await pedir('table_number, reason, created_at');
+  const { error } = conMotivo;
+  const data = error && error.code === '42703' && /reason/i.test(error.message ?? '')
+    ? (await pedir('table_number, created_at')).data
+    : conMotivo.data;
+
+  const result: Record<number, TableCall> = {};
+  for (const row of (data ?? []) as unknown as { table_number: number | null; reason: string | null; created_at: string }[]) {
+    const n = row.table_number;
+    if (n == null) continue;
+    const reason: 'call' | 'bill' = row.reason === 'bill' ? 'bill' : 'call';
+    const prev = result[n];
+    if (!prev) { result[n] = { reason, since: row.created_at }; continue; }
+    if (prev.reason !== 'bill' && reason === 'bill') result[n] = { reason, since: row.created_at };
   }
   return result;
 }

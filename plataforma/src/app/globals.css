@@ -2154,47 +2154,265 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 .preview-frame.is-wide iframe { border-radius: 12px; }
 
 /* ============================================================
-   PANEL DE MESERO — contenedor centrado + hojas responsive
+   TOMAR PEDIDOS — el armazón de dos paneles (rediseño 2026-08-26)
    ------------------------------------------------------------
-   En PC/tablet grande el contenido se centra en una columna
-   cómoda (estilo POS) en vez de estirarse a todo lo ancho.
+   UNA interfaz, tres anchos. No se elige aparato: el restaurante
+   tiene teléfono, tablet o PC, y a veces las tres en el mismo
+   turno. Así que hay un solo marcado y una sola regla que lo
+   pliega.
+
+   · Teléfono (< 1024 px) — una columna. El riel ES la pantalla;
+     elegir una mesa la sustituye por su comanda, con vuelta atrás.
+   · Tablet y PC (>= 1024 px) — riel de 340 px + panel del objeto
+     elegido, cada uno con su propio desplazamiento.
+
+   Lo que había antes aquí era `.waiter-wrap`, que topaba el panel
+   en 960 px y lo centraba: en una PC de 1440 eran 480 px de aire a
+   los lados y tarjetas dibujadas para el pulgar. Ese techo lo
+   sustituye la regla de dos columnas.
    ============================================================ */
-.waiter-wrap { width: 100%; max-width: 960px; margin-inline: auto; }
-.waiter-wrap-narrow { width: 100%; max-width: 720px; margin-inline: auto; }
 
-/* Acolchado lateral del panel de mesero.
-   ------------------------------------------------------------
-   Vive aquí y no en línea porque en el teléfono se suma al de
-   .admin-content (14 px por lado): 30 px por lado en una pantalla
-   de 393 px son 60 px —el 15 %— gastados en aire, y eran justo los
-   que impedían que la rejilla de platos partiera en dos columnas.
-   En pantallas grandes el aire sí ayuda y se conserva. */
-.waiter-pad { padding-inline: 16px; }
-@media (max-width: 640px) {
-  .waiter-pad { padding-inline: 2px; }
-  /* En kiosco no hay .admin-content que acolche: el aire lo pone él. */
-  .admin-kiosk .waiter-pad { padding-inline: 12px; }
-}
-
-/* Rejilla de platos (paso 2). En el teléfono son SIEMPRE dos columnas:
-   tomar una orden es buscar un plato entre docenas, y con una sola
-   columna caben tres y medio por pantalla. De 641 px para arriba la
-   rejilla se acomoda sola (4-5 columnas en tablet/PC). */
-.waiter-menu-grid {
-  display: grid; gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
-}
-@media (max-width: 640px) {
-  .waiter-menu-grid { gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* La altura la mide el componente y la escribe en --wp-h: el panel
+   tiene barra superior, a veces sub-barra de pestañas y un `zoom`
+   configurable por el dueño, así que ningún `calc()` a ojo acierta
+   en los tres casos. El valor de reserva sirve para el primer
+   pintado y para cuando no hay JavaScript. */
+.wp {
+  display: flex;
+  height: var(--wp-h, 72svh);
+  min-height: 440px;
+  overflow: hidden;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--radius-xl, 20px);
+  background: var(--adm-bg);
+  box-shadow: var(--adm-shadow-sm);
 }
 
-/* Rejilla de mesas (paso 1, sin plano del salón): mismo criterio. */
-.waiter-tables-grid {
-  display: grid; gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+.wp-rail {
+  display: flex; flex-direction: column;
+  width: 100%; min-height: 0; flex-shrink: 0;
+  background: var(--adm-bg-2);
 }
-@media (max-width: 640px) {
-  .waiter-tables-grid { gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wp-pane { display: none; flex-direction: column; min-width: 0; min-height: 0; }
+
+/* El pliegue. En el teléfono el riel y el panel son la MISMA
+   pantalla en dos momentos, no dos columnas apretadas. */
+.wp[data-sel="1"] .wp-rail { display: none; }
+.wp[data-sel="1"] .wp-pane { display: flex; }
+
+@media (min-width: 1024px) {
+  .wp-rail { width: 340px; border-right: 1px solid var(--adm-border); }
+  .wp[data-sel="1"] .wp-rail { display: flex; }
+  .wp-pane { display: flex; flex: 1; }
+}
+
+/* Zona con desplazamiento propio (riel y panel). El `min-height: 0`
+   es lo que impide que un hijo largo estire al padre flex en vez de
+   desplazarse dentro de él. */
+.wp-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+/* ── La ficha de mesa ──────────────────────────────────────────
+   Tres pesos, no cinco colores. Antes TODA mesa ocupada se pintaba
+   de ámbar y de rojo pasado el umbral: cinco mesas ocupadas eran
+   cinco alarmas, y aun así ninguna decía quién necesitaba al
+   mesero. Ahora libre calla, abierta va en tinta normal, y el
+   acento queda reservado para la que te necesita AHORA.
+   La regla de qué es cada cual vive en lib/table-state.ts. */
+.wp-mesas {
+  display: grid; gap: 9px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (min-width: 480px) and (max-width: 1023px) {
+  .wp-mesas { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; }
+}
+
+.wp-mesa {
+  display: flex; flex-direction: column; gap: 3px;
+  min-height: 96px; padding: 11px 12px 10px;
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  background: var(--adm-card);
+  box-shadow: var(--adm-shadow-xs);
+  text-align: left; cursor: pointer;
+  transition: border-color 160ms, background 160ms;
+}
+.wp-mesa:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 2px; }
+.wp-mesa-n {
+  font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em; font-size: 21px; line-height: 1.1; color: var(--u-text);
+}
+.wp-mesa-amt {
+  font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em; font-size: 12.5px; color: var(--u-text-2);
+}
+.wp-mesa-st { margin-top: auto; font-size: 12px; line-height: 1.35; color: var(--u-text-3); }
+
+/* Libre: sin fondo, sin sombra y con el borde punteado. Una mesa
+   vacía no es información, es sitio disponible — que no grite. */
+.wp-mesa[data-s="libre"] { background: transparent; border-style: dashed; box-shadow: none; }
+.wp-mesa[data-s="libre"] .wp-mesa-n,
+.wp-mesa[data-s="libre"] .wp-mesa-st { color: var(--u-text-4); }
+
+.wp-mesa[data-s="atencion"] {
+  border-color: var(--adm-accent-500);
+  box-shadow: 0 0 0 1px var(--adm-accent-500), var(--adm-shadow-xs);
+}
+.wp-mesa[data-s="atencion"] .wp-mesa-st { color: var(--brand-accent-ink); font-weight: 600; }
+
+/* Elegida. Gana a los tres estados: mientras la miras, es LA mesa. */
+.wp-mesa[data-on="1"],
+.wp-mesa[data-on="1"][data-s="libre"],
+.wp-mesa[data-on="1"][data-s="atencion"] {
+  background: var(--adm-accent-500);
+  border: 1px solid var(--adm-accent-500);
+  box-shadow: none;
+}
+.wp-mesa[data-on="1"] .wp-mesa-n { color: #ffffff; }
+.wp-mesa[data-on="1"] .wp-mesa-amt,
+.wp-mesa[data-on="1"] .wp-mesa-st { color: rgba(255, 255, 255, 0.86); font-weight: 500; }
+
+/* ── Barra superior del panel derecho ─────────────────────────── */
+.wp-top {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 56px; flex-shrink: 0; padding: 8px 16px;
+  border-bottom: 1px solid var(--adm-border);
+}
+@media (min-width: 1024px) { .wp-top { padding: 8px 22px; } }
+
+/* Título del panel derecho. En el ancho van en la misma línea, como
+   en el lienzo; en el teléfono se apilan y cada uno se recorta a un
+   renglón. Sin esto, "Mesa 4 · Servida hace 34 min · Mesero Test"
+   ocupaba tres renglones y empujaba la barra a 90 px de alto.
+
+   El display vive SOLO aquí, nunca en línea: un `display` en el
+   atributo style le gana a cualquier media query. */
+.wp-top-title { flex: 1; min-width: 0; }
+.wp-top-title > b,
+.wp-top-title > span {
+  display: block;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wp-top-title > b { font-size: 15.5px; font-weight: 600; color: var(--u-text); }
+.wp-top-title > span { font-size: 12.5px; color: var(--u-text-3); }
+@media (min-width: 1024px) {
+  .wp-top-title > b,
+  .wp-top-title > span { display: inline; }
+  .wp-top-title > span { font-size: 13.5px; margin-left: 10px; }
+}
+
+/* ── Barra de acción, abajo del panel derecho ─────────────────── */
+.wp-bar {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--adm-border);
+  background: var(--adm-bg);
+}
+@media (min-width: 1024px) { .wp-bar { padding: 12px 22px; } }
+
+/* ── Buscador de platos ───────────────────────────────────────
+   Vive AL FONDO del panel derecho y saca sus resultados en línea,
+   debajo. Agregar un plato nunca navega: eso es lo que borra el
+   "Paso 2 de 3" del flujo viejo. */
+.wp-find {
+  display: flex; align-items: center; gap: 10px;
+  height: 46px; padding: 0 14px;
+  border: 1px solid var(--adm-border-2);
+  border-radius: 12px;
+  background: var(--adm-card);
+  transition: border-color 160ms, box-shadow 160ms;
+}
+.wp-find:focus-within {
+  border-color: var(--adm-accent-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--adm-accent-500) 16%, transparent);
+}
+.wp-find input {
+  flex: 1; min-width: 0; height: 100%;
+  border: none; outline: none; background: none;
+  color: var(--u-text);
+  /* 16 px es el piso ABSOLUTO: por debajo, Safari de iPhone amplía
+     la página sola al enfocar el campo. */
+  font-size: 16px;
+}
+.wp-find input::placeholder { color: var(--u-text-4); }
+
+/* Paso +/- de cantidad. 40 px es lo que pide un dedo; con ratón
+   sobra, pero un solo tamaño evita dos verdades. */
+.wp-step {
+  display: grid; place-items: center;
+  width: 40px; height: 40px; flex-shrink: 0;
+  border: 1px solid var(--adm-border-2); border-radius: 11px;
+  background: none; color: var(--u-text-2); cursor: pointer;
+}
+.wp-step:disabled { opacity: 0.4; cursor: default; }
+.wp-step[data-on="1"] { border-color: var(--adm-accent-500); color: var(--brand-accent-ink); }
+
+/* Tecla dibujada, para enseñar el atajo JUNTO a la acción y no
+   escondido en una ayuda que nadie abre. */
+.wp-key {
+  display: inline-grid; place-items: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  border: 1px solid var(--adm-border-2); border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
+  color: var(--u-text-3); background: var(--adm-card);
+}
+/* El teclado solo se anuncia donde hay teclado. */
+@media (pointer: coarse) { .wp-key { display: none; } }
+
+/* ── Control segmentado ────────────────────────────────────────
+   Sala/Pedidos, y luego el reparto de la cuenta, la propina y la
+   forma de pago. Cuatro sitios: se dibuja una vez.
+
+   La pista es una tinta del propio texto (no un gris fijo), así
+   que funciona igual sobre el riel, sobre una tarjeta y en oscuro
+   sin una sola variante. */
+.wp-seg {
+  display: flex; width: 100%; gap: 2px; padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.wp-seg > button {
+  flex: 1; min-width: 0;
+  padding: 7px 10px;
+  border: none; border-radius: 7px; background: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 500; color: var(--u-text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wp-seg > button[data-on="1"] {
+  background: var(--adm-card); color: var(--u-text); font-weight: 600;
+  box-shadow: var(--adm-shadow-xs);
+}
+.wp-seg > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+
+/* Tira de teclas dentro de un botón.
+   Tiene clase propia, y no `.wp-wide-only` + un display en línea,
+   porque el estilo EN LÍNEA le gana siempre a la media query: es el
+   error que dejaba el atajo pintado en el teléfono. Aquí el display
+   vive solo en CSS, que es donde se puede apagar. */
+.wp-keys { display: none; gap: 3px; margin-left: 4px; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .wp-keys { display: inline-flex; }
+}
+
+/* ── Qué se enseña en cada ancho ───────────────────────────────
+   No son dos diseños: es el MISMO, y estas dos clases deciden de
+   qué lado del pliegue vive cada pieza. "Te necesitan ahora" es el
+   ejemplo: en la tablet es el panel derecho en reposo, y en el
+   teléfono —donde no hay panel derecho— es una tira arriba de la
+   rejilla. Mismo contenido, mismo componente, otro sitio. */
+.wp-phone-only { display: block; }
+.wp-wide-only  { display: none; }
+@media (min-width: 1024px) {
+  .wp-phone-only { display: none; }
+  .wp-wide-only  { display: block; }
+}
+
+/* ── Modo servicio ─────────────────────────────────────────────
+   A pantalla completa el armazón ya no es una tarjeta dentro del
+   panel: es la pantalla. Sin borde, sin radio y sin techo. */
+.admin-kiosk .wp {
+  height: 100dvh; min-height: 0;
+  border: none; border-radius: 0; box-shadow: none;
 }
 
 /* Hoja modal: pegada abajo en móvil, tarjeta centrada en escritorio. */

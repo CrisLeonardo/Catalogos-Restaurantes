@@ -14,7 +14,30 @@ export type WaiterCall = {
   id: string;
   table_number: number | null;
   created_at: string;
+  /** Para qué llamó (migración 122). Las llamadas viejas son 'call'. */
+  reason?: 'call' | 'bill';
 };
+
+/** Para qué llama el comensal. 'bill' es la que libera la mesa, así que en
+    el salón pesa más que una llamada genérica — ver lib/table-state.ts. */
+export type CallReason = 'call' | 'bill';
+
+/**
+ * ¿Este error es «la columna `reason` todavía no existe aquí»?
+ *
+ * PGRST204 (escritura) y 42703 (lectura) son los dos síntomas de que la
+ * migración 122 no ha corrido en este entorno. Se comprueba el código Y que
+ * el mensaje hable de `reason`, para no tragarse por accidente otro fallo de
+ * esquema y dejarlo pasar como si nada.
+ *
+ * Mensaje real: "Could not find the 'reason' column of 'waiter_calls' in the
+ * schema cache".
+ */
+function isMissingReason(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code !== 'PGRST204' && error.code !== '42703') return false;
+  return /reason/i.test(error.message ?? '');
+}
 
 /** ¿El usuario autenticado pertenece a este restaurante (o es super admin)? */
 async function authorizedFor(restaurantId: string): Promise<boolean> {
@@ -45,6 +68,7 @@ async function authorizedFor(restaurantId: string): Promise<boolean> {
 export async function callWaiter(
   restaurantId: string,
   tableNumber: number | null,
+  reason: CallReason = 'call',
 ): Promise<{ ok?: boolean; error?: string }> {
   if (!UUID_RE.test(restaurantId ?? '')) return { error: 'Restaurante no especificado.' };
 
@@ -74,17 +98,30 @@ export async function callWaiter(
     return { error: 'Este restaurante no tiene activada la llamada al mesero.' };
   }
 
-  const { error } = await db.from('waiter_calls').insert({
-    restaurant_id: restaurantId,
-    table_number: table,
-  });
+  // Solo dos valores posibles: lo que venga del cliente no entra crudo.
+  const motivo: CallReason = reason === 'bill' ? 'bill' : 'call';
+
+  /* La columna `reason` es de la migración 122. Si el código llega a un
+     entorno donde esa migración todavía no corrió, el insert falla y el
+     comensal se queda SIN poder llamar al mesero — una función que ya
+     existía y que no tiene por qué caerse por una mejora. Así que se
+     intenta con motivo y, si la columna no está, se reintenta sin ella:
+     se pierde el detalle, no el servicio. */
+  const base = { restaurant_id: restaurantId, table_number: table };
+  let { error } = await db.from('waiter_calls').insert({ ...base, reason: motivo });
+
+  if (error && isMissingReason(error)) {
+    ({ error } = await db.from('waiter_calls').insert(base));
+  }
 
   if (error) return { error: error.message };
 
   const tableLabel = table ? ` · Mesa ${table}` : '';
   sendPushToRestaurant(restaurantId, {
-    title: '🔔 Llamada al mesero',
-    body: `Un cliente${tableLabel} necesita atención.`,
+    title: motivo === 'bill' ? '💵 Piden la cuenta' : '🔔 Llamada al mesero',
+    body: motivo === 'bill'
+      ? `Un cliente${tableLabel} pide la cuenta.`
+      : `Un cliente${tableLabel} necesita atención.`,
     tag: `waiter-${restaurantId}-${Date.now()}`,
     url: '/admin/mesas',
     requireInteraction: true,
@@ -101,15 +138,21 @@ export async function getPendingWaiterCalls(restaurantId: string): Promise<Waite
   if (!(await authorizedFor(restaurantId))) return [];
 
   const db = createServiceClient();
-  const { data, error } = await db
+  const pedir = (cols: string) => db
     .from('waiter_calls')
-    .select('id, table_number, created_at')
+    .select(cols)
     .eq('restaurant_id', restaurantId)
     .is('resolved_at', null)
     .order('created_at', { ascending: true });
 
+  // Mismo cuidado que en el insert: si la migracion 122 no corrio en este
+  // entorno, `reason` no existe y pedirla tumbaria la consulta ENTERA. Sin
+  // este reintento el panel diria "no hay llamadas" con el salon llamando.
+  let { data, error } = await pedir('id, table_number, created_at, reason');
+  if (error && isMissingReason(error)) ({ data, error } = await pedir('id, table_number, created_at'));
+
   if (error) return [];
-  return (data ?? []) as WaiterCall[];
+  return (data ?? []) as unknown as WaiterCall[];
 }
 
 /** Marca una llamada como atendida (solo staff/dueño del restaurante). */
