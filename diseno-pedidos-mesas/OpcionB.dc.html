@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; --dang:#b91c1c; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; --dang:#f87171; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-lg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; min-height: 44px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .hrf { height: 1px; background: var(--hair); }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; display: flex; align-items: baseline; gap: 12px; }
+    .sc .lbl > span:first-child { flex: 1; }
+    .sc .act { font-weight: 600; color: var(--acc-ink); }
+    .sc .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+    .sc .seg > div { padding: 6px 13px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+    .sc .seg > div[data-on="1"] { background: var(--surf); color: var(--ink); font-weight: 600; box-shadow: var(--sh); }
+    .sc .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; background: currentColor; }
+    .sc .ttl { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+    .sc .sub { font-size: 13px; color: var(--ink3); margin-top: 1px; line-height: 1.35; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+
+    .sc .mesa { border-radius: 14px; border: 1px solid var(--hair); background: var(--surf); box-shadow: var(--sh); padding: 11px 12px 10px; display: flex; flex-direction: column; gap: 3px; min-height: 96px; }
+    .sc .mesa .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-size: 21px; line-height: 1.1; color: var(--ink); }
+    .sc .mesa .st { font-size: 12px; color: var(--ink3); line-height: 1.35; margin-top: auto; }
+    .sc .mesa .amt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink2); letter-spacing: -0.02em; }
+    .sc .mesa[data-s="libre"] { background: transparent; border-style: dashed; box-shadow: none; }
+    .sc .mesa[data-s="libre"] .n { color: var(--ink4); }
+    .sc .mesa[data-s="libre"] .st { color: var(--ink4); }
+    .sc .mesa[data-s="atencion"] { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc), var(--sh); }
+    .sc .mesa[data-s="atencion"] .st { color: var(--acc-ink); font-weight: 600; }
+
+    .sc .ph { width: 390px; height: 844px; border-radius: 44px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0,0,0,0.20); flex-shrink: 0; }
+    .sc .ph-status { height: 46px; flex-shrink: 0; }
+    .sc .tb { height: 74px; flex-shrink: 0; display: flex; align-items: stretch; padding-bottom: 14px; border-top: 1px solid var(--hair); background: var(--side); }
+    .sc .tb > div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--ink4); }
+    .sc .tb > div[data-on="1"] { color: var(--acc-ink); font-weight: 600; }
+    .sc .bar { flex-shrink: 0; border-top: 1px solid var(--hair); background: color-mix(in srgb, var(--bg) 86%, transparent); padding: 12px 16px 22px; }
+    .sc .cta { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 52px; padding: 0 18px; border-radius: 14px; background: var(--acc); color: #ffffff; font-size: 15.5px; font-weight: 600; }
+    .sc .step { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--hair2); display: grid; place-items: center; color: var(--ink2); flex-shrink: 0; }
+    .sc .cap { font-size: 13px; color: rgba(23,22,26,0.55); text-align: center; max-width: 390px; line-height: 1.45; }
+
+    .sc .doc-h1 { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+    .sc .card { background: var(--surf); border: 1px solid var(--hair); border-radius: 14px; box-shadow: var(--sh); }
+    .sc .h2 { font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink3); }
+    .sc .body { font-size: 15px; line-height: 1.55; color: var(--ink2); }
+    .sc .num { width: 25px; height: 25px; border-radius: 99px; flex-shrink: 0; display: grid; place-items: center; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+<div class="sc" data-t="light" style="width: 1370px; height: 1030px; background: #e9e9ee; padding: 44px 40px; display: flex; align-items: flex-start; justify-content: center; gap: 40px">
+  <div style="display: flex; flex-direction: column; gap: 14px; align-items: center">
+    <div class="sc ph" data-t="light">
+      <div class="ph-status"></div>
+        <div style="height: 0"></div>
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 4px 16px 14px">
+          <div style="flex: 1; min-width: 0">
+            <div class="disp" style="font-size: 26px; line-height: 1.15; color: var(--ink)">Pedidos</div>
+            <div style="font-size: 14px; color: var(--ink3); margin-top: 4px">8 en curso · 24 hoy</div>
+          </div>
+          <div class="btn" style="height: 40px; border-radius: 12px; padding: 0 15px"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg><span>Nueva</span></div>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 20px">
+        <div><div class="seg" style="display: flex; width: 100%"><div data-on="1" style="flex: 1; text-align: center">En vivo</div><div style="flex: 1; text-align: center">Mesas</div><div style="flex: 1; text-align: center">Historial</div></div></div>
+        <div>
+          <div class="lbl"><span>En curso</span></div>
+          <div class="group">
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl" style="font-weight: 600">Mesa 4</div><div class="pill" style="color: var(--acc-ink); margin-top: 3px"><span class="dot" style="color: var(--acc-ink)"></span>Nuevo · hace 2 min</div></div><div style="flex-shrink: 0"><span class="mono" style="font-size: 15px; color: var(--ink)">Q210.00</span></div><div style="flex-shrink: 0; margin-left: 10px"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl" style="font-weight: 600">Llevar · Ana L.</div><div class="pill" style="color: var(--acc-ink); margin-top: 3px"><span class="dot" style="color: var(--acc-ink)"></span>Nuevo · hace 4 min</div></div><div style="flex-shrink: 0"><span class="mono" style="font-size: 15px; color: var(--ink)">Q95.00</span></div><div style="flex-shrink: 0; margin-left: 10px"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl" style="font-weight: 600">Mesa 7</div><div class="pill" style="color: var(--warn); margin-top: 3px"><span class="dot" style="color: var(--warn)"></span>En cocina · hace 9 min</div></div><div style="flex-shrink: 0"><span class="mono" style="font-size: 15px; color: var(--ink)">Q340.00</span></div><div style="flex-shrink: 0; margin-left: 10px"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl" style="font-weight: 600">Mesa 2</div><div class="pill" style="color: var(--warn); margin-top: 3px"><span class="dot" style="color: var(--warn)"></span>En cocina · hace 6 min</div></div><div style="flex-shrink: 0"><span class="mono" style="font-size: 15px; color: var(--ink)">Q120.00</span></div><div style="flex-shrink: 0; margin-left: 10px"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl" style="font-weight: 600">Mesa 9</div><div class="pill" style="color: var(--ok); margin-top: 3px"><span class="dot" style="color: var(--ok)"></span>Lista · hace 14 min</div></div><div style="flex-shrink: 0"><span class="mono" style="font-size: 15px; color: var(--ink)">Q260.00</span></div><div style="flex-shrink: 0; margin-left: 10px"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+          </div>
+        </div>
+        <div style="font-size: 12.5px; color: var(--ink3); line-height: 1.45; padding: 0 4px">La misma lista, las mismas filas y los mismos estados que ve el dueño en el panel. Mesa, llevar y domicilio se leen igual porque son la misma cosa: una comanda.</div>
+        </div>
+        <div class="tb"><div><svg class="i" viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11M4 20h16M9 20v-5h6v5"></path></svg><span>Sala</span></div><div data-on="1"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg><span>Pedidos</span></div><div><svg class="i" viewBox="0 0 24 24"><path d="M6 12h.01M12 12h.01M18 12h.01"></path></svg><span>Más</span></div></div>
+    </div>
+    <div class="cap">Pedidos — la misma lista que ve el dueño; mesa, llevar y domicilio se leen igual.</div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 14px; align-items: center">
+    <div class="sc ph" data-t="light">
+      <div class="ph-status"></div>
+        <div style="height: 0"></div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 2px 14px 12px; border-bottom: 1px solid var(--hair)">
+          <div style="width: 40px"></div>
+          <div style="flex: 1; min-width: 0; text-align: center">
+            <div style="font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em">Nueva comanda</div>
+            
+          </div>
+          <div style="font-size: 15px; font-weight: 500; color: var(--acc-ink); width: 60px; text-align: right">Cancelar</div>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow: hidden; padding: 16px 16px 0; display: flex; flex-direction: column; gap: 20px">
+        <div>
+          <div class="lbl"><span>Para</span></div>
+          <div class="group">
+            <div class="row" style="padding: 13px 16px"><span class="tile"><svg class="i-sm" viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11M4 20h16M9 20v-5h6v5"></path></svg></span><div style="flex: 1; min-width: 0"><div class="ttl">Mesa 4</div><div class="sub">Salón · junto a la ventana</div></div><div style="flex-shrink: 0; text-align: right"><span style="font-size: 14px; color: var(--ink3)">Cambiar</span></div><div style="flex-shrink: 0; display: flex; align-items: center"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="lbl"><span>Platos</span><span class="act">3 platos</span></div>
+          <div class="group">
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Carne asada</div><div class="sub">Término medio · sin cebolla</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q210.00</span></div><div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0"><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div><span class="mono" style="font-size: 15px; min-width: 14px; text-align: center">2</span><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Limonada</div><div class="sub">Con hielo</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q18.00</span></div><div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0"><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div><span class="mono" style="font-size: 15px; min-width: 14px; text-align: center">1</span><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px; color: var(--acc-ink)"><svg class="i" viewBox="0 0 24 24" style="color: var(--acc-ink)"><path d="M12 5v14M5 12h14"></path></svg><div style="flex: 1; font-size: 14.5px; font-weight: 600">Agregar plato</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="lbl"><span>Detalles</span></div>
+          <div class="group">
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Nota para cocina</div><div class="sub">Alergias, sin sal, extra salsa</div></div><div style="flex-shrink: 0; display: flex; align-items: center"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Nombre o referencia</div><div class="sub">Opcional</div></div><div style="flex-shrink: 0; text-align: right"><span style="font-size: 14px; color: var(--ink4)">Mesa 4</span></div><div style="flex-shrink: 0; display: flex; align-items: center"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+          </div>
+        </div>
+        </div>
+        <div class="bar">
+          <div style="display: flex; align-items: baseline; padding: 0 4px 10px"><span style="flex: 1; font-size: 14px; color: var(--ink3)">Subtotal Q228.00 · propina 10%</span><span class="mono" style="font-size: 20px; color: var(--ink)">Q250.80</span></div>
+          <div class="cta"><span>Enviar a cocina</span><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></div>
+        </div>
+    </div>
+    <div class="cap">Nueva comanda — una sola pantalla: destino, platos y nota, todo editable en su sitio.</div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 14px; align-items: center">
+    <div class="sc ph" data-t="light">
+      <div class="ph-status"></div>
+        <div style="height: 0"></div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 2px 14px 12px; border-bottom: 1px solid var(--hair)">
+          <div style="width: 40px"></div>
+          <div style="flex: 1; min-width: 0; text-align: center">
+            <div style="font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em">Nueva comanda</div>
+            
+          </div>
+          <div style="font-size: 15px; font-weight: 500; color: var(--ink4); width: 60px; text-align: right">Cancelar</div>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow: hidden; padding: 16px 16px 0; position: relative; display: flex; flex-direction: column; gap: 20px">
+        <div>
+          <div class="lbl"><span>Para</span></div>
+          <div class="group">
+            <div class="row" style="padding: 13px 16px"><span class="tile"><svg class="i-sm" viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11M4 20h16M9 20v-5h6v5"></path></svg></span><div style="flex: 1; min-width: 0"><div class="ttl">Mesa 4</div><div class="sub">Salón · junto a la ventana</div></div><div style="flex-shrink: 0; display: flex; align-items: center"><svg class="i-sm" viewBox="0 0 24 24" style="color: var(--ink4)"><path d="M9 6l6 6-6 6"></path></svg></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="lbl"><span>Platos</span><span class="act">2 platos</span></div>
+          <div class="group">
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Carne asada</div><div class="sub">Término medio · sin cebolla</div></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Limonada</div><div class="sub">Con hielo</div></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="lbl"><span>Detalles</span></div>
+          <div class="group">
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Nota para cocina</div><div class="sub">Alergias, sin sal, extra salsa</div></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 13px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Nombre o referencia</div><div class="sub">Opcional</div></div></div>
+          </div>
+        </div>
+          <div style="position: absolute; inset: -16px 0 0; background: rgba(0,0,0,0.34)"></div>
+        </div>
+        <div style="flex-shrink: 0; background: var(--bg); border-top: 1px solid var(--hair); border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(0,0,0,0.14); padding: 8px 0 0">
+          <div style="width: 38px; height: 5px; border-radius: 99px; background: var(--hair2); margin: 0 auto 12px"></div>
+          <div style="padding: 0 16px 12px; display: flex; align-items: center; gap: 9px; height: 44px; border-radius: 11px">
+            <div style="flex: 1; display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 13px; border-radius: 11px; background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink4)"><svg class="i" viewBox="0 0 24 24"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16M21 21l-4.3-4.3"></path></svg><span style="font-size: 16px">Buscar plato</span></div>
+          </div>
+          <div style="padding: 0 16px 12px"><div class="group">
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Carne asada</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q105.00</span></div><div style="display: flex; align-items: center; gap: 10px"><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div><span class="mono" style="font-size: 15px; min-width: 14px; text-align: center">2</span><div class="step" style="border-color: var(--acc); color: var(--acc-ink)"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Pollo a la plancha</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q95.00</span></div><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Sopa del día</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q38.00</span></div><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Limonada</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q18.00</span></div><div style="display: flex; align-items: center; gap: 10px"><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div><span class="mono" style="font-size: 15px; min-width: 14px; text-align: center">1</span><div class="step" style="border-color: var(--acc); color: var(--acc-ink)"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div></div>
+            <div class="hr"></div>
+            <div class="row" style="padding: 11px 12px 11px 16px"><div style="flex: 1; min-width: 0"><div class="ttl">Café</div></div><div style="flex-shrink: 0; margin-right: 12px"><span class="mono" style="font-size: 14px; color: var(--ink2)">Q15.00</span></div><div class="step"><svg class="i-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div></div>
+          </div></div>
+          <div style="padding: 0 16px 22px">
+            <div class="cta"><span>Listo · 3 platos</span><span class="mono" style="font-size: 16px">Q228.00</span></div>
+          </div>
+        </div>
+    </div>
+    <div class="cap">La hoja del menú sube sobre la comanda: se agregan varios platos sin perderla de vista.</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1370,"height":1030}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

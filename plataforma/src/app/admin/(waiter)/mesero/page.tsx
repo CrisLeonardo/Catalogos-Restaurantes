@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { getWaiterActiveOrders, getActiveTableNumbers } from '@/lib/db/orders';
+import { getWaiterActiveOrders, getActiveTableNumbers, getPendingTableCalls } from '@/lib/db/orders';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
@@ -49,11 +49,12 @@ export default async function MeseroPage() {
     restaurantName = (r?.name as string | null) ?? 'Restaurante';
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedSince, hubInfo] = await Promise.all([
+  const [categoriesRes, productsRes, activeOrders, occupiedSince, tableCalls, hubInfo] = await Promise.all([
     db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     getWaiterActiveOrders(restaurantId, user.id),
     getActiveTableNumbers(restaurantId),
+    getPendingTableCalls(restaurantId),
     getAgentHubInfo(restaurantId),
   ]);
 
@@ -70,6 +71,7 @@ export default async function MeseroPage() {
       products={products}
       initialOrders={activeOrders}
       occupiedSince={occupiedSince}
+      tableCalls={tableCalls}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
       tipEnabled={resolvedConfig ? tipAppliesToType(resolvedConfig, 'DINE_IN') : false}

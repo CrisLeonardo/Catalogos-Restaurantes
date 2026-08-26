@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600&family=Unbounded:wght@800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2542f; } a:hover { color: #a8461f; }
+    .sc, .sc *, .sc *::before, .sc *::after { box-sizing: border-box; }
+    .sc { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+    .sc[data-t="light"] { --bg:#f4f4f6; --side:#ebebef; --surf:#ffffff; --hair:rgba(0,0,0,0.07); --hair2:rgba(0,0,0,0.13); --ink:#17161a; --ink2:rgba(23,22,26,0.72); --ink3:rgba(23,22,26,0.56); --ink4:rgba(23,22,26,0.40); --acc:#c2542f; --acc-ink:#c2542f; --acc-soft:rgba(194,84,47,0.10); --sh:0 1px 2px rgba(0,0,0,0.04); --warn:#b45309; --ok:#15803d; --dang:#b91c1c; }
+    .sc[data-t="dark"]  { --bg:#0a0a0d; --side:#101014; --surf:#141418; --hair:rgba(245,243,239,0.09); --hair2:rgba(245,243,239,0.16); --ink:#f5f3ef; --ink2:rgba(245,243,239,0.72); --ink3:rgba(245,243,239,0.52); --ink4:rgba(245,243,239,0.40); --acc:#c2603f; --acc-ink:#e58a5f; --acc-soft:rgba(217,119,87,0.16); --sh:0 1px 2px rgba(0,0,0,0.30); --warn:#fb923c; --ok:#4ade80; --dang:#f87171; }
+    .sc .disp { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .sc .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sc .i { width: 17px; height: 17px; flex: 0 0 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-sm { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .i-lg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .sc .group { background: var(--surf); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; box-shadow: var(--sh); }
+    .sc .row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; min-height: 44px; }
+    .sc .hr { height: 1px; background: var(--hair); margin-left: 16px; }
+    .sc .hrf { height: 1px; background: var(--hair); }
+    .sc .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink3); padding: 0 4px 8px; display: flex; align-items: baseline; gap: 12px; }
+    .sc .lbl > span:first-child { flex: 1; }
+    .sc .act { font-weight: 600; color: var(--acc-ink); }
+    .sc .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+    .sc .seg > div { padding: 6px 13px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+    .sc .seg > div[data-on="1"] { background: var(--surf); color: var(--ink); font-weight: 600; box-shadow: var(--sh); }
+    .sc .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--acc); color: #ffffff; font-size: 13.5px; font-weight: 600; }
+    .sc .btn2 { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); font-size: 13.5px; font-weight: 500; }
+    .sc .ghost { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--ink2); border: 1px solid var(--hair2); flex-shrink: 0; }
+    .sc .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+    .sc .dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; background: currentColor; }
+    .sc .ttl { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+    .sc .sub { font-size: 13px; color: var(--ink3); margin-top: 1px; line-height: 1.35; }
+    .sc .tile { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+
+    .sc .mesa { border-radius: 14px; border: 1px solid var(--hair); background: var(--surf); box-shadow: var(--sh); padding: 11px 12px 10px; display: flex; flex-direction: column; gap: 3px; min-height: 96px; }
+    .sc .mesa .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-size: 21px; line-height: 1.1; color: var(--ink); }
+    .sc .mesa .st { font-size: 12px; color: var(--ink3); line-height: 1.35; margin-top: auto; }
+    .sc .mesa .amt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink2); letter-spacing: -0.02em; }
+    .sc .mesa[data-s="libre"] { background: transparent; border-style: dashed; box-shadow: none; }
+    .sc .mesa[data-s="libre"] .n { color: var(--ink4); }
+    .sc .mesa[data-s="libre"] .st { color: var(--ink4); }
+    .sc .mesa[data-s="atencion"] { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc), var(--sh); }
+    .sc .mesa[data-s="atencion"] .st { color: var(--acc-ink); font-weight: 600; }
+
+    .sc .ph { width: 390px; height: 844px; border-radius: 44px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0,0,0,0.20); flex-shrink: 0; }
+    .sc .ph-status { height: 46px; flex-shrink: 0; }
+    .sc .tb { height: 74px; flex-shrink: 0; display: flex; align-items: stretch; padding-bottom: 14px; border-top: 1px solid var(--hair); background: var(--side); }
+    .sc .tb > div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--ink4); }
+    .sc .tb > div[data-on="1"] { color: var(--acc-ink); font-weight: 600; }
+    .sc .bar { flex-shrink: 0; border-top: 1px solid var(--hair); background: color-mix(in srgb, var(--bg) 86%, transparent); padding: 12px 16px 22px; }
+    .sc .cta { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 52px; padding: 0 18px; border-radius: 14px; background: var(--acc); color: #ffffff; font-size: 15.5px; font-weight: 600; }
+    .sc .step { width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--hair2); display: grid; place-items: center; color: var(--ink2); flex-shrink: 0; }
+    .sc .cap { font-size: 13px; color: rgba(23,22,26,0.55); text-align: center; max-width: 390px; line-height: 1.45; }
+
+    .sc .doc-h1 { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+    .sc .card { background: var(--surf); border: 1px solid var(--hair); border-radius: 14px; box-shadow: var(--sh); }
+    .sc .h2 { font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink3); }
+    .sc .body { font-size: 15px; line-height: 1.55; color: var(--ink2); }
+    .sc .num { width: 25px; height: 25px; border-radius: 99px; flex-shrink: 0; display: grid; place-items: center; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    .sc .key { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 6px;
+               background: var(--surf); border: 1px solid var(--hair2); box-shadow: 0 1px 0 var(--hair2);
+               font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 600; color: var(--ink2); }
+    .sc .keys { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .sc .keys span.p { font-size: 12px; color: var(--ink4); }
+    .sc .doc-h1 { font-family: 'Unbounded', 'Geist', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+  </style>
+</helmet>
+<div class="sc" data-t="light" style="width: 980px; min-height: 2500px; background: var(--bg); color: var(--ink); padding: 56px 52px 52px; display: flex; flex-direction: column; gap: 38px">
+  <div>
+    <div class="doc-h1" style="font-size: 40px; line-height: 1.08; color: var(--ink)">Un diseño, tres tamaños</div>
+    <div style="font-size: 17px; line-height: 1.5; color: var(--ink3); margin-top: 14px; max-width: 660px">Tus clientes no tienen el mismo equipo y no lo van a tener nunca. Así que la pregunta deja de ser «¿A o C?» y pasa a ser otra: <b style="color: var(--ink2); font-weight: 600">una sola interfaz que se acomoda al aparato que haya.</b> La buena noticia es que la decisión de ayer no se cae — C <i>es</i> el ancho, y ahora el ancho también es la PC.</div>
+  </div>
+  <div class="h2" style="margin-bottom: -20px">Lo que cambia y lo que no</div>
+  <div class="card" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+    <div style="padding: 20px 22px">
+      <div style="font-size: 17px; font-weight: 600; color: var(--ink)">Teléfono</div>
+      <div class="mono" style="font-size: 12.5px; color: var(--ink4); margin-top: 4px">menos de 1024 px · dedo</div>
+      <div style="margin-top: 12px">        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Una columna. La sala es la casa.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>La mesa se abre como pantalla siguiente.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Barra de pestañas abajo, al pulgar.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Nada tocable baja de 44 px.</span></div>
+</div>
+      <div style="font-size: 12.5px; color: var(--ink3); line-height: 1.45; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair)">El mesero que camina el salón.</div>
+    </div>
+    <div style="padding: 20px 22px; border-left: 1px solid var(--hair)">
+      <div style="font-size: 17px; font-weight: 600; color: var(--ink)">Tablet</div>
+      <div class="mono" style="font-size: 12.5px; color: var(--ink4); margin-top: 4px">1024 px o más · dedo</div>
+      <div style="margin-top: 12px">        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Dos columnas: sala + comanda.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Agregar un plato no navega.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Sin nada elegido: «te necesitan ahora».</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Mismos 44 px: se sigue tocando.</span></div>
+</div>
+      <div style="font-size: 12.5px; color: var(--ink3); line-height: 1.45; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair)">La tablet fija en la barra o en la caja.</div>
+    </div>
+    <div style="padding: 20px 22px; border-left: 1px solid var(--hair)">
+      <div style="font-size: 17px; font-weight: 600; color: var(--ink)">PC</div>
+      <div class="mono" style="font-size: 12.5px; color: var(--ink4); margin-top: 4px">1024 px o más · ratón y teclado</div>
+      <div style="margin-top: 12px">        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Las mismas dos columnas que la tablet.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Modo servicio a pantalla completa.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>El buscador siempre enfocado.</span></div>
+        <div style="display: flex; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--ink2); line-height: 1.45"><span style="color: var(--ink4); flex-shrink: 0">·</span><span>Atajos a la vista, junto a cada acción.</span></div>
+</div>
+      <div style="font-size: 12.5px; color: var(--ink3); line-height: 1.45; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair)">Quien teclea la comanda desde la libreta.</div>
+    </div>
+  </div>
+  <div class="card" style="padding: 20px 22px">
+    <div style="font-size: 15.5px; line-height: 1.55; color: var(--ink2)"><b style="color: var(--ink); font-weight: 600">Tablet y PC comparten TODO el marcado.</b> La única diferencia entre las dos es la capa de teclado, que en una pantalla táctil simplemente no se dibuja. No son dos diseños: es uno con una capa de más.</div>
+  </div>
+  <div class="h2" style="margin-bottom: -20px">Lo que nunca cambia, mida lo que mida</div>
+  <div class="card">
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">La mesa es el expediente</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Lo que hay, en qué va cada plato, cuánto lleva y cuánto debe. Igual en los tres.</div>
+    </div>
+    <div class="hrf"></div>
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">El color solo lo usa lo que te necesita</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Libre calla, abierta en tinta normal, acento solo para lo que pide acción. Tres pesos, no cinco colores.</div>
+    </div>
+    <div class="hrf"></div>
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">No hay pasos numerados</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Ni en el teléfono ni en la PC. Se elige mesa, se agregan platos, se envía.</div>
+    </div>
+    <div class="hrf"></div>
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">Los mismos nombres y los mismos estados</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Un mesero que aprendió en el teléfono se sienta en la PC y sabe dónde está todo.</div>
+    </div>
+  </div>
+  <div class="h2" style="margin-bottom: -20px">Y el que no tiene ningún aparato</div>
+  <div class="card" style="padding: 22px 26px">
+    <div class="body" style="font-size: 15.5px; max-width: 700px">Ese caso ya lo resuelve el producto y conviene decirlo en la venta: <b style="color: var(--ink); font-weight: 600">el aparato lo pone el comensal.</b> El QR de la mesa abre el menú en su teléfono, el pedido entra solo y en la caja aparece la mesa abierta sin que nadie teclee nada. El local sin equipo no necesita comprar nada — necesita que la PC de la caja sepa mostrar el salón, que es justo lo que arregla esto.<br><br>Y si ni PC hay: queda el teléfono del dueño, que es el mismo diseño de una columna.</div>
+  </div>
+  <div class="h2" style="margin-bottom: -20px">Qué cambia en el plan de construcción</div>
+  <div class="card">
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">1 · Quitar el techo de 960 px</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Hoy <code>.waiter-wrap</code> topa el panel de mesero en 960 px y lo centra: en una PC de 1440 son 480 px de aire a los lados y una columna de tarjetas pensada para el pulgar. Ese techo pasa a ser la regla de dos columnas.</div>
+    </div>
+    <div class="hrf"></div>
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">2 · Modo servicio a pantalla completa</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">No existe todavía; el botón está dibujado en el panel nuevo pero no hace nada. Es lo que hace usable la PC: esconde la barra lateral y deja el salón y la comanda.</div>
+    </div>
+    <div class="hrf"></div>
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">3 · La capa de teclado</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Foco permanente en el buscador, número como cantidad, Enter que agrega y limpia, dos teclas para enviar. Es lo último que se construye y lo primero que se nota.</div>
+    </div>
+    <div class="hrf"></div>
+    <div style="padding: 16px 22px">
+      <div style="font-size: 15.5px; font-weight: 600; color: var(--ink)">4 · Todo lo demás del plan sigue igual</div>
+      <div class="body" style="margin-top: 5px; font-size: 14.5px">Ampliar lo que sabe una mesa, la regla única de estados y el motivo en la llamada al mesero no cambian: alimentan a los tres tamaños por igual.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":980,"height":2500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

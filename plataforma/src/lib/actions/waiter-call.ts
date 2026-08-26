@@ -14,7 +14,13 @@ export type WaiterCall = {
   id: string;
   table_number: number | null;
   created_at: string;
+  /** Para qué llamó (migración 122). Las llamadas viejas son 'call'. */
+  reason?: 'call' | 'bill';
 };
+
+/** Para qué llama el comensal. 'bill' es la que libera la mesa, así que en
+    el salón pesa más que una llamada genérica — ver lib/table-state.ts. */
+export type CallReason = 'call' | 'bill';
 
 /** ¿El usuario autenticado pertenece a este restaurante (o es super admin)? */
 async function authorizedFor(restaurantId: string): Promise<boolean> {
@@ -45,6 +51,7 @@ async function authorizedFor(restaurantId: string): Promise<boolean> {
 export async function callWaiter(
   restaurantId: string,
   tableNumber: number | null,
+  reason: CallReason = 'call',
 ): Promise<{ ok?: boolean; error?: string }> {
   if (!UUID_RE.test(restaurantId ?? '')) return { error: 'Restaurante no especificado.' };
 
@@ -74,17 +81,23 @@ export async function callWaiter(
     return { error: 'Este restaurante no tiene activada la llamada al mesero.' };
   }
 
+  // Solo dos valores posibles: lo que venga del cliente no entra crudo.
+  const motivo: CallReason = reason === 'bill' ? 'bill' : 'call';
+
   const { error } = await db.from('waiter_calls').insert({
     restaurant_id: restaurantId,
     table_number: table,
+    reason: motivo,
   });
 
   if (error) return { error: error.message };
 
   const tableLabel = table ? ` · Mesa ${table}` : '';
   sendPushToRestaurant(restaurantId, {
-    title: '🔔 Llamada al mesero',
-    body: `Un cliente${tableLabel} necesita atención.`,
+    title: motivo === 'bill' ? '💵 Piden la cuenta' : '🔔 Llamada al mesero',
+    body: motivo === 'bill'
+      ? `Un cliente${tableLabel} pide la cuenta.`
+      : `Un cliente${tableLabel} necesita atención.`,
     tag: `waiter-${restaurantId}-${Date.now()}`,
     url: '/admin/mesas',
     requireInteraction: true,
@@ -103,7 +116,7 @@ export async function getPendingWaiterCalls(restaurantId: string): Promise<Waite
   const db = createServiceClient();
   const { data, error } = await db
     .from('waiter_calls')
-    .select('id, table_number, created_at')
+    .select('id, table_number, created_at, reason')
     .eq('restaurant_id', restaurantId)
     .is('resolved_at', null)
     .order('created_at', { ascending: true });

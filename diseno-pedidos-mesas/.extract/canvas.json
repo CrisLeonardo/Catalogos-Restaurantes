@@ -1,0 +1,119 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1370,
+      "h": 1030,
+      "title": "A · La sala",
+      "page": "opciones"
+    },
+    {
+      "file": "OpcionB.dc.html",
+      "x": 1450,
+      "y": 0,
+      "w": 1370,
+      "h": 1030,
+      "title": "B · La comanda",
+      "page": "opciones"
+    },
+    {
+      "file": "OpcionC.dc.html",
+      "x": 2900,
+      "y": 0,
+      "w": 1720,
+      "h": 1000,
+      "title": "C · Dos paneles",
+      "page": "opciones"
+    },
+    {
+      "file": "Comparar.dc.html",
+      "x": 4700,
+      "y": 0,
+      "w": 880,
+      "h": 1960,
+      "title": "Comparar las tres",
+      "page": "opciones"
+    },
+    {
+      "file": "Actual.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1370,
+      "h": 1030,
+      "title": "El mesero de hoy",
+      "page": "problema"
+    },
+    {
+      "file": "Diagnostico.dc.html",
+      "x": 1450,
+      "y": 0,
+      "w": 880,
+      "h": 2120,
+      "title": "Lo que no encaja",
+      "page": "problema"
+    },
+    {
+      "file": "Mesas.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 860,
+      "title": "Pedidos › Mesas",
+      "page": "mesas"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "nota-eje",
+      "x": 0,
+      "y": -210,
+      "w": 440,
+      "text": "Las tres hablan el idioma del panel nuevo. Lo que cambia es cuál es el objeto principal de la pantalla: la MESA (A), el PEDIDO (B) o los dos a la vez (C).\n\nEsa es la decisión. Lo demás se deriva sola.",
+      "page": "opciones"
+    },
+    {
+      "id": "nota-comparar",
+      "x": 4700,
+      "y": -210,
+      "w": 440,
+      "text": "Aquí está lo que gana y lo que cuesta cada una, sin adornos, y las seis reglas que las tres comparten pase lo que pase.",
+      "page": "opciones"
+    },
+    {
+      "id": "nota-actual",
+      "x": 0,
+      "y": -210,
+      "w": 440,
+      "text": "Esto NO es una caricatura: está recreado con los valores reales de waiter-panel.tsx y floor-map.tsx —pesos 800, vidrio con blur de 13 px, radios 14/16, los glifos ＋ ⚠ ● → y el halo de color de las mesas ocupadas.",
+      "page": "problema"
+    },
+    {
+      "id": "nota-mesas",
+      "x": 0,
+      "y": -210,
+      "w": 440,
+      "text": "Hoy «Mesas» es una pantalla de ajustes con nombre de pantalla de operación. Aquí vive lo que está pasando en el salón; la configuración (cantidad, QR, plano, propina) se va a Ajustes › Salón.\n\nEsto aplica igual elijas A, B o C.",
+      "page": "mesas"
+    }
+  ],
+  "launch": {
+    "view": "focused",
+    "file": "Comparar.dc.html"
+  },
+  "pages": [
+    {
+      "id": "opciones",
+      "name": "Las tres opciones"
+    },
+    {
+      "id": "problema",
+      "name": "Qué no encaja hoy"
+    },
+    {
+      "id": "mesas",
+      "name": "Mesas en el panel"
+    }
+  ]
+}

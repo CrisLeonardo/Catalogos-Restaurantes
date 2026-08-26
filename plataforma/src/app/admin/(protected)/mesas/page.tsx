@@ -2,6 +2,9 @@ import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import TablesPanel from '@/components/admin/tables-panel';
+import SalonBoard from '@/components/admin/salon-board';
+import CollapsibleCard from '@/components/admin/collapsible-card';
+import { getActiveTableNumbers, getPendingTableCalls } from '@/lib/db/orders';
 import PlanLockedScreen from '@/components/admin/plan-locked-screen';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import type { ThemeConfig } from '@/lib/theme/defaults';
@@ -68,8 +71,34 @@ export default async function MesasPage() {
 
   const c = resolvedConfig;
 
+  /* El salón EN VIVO. Hasta ahora esta pantalla se llamaba «Mesas» pero solo
+     enseñaba configuración: el dueño no tenía dónde ver qué pasa en su salón.
+     Va arriba porque es lo que se mira todos los días; la configuración se
+     toca una vez y se pliega. */
+  const [occupancy, calls] = await Promise.all([
+    getActiveTableNumbers(restaurantId),
+    getPendingTableCalls(restaurantId),
+  ]);
+  const waiterHref = hasWaiterPanel || ctx?.profile.role === 'SUPER_ADMIN' ? '/admin/mesero' : null;
+
   return (
-    <TablesPanel
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <SalonBoard
+        tableCount={c.dineInTableCount}
+        occupancy={occupancy}
+        calls={calls}
+        currency={{ symbol: c.currencySymbol, position: c.currencyPosition, locale: c.locale }}
+        waiterHref={waiterHref}
+      />
+
+      <CollapsibleCard
+        title="Configuración del salón"
+        subtitle="Cuántas mesas, códigos QR y NFC, plano por niveles, propina"
+        icon="settings"
+        defaultOpen={false}
+        storageKey="mesas-config"
+      >
+        <TablesPanel
       restaurantId={restaurantId}
       menuUrl={menuUrl}
       config={{
@@ -84,7 +113,9 @@ export default async function MesasPage() {
         locale: c.locale,
         animations: c.animations,
         floorPlan: c.floorPlan,
-      }}
-    />
+          }}
+        />
+      </CollapsibleCard>
+    </div>
   );
 }
