@@ -2154,57 +2154,13 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 .preview-frame.is-wide iframe { border-radius: 12px; }
 
 /* ============================================================
-   PANEL DE MESERO — un diseño, tres tamaños
+   PANEL DE MESERO — contenedor centrado + hojas responsive
    ------------------------------------------------------------
-   Los restaurantes que usan esto tienen teléfono, tablet, PC o
-   nada. Así que no hay tres pantallas: hay una que se acomoda.
-
-     · menos de 1024 px  →  una columna. El salón es la casa y la
-                            mesa se abre como pantalla siguiente.
-     · 1024 px o más     →  dos columnas. El salón vive en un riel
-                            a la izquierda y NUNCA desaparece; la
-                            comanda ocupa el resto.
-
-   Antes .waiter-wrap topaba TODO en 960 px y lo centraba: en una
-   PC de 1440 eran 480 px de aire a los lados y una rejilla de
-   tarjetas pensada para el pulgar, manejada con ratón. Ese techo
-   es ahora la regla de dos columnas, y el ancho cómodo se conserva
-   solo donde de verdad ayuda (formularios y cuentas).
+   En PC/tablet grande el contenido se centra en una columna
+   cómoda (estilo POS) en vez de estirarse a todo lo ancho.
    ============================================================ */
 .waiter-wrap { width: 100%; max-width: 960px; margin-inline: auto; }
 .waiter-wrap-narrow { width: 100%; max-width: 720px; margin-inline: auto; }
-
-/* Armazón de dos columnas. */
-.waiter-shell { min-height: 100dvh; display: flex; align-items: stretch; background: var(--brand-bg); }
-.waiter-rail { display: none; }
-.waiter-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100dvh; }
-
-/* Piezas que solo existen en uno de los dos anchos. Se resuelve con CSS y
-   no con JS a propósito: una media query en JavaScript haría que el primer
-   render del cliente no coincida con el HTML del servidor. */
-.waiter-only-wide { display: none; }
-
-@media (min-width: 1024px) {
-  .waiter-rail {
-    display: flex;
-    flex-direction: column;
-    width: 340px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--u-hair);
-    background: var(--brand-bg-2);
-    max-height: 100dvh;
-    position: sticky;
-    top: 0;
-    overflow-y: auto;
-  }
-  .waiter-only-wide { display: block; }
-  .waiter-only-narrow { display: none !important; }
-  /* Con el riel al lado, el contenido de la comanda ya no necesita que lo
-     centren: el riel hace de margen izquierdo. */
-  .waiter-shell .waiter-wrap,
-  .waiter-shell .waiter-wrap-narrow { max-width: none; margin-inline: 0; }
-  .waiter-shell .waiter-pad { padding-inline: 22px; }
-}
 
 /* Acolchado lateral del panel de mesero.
    ------------------------------------------------------------

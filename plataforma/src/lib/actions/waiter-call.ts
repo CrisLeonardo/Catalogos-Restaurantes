@@ -14,13 +14,7 @@ export type WaiterCall = {
   id: string;
   table_number: number | null;
   created_at: string;
-  /** Para qué llamó (migración 122). Las llamadas viejas son 'call'. */
-  reason?: 'call' | 'bill';
 };
-
-/** Para qué llama el comensal. 'bill' es la que libera la mesa, así que en
-    el salón pesa más que una llamada genérica — ver lib/table-state.ts. */
-export type CallReason = 'call' | 'bill';
 
 /** ¿El usuario autenticado pertenece a este restaurante (o es super admin)? */
 async function authorizedFor(restaurantId: string): Promise<boolean> {
@@ -51,7 +45,6 @@ async function authorizedFor(restaurantId: string): Promise<boolean> {
 export async function callWaiter(
   restaurantId: string,
   tableNumber: number | null,
-  reason: CallReason = 'call',
 ): Promise<{ ok?: boolean; error?: string }> {
   if (!UUID_RE.test(restaurantId ?? '')) return { error: 'Restaurante no especificado.' };
 
@@ -81,35 +74,17 @@ export async function callWaiter(
     return { error: 'Este restaurante no tiene activada la llamada al mesero.' };
   }
 
-  // Solo dos valores posibles: lo que venga del cliente no entra crudo.
-  const motivo: CallReason = reason === 'bill' ? 'bill' : 'call';
-
-  /* La columna `reason` es de la migración 122. Si el código llega a un
-     entorno donde esa migración todavía no corrió, el insert falla y el
-     comensal se queda SIN poder llamar al mesero — una función que ya
-     existía y que no tiene por qué caerse por una mejora. Así que se
-     intenta con motivo y, si la columna no está, se reintenta sin ella:
-     se pierde el detalle, no el servicio. */
-  const base = { restaurant_id: restaurantId, table_number: table };
-  let { error } = await db.from('waiter_calls').insert({ ...base, reason: motivo });
-
-  // PGRST204 = PostgREST no encuentra la columna en su caché de esquema, que
-  // es exactamente el síntoma de "la migración todavía no corrió aquí".
-  // Comprobado contra el error real: "Could not find the 'reason' column of
-  // 'waiter_calls' in the schema cache". Se mira el código Y que hable de
-  // `reason`, para no tragarse por accidente otro fallo de esquema.
-  if (error && error.code === 'PGRST204' && /reason/i.test(error.message ?? '')) {
-    ({ error } = await db.from('waiter_calls').insert(base));
-  }
+  const { error } = await db.from('waiter_calls').insert({
+    restaurant_id: restaurantId,
+    table_number: table,
+  });
 
   if (error) return { error: error.message };
 
   const tableLabel = table ? ` · Mesa ${table}` : '';
   sendPushToRestaurant(restaurantId, {
-    title: motivo === 'bill' ? '💵 Piden la cuenta' : '🔔 Llamada al mesero',
-    body: motivo === 'bill'
-      ? `Un cliente${tableLabel} pide la cuenta.`
-      : `Un cliente${tableLabel} necesita atención.`,
+    title: '🔔 Llamada al mesero',
+    body: `Un cliente${tableLabel} necesita atención.`,
     tag: `waiter-${restaurantId}-${Date.now()}`,
     url: '/admin/mesas',
     requireInteraction: true,
@@ -128,9 +103,7 @@ export async function getPendingWaiterCalls(restaurantId: string): Promise<Waite
   const db = createServiceClient();
   const { data, error } = await db
     .from('waiter_calls')
-    // `reason` puede no existir todavía (migración 122): PostgREST devuelve
-    // error y `data` llega null, que aquí ya se trata como "sin llamadas".
-    .select('id, table_number, created_at, reason')
+    .select('id, table_number, created_at')
     .eq('restaurant_id', restaurantId)
     .is('resolved_at', null)
     .order('created_at', { ascending: true });

@@ -11,7 +11,6 @@ import { Icon } from '@/components/icons';
 import type { FloorTable, FloorFixture, FixtureKind } from '@/lib/theme/defaults';
 import type { IconName } from '@/components/icons';
 import type { TableOccupancy } from '@/lib/db/orders';
-import type { TableState, TableStateKind } from '@/lib/table-state';
 
 /** Primer nombre — las mesas son chicas, no hay lugar para el nombre completo. */
 function firstName(fullName: string | null | undefined): string | null {
@@ -59,113 +58,63 @@ export function fmtOccupied(ms: number): string {
   return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}m`;
 }
 
-/**
- * Cómo se dibuja una mesa según su estado (lib/table-state.ts).
- *
- * Tres pesos, no cinco colores. Antes TODA mesa ocupada se teñía de ámbar y
- * pasada una hora de rojo: con el salón lleno eran doce alarmas encendidas y
- * ninguna decía quién necesitaba al mesero. Ahora el color solo lo usa lo que
- * pide acción; lo demás se lee por la tinta y por el texto.
- */
-export function tokenSkin(kind: TableStateKind): {
-  border: string; background: string; color: string; shadow: string; numColor: string; labelColor: string;
-} {
-  if (kind === 'atencion') {
-    return {
-      border: '1.5px solid var(--brand-accent)',
-      background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)',
-      color: 'var(--u-text)',
-      shadow: '0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 18%, transparent)',
-      numColor: 'var(--u-text)',
-      labelColor: 'var(--brand-accent-ink)',
-    };
-  }
-  if (kind === 'abierta') {
-    return {
-      border: '1.5px solid var(--u-hair-2)',
-      background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-      color: 'var(--u-text)',
-      shadow: '0 2px 10px rgba(0,0,0,0.10)',
-      numColor: 'var(--u-text)',
-      labelColor: 'var(--u-text-3)',
-    };
-  }
-  // Libre: calla. Ni fondo ni sombra — solo el hueco donde va la mesa.
-  return {
-    border: '1.5px dashed var(--u-hair-2)',
-    background: 'transparent',
-    color: 'var(--u-text-4)',
-    shadow: 'none',
-    numColor: 'var(--u-text-4)',
-    labelColor: 'var(--u-text-4)',
-  };
+/** A partir de aquí la mesa lleva demasiado tiempo ocupada y hay que ir a verla. */
+const OCCUPIED_ALERT_MIN = 60;
+
+/** Color de la mesa según cuánto lleva ocupada (más tiempo = más urgente).
+ *  Dos niveles a propósito: ámbar "ocupada, todo normal" y rojo "esta mesa
+ *  lleva demasiado, ve a verla". Antes había un tercer tono naranja entre los
+ *  dos que en la práctica no se distinguía de un vistazo — que es justo para
+ *  lo que sirve el color aquí. El minutero de la mesa da el detalle fino. */
+function occupiedColor(elapsedMs: number | null): string {
+  if (elapsedMs == null) return 'var(--c-warn)';
+  const min = elapsedMs / 60000;
+  if (min >= OCCUPIED_ALERT_MIN) return 'var(--c-danger)';
+  return 'var(--c-warn)';
 }
 
-/* Ficha de mesa. La usa la cuadrícula del salón, "Otras mesas" y el riel.
-
-   Ya no recibe "ocupada sí/no" y decide el color por su cuenta: recibe el
-   estado resuelto (lib/table-state.ts) y solo lo pinta. Así el riel del
-   mesero, el plano y el panel del dueño no pueden discrepar. */
+/* Token de mesa (también lo usa la cuadrícula y "Otras mesas"). */
 export function TableToken({
-  n, state, total, selected, onTap, style,
+  n, occupied, since, waiterName, now, onTap, style,
 }: {
   n: number;
-  state: TableState;
-  /** Lo que lleva consumido la mesa, ya formateado por quien la pinta. */
-  total?: string | null;
-  selected?: boolean;
+  occupied: boolean;
+  /** ISO timestamp de cuándo se ocupó (para el temporizador). */
+  since?: string;
+  /** Quién atiende la mesa — null/undefined = el comensal pidió por su cuenta. */
+  waiterName?: string | null;
+  now?: number | null;
   onTap: () => void;
   style?: React.CSSProperties;
 }) {
-  const skin = tokenSkin(state.kind);
-  const libre = state.kind === 'libre';
+  const elapsedMs = occupied && since && now != null ? now - new Date(since).getTime() : null;
+  const elapsed = elapsedMs != null ? fmtOccupied(elapsedMs) : null;
+  const color = occupied ? occupiedColor(elapsedMs) : null;
+  const attendedBy = firstName(waiterName);
   return (
     <button
       type="button"
       onClick={onTap}
-      aria-label={`Mesa ${n} · ${state.label}`}
-      aria-current={selected ? 'true' : undefined}
       className="press"
       style={{
-        borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-        padding: '10px 11px 9px',
-        border: selected ? '1.5px solid var(--brand-accent)' : skin.border,
-        background: selected ? 'var(--brand-accent)' : skin.background,
-        boxShadow: selected ? 'none' : skin.shadow,
-        display: 'flex', flexDirection: 'column', gap: 2, minHeight: 86,
+        borderRadius: 16, cursor: 'pointer',
+        border: `1.5px solid ${color ? `color-mix(in srgb, ${color} 55%, transparent)` : 'var(--u-hair-2)'}`,
+        background: color ? `color-mix(in srgb, ${color} 14%, transparent)` : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+        color: color ?? 'var(--u-text)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+        boxShadow: color ? `0 4px 14px color-mix(in srgb, ${color} 18%, transparent)` : '0 2px 10px rgba(0,0,0,0.18)',
         transition: 'border-color .3s, background .3s, color .3s, box-shadow .3s',
         ...style,
       }}
     >
-      <span
-        className="t-mono"
-        style={{
-          fontSize: 20, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em',
-          color: selected ? 'var(--brand-on-accent, #fff)' : skin.numColor,
-        }}
-      >
-        {n}
-      </span>
-      {total && !libre && (
-        <span
-          className="t-mono"
-          style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '-0.02em',
-            color: selected ? 'rgba(255,255,255,0.86)' : 'var(--u-text-2)',
-          }}
-        >
-          {total}
+      <span style={{ fontSize: 11, color: color ? `color-mix(in srgb, ${color} 85%, transparent)` : 'var(--u-text-4)', fontWeight: 600 }}>Mesa</span>
+      <span style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{n}</span>
+      {occupied && <span style={{ fontSize: 11, fontWeight: 700, marginTop: 1 }}>● {elapsed ?? 'activa'}</span>}
+      {occupied && (
+        <span style={{ fontSize: 9.5, fontWeight: 600, opacity: 0.85, maxWidth: '92%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {attendedBy ?? 'Cliente'}
         </span>
       )}
-      <span
-        style={{
-          fontSize: 11.5, lineHeight: 1.3, marginTop: 'auto',
-          fontWeight: state.kind === 'atencion' ? 600 : 400,
-          color: selected ? 'rgba(255,255,255,0.86)' : skin.labelColor,
-        }}
-      >
-        {state.label}
-      </span>
     </button>
   );
 }
@@ -177,7 +126,6 @@ export default function FloorMap({
   fixtures = [],
   occupied,
   occupiedSince,
-  states,
   now,
   onSelect,
 }: {
@@ -188,8 +136,6 @@ export default function FloorMap({
   occupied: Set<number>;
   /** Mesa → desde cuándo se ocupó y quién la atiende (null = comensal). */
   occupiedSince?: Record<number, TableOccupancy>;
-  /** Mesa → estado ya resuelto por lib/table-state.ts. El plano solo pinta. */
-  states?: Record<number, TableState>;
   now?: number | null;
   onSelect: (n: number) => void;
 }) {
@@ -440,11 +386,9 @@ export default function FloorMap({
         {tables.map((tb) => {
           const isOcc = occupied.has(tb.n);
           const occ = occupiedSince?.[tb.n];
-          const state = states?.[tb.n];
-          const kind = state?.kind ?? (isOcc ? 'abierta' : 'libre');
-          const skin = tokenSkin(kind);
           const elapsedMs = isOcc && occ && now != null ? now - new Date(occ.since).getTime() : null;
           const elapsed = elapsedMs != null ? fmtOccupied(elapsedMs) : null;
+          const color = isOcc ? occupiedColor(elapsedMs) : null;
           const attendedBy = firstName(occ?.waiterName);
           const sx = tb.x * VIRT_W * t.s + t.x;
           const sy = tb.y * VIRT_H * t.s + t.y;
@@ -452,29 +396,26 @@ export default function FloorMap({
             <div
               key={tb.n}
               data-table={tb.n}
-              title={state ? `Mesa ${tb.n} · ${state.label}` : undefined}
               style={{
                 position: 'absolute',
                 left: sx, top: sy,
                 width: 'var(--floor-pin, 50px)', height: 'var(--floor-pin, 50px)',
                 transform: 'translate(-50%, -50%)',
                 borderRadius: tb.shape === 'square' ? 13 : 99, cursor: 'pointer',
-                border: skin.border,
-                background: kind === 'libre'
-                  ? 'color-mix(in srgb, var(--brand-bg) 80%, transparent)'
-                  : skin.background,
-                color: skin.color,
+                border: `1.5px solid ${color ? `color-mix(in srgb, ${color} 60%, transparent)` : 'var(--u-hair-2)'}`,
+                background: color ? `color-mix(in srgb, ${color} 18%, transparent)` : 'color-mix(in srgb, var(--brand-bg) 80%, transparent)',
+                color: color ?? 'var(--u-text)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0,
-                boxShadow: skin.shadow,
+                boxShadow: color ? `0 4px 14px color-mix(in srgb, ${color} 22%, transparent)` : '0 2px 10px rgba(0,0,0,0.3)',
                 WebkitBackdropFilter: 'blur(2px)', backdropFilter: 'blur(2px)',
                 transition: 'border-color .3s, background .3s, color .3s, box-shadow .3s',
               }}
             >
-              <span style={{ fontSize: 10, color: skin.labelColor, fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
-              <span className="t-mono" style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, pointerEvents: 'none', color: skin.numColor }}>{tb.n}</span>
+              <span style={{ fontSize: 10, color: color ? `color-mix(in srgb, ${color} 85%, transparent)` : 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Mesa</span>
+              <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
               {isOcc && (
-                <span style={{ fontSize: 9.5, fontWeight: 600, pointerEvents: 'none', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: skin.labelColor }}>
-                  {elapsed ?? 'activa'} · {attendedBy ?? 'Cliente'}
+                <span style={{ fontSize: 9.5, fontWeight: 700, pointerEvents: 'none', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  ● {elapsed ?? 'activa'} · {attendedBy ?? 'Cliente'}
                 </span>
               )}
             </div>

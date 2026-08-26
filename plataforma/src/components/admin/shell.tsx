@@ -153,23 +153,6 @@ export default function AdminShell({
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
-  /* Esc sale del modo servicio. El listener de `fullscreenchange` de arriba
-     solo cubre el caso de escritorio con Fullscreen API activa; en tablet no
-     se pide pantalla completa (ver toggleKiosk), así que sin esto un teclado
-     conectado a una tablet no tenía forma de salir. */
-  useEffect(() => {
-    if (!kiosk) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || document.fullscreenElement) return;
-      const el = document.activeElement as HTMLElement | null;
-      // Escapar de un campo de texto es cerrar el campo, no salir del modo.
-      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
-      setKiosk(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [kiosk]);
-
   /* En un teléfono/tablet NO se pide la Fullscreen API. Android responde a
      ella con su propio aviso del sistema ("Deslice hacia abajo desde la parte
      superior…"): una caja gris encima de la app, con texto cortado, que el
@@ -309,8 +292,8 @@ export default function AdminShell({
           <button
             type="button"
             onClick={toggleKiosk}
-            title="Salir del modo servicio (Esc)"
-            aria-label="Salir del modo servicio"
+            title="Salir de pantalla completa"
+            aria-label="Salir de pantalla completa"
             className="press glass"
             style={{
               position: 'fixed', top: 12, right: 12, zIndex: 100,
@@ -477,12 +460,12 @@ export default function AdminShell({
             <button
               type="button"
               onClick={toggleKiosk}
-              title="Modo servicio"
-              aria-label="Modo servicio"
+              title="Pantalla completa"
+              aria-label="Pantalla completa"
               className="glass-quiet press"
               style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', boxShadow: 'var(--adm-shadow-xs, none)' }}
             >
-              <Icon name="monitor" size={18} />
+              <Icon name="grid" size={18} />
             </button>
           )}
           {!preview && <span className="adm-desk-only"><AdminThemeToggle /></span>}
