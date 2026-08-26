@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
-import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
+import FloorMap, { TableToken } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
@@ -26,6 +26,7 @@ import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types
 import type { FloorPlan } from '@/lib/theme/defaults';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import { tablesWithState, needsAttention, type TableState } from '@/lib/table-state';
+import { groupTableLines, type TableLine } from '@/lib/table-lines';
 import type { PanelCurrency } from '@/components/admin/order-card';
 import {
   STATUS_LABEL_SHORT, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
@@ -436,25 +437,24 @@ function WaiterHeader({
        lugar que .admin-topbar. Vive dentro del contenido, como el
        encabezado de cualquier otra pantalla del panel. */
     <header style={{
-      background: 'linear-gradient(color-mix(in srgb, var(--u-text) 4%, transparent), color-mix(in srgb, var(--u-text) 4%, transparent)), color-mix(in srgb, var(--brand-bg) 82%, transparent)',
+      background: 'color-mix(in srgb, var(--brand-bg) 88%, transparent)',
       borderBottom: '1px solid var(--u-hair)',
-      borderRadius: 16,
     }}>
       <div className="waiter-wrap waiter-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
         {onBack && (
-          <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
+          <button type="button" onClick={onBack} aria-label="Volver" className="press" style={{ width: 40, height: 40, borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="chevronLeft" size={20} />
           </button>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontWeight: 600, fontSize: 15.5, letterSpacing: '-0.01em', color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {title}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="userPlus" size={12} /> {waiterName}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>{waiterName}</div>
         </div>
         {showOrders && (
-          <button type="button" onClick={onShowOrders} className="press glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-            <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
+          <button type="button" onClick={onShowOrders} className="press" style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 14px', borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, flexShrink: 0 }}>
+            <Icon name="list" size={15} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
           </button>
         )}
       </div>
@@ -487,6 +487,10 @@ export default function WaiterPanel({
   const [tableToFree, setTableToFree] = useState<number | null>(null);
   /* Liberar sin cobrar pide confirmación explícita: es irreversible y roza el dinero. */
   const [confirmFree, setConfirmFree] = useState(false);
+  /* Los platos que hay en la mesa abierta, ya agrupados y con el estado de
+     su pedido. Es lo que convierte la hoja en un expediente en vez de tres
+     botones sueltos. `null` = todavía cargando. */
+  const [tableLines, setTableLines] = useState<TableLine[] | null>(null);
   const [freeing, startFree] = useTransition();
   const [productModal, setProductModal] = useState<Product | null>(null);
   /** Línea del carrito que se está editando (null = la hoja está agregando una nueva). */
@@ -1025,6 +1029,21 @@ export default function WaiterPanel({
     </div>
   );
 
+  /* Al abrir una mesa se traen sus platos. Se reutiliza getTableBill, que
+     ya existía para la vista de cuenta: mismo dato, otro sitio. */
+  useEffect(() => {
+    if (tableToFree == null) { setTableLines(null); return; }
+    let vivo = true;
+    setTableLines(null);
+    (async () => {
+      const res = await getTableBill(restaurantId, tableToFree);
+      if (!vivo) return;
+      if ('error' in res) { setTableLines([]); return; }
+      setTableLines(groupTableLines(res.orders));
+    })();
+    return () => { vivo = false; };
+  }, [tableToFree, restaurantId]);
+
   /* Mesa pedida por la URL (?mesa=7). Es lo que permite que el salón del
      panel del dueño enlace directo a una mesa, y que recargar en medio del
      turno no devuelva al mesero al principio. Se aplica UNA vez: después
@@ -1429,31 +1448,29 @@ export default function WaiterPanel({
                 </div>
               )}
 
-              {/* Pedido sin mesa. Va ARRIBA del plano y no escondido al final:
-                  quien entra a pedir para llevar no debería tener que buscar
-                  cómo decirlo entre veinte mesas. */}
               {pickupEnabled && (
+                /* Deja de ser una tarjeta de vidrio con borde punteado
+                   gritando en medio del salón: es una fila más, al final y
+                   en silencio. Quien viene a pedir para llevar la encuentra;
+                   quien viene a atender mesas no la tropieza. */
                 <button
                   type="button"
                   onClick={startTakeaway}
-                  className="press glass"
+                  className="press"
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '13px 15px', marginBottom: 16, borderRadius: 14,
-                    border: '1.5px dashed var(--u-hair-2)', cursor: 'pointer', textAlign: 'left',
+                    padding: '13px 16px', marginBottom: 16, borderRadius: 12, minHeight: 56,
+                    border: '1px solid var(--u-hair)', background: 'transparent',
+                    cursor: 'pointer', textAlign: 'left',
                   }}
                 >
-                  <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
-                    <Icon name="bag" size={19} />
+                  <Icon name="bag" size={18} style={{ color: 'var(--u-text-3)', flexShrink: 0 }} />
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, color: 'var(--u-text)' }}>
+                    Para llevar
                   </span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Para llevar · sin mesa</span>
-                    <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Mostrador, barra o alguien que pasa a recoger</span>
-                  </span>
-                  <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+                  <Icon name="plus" size={16} style={{ color: 'var(--brand-accent-ink)', flexShrink: 0 }} />
                 </button>
               )}
-
               {abandonedCount > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, marginBottom: 14, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
                   <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)', flexShrink: 0 }} />
@@ -1587,35 +1604,61 @@ export default function WaiterPanel({
           {tableToFree !== null && (
             <div onClick={() => { setTableToFree(null); setConfirmFree(false); }} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
               <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, padding: '20px 20px 28px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
-                    <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
-                      Tiene un pedido activo{tableToFree != null && occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree].since).getTime())}` : ''}
+                {/* La mesa es el EXPEDIENTE: primero se lee qué hay en ella y
+                    en qué va cada plato; las acciones vienen después. Un solo
+                    reloj y un solo formato de tiempo — el de table-state. */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 21, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>
+                      Mesa {tableToFree}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3 }}>
+                      {tableToFree != null && stateByTable[tableToFree]?.label}
                       {tableToFree != null && occupiedSince[tableToFree] && (
                         occupiedSince[tableToFree].waiterName
-                          ? ` · atendida por ${occupiedSince[tableToFree].waiterName}`
+                          ? ` · ${occupiedSince[tableToFree].waiterName}`
                           : ' · pedido por el comensal'
                       )}
                     </div>
                   </div>
-                  <button onClick={() => { setTableToFree(null); setConfirmFree(false); }} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
-                    <Icon name="x" size={18} />
+                  <button onClick={() => { setTableToFree(null); setConfirmFree(false); }} aria-label="Cerrar" className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0 }}>
+                    <Icon name="x" size={17} />
                   </button>
                 </div>
-                {/* La mesa es el expediente, no un menú de tres verbos sin
-                    relación. Lo que hay en ella se lee primero; las acciones
-                    van después y en orden de uso. */}
-                {tableToFree != null && occupiedSince[tableToFree] && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', marginBottom: 14 }}>
-                    <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-2)' }}>
-                      {occupiedSince[tableToFree].itemCount}{' '}
-                      {occupiedSince[tableToFree].itemCount === 1 ? 'plato' : 'platos'}
-                      {stateByTable[tableToFree] ? ` · ${stateByTable[tableToFree].label}` : ''}
-                    </div>
-                    <div className="t-mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--u-text)' }}>
-                      {money(occupiedSince[tableToFree].total, currency)}
-                    </div>
+
+                {/* Lo que hay en la mesa, plato por plato. */}
+                {tableToFree != null && (
+                  <div style={{ border: '1px solid var(--u-hair)', borderRadius: 12, overflow: 'hidden', marginBottom: 16, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)' }}>
+                    {tableLines === null ? (
+                      <div style={{ padding: '14px 16px', fontSize: 13.5, color: 'var(--u-text-4)' }}>Cargando lo que hay en la mesa…</div>
+                    ) : tableLines.length === 0 ? (
+                      <div style={{ padding: '14px 16px', fontSize: 13.5, color: 'var(--u-text-4)' }}>Todavía no hay platos en esta mesa.</div>
+                    ) : (
+                      tableLines.map((l, i) => (
+                        <div key={`${l.name}-${i}`}>
+                          {i > 0 && <div style={{ height: 1, background: 'var(--u-hair)', marginLeft: 16 }} />}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', minHeight: 44 }}>
+                            <span className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text-3)', width: 26, flexShrink: 0 }}>{l.qty}×</span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: 'var(--u-text)' }}>{l.name}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: l.color, flexShrink: 0 }}>
+                              <span style={{ width: 7, height: 7, borderRadius: 99, background: l.color }} />
+                              {l.estado}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {tableToFree != null && occupiedSince[tableToFree] && (
+                      <>
+                        <div style={{ height: 1, background: 'var(--u-hair)' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px' }}>
+                          <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: 'var(--u-text)' }}>Total</span>
+                          <span className="t-mono" style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)' }}>
+                            {money(occupiedSince[tableToFree].total, currency)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1951,7 +1994,7 @@ export default function WaiterPanel({
                 {query ? 'Ningún plato coincide con tu búsqueda.' : 'Sin productos disponibles en esta categoría.'}
               </div>
             ) : (
-              <div className="waiter-menu-grid">
+              <div style={{ border: '1px solid var(--u-hair)', borderRadius: 14, overflow: 'hidden' }}>
                 {visibleProducts.map((p, i) => {
                   const qty = cartQtyOf(p.id);
                   const hasOptions = ((p.options as ProductOptionGroup[] | null) ?? []).length > 0;
@@ -1959,56 +2002,66 @@ export default function WaiterPanel({
                   // búsqueda no hay "el siguiente", hay una carta entera.
                   const marcado = !!query && i === kbIndex;
                   return (
-                    <div
-                      key={p.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleProductTap(p, typedQty)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProductTap(p, typedQty); } }}
-                      aria-current={marcado ? 'true' : undefined}
-                      className="press glass"
-                      style={{
-                        // Acolchado ajustado a la columna angosta del teléfono
-                        // (dos por fila): con 14 px por lado el nombre de un
-                        // plato de tres palabras se partía en tres renglones.
-                        borderRadius: 14, padding: '12px 12px 11px', position: 'relative', cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column', gap: 6,
-                        border: qty > 0 || marcado ? '1.5px solid var(--brand-accent)' : '1.5px solid transparent',
-                        boxShadow: marcado ? '0 0 0 3px color-mix(in srgb, var(--brand-accent) 22%, transparent)' : undefined,
-                      }}
-                    >
-                      {qty > 0 && (
-                        <span style={{ position: 'absolute', top: 8, right: 8, minWidth: 24, height: 24, padding: '0 6px', borderRadius: 99, background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)', fontSize: 13, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
-                          {qty}
-                        </span>
-                      )}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--u-text)' }}>
-                        {p.icon && (
-                          ICON_PATHS[p.icon]
-                            ? <Icon name={p.icon} size={23} />
-                            : <span style={{ fontSize: 23 }}>{p.icon}</span>
-                        )}
-                        <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, paddingRight: qty > 0 ? 24 : 0 }}>{p.name}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{money(p.price, currency)}</span>
-                      </div>
-
-                      {/* Controles rápidos: +/- para productos sin opciones; "+ Agregar" para los que tienen.
-                          stopPropagation en todos: si no, el tap también dispara el onClick de la tarjeta
-                          entera y el plato se agrega dos veces. */}
-                      {hasOptions ? (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setProductModal(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                          {qty > 0 ? 'Agregar otro' : '+ Elegir opciones'}
-                        </button>
-                      ) : qty > 0 ? (
-                        <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); decProduct(p.id); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleProductTap(p); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                    <div key={p.id}>
+                      {i > 0 && <div style={{ height: 1, background: 'var(--u-hair)', marginLeft: 16 }} />}
+                      {/* Una FILA por plato, no una tarjeta con tres controles.
+                          Tocar la fila agrega uno; si ya hay, aparece el par
+                          −/+ a la derecha. Un solo gesto, un solo sitio. */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-current={marcado ? 'true' : undefined}
+                        onClick={() => handleProductTap(p, typedQty)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProductTap(p, typedQty); } }}
+                        className="press"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '10px 12px 10px 16px', minHeight: 56, cursor: 'pointer',
+                          background: marcado
+                            ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)'
+                            : 'transparent',
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 15, color: 'var(--u-text)', fontWeight: 500 }}>{p.name}</div>
+                          {hasOptions && (
+                            <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Elige opciones</div>
+                          )}
                         </div>
-                      ) : (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); handleProductTap(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
-                          + Agregar
-                        </button>
-                      )}
+                        <span className="t-mono" style={{ fontSize: 14, color: 'var(--u-text-2)', flexShrink: 0 }}>
+                          {money(p.price, currency)}
+                        </span>
+                        {qty > 0 ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              aria-label={`Quitar un ${p.name}`}
+                              onClick={(e) => { e.stopPropagation(); decProduct(p.id); }}
+                              className="press"
+                              style={{ width: 40, height: 40, borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none', color: 'var(--u-text)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                            >
+                              <Icon name="minus" size={16} />
+                            </button>
+                            <span className="t-mono" style={{ minWidth: 16, textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>{qty}</span>
+                            <button
+                              type="button"
+                              aria-label={`Agregar otro ${p.name}`}
+                              onClick={(e) => { e.stopPropagation(); handleProductTap(p, 1); }}
+                              className="press"
+                              style={{ width: 40, height: 40, borderRadius: 11, border: '1px solid var(--brand-accent)', background: 'none', color: 'var(--brand-accent-ink)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                            >
+                              <Icon name="plus" size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            style={{ width: 40, height: 40, borderRadius: 11, border: '1px solid var(--u-hair-2)', color: 'var(--u-text-3)', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+                          >
+                            <Icon name="plus" size={16} />
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -2078,15 +2131,24 @@ export default function WaiterPanel({
               </button>
               <button
                 type="button"
-                onClick={() => setView('review')}
+                /* Con mesa elegida se envía DIRECTO: el repaso es la mesa, a
+                   la que estos platos se suman y donde se ven al volver. La
+                   pantalla de "Revisar" solo queda para llevar, que sí
+                   necesita un nombre de quien recoge. */
+                onClick={() => (tableNumber ? handleSubmit() : setView('review'))}
+                disabled={submitting}
                 className="press btn-accent"
-                style={{ width: '100%', padding: '15px 18px', borderRadius: 16, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontWeight: 700, fontSize: 15.5 }}
+                style={{ width: '100%', padding: '15px 18px', borderRadius: 16, border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontWeight: 700, fontSize: 15.5, opacity: submitting ? 0.6 : 1 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ minWidth: 26, height: 26, borderRadius: 99, background: 'rgba(0,0,0,0.18)', display: 'grid', placeItems: 'center', fontSize: 13.5, fontWeight: 800 }}>{cartCount}</span>
-                  Revisar pedido
+                  <span className="t-mono" style={{ minWidth: 26, height: 26, borderRadius: 99, background: 'rgba(0,0,0,0.18)', display: 'grid', placeItems: 'center', fontSize: 13.5, fontWeight: 700 }}>{cartCount}</span>
+                  {submitting
+                    ? 'Enviando…'
+                    : tableNumber
+                      ? `Enviar a cocina · mesa ${tableNumber}`
+                      : 'Revisar pedido'}
                 </span>
-                <span>{money(total, currency)} →</span>
+                <span className="t-mono">{money(total, currency)}</span>
               </button>
             </div>
           </div>
