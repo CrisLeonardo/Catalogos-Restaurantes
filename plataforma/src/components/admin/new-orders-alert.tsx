@@ -368,10 +368,12 @@ export default function NewOrdersAlert({
   const hiddenCount = sorted.length - visible.length;
 
   return (
-    <div style={{
+    <div className="adm-float-alert" data-side="right" style={{
       // Abajo a la DERECHA: las llamadas al mesero ocupan la izquierda
       // (waiter-calls-alert.tsx) y deben poder verse las dos a la vez.
-      position: 'fixed', right: 16, bottom: 16, zIndex: 71,
+      // El sitio exacto lo pone globals.css (.adm-float-alert), que además
+      // levanta el aviso por encima de la barra inferior del teléfono.
+      zIndex: 71,
       display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch',
       maxWidth: 'min(370px, calc(100vw - 32px))',
       maxHeight: 'calc(100vh - 90px)', overflowY: showAll ? 'auto' : 'visible',

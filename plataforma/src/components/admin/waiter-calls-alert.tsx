@@ -217,8 +217,11 @@ export default function WaiterCallsAlert({
   const hiddenCount = sorted.length - visible.length;
 
   return (
-    <div style={{
-      position: 'fixed', left: 16, bottom: 16, zIndex: 70,
+    <div className="adm-float-alert" data-side="left" style={{
+      // `position` y `bottom` viven en globals.css (.adm-float-alert): en el
+      // teléfono tienen que esquivar la barra inferior, y un valor EN LÍNEA
+      // le gana siempre a la media query.
+      zIndex: 70,
       display: 'flex', flexDirection: 'column', gap: 8,
       maxWidth: 'min(360px, calc(100vw - 32px))',
       // Expandida, la lista es desplazable en vez de crecer sin límite.

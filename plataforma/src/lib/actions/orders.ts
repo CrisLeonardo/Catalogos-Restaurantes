@@ -736,36 +736,10 @@ export async function freeTable(
 ): Promise<{ error?: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'No autorizado.' };
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
-  const { data: profile } = await db
-    .from('profiles')
-    .select('role, restaurant_id, permissions')
-    .eq('id', user.id)
-    .single();
-
-  // O administra el grupo de esta sucursal, o es su propio restaurante
-  // (migración 116: ya no hay un rol que preguntar), o tiene membresía aquí
-  // — que es el caso del dueño desde el modelo de membresías, porque su
-  // `profiles.restaurant_id` nace en null y esta línea lo dejaba fuera.
-  const efectivo = await resolveEffectiveRole(
-    { role: (profile?.role as string | null) ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
-    restaurantId,
-  );
-  const ownsBranch = (await canActOnGroupBranch(restaurantId))
-    || efectivo.isMember
-    || profile?.restaurant_id === restaurantId;
-  if (
-    !profile ||
-    !ownsBranch ||
-    !can(efectivo.role, efectivo.permissions, 'mesero')
-  ) {
-    return { error: 'No autorizado.' };
-  }
-
   const tableAddress = `Mesa ${tableNumber}`;
   // Se piden los ids de vuelta: cerrar la mesa es el momento en que la venta
   // de comer en local queda cobrada, y es cuando toca facturarla. Sin el
@@ -1039,7 +1013,39 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
 
 /** Autorización compartida de la cuenta de mesa: sesión válida, del mismo
  *  restaurante y con permiso de mesero. */
-async function assertTableAccess(restaurantId: string): Promise<{ error: string } | null> {
+/** Quién está tocando la mesa, ya comprobado. */
+interface TableActor {
+  userId: string;
+  role: string;
+  /** El restaurante del perfil. `null` en el super admin, que no tiene uno. */
+  profileRestaurantId: string | null;
+}
+
+/**
+ * ¿Puede esta persona operar las mesas de este restaurante?
+ *
+ * Es la ÚNICA regla, y devuelve al actor para que quien la llame no tenga
+ * que volver a pedir el perfil. Antes estaba copiada palabra por palabra en
+ * `freeTable`, `archiveAbandonedTables` y aquí: tres sitios donde arreglar
+ * lo mismo, y de hecho ya habían empezado a separarse.
+ *
+ * Pasa quien: administra el grupo de esta sucursal, es su propio restaurante
+ * (migración 116: ya no hay un rol que preguntar), tiene membresía aquí —el
+ * caso del dueño desde el modelo de membresías, cuyo `restaurant_id` nace en
+ * null— o es el super admin.
+ *
+ * SUPER_ADMIN (2026-08-26): las tres funciones de mesa eran las únicas del
+ * archivo que lo dejaban fuera. `updateOrderStatus`, `getPendingNewOrders` y
+ * `resolveOrderRestaurant` ya lo admiten, y el layout del panel de mesero
+ * también ("SUPER_ADMIN sí entra, soporte/pruebas"). El resultado no era un
+ * candado sino una pantalla rota: en Tomar pedidos veía el salón entero con
+ * sus totales —`getActiveTableNumbers` no filtra por persona— y al abrir una
+ * mesa le salía "No autorizado" en la comanda. Se estaba escondiendo el
+ * detalle de un dinero que ya se enseñaba dos centímetros más arriba.
+ */
+async function assertTableAccess(
+  restaurantId: string,
+): Promise<{ error: string } | { actor: TableActor }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autorizado.' };
@@ -1050,26 +1056,33 @@ async function assertTableAccess(restaurantId: string): Promise<{ error: string 
     .select('role, restaurant_id, permissions')
     .eq('id', user.id)
     .single();
+  if (!profile) return { error: 'No autorizado.' };
 
-  // O administra el grupo de esta sucursal, o es su propio restaurante
-  // (migración 116: ya no hay un rol que preguntar), o tiene membresía aquí
-  // — que es el caso del dueño desde el modelo de membresías, porque su
-  // `profiles.restaurant_id` nace en null y esta línea lo dejaba fuera.
+  const role = profile.role as string;
+  const esSuper = role === 'SUPER_ADMIN';
+
   const efectivo = await resolveEffectiveRole(
-    { role: (profile?.role as string | null) ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
+    { role, permissions: (profile.permissions as string[] | null) ?? null },
     restaurantId,
   );
-  const ownsBranch = (await canActOnGroupBranch(restaurantId))
+  const ownsBranch = esSuper
+    || (await canActOnGroupBranch(restaurantId))
     || efectivo.isMember
-    || profile?.restaurant_id === restaurantId;
-  if (
-    !profile ||
-    !ownsBranch ||
-    !can(efectivo.role, efectivo.permissions, 'mesero')
-  ) {
+    || profile.restaurant_id === restaurantId;
+
+  // El super admin no tiene permisos de restaurante que consultar: su rol ES
+  // el permiso, igual que en el resto de acciones de este archivo.
+  if (!ownsBranch || (!esSuper && !can(efectivo.role, efectivo.permissions, 'mesero'))) {
     return { error: 'No autorizado.' };
   }
-  return null;
+
+  return {
+    actor: {
+      userId: user.id,
+      role,
+      profileRestaurantId: (profile.restaurant_id as string | null) ?? null,
+    },
+  };
 }
 
 /** Todos los pedidos activos de una mesa (todas las rondas acumuladas),
@@ -1080,8 +1093,8 @@ export async function getTableBill(
 ): Promise<{ orders: OrderWithItems[] } | { error: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const denied = await assertTableAccess(restaurantId);
-  if (denied) return denied;
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
 
   return { orders: await getOrdersForTable(restaurantId, tableNumber) };
 }
@@ -1110,8 +1123,8 @@ export async function printTableBillShare(
   const { restaurantId, tableNumber, mode, peopleIds, names, assignment, personId } = input;
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
-  const denied = await assertTableAccess(restaurantId);
-  if (denied) return denied;
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
 
   const orders = await getOrdersForTable(restaurantId, tableNumber);
   if (orders.length === 0) return { error: 'Esta mesa no tiene pedidos activos.' };
@@ -1208,42 +1221,19 @@ async function finishTicket(t: {
 export async function archiveAbandonedTables(restaurantId: string): Promise<{ error?: string; archived?: number }> {
   if (!restaurantId) return { error: 'Restaurante inválido.' };
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'No autorizado.' };
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+  const { actor } = acceso;
 
   const db = createServiceClient();
-  const { data: profile } = await db
-    .from('profiles')
-    .select('role, restaurant_id, permissions')
-    .eq('id', user.id)
-    .single();
-
-  // O administra el grupo de esta sucursal, o es su propio restaurante
-  // (migración 116: ya no hay un rol que preguntar), o tiene membresía aquí
-  // — que es el caso del dueño desde el modelo de membresías, porque su
-  // `profiles.restaurant_id` nace en null y esta línea lo dejaba fuera.
-  const efectivo = await resolveEffectiveRole(
-    { role: (profile?.role as string | null) ?? null, permissions: (profile?.permissions as string[] | null) ?? null },
-    restaurantId,
-  );
-  const ownsBranch = (await canActOnGroupBranch(restaurantId))
-    || efectivo.isMember
-    || profile?.restaurant_id === restaurantId;
-  if (
-    !profile ||
-    !ownsBranch ||
-    !can(efectivo.role, efectivo.permissions, 'mesero')
-  ) {
-    return { error: 'No autorizado.' };
-  }
-
   const { data, error } = await db.rpc('leogin_archive_abandoned_orders', { p_restaurant_id: restaurantId });
   if (error) return { error: error.message };
 
   const archived = (data as number) ?? 0;
-  if (archived > 0 && profile.restaurant_id) {
-    logActivity({ restaurantId: profile.restaurant_id, actorId: user.id, action: 'auto_archive', entity: `${archived} mesa(s)` });
+  if (archived > 0) {
+    // El super admin no tiene restaurante propio: se apunta el que se archivó,
+    // que es el dato que le sirve a quien lea la bitácora.
+    logActivity({ restaurantId, actorId: actor.userId, action: 'auto_archive', entity: `${archived} mesa(s)` });
   }
 
   revalidatePath('/admin/mesero');

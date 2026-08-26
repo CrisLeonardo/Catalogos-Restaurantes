@@ -288,6 +288,37 @@ export default function AdminShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [kiosk, kioskEligible],
   );
+  /* Los dos avisos que no se pueden perder, montados en las DOS ramas.
+     Antes solo existían con el chrome del panel puesto: en pantalla completa
+     —justo el modo en que la tablet se queda sola sobre el mostrador— el
+     mesero dejaba de oír el chime de "llaman de la mesa 6" y no le entraba el
+     aviso de pedido nuevo. Se notó al darle al modo servicio un botón propio
+     dentro de Tomar pedidos: hacerlo fácil de alcanzar convertía un rincón
+     olvidado en el sitio donde más falta hacen. */
+  const avisosFlotantes = (
+    <>
+      {!preview && restaurantId && ordersEnabled && (
+        /* Alerta de pedido nuevo, visible en TODO el panel (no solo en
+           /admin/pedidos) y persistente hasta que alguien la atienda. Es
+           además la ÚNICA fuente del sonido de pedido: orders-panel y
+           notifications.tsx ya no suenan por su cuenta, así que no pueden
+           encimarse dos chimes por el mismo pedido. Solo se mutea en cocina,
+           que tiene su propio aviso (kitchen-display.tsx). */
+        <NewOrdersAlert restaurantId={restaurantId} muteChime={isKitchen} />
+      )}
+      {!preview && restaurantId && llamadaMeseroActive && (
+        /* OJO: a diferencia de AdminNotifications, ninguna pantalla
+           (orders-panel, kitchen-display) reproduce sonido de llamada al
+           mesero por su cuenta — WaiterCallsAlert es la ÚNICA fuente del chime
+           (ver su comentario de cabecera). Silenciarlo también en isLive
+           dejaba la alerta muda justamente en /admin/pedidos, la pantalla
+           donde el staff pasa más tiempo. Solo se mutea en modo cocina (por
+           diseño: ver notifications.tsx). */
+        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
+      )}
+    </>
+  );
+
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';
 
   if (kiosk && kioskEligible) {
@@ -314,6 +345,7 @@ export default function AdminShell({
             <Icon name="x" size={18} />
           </button>
           {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}
+          {avisosFlotantes}
         </div>
         <Toaster />
       </ToastProvider>
@@ -519,24 +551,7 @@ export default function AdminShell({
           <ServiceModeContext.Provider value={servicio}>{children}</ServiceModeContext.Provider>
         </div>
       </div>
-      {!preview && restaurantId && ordersEnabled && (
-        // Alerta de pedido nuevo, visible en TODO el panel (no solo en
-        // /admin/pedidos) y persistente hasta que alguien la atienda. Es
-        // además la ÚNICA fuente del sonido de pedido: orders-panel y
-        // notifications.tsx ya no suenan por su cuenta, así que no pueden
-        // encimarse dos chimes por el mismo pedido. Solo se mutea en cocina,
-        // que tiene su propio aviso (kitchen-display.tsx).
-        <NewOrdersAlert restaurantId={restaurantId} muteChime={isKitchen} />
-      )}
-      {!preview && restaurantId && llamadaMeseroActive && (
-        // OJO: a diferencia de AdminNotifications, ninguna pantalla (orders-panel,
-        // kitchen-display) reproduce sonido de llamada al mesero por su cuenta —
-        // WaiterCallsAlert es la ÚNICA fuente del chime (ver su comentario de
-        // cabecera). Silenciarlo también en isLive dejaba la alerta muda
-        // justamente en /admin/pedidos, la pantalla donde el staff pasa más
-        // tiempo. Solo se mutea en modo cocina (por diseño: ver notifications.tsx).
-        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
-      )}
+      {avisosFlotantes}
       {!preview && <CommandSearch groups={groups} />}
       <WelcomeTour restaurantName={restaurantName} preview={preview} />
       {!preview && <LoginWelcomeToast restaurantName={restaurantName} userName={userName} roleLabel={roleLabel} />}

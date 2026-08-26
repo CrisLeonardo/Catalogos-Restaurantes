@@ -2154,6 +2154,35 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 .preview-frame.is-wide iframe { border-radius: 12px; }
 
 /* ============================================================
+   AVISOS FLOTANTES — llamada al mesero y pedido nuevo
+   ------------------------------------------------------------
+   Los dos viven pegados al borde de abajo, uno a cada lado, y
+   siguen visibles en TODO el panel: son las dos cosas que no se
+   pueden perder aunque nadie esté mirando la pantalla correcta.
+
+   El sitio vive aquí y no en línea porque en el teléfono hay una
+   barra de navegación fija abajo: con `bottom: 16` los avisos se
+   montaban encima y tapaban los seis destinos del panel — y ahí
+   no hay otra forma de navegar. Se levantan los mismos 56 px que
+   ya usa `.waiter-cart-bar`, que resolvió este mismo problema.
+
+   En modo servicio no hay barra que esquivar: vuelven al borde.
+   ============================================================ */
+.adm-float-alert {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.adm-float-alert[data-side="left"]  { left: 16px; }
+.adm-float-alert[data-side="right"] { right: 16px; }
+
+@media (max-width: 1024px) {
+  .adm-float-alert { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  /* En modo servicio los avisos se montan DENTRO de .admin-kiosk, que no
+     tiene barra inferior: ahí vuelven al borde. */
+  .admin-kiosk .adm-float-alert { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ============================================================
    TOMAR PEDIDOS — el armazón de dos paneles (rediseño 2026-08-26)
    ------------------------------------------------------------
    UNA interfaz, tres anchos. No se elige aparato: el restaurante
@@ -2419,6 +2448,10 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   height: 100dvh; min-height: 0;
   border: none; border-radius: 0; box-shadow: none;
 }
+/* A pantalla completa, el armazón llega al canto derecho — y ahí vive la
+   «X» flotante con la que se sale (shell.tsx, `position: fixed`). Sin este
+   hueco se montaba encima del último botón de la barra y lo recortaba. */
+.admin-kiosk .wp-top { padding-right: 64px; }
 
 /* Hoja modal: pegada abajo en móvil, tarjeta centrada en escritorio. */
 .waiter-sheet-scrim { display: flex; justify-content: center; align-items: flex-end; }

@@ -270,6 +270,42 @@ Si el cambio incluye **cambios en la base de datos** (nuevas tablas/columnas):
 
 ---
 
+# PARTE 7b — Migración 122: motivo de la llamada al mesero
+
+Es la **única** migración del rediseño de "Tomar pedidos y mesas"
+(2026-08-26) y está **pendiente en producción**.
+
+**Qué hace:** añade `waiter_calls.reason` para distinguir *"necesito algo"*
+de *"quiero pagar"*. Es lo que permite que el salón avise **"Mesa 6 pidió la
+cuenta"** en vez de un genérico "te llaman" — el aviso más útil de la
+pantalla, porque cobrar es lo que libera la mesa.
+
+**Sin ella no se rompe nada.** El código detecta que la columna no existe y
+reintenta sin ella, tanto al escribir como al leer: el botón del comensal
+sigue funcionando y todas las llamadas cuentan como genéricas. Solo se pierde
+el detalle.
+
+**Cómo aplicarla** — pega el contenido de
+`plataforma/supabase/migrations/122_waiter_call_reason.sql` en el **SQL Editor**
+de Supabase. Es idempotente (`add column if not exists` + la restricción
+envuelta en un bloque que ignora el duplicado): si la ejecutas dos veces no
+pasa nada.
+
+**Cómo comprobar que quedó:**
+
+```sql
+select column_name, data_type, column_default
+from information_schema.columns
+where table_name = 'waiter_calls' and column_name = 'reason';
+```
+
+Un renglón con `text` y `'call'::text` = lista. Cero renglones = no corrió.
+
+Después, en el menú público, el botón flotante ofrece las dos opciones
+("Necesito algo" / "La cuenta, por favor") y el salón las pinta distinto.
+
+---
+
 # PARTE 8 — Poner la nube al día (módulos, recetas, llamada al mesero)
 
 El esquema fue creciendo. Si tu Supabase de producción está **atrasado**, aplica
