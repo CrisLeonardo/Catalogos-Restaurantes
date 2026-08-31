@@ -1,69 +1,72 @@
 'use client';
 
-/* Tomar pedidos — el armazón de dos paneles.
+/* WaiterPanel — interfaz táctil para meseros.
    ══════════════════════════════════════════════════════════════════
-   Esta pantalla dejó de ser un asistente de tres pasos (Mesa → Menú →
-   Revisar) y pasó a ser un solo sitio donde el salón y la comanda se
-   ven a la vez:
+   Flujo guiado en pantallas completas: Mesa → Menú → Revisar, más las
+   pestañas "Mis pedidos" y "Cobrar". Cada vista ocupa la pantalla
+   entera, centrada en una columna cómoda (.waiter-wrap / narrow) —
+   nunca un riel fijo junto a un panel. Es la vuelta al método
+   original (commit 520dcdb) tras dos rediseños que el restaurante
+   rechazó, esta vez alimentado por la arquitectura de datos nueva:
 
-     · el RIEL de la izquierda dice qué hay (mesas, o todo lo que está
-       en marcha). Nunca navega: solo cambia qué está elegido;
-     · el PANEL de la derecha es el objeto elegido. Sin nada elegido
-       no se queda en blanco: contesta "¿quién me necesita ahora?".
+     · lib/table-state.ts — la única regla del estado de una mesa
+       (libre / abierta / atención), con motivo;
+     · el carrito es un MAPA por mesa (CartMap): cambiar de mesa nunca
+       borra lo que se estaba apuntando en otra;
+     · la selección vive en la URL (?mesa=4), para que recargar la
+       tablet a media comanda no la pierda;
+     · el borrador rescatado, la cola sin conexión con respaldo al hub
+       del local, la anulación con motivo y PIN, y el archivado
+       automático de mesas abandonadas — nada de esto cambió.
 
-   Por debajo de 1024 px se pliega: el riel ES la pantalla y elegir una
-   mesa la sustituye por su comanda. Es el mismo marcado y los mismos
-   componentes, no un segundo diseño (ver `.wp` en globals.css).
-
-   Este archivo es el orquestador: guarda el estado, habla con el
-   servidor y reparte. Lo que se ve vive en components/admin/waiter/.
-
-   ── Lo que NO cambió ──────────────────────────────────────────────
-   El borrador que rescata la comanda a medias, la cola sin conexión
-   con identificador idempotente y su respaldo contra el hub del local,
-   la anulación con motivo y PIN, dividir la cuenta, el plano del salón
-   con zoom y niveles. Cambió dónde se tocan, no qué hacen. */
+   Responsive: en móvil es una columna a pantalla completa; en PC/tablet
+   grande el contenido se centra en una columna cómoda (.waiter-wrap) en
+   vez de estirarse a todo lo ancho. Si el restaurante diseñó su plano del
+   salón (config.floorPlan), las mesas se muestran colocadas como en el
+   local; si no, se usa la cuadrícula automática. */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
-import { Icon } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons';
+import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
 import { createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import WaiterBill, { clearSavedSplit } from '@/components/admin/waiter-bill';
 import VoidOrderDialog from '@/components/admin/void-order-dialog';
 import ProductOptionsModal from '@/components/admin/waiter/product-options-modal';
-import Rail, { type RailTab } from '@/components/admin/waiter/rail';
-import AttentionPane from '@/components/admin/waiter/attention-pane';
-import ComandaPane from '@/components/admin/waiter/comanda-pane';
 import TableJump from '@/components/admin/waiter/table-jump';
-import { money, newLineId, lineDetail, type CartLine } from '@/components/admin/waiter/cart';
-import { usePaneHeight } from '@/components/admin/waiter/use-pane-height';
+import { parseQuery } from '@/components/admin/waiter/dish-finder';
+import { money, newLineId, type CartLine } from '@/components/admin/waiter/cart';
 import { useServiceMode } from '@/components/admin/service-mode';
 import {
   selectionFromParams, selectionToQuery, sameSelection,
-  type Selection, type PedidoRow,
+  type Selection,
 } from '@/components/admin/waiter/types';
-import { tablesWithState, needsAttention, fmtMin } from '@/lib/table-state';
-import { STATUS_LABEL_SHORT } from '@/lib/order-status';
+import { tablesWithState, needsAttention, type TableWithState } from '@/lib/table-state';
+import { REASON_ICON } from '@/components/admin/waiter/reason-icon';
+import {
+  STATUS_LABEL_SHORT, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
+  stageClock, fmtElapsed, clockChipClass,
+} from '@/lib/order-status';
 import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
-import type { OrderWithItems, TableOccupancy, TableCall } from '@/lib/db/orders';
+import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /* ── Borrador del pedido en curso ──────────────────────────────
-   El carrito vive en memoria: sin esto, tocar "Menú" o "Negocio" en la
-   barra inferior del panel se llevaba por delante una comanda de doce
-   platos sin decir una palabra. Se guarda en el propio aparato (no en
-   la nube: es un borrador, no un pedido) y caduca en 6 h —un turno—,
-   para que nadie se encuentre mañana con el carrito de anoche.
+   El carrito vive en memoria: sin esto, salir de la pantalla a media
+   comanda se llevaba por delante una orden de doce platos sin decir
+   una palabra. Se guarda en el propio aparato (no en la nube: es un
+   borrador, no un pedido) y caduca en 6 h —un turno—, para que nadie
+   se encuentre mañana con el carrito de anoche.
 
-   Desde el rediseño se guarda el mapa ENTERO de carritos, no uno solo:
-   ahora cada mesa acumula el suyo. */
+   Guarda el mapa ENTERO de carritos, no uno solo: cada mesa acumula
+   el suyo, y el borrador tiene que rescatarlas todas. */
 const DRAFT_TTL_MS = 6 * 60 * 60 * 1000;
 
 /** Carrito por objeto elegido: "mesa-4", "llevar". */
@@ -138,8 +141,11 @@ type VoidTarget = {
   item: { id: string; name: string; remainingQty: number } | null;
 };
 
-/** El panel derecho: la comanda, o la cuenta de esa misma mesa. */
-type PaneMode = 'comanda' | 'cobrar';
+/* ── Pantallas ────────────────────────────────────────────────
+   Mesa → Menú → Revisar, más "Mis pedidos" y "Cobrar". Cada una es un
+   `return` de pantalla completa, no un panel: no hay riel fijo en
+   ningún ancho (ver plan de reconstrucción, 2026-08-31). */
+type View = 'tables' | 'menu' | 'review' | 'orders' | 'bill';
 
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
@@ -148,29 +154,36 @@ export default function WaiterPanel({
   hubUrl, hubToken,
 }: Props) {
   const router = useRouter();
-  /* Pantalla completa sin chrome del panel. `null` donde no existe
-     (la vista previa del editor de temas). */
   const servicio = useServiceMode();
+
+  const [view, setView] = useState<View>('tables');
 
   /* ── Qué está elegido ──────────────────────────────────────── */
   const [selection, setSelection] = useState<Selection>({ kind: 'none' });
-  const [railTab, setRailTab] = useState<RailTab>('sala');
-  const [paneMode, setPaneMode] = useState<PaneMode>('comanda');
-  const [planMode, setPlanMode] = useState(false);
   const [jumpOpen, setJumpOpen] = useState(false);
 
   /* La selección vive TAMBIÉN en la URL, para que recargar la tablet a
      media comanda no pierda la mesa. Se escribe con history.replaceState
      y no con router.replace a propósito: lo segundo vuelve a pedir la
      página al servidor en cada toque de mesa, y en una tablet eso son
-     cientos de viajes por turno para no cambiar ni un dato. */
+     cientos de viajes por turno para no cambiar ni un dato.
+
+     Al montar, si la URL trae una mesa elegida, la pantalla arranca
+     directo en el menú de esa mesa en vez de en "Mesas" — solo la
+     PRIMERA vez: si luego el mesero vuelve a "Mesas" a propósito, un
+     cambio de `tableCount` no debe arrancarlo de nuevo. */
+  const mountedSelRef = useRef(false);
   useEffect(() => {
-    setSelection(selectionFromParams(new URLSearchParams(window.location.search), tableCount));
+    const sel = selectionFromParams(new URLSearchParams(window.location.search), tableCount);
+    setSelection(sel);
+    if (!mountedSelRef.current) {
+      mountedSelRef.current = true;
+      if (sel.kind !== 'none') setView('menu');
+    }
   }, [tableCount]);
 
   const elegir = useCallback((sel: Selection) => {
     setSelection((prev) => (sameSelection(prev, sel) ? prev : sel));
-    setPaneMode('comanda');
     const q = selectionToQuery(sel);
     window.history.replaceState(null, '', `${window.location.pathname}${q}`);
   }, []);
@@ -182,6 +195,7 @@ export default function WaiterPanel({
   const [productModal, setProductModal] = useState<Product | null>(null);
   const [editingLine, setEditingLine] = useState<CartLine | null>(null);
   const [pendingQty, setPendingQty] = useState(1);
+  const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [submitting, startSubmit] = useTransition();
   const [aviso, setAviso] = useState<{ text: string; bad: boolean } | null>(null);
 
@@ -190,31 +204,41 @@ export default function WaiterPanel({
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
   const totalPendiente = contarCarts(carts);
 
+  /* ── Menú: buscador y categoría activa ─────────────────────── */
+  const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
   const [orders, setOrders] = useState<OrderWithItems[]>(initialOrders);
   const [, startStatus] = useTransition();
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [queuedCount, setQueuedCount] = useState(0);
   const retryingQueueRef = useRef(false);
 
-  /* ── Borrador y salida protegida ──────────────────────────── */
+  /* ── Borrador y salida protegida ────────────────────────────── */
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
-  /* ── Anulación (motivo + aprobación) ─────────────────────── */
+  /* ── Anulación (motivo + aprobación) ───────────────────────── */
   const [voidTarget, setVoidTarget] = useState<VoidTarget | null>(null);
 
-  /* ── Cuenta de la mesa elegida ────────────────────────────── */
-  const [tableOrders, setTableOrders] = useState<OrderWithItems[] | null>(null);
+  /* ── Mesa ocupada tocada en "Mesas": qué hacer con ella ────── */
+  const [tableToFree, setTableToFree] = useState<number | null>(null);
+
+  /* ── Cuenta de mesa / dividir cuenta ────────────────────────── */
+  const [billTable, setBillTable] = useState<number | null>(null);
+  const [billOrders, setBillOrders] = useState<OrderWithItems[] | null>(null);
   const [billLoading, setBillLoading] = useState(false);
   const [billError, setBillError] = useState<string | null>(null);
   const [freeing, startFree] = useTransition();
 
-  /* ── Archivar mesas abandonadas (>24 h) ───────────────────── */
+  /* ── Archivar mesas abandonadas (>24 h) ─────────────────────── */
   const [archiving, startArchive] = useTransition();
   const [archiveMsg, setArchiveMsg] = useState<string | null>(null);
 
   /* Al entrar: ¿quedó un pedido sin enviar de la última vez? No se
      restaura solo —aparecer con platos que uno no acaba de tocar asusta
-     más de lo que ayuda—: se ofrece y el mesero decide. */
+     más de lo que ayuda—: se ofrece en "Mesas" y el mesero decide. */
   useEffect(() => {
     setDraft(readDraft(restaurantId, waiterId));
   }, [restaurantId, waiterId]);
@@ -230,9 +254,10 @@ export default function WaiterPanel({
   }, [carts, guestName, notes, restaurantId, waiterId]);
 
   /* Salir del panel con el carrito lleno pide confirmación. El
-     disparador real son los destinos de la barra inferior, que están a
-     un dedo del botón de enviar. Se intercepta en fase de CAPTURA para
-     llegar antes que el <Link> de Next. */
+     disparador real son los destinos del panel (menú lateral del
+     administrador), que están a un toque del botón de enviar. Se
+     intercepta en fase de CAPTURA para llegar antes que el <Link> de
+     Next. */
   useEffect(() => {
     if (totalPendiente === 0) return;
     function onClick(e: MouseEvent) {
@@ -266,6 +291,7 @@ export default function WaiterPanel({
     const primera = Object.keys(draft.carts).find((k2) => (draft.carts[k2]?.length ?? 0) > 0);
     if (primera === 'llevar') elegir({ kind: 'llevar' });
     else if (primera?.startsWith('mesa-')) elegir({ kind: 'mesa', n: Number(primera.slice(5)) });
+    setView('menu');
   }
 
   function discardDraft() {
@@ -273,40 +299,16 @@ export default function WaiterPanel({
     setDraft(null);
   }
 
-  /* ── Los pedidos de la mesa elegida ────────────────────────── */
+  /* ── La cuenta de una mesa (para "Cobrar" y para el diálogo) ── */
   const loadTableBill = useCallback(async (n: number) => {
+    setBillTable(n);
     setBillLoading(true);
     setBillError(null);
     const res = await getTableBill(restaurantId, n);
     setBillLoading(false);
-    if ('error' in res) { setBillError(res.error); setTableOrders([]); return; }
-    setTableOrders(res.orders);
+    if ('error' in res) { setBillError(res.error); return; }
+    setBillOrders(res.orders);
   }, [restaurantId]);
-
-  /* Elegir una mesa carga lo que ya tiene. Se pide aquí y no en el
-     servidor porque la selección no viaja: cambiar de mesa no vuelve a
-     pedir la página (ver `elegir`).
-
-     La dependencia es una FIRMA de la mesa, no el objeto `occupiedSince`
-     entero: ese objeto se crea de nuevo en cada render del servidor, y
-     el panel se refresca solo con cada aviso de Realtime y con el sondeo
-     de pedidos nuevos. Atado al objeto, cada uno de esos refrescos
-     disparaba otra consulta de la cuenta sin que la mesa hubiera
-     cambiado. Atado a la firma, se vuelve a pedir cuando de verdad le
-     pasó algo a ESTA mesa. */
-  const mesaSelN = selection.kind === 'mesa' ? selection.n : null;
-  const firmaMesa = useMemo(() => {
-    if (mesaSelN == null) return null;
-    const occ = occupiedSince[mesaSelN];
-    if (!occ) return 'libre';
-    return `${occ.since}|${occ.status}|${occ.itemCount}|${occ.total}|${occ.servedAt ?? ''}`;
-  }, [mesaSelN, occupiedSince]);
-
-  useEffect(() => {
-    if (mesaSelN == null) { setTableOrders(null); setBillError(null); return; }
-    if (firmaMesa === 'libre') { setTableOrders([]); setBillError(null); return; }
-    loadTableBill(mesaSelN);
-  }, [mesaSelN, firmaMesa, loadTableBill]);
 
   /* Coalescer de router.refresh(): una ráfaga de eventos Realtime (la cola
      del hub sincronizando 20 pedidos de golpe) disparaba un re-render
@@ -422,6 +424,10 @@ export default function WaiterPanel({
     [tableCount, occupiedSince, tableCalls, now],
   );
   const attention = useMemo(() => needsAttention(tables), [tables]);
+  /** Ya comieron y nadie las cerró — la fuga de dinero más común de un
+      salón lleno. Es más ancho que "atención": esa solo entra a los 15
+      minutos; esto enseña TODAS las que están en ese estado. */
+  const servidasSinCobrar = useMemo(() => tables.filter((t) => t.occ?.status === 'SERVED'), [tables]);
   const occupiedSet = useMemo(() => new Set(Object.keys(occupiedSince).map(Number)), [occupiedSince]);
 
   const abandonedCount = useMemo(() => {
@@ -480,9 +486,7 @@ export default function WaiterPanel({
     setCart((prev) => prev.map((l) => (l.lineId === lineId ? { ...updated, lineId } : l)));
   }
 
-  function openEditLine(lineId: string) {
-    const line = cart.find((l) => l.lineId === lineId);
-    if (!line) return;
+  function openEditLine(line: CartLine) {
     const product = products.find((p) => p.id === line.productId);
     if (!product) return;
     setEditingLine(line);
@@ -520,8 +524,7 @@ export default function WaiterPanel({
     if (line) decLine(line.lineId);
   }
 
-  /** El buscador eligió un plato. Si tiene opciones (variantes, combo) se
-      abre la hoja; si no, entra directo al carrito. */
+  /** Agrega (o abre la hoja de opciones de) un producto con `qty` unidades. */
   function handlePick(product: Product, qty: number) {
     const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
     if (groups.length === 0) {
@@ -531,8 +534,6 @@ export default function WaiterPanel({
       });
       return;
     }
-    /* La cantidad tecleada ("3 lim") viaja a la hoja para no tener que
-       volver a marcarla ahí. */
     setPendingQty(qty);
     setEditingLine(null);
     setProductModal(product);
@@ -545,9 +546,12 @@ export default function WaiterPanel({
   const esLlevar = selection.kind === 'llevar';
   const tipApplies = esLlevar ? tipEnabledPickup : tipEnabled;
   const tipAmount = tipApplies && subtotal > 0 ? Math.round(subtotal * tipPercent) / 100 : 0;
+  const total = subtotal + tipAmount;
+  /** "Mesa 4" / "Para llevar" — a dónde va este pedido. */
+  const destLabel = selection.kind === 'mesa' ? `Mesa ${selection.n}` : 'Para llevar';
 
   /* ── Enviar a cocina ───────────────────────────────────────── */
-  async function handleSubmit() {
+  function handleSubmit() {
     if (selection.kind === 'none') return;
     if (cart.length === 0) { setAviso({ text: 'No hay platos que enviar.', bad: true }); return; }
     setAviso(null);
@@ -615,6 +619,7 @@ export default function WaiterPanel({
         setAviso({ text: `Pedido ${result.orderNumber} enviado a cocina.`, bad: false });
         limpiar();
         router.refresh();
+        setTimeout(() => setView('orders'), 1600);
       } catch {
         /* La nube no respondió: se intenta el hub local del restaurante
            antes de dejarlo encolado en este aparato. */
@@ -624,12 +629,14 @@ export default function WaiterPanel({
             removeQueuedOrder(restaurantId, clientId, 'waiter');
             setAviso({ text: `Pedido ${hubResult.orderNumber} impreso — se sincroniza solo en cuanto vuelva la señal.`, bad: false });
             limpiar();
+            setTimeout(() => setView('orders'), 2200);
             return;
           }
         }
         setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
         setAviso({ text: 'Sin conexión: el pedido quedó guardado en este aparato y se enviará solo cuando vuelva la señal.', bad: false });
         limpiar();
+        setTimeout(() => setView('orders'), 2600);
       }
     });
   }
@@ -641,82 +648,44 @@ export default function WaiterPanel({
     return () => clearTimeout(t);
   }, [aviso]);
 
-  /* ── Avanzar el estado de la mesa ──────────────────────────── */
-  /** Los pedidos de la mesa elegida que ya están listos y nadie llevó. */
-  const listosSinLlevar = useMemo(
-    () => (tableOrders ?? []).filter((o) => o.status === 'READY'),
-    [tableOrders],
-  );
+  /* ── Navegar desde "Mesas" ─────────────────────────────────── */
+  /** Libre → directo al menú. Ocupada → la hoja de 3 acciones (igual
+      que siempre): agregar, cobrar, o marcar libre. */
+  function selectTable(n: number) {
+    if (occupiedSet.has(n)) { setTableToFree(n); return; }
+    elegir({ kind: 'mesa', n });
+    setView('menu');
+  }
 
-  const accionEstado = useMemo(() => {
-    if (selection.kind !== 'mesa' || listosSinLlevar.length === 0) return null;
-    const n = selection.n;
-    return {
-      label: listosSinLlevar.length === 1 ? 'Marcar servida' : `Marcar servidas (${listosSinLlevar.length})`,
-      run: () => {
-        startStatus(async () => {
-          for (const o of listosSinLlevar) await updateOrderStatus(o.id, 'SERVED');
-          loadTableBill(n);
-          router.refresh();
-        });
-      },
-    };
-  }, [selection, listosSinLlevar, loadTableBill, router]);
+  function startTakeaway() {
+    elegir({ kind: 'llevar' });
+    setView('menu');
+  }
 
-  /* ── La lista unificada de la pestaña "Pedidos" ────────────── */
-  const pedidos = useMemo<PedidoRow[]>(() => {
-    const filas: PedidoRow[] = [];
-
-    /* Mesas: salen de la ocupación, que es de TODO el restaurante — así
-       se ven también las que atiende otro mesero. */
-    for (const t of tables) {
-      if (!t.occ) continue;
-      filas.push({
-        key: `mesa-${t.n}`,
-        title: `Mesa ${t.n}`,
-        estado: t.state.kind === 'atencion' ? t.state.short : (STATUS_LABEL_SHORT[t.occ.status] ?? ''),
-        tone: t.state.kind === 'atencion' ? 'var(--brand-accent-ink)'
-          : t.occ.status === 'SERVED' ? 'var(--c-ok)' : 'var(--c-warn)',
-        detalle: now == null ? 'en marcha' : `hace ${fmtMin((now - new Date(t.occ.since).getTime()) / 60000)}`,
-        total: money(t.occ.total, currency),
-        selected: selection.kind === 'mesa' && selection.n === t.n,
-        onSelect: () => elegir({ kind: 'mesa', n: t.n }),
-      });
-    }
-
-    /* Lo que no es mesa: para llevar y domicilio, de este mesero. */
-    for (const o of orders) {
-      if (o.order_type === 'DINE_IN') continue;
-      if (o.status === 'DELIVERED' || o.status === 'CANCEL') continue;
-      filas.push({
-        key: o.id,
-        title: `${o.order_type === 'DELIVERY' ? 'Domicilio' : 'Llevar'} · ${o.customer_name ?? 'Sin nombre'}`,
-        estado: STATUS_LABEL_SHORT[o.status] ?? o.status,
-        tone: o.status === 'READY' ? 'var(--brand-accent-ink)' : o.status === 'SERVED' ? 'var(--c-ok)' : 'var(--c-warn)',
-        detalle: now == null ? 'en marcha' : `hace ${fmtMin((now - new Date(o.created_at).getTime()) / 60000)}`,
-        total: money(Number(o.total ?? 0), currency),
-        selected: false,
-        onSelect: () => elegir({ kind: 'llevar' }),
-      });
-    }
-
-    /* Lo urgente arriba. Es la misma prioridad que usa "Te necesitan
-       ahora", para que las dos listas no se contradigan. */
-    const urgencia = (f: PedidoRow) => (f.tone === 'var(--brand-accent-ink)' ? 0 : f.tone === 'var(--c-warn)' ? 1 : 2);
-    return filas.sort((a, b) => urgencia(a) - urgencia(b));
-  }, [tables, orders, now, currency, selection, elegir]);
-
-  const llevarEnCurso = orders.filter(
-    (o) => o.order_type !== 'DINE_IN' && o.status !== 'DELIVERED' && o.status !== 'CANCEL',
-  ).length;
+  /** Libera la mesa `n` y vuelve a "Mesas". */
+  function liberar(n: number) {
+    startFree(async () => {
+      const res = await freeTable(restaurantId, n);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      /* La mesa se fue: su reparto ya no le sirve a nadie, y heredarlo a
+         los próximos comensales sería peor que empezar de cero. */
+      clearSavedSplit(restaurantId, n);
+      setTableToFree(null);
+      setBillTable(null);
+      setBillOrders(null);
+      elegir({ kind: 'none' });
+      setView('tables');
+      router.refresh();
+    });
+  }
 
   /* ── Atajo global: cambiar de mesa sin soltar el teclado ─────
      M de mesa, no K.
 
-     El lienzo de diseño dibujaba ⌘K, pero Ctrl/⌘+K ya es el buscador
-     global del panel (command-search.tsx:117) y lo intercepta ANTES de
-     que llegue aquí — comprobado en el navegador: el salto de mesa
-     sencillamente no abría. Se probó y se cambió; no volver a K. */
+     Ctrl/⌘+K ya es el buscador global del panel (command-search.tsx) y
+     lo intercepta ANTES de que llegue aquí — comprobado en el
+     navegador: el salto de mesa sencillamente no abría con K. Funciona
+     desde cualquier vista. */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && (e.key === 'm' || e.key === 'M')) {
@@ -728,136 +697,389 @@ export default function WaiterPanel({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  /* ── Medidas del armazón ───────────────────────────────────── */
-  const wpRef = useRef<HTMLDivElement | null>(null);
-  const hayBanners = !!draft || queuedCount > 0 || abandonedCount > 0 || !!archiveMsg || !!aviso;
-  /* Entrar o salir del modo servicio mueve el armazón medio panel hacia
-     arriba sin disparar `resize`: si no se vuelve a medir aquí, el alto se
-     queda con el del otro modo y el armazón sale cortado o corto. */
-  usePaneHeight(wpRef, [hayBanners, servicio?.active]);
+  /* Atajos propios de "Menú": "/" vuelve al buscador y Ctrl/⌘+Enter va
+     a "Revisar" si hay algo que revisar. Son listeners de teclado —
+     nunca disparan por toque, así que no hace falta ningún gateo
+     adicional para el móvil. */
+  useEffect(() => {
+    if (view !== 'menu') return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        if (cartCount > 0) { e.preventDefault(); setView('review'); }
+        return;
+      }
+      if (e.key === '/') {
+        const t = e.target as HTMLElement | null;
+        const escribiendo = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+        if (!escribiendo) { e.preventDefault(); searchRef.current?.focus(); }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, cartCount]);
 
   const fmt = useCallback((n: number) => money(n, currency), [currency]);
 
-  const mesaSel = selection.kind === 'mesa' ? tables.find((t) => t.n === selection.n) ?? null : null;
-  const hayDialogo = !!productModal || !!voidTarget || !!pendingHref || jumpOpen;
+  /* ── UI compartida ───────────────────────────────────────────── */
+  const inputStyle: React.CSSProperties = {
+    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
+    borderRadius: 12, padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%',
+  };
 
-  const planTables = planEnabled
-    ? (floorPlan?.tables ?? []).filter((t) => t.level === activeLevel && t.n <= tableCount)
-    : [];
-  const planFixtures = planEnabled
-    ? (floorPlan?.fixtures ?? []).filter((f) => f.level === activeLevel)
-    : [];
+  const headerProps = {
+    waiterName,
+    showOrders: view !== 'orders',
+    ordersCount: orders.length,
+    onShowOrders: () => setView('orders'),
+  };
 
-  /** Libera la mesa `n` y vuelve a "nada elegido". */
-  function liberar(n: number) {
-    startFree(async () => {
-      const res = await freeTable(restaurantId, n);
-      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      /* La mesa se fue: su reparto ya no le sirve a nadie, y heredarlo a
-         los próximos comensales sería peor que empezar de cero. */
-      clearSavedSplit(restaurantId, n);
-      elegir({ kind: 'none' });
-      router.refresh();
-    });
+  /* El acuse de recibo del envío ("Pedido #123 enviado a cocina"), y
+     nada más: los avisos de borrador/cola/abandonadas viven donde
+     siempre vivieron (ver vista "tables" y "orders"), porque ahí es
+     donde el mesero los espera. Este se ve en CUALQUIER vista porque
+     el envío puede tardar en llevarlo de vuelta a "Mesas". */
+  const avisoBanner = aviso ? (
+    <div style={{ marginBottom: 4 }}>
+      <Banner tone={aviso.bad ? 'danger' : 'ok'} icon={aviso.bad ? 'alertCircle' : 'checkCircle'} text={aviso.text} />
+    </div>
+  ) : null;
+
+  /* Aviso de salida con pedido a medias. Se pinta en todas las vistas del
+     panel porque el toque que lo dispara —el menú del administrador—
+     está siempre ahí. El pedido NO se pierde (queda de borrador), pero
+     salir sin querer en hora pico es de todos modos lo peor que le puede
+     pasar a un mesero. */
+  const exitGuard = pendingHref === null ? null : (
+    <div onClick={() => setPendingHref(null)} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+      <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 420, padding: '22px 20px 28px' }}>
+        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
+          Tienes un pedido a medias
+        </div>
+        <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
+          {totalPendiente} {totalPendiente === 1 ? 'plato' : 'platos'} sin enviar a cocina. Si sales ahora se
+          guardan como borrador y los puedes retomar al volver.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 20 }}>
+          <button type="button" onClick={() => setPendingHref(null)} className="press btn-accent" style={{ width: '100%', padding: '14px', borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
+            Seguir con el pedido
+          </button>
+          <button
+            type="button"
+            onClick={() => { const href = pendingHref; setPendingHref(null); if (href) router.push(href); }}
+            className="press glass-quiet"
+            style={{ width: '100%', padding: '13px', borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)' }}
+          >
+            Salir de todos modos
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ════════════════ VISTA: MIS PEDIDOS ════════════════ */
+  if (view === 'orders') {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title="Mis pedidos" onBack={() => setView(selection.kind !== 'none' ? 'menu' : 'tables')} />
+        {exitGuard}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {avisoBanner}
+            <button type="button" onClick={() => setView('tables')} className="press btn-accent" style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
+              ＋ Nuevo pedido
+            </button>
+            {queuedCount > 0 && (
+              <Banner
+                tone="warn"
+                icon="alertCircle"
+                text={`${queuedCount} pedido${queuedCount === 1 ? '' : 's'} sin sincronizar — se enviará${queuedCount === 1 ? '' : 'n'} solo${queuedCount === 1 ? '' : 's'} al volver la señal.`}
+                acciones={<BannerBtn onClick={() => { retryWaiterQueue(); }}>Reintentar</BannerBtn>}
+              />
+            )}
+            {statusError && <Banner tone="danger" icon="alertCircle" text={statusError} />}
+            {orders.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--u-text-4)', fontSize: 15 }}>
+                Sin pedidos activos. Tus pedidos en curso aparecerán aquí.
+              </div>
+            ) : orders.map((order) => {
+              const next = nextStatus(order.status, order.order_type);
+              const isTerminal = isCardTerminal(order.status);
+              const clk = stageClock(order, 10, 20);
+              const elapsedMs = clk && now != null ? now - new Date(clk.since).getTime() : 0;
+              return (
+                <div key={order.id} className="glass" style={{ borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, opacity: isTerminal ? 0.6 : 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{order.order_number}</span>
+                        <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL_SHORT[order.status]}</span>
+                        {clk && now != null && (
+                          <span className={`chip ${clockChipClass(elapsedMs / 60000, clk)}`} title={clk.label}>
+                            <Icon name="clock" size={11} /> {fmtElapsed(elapsedMs)}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginTop: 3 }}>{order.customer_name}</div>
+                      {order.address && <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="grid" size={12} /> {order.address}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--u-text)' }}>
+                        {fmt(Number(order.total))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {order.items.map((item) => {
+                      const remaining = remainingQuantity(item, order.voids ?? []);
+                      const voidedQty = item.quantity - remaining;
+                      const unitPrice = item.quantity > 0 ? Number(item.subtotal) / item.quantity : 0;
+                      return (
+                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--u-text-2)' }}>
+                          <span>
+                            {remaining}× {item.name_snapshot}
+                            {voidedQty > 0 && (
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger)', fontWeight: 600 }}>
+                                {voidedQty} anulada{voidedQty === 1 ? '' : 's'}
+                              </span>
+                            )}
+                            {item.note && (
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-warn)', fontWeight: 600 }}>
+                                ⚠ {item.note}
+                              </span>
+                            )}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            <span style={{ fontWeight: 600 }}>{fmt(unitPrice * remaining)}</span>
+                            {!isTerminal && remaining > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setVoidTarget({ orderId: order.id, orderStatus: order.status, item: { id: item.id, name: item.name_snapshot, remainingQty: remaining } })}
+                                title="Anular"
+                                className="press"
+                                style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                              >
+                                <Icon name="x" size={11} />
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {!isTerminal && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {next && (
+                        <button
+                          type="button"
+                          onClick={() => startStatus(async () => {
+                            setStatusError(null);
+                            const res = await updateOrderStatus(order.id, next);
+                            if (res.error) { setStatusError(res.error); return; }
+                            router.refresh();
+                          })}
+                          className="press btn-accent"
+                          style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                        >
+                          {nextLabel(order.status, order.order_type)}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setVoidTarget({ orderId: order.id, orderStatus: order.status, item: null })}
+                        className="press"
+                        style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {voidTarget && (
+          <VoidOrderDialog
+            orderId={voidTarget.orderId}
+            orderStatus={voidTarget.orderStatus}
+            item={voidTarget.item}
+            onClose={() => setVoidTarget(null)}
+            onDone={() => { setVoidTarget(null); router.refresh(); }}
+          />
+        )}
+      </div>
+    );
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* ── Avisos ────────────────────────────────────────────────
-          Van todos aquí arriba, con la misma forma: antes podían
-          apilarse hasta cinco bandas distintas —cinco alturas, cinco
-          colores, cinco clases de botón— antes de que se viera la
-          primera mesa. */}
-      {aviso && (
-        <Banner
-          tone={aviso.bad ? 'danger' : 'ok'}
-          icon={aviso.bad ? 'alertCircle' : 'checkCircle'}
-          text={aviso.text}
-        />
-      )}
+  /* ════════════════ VISTA: CUENTA DE MESA / DIVIDIR ════════════════ */
+  if (view === 'bill') {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={`Cuenta · Mesa ${billTable}`} onBack={() => { setView('tables'); setBillTable(null); setBillOrders(null); }} />
+        {exitGuard}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {avisoBanner}
+            {billLoading && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Cargando la cuenta…</div>
+            )}
+            {billError && <Banner tone="danger" icon="alertCircle" text={billError} />}
+            {!billLoading && !billError && billOrders && billTable != null && (
+              <WaiterBill
+                restaurantId={restaurantId}
+                tableNumber={billTable}
+                orders={billOrders}
+                currency={currency}
+                freeing={freeing}
+                onVoidItem={setVoidTarget}
+                onFreeTable={() => liberar(billTable)}
+              />
+            )}
+          </div>
+        </div>
 
-      {draft && totalPendiente === 0 && (
-        <Banner
-          tone="warn"
-          icon="alertCircle"
-          text={`Quedó un pedido sin enviar: ${contarCarts(draft.carts)} platos.`}
-          acciones={
-            <>
-              <BannerBtn onClick={resumeDraft} primary>Retomar</BannerBtn>
-              <BannerBtn onClick={discardDraft}>Descartar</BannerBtn>
-            </>
-          }
-        />
-      )}
+        {voidTarget && (
+          <VoidOrderDialog
+            orderId={voidTarget.orderId}
+            orderStatus={voidTarget.orderStatus}
+            item={voidTarget.item}
+            onClose={() => setVoidTarget(null)}
+            onDone={() => { setVoidTarget(null); if (billTable) loadTableBill(billTable); router.refresh(); }}
+          />
+        )}
+      </div>
+    );
+  }
 
-      {queuedCount > 0 && (
-        <Banner
-          tone="warn"
-          icon="alertCircle"
-          text={`${queuedCount} pedido${queuedCount === 1 ? '' : 's'} guardado${queuedCount === 1 ? '' : 's'} en este aparato, esperando señal. Se envían solos.`}
-          acciones={<BannerBtn onClick={() => { retryWaiterQueue(); }}>Reintentar ahora</BannerBtn>}
-        />
-      )}
+  /* ════════════════ VISTA: REVISAR Y ENVIAR ════════════════ */
+  if (view === 'review') {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={`Revisar · ${destLabel}`} onBack={() => setView('menu')} />
+        {exitGuard}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {avisoBanner}
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Orden ({cartCount})</div>
+              {cart.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
+                  Aún no agregaste platos. <button type="button" onClick={() => setView('menu')} style={{ color: 'var(--brand-accent-ink)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Volver al menú</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {cart.map((line) => (
+                    <div key={line.lineId} className="glass" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, color: 'var(--u-text)', fontWeight: 600 }}>{line.name}</div>
+                        {line.options.length > 0 && (
+                          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                            {line.options.map((o) => (o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName)).join(', ')}
+                          </div>
+                        )}
+                        {line.note && (
+                          <div style={{ fontSize: 11.5, color: 'var(--c-warn)', fontWeight: 600, marginTop: 1 }}>
+                            ⚠ {line.note}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>{fmt(line.price)} c/u</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <button type="button" onClick={() => openEditLine(line)} aria-label={`Editar ${line.name}`} title="Editar opciones o nota" className="press glass-quiet" style={{ width: 30, height: 30, borderRadius: 9, border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                          <Icon name="edit" size={14} />
+                        </button>
+                        <button type="button" onClick={() => decLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <span style={{ minWidth: 22, textAlign: 'center', fontWeight: 700, fontSize: 15 }}>{line.quantity}</span>
+                        <button type="button" onClick={() => incLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-      {abandonedCount > 0 && (
-        <Banner
-          tone="danger"
-          icon="alertCircle"
-          text={`${abandonedCount} mesa${abandonedCount === 1 ? '' : 's'} con más de 24 h ocupada${abandonedCount === 1 ? '' : 's'} — casi seguro un pedido olvidado.`}
-          acciones={
-            <BannerBtn onClick={handleArchiveAbandoned} disabled={archiving} primary>
-              {archiving ? 'Archivando…' : 'Archivar'}
-            </BannerBtn>
-          }
-        />
-      )}
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Nombre / referencia (opcional)</div>
+              <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder={destLabel} style={inputStyle} />
+            </div>
 
-      {archiveMsg && (
-        <Banner tone="ok" icon="checkCircle" text={archiveMsg} acciones={<BannerBtn onClick={() => setArchiveMsg(null)}>Entendido</BannerBtn>} />
-      )}
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Notas especiales</div>
+              <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Alergias, sin sal, extra salsa…" style={inputStyle} />
+            </div>
+          </div>
+        </div>
 
-      {/* ── El armazón ───────────────────────────────────────── */}
-      <div className="wp" ref={wpRef} data-sel={selection.kind === 'none' ? '0' : '1'}>
-        <Rail
-          restaurantName={restaurantName}
-          tables={tables}
-          attention={attention}
-          selection={selection}
-          tab={railTab}
-          onTab={setRailTab}
-          onSelectTable={(n) => elegir({ kind: 'mesa', n })}
-          onSelectLlevar={() => elegir({ kind: 'llevar' })}
-          pedidos={pedidos}
-          llevarEnCurso={llevarEnCurso}
-          pickupEnabled={pickupEnabled}
-          money={fmt}
-          planEnabled={planEnabled}
-          planMode={planMode}
-          onPlanMode={setPlanMode}
-          planTables={planTables}
-          planFixtures={planFixtures}
-          levels={levels}
-          activeLevel={activeLevel}
-          onLevel={setActiveLevel}
-          occupiedSet={occupiedSet}
-          occupiedSince={occupiedSince}
-          now={now}
-        />
-
-        {selection.kind === 'none' ? (
-          <div className="wp-pane">
-            <div className="wp-top">
-              {/* El lienzo pone aquí el día, y no es adorno: esta pantalla se
-                  queda puesta horas en una tablet sobre el mostrador, que tapa
-                  el reloj del sistema. Decía solo el nombre del mesero, que ya
-                  está en la esquina de al lado. */}
-              <div className="wp-top-title">
-                <b>Sala</b>
-                <span>{fechaLarga(now)}{waiterName ? ` · ${waiterName}` : ''}</span>
+        {/* Barra fija inferior: total + enviar. */}
+        <div style={{ borderTop: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--brand-bg) 82%, transparent)', backdropFilter: 'blur(16px)' }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {tipApplies && tipAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Subtotal</span>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{fmt(subtotal)}</span>
               </div>
-              {/* Solo para ENTRAR. Una vez dentro, salir es cosa de la barra
-                  de arriba, que además dice con qué tecla: dos botones para
-                  lo mismo en la misma pantalla es uno de más. */}
+            )}
+            {tipApplies && tipAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({tipPercent}%)</span>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{fmt(tipAmount)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 15, color: 'var(--u-text-2)', fontWeight: 600 }}>Total</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)' }}>{fmt(total)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting || cart.length === 0}
+              className="press btn-accent"
+              style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', cursor: submitting || cart.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 16, opacity: submitting || cart.length === 0 ? 0.6 : 1 }}
+            >
+              {submitting ? 'Enviando…' : <><Icon name="bell" size={16} style={{ display: 'inline', verticalAlign: '-3px' }} /> Enviar a cocina</>}
+            </button>
+          </div>
+        </div>
+
+        {productModal && (
+          <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} initialQty={pendingQty} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
+        )}
+      </div>
+    );
+  }
+
+  /* ════════════════ VISTA: MESAS ════════════════ */
+  if (view === 'tables') {
+    const planTables = planEnabled
+      ? (floorPlan?.tables ?? []).filter((t) => t.level === activeLevel && t.n <= tableCount)
+      : [];
+    const planFixtures = planEnabled
+      ? (floorPlan?.fixtures ?? []).filter((f) => f.level === activeLevel)
+      : [];
+    const placedNums = new Set((floorPlan?.tables ?? []).filter((t) => t.n <= tableCount).map((t) => t.n));
+    const otherTables = planEnabled
+      ? Array.from({ length: tableCount }, (_, i) => i + 1).filter((n) => !placedNums.has(n))
+      : [];
+    const states: Record<number, TableWithState['state']> = {};
+    for (const t of tables) states[t.n] = t.state;
+
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={restaurantName} />
+        {exitGuard}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="waiter-wrap waiter-pad" style={{ padding: '18px 0 40px' }}>
+            {avisoBanner}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesas</div>
+              {/* El botón que enciende el modo servicio (shell.tsx lo consume vía
+                  el context de service-mode.tsx) vive AQUÍ y no en el chrome del
+                  panel: hacerlo fácil de alcanzar es lo que convierte un rincón
+                  olvidado en el sitio donde más falta hace, sobre todo en la
+                  tablet que se queda sola en el mostrador. */}
               {servicio && !servicio.active && (
                 <button
                   type="button"
@@ -871,199 +1093,511 @@ export default function WaiterPanel({
                   }}
                 >
                   <Icon name="monitor" size={15} />
-                  <span className="wp-wide-only">Modo servicio</span>
-                </button>
-              )}
-              {pickupEnabled && (
-                <button
-                  type="button"
-                  onClick={() => elegir({ kind: 'llevar' })}
-                  className="press btn-accent"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
-                    height: 36, padding: '0 15px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                    fontSize: 13.5, fontWeight: 600,
-                  }}
-                >
-                  <Icon name="plus" size={15} />
-                  <span className="wp-wide-only">Pedido para llevar</span>
-                  <span className="wp-phone-only">Llevar</span>
+                  <span>Modo servicio</span>
                 </button>
               )}
             </div>
-            <AttentionPane
-              attention={attention}
-              tables={tables}
-              tableCount={tableCount}
-              now={now}
-              money={fmt}
-              onSelectTable={(n) => elegir({ kind: 'mesa', n })}
-              onCobrar={(n) => { elegir({ kind: 'mesa', n }); setPaneMode('cobrar'); }}
-            />
-          </div>
-        ) : paneMode === 'cobrar' && selection.kind === 'mesa' ? (
-          <div className="wp-pane">
-            <div className="wp-top">
+            <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'transparent', border: '1.5px dashed var(--u-hair-2)' }} /> Libre
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1.5px solid var(--u-hair-2)' }} /> Abierta
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)', border: '1.5px solid var(--brand-accent)' }} /> Necesita atención
+              </span>
+            </div>
+
+            {/* Borrador rescatado: el pedido que se estaba tomando la última
+                vez y nunca salió a cocina. */}
+            {draft && totalPendiente === 0 && (
+              <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, marginBottom: 14, border: '1px solid color-mix(in srgb, var(--c-warn) 35%, transparent)' }}>
+                <Icon name="alertCircle" size={17} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 170 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+                    Pedido sin enviar
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                    {contarCarts(draft.carts)} platos sin enviar todavía
+                  </div>
+                </div>
+                <button type="button" onClick={resumeDraft} className="press btn-accent" style={{ padding: '9px 15px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  Retomar
+                </button>
+                <button type="button" onClick={discardDraft} className="press glass-quiet" style={{ padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--u-text-3)' }}>
+                  Descartar
+                </button>
+              </div>
+            )}
+
+            {/* Pedido sin mesa. Va ARRIBA del plano y no escondido al final. */}
+            {pickupEnabled && (
               <button
                 type="button"
-                onClick={() => setPaneMode('comanda')}
-                className="press"
+                onClick={startTakeaway}
+                className="press glass"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
-                  height: 36, padding: '0 13px', borderRadius: 9, cursor: 'pointer',
-                  border: '1px solid var(--adm-border-2)', background: 'none',
-                  color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 15px', marginBottom: 16, borderRadius: 14,
+                  border: '1.5px dashed var(--u-hair-2)', cursor: 'pointer', textAlign: 'left',
                 }}
               >
-                <Icon name="chevronLeft" size={15} />
-                <span>Volver a la comanda</span>
-              </button>
-              <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-                <span style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--u-text)' }}>
-                  Mesa {selection.n} · cobrar
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
+                  <Icon name="bag" size={19} />
                 </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Para llevar · sin mesa</span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Mostrador, barra o alguien que pasa a recoger</span>
+                </span>
+                <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+              </button>
+            )}
+
+            {/* "Te necesitan ahora": pidió la cuenta, llamó al mesero, tiene
+                comida lista sin llevar, o cocina no ha visto la comanda. */}
+            {attention.length > 0 && (
+              <div className="glass" style={{ borderRadius: 16, padding: '6px 4px', marginBottom: 14 }}>
+                <div style={{ padding: '10px 14px 6px', fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Te necesitan ahora
+                </div>
+                {attention.map((t, i) => (
+                  <button
+                    key={t.n}
+                    type="button"
+                    onClick={() => selectTable(t.n)}
+                    className="press"
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--u-hair)' : 'none' }}
+                  >
+                    <span style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
+                      <Icon name={REASON_ICON[t.state.reason ?? 'llamada']} size={15} />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>Mesa {t.n}</span>
+                      <span style={{ display: 'block', fontSize: 12.5, color: 'var(--brand-accent-ink)', fontWeight: 600, marginTop: 1 }}>{t.state.label}</span>
+                    </span>
+                    <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* "Servidas sin cobrar": ya comieron y nadie las cerró — la fuga
+                de dinero más común de un salón lleno. */}
+            {servidasSinCobrar.length > 0 && (
+              <div className="glass" style={{ borderRadius: 16, padding: '6px 4px', marginBottom: 14 }}>
+                <div style={{ padding: '10px 14px 6px', fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Servidas sin cobrar
+                </div>
+                {servidasSinCobrar.map((t, i) => (
+                  <div key={t.n} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i > 0 ? '1px solid var(--u-hair)' : 'none' }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>Mesa {t.n}</span>
+                    <span className="t-mono" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>{fmt(t.occ!.total)}</span>
+                    <button
+                      type="button"
+                      onClick={() => { elegir({ kind: 'mesa', n: t.n }); loadTableBill(t.n); setView('bill'); }}
+                      className="press btn-accent"
+                      style={{ padding: '7px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}
+                    >
+                      Cobrar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {abandonedCount > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, marginBottom: 14, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
+                <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)', flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger)' }}>
+                  {abandonedCount} mesa{abandonedCount === 1 ? '' : 's'} con más de 24h ocupada{abandonedCount === 1 ? '' : 's'} — probablemente un pedido olvidado.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleArchiveAbandoned}
+                  disabled={archiving}
+                  className="press"
+                  style={{ padding: '7px 13px', borderRadius: 99, border: 'none', cursor: archiving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 12.5, background: 'var(--c-danger, #f87171)', color: '#fff', opacity: archiving ? 0.7 : 1, flexShrink: 0 }}
+                >
+                  {archiving ? 'Archivando…' : 'Archivar mesas abandonadas'}
+                </button>
+              </div>
+            )}
+            {archiveMsg && (
+              <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginBottom: 14, padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}>
+                {archiveMsg}
+              </div>
+            )}
+
+            {planEnabled ? (
+              <>
+                {levels.length > 1 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                    {levels.map((l) => {
+                      const on = l.id === activeLevel;
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => setActiveLevel(l.id)}
+                          className="press"
+                          style={{ padding: '9px 16px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600 }}
+                        >
+                          {l.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <FloorMap tables={planTables} fixtures={planFixtures} occupied={occupiedSet} occupiedSince={occupiedSince} states={states} now={now} onSelect={selectTable} />
+
+                {otherTables.length > 0 && (
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Otras mesas</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
+                      {otherTables.map((n) => {
+                        const t = tables[n - 1];
+                        return <TableToken key={n} n={n} state={t.state} total={t.occ ? fmt(t.occ.total) : null} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="waiter-tables-grid">
+                {tables.map((t) => (
+                  <TableToken key={t.n} n={t.n} state={t.state} total={t.occ ? fmt(t.occ.total) : null} onTap={() => selectTable(t.n)} style={{ aspectRatio: '1 / 1' }} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Diálogo: opciones para mesa ocupada */}
+        {tableToFree !== null && (
+          <div onClick={() => setTableToFree(null)} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+            <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, padding: '20px 20px 28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
+                  <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
+                    {tables[tableToFree - 1]?.state.label ?? 'Tiene un pedido activo'}
+                    {occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree].since).getTime())}` : ''}
+                    {occupiedSince[tableToFree] && (
+                      occupiedSince[tableToFree].waiterName
+                        ? ` · atendida por ${occupiedSince[tableToFree].waiterName}`
+                        : ' · pedido por el comensal'
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => { const n = tableToFree; setTableToFree(null); elegir({ kind: 'mesa', n: n as number }); setView('menu'); }}
+                  className="press btn-accent"
+                  style={{ padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}
+                >
+                  ＋ Agregar platos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { const n = tableToFree as number; setTableToFree(null); elegir({ kind: 'mesa', n }); loadTableBill(n); setView('bill'); }}
+                  className="press glass-quiet"
+                  style={{ padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}
+                >
+                  <Icon name="list" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} /> Ver cuenta / dividir
+                </button>
+                <button
+                  type="button"
+                  disabled={freeing}
+                  onClick={() => liberar(tableToFree as number)}
+                  className="press"
+                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
+                >
+                  {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar como libre</>}
+                </button>
               </div>
             </div>
-            <div className="wp-scroll" style={{ padding: 16 }}>
-              {billLoading && <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Cargando la cuenta…</div>}
-              {billError && <div style={{ fontSize: 13.5, color: 'var(--c-danger)' }}>{billError}</div>}
-              {!billLoading && !billError && tableOrders && (
-                <WaiterBill
-                  restaurantId={restaurantId}
-                  tableNumber={selection.n}
-                  orders={tableOrders}
-                  currency={currency}
-                  freeing={freeing}
-                  onVoidItem={setVoidTarget}
-                  onFreeTable={() => liberar(selection.n)}
-                />
-              )}
-            </div>
           </div>
-        ) : (
-          <ComandaPane
-            titulo={selection.kind === 'mesa' ? `Mesa ${selection.n}` : 'Para llevar'}
-            subtitulo={
-              selection.kind === 'mesa'
-                ? (mesaSel?.occ
-                  ? `${mesaSel.state.label}${mesaSel.occ.waiterName ? ` · ${mesaSel.occ.waiterName}` : ''}`
-                  : 'Libre · comanda nueva')
-                : 'Mostrador, barra o alguien que pasa a recoger'
-            }
-            esMesa={selection.kind === 'mesa'}
-            state={mesaSel?.state ?? null}
-            tableOrders={tableOrders}
-            cargando={billLoading}
-            error={billError}
-            cart={cart.map((l) => ({
-              lineId: l.lineId,
-              productId: l.productId,
-              name: l.name,
-              price: l.price,
-              quantity: l.quantity,
-              detalle: lineDetail(l),
-            }))}
-            subtotal={subtotal + tipAmount}
-            onInc={incLine}
-            onDec={decLine}
-            onEdit={openEditLine}
-            products={products}
-            categories={categories}
-            onPick={handlePick}
-            qtyOf={cartQtyOf}
-            onDecProduct={decProduct}
-            onBack={() => elegir({ kind: 'none' })}
-            onEnviar={handleSubmit}
-            enviando={submitting}
-            onCobrar={selection.kind === 'mesa' && !!mesaSel?.occ ? () => setPaneMode('cobrar') : null}
-            onDividir={selection.kind === 'mesa' && !!mesaSel?.occ ? () => setPaneMode('cobrar') : null}
-            accionEstado={accionEstado}
-            onLiberar={selection.kind === 'mesa' && !!mesaSel?.occ && !freeing ? () => liberar(selection.n) : null}
-            guestName={guestName}
-            onGuestName={setGuestName}
-            notes={notes}
-            onNotes={setNotes}
+        )}
+
+        {jumpOpen && (
+          <TableJump
+            tables={tables}
             money={fmt}
-            now={now}
-            focoBuscador={!hayDialogo}
+            onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('menu'); }}
+            onClose={() => setJumpOpen(false)}
           />
         )}
       </div>
+    );
+  }
 
-      {/* ── Encima de todo ───────────────────────────────────── */}
-      {productModal && (
-        <ProductOptionsModal
-          product={productModal}
-          currency={currency}
-          initialLine={editingLine ?? undefined}
-          initialQty={pendingQty}
-          onAdd={addToCart}
-          onSave={saveLine}
-          onClose={closeProductModal}
-        />
+  /* ════════════════ VISTA: MENÚ (agregar platos) ════════════════ */
+  const { qty: searchQty, term: searchTerm } = parseQuery(search);
+  const query = searchTerm.trim().toLowerCase();
+  const visibleProducts = products.filter((p) => {
+    if (!p.is_available || !p.is_active) return false;
+    if (query) return p.name.toLowerCase().includes(query);
+    if (activeCat !== null) return p.category_id === activeCat;
+    return true;
+  });
+  /** La cantidad tecleada ("3 lim") solo se aplica al primer toque que
+      agrega el plato — buscar, tocar la tarjeta, listo. Los pasos +/-
+      de un plato que ya está en el carrito suben de uno en uno, como
+      siempre: es lo que un dedo espera de un botón "+". */
+  function tapProduct(p: Product) {
+    handlePick(p, search.trim() ? searchQty : 1);
+  }
+
+  return (
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+      <WaiterHeader {...headerProps} title={destLabel} onBack={() => setView('tables')} />
+      {exitGuard}
+      {avisoBanner && <div className="waiter-wrap waiter-pad" style={{ paddingTop: 10 }}>{avisoBanner}</div>}
+
+      {/* Buscador */}
+      <div className="waiter-wrap waiter-pad" style={{ width: '100%', padding: '12px 0 6px', flexShrink: 0 }}>
+        <div style={{ position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-4)', display: 'grid', placeItems: 'center' }}>
+            <Icon name="search" size={17} />
+          </span>
+          {searchQty > 1 && (
+            <span style={{
+              position: 'absolute', left: 38, top: '50%', transform: 'translateY(-50%)',
+              padding: '2px 7px', borderRadius: 6,
+              background: 'color-mix(in srgb, var(--adm-accent-500) 14%, transparent)',
+              color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)',
+              fontSize: 12.5, fontWeight: 700,
+            }}>
+              ×{searchQty}
+            </span>
+          )}
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar plato… (o «3 lim»)"
+            style={{ ...inputStyle, paddingLeft: searchQty > 1 ? 78 : 40, paddingRight: search ? 40 : 14 }}
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 8, border: 'none', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+              <Icon name="x" size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Categorías (ocultas al buscar) */}
+      {!query && (
+        <div className="waiter-wrap waiter-pad" style={{ width: '100%', display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 0 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
+          <button
+            type="button"
+            onClick={() => setActiveCat(null)}
+            className="press"
+            style={{
+              whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
+              background: activeCat === null ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
+              color: activeCat === null ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+              flexShrink: 0,
+            }}
+          >
+            Todos
+          </button>
+          {categories.filter((c) => c.is_active).map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCat(cat.id)}
+              className="press"
+              style={{
+                whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
+                background: activeCat === cat.id ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
+                color: activeCat === cat.id ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+                flexShrink: 0,
+              }}
+            >
+              {cat.icon && (
+                ICON_PATHS[cat.icon]
+                  ? <Icon name={cat.icon} size={13} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />
+                  : <span style={{ marginRight: 4 }}>{cat.icon}</span>
+              )}{cat.name}
+            </button>
+          ))}
+        </div>
       )}
 
-      {voidTarget && (
-        <VoidOrderDialog
-          orderId={voidTarget.orderId}
-          orderStatus={voidTarget.orderStatus}
-          item={voidTarget.item}
-          onClose={() => setVoidTarget(null)}
-          onDone={() => {
-            setVoidTarget(null);
-            if (selection.kind === 'mesa') loadTableBill(selection.n);
-            router.refresh();
-          }}
-        />
+      {/* Productos */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="waiter-wrap waiter-pad" style={{ padding: '4px 0 96px' }}>
+          {visibleProducts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
+              {query ? 'Ningún plato coincide con tu búsqueda.' : 'Sin productos disponibles en esta categoría.'}
+            </div>
+          ) : (
+            <div className="waiter-menu-grid">
+              {visibleProducts.map((p) => {
+                const qty = cartQtyOf(p.id);
+                const hasOptions = ((p.options as ProductOptionGroup[] | null) ?? []).length > 0;
+                return (
+                  <div
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => tapProduct(p)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapProduct(p); } }}
+                    className="press glass"
+                    style={{
+                      borderRadius: 14, padding: '12px 12px 11px', position: 'relative', cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                      border: qty > 0 ? '1.5px solid var(--brand-accent)' : '1.5px solid transparent',
+                    }}
+                  >
+                    {qty > 0 && (
+                      <span style={{ position: 'absolute', top: 8, right: 8, minWidth: 24, height: 24, padding: '0 6px', borderRadius: 99, background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)', fontSize: 13, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
+                        {qty}
+                      </span>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--u-text)' }}>
+                      {p.icon && (
+                        ICON_PATHS[p.icon]
+                          ? <Icon name={p.icon} size={23} />
+                          : <span style={{ fontSize: 23 }}>{p.icon}</span>
+                      )}
+                      <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, paddingRight: qty > 0 ? 24 : 0 }}>{p.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{fmt(p.price)}</span>
+                    </div>
+
+                    {hasOptions ? (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); tapProduct(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                        {qty > 0 ? 'Agregar otro' : '+ Elegir opciones'}
+                      </button>
+                    ) : qty > 0 ? (
+                      <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); decProduct(p.id); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handlePick(p, 1); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); tapProduct(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                        + Agregar
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Barra flotante del carrito → Revisar, con mini-carrito desplegable. */}
+      {cartCount > 0 && (
+        <div className="waiter-cart-bar" style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
+          <div className="waiter-wrap waiter-pad" style={{ padding: '0 0 12px' }}>
+            {miniCartOpen && (
+              <div className="glass anim-slide-up" style={{ borderRadius: 16, padding: '8px 10px', marginBottom: 8, maxHeight: '34vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {cart.map((line) => (
+                  <div key={line.lineId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{line.name}</div>
+                      {line.note && (
+                        <div style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 600 }}>⚠ {line.note}</div>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => decLine(line.lineId)} className="press glass-quiet" style={{ width: 28, height: 28, borderRadius: 8, border: 'none', color: 'var(--u-text)', cursor: 'pointer', fontSize: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}>−</button>
+                    <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{line.quantity}</span>
+                    <button type="button" onClick={() => incLine(line.lineId)} className="press glass-quiet" style={{ width: 28, height: 28, borderRadius: 8, border: 'none', color: 'var(--u-text)', cursor: 'pointer', fontSize: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}>+</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setMiniCartOpen((v) => !v)}
+              className="press"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '5px', marginBottom: 6, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--u-text-3)', fontSize: 11.5, fontWeight: 600 }}
+            >
+              <Icon name="chevronDown" size={12} style={{ transform: miniCartOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              {miniCartOpen ? 'Ocultar pedido' : 'Ver pedido actual'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('review')}
+              className="press btn-accent"
+              style={{ width: '100%', padding: '15px 18px', borderRadius: 16, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontWeight: 700, fontSize: 15.5 }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ minWidth: 26, height: 26, borderRadius: 99, background: 'rgba(0,0,0,0.18)', display: 'grid', placeItems: 'center', fontSize: 13.5, fontWeight: 800 }}>{cartCount}</span>
+                Revisar pedido
+              </span>
+              <span>{fmt(total)} →</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {productModal && (
+        <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} initialQty={pendingQty} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
       )}
 
       {jumpOpen && (
         <TableJump
           tables={tables}
           money={fmt}
-          onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); }}
+          onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('menu'); }}
           onClose={() => setJumpOpen(false)}
         />
       )}
-
-      {/* Salir con la comanda a medias. El pedido NO se pierde (queda de
-          borrador), pero salir sin querer en hora pico es de todos modos
-          lo peor que le puede pasar a un mesero. */}
-      {pendingHref !== null && (
-        <div onClick={() => setPendingHref(null)} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
-          <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 420, padding: '22px 20px 28px' }}>
-            <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
-              Tienes un pedido a medias
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
-              {totalPendiente} {totalPendiente === 1 ? 'plato' : 'platos'} sin enviar a cocina. Si sales ahora se
-              guardan como borrador y los puedes retomar al volver.
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 20 }}>
-              <button type="button" onClick={() => setPendingHref(null)} className="press btn-accent" style={{ width: '100%', padding: 14, borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
-                Seguir con el pedido
-              </button>
-              <button type="button" onClick={() => { const href = pendingHref; setPendingHref(null); if (href) router.push(href); }} className="press glass-quiet" style={{ width: '100%', padding: 13, borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)' }}>
-                Salir de todos modos
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cuenta viva del pedido en curso para lectores de pantalla: en la
-          tablet el total está a la vista, pero quien navega a oídas
-          necesita que alguien se lo diga cuando cambia. */}
-      <span className="sr-only" role="status" aria-live="polite">
-        {cartCount === 0 ? '' : `${cartCount} platos por enviar, ${fmt(subtotal)}`}
-      </span>
     </div>
   );
 }
 
+/* ── Encabezado compartido ─────────────────────────────────── */
+function WaiterHeader({
+  title, waiterName, onBack, showOrders, ordersCount, onShowOrders,
+}: {
+  title: string;
+  waiterName: string;
+  onBack?: () => void;
+  showOrders: boolean;
+  ordersCount: number;
+  onShowOrders: () => void;
+}) {
+  return (
+    <header style={{
+      background: 'linear-gradient(color-mix(in srgb, var(--u-text) 4%, transparent), color-mix(in srgb, var(--u-text) 4%, transparent)), color-mix(in srgb, var(--brand-bg) 82%, transparent)',
+      borderBottom: '1px solid var(--u-hair)',
+      borderRadius: 16,
+    }}>
+      <div className="waiter-wrap waiter-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+        {onBack && (
+          <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
+            <Icon name="chevronLeft" size={20} />
+          </button>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {title}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="userPlus" size={12} /> {waiterName}</div>
+        </div>
+        {showOrders && (
+          <button type="button" onClick={onShowOrders} className="press glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+            <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}
+
 /* ── Aviso de una línea ────────────────────────────────────────
-   Todos los avisos del panel tienen la misma forma. Antes cada uno se
-   dibujaba por su cuenta. */
+   Todos los avisos del panel tienen la misma forma. */
 function Banner({ tone, icon, text, acciones }: {
   tone: 'ok' | 'warn' | 'danger';
   icon: 'checkCircle' | 'alertCircle';
@@ -1110,15 +1644,4 @@ function BannerBtn({ children, onClick, primary = false, disabled = false }: {
       {children}
     </button>
   );
-}
-
-/** "Jueves 26 de agosto". Vacío mientras no hay reloj, para que el primer
-    pintado del servidor y el del navegador digan lo mismo. */
-function fechaLarga(now: number | null): string {
-  if (now == null) return '';
-  const d = new Date(now)
-    .toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })
-    // "miércoles, 26 de agosto" → "Miércoles 26 de agosto", como el lienzo.
-    .replace(',', '');
-  return d.charAt(0).toUpperCase() + d.slice(1);
 }
