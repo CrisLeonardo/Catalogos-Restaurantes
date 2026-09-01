@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import LeoginLogo from '@/components/leogin-logo';
 import SiteMenu from '@/components/site-menu';
+import LeoginInstallBanner from '@/components/leogin-install-banner';
 import { subdomainUrl, DEMO_SLUG } from '@/lib/tenant';
 
 /**
@@ -71,6 +72,9 @@ export function SiteFooter({ home = false }: { home?: boolean }) {
 
   return (
     <footer style={{ borderTop: '1px solid var(--lp-line)', background: 'color-mix(in srgb, #ffffff 70%, transparent)' }}>
+      {/* Quien todavía no es cliente: instalar AQUÍ es correcto, no hay
+          panel propio al que mandarlo. Ver leogin-install-banner.tsx. */}
+      <LeoginInstallBanner />
       <div className="lp-shell" style={{ padding: '48px 20px 32px' }}>
         <div className="lp-footer-grid">
           <div>

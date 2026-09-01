@@ -3,6 +3,7 @@ import { Geist, Unbounded, Anton, Instrument_Serif, JetBrains_Mono } from 'next/
 import { headers, cookies } from 'next/headers';
 import './globals.css';
 import ThemeBackground from '@/components/theme-background';
+import OfflineSupport from '@/components/offline-support';
 /**
  * El layout solo usa el tema del restaurante (colores, fuentes, fondo, CSS
  * propio, ícono, color de la barra del navegador) — nada que dependa de la
@@ -261,6 +262,15 @@ export default async function RootLayout({
         )}
 
         <ThemeBackground config={resolved?.config} />
+
+        {/* Cierra el hueco de instalabilidad de la web comercial y Mi
+            cuenta: sw.js ya se registraba dentro del panel y del menú del
+            comensal, pero nunca aquí, así que Chrome no siempre ofrecía
+            "Instalar app" en esas páginas. Idempotente si `children` ya lo
+            registró (menú del tenant) — el navegador reutiliza el registro
+            existente. Redundante en el área de personal (arriba, admin/
+            shell.tsx ya lo hace) porque esa rama no pasa por aquí. */}
+        <OfflineSupport />
 
         {children}
 
