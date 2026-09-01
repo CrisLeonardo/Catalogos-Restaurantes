@@ -50,6 +50,15 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
   const [mode, setMode] = useState<'password' | 'pin'>(openInPin ? 'pin' : 'password');
   const [state, formAction, isPending] = useActionState(login, emptyState);
 
+  // Navegación de DOCUMENTO, no `redirect()` del servidor: mismo motivo que
+  // `enterRestaurant` (lib/actions/mi-cuenta.ts) — el destino puede compartir
+  // host con esta página (`/mi-cuenta`, `/admin`), y ese `redirect()` se
+  // resuelve por dentro sin pasar por `proxy.ts`.
+  const entrando = !!state && 'url' in state;
+  useEffect(() => {
+    if (state && 'url' in state) window.location.assign(state.url);
+  }, [state]);
+
   // Asegura que este navegador tenga su id de aparato y su cookie espejo. Es
   // lo que permite al servidor reconocerlo en la SIGUIENTE visita (y lo que
   // hace posible que un PIN correcto lo registre solo). Sin esto, la pantalla
@@ -286,7 +295,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
               />
             </div>
 
-            {state?.error && (
+            {state && 'error' in state && (
               <div
                 style={{
                   padding: '10px 14px',
@@ -303,7 +312,7 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
 
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || entrando}
               className="press btn-accent"
               style={{
                 width: '100%',
@@ -312,12 +321,12 @@ export default function LoginClient({ restaurantName, restaurantId, logoUrl, slu
                 fontWeight: 600,
                 fontSize: 16,
                 border: 'none',
-                cursor: isPending ? 'not-allowed' : 'pointer',
-                opacity: isPending ? 0.7 : 1,
+                cursor: isPending || entrando ? 'not-allowed' : 'pointer',
+                opacity: isPending || entrando ? 0.7 : 1,
                 marginTop: 4,
               }}
             >
-              {isPending ? 'Entrando…' : 'Entrar'}
+              {isPending || entrando ? 'Entrando…' : 'Entrar'}
             </button>
 
             {/* Hasta ahora esta salida no existía: quien olvidaba su

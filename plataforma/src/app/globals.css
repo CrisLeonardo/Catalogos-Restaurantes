@@ -1612,8 +1612,6 @@ html[data-scheme="light"] .btn-white {
 /* Pin del visor de mesas (mesero): tamaño fijo cómodo al tacto. */
 .floor-map-vp { --floor-pin: 68px; }
 @media (max-width: 820px) {
-  /* Targets táctiles más cómodos en la barra de navegación inferior */
-  .admin-navlink { min-width: 62px; padding: 7px 9px; }
   /* Tokens del editor de mesas: cómodos para el dedo aun en pantallas chicas */
   .floor-edit-canvas { --floor-token: 64px; }
 }
@@ -2916,7 +2914,13 @@ html[data-platform] .asphalt::after { display: none; }
 @media (max-width: 767px) {
   /* Móvil: el interruptor pasa a fila completa y el resumen se desplaza
      en horizontal en vez de aplastarse. */
+  /* `width:100%` + `flex-basis:auto` a propósito: en columna, el `flex: 1 1
+     480px` de escritorio pasa a fijar el ALTO (eje principal ahora es
+     vertical), y el ANCHO se decidía por el contenido de las celdas en vez
+     de por el contenedor — la tira se salía del viewport en vez de quedarse
+     en dos columnas de 46%. */
   .salon-top { flex-direction: column; gap: 10px; }
+  .salon-summary { width: 100%; flex-basis: auto; }
   .salon-summary > div { flex: 0 0 46%; min-width: 0; padding: 11px 14px; }
   .salon-summary-value { font-size: 20px; }
   .salon-seg { display: flex; width: 100%; }

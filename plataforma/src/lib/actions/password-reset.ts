@@ -16,7 +16,6 @@
    ============================================================ */
 
 import { cookies, headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
@@ -27,7 +26,13 @@ import { writeSessionActivity } from '@/lib/auth/session-activity';
 import { splitLoginIdentifier } from '@/lib/staff-email';
 import { rootDomainForUrls } from '@/lib/tenant';
 
-export type ResetState = { error: string } | { sent: true } | null;
+/**
+ * `url` (solo la devuelve `setNewPassword`) = entra aquí con una navegación
+ * de DOCUMENTO desde el cliente (`window.location.assign`), no con el
+ * `redirect()` del servidor: mismo motivo que `enterRestaurant`
+ * (lib/actions/mi-cuenta.ts).
+ */
+export type ResetState = { error: string } | { sent: true } | { url: string } | null;
 
 /** Dominio de los correos sintéticos del personal que entra por PIN. */
 const STAFF_EMAIL_DOMAIN = '@staff.leogin.internal';
@@ -155,15 +160,15 @@ export async function setNewPassword(
     .select('role, permissions, restaurant_id')
     .eq('id', user.id)
     .single();
-  if (!profile) redirect('/admin/login');
+  if (!profile) return { url: '/admin/login' };
 
-  redirect(
-    await resolveStaffDestination(
+  return {
+    url: await resolveStaffDestination(
       supabase,
       profile as { role: string; permissions: string[] | null; restaurant_id: string | null },
       (await headers()).get('x-tenant-slug'),
     ),
-  );
+  };
 }
 
 /**

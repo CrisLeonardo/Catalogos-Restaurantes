@@ -18,12 +18,19 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   // instalaría una sola PWA con scope '/' que chocaría entre restaurantes.
   const stableId = headersList.get('x-tenant-stable-id');
 
+  // Fallback sin slug (dominio raíz, sin tenant): "Leogin" a secas. No hay
+  // restaurante que mostrar aquí — es la web comercial — así que instalarla
+  // no debe llevar a esa portada sino directo al login (mismo criterio que
+  // /api/admin-manifest para el subdominio admin: ver la nota ahí).
   let name = 'Leogin';
+  let leoginFallback = true;
   let logoUrl: string | null = null;
   let pwaIconUrl: string | null = null;
   if (slug === DEMO_SLUG) {
     name = 'Café Demo';
+    leoginFallback = false;
   } else if (slug) {
+    leoginFallback = false;
     try {
       const data = await getRestaurantBySlug(slug);
       if (data?.restaurant.name) name = data.restaurant.name;
@@ -70,13 +77,18 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   // en su lugar — mismo truco, un nivel más: distintos restaurantes en el
   // mismo dominio raíz, cada uno con su propio scope no-superpuesto.
   const scope = stableId ? `/m/${stableId}/` : '/';
+  // "Leogin" instalada desde el dominio raíz (sin tenant) es una puerta de
+  // entrada al panel, no la web comercial: start_url va a /admin/login en
+  // vez de a la portada de ventas. El scope se queda en '/' (no hay ruta
+  // /admin en este dominio a la que angostarlo sin romper la instalación).
+  const startUrl = leoginFallback ? '/admin/login' : scope;
 
   return {
     name,
     short_name: name,
     description: 'Menús interactivos para restaurantes',
     id: scope,
-    start_url: scope,
+    start_url: startUrl,
     scope,
     display: 'standalone',
     orientation: 'portrait',

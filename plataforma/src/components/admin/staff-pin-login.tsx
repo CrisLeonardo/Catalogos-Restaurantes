@@ -2,8 +2,11 @@
 
 /* Pantalla "¿Quién eres?" — login rápido de personal por PIN de 4 dígitos.
    Grilla de nombres → pad numérico → auto-envía al 4º dígito. verifyStaffPin
-   deja una sesión REAL de Supabase (no una identidad paralela) y hace
-   redirect() por su cuenta.
+   deja una sesión REAL de Supabase (no una identidad paralela) y devuelve la
+   URL de destino; la navegación la hace ESTE componente con
+   `window.location.assign` — no un `redirect()` del servidor, que se
+   resuelve por dentro sin pasar por proxy.ts cuando el destino comparte host
+   con esta pantalla (ver la nota en lib/actions/mi-cuenta.ts).
 
    Fallback offline (hub local, agente-impresion): si el envío falla por
    conectividad, se valida el PIN directo contra el hub para identificar al
@@ -89,22 +92,19 @@ export default function StaffPinLogin({ restaurantId, onBack, hubUrl = null, hub
         fd.set('profileId', selected.id);
         fd.set('pin', fullPin);
         const result = await verifyStaffPin(null, fd);
-        if (result?.error) {
+        if (result && 'error' in result) {
           setError(result.error);
           setPin('');
+        } else if (result && 'url' in result) {
+          // Navegación de DOCUMENTO, no un `redirect()` del servidor: mismo
+          // motivo que `enterRestaurant` (lib/actions/mi-cuenta.ts) — el
+          // destino comparte host con esta pantalla.
+          window.location.assign(result.url);
+          return;
         }
-        // Éxito: verifyStaffPin ya redirigió — nada más que hacer aquí.
         setWaitingForReconnect(false);
         pendingPinRef.current = null;
-      } catch (e) {
-        // redirect() de Next.js se implementa lanzando una excepción con
-        // digest "NEXT_REDIRECT" — NO es un fallo de red, es un login
-        // exitoso. Dejarla pasar para que el framework navegue; si se
-        // tratara como error de red aquí, cada login online correcto
-        // dispararía un fallback innecesario (y roto) al hub.
-        const digest = (e as { digest?: unknown } | null)?.digest;
-        if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) throw e;
-
+      } catch {
         // Fallo de red de verdad (no un PIN incorrecto): intentar identificar
         // contra el hub local, si hay uno vinculado a este restaurante.
         if (!hubUrl) {

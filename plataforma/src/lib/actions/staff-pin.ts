@@ -7,7 +7,6 @@
    incluida) sigue funcionando sin cambios. El PIN es solo el gate.
    ============================================================ */
 
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -114,7 +113,12 @@ export async function isPinAllowedHere(restaurantId: string): Promise<boolean> {
   return access.allowed;
 }
 
-export type PinVerifyState = { error: string } | null;
+/**
+ * `url` = entra aquí con una navegación de DOCUMENTO desde el cliente
+ * (`window.location.assign`), no con el `redirect()` del servidor: mismo
+ * motivo que `enterRestaurant` (lib/actions/mi-cuenta.ts).
+ */
+export type PinVerifyState = { error: string } | { url: string } | null;
 
 export async function verifyStaffPin(prevState: PinVerifyState, formData: FormData): Promise<PinVerifyState> {
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
@@ -236,6 +240,6 @@ export async function verifyStaffPin(prevState: PinVerifyState, formData: FormDa
     tenantSlug,
     '?welcome=1',
   );
-  redirect(destination);
+  return { url: destination };
 }
 

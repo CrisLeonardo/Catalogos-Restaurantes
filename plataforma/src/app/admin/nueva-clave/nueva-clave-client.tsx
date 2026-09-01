@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { setNewPassword, type ResetState } from '@/lib/actions/password-reset';
 
@@ -24,6 +24,12 @@ const labelStyle: React.CSSProperties = {
 
 export default function NuevaClaveClient() {
   const [state, formAction, isPending] = useActionState(setNewPassword, empty);
+  // Navegación de DOCUMENTO, no `redirect()` del servidor: mismo motivo que
+  // `enterRestaurant` (lib/actions/mi-cuenta.ts).
+  const entrando = !!state && 'url' in state;
+  useEffect(() => {
+    if (state && 'url' in state) window.location.assign(state.url);
+  }, [state]);
   // Misma decisión que en el registro: se escribe dos veces y se puede ver.
   // Aquí importa aún más — quien llega es alguien que YA se quedó fuera una vez.
   const [password, setPassword] = useState('');
@@ -108,16 +114,16 @@ export default function NuevaClaveClient() {
 
         <button
           type="submit"
-          disabled={isPending || mismatch || password.length < 8}
+          disabled={isPending || entrando || mismatch || password.length < 8}
           className="press btn-accent"
           style={{
             padding: '13px', borderRadius: 999, fontWeight: 600, fontSize: 15,
             border: 'none', color: '#fff',
-            cursor: isPending || mismatch ? 'not-allowed' : 'pointer',
-            opacity: isPending || mismatch || password.length < 8 ? 0.6 : 1,
+            cursor: isPending || entrando || mismatch ? 'not-allowed' : 'pointer',
+            opacity: isPending || entrando || mismatch || password.length < 8 ? 0.6 : 1,
           }}
         >
-          {isPending ? 'Guardando…' : 'Guardar y entrar'}
+          {isPending || entrando ? 'Guardando…' : 'Guardar y entrar'}
         </button>
       </form>
     </div>

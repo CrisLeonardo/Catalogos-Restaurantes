@@ -10,7 +10,16 @@ import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
 
-export type AuthState = { error: string } | null;
+/**
+ * `url` = entra aquí con una navegación de DOCUMENTO desde el cliente
+ * (`window.location.assign`), no con el `redirect()` del servidor: mismo
+ * motivo que `enterRestaurant` (lib/actions/mi-cuenta.ts) — el destino puede
+ * tener el MISMO host que /login o /admin/login (p. ej. `/mi-cuenta` o
+ * `/admin`), y ese `redirect()` se resuelve por dentro sin pasar por
+ * `proxy.ts`, dejando la respuesta sin los headers de tenant que el panel
+ * necesita para pintar lo correcto.
+ */
+export type AuthState = { error: string } | { url: string } | null;
 
 /**
  * Con qué correo se abre sesión, a partir de lo que la persona escribió.
@@ -95,7 +104,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     .eq('id', signInData.user.id)
     .single();
 
-  if (!profile) redirect('/admin/login');
+  if (!profile) return { url: '/admin/login' };
 
   // Arranca el reloj de inactividad (checklist 2026-08-25 §2) desde este
   // mismo login, en vez de esperar a que el heartbeat del panel la escriba
@@ -120,7 +129,14 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   // real: cuenta nueva de otro restaurante "no reconocida" solo en el
   // desktop, porque ahí es común arrancar ya posicionado en el subdominio de
   // un restaurante distinto al de la cuenta que se está probando).
-  redirect(await resolveStaffDestination(supabase, profile as { role: string; permissions: string[] | null; restaurant_id: string | null }, tenantSlug, '?welcome=1'));
+  return {
+    url: await resolveStaffDestination(
+      supabase,
+      profile as { role: string; permissions: string[] | null; restaurant_id: string | null },
+      tenantSlug,
+      '?welcome=1',
+    ),
+  };
 }
 
 export async function logout() {
