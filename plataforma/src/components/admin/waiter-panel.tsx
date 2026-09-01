@@ -30,8 +30,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
-import FloorMap, { TableToken, fmtOccupied } from '@/components/admin/floor-map';
-import { createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables } from '@/lib/actions/orders';
+import FloorMap, { TableToken } from '@/components/admin/floor-map';
+import {
+  createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables,
+  serveTableReady, setTableParty, setItemSeat, moveTableOrders, printTableBillShare,
+} from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
 import WaiterBill, { clearSavedSplit } from '@/components/admin/waiter-bill';
@@ -39,13 +42,14 @@ import VoidOrderDialog from '@/components/admin/void-order-dialog';
 import ProductOptionsModal from '@/components/admin/waiter/product-options-modal';
 import TableJump from '@/components/admin/waiter/table-jump';
 import { parseQuery } from '@/components/admin/waiter/dish-finder';
+import TableCycle from '@/components/admin/waiter/table-cycle';
 import { money, newLineId, type CartLine } from '@/components/admin/waiter/cart';
 import { useServiceMode } from '@/components/admin/service-mode';
 import {
   selectionFromParams, selectionToQuery, sameSelection,
   type Selection,
 } from '@/components/admin/waiter/types';
-import { tablesWithState, needsAttention, type TableWithState } from '@/lib/table-state';
+import { tablesWithState, needsAttention, tableStage, type TableWithState } from '@/lib/table-state';
 import { REASON_ICON } from '@/components/admin/waiter/reason-icon';
 import {
   STATUS_LABEL_SHORT, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
@@ -142,10 +146,17 @@ type VoidTarget = {
 };
 
 /* ── Pantallas ────────────────────────────────────────────────
-   Mesa → Menú → Revisar, más "Mis pedidos" y "Cobrar". Cada una es un
-   `return` de pantalla completa, no un panel: no hay riel fijo en
-   ningún ancho (ver plan de reconstrucción, 2026-08-31). */
-type View = 'tables' | 'menu' | 'review' | 'orders' | 'bill';
+   El salón, y luego LA MESA: desde el rediseño de 2026-09-01 elegir
+   una mesa ya no abre una rejilla de tarjetas, abre la pantalla de esa
+   mesa ('ciclo'), que la acompaña de principio a fin —pedir, enviar,
+   agregar, mover, juntar y cobrar— con una sola barra abajo que
+   siempre dice el siguiente paso.
+
+   Las demás siguen donde estaban: 'menu' es el menú completo para
+   quien prefiere tocar antes que teclear, 'review' revisa el envío
+   desde ahí, 'orders' son los pedidos en marcha y 'bill' el cobro y
+   el reparto. */
+type View = 'tables' | 'ciclo' | 'menu' | 'review' | 'orders' | 'bill';
 
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
@@ -161,6 +172,20 @@ export default function WaiterPanel({
   /* ── Qué está elegido ──────────────────────────────────────── */
   const [selection, setSelection] = useState<Selection>({ kind: 'none' });
   const [jumpOpen, setJumpOpen] = useState(false);
+
+  /* A qué asiento van los platos que se agreguen ahora (lienzo `3a`). Se
+     elige UNA vez y lo demás se apunta solo: preguntarlo plato por plato
+     es lo que hace que nadie lo use. `null` = a la mesa, sin dueño. */
+  const [asiento, setAsiento] = useState<number | null>(null);
+
+  /* ── Cuenta de mesa / dividir cuenta ──────────────────────────
+     Vive aquí arriba porque el efecto de montaje ya la necesita: al
+     llegar desde el salón del dueño con `?ir=cobrar`, la pantalla
+     tiene que arrancar en el cobro de esa mesa, no en otra parte. */
+  const [billTable, setBillTable] = useState<number | null>(null);
+  const [billOrders, setBillOrders] = useState<OrderWithItems[] | null>(null);
+  const [billLoading, setBillLoading] = useState(false);
+  const [billError, setBillError] = useState<string | null>(null);
 
   /* La selección vive TAMBIÉN en la URL, para que recargar la tablet a
      media comanda no pierda la mesa. Se escribe con history.replaceState
@@ -178,12 +203,27 @@ export default function WaiterPanel({
     setSelection(sel);
     if (!mountedSelRef.current) {
       mountedSelRef.current = true;
-      if (sel.kind !== 'none') setView('menu');
+      if (sel.kind !== 'none') {
+        /* `?ir=` es la intención con la que se llega desde el salón del
+           dueño (Pedidos › Mesas): tocar «Cobrar» en una ficha tiene que
+           aterrizar en el cobro, no en una pantalla desde la que haya que
+           volver a buscarlo. */
+        const ir = new URLSearchParams(window.location.search).get('ir');
+        if ((ir === 'cobrar' || ir === 'dividir') && sel.kind === 'mesa') {
+          setBillTable(sel.n);
+          setView('bill');
+        } else {
+          setView('ciclo');
+        }
+      }
     }
   }, [tableCount]);
 
   const elegir = useCallback((sel: Selection) => {
     setSelection((prev) => (sameSelection(prev, sel) ? prev : sel));
+    /* Cambiar de mesa vuelve el asiento a "Mesa": el 2 de la mesa 3 no
+       tiene nada que ver con el 2 de la 7. */
+    setAsiento(null);
     const q = selectionToQuery(sel);
     window.history.replaceState(null, '', `${window.location.pathname}${q}`);
   }, []);
@@ -222,14 +262,35 @@ export default function WaiterPanel({
   /* ── Anulación (motivo + aprobación) ───────────────────────── */
   const [voidTarget, setVoidTarget] = useState<VoidTarget | null>(null);
 
-  /* ── Mesa ocupada tocada en "Mesas": qué hacer con ella ────── */
-  const [tableToFree, setTableToFree] = useState<number | null>(null);
+  /* Mover a otra mesa o juntar con otra: las dos eligen mesa destino
+     con el mismo selector, y lo único que cambia es si el destino
+     puede estar ocupado. */
+  const [moveMode, setMoveMode] = useState<'move' | 'merge' | null>(null);
 
-  /* ── Cuenta de mesa / dividir cuenta ────────────────────────── */
-  const [billTable, setBillTable] = useState<number | null>(null);
-  const [billOrders, setBillOrders] = useState<OrderWithItems[] | null>(null);
-  const [billLoading, setBillLoading] = useState(false);
-  const [billError, setBillError] = useState<string | null>(null);
+  /* La nota de la mesa ("cumpleaños en la 7", "sin picante para todos").
+     Viaja con la comanda que se envíe a continuación. */
+  const [notaOpen, setNotaOpen] = useState(false);
+
+  /* ¿Hay teclado de verdad? El buscador reclama el foco al abrir la mesa,
+     y en una tablet eso levanta el teclado en pantalla y tapa media
+     comanda antes de que nadie haya pedido escribir nada. Con ratón sí:
+     ahí el foco es lo que permite teclear la comanda de corrido. */
+  const [conTeclado, setConTeclado] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: fine)');
+    const apply = () => setConTeclado(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  /* Cuánta gente se sentó en una mesa que TODAVÍA no tiene pedido. En
+     cuanto la mesa se abre, el dato vive en la BD (orders.party_size);
+     hasta entonces solo existe aquí, y se manda con la primera comanda.
+     Sin esto habría que apuntar el primer plato antes de poder decir
+     cuántos son, que es al revés de como se sienta la gente. */
+  const [partyDraft, setPartyDraft] = useState<Record<number, number>>({});
+
   const [freeing, startFree] = useTransition();
 
   /* ── Archivar mesas abandonadas (>24 h) ─────────────────────── */
@@ -291,7 +352,7 @@ export default function WaiterPanel({
     const primera = Object.keys(draft.carts).find((k2) => (draft.carts[k2]?.length ?? 0) > 0);
     if (primera === 'llevar') elegir({ kind: 'llevar' });
     else if (primera?.startsWith('mesa-')) elegir({ kind: 'mesa', n: Number(primera.slice(5)) });
-    setView('menu');
+    setView('ciclo');
   }
 
   function discardDraft() {
@@ -304,11 +365,28 @@ export default function WaiterPanel({
     setBillTable(n);
     setBillLoading(true);
     setBillError(null);
-    const res = await getTableBill(restaurantId, n);
-    setBillLoading(false);
-    if ('error' in res) { setBillError(res.error); return; }
-    setBillOrders(res.orders);
+    /* Con try/catch: sin él, una caída de red dejaba la cuenta en
+       «Cargando…» para siempre — el mesero mirando una pantalla que no
+       iba a cambiar nunca y sin nada que tocar. */
+    try {
+      const res = await getTableBill(restaurantId, n);
+      setBillLoading(false);
+      if ('error' in res) { setBillError(res.error); return; }
+      setBillOrders(res.orders);
+    } catch {
+      setBillLoading(false);
+      setBillError('No se pudo traer la cuenta. Revisa la conexión y vuelve a intentarlo.');
+    }
   }, [restaurantId]);
+
+  /* La pantalla de la mesa enseña la cuenta COMPLETA, no solo lo que
+     apuntó este mesero: si el turno anterior tomó la primera ronda,
+     esos platos son de la misma mesa y del mismo total. Se recarga al
+     cambiar de mesa y cada vez que llegan pedidos nuevos. */
+  useEffect(() => {
+    if (selection.kind !== 'mesa') return;
+    loadTableBill(selection.n);
+  }, [selection, loadTableBill, orders]);
 
   /* Coalescer de router.refresh(): una ráfaga de eventos Realtime (la cola
      del hub sincronizando 20 pedidos de golpe) disparaba un re-render
@@ -464,6 +542,8 @@ export default function WaiterPanel({
   }, [key]);
 
   function addToCart(line: CartLine) {
+    // El plato nace con el asiento que está elegido arriba.
+    if (line.seat === undefined) line = { ...line, seat: asiento };
     setCart((prev) => {
       /* La nota entra en la clave de fusión: dos líneas con las mismas
          opciones pero notas distintas ("sin sal" vs. sin nota) son platos
@@ -551,6 +631,20 @@ export default function WaiterPanel({
   const destLabel = selection.kind === 'mesa' ? `Mesa ${selection.n}` : 'Para llevar';
 
   /* ── Enviar a cocina ───────────────────────────────────────── */
+  /** Vuelve a la pantalla de la mesa y recarga su cuenta con lo recién
+      enviado. Sin la recarga, el plato que acaba de salir a cocina no
+      aparecería en la comanda hasta el siguiente refresco. */
+  function volverAlCiclo(mesa: number | null) {
+    setView('ciclo');
+    if (mesa != null) loadTableBill(mesa);
+  }
+
+  /** Las personas de la mesa elegida: lo que dice la BD manda, y si la
+      mesa aún no está abierta, lo que el mesero acaba de anotar. */
+  const personasMesa = selection.kind === 'mesa'
+    ? (occupiedSince[selection.n]?.partySize ?? partyDraft[selection.n] ?? null) || null
+    : null;
+
   function handleSubmit() {
     if (selection.kind === 'none') return;
     if (cart.length === 0) { setAviso({ text: 'No hay platos que enviar.', bad: true }); return; }
@@ -577,6 +671,9 @@ export default function WaiterPanel({
            combo + variantes era rechazado con "Elige una variante". */
         options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
         ...(l.note ? { note: l.note } : {}),
+        /* El asiento se decide AL PEDIR, no al cobrar: quien sabe de quién
+           es el pepián es el mesero en ese momento (migración 123). */
+        ...(l.seat ? { seat: l.seat } : {}),
       })),
       customer: {
         name: finalName,
@@ -585,6 +682,7 @@ export default function WaiterPanel({
            y su recorrido de estados es el de mostrador, no el de mesa. */
         type: (mesa ? 'DINE_IN' : 'PICKUP') as 'PICKUP' | 'DINE_IN',
         ...(mesa ? { tableNumber: mesa } : {}),
+        ...(mesa && personasMesa ? { partySize: personasMesa } : {}),
         notes: notes.trim() || undefined,
       },
       tipAccepted: tipApplies && subtotal > 0,
@@ -619,7 +717,10 @@ export default function WaiterPanel({
         setAviso({ text: `Pedido ${result.orderNumber} enviado a cocina.`, bad: false });
         limpiar();
         router.refresh();
-        setTimeout(() => setView('orders'), 1600);
+        /* Se QUEDA en la mesa. Antes saltaba a "Mis pedidos", y eso era
+           justo lo contrario de lo que hace un mesero: manda la primera
+           ronda y sigue en la misma mesa apuntando las bebidas. */
+        volverAlCiclo(mesa);
       } catch {
         /* La nube no respondió: se intenta el hub local del restaurante
            antes de dejarlo encolado en este aparato. */
@@ -629,14 +730,14 @@ export default function WaiterPanel({
             removeQueuedOrder(restaurantId, clientId, 'waiter');
             setAviso({ text: `Pedido ${hubResult.orderNumber} impreso — se sincroniza solo en cuanto vuelva la señal.`, bad: false });
             limpiar();
-            setTimeout(() => setView('orders'), 2200);
+            volverAlCiclo(mesa);
             return;
           }
         }
         setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
         setAviso({ text: 'Sin conexión: el pedido quedó guardado en este aparato y se enviará solo cuando vuelva la señal.', bad: false });
         limpiar();
-        setTimeout(() => setView('orders'), 2600);
+        volverAlCiclo(mesa);
       }
     });
   }
@@ -648,18 +749,21 @@ export default function WaiterPanel({
     return () => clearTimeout(t);
   }, [aviso]);
 
-  /* ── Navegar desde "Mesas" ─────────────────────────────────── */
-  /** Libre → directo al menú. Ocupada → la hoja de 3 acciones (igual
-      que siempre): agregar, cobrar, o marcar libre. */
+  /* ── Navegar desde "Mesas" ───────────────────────────────────
+     Tocar una mesa abre SU pantalla, esté libre u ocupada. Antes una
+     mesa ocupada abría una hoja con tres opciones —agregar, cobrar,
+     marcar libre— y había que elegir antes de ver nada; ahora la
+     pantalla de la mesa enseña la cuenta, en qué va la comida y la
+     única acción que toca, que es de donde salían esas tres. La hoja
+     sigue existiendo para "marcar libre" (el botón «···»). */
   function selectTable(n: number) {
-    if (occupiedSet.has(n)) { setTableToFree(n); return; }
     elegir({ kind: 'mesa', n });
-    setView('menu');
+    setView('ciclo');
   }
 
   function startTakeaway() {
     elegir({ kind: 'llevar' });
-    setView('menu');
+    setView('ciclo');
   }
 
   /** Libera la mesa `n` y vuelve a "Mesas". */
@@ -670,13 +774,138 @@ export default function WaiterPanel({
       /* La mesa se fue: su reparto ya no le sirve a nadie, y heredarlo a
          los próximos comensales sería peor que empezar de cero. */
       clearSavedSplit(restaurantId, n);
-      setTableToFree(null);
       setBillTable(null);
       setBillOrders(null);
       elegir({ kind: 'none' });
       setView('tables');
       router.refresh();
     });
+  }
+
+  /* ════════════════ EL CICLO DE LA MESA ════════════════
+     Las acciones que antes obligaban a salirse de la pantalla —o que
+     sencillamente no existían— y que ahora viven junto a la comanda. */
+
+  /** Asiento de un plato que TODAVÍA no ha salido a cocina. */
+  function setCartSeat(lineId: string, seat: number | null) {
+    setCart((prev) => prev.map((l) => (l.lineId === lineId ? { ...l, seat } : l)));
+  }
+
+  /** Asiento de un plato ya enviado. Va a la BD porque el reparto tiene
+      que seguir ahí si el cobro lo hace otra persona en la caja. */
+  function setSentSeat(itemId: string, seat: number | null) {
+    // Optimista: el chip cambia al toque y la BD confirma después. Una
+    // espera de red por cada asiento haría el reparto insufrible.
+    setBillOrders((prev) => prev?.map((o) => ({
+      ...o,
+      items: o.items.map((it) => (it.id === itemId ? { ...it, seat_no: seat } : it)),
+    })) ?? prev);
+    startStatus(async () => {
+      const res = await setItemSeat(restaurantId, itemId, seat);
+      if (res.error) {
+        setAviso({ text: res.error, bad: true });
+        if (billTable != null) loadTableBill(billTable);
+      }
+    });
+  }
+
+  /** Cuánta gente se sentó. */
+  function handleParty(n: number | null) {
+    if (selection.kind !== 'mesa') return;
+    const mesa = selection.n;
+    setPartyDraft((prev) => ({ ...prev, [mesa]: n ?? 0 }));
+    // La mesa todavía no existe en la BD: el dato viaja con la primera
+    // comanda (ver handleSubmit) en vez de fallar en silencio.
+    if (!occupiedSince[mesa]) return;
+    setBillOrders((prev) => prev?.map((o) => ({ ...o, party_size: n })) ?? prev);
+    startStatus(async () => {
+      const res = await setTableParty(restaurantId, mesa, n);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      router.refresh();
+    });
+  }
+
+  /** Las mesas a las que tiene sentido mover/juntar la actual: libres para
+      mover, ocupadas para juntar. Nunca la propia. */
+  function destinosDe(modo: 'move' | 'merge'): TableWithState[] {
+    return tables.filter((t) => (
+      (selection.kind !== 'mesa' || t.n !== selection.n)
+      && (modo === 'move' ? t.state.kind === 'libre' : t.state.kind !== 'libre')
+    ));
+  }
+
+  /** Abre el selector de destino, o dice por qué no hay ninguno. Un
+      diálogo vacío es peor que un aviso: parece que la app falló. */
+  function abrirMover(modo: 'move' | 'merge') {
+    if (destinosDe(modo).length === 0) {
+      setAviso({
+        text: modo === 'move'
+          ? 'No hay ninguna mesa libre a la que mover esta.'
+          : 'No hay otra mesa con gente con la que juntar esta.',
+        bad: true,
+      });
+      return;
+    }
+    setMoveMode(modo);
+  }
+
+  /** Mover la mesa a otra, o juntarla con otra. */
+  function handleMove(destino: number) {
+    if (selection.kind !== 'mesa' || moveMode === null) return;
+    const origen = selection.n;
+    const merge = moveMode === 'merge';
+    setMoveMode(null);
+    startStatus(async () => {
+      const res = await moveTableOrders(restaurantId, origen, destino, merge);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      /* El reparto guardado era de la mesa vieja: heredarlo a la nueva
+         mezclaría dos cuentas que no tienen nada que ver. */
+      clearSavedSplit(restaurantId, origen);
+      setAviso({
+        text: merge
+          ? `Mesa ${origen} juntada con la ${destino}.`
+          : `Lo de la mesa ${origen} pasó a la ${destino}.`,
+        bad: false,
+      });
+      elegir({ kind: 'mesa', n: destino });
+      loadTableBill(destino);
+      router.refresh();
+    });
+  }
+
+  /** «Llevar a la mesa»: lo que estaba listo en la barra ya está puesto. */
+  function handleServe() {
+    if (selection.kind !== 'mesa') return;
+    const mesa = selection.n;
+    startStatus(async () => {
+      const res = await serveTableReady(restaurantId, mesa);
+      if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      setAviso({ text: `Mesa ${mesa}: servida.`, bad: false });
+      loadTableBill(mesa);
+      router.refresh();
+    });
+  }
+
+  /** La cuenta entera a la impresora de caja (sin repartir). */
+  function handlePrintBill() {
+    if (selection.kind !== 'mesa') return;
+    const mesa = selection.n;
+    startStatus(async () => {
+      const res = await printTableBillShare({
+        restaurantId, tableNumber: mesa, mode: 'single',
+        peopleIds: [], names: {}, assignment: {}, personId: null,
+      });
+      setAviso(res.error
+        ? { text: res.error, bad: true }
+        : { text: 'Cuenta enviada a la impresora.', bad: false });
+    });
+  }
+
+  /** Ir al cobro / reparto de la mesa elegida. */
+  function irACobrar() {
+    if (selection.kind !== 'mesa') return;
+    loadTableBill(selection.n);
+    setView('bill');
   }
 
   /* ── Atajo global: cambiar de mesa sin soltar el teclado ─────
@@ -1051,6 +1280,107 @@ export default function WaiterPanel({
     );
   }
 
+  /* ════════════════ VISTA: LA MESA (su ciclo entero) ════════════════
+     Aquí aterriza el mesero al tocar una mesa. Es la pantalla que
+     acompaña la mesa de principio a fin: la cuenta completa, en qué va
+     la comida, el reparto por asiento, el buscador de siempre debajo, y
+     UNA barra abajo que dice el siguiente paso. */
+  if (view === 'ciclo' && selection.kind !== 'none') {
+    const mesaN = selection.kind === 'mesa' ? selection.n : null;
+    const occSel = mesaN != null ? occupiedSince[mesaN] : undefined;
+    const stateSel = mesaN != null
+      ? (tables[mesaN - 1]?.state ?? { kind: 'libre' as const, reason: null, label: 'Libre', short: 'Libre', since: null, priority: 99 })
+      : { kind: 'libre' as const, reason: null, label: 'Sin enviar', short: 'Sin enviar', since: null, priority: 99 };
+    const stageSel = tableStage(occSel, stateSel);
+    const ordersSel = mesaN != null && billTable === mesaN ? (billOrders ?? []) : [];
+
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={destLabel} onBack={() => { elegir({ kind: 'none' }); setView('tables'); }} />
+        {exitGuard}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="waiter-wrap waiter-pad" style={{ padding: '14px 0 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {avisoBanner}
+            {statusError && <Banner tone="danger" icon="alertCircle" text={statusError} />}
+
+            <TableCycle
+              mesa={mesaN}
+              titulo={destLabel}
+              occ={occSel}
+              personas={personasMesa}
+              state={stateSel}
+              stage={stageSel}
+              orders={ordersSel}
+              ordersLoading={billLoading && billTable === mesaN}
+              cart={cart}
+              now={now}
+              products={products}
+              categories={categories}
+              money={fmt}
+              tipPercent={tipPercent}
+              tipApplies={tipApplies}
+              onPick={handlePick}
+              qtyOf={cartQtyOf}
+              onDec={decProduct}
+              onSend={cart.length > 0 && !submitting ? handleSubmit : null}
+              /* El campo no roba el foco mientras hay un diálogo encima:
+                 escribir en la hoja de opciones y que las letras acaben en
+                 el buscador es de las cosas más frustrantes que hay. */
+              finderFocus={conTeclado && !productModal && !jumpOpen && moveMode === null && pendingHref === null}
+              asiento={asiento}
+              onAsiento={setAsiento}
+              onSeatCart={setCartSeat}
+              onSeatItem={setSentSeat}
+              onIncCart={incLine}
+              onDecCart={decLine}
+              onEditCart={openEditLine}
+              onParty={handleParty}
+              onJuntar={() => abrirMover('merge')}
+              onMover={() => abrirMover('move')}
+              onNota={() => setNotaOpen(true)}
+              onCobrar={irACobrar}
+              onImprimir={handlePrintBill}
+              onServir={handleServe}
+              onVerMenu={() => setView('menu')}
+              ocupado={submitting}
+            />
+          </div>
+        </div>
+
+        {productModal && (
+          <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} initialQty={pendingQty} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
+        )}
+
+        {notaOpen && (
+          <NotaDeMesa
+            valor={notes}
+            titulo={destLabel}
+            onGuardar={(v) => { setNotes(v); setNotaOpen(false); }}
+            onClose={() => setNotaOpen(false)}
+          />
+        )}
+
+        {moveMode !== null && (
+          <TableJump
+            tables={destinosDe(moveMode)}
+            money={fmt}
+            onPick={handleMove}
+            onClose={() => setMoveMode(null)}
+          />
+        )}
+
+        {jumpOpen && (
+          <TableJump
+            tables={tables}
+            money={fmt}
+            onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('ciclo'); }}
+            onClose={() => setJumpOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   /* ════════════════ VISTA: MESAS ════════════════ */
   if (view === 'tables') {
     const planTables = planEnabled
@@ -1274,63 +1604,11 @@ export default function WaiterPanel({
           </div>
         </div>
 
-        {/* Diálogo: opciones para mesa ocupada */}
-        {tableToFree !== null && (
-          <div onClick={() => setTableToFree(null)} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
-            <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, padding: '20px 20px 28px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-                <div>
-                  <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesa {tableToFree}</div>
-                  <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
-                    {tables[tableToFree - 1]?.state.label ?? 'Tiene un pedido activo'}
-                    {occupiedSince[tableToFree] && now != null ? ` · ocupada hace ${fmtOccupied(now - new Date(occupiedSince[tableToFree].since).getTime())}` : ''}
-                    {occupiedSince[tableToFree] && (
-                      occupiedSince[tableToFree].waiterName
-                        ? ` · atendida por ${occupiedSince[tableToFree].waiterName}`
-                        : ' · pedido por el comensal'
-                    )}
-                  </div>
-                </div>
-                <button onClick={() => setTableToFree(null)} className="press glass-quiet" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)' }}>
-                  <Icon name="x" size={18} />
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => { const n = tableToFree; setTableToFree(null); elegir({ kind: 'mesa', n: n as number }); setView('menu'); }}
-                  className="press btn-accent"
-                  style={{ padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}
-                >
-                  ＋ Agregar platos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { const n = tableToFree as number; setTableToFree(null); elegir({ kind: 'mesa', n }); loadTableBill(n); setView('bill'); }}
-                  className="press glass-quiet"
-                  style={{ padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}
-                >
-                  <Icon name="list" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} /> Ver cuenta / dividir
-                </button>
-                <button
-                  type="button"
-                  disabled={freeing}
-                  onClick={() => liberar(tableToFree as number)}
-                  className="press"
-                  style={{ padding: '14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger, #f87171) 8%, transparent)', color: 'var(--c-danger)', cursor: 'pointer', fontWeight: 700, fontSize: 15, opacity: freeing ? 0.6 : 1 }}
-                >
-                  {freeing ? 'Liberando…' : <><Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px' }} /> Marcar como libre</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {jumpOpen && (
           <TableJump
             tables={tables}
             money={fmt}
-            onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('menu'); }}
+            onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('ciclo'); }}
             onClose={() => setJumpOpen(false)}
           />
         )}
@@ -1553,6 +1831,59 @@ export default function WaiterPanel({
           onClose={() => setJumpOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+/* ── La nota de la mesa ────────────────────────────────────────
+   "Cumpleaños en la 7", "sin picante para todos", "la señora es
+   celíaca". Viaja con la siguiente comanda hasta la cocina, que es
+   donde hace falta.
+
+   Es una hoja y no un campo suelto en la pantalla a propósito: se
+   escribe una vez por mesa, no en cada ronda, y tenerlo siempre a la
+   vista solo restaría sitio a la comanda. */
+function NotaDeMesa({ valor, titulo, onGuardar, onClose }: {
+  valor: string;
+  titulo: string;
+  onGuardar: (v: string) => void;
+  onClose: () => void;
+}) {
+  const [texto, setTexto] = useState(valor);
+  return (
+    <div onClick={onClose} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+      <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, padding: '22px 20px 28px' }}>
+        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
+          Nota de {titulo.toLowerCase()}
+        </div>
+        <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
+          Lo que cocina tiene que saber de esta mesa. Sale impreso con la siguiente comanda.
+        </div>
+        <input
+          autoFocus
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onGuardar(texto.trim()); } }}
+          placeholder="Cumpleaños, alergias, sin picante…"
+          aria-label="Nota de la mesa"
+          maxLength={500}
+          style={{
+            width: '100%', height: 48, marginTop: 16, padding: '0 14px', borderRadius: 12, outline: 'none',
+            border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+            color: 'var(--u-text)', fontSize: 16,
+          }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16 }}>
+          <button type="button" onClick={() => onGuardar(texto.trim())} className="press btn-accent" style={{ width: '100%', padding: '14px', borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
+            Guardar la nota
+          </button>
+          {valor && (
+            <button type="button" onClick={() => onGuardar('')} className="press glass-quiet" style={{ width: '100%', padding: '13px', borderRadius: 13, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)' }}>
+              Quitar la nota
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

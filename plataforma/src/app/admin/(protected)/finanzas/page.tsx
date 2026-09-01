@@ -3,12 +3,11 @@ import { headers } from 'next/headers';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getSalesReport, type Split } from '@/lib/db/reports';
-import { getCashSummary, getCashHistory } from '@/lib/actions/finanzas';
 import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
-import CashCountForm from '@/components/admin/cash-count-form';
-import CashHistoryPanel from '@/components/admin/cash-history-panel';
+import Link from 'next/link';
+import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
@@ -17,9 +16,18 @@ import { EmptyState } from '@/components/ui/empty-state';
 export const metadata = { title: 'Finanzas – Panel admin' };
 
 /* ============================================================
-   /admin/finanzas — reportes financieros + corte de caja
-   Ingreso, utilidad, margen y mix de ventas en un rango, más
-   el cuadre de efectivo del día.
+   /admin/finanzas — el reporte del negocio
+   ------------------------------------------------------------
+   Ingreso, utilidad, margen y mix de ventas en un rango.
+
+   Esta pantalla NO se rediseñó en 2026-09-01: funciona y el dueño
+   la conoce. Lo único que cambió es que el arqueo de caja se fue de
+   aquí. Vivía al final del scroll, como un formulario largo detrás
+   de siete tarjetas de números — y cerrar caja no es un apéndice de
+   un reporte: es la última tarea de todas las noches, la hace el
+   cajero y no el dueño. Ahora vive en su propia pestaña (Caja) y
+   aquí queda el enlace, para que quien lo buscaba donde siempre
+   estuvo lo encuentre.
    ============================================================ */
 
 const money = (n: number) => `Q${n.toFixed(2)}`;
@@ -80,11 +88,7 @@ export default async function AdminFinanzasPage({
   const to = isYmd(sp.to) ? sp.to : today;
   const from = isYmd(sp.from) ? sp.from : shiftYmd(to, -29);
 
-  const [report, cashSummary, cashHistory] = await Promise.all([
-    getSalesReport(restaurantId, from, to, timezone),
-    getCashSummary(restaurantId),
-    getCashHistory(restaurantId, 10),
-  ]);
+  const report = await getSalesReport(restaurantId, from, to, timezone);
 
   const maxRevenue = Math.max(...report.series.map((d) => d.revenue), 1);
 
@@ -157,11 +161,33 @@ export default async function AdminFinanzasPage({
         )}
       </div>
 
-      {/* Arqueo de caja */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-        <CashCountForm restaurantId={restaurantId} summary={cashSummary} />
-        <CashHistoryPanel history={cashHistory} restaurantId={restaurantId} />
-      </div>
+      {/* El arqueo se mudó a su propia pestaña: aquí queda el camino. */}
+      <Link
+        href="/admin/caja"
+        className="press"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+          border: '1px solid var(--u-hair)', borderRadius: 14, textDecoration: 'none',
+          background: 'var(--adm-card, transparent)',
+        }}
+      >
+        <span style={{
+          display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+          background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)',
+        }}>
+          <Icon name="banknote" size={16} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
+            Cerrar la caja del día
+          </span>
+          <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>
+            Contar el efectivo, anotar lo que salió de la caja y repartir las propinas
+          </span>
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--u-text-3)', flexShrink: 0 }}>Negocio › Caja</span>
+        <Icon name="chevronRight" size={17} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+      </Link>
     </div>
   );
 }

@@ -118,6 +118,16 @@ export function fmtMin(min: number): string {
   return r === 0 ? `${h} h` : `${h} h ${r} min`;
 }
 
+/** La llamada, si de verdad es de esta mesa; `undefined` si es de la
+    tanda anterior (se pidió antes de que esta se abriera). */
+function call1(call: TableCall | undefined, since: string): TableCall | undefined {
+  if (!call) return undefined;
+  const c = new Date(call.since).getTime();
+  const s = new Date(since).getTime();
+  if (!Number.isFinite(c) || !Number.isFinite(s)) return call;
+  return c >= s ? call : undefined;
+}
+
 const STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
   NEW: 'Sin aceptar',
   PREP: 'En cocina',
@@ -135,10 +145,18 @@ const STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
  */
 export function tableState(
   occ: TableOccupancy | undefined,
-  call: TableCall | undefined,
+  callRaw: TableCall | undefined,
   now: number | null,
 ): TableState {
   if (!occ) return LIBRE;
+
+  /* Una llamada ANTERIOR a que se abriera la mesa es de la gente que se
+     sentó antes: se fueron, la mesa se liberó y nadie resolvió el aviso.
+     Sin esta comprobación, un "pidió la cuenta" olvidado de la semana
+     pasada secuestra una mesa que acaba de sentarse — visto tal cual en
+     el entorno local: «Pidió la cuenta · 145 h 53 min» en una mesa de
+     diecisiete minutos. El aviso muere con la mesa que lo pidió. */
+  const call = call1(callRaw, occ.since);
 
   const abierta = (label: string, short = label): TableState => ({
     kind: 'abierta', reason: null, label, short, since: occ.since, priority: 50,
@@ -232,4 +250,108 @@ export function needsAttention(tables: TableWithState[]): TableWithState[] {
     .filter((t) => t.state.kind === 'atencion')
     .sort((a, b) => a.state.priority - b.state.priority
       || (a.state.since ?? '').localeCompare(b.state.since ?? ''));
+}
+
+/* ════════════════════════════════════════════════════════════
+   LA ETAPA DE LA COMIDA
+   ------------------------------------------------------------
+   El estado dice si la mesa te necesita; la ETAPA dice en qué va la
+   comida. Son preguntas distintas y la ficha enseña las dos: la
+   barra de cuatro tramos (Pedido tomado → En cocina → Servida → Por
+   cobrar) es lo que permite mirar el salón y saber, sin tocar nada,
+   cuáles están esperando plato y cuáles esperando cuenta.
+
+   Vive aquí, junto al estado, porque las tres pantallas que dibujan
+   una mesa —fichas, plano y la pantalla de tomar pedidos— tienen que
+   contar exactamente la misma historia.
+   ════════════════════════════════════════════════════════════ */
+
+/** Las cuatro etapas, en orden. El índice ES el paso de la barra. */
+export const STAGES = ['Pedido tomado', 'En cocina', 'Servida', 'Por cobrar'] as const;
+export type StageIndex = 0 | 1 | 2 | 3;
+
+export interface TableStage {
+  /** -1 = la mesa está libre: no hay ninguna etapa que enseñar. */
+  index: StageIndex | -1;
+  label: string;
+  /** Desde cuándo dura ESTA etapa (no desde que se sentaron). */
+  since: string | null;
+}
+
+const LIBRE_STAGE: TableStage = { index: -1, label: 'Sin abrir', since: null };
+
+/**
+ * En qué va la comida de una mesa.
+ *
+ * "Por cobrar" no es un estado del pedido sino una petición: la mesa ya
+ * comió Y alguien está esperando la cuenta (la pidió, o lleva rato servida
+ * sin que nadie la cierre). Por eso necesita el estado resuelto y no le
+ * basta con `occ.status`.
+ */
+export function tableStage(occ: TableOccupancy | undefined, state: TableState): TableStage {
+  if (!occ) return LIBRE_STAGE;
+
+  const esperandoCuenta = state.reason === 'cuenta' || state.reason === 'sin-cobrar';
+
+  if (occ.status === 'SERVED') {
+    return esperandoCuenta
+      ? { index: 3, label: STAGES[3], since: state.since ?? occ.servedAt ?? occ.since }
+      : { index: 2, label: STAGES[2], since: occ.servedAt ?? occ.since };
+  }
+  if (occ.status === 'NEW') {
+    return { index: 0, label: STAGES[0], since: occ.since };
+  }
+  // PREP · READY · TRANSIT — la comida está en marcha.
+  return { index: 1, label: STAGES[1], since: occ.firedAt ?? occ.since };
+}
+
+/* ── La única acción de una ficha ──────────────────────────────
+   "Una mesa = una acción": la ficha no ofrece un menú de opciones,
+   ofrece lo que toca hacer AHORA. El verbo sale del motivo, no del
+   estado del pedido, porque es el motivo el que dice qué está
+   esperando alguien. */
+export type TableActionKind = 'cobrar' | 'llevar' | 'atender' | 'agregar' | 'abrir' | 'revisar';
+
+export interface TableAction {
+  kind: TableActionKind;
+  label: string;
+}
+
+const ACTION_BY_REASON: Record<TableReason, TableAction> = {
+  cuenta: { kind: 'cobrar', label: 'Cobrar' },
+  lista: { kind: 'llevar', label: 'Llevar a la mesa' },
+  llamada: { kind: 'atender', label: 'Atender' },
+  'sin-cobrar': { kind: 'cobrar', label: 'Cobrar' },
+  'sin-aceptar': { kind: 'revisar', label: 'Ver la comanda' },
+  abandonada: { kind: 'revisar', label: 'Revisar la mesa' },
+};
+
+export function tableAction(state: TableState): TableAction {
+  if (state.kind === 'libre') return { kind: 'abrir', label: 'Abrir mesa' };
+  if (state.kind === 'atencion' && state.reason) return ACTION_BY_REASON[state.reason];
+  return { kind: 'agregar', label: 'Agregar platillos' };
+}
+
+/**
+ * El salón ordenado como se trabaja en hora pico: primero lo que pide
+ * algo (de lo más urgente a lo menos), luego lo que está en marcha, y al
+ * final las libres.
+ *
+ * En hora pico nadie busca "la mesa 7": busca qué atender primero. Por eso
+ * el orden por número solo manda DENTRO de cada grupo.
+ */
+export function byUrgency(tables: TableWithState[]): TableWithState[] {
+  const rank = (t: TableWithState) => (t.state.kind === 'atencion' ? 0 : t.state.kind === 'abierta' ? 1 : 2);
+  return [...tables].sort((a, b) => {
+    const r = rank(a) - rank(b);
+    if (r !== 0) return r;
+    if (a.state.kind === 'atencion' && b.state.kind === 'atencion') {
+      const p = a.state.priority - b.state.priority;
+      if (p !== 0) return p;
+      // A igual motivo, la que lleva más tiempo esperando va primero.
+      const s = (a.state.since ?? '').localeCompare(b.state.since ?? '');
+      if (s !== 0) return s;
+    }
+    return a.n - b.n;
+  });
 }

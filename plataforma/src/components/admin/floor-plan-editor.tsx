@@ -138,6 +138,14 @@ export default function FloorPlanEditor({
     setTables(value.tables.map((tb) => (tb.n === n ? { ...tb, x, y } : tb)));
   }
 
+  /** Cuántas sillas tiene la mesa. Es la capacidad del sitio, no quién
+      está sentado ahora: por eso vive en el plano y no en el pedido.
+      El salón la enseña en las mesas LIBRES («4 pers»), que es cuando
+      sirve para decidir dónde sentar a los que acaban de entrar. */
+  function setSeats(n: number, seats: number | null) {
+    setTables(value.tables.map((tb) => (tb.n === n ? { ...tb, seats: seats ?? undefined } : tb)));
+  }
+
   /* ── Referencias del salón (barra, recepción, cocina…) ── */
   function setFixtures(next: FloorFixture[]) {
     patch({ fixtures: next });
@@ -680,6 +688,52 @@ export default function FloorPlanEditor({
               </div>
             )}
           </div>
+
+          {/* Sillas de cada mesa colocada. Va aquí y no en el pedido porque
+              es una propiedad del SITIO: la mesa 8 cabe cuatro tanto si
+              está llena como si está vacía. */}
+          {tablesOnLevel.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                Sillas por mesa
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
+                Cuánta gente cabe en cada una. El salón lo enseña en las mesas libres, para saber de un vistazo dónde sentar a los que acaban de entrar. Déjalo vacío si prefieres no decirlo.
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {[...tablesOnLevel].sort((a, b) => a.n - b.n).map((tb) => (
+                  <label
+                    key={tb.n}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 12px',
+                      borderRadius: 12, border: '1px solid var(--u-hair-2)',
+                      background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)' }}>Mesa {tb.n}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="40"
+                      inputMode="numeric"
+                      value={tb.seats ?? ''}
+                      placeholder="—"
+                      aria-label={`Sillas de la mesa ${tb.n}`}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setSeats(tb.n, Number.isFinite(v) && v > 0 ? Math.min(40, v) : null);
+                      }}
+                      style={{
+                        width: 56, height: 40, textAlign: 'center', borderRadius: 10, outline: 'none',
+                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                        color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)', fontSize: 15, fontWeight: 600,
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Bandeja: mesas sin ubicar */}
           <div>

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   tableState, tablesWithState, needsAttention, fmtMin, fmtMinShort,
+  tableStage, tableAction, byUrgency,
   READY_ALERT_MIN, UNPAID_ALERT_MIN, UNACCEPTED_ALERT_MIN, ABANDONED_HOURS,
   type TableState,
 } from './table-state';
@@ -22,6 +23,8 @@ function ocupada(over: Partial<TableOccupancy> = {}): TableOccupancy {
     total: 284,
     servedAt: null,
     readySince: null,
+    partySize: null,
+    firedAt: null,
     ...over,
   };
 }
@@ -111,6 +114,30 @@ describe('tableState', () => {
       ocupada({ status: 'SERVED', since: haceMin(ABANDONED_HOURS * 60 + 10), servedAt: haceMin(600) }),
       undefined, NOW);
     expect(s.reason).toBe('abandonada');
+  });
+
+  it('una llamada anterior a la mesa es de la tanda de antes y NO cuenta', () => {
+    /* Visto tal cual en el entorno local: un "pidió la cuenta" del 26 de
+       agosto sin resolver hacía que una mesa de diecisiete minutos dijera
+       «Pidió la cuenta · 145 h 53 min». El aviso muere con la mesa que lo
+       pidió. */
+    const occ = ocupada({ since: haceMin(17) });
+    const vieja: TableCall = { reason: 'bill', since: haceMin(60 * 24 * 6) };
+    const s = tableState(occ, vieja, NOW);
+    expect(s.kind).toBe('abierta');
+    expect(s.reason).toBeNull();
+  });
+
+  it('pero una llamada de después de sentarse sí cuenta, aunque lleve rato', () => {
+    const occ = ocupada({ since: haceMin(90) });
+    const s = tableState(occ, { reason: 'bill', since: haceMin(40) }, NOW);
+    expect(s.reason).toBe('cuenta');
+  });
+
+  it('sin reloj tampoco se cuela la llamada de la tanda anterior', () => {
+    const occ = ocupada({ since: haceMin(10) });
+    const s = tableState(occ, { reason: 'bill', since: haceMin(5000) }, null);
+    expect(s.kind).toBe('abierta');
   });
 
   it('sin reloj no inventa relojes, pero sí respeta lo que pidió el comensal', () => {
@@ -223,5 +250,111 @@ describe('fmtMinShort — el ancho de una ficha de mesa', () => {
     for (const m of [0, 1, 59, 60, 61, 599, 1439, 1440, 100000]) {
       expect(fmtMinShort(m).length).toBeLessThanOrEqual(7);
     }
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   LA ETAPA DE LA COMIDA Y LA ÚNICA ACCIÓN (rediseño 2026-09-01)
+   ════════════════════════════════════════════════════════════ */
+
+describe('tableStage', () => {
+  it('una mesa libre no tiene etapa que enseñar', () => {
+    const s = tableStage(undefined, tableState(undefined, undefined, NOW));
+    expect(s.index).toBe(-1);
+    expect(s.label).toBe('Sin abrir');
+  });
+
+  it('recién tomada, la etapa es "Pedido tomado" y cuenta desde que se abrió', () => {
+    const occ = ocupada({ status: 'NEW', since: haceMin(2) });
+    const s = tableStage(occ, tableState(occ, undefined, NOW));
+    expect(s.index).toBe(0);
+    expect(s.since).toBe(occ.since);
+  });
+
+  it('en cocina, el reloj cuenta desde que SALIÓ la comanda, no desde que se sentaron', () => {
+    const occ = ocupada({ status: 'PREP', since: haceMin(40), firedAt: haceMin(12) });
+    const s = tableStage(occ, tableState(occ, undefined, NOW));
+    expect(s.index).toBe(1);
+    expect(s.since).toBe(occ.firedAt);
+  });
+
+  it('servida sin prisa se queda en "Servida"', () => {
+    const occ = ocupada({ status: 'SERVED', servedAt: haceMin(3) });
+    const s = tableStage(occ, tableState(occ, undefined, NOW));
+    expect(s.index).toBe(2);
+  });
+
+  it('pedir la cuenta la lleva a "Por cobrar" aunque el pedido siga en SERVED', () => {
+    const occ = ocupada({ status: 'SERVED', servedAt: haceMin(3) });
+    const call: TableCall = { reason: 'bill', since: haceMin(4) };
+    const s = tableStage(occ, tableState(occ, call, NOW));
+    expect(s.index).toBe(3);
+    expect(s.since).toBe(call.since);
+  });
+
+  it('servida hace rato sin cobrar también es "Por cobrar"', () => {
+    const occ = ocupada({ status: 'SERVED', servedAt: haceMin(UNPAID_ALERT_MIN + 10) });
+    const s = tableStage(occ, tableState(occ, undefined, NOW));
+    expect(s.index).toBe(3);
+  });
+});
+
+describe('tableAction — una mesa, una acción', () => {
+  it('la mesa libre se abre', () => {
+    expect(tableAction(tableState(undefined, undefined, NOW)).kind).toBe('abrir');
+  });
+
+  it('la que pidió la cuenta se cobra', () => {
+    const occ = ocupada();
+    const a = tableAction(tableState(occ, { reason: 'bill', since: haceMin(2) }, NOW));
+    expect(a.kind).toBe('cobrar');
+    expect(a.label).toBe('Cobrar');
+  });
+
+  it('la comida lista se lleva a la mesa', () => {
+    const occ = ocupada({ status: 'READY', readySince: haceMin(READY_ALERT_MIN + 3) });
+    expect(tableAction(tableState(occ, undefined, NOW)).kind).toBe('llevar');
+  });
+
+  it('quien llamó se atiende', () => {
+    const occ = ocupada();
+    expect(tableAction(tableState(occ, { reason: 'call', since: haceMin(1) }, NOW)).kind).toBe('atender');
+  });
+
+  it('la mesa en marcha ofrece agregar platillos, no un menú de opciones', () => {
+    const a = tableAction(tableState(ocupada(), undefined, NOW));
+    expect(a.kind).toBe('agregar');
+    expect(a.label).toBe('Agregar platillos');
+  });
+});
+
+describe('byUrgency — el salón se ordena por lo que pide, no por número', () => {
+  const salon = () => tablesWithState(
+    6,
+    {
+      2: ocupada({ status: 'PREP' }),
+      4: ocupada({ status: 'SERVED', servedAt: haceMin(UNPAID_ALERT_MIN + 5) }),
+      5: ocupada({ status: 'PREP' }),
+    },
+    { 5: { reason: 'bill', since: haceMin(3) } },
+    NOW,
+  );
+
+  it('primero las que piden algo, luego las que están en marcha, al final las libres', () => {
+    const orden = byUrgency(salon()).map((t) => t.n);
+    // 5 pidió la cuenta (prioridad 0), 4 lleva rato servida (prioridad 4),
+    // 2 está en marcha, y 1·3·6 están libres.
+    expect(orden).toEqual([5, 4, 2, 1, 3, 6]);
+  });
+
+  it('dentro de cada grupo manda el número de mesa', () => {
+    const libres = byUrgency(salon()).filter((t) => t.state.kind === 'libre').map((t) => t.n);
+    expect(libres).toEqual([1, 3, 6]);
+  });
+
+  it('no pierde ni duplica mesas', () => {
+    const orden = byUrgency(salon());
+    expect(orden).toHaveLength(6);
+    expect(new Set(orden.map((t) => t.n)).size).toBe(6);
   });
 });

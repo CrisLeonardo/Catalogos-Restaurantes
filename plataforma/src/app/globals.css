@@ -1101,6 +1101,13 @@ html[data-scheme="light"] .btn-white {
   color: var(--u-text-3);
 }
 
+/* Variante EN MAYÚSCULAS de la etiqueta de sección. `.adm-label` se
+   quedó en caja baja a propósito para el resto del panel; las pantallas
+   del rediseño de 2026-09-01 usan esta donde el título encabeza una
+   tarjeta grande («LA CUENTA DE LA MESA», «GASTOS DE HOY») y hace falta
+   que se lea como rótulo y no como una línea más de texto. */
+.adm-label-caps { text-transform: uppercase; letter-spacing: 0.05em; }
+
 /* Barra de guardado de las pantallas de Ajustes.
    ------------------------------------------------------------------
    Un botón "Guardar" al final de una lista de ajustes obliga a recorrer
@@ -2822,4 +2829,531 @@ html[data-platform] .asphalt::after { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .lp-card-lift, .lp-btn { transition: none; }
   .lp-card-lift:hover { transform: none; }
+}
+
+/* ============================================================
+   SALÓN · COMANDA · CAJA  (rediseño 2026-09-01)
+   ------------------------------------------------------------
+   Las tres pantallas del rediseño «Mesas · Tomar pedidos · Caja»
+   comparten armazón: una barra superior que NO se mueve al cambiar
+   de vista, un lienzo que sí, y una barra de acción abajo que
+   siempre dice el siguiente paso.
+
+   Todo lo que hay aquí es estructura y puntos de quiebre. El color
+   y la tipografía salen de los tokens del panel (--u-*, --adm-*),
+   para que las tres funcionen igual en claro y en oscuro sin una
+   sola variante escrita a mano.
+
+   Puntos de quiebre:
+     · > 1180 px  PC     — fichas a 5 columnas, panel de cuenta al lado
+     · 768–1180   tablet — fichas a 3, el panel baja debajo del plano
+     · < 768      móvil  — una columna, controles de 46 px, hoja inferior
+   ============================================================ */
+
+/* ── Barra superior del salón ─────────────────────────────────
+   Resumen + interruptor de vista + «Tomar pedido». Nunca se
+   encoge: en cuanto no cabe, se apila. Aplastar el resumen a la
+   mitad convierte «Q1,904.00» en «Q1,9…», que es peor que nada. */
+/* `wrap` + una base ancha: cuando el resumen y el interruptor no caben
+   juntos, el interruptor baja a su propia línea. Nunca se aplastan —
+   una tira de resumen encogida convierte «Q1,904.00» en «Q1,9…» y
+   «Mesas con gente» en «Mes…», que es peor que no enseñarla. */
+.salon-top { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; }
+.salon-summary {
+  flex: 1 1 480px; min-width: 0; display: flex;
+  overflow-x: auto; scrollbar-width: none;
+  border: 1px solid var(--u-hair); border-radius: 14px;
+  background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.salon-summary::-webkit-scrollbar { display: none; }
+/* `1 0 auto` con suelo: las celdas crecen a partes iguales cuando sobra
+   sitio y, cuando falta, la tira se desplaza en vez de encogerlas. */
+.salon-summary > div { flex: 1 0 auto; min-width: 148px; padding: 12px 16px; border-left: 1px solid var(--u-hair); }
+.salon-summary > div:first-child { border-left: none; }
+.salon-summary-label { font-size: 12.5px; color: var(--u-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.salon-summary-value {
+  font-family: var(--ui-font-mono); font-weight: 700; font-size: 22px;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-top: 3px; color: var(--u-text);
+}
+
+/* Interruptor Fichas · Plano · Lista. A diferencia de `.wp-seg` este
+   NO ocupa todo el ancho en escritorio: vive al lado del resumen. */
+.salon-seg {
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px; flex-shrink: 0;
+  border-radius: 11px; background: color-mix(in srgb, var(--u-text) 7%, transparent);
+}
+.salon-seg > button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 13px; border: none; border-radius: 8px; background: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 500; color: var(--u-text-2); white-space: nowrap;
+}
+.salon-seg > button[data-on="1"] {
+  background: var(--adm-card); color: var(--u-text); font-weight: 600;
+  box-shadow: var(--adm-shadow-xs);
+}
+.salon-seg > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+
+/* Rejilla de fichas. Cinco en PC — el ancho dibujado; menos según cabe. */
+.salon-grid {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px; align-content: start;
+}
+@media (max-width: 1420px) { .salon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1180px) { .salon-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px)  { .salon-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Plano + panel de cuenta. En tablet el panel deja de ir al lado y
+   pasa debajo: 336 px robados a un plano de 700 lo vuelven ilegible. */
+.salon-floor { display: flex; gap: 14px; align-items: stretch; min-height: 0; }
+.salon-bill { width: 336px; flex-shrink: 0; }
+@media (max-width: 1180px) {
+  .salon-floor { flex-direction: column; }
+  .salon-bill { width: 100%; }
+}
+
+@media (max-width: 767px) {
+  /* Móvil: el interruptor pasa a fila completa y el resumen se desplaza
+     en horizontal en vez de aplastarse. */
+  .salon-top { flex-direction: column; gap: 10px; }
+  .salon-summary > div { flex: 0 0 46%; min-width: 0; padding: 11px 14px; }
+  .salon-summary-value { font-size: 20px; }
+  .salon-seg { display: flex; width: 100%; }
+  .salon-seg > button { flex: 1; min-height: 38px; }
+  .salon-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+
+/* ── Ficha de mesa ────────────────────────────────────────────
+   Tres estados y nada más: te necesita (lo único con color), en
+   marcha, y libre —que se dibuja callada, con borde punteado y sin
+   relleno—. El color no describe: avisa. */
+.salon-card {
+  display: flex; flex-direction: column; gap: 9px;
+  min-height: 168px; padding: 13px 14px 12px;
+  border-radius: 16px; text-align: left; width: 100%;
+  transition: border-color .25s, background .25s, box-shadow .25s;
+}
+.salon-card[data-kind="atencion"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
+  box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.salon-card[data-kind="abierta"] {
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-card[data-kind="libre"] {
+  border: 1.5px dashed var(--u-hair-2); background: transparent; box-shadow: none;
+}
+
+/* El bloque de datos de la ficha: es un botón, pero se dibuja como
+   texto. Dos maquetas dentro, una para cada tamaño. */
+.salon-card-open {
+  display: flex; flex-direction: column; gap: 9px; width: 100%;
+  border: none; background: none; padding: 0; cursor: pointer;
+  text-align: left; color: inherit;
+}
+.salon-card-full { display: flex; flex-direction: column; gap: 9px; width: 100%; }
+.salon-card-compact { display: none; }
+
+@media (max-width: 767px) {
+  /* En el teléfono la ficha se comprime a un renglón: catorce fichas
+     de 250 px son cuatro pantallas de scroll para mirar un salón. */
+  .salon-card { min-height: 0; padding: 12px 14px; gap: 10px; }
+  .salon-card-full { display: none; }
+  .salon-card-compact { display: flex; align-items: center; gap: 12px; width: 100%; }
+}
+
+/* Botón de la ficha: uno solo, con lo que toca hacer ahora. */
+.salon-act {
+  margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 7px;
+  height: 38px; border-radius: 10px; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; width: 100%;
+  border: 1px solid var(--u-hair-2); background: none; color: var(--u-text-2);
+}
+.salon-act[data-primary="1"] {
+  border-color: var(--brand-accent); background: var(--brand-accent);
+  color: var(--brand-on-accent, #fff);
+}
+.salon-act:disabled { cursor: default; opacity: 0.55; }
+@media (max-width: 767px) { .salon-act { height: 46px; font-size: 14.5px; } }
+
+/* Barras de la etapa de la comida. */
+.salon-steps { display: flex; align-items: center; gap: 4px; }
+.salon-steps > span { flex: 1; height: 4px; border-radius: 99px; }
+
+/* ── Mesa en el plano ─────────────────────────────────────────
+   100 px dibujados, 88 en el teléfono. */
+.salon-pin {
+  position: absolute; width: 100px; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 10px; border-radius: 14px; cursor: pointer; text-align: left;
+}
+@media (max-width: 767px) { .salon-pin { width: 88px; padding: 8px 9px; border-radius: 13px; } }
+.salon-pin[data-kind="atencion"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 12%, var(--adm-card));
+  box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.salon-pin[data-kind="abierta"] {
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-pin[data-kind="libre"] {
+  border: 1.5px dashed var(--u-hair-2); background: transparent; box-shadow: none;
+}
+.salon-pin[data-sel="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+
+/* El lienzo del plano: rejilla de referencia, nada más. */
+.salon-canvas {
+  position: relative; flex: 1; min-height: 340px; overflow: hidden;
+  border-radius: 18px; border: 1px solid var(--u-hair-2);
+  background-color: color-mix(in srgb, var(--u-text) 2%, transparent);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px);
+  background-size: 100% 9%, 6.25% 100%;
+}
+@media (max-width: 767px) {
+  .salon-canvas { background-size: 100% 9%, 12.5% 100%; }
+  /* Catorce mesas de 88 px en 340 px de ancho se pisan unas a otras. El
+     plano conserva su tamaño y es el lienzo el que se desplaza: mejor
+     arrastrar el salón que no poder leer ninguna mesa. */
+  .salon-floor-scroll { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .salon-floor-scroll::-webkit-scrollbar { display: none; }
+  .salon-floor-scroll > .salon-canvas { min-width: 620px; }
+}
+
+/* Zona fija del salón (barra, caja, cocina). Se dibuja como parte del
+   local, no como algo que se pueda tocar. */
+.salon-zone {
+  position: absolute; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  border-radius: 10px; pointer-events: none; overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--u-text) 16%, transparent);
+  background: color-mix(in srgb, var(--u-text) 6%, transparent);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--u-text) 45%, transparent);
+}
+
+/* ── Hoja inferior del teléfono ───────────────────────────────
+   La mesa elegida sube desde abajo con su resumen y su acción. */
+.salon-sheet {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  margin-top: 12px;
+  border-top: 1px solid var(--u-hair); border-radius: 16px 16px 0 0;
+  background: var(--adm-card);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--u-text) 10%, transparent);
+}
+
+/* ── La pantalla de una mesa (Tomar pedidos) ──────────────────
+   Identidad, línea del ciclo, cuerpo a dos columnas y la barra del
+   siguiente paso. En tablet la columna derecha baja; en el teléfono
+   todo va a una y la barra se pega al pulgar. */
+.ciclo { display: flex; flex-direction: column; gap: 14px; }
+.ciclo-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ciclo-line {
+  display: flex; align-items: stretch; flex-shrink: 0; overflow: hidden;
+  border-radius: 12px; border: 1px solid var(--u-hair);
+  background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.ciclo-line > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-left: 1px solid var(--u-hair); }
+.ciclo-line > div:first-child { border-left: none; }
+.ciclo-body { display: flex; gap: 14px; align-items: flex-start; }
+.ciclo-side { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+.ciclo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 1180px) {
+  .ciclo-body { flex-direction: column; }
+  .ciclo-side { width: 100%; }
+}
+/* En el teléfono la línea del ciclo se comprime a cuatro barras con
+   etiqueta: cuatro tramos de texto en 358 px no se leen. */
+.ciclo-bars { display: none; gap: 8px; }
+@media (max-width: 767px) {
+  .ciclo-line { display: none; }
+  .ciclo-bars { display: flex; }
+}
+.ciclo-next {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
+}
+.ciclo-next-note { flex: 1; min-width: 180px; font-size: 13.5px; color: var(--u-text-2); line-height: 1.45; }
+@media (max-width: 767px) {
+  .ciclo-next {
+    position: sticky; bottom: 0; z-index: 5;
+    flex-direction: column; align-items: stretch;
+    border-radius: 16px 16px 0 0;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
+  }
+  .ciclo-next-note { min-width: 0; }
+}
+
+/* Fila de un plato en la cuenta de la mesa. */
+.ciclo-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 15px; min-height: 46px; border-top: 1px solid var(--u-hair);
+}
+.ciclo-item:first-child { border-top: none; }
+/* En escritorio los tres bloques de la derecha son hermanos de la fila:
+   `contents` los deja planos y todo cabe en una línea. */
+.ciclo-meta { display: contents; }
+
+@media (max-width: 767px) {
+  /* A 375 px no caben nombre, estado, asiento, pasos y precio en un
+     renglón: el precio se salía del cuadro. El nombre y el importe se
+     quedan arriba —que es lo que se lee— y lo demás baja. */
+  .ciclo-item {
+    display: grid; min-height: 52px; padding: 12px 13px;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-areas: "qty name price" "meta meta meta";
+    column-gap: 11px; row-gap: 8px; align-items: center;
+  }
+  .ciclo-qty { grid-area: qty; width: 28px; height: 28px; border-radius: 8px; font-size: 13.5px; }
+  .ciclo-name { grid-area: name; }
+  .ciclo-price { grid-area: price; width: auto !important; font-size: 14.5px; }
+  .ciclo-meta {
+    grid-area: meta; display: flex; align-items: center; gap: 10px;
+    justify-content: flex-end; flex-wrap: wrap;
+  }
+}
+
+/* Chip de asiento / de cantidad. */
+.ciclo-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px;
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 700;
+  background: color-mix(in srgb, var(--u-text) 7%, transparent); color: var(--u-text);
+}
+.ciclo-chip[data-seat="1"] {
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+/* ── El asiento ────────────────────────────────────────────────
+   Dos piezas, las dos dibujadas en el lienzo:
+
+   · el SELECTOR de arriba decide a qué asiento van los platos que se
+     agreguen ahora («Asiento  Mesa 1 2 3 4»);
+   · la PÍLDORA de cada fila dice de quién es ese plato, y tocarla lo
+     corrige sin salir del renglón.
+
+   La píldora es más ancha que alta a propósito: al lado del chip de
+   cantidad —cuadrado de 26 px— hay que poder distinguir de un vistazo
+   cuál es el «2» de dos platos y cuál el «2» del asiento dos. */
+.ciclo-seats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ciclo-seats > button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; height: 32px; padding: 0 11px; cursor: pointer;
+  border-radius: 9px; border: 1px solid var(--u-hair-2); background: none;
+  font-family: var(--ui-font-mono); font-size: 13.5px; font-weight: 600;
+  color: var(--u-text-2);
+}
+.ciclo-seats > button[data-on="1"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+.ciclo-seats > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+
+.ciclo-seat {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  min-width: 30px; height: 24px; padding: 0 8px; cursor: pointer;
+  border: none; border-radius: 7px;
+  background: color-mix(in srgb, var(--u-text) 7%, transparent); color: var(--u-text-3);
+  font-family: var(--ui-font-mono); font-size: 12px; font-weight: 700;
+}
+.ciclo-seat[data-on="1"] {
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+@media (max-width: 767px) {
+  /* En el teléfono el asiento es un botón de 44 px, como pide el lienzo. */
+  .ciclo-seats > button { min-width: 44px; height: 44px; border-radius: 12px; font-size: 15px; }
+  .ciclo-seat { min-width: 44px; height: 44px; border-radius: 12px; font-size: 14px; }
+}
+
+/* ── Cierre de caja ───────────────────────────────────────────
+   Tres pasos, el cuadre a la vista mientras se cuenta, y casillas
+   de 56 px en el teléfono: esto se hace de noche, con prisa y con
+   dinero en la mano. */
+.caja-steps { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+.caja-steps > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; padding-right: 14px; }
+@media (max-width: 900px) {
+  /* La fila de pasos se desplaza en vez de partir «contando ahora» en dos
+     renglones: un rótulo cortado a la mitad no dice en qué paso vas. */
+  .caja-steps { overflow-x: auto; scrollbar-width: none; }
+  .caja-steps::-webkit-scrollbar { display: none; }
+  .caja-steps > div { flex: 0 0 auto; }
+  .caja-steps > div span { white-space: nowrap; }
+  .caja-steps > div > span:last-child { min-width: 34px; }
+}
+.caja-body { display: flex; gap: 16px; align-items: flex-start; }
+.caja-main { flex: 1.25; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.caja-side { width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+.caja-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+@media (max-width: 1180px) { .caja-body { flex-direction: column; } .caja-side { width: 100%; } }
+@media (max-width: 767px) { .caja-cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* El turno, escrito dentro de la propia línea de contexto. Se dibuja
+   como texto y solo se declara campo al tocarlo: en el lienzo ahí pone
+   «turno noche», no un formulario. */
+.caja-turno {
+  min-width: 60px; max-width: 180px; height: 26px; padding: 0 6px;
+  border: 1px solid transparent; border-radius: 7px; outline: none;
+  background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  color: var(--u-text-2); font-size: 13px; font-family: inherit;
+}
+.caja-turno::placeholder { color: var(--u-text-4); }
+.caja-turno:hover { border-color: var(--u-hair-2); }
+.caja-turno:focus-visible {
+  border-color: var(--brand-accent); color: var(--u-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+/* En el teléfono es un campo de verdad: 26 px no se tocan con el pulgar. */
+@media (max-width: 767px) { .caja-turno { height: 40px; padding: 0 10px; font-size: 15px; } }
+
+.caja-denom { display: grid; grid-template-columns: 58px 1fr 84px; gap: 8px; align-items: center; }
+.caja-denom-label {
+  font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600; color: var(--u-text-2);
+  cursor: pointer;
+}
+.caja-denom input {
+  width: 100%; height: 44px; padding: 0 12px; text-align: right;
+  border-radius: 10px; outline: none;
+  border: 1px solid var(--u-hair-2);
+  background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  color: var(--u-text-4);
+  font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600;
+}
+.caja-denom input[data-filled="1"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
+  color: var(--u-text);
+}
+.caja-denom input:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+.caja-denom-sub { font-family: var(--ui-font-mono); font-size: 13px; text-align: right; color: var(--u-text-4); }
+.caja-denom-sub[data-filled="1"] { color: var(--u-text); }
+/* Las flechitas del input numérico roban 20 px justo donde va la cifra. */
+.caja-denom input::-webkit-outer-spin-button,
+.caja-denom input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.caja-denom input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+@media (max-width: 767px) {
+  .caja-denom { grid-template-columns: 62px 1fr 86px; gap: 10px; }
+  .caja-denom-label { font-size: 15px; }
+  .caja-denom input { height: 56px; padding: 0 14px; border-radius: 12px; font-size: 21px; }
+  .caja-denom-sub { font-size: 14px; }
+}
+
+/* Pie fijo del cierre en el teléfono: el total contado y el paso
+   siguiente, siempre bajo el pulgar. */
+.caja-foot {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 9px;
+  margin-top: 12px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--u-hair); border-radius: 16px 16px 0 0;
+  background: var(--adm-card);
+}
+@media (min-width: 768px) {
+  .caja-foot { position: static; margin: 0; padding: 0; border-top: none; border-radius: 0; background: none; }
+}
+
+/* ── El buscador de platillos ──────────────────────────────────
+   Vive debajo de la comanda, en la pantalla de la mesa. Es la pieza
+   que borra el «paso 2 de 3»: se escribe, sale la lista en línea, se
+   pulsa Enter y la comanda de arriba se actualiza sola. Cero
+   pantallas intermedias.
+
+   Campo y lista comparten caja mientras hay algo que enseñar: así la
+   lista se lee como parte de lo que se está escribiendo y no como una
+   tarjeta suelta debajo. */
+.wp-finder {
+  border-radius: 12px;
+  border: 1px solid var(--u-hair-2);
+  background: var(--adm-card);
+  transition: box-shadow .15s, border-color .15s;
+}
+.wp-finder[data-open="1"] { box-shadow: var(--adm-shadow-xs); }
+.wp-finder:focus-within {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+
+.wp-find { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; }
+.wp-find > input {
+  flex: 1; min-width: 0; height: 100%;
+  border: none; outline: none; background: none; color: var(--u-text);
+  /* Piso absoluto de 16 px: por debajo de eso Safari amplía la página
+     entera al enfocar el campo, y el mesero pierde de vista la comanda. */
+  font-size: 16px;
+}
+.wp-find > input::placeholder { color: var(--u-text-4); }
+
+.wp-finder-res { border-top: 1px solid var(--u-hair); }
+.wp-finder[data-open="0"] .wp-finder-res { border-top: none; }
+
+/* Una fila de resultado. La resaltada es la que agrega Enter, y lo
+   dice con la tecla dibujada al lado: el tinte solo no basta para
+   quien no lo distingue. */
+.wp-res {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 14px; min-height: 52px;
+}
+.wp-res[data-on="1"] { background: color-mix(in srgb, var(--brand-accent) 6%, transparent); }
+
+/* Paso de cantidad: el mismo botón redondo en el buscador y en la
+   comanda, para que «+» signifique siempre lo mismo. */
+.wp-step {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--u-hair-2); background: none; color: var(--u-text-2);
+}
+.wp-step[data-on="1"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+  color: var(--brand-accent-ink);
+}
+.wp-step:disabled { opacity: 0.45; cursor: default; }
+@media (max-width: 767px) { .wp-step { width: 38px; height: 38px; border-radius: 11px; } }
+
+/* La caja con filas que usan el buscador y la comanda. */
+.wp-group {
+  border-radius: 12px; overflow: hidden;
+  background: var(--adm-card); border: 1px solid var(--adm-border);
+  box-shadow: var(--adm-shadow-xs);
+}
+/* Dentro del buscador la caja ya la pone `.wp-finder`: doble borde
+   dibujaría una tarjeta dentro de otra. */
+.wp-finder-res .wp-group { border: none; border-radius: 0; box-shadow: none; background: none; }
+
+/* Ayudas que solo tienen sentido con sitio de sobra. */
+.wp-wide-only { display: none; }
+@media (min-width: 900px) { .wp-wide-only { display: inline; } }
+
+/* ── Las barras pegadas, por encima de la barra de destinos ────
+   La del siguiente paso de la mesa, la del cierre de caja y la hoja de
+   la mesa elegida son `sticky bottom: 0`, y en el teléfono ese borde lo
+   ocupa la barra inferior de destinos del panel (fija, z-index 60). Sin
+   este colchón tapaba justo el botón que dice qué hacer.
+
+   Va al FINAL del archivo a propósito: las reglas de cada pantalla se
+   declaran más abajo y ganarían por orden si esto viviera arriba.
+   ------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  .ciclo-next, .caja-foot, .salon-sheet {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 14px;
+  }
+  /* En modo servicio no hay barra de destinos que evitar: al borde. */
+  .admin-kiosk .ciclo-next,
+  .admin-kiosk .caja-foot,
+  .admin-kiosk .salon-sheet {
+    bottom: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
 }

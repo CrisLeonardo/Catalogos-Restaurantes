@@ -289,6 +289,8 @@ export interface Order {
   /** Efectivo realmente recibido en la puerta (para cuadrar caja). */
   cash_collected: number | null;
   delivery_zone_id: string | null;
+  /** Comensales sentados en la mesa (migración 123). null = no se anotó. */
+  party_size: number | null;
 }
 
 /** Auditoría de anulación de pedido/ítem (migración 079): motivo obligatorio
@@ -329,6 +331,9 @@ export interface OrderItem {
   options_snapshot: OrderItemOption[] | null;
   /** Nota libre del mesero/comensal para este plato (ej. "sin cebolla"). */
   note: string | null;
+  /** Asiento al que se le apunta el plato (migración 123). null = de la mesa,
+      sin dueño: al dividir la cuenta cae en "sin repartir". */
+  seat_no: number | null;
 }
 
 /* ── Carrito ──────────────────────────────────────────────── */

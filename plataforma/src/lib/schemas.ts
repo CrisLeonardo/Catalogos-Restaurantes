@@ -16,6 +16,12 @@ export const orderItemSchema = z.object({
   options: z.array(orderItemOptionSchema).max(30).optional(),
   /** Nota libre para este plato (ej. "sin cebolla"), distinta de la nota del pedido completo. */
   note: z.string().max(140).transform((v) => v.trim()).optional(),
+  /**
+   * Asiento al que se le apunta el plato (migración 123). Solo lo manda el
+   * panel de mesero: es lo que convierte «dividir la cuenta» en una lista ya
+   * hecha en vez de un rompecabezas al final de la noche.
+   */
+  seat: z.number().int().min(1).max(40).optional(),
 });
 
 /** Strips spaces, dashes, dots, parens from a phone string. */
@@ -53,6 +59,8 @@ export const customerSchema = z.object({
   tableNumber: z.number().int().min(1).max(200).optional(),
   /** Solo para DINE_IN: preferencia de orden de servicio. */
   coursePreference: z.string().max(200).transform((v) => v.trim()).optional(),
+  /** Solo para DINE_IN: cuánta gente se sentó (migración 123). */
+  partySize: z.number().int().min(1).max(100).optional(),
 });
 
 export const createOrderSchema = z

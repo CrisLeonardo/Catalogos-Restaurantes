@@ -237,6 +237,12 @@ export type TableOccupancy = {
   /** El READY más viejo sin entregar, si lo hay: el plato que lleva rato en
       la barra esperando que alguien lo lleve. */
   readySince: string | null;
+  /** Comensales sentados (migración 123). `null` = nadie lo anotó — la ficha
+      omite el dato en vez de inventar un número. */
+  partySize: number | null;
+  /** Cuándo salió el último plato a cocina (accepted_at más reciente). Es lo
+      que la línea del ciclo enseña como "salió 20:12". */
+  firedAt: string | null;
 };
 
 /** Cuál de dos estados "manda" en la mesa: el menos avanzado. */
@@ -248,23 +254,37 @@ const STATUS_RANK: Record<string, number> = { NEW: 0, PREP: 1, READY: 2, TRANSIT
     misma mesa sin saberlo). */
 export async function getActiveTableNumbers(restaurantId: string): Promise<Record<number, TableOccupancy>> {
   const db = createServiceClient();
-  const { data } = await db
+  const pedir = (cols: string) => db
     .from('orders')
-    .select('address, created_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)')
+    .select(cols)
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
     .not('status', 'in', '("DELIVERED","CANCEL")')
     .order('created_at', { ascending: true })
     .limit(200);
 
+  const BASE = 'address, created_at, accepted_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)';
+
+  /* `party_size` es de la migración 123. Donde todavía no corrió, pedirla
+     tumba la consulta ENTERA y el salón se quedaría sin ver ninguna mesa
+     ocupada — mucho peor que no saber cuánta gente hay. Si falta la columna
+     se reintenta sin ella y las personas quedan en null, que es justo lo que
+     la ficha sabe omitir. (Mismo patrón que `reason` en las llamadas.) */
+  const conPax = await pedir(`${BASE}, party_size`);
+  const { error } = conPax;
+  const data = error && error.code === '42703' && /party_size/i.test(error.message ?? '')
+    ? (await pedir(BASE)).data
+    : conPax.data;
+
   const result: Record<number, TableOccupancy> = {};
   /** Mesas donde algún pedido NO está servido: no pueden reportar servedAt. */
   const sinServir = new Set<number>();
 
-  for (const row of (data ?? []) as (Record<string, unknown>)[]) {
-    const { address, created_at, status, total, served_at, ready_at, items, waiter } = row as {
-      address: string | null; created_at: string; status: OrderStatus;
+  for (const row of (data ?? []) as unknown as (Record<string, unknown>)[]) {
+    const { address, created_at, accepted_at, status, total, served_at, ready_at, party_size, items, waiter } = row as {
+      address: string | null; created_at: string; accepted_at: string | null; status: OrderStatus;
       total: number | string | null; served_at: string | null; ready_at: string | null;
+      party_size?: number | null;
       items?: { quantity: number }[] | null;
       waiter?: { full_name: string | null } | null;
     };
@@ -284,6 +304,8 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
         total: Number(total ?? 0),
         servedAt: status === 'SERVED' ? served_at : null,
         readySince: status === 'READY' ? ready_at : null,
+        partySize: party_size ?? null,
+        firedAt: accepted_at ?? null,
       };
     } else {
       prev.itemCount += platos;
@@ -291,6 +313,10 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
       if ((STATUS_RANK[status] ?? 0) < (STATUS_RANK[prev.status] ?? 0)) prev.status = status;
       if (status === 'SERVED' && served_at && (!prev.servedAt || served_at > prev.servedAt)) prev.servedAt = served_at;
       if (status === 'READY' && ready_at && (!prev.readySince || ready_at < prev.readySince)) prev.readySince = ready_at;
+      // La mesa la ocupa la ronda MÁS GRANDE que alguien anotó: si la segunda
+      // comanda se tomó sin preguntar, no por eso se sentó menos gente.
+      if (party_size != null && party_size > (prev.partySize ?? 0)) prev.partySize = party_size;
+      if (accepted_at && (!prev.firedAt || accepted_at > prev.firedAt)) prev.firedAt = accepted_at;
     }
     if (status !== 'SERVED') sinServir.add(n);
   }
@@ -340,6 +366,49 @@ export async function getPendingTableCalls(restaurantId: string): Promise<Record
     if (prev.reason !== 'bill' && reason === 'bill') result[n] = { reason, since: row.created_at };
   }
   return result;
+}
+
+/**
+ * Cuántas veces se ha ocupado una mesa hoy («Rotación hoy» de la tira de
+ * resumen). Es el número que dice si un salón de 14 mesas trabajó o no:
+ * nueve mesas llenas a las 21:00 significan cosas muy distintas si el día
+ * lleva 31 rotaciones o si lleva 9.
+ *
+ * Cómo se cuenta: cada CIERRE de mesa es una rotación. Al liberar una mesa
+ * (`freeTable`) todos sus pedidos se marcan DELIVERED con la MISMA marca de
+ * tiempo, así que agrupar por mesa + minuto de cierre da exactamente una
+ * rotación por cada vez que la mesa se vació. Se suman las que están
+ * ocupadas ahora, que también son gente que se sentó hoy.
+ */
+export async function getTableTurnsToday(restaurantId: string, timezone: string): Promise<number> {
+  const db = createServiceClient();
+
+  // Se pide desde ayer y se filtra por día local: el corte del día del
+  // restaurante no es medianoche UTC (mismo criterio que getCashSummary).
+  const desde = new Date();
+  desde.setUTCDate(desde.getUTCDate() - 1);
+
+  const { data } = await db
+    .from('orders')
+    .select('address, delivered_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .eq('status', 'DELIVERED')
+    .gte('delivered_at', desde.toISOString())
+    .limit(2000);
+
+  const hoy = localDateKey(new Date(), timezone);
+  const cierres = new Set<string>();
+  for (const row of (data ?? []) as { address: string | null; delivered_at: string | null }[]) {
+    if (!row.delivered_at) continue;
+    if (localDateKey(new Date(row.delivered_at), timezone) !== hoy) continue;
+    const m = row.address?.match(/Mesa\s+(\d+)/i);
+    if (!m) continue;
+    // Minuto de cierre: una mesa liberada de golpe cuenta una sola vez
+    // aunque tuviera cuatro comandas acumuladas.
+    cierres.add(`${m[1]}|${row.delivered_at.slice(0, 16)}`);
+  }
+  return cierres.size;
 }
 
 export type DaySale    = { label: string; total: number; isToday: boolean };

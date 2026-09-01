@@ -163,6 +163,13 @@ export function buildNav(ctx: NavContext): NavGroup[] {
         { href: '/admin/metricas', label: 'Resumen', key: 'metricas' },
         ...lockable(ctx, ctx.analiticaEnabled, plan.hasAnalytics, { href: '/admin/analitica', label: 'Analítica', key: 'analitica' }),
         ...lockable(ctx, ctx.finanzasEnabled, plan.hasFinance, { href: '/admin/finanzas', label: 'Finanzas', key: 'finanzas' }),
+        /* Caja es pestaña propia desde el rediseño de 2026-09-01. El arqueo
+           vivía al final del scroll de Finanzas, y cerrar caja no es un
+           apéndice de un reporte: es la última tarea de todas las noches, la
+           hace el cajero y no el dueño, y tiene su propio ritmo. Comparte la
+           llave 'finanzas' a propósito: quien puede ver el dinero puede
+           cuadrarlo, sin tocar el modelo de permisos. */
+        ...lockable(ctx, ctx.finanzasEnabled, plan.hasFinance, { href: '/admin/caja', label: 'Caja', key: 'finanzas' }),
         ...(on(ctx.felActive) ? [{ href: '/admin/facturacion', label: 'Facturación', key: 'fel' }] : []),
         // Apps de delivery (Canales, Fase 5A): deshabilitado, sigue en pruebas.
         /* "Copia de datos" ESTABA aquí y también en la portada de Ajustes, y

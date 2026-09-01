@@ -69,6 +69,29 @@ Ya hice todo esto por ti (no tienes que repetirlo, solo entenderlo):
 
 > Estas credenciales **solo existen en tu Supabase local**. No sirven en producción.
 
+### Entrar sin escribir la contraseña
+
+Con `DEV_LOGIN=1` en tu `.env.local` (ya viene puesto) puedes abrir sesión de
+un tirón, sin pasar por el formulario:
+
+| Quieres | Abre |
+|---------|------|
+| El panel del dueño | http://localhost:3000/api/dev-login |
+| Directo a una pantalla | http://localhost:3000/api/dev-login?next=/admin/caja |
+| Otro usuario | http://localhost:3000/api/dev-login?email=admin@local.test&next=/super |
+
+Abre una sesión **real** de Supabase por el mismo camino que el login por PIN
+(`generateLink` + `verifyOtp`): no hay contraseñas de por medio en ningún
+momento.
+
+> **Por qué es seguro dejarlo puesto.** La ruta exige DOS candados a la vez: la
+> bandera `DEV_LOGIN=1` (que no es `NEXT_PUBLIC_`, así que no viaja al
+> navegador) **y** que `NEXT_PUBLIC_SUPABASE_URL` apunte a `127.0.0.1` o
+> `localhost`. Con cualquiera de los dos cerrado responde 404. El segundo es el
+> que de verdad importa: aunque la bandera se colara en un despliegue real, ahí
+> el Supabase es el de la nube y la ruta se niega igual. Una bandera se
+> enciende por error; un host no.
+
 ---
 
 ## 4. Tu rutina diaria de trabajo

@@ -30,6 +30,8 @@ export interface SalonData {
   isSuperAdmin: boolean;
   /** URL pública del menú, para los códigos QR de mesa. */
   menuUrl: string | null;
+  /** Zona horaria del restaurante: el día del salón no acaba a medianoche UTC. */
+  timezone: string;
 }
 
 export async function getSalonData(): Promise<SalonData> {
@@ -41,6 +43,7 @@ export async function getSalonData(): Promise<SalonData> {
   let restaurantId: string | null = null;
   let config: ThemeConfig | null = null;
   let planActual: string | null = null;
+  let timezone = 'America/Guatemala';
 
   if (tenantSlug) {
     const data = await getRestaurantBySlug(tenantSlug);
@@ -49,11 +52,13 @@ export async function getSalonData(): Promise<SalonData> {
       slug = tenantSlug;
       config = data.resolved.config;
       planActual = data.restaurant.plan_actual ?? null;
+      timezone = data.restaurant.timezone ?? timezone;
     }
   } else if (ctx?.restaurant) {
     restaurantId = ctx.restaurant.id;
     slug = ctx.restaurant.slug;
     planActual = ctx.restaurant.plan_actual ?? null;
+    timezone = ctx.restaurant.timezone ?? timezone;
     if (slug) {
       const data = await getRestaurantBySlug(slug);
       if (data) config = data.resolved.config;
@@ -71,5 +76,6 @@ export async function getSalonData(): Promise<SalonData> {
     hasDineIn: config?.orderTypes.includes('dine_in') ?? false,
     isSuperAdmin: ctx?.profile.role === 'SUPER_ADMIN',
     menuUrl: slug ? `${protocol}://${slug}.${rootDomain}` : null,
+    timezone,
   };
 }

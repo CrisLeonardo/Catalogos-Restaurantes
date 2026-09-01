@@ -10,6 +10,10 @@
      · aquí vive lo que está pasando;
      · en Ajustes › Salón vive cómo está armado el salón.
 
+   Desde el rediseño de 2026-09-01 esto es UNA pantalla con tres
+   vistas del mismo salón —Fichas, Plano y Lista— bajo una barra
+   superior que no se mueve. Ver `components/admin/salon-board.tsx`.
+
    El tablero usa la MISMA regla que el mesero (lib/table-state.ts):
    si una mesa sale en acento aquí, sale en acento en su teléfono. */
 
@@ -17,13 +21,13 @@ import Link from 'next/link';
 import SalonBoard from '@/components/admin/salon-board';
 import PlanLockedScreen from '@/components/admin/plan-locked-screen';
 import { Icon } from '@/components/icons';
-import { getActiveTableNumbers, getPendingTableCalls } from '@/lib/db/orders';
+import { getActiveTableNumbers, getPendingTableCalls, getTableTurnsToday } from '@/lib/db/orders';
 import { getSalonData } from './salon-data';
 
 export const metadata = { title: 'Mesas — Panel Admin' };
 
 export default async function MesasPage() {
-  const { restaurantId, config, hasWaiterPanel, hasDineIn, isSuperAdmin } = await getSalonData();
+  const { restaurantId, config, hasWaiterPanel, hasDineIn, isSuperAdmin, timezone } = await getSalonData();
 
   /* Gestión de mesas es de Premium en adelante, pero un ESTANDAR con el
      paquete "Local" (dine_in activo) también depende de esta pantalla:
@@ -47,9 +51,10 @@ export default async function MesasPage() {
     );
   }
 
-  const [occupancy, calls] = await Promise.all([
+  const [occupancy, calls, turnsToday] = await Promise.all([
     getActiveTableNumbers(restaurantId),
     getPendingTableCalls(restaurantId),
+    getTableTurnsToday(restaurantId, timezone),
   ]);
 
   return (
@@ -58,6 +63,9 @@ export default async function MesasPage() {
         tableCount={config.dineInTableCount}
         occupancy={occupancy}
         calls={calls}
+        restaurantId={restaurantId}
+        turnsToday={turnsToday}
+        floorPlan={config.floorPlan ?? null}
         currency={{
           symbol: config.currencySymbol,
           position: config.currencyPosition,
@@ -88,7 +96,7 @@ export default async function MesasPage() {
             Configuración del salón
           </span>
           <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>
-            Cuántas mesas, códigos QR y NFC, plano por niveles, propina
+            Cuántas mesas, sillas por mesa, códigos QR y NFC, plano por niveles, propina
           </span>
         </span>
         <span style={{ fontSize: 13, color: 'var(--u-text-3)', flexShrink: 0 }}>Ajustes › Salón</span>

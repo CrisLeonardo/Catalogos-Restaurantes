@@ -21,6 +21,15 @@ export interface CartLine {
   /** Nota libre para ESTE plato ("sin cebolla"), distinta de la nota
       general del pedido. */
   note?: string;
+  /**
+   * Asiento al que se le apunta (migración 123). `null`/ausente = de la
+   * mesa, sin dueño.
+   *
+   * Se decide AL PEDIR y no al cobrar a propósito: quien sabe que el
+   * pepián es del que está frente a la ventana es el mesero en ese
+   * momento, no el cajero dos horas después.
+   */
+  seat?: number | null;
 }
 
 let _lineSeq = 0;

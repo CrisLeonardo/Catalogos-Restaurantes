@@ -54,6 +54,10 @@ export interface BillLine {
   voidedQuantity: number;
   unitPrice: number;
   lineTotal: number;
+  /** Nota del plato ("sin cilantro"), tal como la escribió el mesero. */
+  note: string | null;
+  /** Asiento al que se le apuntó (migración 123). null = de la mesa. */
+  seat: number | null;
 }
 
 export interface BillBreakdown {
@@ -106,6 +110,8 @@ export function buildBillLines(orders: OrderWithItems[]): BillLine[] {
         voidedQuantity: voidedQuantity(item, voids),
         unitPrice,
         lineTotal: round2(unitPrice * quantity),
+        note: item.note ?? null,
+        seat: item.seat_no ?? null,
       });
     }
   }

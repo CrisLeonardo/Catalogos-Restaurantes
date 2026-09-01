@@ -58,6 +58,8 @@ export type VerifiedOrderItem = {
   quantity: number;
   options: OrderItemOption[];
   note?: string;
+  /** Asiento al que se le apunta (migración 123); solo el panel de mesero. */
+  seat?: number | null;
   /** Solo lo usa createOrder (canje de recompensas); createWaiterOrder nunca los fija. */
   is_reward?: boolean;
   reward_id?: string | null;
@@ -116,6 +118,7 @@ async function verifyAndPriceItems(
       quantity: item.quantity,
       options: resolvedOpts.snapshot,
       note: item.note,
+      seat: item.seat ?? null,
     });
   }
 
@@ -682,12 +685,23 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
       subtotal:         i.price * i.quantity,
       options_snapshot: i.options.length > 0 ? i.options : null,
       note:             i.note || null,
+      seat_no:          i.seat ?? null,
     })),
   });
 
   const order = placed as { id: string; order_number: string; public_token: string } | null;
   if (orderError || !order) {
     return { error: orderError?.message ?? 'Error al crear el pedido.' };
+  }
+
+  /* Cuánta gente se sentó. Va en un UPDATE aparte y no dentro de
+     place_order a propósito: añadirle un parámetro al RPC crea una
+     SOBRECARGA nueva y deja ambiguas las llamadas que no lo mandan (ver el
+     aviso de la migración 031). Y si la columna todavía no existe en este
+     entorno, el pedido ya está creado: perder el dato de personas no puede
+     costar la comanda. */
+  if (waiterOrderType === 'DINE_IN' && customer.partySize) {
+    await db.from('orders').update({ party_size: customer.partySize }).eq('id', order.id);
   }
 
   // El pedido del mesero NACE ya enviado a cocina.
@@ -1097,6 +1111,239 @@ export async function getTableBill(
   if ('error' in acceso) return acceso;
 
   return { orders: await getOrdersForTable(restaurantId, tableNumber) };
+}
+
+/* ════════════════════════════════════════════════════════════
+   LA ÚNICA ACCIÓN DE UNA FICHA DE MESA
+   ------------------------------------------------------------
+   El rediseño del salón cambia el trato: una mesa no ofrece un menú
+   de opciones, ofrece lo que toca hacer AHORA. Dos de esos verbos se
+   resuelven aquí mismo, sin sacar a nadie de la pantalla:
+
+     · «Llevar a la mesa» — la comida está lista en la barra.
+     · «Atender»          — alguien llamó y ya va para allá.
+
+   Los demás (cobrar, agregar, abrir) sí llevan al panel de mesero,
+   que es donde vive el pedido: duplicar ahí la lógica de cobro sería
+   una segunda verdad sobre la misma mesa.
+   ════════════════════════════════════════════════════════════ */
+
+/**
+ * Marca como servidos los platos que ya estaban listos en una mesa.
+ *
+ * Es «Llevar a la mesa»: lo que había en la barra enfriándose ya está
+ * puesto. Solo toca los pedidos en READY — lo que sigue en cocina no se
+ * puede haber servido.
+ */
+export async function serveTableReady(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<{ error?: string; served?: number }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('orders')
+    .update({ status: 'SERVED', served_at: new Date().toISOString() })
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .eq('address', `Mesa ${tableNumber}`)
+    .eq('status', 'READY')
+    .select('id');
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/cocina');
+  revalidatePath('/admin/pedidos');
+  return { served: data?.length ?? 0 };
+}
+
+/**
+ * Da por atendidas las llamadas pendientes de una mesa.
+ *
+ * Es «Atender»: el aviso desaparece del salón porque alguien ya va. No
+ * cambia nada del pedido — una llamada no es un estado de la comida.
+ */
+export async function resolveTableCalls(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<{ error?: string; resolved?: number }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('waiter_calls')
+    .update({ resolved_at: new Date().toISOString() })
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableNumber)
+    .is('resolved_at', null)
+    .select('id');
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
+  return { resolved: data?.length ?? 0 };
+}
+
+/**
+ * Cuánta gente hay sentada en la mesa (migración 123).
+ *
+ * Se guarda en TODOS los pedidos activos de la mesa, no solo en el
+ * último: la mesa es una sola y la cifra tiene que decir lo mismo se
+ * mire desde la comanda que se mire.
+ */
+export async function setTableParty(
+  restaurantId: string,
+  tableNumber: number,
+  partySize: number | null,
+): Promise<{ error?: string }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+  if (partySize != null && (!Number.isInteger(partySize) || partySize < 1 || partySize > 100)) {
+    return { error: 'Número de personas inválido.' };
+  }
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const { error } = await db
+    .from('orders')
+    .update({ party_size: partySize })
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .eq('address', `Mesa ${tableNumber}`)
+    .not('status', 'in', '("DELIVERED","CANCEL")');
+
+  // La columna es de la migración 123: donde no ha corrido, anotar las
+  // personas no debe romper la pantalla — simplemente no se guarda.
+  if (error) {
+    if (error.code === '42703') return { error: 'Falta la migración 123 para poder anotar las personas.' };
+    return { error: error.message };
+  }
+
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
+  return {};
+}
+
+/**
+ * Mueve lo que hay en una mesa a otra.
+ *
+ * Cubre las dos cosas que pasan de verdad en un salón y que hasta ahora
+ * obligaban a anular y volver a apuntar:
+ *
+ *   · «Mover a otra»  — se cambiaron de mesa. El destino está libre.
+ *   · «Juntar mesas»  — llegaron dos más y se corren las mesas. El
+ *                       destino YA tiene gente, y eso es lo que se
+ *                       quiere: una sola cuenta.
+ *
+ * `merge` distingue las dos: sin él, mover a una mesa ocupada juntaría
+ * dos cuentas ajenas por un dedazo, que es de las peores cosas que
+ * pueden pasar en una noche llena.
+ */
+export async function moveTableOrders(
+  restaurantId: string,
+  from: number,
+  to: number,
+  merge = false,
+): Promise<{ error?: string; moved?: number }> {
+  if (!restaurantId || !from || !to) return { error: 'Datos inválidos.' };
+  if (from === to) return { error: 'Es la misma mesa.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const activos = '("DELIVERED","CANCEL")';
+
+  const { count: ocupada } = await db
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .eq('address', `Mesa ${to}`)
+    .not('status', 'in', activos);
+
+  if ((ocupada ?? 0) > 0 && !merge) {
+    return { error: `La mesa ${to} ya tiene gente. Usa «Juntar mesas» si quieres una sola cuenta.` };
+  }
+
+  const { data, error } = await db
+    .from('orders')
+    .update({ address: `Mesa ${to}` })
+    .eq('restaurant_id', restaurantId)
+    .eq('order_type', 'DINE_IN')
+    .eq('address', `Mesa ${from}`)
+    .not('status', 'in', activos)
+    .select('id');
+
+  if (error) return { error: error.message };
+  if ((data?.length ?? 0) === 0) return { error: `La mesa ${from} no tiene nada que mover.` };
+
+  /* Las llamadas pendientes se van con la mesa: si pidieron la cuenta en
+     la 3 y se pasaron a la 7, el aviso tiene que seguirlos. */
+  await db
+    .from('waiter_calls')
+    .update({ table_number: to })
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', from)
+    .is('resolved_at', null);
+
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/cocina');
+  return { moved: data?.length ?? 0 };
+}
+
+/**
+ * Reasigna el asiento de una línea del pedido (migración 123).
+ *
+ * Es lo que convierte «dividir la cuenta» en algo ya hecho: si cada
+ * plato sabe de quién es desde que se pide, cobrar por separado deja de
+ * ser un rompecabezas al final de la noche.
+ */
+export async function setItemSeat(
+  restaurantId: string,
+  itemId: string,
+  seatNo: number | null,
+): Promise<{ error?: string }> {
+  if (!restaurantId || !itemId) return { error: 'Datos inválidos.' };
+  if (seatNo != null && (!Number.isInteger(seatNo) || seatNo < 1 || seatNo > 40)) {
+    return { error: 'Asiento inválido.' };
+  }
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  // El ítem tiene que ser de un pedido de ESTE restaurante: sin esta
+  // comprobación, un id de línea ajeno sería editable desde aquí.
+  const { data: item } = await db
+    .from('order_items')
+    .select('id, order:orders!inner(restaurant_id)')
+    .eq('id', itemId)
+    .maybeSingle();
+  const dueño = (item as { order?: { restaurant_id: string } | null } | null)?.order?.restaurant_id;
+  if (!item || dueño !== restaurantId) return { error: 'Plato no encontrado.' };
+
+  const { error } = await db.from('order_items').update({ seat_no: seatNo }).eq('id', itemId);
+  if (error) {
+    if (error.code === '42703') return { error: 'Falta la migración 123 para poder repartir por asiento.' };
+    return { error: error.message };
+  }
+
+  revalidatePath('/admin/mesero');
+  return {};
 }
 
 export interface PrintBillShareInput {
