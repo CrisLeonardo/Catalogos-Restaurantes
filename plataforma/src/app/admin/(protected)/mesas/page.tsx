@@ -66,6 +66,11 @@ export default async function MesasPage() {
         restaurantId={restaurantId}
         turnsToday={turnsToday}
         floorPlan={config.floorPlan ?? null}
+        umbrales={{
+          readyMin: config.salonReadyMin,
+          unpaidMin: config.salonUnpaidMin,
+          unacceptedMin: config.salonUnacceptedMin,
+        }}
         currency={{
           symbol: config.currencySymbol,
           position: config.currencyPosition,

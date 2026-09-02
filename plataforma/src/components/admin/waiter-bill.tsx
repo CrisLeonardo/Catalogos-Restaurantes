@@ -23,14 +23,16 @@
    y todo el reparto guardado por mesa (salir a tomar otro pedido ya no borra
    el trabajo). */
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { Group, Hr, Mono, Seg } from '@/components/admin/waiter/pieces';
 import {
-  buildBillLines, computeSplit, countUnassignedLines, UNASSIGNED_ID,
+  buildBillLines, computeSplit, countUnassignedLines, splitFromSeats, UNASSIGNED_ID,
   type BillAssignment, type BillLine, type SplitMode,
 } from '@/lib/bill-split';
-import { printTableBillShare } from '@/lib/actions/orders';
+import { printTableBillShare, getTableSplit, saveTableSplit } from '@/lib/actions/orders';
+import CloseTableSheet from '@/components/admin/waiter/close-table-sheet';
+import type { PaymentMethod } from '@/lib/payment-method';
 import type { OrderWithItems } from '@/lib/db/orders';
 import type { OrderStatus } from '@/types';
 import type { PanelCurrency } from '@/components/admin/order-card';
@@ -48,7 +50,9 @@ interface Props {
   currency: PanelCurrency;
   freeing: boolean;
   onVoidItem: (target: VoidTarget) => void;
-  onFreeTable: () => void;
+  /** Cierra la mesa. Recibe cómo se pagó: sin eso, el arqueo de caja
+      cuenta como efectivo hasta lo que se pagó con tarjeta. */
+  onFreeTable: (method: PaymentMethod, cashReceived: number | null) => void;
 }
 
 /* ── Estado persistido por mesa ───────────────────────────── */
@@ -84,9 +88,35 @@ function loadSaved(restaurantId: string, tableNumber: number): SavedSplit {
   }
 }
 
-/** Borra el reparto guardado de una mesa (al liberarla ya no aplica a nadie). */
+/** Borra el reparto guardado de una mesa (al liberarla ya no aplica a nadie).
+    El del servidor lo borra `freeTable`; este es el de este aparato. */
 export function clearSavedSplit(restaurantId: string, tableNumber: number) {
   try { localStorage.removeItem(storageKey(restaurantId, tableNumber)); } catch { /* modo privado */ }
+}
+
+/** ¿Alguien tocó ya este reparto, o es el que viene de fábrica? */
+function tieneReparto(s: SavedSplit): boolean {
+  return s.mode !== 'single'
+    || s.paid.length > 0
+    || Object.keys(s.names).length > 0
+    || Object.values(s.assignment).some((ids) => ids.length > 0);
+}
+
+/** Envuelve el reparto por asientos (lib/bill-split.ts) en la forma que
+    guarda esta pantalla. El modo NO se fuerza a 'byItem': la mayoría de
+    las mesas pagan juntas y abrir el cobro ya partido en cuatro sería
+    contestar una pregunta que nadie hizo. Lo que se gana es que, si se
+    elige repartir, ya está repartido. */
+function fromSeats(lines: BillLine[]): SavedSplit | null {
+  const semilla = splitFromSeats(lines);
+  if (!semilla) return null;
+  return {
+    mode: 'single',
+    peopleIds: semilla.peopleIds.length > 0 ? semilla.peopleIds : EMPTY.peopleIds,
+    names: {},
+    assignment: semilla.assignment,
+    paid: [],
+  };
 }
 
 /* ── Utilidades de presentación ───────────────────────────── */
@@ -144,33 +174,94 @@ export default function WaiterBill({
   const [printing, startPrint] = useTransition();
   const [printMsg, setPrintMsg] = useState<{ text: string; bad: boolean } | null>(null);
   const [hydrated, setHydrated] = useState(false);
-
-  // Rehidrata el reparto de ESTA mesa. Sin esto, salir a agregar un plato y
-  // volver borraba nombres y asignaciones — la queja número uno del flujo.
-  useEffect(() => {
-    const saved = loadSaved(restaurantId, tableNumber);
-    setMode(saved.mode);
-    setPeopleIds(saved.peopleIds);
-    setNames(saved.names);
-    setAssignment(saved.assignment);
-    setPaid(saved.paid);
-    setActivePerson(saved.peopleIds[0] ?? '1');
-    setHydrated(true);
-  }, [restaurantId, tableNumber]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(
-        storageKey(restaurantId, tableNumber),
-        JSON.stringify({ mode, peopleIds, names, assignment, paid } satisfies SavedSplit),
-      );
-    } catch { /* modo privado / sin cuota: el reparto sigue vivo en memoria */ }
-  }, [hydrated, restaurantId, tableNumber, mode, peopleIds, names, assignment, paid]);
+  /* La hoja de cierre: cómo pagó la mesa y el aviso de lo que queda sin
+     cobrar. Cerrar una mesa dispara la facturación y no se deshace, así
+     que ya no es un botón suelto. */
+  const [closing, setClosing] = useState(false);
 
   const lines = useMemo(() => buildBillLines(orders), [orders]);
   const liveLines = useMemo(() => lines.filter((l) => l.quantity > 0), [lines]);
   const voidedLines = useMemo(() => lines.filter((l) => l.quantity === 0), [lines]);
+
+  /* Las líneas, sin que su identidad reinicie la hidratación: el efecto de
+     abajo corre UNA vez por mesa y solo las necesita para sembrar. */
+  const linesRef = useRef(lines);
+  useEffect(() => { linesRef.current = lines; }, [lines]);
+
+  /* ── De dónde sale el reparto al abrir la mesa ───────────────
+     Tres fuentes, en este orden, y cada una solo entra si la anterior
+     no tenía nada que decir:
+
+       1. este aparato (localStorage) — pintado al instante, para que
+          volver de agregar un plato no parpadee, y para que el cobro
+          siga funcionando sin señal;
+       2. el local (tabla `table_splits`, migración 125) — manda, porque
+          es lo que ve todo el mundo: el mesero empieza en su teléfono y
+          el cajero lo termina en la tablet;
+       3. los asientos ya apuntados al pedir (`seat_no`, migración 123)
+          — si nadie ha repartido todavía, el reparto YA ESTÁ HECHO
+          desde que se tomó la comanda. Antes se tiraba y había que
+          rehacerlo plato por plato con el cliente esperando. */
+  useEffect(() => {
+    let vivo = true;
+    setHydrated(false);
+
+    const local = loadSaved(restaurantId, tableNumber);
+    const aplicar = (s: SavedSplit) => {
+      setMode(s.mode);
+      setPeopleIds(s.peopleIds);
+      setNames(s.names);
+      setAssignment(s.assignment);
+      setPaid(s.paid);
+      setActivePerson(s.peopleIds[0] ?? '1');
+    };
+    aplicar(local);
+
+    getTableSplit(restaurantId, tableNumber).then((res) => {
+      if (!vivo) return;
+      if (!('error' in res) && res.split) {
+        const s = res.split;
+        aplicar({
+          mode: s.mode,
+          peopleIds: s.people.map((p) => p.id),
+          names: Object.fromEntries(s.people.flatMap((p) => (p.name ? [[p.id, p.name]] : []))),
+          assignment: s.assignment,
+          paid: s.paid,
+        });
+      } else if (!tieneReparto(local)) {
+        const sembrado = fromSeats(linesRef.current);
+        if (sembrado) aplicar(sembrado);
+      }
+      setHydrated(true);
+    }).catch(() => {
+      /* Sin red se cobra igual con lo de este aparato: el reparto es
+         trabajo en curso, no puede quedarse esperando al servidor. */
+      if (vivo) setHydrated(true);
+    });
+
+    return () => { vivo = false; };
+  }, [restaurantId, tableNumber]);
+
+  /* Guardar: en el aparato al instante y en el local con freno. Cada
+     toque de un plato es un cambio, y sin el freno serían veinte
+     escrituras para repartir una mesa de cuatro. */
+  useEffect(() => {
+    if (!hydrated) return;
+    const snapshot: SavedSplit = { mode, peopleIds, names, assignment, paid };
+    try {
+      localStorage.setItem(storageKey(restaurantId, tableNumber), JSON.stringify(snapshot));
+    } catch { /* modo privado / sin cuota: el reparto sigue vivo en memoria */ }
+
+    const t = setTimeout(() => {
+      saveTableSplit(restaurantId, tableNumber, {
+        mode,
+        people: peopleIds.map((id) => (names[id] ? { id, name: names[id] } : { id })),
+        assignment,
+        paid,
+      }).catch(() => { /* sin señal: queda guardado en el aparato */ });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [hydrated, restaurantId, tableNumber, mode, peopleIds, names, assignment, paid]);
 
   const split = useMemo(
     () => computeSplit({ orders, mode, peopleIds, assignment }),
@@ -599,7 +690,7 @@ export default function WaiterBill({
       <div className="wp-billact">
         <p className="wp-billact-note">
           {allPaid
-            ? 'Todo cobrado. Al liberar, la mesa vuelve a estar disponible.'
+            ? 'Todo marcado como cobrado. Al cerrar se apunta la forma de pago y la mesa queda libre.'
             : `Quedan ${money(pendingTotal, currency)} sin cobrar en esta mesa.`}
         </p>
         <button
@@ -620,20 +711,30 @@ export default function WaiterBill({
         <button
           type="button"
           disabled={freeing}
-          onClick={onFreeTable}
-          className={allPaid ? 'press btn-accent' : 'press'}
-          style={allPaid
-            ? { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, height: 40, padding: '0 18px', borderRadius: 11, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1 }
-            : { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, height: 40, padding: '0 18px', borderRadius: 11, cursor: 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1, border: '1px solid color-mix(in srgb, var(--c-danger) 30%, transparent)', background: 'color-mix(in srgb, var(--c-danger) 8%, transparent)', color: 'var(--c-danger)' }}
+          onClick={() => setClosing(true)}
+          className="press btn-accent"
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0, minHeight: 40, padding: '0 18px', borderRadius: 11, border: 'none', cursor: freeing ? 'default' : 'pointer', fontWeight: 600, fontSize: 14.5, opacity: freeing ? 0.6 : 1 }}
         >
-          {freeing ? 'Liberando…' : (
+          {freeing ? 'Cerrando…' : (
             <>
-              <Icon name="check" size={15} strokeWidth={2.6} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />
-              {allPaid ? 'Cobrada — liberar la mesa' : 'Marcar mesa como libre'}
+              <Icon name="creditCard" size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />
+              Cobrar y cerrar
             </>
           )}
         </button>
       </div>
+
+      {closing && (
+        <CloseTableSheet
+          tableNumber={tableNumber}
+          total={breakdown.grandTotal}
+          pending={pendingTotal}
+          money={(n) => money(n, currency)}
+          busy={freeing}
+          onCancel={() => setClosing(false)}
+          onConfirm={(method, cashReceived) => { setClosing(false); onFreeTable(method, cashReceived); }}
+        />
+      )}
     </div>
   );
 }

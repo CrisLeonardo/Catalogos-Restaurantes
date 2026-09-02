@@ -11,7 +11,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { FloorPlan, FloorTable, FloorFixture, FixtureKind } from '@/lib/theme/defaults';
-import { FIXTURE_META, FIXTURE_KINDS, fixtureLabel } from '@/components/admin/floor-map';
+import { FIXTURE_META, FIXTURE_KINDS, fixtureLabel } from '@/components/admin/salon/fixtures';
 
 const MAX_LEVELS = 3;
 const VIRT_W = 1000;
@@ -144,6 +144,14 @@ export default function FloorPlanEditor({
       sirve para decidir dónde sentar a los que acaban de entrar. */
   function setSeats(n: number, seats: number | null) {
     setTables(value.tables.map((tb) => (tb.n === n ? { ...tb, seats: seats ?? undefined } : tb)));
+  }
+
+  /** El nombre de la mesa, si tiene uno. No la renombra: la 7 sigue siendo
+      la 7 para el QR, el pedido y la cuenta. Es cómo se le llama en voz
+      alta cuando el local tiene más de un ambiente. */
+  function setLabel(n: number, label: string) {
+    const limpio = label.trim().slice(0, 24);
+    setTables(value.tables.map((tb) => (tb.n === n ? { ...tb, label: limpio || undefined } : tb)));
   }
 
   /* ── Referencias del salón (barra, recepción, cocina…) ── */
@@ -698,7 +706,7 @@ export default function FloorPlanEditor({
                 Sillas por mesa
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.45, marginBottom: 9 }}>
-                Cuánta gente cabe en cada una. El salón lo enseña en las mesas libres, para saber de un vistazo dónde sentar a los que acaban de entrar. Déjalo vacío si prefieres no decirlo.
+                Cuánta gente cabe en cada una y, si quieres, cómo la llaman: «Terraza 2», «Barra A». El número no cambia —el QR y la cuenta siguen yendo por él—, es solo el nombre que se ve en el salón. Deja lo que no quieras decir en blanco.
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {[...tablesOnLevel].sort((a, b) => a.n - b.n).map((tb) => (
@@ -727,6 +735,19 @@ export default function FloorPlanEditor({
                         width: 56, height: 40, textAlign: 'center', borderRadius: 10, outline: 'none',
                         border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                         color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)', fontSize: 15, fontWeight: 600,
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={tb.label ?? ''}
+                      placeholder="Nombre"
+                      maxLength={24}
+                      aria-label={`Nombre de la mesa ${tb.n}`}
+                      onChange={(e) => setLabel(tb.n, e.target.value)}
+                      style={{
+                        width: 104, height: 40, borderRadius: 10, outline: 'none', padding: '0 10px',
+                        border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                        color: 'var(--u-text)', fontSize: 14,
                       }}
                     />
                   </label>

@@ -9,6 +9,7 @@ import { updateOrderStatus } from '@/lib/actions/orders';
 import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
+import { etiquetaDeMesa } from '@/lib/mesa';
 
 interface Props {
   restaurantId: string;
@@ -61,8 +62,7 @@ type Palette = typeof C_DARK;
 
 function orderLabel(o: OrderWithItems): { icon: string; text: string } {
   if (o.order_type === 'DINE_IN') {
-    const m = o.address?.match(/Mesa\s+(\d+)/i);
-    return { icon: 'utensils', text: m ? `Mesa ${m[1]}` : (o.address || 'En local') };
+    return { icon: 'utensils', text: etiquetaDeMesa(o) };
   }
   if (o.order_type === 'PICKUP') return { icon: 'bag', text: 'Para llevar' };
   return { icon: 'truck', text: 'Domicilio' };

@@ -35,18 +35,38 @@ export default async function MeseroPage() {
     }
   }
   if (!restaurantId) return null;
-  let restaurantName = 'Restaurante';
+
+  /* La configuración del restaurante NO puede depender de haber entrado por
+     el subdominio.
+     ------------------------------------------------------------------
+     Esto resolvía el tema solo cuando llegaba `x-tenant-slug`, que el proxy
+     únicamente pone cuando el host resuelve un tenant. Entrando por el
+     dominio raíz (o desde la app de escritorio) la cabecera no existe y la
+     pantalla caía a los valores de fábrica: SIN PLANO DEL SALÓN, 20 mesas
+     fijas, moneda «Q» y propina apagada. Comprobado: el plano que el dueño
+     dibujó salía en Pedidos › Mesas y no salía aquí, y un restaurante de 40
+     mesas enseñaba 20.
+
+     `getSalonData()` (mesas/salon-data.ts) ya resolvía este caso desde el
+     rediseño de 2026-08-26; el mesero se había quedado atrás. La cascada es
+     la misma: el slug del tenant si viene, y si no el del propio
+     restaurante, que siempre lo hay porque el restaurante ya está resuelto. */
+  const { data: r } = await db
+    .from('restaurants')
+    .select('name, slug')
+    .eq('id', restaurantId)
+    .single();
+
+  let restaurantName = (r?.name as string | null) ?? 'Restaurante';
   let resolvedConfig: ThemeConfig | null = null;
 
-  if (slug) {
-    const tenantData = await getRestaurantBySlug(slug);
+  const configSlug = slug ?? (r?.slug as string | null) ?? null;
+  if (configSlug) {
+    const tenantData = await getRestaurantBySlug(configSlug);
     if (tenantData) {
       restaurantName = tenantData.restaurant.name;
       resolvedConfig = tenantData.resolved.config;
     }
-  } else {
-    const { data: r } = await db.from('restaurants').select('name').eq('id', restaurantId).single();
-    restaurantName = (r?.name as string | null) ?? 'Restaurante';
   }
 
   const [categoriesRes, productsRes, activeOrders, occupiedSince, tableCalls, hubInfo] = await Promise.all([
@@ -76,6 +96,11 @@ export default async function MeseroPage() {
       tableCalls={tableCalls}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}
+      umbrales={resolvedConfig ? {
+        readyMin: resolvedConfig.salonReadyMin,
+        unpaidMin: resolvedConfig.salonUnpaidMin,
+        unacceptedMin: resolvedConfig.salonUnacceptedMin,
+      } : undefined}
       tipEnabled={resolvedConfig ? tipAppliesToType(resolvedConfig, 'DINE_IN') : false}
       tipEnabledPickup={resolvedConfig ? tipAppliesToType(resolvedConfig, 'PICKUP') : false}
       // "Para llevar" en el panel de mesero solo si el restaurante acepta ese

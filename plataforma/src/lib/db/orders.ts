@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { hayColumnaMesa, mesaDeFila, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { localDateKey } from '@/lib/hours';
 import type { Order, OrderItem, OrderStatus, OrderVoid } from '@/types';
 
@@ -98,8 +99,10 @@ export interface ActiveOrderPreview {
   id: string;
   order_number: string;
   order_type: Order['order_type'];
-  /** En DINE_IN trae "Mesa N" (ver tableLabel en la pantalla Hoy). */
+  /** En DINE_IN trae "Mesa N": el texto que se imprime. */
   address: string | null;
+  /** La mesa de verdad (migración 127). Ausente donde no ha corrido. */
+  table_number?: number | null;
   customer_name: string;
   status: OrderStatus;
   total: number;
@@ -126,10 +129,11 @@ export async function getActiveOrdersPreview(
   limit = 4,
 ): Promise<ActiveOrdersPreview> {
   const db = createServiceClient();
+  const cols = `id, order_number, order_type, address, customer_name, status, total, created_at${
+    (await hayColumnaMesa()) ? ', table_number' : ''}`;
   const { data, count } = await db
     .from('orders')
-    .select('id, order_number, order_type, address, customer_name, status, total, created_at',
-      { count: 'exact' })
+    .select(cols, { count: 'exact' })
     .eq('restaurant_id', restaurantId)
     .not('status', 'in', '("DELIVERED","CANCEL")')
     .order('created_at', { ascending: true })
@@ -170,13 +174,17 @@ export async function getOrdersForTable(
   tableNumber: number,
 ): Promise<OrderWithItems[]> {
   const db = createServiceClient();
-  const tableAddress = `Mesa ${tableNumber}`;
-  const { data } = await db
+  /* Por NÚMERO, no por el texto «Mesa 4» (migración 127). Mientras la
+     columna no exista en producción se sigue filtrando por la dirección:
+     ver lib/db/mesa-columna.ts. */
+  const porNumero = await hayColumnaMesa();
+  let q = db
     .from('orders')
     .select('*, items:order_items(*), voids:order_voids(*), waiter:profiles!orders_waiter_id_fkey(full_name)')
     .eq('restaurant_id', restaurantId)
-    .eq('order_type', 'DINE_IN')
-    .eq('address', tableAddress)
+    .eq('order_type', 'DINE_IN');
+  q = porNumero ? q.eq('table_number', tableNumber) : q.eq('address', direccionDeMesa(tableNumber));
+  const { data } = await q
     .not('status', 'in', '("DELIVERED","CANCEL")')
     .order('created_at', { ascending: true });
 
@@ -264,16 +272,17 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
     .limit(200);
 
   const BASE = 'address, created_at, accepted_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)';
+  const MESA = (await hayColumnaMesa()) ? ', table_number' : '';
 
   /* `party_size` es de la migración 123. Donde todavía no corrió, pedirla
      tumba la consulta ENTERA y el salón se quedaría sin ver ninguna mesa
      ocupada — mucho peor que no saber cuánta gente hay. Si falta la columna
      se reintenta sin ella y las personas quedan en null, que es justo lo que
      la ficha sabe omitir. (Mismo patrón que `reason` en las llamadas.) */
-  const conPax = await pedir(`${BASE}, party_size`);
+  const conPax = await pedir(`${BASE}${MESA}, party_size`);
   const { error } = conPax;
   const data = error && error.code === '42703' && /party_size/i.test(error.message ?? '')
-    ? (await pedir(BASE)).data
+    ? (await pedir(`${BASE}${MESA}`)).data
     : conPax.data;
 
   const result: Record<number, TableOccupancy> = {};
@@ -281,16 +290,15 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
   const sinServir = new Set<number>();
 
   for (const row of (data ?? []) as unknown as (Record<string, unknown>)[]) {
-    const { address, created_at, accepted_at, status, total, served_at, ready_at, party_size, items, waiter } = row as {
+    const { created_at, accepted_at, status, total, served_at, ready_at, party_size, items, waiter } = row as {
       address: string | null; created_at: string; accepted_at: string | null; status: OrderStatus;
       total: number | string | null; served_at: string | null; ready_at: string | null;
       party_size?: number | null;
       items?: { quantity: number }[] | null;
       waiter?: { full_name: string | null } | null;
     };
-    const m = address?.match(/Mesa\s+(\d+)/i);
-    if (!m) continue;
-    const n = Number(m[1]);
+    const n = mesaDeFila(row as { table_number?: number | null; address?: string | null });
+    if (n == null) continue;
     const platos = (items ?? []).reduce((s, it) => s + (it.quantity ?? 0), 0);
 
     const prev = result[n];
@@ -388,9 +396,13 @@ export async function getTableTurnsToday(restaurantId: string, timezone: string)
   const desde = new Date();
   desde.setUTCDate(desde.getUTCDate() - 1);
 
+  /* La lista de columnas se arma en tiempo de ejecución (la 127 puede no
+     haber corrido), así que el analizador de tipos de Supabase no puede
+     deducir la forma: se declara a mano. */
+  const cols = `address, delivered_at${(await hayColumnaMesa()) ? ', table_number' : ''}`;
   const { data } = await db
     .from('orders')
-    .select('address, delivered_at')
+    .select(cols)
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
     .eq('status', 'DELIVERED')
@@ -399,14 +411,15 @@ export async function getTableTurnsToday(restaurantId: string, timezone: string)
 
   const hoy = localDateKey(new Date(), timezone);
   const cierres = new Set<string>();
-  for (const row of (data ?? []) as { address: string | null; delivered_at: string | null }[]) {
+  type FilaCierre = { address: string | null; table_number?: number | null; delivered_at: string | null };
+  for (const row of (data ?? []) as unknown as FilaCierre[]) {
     if (!row.delivered_at) continue;
     if (localDateKey(new Date(row.delivered_at), timezone) !== hoy) continue;
-    const m = row.address?.match(/Mesa\s+(\d+)/i);
-    if (!m) continue;
+    const n = mesaDeFila(row);
+    if (n == null) continue;
     // Minuto de cierre: una mesa liberada de golpe cuenta una sola vez
     // aunque tuviera cuatro comandas acumuladas.
-    cierres.add(`${m[1]}|${row.delivered_at.slice(0, 16)}`);
+    cierres.add(`${n}|${row.delivered_at.slice(0, 16)}`);
   }
   return cierres.size;
 }

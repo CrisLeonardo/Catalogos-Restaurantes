@@ -13,8 +13,12 @@
    lleva acento, y la libre se dibuja callada. */
 
 import { Icon } from '@/components/icons';
-import { fmtMin, type TableState, type TableStage, type TableAction } from '@/lib/table-state';
-import type { TableOccupancy } from '@/lib/db/orders';
+import {
+  byUrgency, fmtMin, tableAction, tableStage, tablesWithState, tableTone,
+  type TableState, type TableStage, type TableAction, type SalonUmbrales,
+} from '@/lib/table-state';
+import type { TableCall, TableOccupancy } from '@/lib/db/orders';
+import type { FloorPlan } from '@/lib/theme/defaults';
 import type { OrderStatus } from '@/types';
 
 /** Lo que las tres piezas necesitan saber de una mesa. */
@@ -30,8 +34,75 @@ export interface SalonTable {
   totalCorto: string | null;
   /** «4 pers» — personas sentadas, o sillas de la mesa si está libre. */
   pax: string | null;
+  /** Cómo la llaman en el local («Terraza 2»), si el plano le puso nombre.
+      El número manda igual: esto solo se lee. */
+  nombre: string | null;
   /** Cuánto lleva la etapa actual, ya en texto. */
   tiempo: string | null;
+}
+
+/* ════════════════════════════════════════════════════════════
+   EL SALÓN, RESUELTO
+   ------------------------------------------------------------
+   De los datos crudos (ocupación, llamadas, plano) a las mesas que
+   el lienzo pinta. Vive aquí, junto a las piezas, porque las DOS
+   pantallas del salón lo necesitan igual: si una construyera sus
+   mesas por su cuenta, volverían a contar historias distintas del
+   mismo local — que es de lo que se venía.
+   ════════════════════════════════════════════════════════════ */
+
+export interface BuildSalonInput {
+  tableCount: number;
+  occupancy: Record<number, TableOccupancy>;
+  calls: Record<number, TableCall>;
+  /** El reloj del cliente. `null` mientras no hay: sin él no se pintan tiempos. */
+  now: number | null;
+  /** Sillas por mesa, para que una mesa libre pueda decir su capacidad. */
+  floorPlan: FloorPlan | null;
+  /** Importe completo («Q1,364.00»). */
+  money: (n: number) => string;
+  /** Importe abreviado para el pin del plano («Q412», «Q1.2k»). */
+  moneyShort: (n: number) => string;
+  /** Los relojes del salón de ESTE restaurante. Sin ellos, los de fábrica. */
+  umbrales?: SalonUmbrales;
+}
+
+/**
+ * Las mesas del salón, ordenadas como se trabaja en hora pico: primero
+ * lo que pide algo, luego lo que está en marcha, y al final las libres.
+ * Dentro de cada grupo manda el número.
+ */
+export function buildSalonTables(input: BuildSalonInput): SalonTable[] {
+  const { tableCount, occupancy, calls, now, floorPlan, money, moneyShort, umbrales } = input;
+
+  const sillas: Record<number, number> = {};
+  const nombres: Record<number, string> = {};
+  for (const t of floorPlan?.tables ?? []) {
+    if (t.seats) sillas[t.n] = t.seats;
+    const nombre = t.label?.trim();
+    if (nombre) nombres[t.n] = nombre;
+  }
+
+  const base = tablesWithState(tableCount, occupancy, calls, now, umbrales);
+
+  return byUrgency(base).map((t) => {
+    const stage = tableStage(t.occ, t.state);
+    // Con gente, las personas que hay; libre, las sillas que tiene.
+    const pax = t.occ?.partySize ?? (t.occ ? null : sillas[t.n] ?? null);
+    const desde = stage.since ? new Date(stage.since).getTime() : NaN;
+    return {
+      n: t.n,
+      state: t.state,
+      stage,
+      occ: t.occ,
+      action: tableAction(t.state),
+      total: t.occ ? money(t.occ.total) : null,
+      totalCorto: t.occ ? moneyShort(t.occ.total) : null,
+      pax: pax != null ? `${pax} pers` : null,
+      nombre: nombres[t.n] ?? null,
+      tiempo: now != null && Number.isFinite(desde) ? fmtMin((now - desde) / 60000) : null,
+    };
+  });
 }
 
 /* ── Cómo se lee el estado en una ficha ────────────────────────
@@ -46,20 +117,41 @@ const ESTADO_CORTO: Partial<Record<OrderStatus, string>> = {
   SERVED: 'Servida',
 };
 
-export function estadoDeFicha(t: SalonTable): string {
+/**
+ * `largo` solo donde de verdad hay ancho.
+ *
+ * `TableState.short` existe exactamente para esto —lo dice su comentario:
+ * «una ficha mide unos 95 px, ahí no cabe Servida hace 21 minutos»— y la
+ * ficha no lo usaba. El resultado eran «Sin aceptar hace 10 min» y «Abierta
+ * hace 31 h 1 min» partidos en dos renglones, y con la rejilla eso engorda
+ * la fila entera de fichas, no solo la que se pasó.
+ *
+ * La FILA de la vista lista sí tiene el ancho de la pantalla, y ahí la
+ * frase completa se lee mejor que la abreviatura.
+ */
+export function estadoDeFicha(t: SalonTable, largo = false): string {
   if (t.state.kind === 'libre') return 'Libre';
-  if (t.state.kind === 'atencion') return t.state.label;
+  if (t.state.kind === 'atencion') return largo ? t.state.label : t.state.short;
   const occ = t.occ;
-  if (!occ) return t.state.label;
+  if (!occ) return largo ? t.state.label : t.state.short;
   if (occ.status === 'NEW') return occ.itemCount === 1 ? '1 plato' : `${occ.itemCount} platos`;
   return ESTADO_CORTO[occ.status] ?? t.state.short;
 }
 
-/** El color del texto de estado. Solo la mesa que pide algo lleva acento. */
+/**
+ * El color del texto de estado.
+ *
+ * Acento SOLO para la alarma. El pendiente se dice con tinta plena —más
+ * oscuro que la mesa que solo está comiendo, y eso basta para que salte al
+ * recorrer la rejilla— sin gastar el único color que tiene el salón.
+ */
 export function estadoInk(t: SalonTable): string {
-  if (t.state.kind === 'atencion') return 'var(--brand-accent-ink)';
-  if (t.state.kind === 'libre') return 'var(--u-text-4)';
-  return 'var(--u-text-3)';
+  switch (tableTone(t.state)) {
+    case 'alarma': return 'var(--brand-accent-ink)';
+    case 'aviso': return 'var(--u-text)';
+    case 'libre': return 'var(--u-text-4)';
+    default: return 'var(--u-text-3)';
+  }
 }
 
 /** Cuánto tiempo lleva la etapa en curso, listo para pintar. */
@@ -111,16 +203,44 @@ export function TableCard({
   disabled?: boolean;
   busy?: boolean;
 }) {
-  const urgente = t.state.kind === 'atencion';
-  const libre = t.state.kind === 'libre';
+  const tono = tableTone(t.state);
+  const urgente = tono === 'alarma';
+  const libre = tono === 'libre';
   const num = (size: number, width?: number) => ({
     fontSize: size, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1,
     width, flexShrink: 0,
     color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
   } as const);
 
+  /* ── La mesa libre, dibujada como el hueco que es ─────────────
+     Traía «Libre», «Sin abrir» y «Sin asignar» —un mesero para una
+     mesa vacía— más un botón «Abrir mesa» del mismo peso que
+     «Cobrar». Con veinte mesas y doce libres, la mayor parte del
+     tablero eran tarjetas inertes idénticas compitiendo por la
+     mirada con las tres que sí pedían algo.
+
+     Queda el número, las sillas y nada más. Se abre tocándola: la
+     tarjeta ENTERA es el botón, que además es más fácil de acertar
+     que el rectángulo de 38 px que había dentro. */
+  if (libre) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className="press salon-card salon-hueco"
+        data-kind="libre"
+        data-tone="libre"
+        aria-label={`Mesa ${t.n}, libre. Tocar para abrirla`}
+      >
+        <span className="t-mono" style={num(24)}>{t.n}</span>
+        {t.nombre && <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)' }}>{t.nombre}</span>}
+        {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{t.pax}</span>}
+      </button>
+    );
+  }
+
   return (
-    <div className="salon-card" data-kind={t.state.kind}>
+    <div className="salon-card" data-kind={t.state.kind} data-tone={tono}>
       {/* El bloque de datos es un botón de verdad: abre la mesa. El de
           acción va aparte para no anidar botones (HTML inválido, y en
           la práctica un toque que dispara las dos cosas).
@@ -139,9 +259,17 @@ export function TableCard({
         <span className="salon-card-full">
           <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%' }}>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+              <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
                 <span className="t-mono" style={num(24)}>{t.n}</span>
-                {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)' }}>{t.pax}</span>}
+                {/* El nombre del plano, si lo tiene. Recortado y no envuelto:
+                    un «Terraza de arriba» de dos renglones engorda la fila
+                    entera de fichas por culpa de una sola. */}
+                {t.nombre && (
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.nombre}
+                  </span>
+                )}
+                {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)', flexShrink: 0 }}>{t.pax}</span>}
               </span>
               <span style={{ display: 'block', fontSize: 12.5, marginTop: 5, fontWeight: 600, color: estadoInk(t) }}>
                 {estadoDeFicha(t)}
@@ -151,7 +279,7 @@ export function TableCard({
               className="t-mono"
               style={{
                 fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em', flexShrink: 0,
-                color: libre ? 'var(--u-text-4)' : 'var(--u-text-2)',
+                color: 'var(--u-text-2)',
               }}
             >
               {t.total ?? '—'}
@@ -180,14 +308,14 @@ export function TableCard({
               {estadoDeFicha(t)}
             </span>
             <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
-              {[t.pax, libre ? null : (t.occ?.waiterName ?? 'Sin asignar'), t.tiempo].filter(Boolean).join(' · ') || 'Sin abrir'}
+              {[t.nombre, t.pax, t.occ?.waiterName ?? 'Sin asignar', t.tiempo].filter(Boolean).join(' · ')}
             </span>
           </span>
           <span
             className="t-mono"
             style={{
               fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', flexShrink: 0,
-              color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
+              color: 'var(--u-text)',
             }}
           >
             {t.total ?? '—'}
@@ -225,12 +353,14 @@ export function TableRow({
   busy?: boolean;
   primera: boolean;
 }) {
-  const urgente = t.state.kind === 'atencion';
-  const libre = t.state.kind === 'libre';
+  const tono = tableTone(t.state);
+  const urgente = tono === 'alarma';
+  const libre = tono === 'libre';
   return (
     <div
+      className="salon-row"
+      data-tone={tono}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 58,
         borderTop: primera ? 'none' : '1px solid var(--u-hair)',
         background: urgente ? 'color-mix(in srgb, var(--brand-accent) 5%, transparent)' : 'transparent',
       }}
@@ -238,11 +368,8 @@ export function TableRow({
       <button
         type="button"
         onClick={onOpen}
-        className="press"
-        style={{
-          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12,
-          border: 'none', background: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', color: 'inherit',
-        }}
+        className="press salon-row-open"
+        aria-label={libre ? `Mesa ${t.n}, libre. Tocar para abrirla` : undefined}
       >
         <span
           className="t-mono"
@@ -253,14 +380,25 @@ export function TableRow({
         >
           {t.n}
         </span>
+        {/* El renglón sí tiene el ancho de la pantalla: aquí la frase
+            completa («Servida hace 21 min») se lee mejor que «Sin cobrar». */}
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: estadoInk(t) }}>
-            {estadoDeFicha(t)}
+            {estadoDeFicha(t, true)}
           </span>
-          <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-            {[t.pax, t.occ?.waiterName ?? (libre ? null : 'Sin asignar'), t.tiempo && `${t.stage.label} · ${t.tiempo}`]
-              .filter(Boolean).join(' · ') || 'Sin abrir'}
-          </span>
+          {/* Una mesa libre no tiene mesero, ni etapa, ni «Sin abrir» que
+              contar: ya lo dijo la palabra «Libre» de arriba. */}
+          {!libre && (
+            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+              {[t.nombre, t.pax, t.occ?.waiterName ?? 'Sin asignar', t.tiempo && `${t.stage.label} · ${t.tiempo}`]
+                .filter(Boolean).join(' · ')}
+            </span>
+          )}
+          {libre && (t.nombre || t.pax) && (
+            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+              {[t.nombre, t.pax].filter(Boolean).join(' · ')}
+            </span>
+          )}
         </span>
         <span
           className="t-mono"
@@ -269,19 +407,23 @@ export function TableRow({
             color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
           }}
         >
-          {t.total ?? '—'}
+          {t.total ?? ''}
         </span>
       </button>
-      <button
-        type="button"
-        className="salon-act press"
-        data-primary={urgente ? '1' : '0'}
-        onClick={onAction}
-        disabled={disabled || busy}
-        style={{ marginTop: 0, width: 'auto', minWidth: 132, padding: '0 14px', flexShrink: 0 }}
-      >
-        {busy ? 'Un momento…' : t.action.label}
-      </button>
+      {/* Sin botón en la mesa libre: «Abrir mesa» al lado de «Cobrar», con
+          el mismo peso y repetido doce veces, es lo que hacía que el salón
+          pareciera una pared de botones. Tocar el renglón la abre. */}
+      {!libre && (
+        <button
+          type="button"
+          className="salon-act press"
+          data-primary={urgente ? '1' : '0'}
+          onClick={onAction}
+          disabled={disabled || busy}
+        >
+          {busy ? 'Un momento…' : t.action.label}
+        </button>
+      )}
     </div>
   );
 }
@@ -303,12 +445,14 @@ export function TablePin({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const libre = t.state.kind === 'libre';
+  const tono = tableTone(t.state);
+  const libre = tono === 'libre';
   return (
     <button
       type="button"
       className="salon-pin press"
       data-kind={t.state.kind}
+      data-tone={tono}
       data-sel={selected ? '1' : '0'}
       onClick={onSelect}
       style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
@@ -325,9 +469,15 @@ export function TablePin({
         >
           {t.n}
         </span>
-        {/* `nowrap` en los dos: a 100 px de ancho, «4 pers» partido en dos
-            renglones descuadra el pin entero. */}
-        {t.pax && <span style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>{t.pax}</span>}
+        {/* `nowrap` y recorte: a 100 px de ancho, «4 pers» partido en dos
+            renglones descuadra el pin entero. En el plano el nombre manda
+            sobre las sillas — quien mira el plano ya sabe dónde está la
+            mesa, lo que quiere saber es cómo la llaman. */}
+        {(t.nombre || t.pax) && (
+          <span style={{ fontSize: 11, color: 'var(--u-text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            {t.nombre ?? t.pax}
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         {t.totalCorto && (
           <span className="t-mono" style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--u-text-2)', whiteSpace: 'nowrap' }}>
@@ -335,11 +485,14 @@ export function TablePin({
           </span>
         )}
       </span>
-      <span style={{ fontSize: 11, lineHeight: 1.3, fontWeight: 600, color: estadoInk(t) }}>
-        {t.state.short}
-      </span>
-      {/* En una mesa libre no hay mesero que nombrar, y repetir «Libre»
-          debajo de «Libre» no informa de nada. */}
+      {/* En el plano, el hueco punteado YA dice que la mesa está libre:
+          escribir «Libre» debajo del número es decirlo dos veces. */}
+      {!libre && (
+        <span style={{ fontSize: 11, lineHeight: 1.3, fontWeight: 600, color: estadoInk(t) }}>
+          {t.state.short}
+        </span>
+      )}
+      {/* En una mesa libre tampoco hay mesero que nombrar. */}
       {!libre && (
         <span style={{ fontSize: 10.5, color: 'var(--u-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {t.occ?.waiterName ?? 'Sin asignar'}
@@ -348,3 +501,4 @@ export function TablePin({
     </button>
   );
 }
+

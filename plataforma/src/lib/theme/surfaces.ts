@@ -73,6 +73,7 @@ export const OPERATIONAL_KEYS = [
   'tipEnabled', 'tipPercent', 'tipOrderTypes',
   'autoConfirmEnabled', 'autoConfirmMinutes',
   'kdsYellowMin', 'kdsRedMin', 'kdsConfirmFirst',
+  'salonReadyMin', 'salonUnpaidMin', 'salonUnacceptedMin',
   'currencySymbol', 'currencyPosition', 'locale',
   'floorPlan',
 ] as const satisfies readonly Key[];

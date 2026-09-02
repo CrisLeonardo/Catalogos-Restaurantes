@@ -27,6 +27,7 @@ import {
 import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { OrderStatus, Restaurant } from '@/types';
+import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -82,12 +83,12 @@ const STATUS_TONE: Record<OrderStatus, Tone> = {
 };
 
 /** Cómo se llama el pedido en una lista: la mesa si la hay, si no el canal.
- *  El número de mesa viaja dentro de `address` como "Mesa N" (igual que en
- *  el KDS, ver kitchen-display.tsx). */
+ *  La mesa sale de `lib/mesa.ts`, igual que en el KDS y en el salón: antes
+ *  cada pantalla traía su propia copia del regex sobre `address`. */
 function orderLabel(o: ActiveOrderPreview): string {
   if (o.order_type === 'DINE_IN') {
-    const m = o.address?.match(/Mesa\s+(\d+)/i);
-    return m ? `Mesa ${m[1]}` : 'En local';
+    const n = mesaDeFila(o);
+    return n != null ? direccionDeMesa(n) : 'En local';
   }
   return o.order_type === 'PICKUP' ? 'Para llevar' : 'Domicilio';
 }

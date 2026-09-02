@@ -2,6 +2,7 @@
 // Genera Uint8Array listo para enviar vía Web USB o el Agente Leogin en modo raw.
 
 import type { OrderWithItems } from '@/lib/db/orders';
+import { labelOf, countsAsCash } from '@/lib/payment-method';
 
 // ── Fecha y hora del ticket ──────────────────────────────────────────────────
 /* Estos builders corren en DOS sitios con relojes distintos:
@@ -386,10 +387,9 @@ export function buildReceiptEscPos(
    .bold(true).row('TOTAL', fm(Number(order.total))).bold(false)
    .sep('-');
 
-  if (order.order_type !== 'DINE_IN') {
-    const method = order.payment_method === 'CARD' ? 'Tarjeta al recibir' : 'Efectivo';
-    b.line(method);
-    if (order.payment_method !== 'CARD' && order.cash_amount && order.cash_amount > 0) {
+  if (order.order_type !== 'DINE_IN' || order.status === 'DELIVERED') {
+    b.line(labelOf(order.payment_method));
+    if (countsAsCash(order.payment_method) && order.cash_amount && order.cash_amount > 0) {
       const change = Number(order.cash_amount) - Number(order.total);
       b.line(`Paga: ${fm(Number(order.cash_amount))}  Cambio: ${fm(change)}`);
     }

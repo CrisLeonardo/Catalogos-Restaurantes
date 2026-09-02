@@ -87,10 +87,18 @@ function typeLabel(t: PendingNewOrder['order_type'], address: string | null): st
 export default function NewOrdersAlert({
   restaurantId,
   muteChime = false,
+  showCards = true,
 }: {
   restaurantId: string;
   /** true en modo cocina — la pantalla de cocina tiene su propio aviso. */
   muteChime?: boolean;
+  /**
+   * false donde el pedido nuevo YA está en pantalla (el tablero de
+   * pedidos, la pantalla de cocina). Apaga la TARJETA, no el
+   * componente: este es la única fuente del sonido de pedido y de su
+   * refresco (ver la cabecera).
+   */
+  showCards?: boolean;
 }) {
   const router   = useRouter();
   const pathname = usePathname();
@@ -359,7 +367,7 @@ export default function NewOrdersAlert({
     return () => { clearInterval(id); document.title = original; };
   }, [orders.length]);
 
-  if (orders.length === 0) return null;
+  if (orders.length === 0 || !showCards) return null;
 
   const MAX_VISIBLE = 3;
   // Más antiguos primero: son los que llevan más tiempo esperando.
@@ -368,12 +376,10 @@ export default function NewOrdersAlert({
   const hiddenCount = sorted.length - visible.length;
 
   return (
-    <div className="adm-float-alert" data-side="right" style={{
-      // Abajo a la DERECHA: las llamadas al mesero ocupan la izquierda
-      // (waiter-calls-alert.tsx) y deben poder verse las dos a la vez.
-      // El sitio exacto lo pone globals.css (.adm-float-alert), que además
-      // levanta el aviso por encima de la barra inferior del teléfono.
-      zIndex: 71,
+    /* Sin `position` propia: la pone el contenedor único de avisos del
+       armazón (.adm-float-alert en shell.tsx), que además los levanta por
+       encima de la barra inferior del teléfono. */
+    <div className="adm-float-stack" style={{
       display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch',
       maxWidth: 'min(370px, calc(100vw - 32px))',
       maxHeight: 'calc(100vh - 90px)', overflowY: showAll ? 'auto' : 'visible',

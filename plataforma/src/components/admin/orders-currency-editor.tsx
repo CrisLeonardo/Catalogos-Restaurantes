@@ -35,6 +35,7 @@ type Patch = Pick<ThemeConfig,
   'tipEnabled' | 'tipPercent' | 'tipOrderTypes' | 'acceptsCard' |
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
   'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
+  'salonReadyMin' | 'salonUnpaidMin' | 'salonUnacceptedMin' |
   'autoConfirmEnabled' | 'autoConfirmMinutes'
 >;
 
@@ -263,6 +264,37 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         <SectionNote>
           Minutos de espera con los que la comanda cambia de color en la
           pantalla de cocina. Verde a tiempo · ámbar apúrate · rojo tarde.
+        </SectionNote>
+      </Section>
+
+      {/* Los relojes del SALÓN, que son otra cosa que los de la cocina: no
+          miden cuánto tarda un plato, miden cuánto lleva algo esperando a
+          una persona. Se pueden cambiar porque «dentro del rato» no
+          significa lo mismo en un menú del día que en una sobremesa. */}
+      <Section title="Cuándo una mesa te necesita">
+        <List>
+          <NumberRow
+            label="Comida lista sin llevar" suffix="min"
+            value={patch.salonReadyMin} min={1} max={60}
+            onChange={(v) => set('salonReadyMin', v)}
+          />
+          <NumberRow
+            label="Servida sin cobrar" suffix="min"
+            value={patch.salonUnpaidMin} min={1} max={180}
+            onChange={(v) => set('salonUnpaidMin', v)}
+          />
+          <NumberRow
+            label="Sin que cocina la acepte" suffix="min"
+            value={patch.salonUnacceptedMin} min={1} max={60}
+            onChange={(v) => set('salonUnacceptedMin', v)}
+          />
+        </List>
+        <SectionNote>
+          Pasado el tiempo, la mesa queda <strong>pendiente</strong> en el
+          salón: se dice con texto, sin color. Al <strong>doble</strong> pasa
+          a <strong>alarma</strong> y se pinta con tu color de marca. Lo que
+          un cliente pide con la mano —llamar o pedir la cuenta— es alarma
+          desde el primer segundo y no depende de estos números.
         </SectionNote>
       </Section>
 

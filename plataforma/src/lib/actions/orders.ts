@@ -3,7 +3,7 @@
 import { createClient, createDinerClient } from '@/lib/supabase/server';
 import { canActOnRestaurant, resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
-import { resolveGroupBranchId, canActOnGroupBranch } from '@/lib/db/admin';
+import { canActOnGroupBranch } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
@@ -17,6 +17,8 @@ import { resolveCoupon } from '@/lib/db/cupones';
 import { getDeliveryZones, resolveZoneFee } from '@/lib/db/zones';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
+import { necesitaAprobacion, puedeAprobar, type Aprobador } from '@/lib/void-approval';
+import { isValidPin, verifyPin, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS } from '@/lib/staff-pin-crypto';
 import { enqueueKitchenForOrder, enqueueReceiptForOrder, enqueueSplitBillTicket } from '@/lib/print-agent';
 import {
   buildBillLines, computeSplit, UNASSIGNED_ID,
@@ -26,6 +28,26 @@ import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyal
 import { notifyOrderStatus } from '@/lib/whatsapp/notify';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
+import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
+import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
+
+/**
+ * «Los pedidos de la mesa N», como par columna/valor.
+ *
+ * El salón buscaba sus pedidos con `.eq('address', 'Mesa 4')`: cobrar,
+ * mover, juntar y marcar servido dependían de que ese texto se hubiera
+ * escrito idéntico en todos lados, y bastaba una mesa con nombre para que
+ * dejaran de encontrarse. Desde la migración 127 la identidad es
+ * `table_number`; esto es lo único que queda sabiendo que hubo dos formas,
+ * y se borra el día que la migración esté en todas partes.
+ *
+ * Devuelve el par y no la consulta ya filtrada a propósito: el constructor
+ * de Supabase es «thenable», así que un ayudante `async` que lo recibiera
+ * ejecutaría la consulta a medio montar al hacerle `await`.
+ */
+function campoMesa(porNumero: boolean, tableNumber: number): [string, string | number] {
+  return porNumero ? ['table_number', tableNumber] : ['address', direccionDeMesa(tableNumber)];
+}
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import { getOrdersForTable, type OrderWithItems } from '@/lib/db/orders';
 import { emitirFacturaAutomatica } from '@/lib/actions/fel';
@@ -740,35 +762,76 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   return { success: true, orderId: order.id, orderNumber: order.order_number };
 }
 
+/** Cómo pagó la mesa al cerrarse. */
+export interface TablePayment {
+  method: PaymentMethod;
+  /** Lo que puso el cliente en efectivo, para dejar el vuelto por escrito.
+      Solo se guarda con `method: 'CASH'`. */
+  cashReceived?: number | null;
+}
+
 /**
  * Libera una mesa marcando como DELIVERED todos sus pedidos DINE_IN activos.
  * Solo el personal con permiso 'mesero' puede hacerlo.
+ *
+ * `payment` es cómo se pagó, y no es un adorno: hasta ahora TODO pedido de
+ * mesa nacía con `payment_method: 'CASH'` escrito a mano y nadie lo volvía a
+ * tocar, así que el arqueo de caja (lib/actions/finanzas.ts) contaba como
+ * efectivo esperado también lo que se había pagado con tarjeta — y la caja
+ * salía corta esa cantidad, todas las noches, sin nada que lo explicara.
+ * Omitirlo deja los pedidos como estén (compatibilidad con quien llame sin
+ * método); pasarlo lo escribe en los pedidos que se cierran.
  */
 export async function freeTable(
   restaurantId: string,
   tableNumber: number,
+  payment?: TablePayment,
 ): Promise<{ error?: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+  if (payment && !isPaymentMethod(payment.method)) return { error: 'Forma de pago inválida.' };
 
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
-  const tableAddress = `Mesa ${tableNumber}`;
+  const porNumero = await hayColumnaMesa();
   // Se piden los ids de vuelta: cerrar la mesa es el momento en que la venta
   // de comer en local queda cobrada, y es cuando toca facturarla. Sin el
   // `select` no habría a qué pedido emitirle factura — este camino no pasa
   // por updateOrderStatus().
+  /* El efectivo recibido se guarda SOLO cuando de verdad cubre la cuenta:
+     un "recibí" menor que el total es un teclazo a medias, y dejarlo escrito
+     haría que el ticket prometiera un vuelto que nadie dio. */
+  const cierre: Record<string, unknown> = {
+    status: 'DELIVERED',
+    delivered_at: new Date().toISOString(),
+  };
+  if (payment) {
+    cierre.payment_method = payment.method;
+    cierre.cash_amount = payment.method === 'CASH' && (payment.cashReceived ?? 0) > 0
+      ? payment.cashReceived
+      : null;
+  }
+
+  const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
   const { data: cerrados, error } = await db
     .from('orders')
-    .update({ status: 'DELIVERED', delivered_at: new Date().toISOString() })
+    .update(cierre)
     .eq('restaurant_id', restaurantId)
-    .eq('address', tableAddress)
+    .eq(colMesa, valMesa)
     .eq('order_type', 'DINE_IN')
     .not('status', 'in', '("DELIVERED","CANCEL")')
     .select('id');
 
   if (error) return { error: error.message };
+
+  /* El reparto era de la gente que se acaba de ir: heredarlo a los
+     próximos comensales mezclaría dos cuentas que no tienen nada que
+     ver (migración 125). Si la tabla no existe todavía, no pasa nada. */
+  await db.from('table_splits')
+    .delete()
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableNumber);
 
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
@@ -939,6 +1002,146 @@ export interface VoidOrderInput {
   /** Requerido junto con itemId: cuántas unidades de esa línea se anulan. */
   quantity?: number | null;
   reason: string;
+  /** El encargado que autoriza, cuando quien anula no puede firmar solo. */
+  approverId?: string | null;
+  approverPin?: string | null;
+}
+
+/** Lo que el diálogo de anulación necesita saber antes de pintarse. */
+export interface VoidApproval {
+  /** Ya salió a cocina: hace falta una firma. */
+  required: boolean;
+  /** Quien está anulando puede firmar solo (no es mesero puro). */
+  selfApproves: boolean;
+  /** A quién puede pasarle la tablet. Vacío = nadie tiene PIN puesto. */
+  approvers: Aprobador[];
+}
+
+/* Si no se puede averiguar quién firma —sesión caída, pedido que no
+   existe, alguien de otro restaurante—, se responde lo MÁS cerrado: hace
+   falta firma y no hay nadie que pueda darla. La comprobación de verdad
+   está en `voidOrder`, pero un fallo aquí no debe pintar un diálogo que
+   parezca decir «adelante, esto no necesita permiso». */
+const BLOQUEADO: VoidApproval = { required: true, selfApproves: false, approvers: [] };
+
+/**
+ * Quién puede firmar la anulación de ESTE pedido.
+ *
+ * Recibe el pedido y no el restaurante a propósito: el diálogo siempre
+ * tiene el `orderId` a mano, y así el restaurante lo resuelve el servidor
+ * en vez de venir del cliente, que es quien no debería decidirlo.
+ *
+ * La lista solo trae a quien tiene PIN puesto: es la de quien puede
+ * autorizar AHORA, no la de quien podría en teoría. Y solo nombre y cargo,
+ * los mismos datos que ya enseña la pantalla de entrar con PIN.
+ */
+export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
+  if (!orderId) return BLOQUEADO;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return BLOQUEADO;
+
+  const db = createServiceClient();
+  const { data: order } = await db
+    .from('orders').select('restaurant_id, status').eq('id', orderId).maybeSingle();
+  if (!order) return BLOQUEADO;
+  const restaurantId = order.restaurant_id as string;
+
+  // Quien pregunta tiene que ser del local: la lista de encargados no es
+  // pública aunque solo lleve nombres.
+  const { data: quien } = await db
+    .from('profiles').select('role, restaurant_id, permissions').eq('id', user.id).maybeSingle();
+  if (!quien) return BLOQUEADO;
+  const suyo = await resolveEffectiveRole(
+    { role: (quien.role as string | null) ?? null, permissions: (quien.permissions as string[] | null) ?? null },
+    restaurantId,
+  );
+  if (!suyo.isMember && quien.restaurant_id !== restaurantId && !(await canActOnGroupBranch(restaurantId))) {
+    return BLOQUEADO;
+  }
+
+  const required = necesitaAprobacion(order.status as string);
+  const selfApproves = puedeAprobar(quien.role as string | null, quien.permissions as string[] | null);
+  if (!required || selfApproves) return { required, selfApproves, approvers: [] };
+
+  const { data: pins } = await db
+    .from('staff_pins').select('profile_id').eq('restaurant_id', restaurantId);
+  const conPin = new Set((pins ?? []).map((p) => p.profile_id as string));
+  if (conPin.size === 0) return { required, selfApproves, approvers: [] };
+
+  const { data: perfiles } = await db
+    .from('profiles')
+    .select('id, full_name, role, permissions')
+    .eq('restaurant_id', restaurantId);
+
+  const approvers = (perfiles ?? [])
+    .filter((p) => conPin.has(p.id as string))
+    .filter((p) => puedeAprobar(p.role as string | null, p.permissions as string[] | null))
+    .map((p) => ({
+      id: p.id as string,
+      name: (p.full_name as string | null)?.trim() || 'Sin nombre',
+      role: p.role === 'RESTAURANT_OWNER' ? 'Dueño' : 'Encargado',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return { required, selfApproves, approvers };
+}
+
+/**
+ * Comprueba el PIN del encargado y devuelve su id para `approved_by`.
+ *
+ * Vuelve a verificar que quien firma SIGUE pudiendo firmar y sigue siendo
+ * de este restaurante: el diálogo pudo haberse quedado abierto desde antes
+ * de que el dueño le cambiara los permisos.
+ */
+async function verificarAprobador(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+  approverId: string,
+  pin: string,
+): Promise<{ id: string } | { error: string }> {
+  if (!isValidPin(pin)) return { error: 'El PIN son 4 dígitos.' };
+
+  // El mismo techo que el login por PIN: sin esto, el diálogo de anulación
+  // sería un oráculo cómodo para probar los 10 000 PIN de un encargado.
+  const ip = clientIp(await headers());
+  if (!(await rateLimit(`void-pin:${ip}`, 20, 5 * 60_000)) ||
+      !(await rateLimit(`void-pin:${restaurantId}:${approverId}`, 8, 5 * 60_000))) {
+    return { error: 'Demasiados intentos. Espera unos minutos.' };
+  }
+
+  const { data: perfil } = await db
+    .from('profiles').select('id, role, permissions, restaurant_id').eq('id', approverId).maybeSingle();
+  if (!perfil || perfil.restaurant_id !== restaurantId) return { error: 'PIN incorrecto.' };
+  if (!puedeAprobar(perfil.role as string | null, perfil.permissions as string[] | null)) {
+    return { error: 'Esa persona ya no puede autorizar anulaciones.' };
+  }
+
+  const { data: row } = await db
+    .from('staff_pins')
+    .select('pin_hash, pin_salt, failed_attempts, locked_until')
+    .eq('profile_id', approverId).eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (!row) return { error: 'PIN incorrecto.' };
+  if (row.locked_until && new Date(row.locked_until as string) > new Date()) {
+    return { error: 'Demasiados intentos fallidos. Espera unos minutos.' };
+  }
+
+  const ok = await verifyPin(pin, row.pin_salt as string, row.pin_hash as string);
+  if (!ok) {
+    // El MISMO contador que el login: cinco fallos aquí también dejan el PIN
+    // bloqueado un rato. Si no, esta pantalla sería la puerta de atrás.
+    const intentos = (row.failed_attempts as number) + 1;
+    const bloqueado = intentos >= PIN_LOCK_AFTER_ATTEMPTS;
+    await db.from('staff_pins').update({
+      failed_attempts: bloqueado ? 0 : intentos,
+      locked_until: bloqueado ? new Date(Date.now() + PIN_LOCK_MS).toISOString() : null,
+    }).eq('profile_id', approverId);
+    return { error: bloqueado ? 'Demasiados intentos fallidos. Espera unos minutos.' : 'PIN incorrecto.' };
+  }
+
+  await db.from('staff_pins').update({ failed_attempts: 0, locked_until: null }).eq('profile_id', approverId);
+  return { id: approverId };
 }
 
 /**
@@ -987,7 +1190,32 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     return { error: 'Este pedido ya está cerrado.' };
   }
 
-  const approvedBy: string | null = null;
+  /* ── La firma del encargado (hallazgo F-06) ──────────────────
+     `approvedBy` estaba fijado a `null` en el código: la columna que la
+     migración 079 creó para esto no se llenaba nunca y cualquiera con
+     permiso de mesero podía quitar de la cuenta un plato ya cocinado sin
+     que nadie más se enterara.
+
+     Lo que aún no salió a cocina se sigue anulando solo —corregirse al
+     escribir la comanda no es descuadrar nada—; lo demás necesita a
+     alguien que firme. Si quien anula YA es encargado, firma él: no se le
+     pide un PIN para autorizarse a sí mismo, pero su id queda escrito, que
+     es lo que faltaba. */
+  let approvedBy: string | null = null;
+
+  if (necesitaAprobacion(order.status as string)) {
+    if (puedeAprobar(requester.role as string | null, requester.permissions as string[] | null)) {
+      approvedBy = user.id;
+    } else if (input.approverId && input.approverPin) {
+      const firma = await verificarAprobador(
+        db, order.restaurant_id as string, input.approverId, input.approverPin,
+      );
+      if ('error' in firma) return { error: firma.error };
+      approvedBy = firma.id;
+    } else {
+      return { error: 'Esto ya salió a cocina: hace falta que lo autorice un encargado con su PIN.' };
+    }
+  }
 
   if (input.itemId) {
     const qty = Math.trunc(input.quantity ?? 0);
@@ -1145,12 +1373,13 @@ export async function serveTableReady(
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
+  const [colMesa, valMesa] = campoMesa(await hayColumnaMesa(), tableNumber);
   const { data, error } = await db
     .from('orders')
     .update({ status: 'SERVED', served_at: new Date().toISOString() })
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
-    .eq('address', `Mesa ${tableNumber}`)
+    .eq(colMesa, valMesa)
     .eq('status', 'READY')
     .select('id');
 
@@ -1215,12 +1444,13 @@ export async function setTableParty(
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
+  const [colMesa, valMesa] = campoMesa(await hayColumnaMesa(), tableNumber);
   const { error } = await db
     .from('orders')
     .update({ party_size: partySize })
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
-    .eq('address', `Mesa ${tableNumber}`)
+    .eq(colMesa, valMesa)
     .not('status', 'in', '("DELIVERED","CANCEL")');
 
   // La columna es de la migración 123: donde no ha corrido, anotar las
@@ -1265,24 +1495,31 @@ export async function moveTableOrders(
   const db = createServiceClient();
   const activos = '("DELIVERED","CANCEL")';
 
+  const porNumero = await hayColumnaMesa();
+  const [colDestino, valDestino] = campoMesa(porNumero, to);
   const { count: ocupada } = await db
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
-    .eq('address', `Mesa ${to}`)
+    .eq(colDestino, valDestino)
     .not('status', 'in', activos);
 
   if ((ocupada ?? 0) > 0 && !merge) {
     return { error: `La mesa ${to} ya tiene gente. Usa «Juntar mesas» si quieres una sola cuenta.` };
   }
 
+  /* Se escriben LAS DOS: el número es la identidad y la dirección es lo
+     que se imprime en el ticket. Dejar solo una las descuadraría. */
+  const mudanza: Record<string, unknown> = { address: direccionDeMesa(to) };
+  if (porNumero) mudanza.table_number = to;
+  const [colOrigen, valOrigen] = campoMesa(porNumero, from);
   const { data, error } = await db
     .from('orders')
-    .update({ address: `Mesa ${to}` })
+    .update(mudanza)
     .eq('restaurant_id', restaurantId)
     .eq('order_type', 'DINE_IN')
-    .eq('address', `Mesa ${from}`)
+    .eq(colOrigen, valOrigen)
     .not('status', 'in', activos)
     .select('id');
 
@@ -1303,6 +1540,147 @@ export async function moveTableOrders(
   revalidatePath('/admin/pedidos');
   revalidatePath('/admin/cocina');
   return { moved: data?.length ?? 0 };
+}
+
+/* ════════════════ EL REPARTO DE LA CUENTA ════════════════
+   Cómo se divide una mesa y quién ya pagó (migración 125).
+
+   Vivía en el `localStorage` del aparato que estuviera cobrando, así
+   que no existía para nadie más: el mesero empezaba el cobro en su
+   teléfono y el cajero, en la tablet, veía la cuenta entera sin
+   cobrar. Ahora es una fila por mesa, compartida por el local, que se
+   borra sola al cerrar la mesa.
+
+   Es un borrador de trabajo, no contabilidad: lo cobrado de verdad
+   son `orders.payment_method` y `orders.total`, que escribe
+   `freeTable`.                                                      */
+
+/** Una persona del reparto. El nombre es opcional («Persona 2»). */
+export interface SplitPerson { id: string; name?: string }
+
+export interface TableSplit {
+  mode: 'single' | 'equal' | 'byItem';
+  people: SplitPerson[];
+  /** order_item_id → ids de comensales. Ausente = sin asignar. */
+  assignment: Record<string, string[]>;
+  paid: string[];
+  /** Cuándo se guardó por última vez, para poder decir quién va ganando. */
+  updatedAt: string | null;
+}
+
+const SPLIT_MODES = ['single', 'equal', 'byItem'] as const;
+
+/** Recorta lo que llega del cliente a algo que quepa en una fila y no
+    pueda crecer sin límite: son datos que escribe un navegador. */
+function sanitizeSplit(raw: unknown): Omit<TableSplit, 'updatedAt'> | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const s = raw as Record<string, unknown>;
+
+  const mode = (SPLIT_MODES as readonly string[]).includes(s.mode as string)
+    ? (s.mode as TableSplit['mode'])
+    : 'single';
+
+  const people = Array.isArray(s.people)
+    ? s.people
+      .filter((p): p is Record<string, unknown> => !!p && typeof p === 'object')
+      .slice(0, 30)
+      .map((p) => {
+        const id = String(p.id ?? '').slice(0, 12);
+        const name = typeof p.name === 'string' ? p.name.trim().slice(0, 24) : '';
+        return name ? { id, name } : { id };
+      })
+      .filter((p) => p.id)
+    : [];
+
+  const ids = new Set(people.map((p) => p.id));
+  const assignment: Record<string, string[]> = {};
+  if (s.assignment && typeof s.assignment === 'object') {
+    for (const [itemId, v] of Object.entries(s.assignment as Record<string, unknown>).slice(0, 400)) {
+      if (!Array.isArray(v)) continue;
+      // Solo personas que existen: un id huérfano descuadraría el cobro
+      // en silencio, que es justo lo que se venía arreglando.
+      const claim = v.map(String).filter((id) => ids.has(id));
+      if (claim.length > 0) assignment[itemId.slice(0, 64)] = claim;
+    }
+  }
+
+  const paid = Array.isArray(s.paid)
+    ? [...new Set(s.paid.map(String).filter((id) => ids.has(id) || id === 'mesa'))].slice(0, 31)
+    : [];
+
+  return { mode, people, assignment, paid };
+}
+
+/** El reparto guardado de una mesa. `null` = todavía no hay ninguno. */
+export async function getTableSplit(
+  restaurantId: string,
+  tableNumber: number,
+): Promise<{ split: TableSplit | null } | { error: string }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('table_splits')
+    .select('mode, people, assignment, paid, updated_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableNumber)
+    .maybeSingle();
+
+  /* Donde la migración 125 todavía no corrió, la tabla no existe. Eso no
+     puede tumbar el cobro: se devuelve "no hay reparto" y la pantalla
+     sigue funcionando con el suyo en memoria. (Mismo criterio que
+     `party_size` en getActiveTableNumbers.) */
+  if (error) {
+    if (error.code === '42P01') return { split: null };
+    return { error: error.message };
+  }
+  if (!data) return { split: null };
+
+  const limpio = sanitizeSplit(data);
+  return {
+    split: limpio
+      ? { ...limpio, updatedAt: (data.updated_at as string | null) ?? null }
+      : null,
+  };
+}
+
+/** Guarda el reparto en curso de una mesa. */
+export async function saveTableSplit(
+  restaurantId: string,
+  tableNumber: number,
+  raw: unknown,
+): Promise<{ error?: string; savedAt?: string }> {
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+
+  const split = sanitizeSplit(raw);
+  if (!split) return { error: 'Reparto inválido.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const savedAt = new Date().toISOString();
+  const { error } = await db
+    .from('table_splits')
+    .upsert({
+      restaurant_id: restaurantId,
+      table_number: tableNumber,
+      mode: split.mode,
+      people: split.people,
+      assignment: split.assignment,
+      paid: split.paid,
+      updated_at: savedAt,
+      updated_by: acceso.actor.userId,
+    }, { onConflict: 'restaurant_id,table_number' });
+
+  if (error) {
+    if (error.code === '42P01') return {};
+    return { error: error.message };
+  }
+  return { savedAt };
 }
 
 /**

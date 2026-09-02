@@ -132,27 +132,55 @@ export default function AdminShell({
 
   const pathname = preview ? '/admin/menu' : realPathname;
 
-  /* "Pantalla completa" (Cocina y Mesero, rediseño 2026-08-22): por defecto
-     ambas pantallas se ven como cualquier otra sección (sidebar + topbar);
-     este modo es la excepción que el propio usuario activa cuando quiere el
-     tablero táctil de siempre, sin chrome del panel. Vive aquí y no en
-     KitchenDisplay/WaiterPanel porque lo único que cambia es si ESTE
-     componente pinta o no su sidebar/topbar alrededor de `children` — el
-     contenido no necesita saberlo. */
+  /* "Modo servicio" (Cocina y Mesero, rediseño 2026-08-22): quita el
+     armazón del panel y deja la pantalla entera para el trabajo. Vive aquí
+     y no en KitchenDisplay/WaiterPanel porque lo único que cambia es si
+     ESTE componente pinta o no su sidebar/topbar alrededor de `children`.
+
+     SE RECUERDA POR PANTALLA Y POR APARATO. Antes era estado suelto que se
+     reiniciaba en cada cambio de ruta y se perdía al recargar: la tablet
+     que se queda toda la noche sobre el mostrador volvía al chrome del
+     panel cada vez que el mesero iba a Cocina y regresaba, o cada vez que
+     el navegador se reiniciaba. Encenderlo una vez y que se quede es la
+     mitad de lo que lo hace útil. */
   const [kiosk, setKiosk] = useState(false);
 
-  // Cambiar de pantalla saliendo de Cocina/Mesero restaura el chrome — nadie
-  // quiere que "pantalla completa" persiga a otras secciones del panel.
-  useEffect(() => { setKiosk(false); }, [pathname]);
+  /** La preferencia es de esta pantalla: Cocina y Mesero se usan en
+      aparatos distintos y no tienen por qué ir a la par. */
+  const kioskKey = pathname.startsWith('/admin/cocina')
+    ? 'leogin:modo-servicio:cocina'
+    : pathname.startsWith('/admin/mesero')
+      ? 'leogin:modo-servicio:mesero'
+      : null;
+
+  /* Al entrar en una pantalla con modo servicio se aplica lo que este
+     aparato tuviera guardado; al salir a cualquier otra sección se apaga
+     —nadie quiere que "pantalla completa" persiga al resto del panel—,
+     pero la preferencia se queda para la próxima vez. */
+  useEffect(() => {
+    if (!kioskKey) { setKiosk(false); return; }
+    let guardado = false;
+    try { guardado = localStorage.getItem(kioskKey) === '1'; } catch { /* sin almacenamiento */ }
+    setKiosk(guardado);
+  }, [kioskKey]);
 
   // El navegador puede salir de pantalla completa por su cuenta (Esc, gesto
   // del sistema): sin este listener el panel se quedaba "atascado" sin
   // sidebar aunque el navegador ya hubiera vuelto a modo ventana.
   useEffect(() => {
-    const onFsChange = () => { if (!document.fullscreenElement) setKiosk(false); };
+    const onFsChange = () => {
+      if (document.fullscreenElement) return;
+      setKiosk(false);
+      /* Salirse por Esc o por gesto del sistema ES apagarlo: si solo se
+         apagara la pantalla y no la preferencia, volvería solo la próxima
+         vez y parecería que no obedece. */
+      if (kioskKey) {
+        try { localStorage.setItem(kioskKey, '0'); } catch { /* sin almacenamiento */ }
+      }
+    };
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
-  }, []);
+  }, [kioskKey]);
 
   /* Esc sale del modo servicio, que es lo que anuncia su propia barra.
      Cuando el navegador SÍ concedió pantalla completa esto ya pasaba solo
@@ -189,12 +217,20 @@ export default function AdminShell({
   function toggleKiosk() {
     const isTouch = typeof window !== 'undefined'
       && window.matchMedia?.('(pointer: coarse)').matches;
-    if (!kiosk) {
+    const encender = !kiosk;
+
+    if (encender) {
       if (!isTouch) document.documentElement.requestFullscreen?.().catch(() => {});
-      setKiosk(true);
-    } else {
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-      setKiosk(false);
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+    setKiosk(encender);
+
+    /* Se recuerda en el aparato, no en la cuenta: el modo servicio es una
+       propiedad de ESTA tablet sobre el mostrador, no del mesero que la
+       esté usando esta noche. */
+    if (kioskKey) {
+      try { localStorage.setItem(kioskKey, encender ? '1' : '0'); } catch { /* sin almacenamiento */ }
     }
   }
 
@@ -302,6 +338,10 @@ export default function AdminShell({
   const isLive    = pathname.startsWith('/admin/pedidos');
   const isKitchen = pathname.startsWith('/admin/cocina');
   const isWaiter  = pathname.startsWith('/admin/mesero');
+  /* Las dos pantallas que dibujan el salón entero. Ahí la llamada de una
+     mesa ya sale EN la mesa, con su botón «Atender»: la tarjeta flotante
+     repetía el hecho y encima tapaba la comanda. */
+  const isSalon   = isWaiter || pathname.startsWith('/admin/mesas');
   // Únicas dos pantallas táctiles con modo "pantalla completa" (ver toggleKiosk).
   const kioskEligible = isKitchen || isWaiter;
   /* El cable con la pantalla de dentro: el boton "Modo servicio" del
@@ -319,8 +359,18 @@ export default function AdminShell({
      aviso de pedido nuevo. Se notó al darle al modo servicio un botón propio
      dentro de Tomar pedidos: hacerlo fácil de alcanzar convertía un rincón
      olvidado en el sitio donde más falta hacen. */
+  /* Y montados en UN solo sitio de la pantalla. Antes las llamadas de mesa
+     salían abajo a la izquierda y los pedidos nuevos abajo a la derecha, de
+     dos componentes distintos: en el teléfono los dos juntos cubrían unos
+     300 px por encima de la comanda, y decían lo que las fichas de arriba
+     ya estaban diciendo.
+
+     `showCards` es lo que los calla donde el hecho ya está en pantalla. No
+     se desmontan: cada uno es la ÚNICA fuente de su sonido, así que
+     esconderlos quitándolos del árbol dejaría al mesero sin chime — que es
+     justo lo contrario de lo que se busca. */
   const avisosFlotantes = (
-    <>
+    <div className="adm-float-alert" data-side="right">
       {!preview && restaurantId && ordersEnabled && (
         /* Alerta de pedido nuevo, visible en TODO el panel (no solo en
            /admin/pedidos) y persistente hasta que alguien la atienda. Es
@@ -328,7 +378,7 @@ export default function AdminShell({
            notifications.tsx ya no suenan por su cuenta, así que no pueden
            encimarse dos chimes por el mismo pedido. Solo se mutea en cocina,
            que tiene su propio aviso (kitchen-display.tsx). */
-        <NewOrdersAlert restaurantId={restaurantId} muteChime={isKitchen} />
+        <NewOrdersAlert restaurantId={restaurantId} muteChime={isKitchen} showCards={!isLive && !isKitchen} />
       )}
       {!preview && restaurantId && llamadaMeseroActive && (
         /* OJO: a diferencia de AdminNotifications, ninguna pantalla
@@ -338,9 +388,9 @@ export default function AdminShell({
            dejaba la alerta muda justamente en /admin/pedidos, la pantalla
            donde el staff pasa más tiempo. Solo se mutea en modo cocina (por
            diseño: ver notifications.tsx). */
-        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} />
+        <WaiterCallsAlert restaurantId={restaurantId} muteChime={isKitchen} showCards={!isSalon} />
       )}
-    </>
+    </div>
   );
 
   const initial = restaurantName.trim().charAt(0).toUpperCase() || '·';

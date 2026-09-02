@@ -2,10 +2,12 @@
 // hub local (agente-impresion/src/staff-pin-cache.ts) debe replicar para
 // poder validar el PIN sin conexión — ver PLAN_LOGIN_STAFF_PIN.md.
 import crypto from 'node:crypto';
+import { PIN_LENGTH } from '@/lib/staff-pin-constants';
 
-export const PIN_LENGTH = 4;
-export const PIN_LOCK_AFTER_ATTEMPTS = 5;
-export const PIN_LOCK_MS = 5 * 60_000;
+// Reexportadas para que el servidor las siga importando de aquí; la
+// definición vive en `staff-pin-constants.ts`, que sí puede entrar en un
+// componente de cliente (este módulo arrastra `node:crypto` y no compila).
+export { PIN_LENGTH, PIN_LOCK_AFTER_ATTEMPTS, PIN_LOCK_MS } from '@/lib/staff-pin-constants';
 
 const SCRYPT_KEYLEN = 64;
 

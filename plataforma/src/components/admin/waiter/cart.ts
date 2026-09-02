@@ -44,10 +44,12 @@ export function newLineId(productId: string): string {
 
 /** Un importe tal como lo escribe este restaurante (símbolo, posición
     y separadores de su país). */
-export function money(n: number, c: PanelCurrency): string {
+/** `decimals` baja a 0 para el pin del plano, donde en 100 px de ancho no
+    caben los centavos («Q412» en vez de «Q412.00»). */
+export function money(n: number, c: PanelCurrency, decimals = 2): string {
   let num: string;
-  try { num = n.toLocaleString(c.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  catch { num = n.toFixed(2); }
+  try { num = n.toLocaleString(c.locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
+  catch { num = n.toFixed(decimals); }
   return c.position === 'suffix' ? `${num}${c.symbol}` : `${c.symbol}${num}`;
 }
 

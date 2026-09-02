@@ -2183,11 +2183,20 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 
    En modo servicio no hay barra que esquivar: vuelven al borde.
    ============================================================ */
+/* UN solo canal de avisos flotantes (ver shell.tsx · avisosFlotantes).
+   Los dos que hay —pedido nuevo y llamada de mesa— se apilan en esta
+   columna; antes cada uno se plantaba en una esquina distinta y en el
+   teléfono los dos juntos tapaban unos 300 px de comanda. */
 .adm-float-alert {
-  position: fixed;
+  position: fixed; z-index: 71;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  /* El contenedor no intercepta nada; cada aviso sí. Sin esto, la columna
+     vacía se quedaría cazando toques en la esquina de la pantalla. */
+  pointer-events: none;
 }
-.adm-float-alert[data-side="left"]  { left: 16px; }
+.adm-float-alert > * { pointer-events: auto; }
+.adm-float-alert[data-side="left"]  { left: 16px; align-items: flex-start; }
 .adm-float-alert[data-side="right"] { right: 16px; }
 
 @media (max-width: 1024px) {
@@ -2215,6 +2224,21 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
    de 393 px son 60 px —el 15 %— gastados en aire, y eran justo los
    que impedían que la rejilla de platos partiera en dos columnas.
    En pantallas grandes el aire sí ayuda y se conserva. */
+/* ── El cuerpo desplazable del panel de mesero ────────────────
+   Era `flex: 1; overflow-y: auto` en línea, un segundo contenedor de
+   desplazamiento DENTRO del que ya pone el armazón (.admin-content) o
+   el modo servicio (.admin-kiosk-body). Dos consecuencias:
+
+     · el de dentro casi nunca desplazaba nada (su contenido cabía
+       justo), así que el de fuera hacía el trabajo — pero era el de
+       dentro el que contaba como «pantalla» para `position: sticky`;
+     · y por eso la barra del siguiente paso NO se pegaba abajo: se
+       quedaba al final del documento, fuera de vista, en el aparato
+       donde más falta hace.
+
+   Aquí solo crece y deja desplazar a quien de verdad desplaza. */
+.waiter-scroll { flex: 1; min-height: 0; }
+
 .waiter-pad { padding-inline: 16px; }
 @media (max-width: 640px) {
   .waiter-pad { padding-inline: 2px; }
@@ -2279,6 +2303,12 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
   box-shadow: var(--adm-shadow-xs);
 }
 .wp-seg > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+/* En el teléfono el segmentado es un control de dedo, no de ratón: 34 px de
+   alto es la mitad de lo que pide un pulgar, y por aquí pasa desde el modo
+   de reparto hasta la forma de pago con la que se cierra la mesa. */
+@media (max-width: 767px) {
+  .wp-seg > button { min-height: 44px; font-size: 14px; }
+}
 
 /* ── Acciones del cobro ────────────────────────────────────────
    La advertencia y las dos acciones en una fila. En el teléfono se
@@ -2938,17 +2968,40 @@ html[data-platform] .asphalt::after { display: none; }
   border-radius: 16px; text-align: left; width: 100%;
   transition: border-color .25s, background .25s, box-shadow .25s;
 }
-.salon-card[data-kind="atencion"] {
+/* El color lo decide el TONO, no el estado (ver lib/table-state.ts).
+   Con un solo nivel de atención, seis de ocho mesas abiertas salían en
+   acento en un salón normal y el acento dejaba de avisar de nada. */
+.salon-card[data-tone="alarma"] {
   border: 1.5px solid var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
   box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 16%, transparent);
 }
-.salon-card[data-kind="abierta"] {
+/* Pendiente: la misma tarjeta de siempre con el canto izquierdo marcado
+   en tinta. Se distingue al recorrer la rejilla sin robarle el color a
+   la mesa que sí tiene a alguien esperando. */
+.salon-card[data-tone="aviso"] {
+  border: 1px solid var(--u-hair-2);
+  border-left: 3px solid color-mix(in srgb, var(--u-text) 42%, transparent);
+  background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-card[data-tone="abierta"] {
   border: 1px solid var(--u-hair); background: var(--adm-card);
   box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
 }
-.salon-card[data-kind="libre"] {
+.salon-card[data-tone="libre"] {
   border: 1.5px dashed var(--u-hair-2); background: transparent; box-shadow: none;
+}
+
+/* La mesa libre: un hueco, no una tarjeta. Número, sillas y nada más;
+   la caja entera es el botón que la abre. Y la mitad muerta del tablero
+   deja de ocupar lo mismo que la mitad viva. */
+.salon-hueco {
+  min-height: 96px; align-items: baseline; justify-content: center;
+  flex-direction: row; gap: 8px; cursor: pointer; color: inherit;
+}
+@media (max-width: 767px) {
+  .salon-hueco { min-height: 0; padding: 14px; justify-content: flex-start; }
 }
 
 /* El bloque de datos de la ficha: es un botón, pero se dibuja como
@@ -2983,6 +3036,34 @@ html[data-platform] .asphalt::after { display: none; }
 .salon-act:disabled { cursor: default; opacity: 0.55; }
 @media (max-width: 767px) { .salon-act { height: 46px; font-size: 14.5px; } }
 
+/* ── La fila de la vista Lista ────────────────────────────────
+   En escritorio es un renglón: número, qué pasa, monto y la acción al
+   canto derecho. En el teléfono NO cabe —a 375 px el botón se comía
+   260 px y «Pidió la cuenta · 0 min» se partía en tres renglones—, así
+   que la acción baja y ocupa el ancho, que además es como se toca. */
+.salon-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; min-height: 58px;
+}
+/* El mismo canto de la ficha pendiente, pero por dentro: la fila no
+   tiene borde propio (las separa una línea compartida). */
+.salon-row[data-tone="aviso"] {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--u-text) 42%, transparent);
+}
+.salon-row-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  border: none; background: none; padding: 0; cursor: pointer;
+  text-align: left; color: inherit;
+}
+.salon-row > .salon-act {
+  margin-top: 0; width: auto; min-width: 132px; padding: 0 14px; flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .salon-row { flex-wrap: wrap; row-gap: 10px; padding: 12px 14px; }
+  .salon-row-open { flex: 1 0 100%; }
+  .salon-row > .salon-act { width: 100%; min-width: 0; }
+}
+
 /* Barras de la etapa de la comida. */
 .salon-steps { display: flex; align-items: center; gap: 4px; }
 .salon-steps > span { flex: 1; height: 4px; border-radius: 99px; }
@@ -2995,21 +3076,55 @@ html[data-platform] .asphalt::after { display: none; }
   padding: 9px 10px; border-radius: 14px; cursor: pointer; text-align: left;
 }
 @media (max-width: 767px) { .salon-pin { width: 88px; padding: 8px 9px; border-radius: 13px; } }
-.salon-pin[data-kind="atencion"] {
+.salon-pin[data-tone="alarma"] {
   border: 1.5px solid var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 12%, var(--adm-card));
   box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 16%, transparent);
 }
-.salon-pin[data-kind="abierta"] {
+.salon-pin[data-tone="aviso"] {
+  border: 1px solid var(--u-hair-2);
+  border-left: 3px solid color-mix(in srgb, var(--u-text) 42%, transparent);
+  background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-pin[data-tone="abierta"] {
   border: 1px solid var(--u-hair); background: var(--adm-card);
   box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
 }
-.salon-pin[data-kind="libre"] {
+.salon-pin[data-tone="libre"] {
   border: 1.5px dashed var(--u-hair-2); background: transparent; box-shadow: none;
 }
 .salon-pin[data-sel="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
 
 /* El lienzo del plano: rejilla de referencia, nada más. */
+/* ── La leyenda del salón ─────────────────────────────────────
+   Los tres estados, con los nombres que dicta lib/table-state.ts. La
+   comparten el plano del dueño y el salón del mesero: antes cada una
+   tenía la suya, con distintas palabras y en distinto orden. */
+.salon-legend {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--u-text-3);
+}
+.salon-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.salon-legend > span > span[data-tone] {
+  width: 10px; height: 10px; border-radius: 4px; flex-shrink: 0;
+}
+.salon-legend > span > span[data-tone="alarma"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+}
+.salon-legend > span > span[data-tone="aviso"] {
+  border: 1.5px solid var(--u-hair-2);
+  border-left: 3px solid color-mix(in srgb, var(--u-text) 42%, transparent);
+  background: var(--adm-card);
+}
+.salon-legend > span > span[data-tone="abierta"] {
+  border: 1.5px solid var(--u-hair-2); background: var(--adm-card);
+}
+.salon-legend > span > span[data-tone="libre"] {
+  border: 1.5px dashed var(--u-hair-2); background: transparent;
+}
+
 .salon-canvas {
   position: relative; flex: 1; min-height: 340px; overflow: hidden;
   border-radius: 18px; border: 1px solid var(--u-hair-2);
@@ -3027,6 +3142,47 @@ html[data-platform] .asphalt::after { display: none; }
   .salon-floor-scroll { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .salon-floor-scroll::-webkit-scrollbar { display: none; }
   .salon-floor-scroll > .salon-canvas { min-width: 620px; }
+}
+
+/* ── El plano y lo que no cabe en él ──────────────────────────
+   «Fuera del plano» estaba DEBAJO del lienzo, y el lienzo era 16:10
+   fijo: con cinco mesas colocadas de veinte, las otras quince vivían
+   bajo 708 px de vacío y fuera de la primera pantalla. Ahora va al
+   lado, en su propia columna, y baja solo cuando ya no cabe. */
+.salon-plan-row { display: flex; gap: 14px; align-items: flex-start; flex: 1; min-height: 0; }
+.salon-plan-out {
+  width: 226px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
+  /* Con veinte mesas sin colocar la columna crecería más que el plano y
+     volvería a alargar la pantalla, que es lo que se venía a arreglar. */
+  max-height: 460px; overflow-y: auto;
+}
+.salon-plan-out-pins { display: flex; flex-wrap: wrap; gap: 10px; }
+.salon-plan-out-link {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
+  font-size: 12.5px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none;
+}
+.salon-plan-out-link:hover { text-decoration: underline; }
+@media (max-width: 1180px) {
+  .salon-plan-row { flex-direction: column; }
+  .salon-plan-out { width: 100%; max-height: none; }
+}
+
+/* ── «El salón cambió · reordenar» ────────────────────────────
+   Mientras el dedo está sobre las mesas el orden no se mueve (ver
+   useOrdenEstable). Si el reloj cambió las prioridades mientras
+   tanto, se dice aquí en vez de recolocarlo todo por sorpresa. */
+.salon-reordenar {
+  position: sticky; top: 0; z-index: 4;
+  display: flex; justify-content: center; pointer-events: none; height: 0;
+}
+.salon-reordenar > button {
+  pointer-events: auto; transform: translateY(-6px);
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 14px; border-radius: 99px; cursor: pointer;
+  font-size: 12.5px; font-weight: 600;
+  border: 1px solid var(--u-hair-2); color: var(--u-text-2);
+  background: var(--adm-card);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--u-text) 16%, transparent);
 }
 
 /* Zona fija del salón (barra, caja, cocina). Se dibuja como parte del
@@ -3059,6 +3215,11 @@ html[data-platform] .asphalt::after { display: none; }
    todo va a una y la barra se pega al pulgar. */
 .ciclo { display: flex; flex-direction: column; gap: 14px; }
 .ciclo-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ciclo-head-id { flex: 1; min-width: 160px; }
+/* En el teléfono la identidad cede ancho para que las personas y el «···»
+   quepan en su misma línea: con 160 px de mínimo, el «···» se quedaba solo
+   en un renglón de sesenta píxeles por delante del buscador. */
+@media (max-width: 767px) { .ciclo-head-id { min-width: 118px; } }
 .ciclo-line {
   display: flex; align-items: stretch; flex-shrink: 0; overflow: hidden;
   border-radius: 12px; border: 1px solid var(--u-hair);
@@ -3087,15 +3248,43 @@ html[data-platform] .asphalt::after { display: none; }
   background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
 }
 .ciclo-next-note { flex: 1; min-width: 180px; font-size: 13.5px; color: var(--u-text-2); line-height: 1.45; }
-@media (max-width: 767px) {
+
+/* ── La barra del siguiente paso, pegada abajo ────────────────
+   Estaba fijada SOLO por debajo de 767 px, y ese corte dejaba a la
+   tablet —que es el aparato del mesero— en el peor de los tres casos:
+   por encima de 767 la barra dejaba de estar pegada, y por debajo de
+   1180 la columna derecha (el total y el reparto) se va al final del
+   documento. En un iPad de 1024 px el mesero no veía ni el total ni el
+   botón principal sin recorrer toda la pantalla.
+
+   El corte correcto es el MISMO que pliega la columna: mientras el
+   total no esté a la vista al lado, el botón que dice qué hacer tiene
+   que estar bajo el pulgar. */
+@media (max-width: 1180px) {
   .ciclo-next {
     position: sticky; bottom: 0; z-index: 5;
-    flex-direction: column; align-items: stretch;
     border-radius: 16px 16px 0 0;
     padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
     background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
+    box-shadow: 0 -6px 20px color-mix(in srgb, var(--u-text) 8%, transparent);
   }
+}
+@media (max-width: 767px) {
+  .ciclo-next { flex-direction: column; align-items: stretch; }
   .ciclo-next-note { min-width: 0; }
+}
+
+/* ── El total, cuando la columna lateral se plegó ─────────────
+   Con la columna al lado el total ya está a la vista y repetirlo sería
+   ruido. Sin ella hay que subirlo a la cabecera de la mesa: es el dato
+   que se mira más veces por turno y no puede quedar al final de un
+   scroll de menú. */
+.ciclo-head-total { display: none; }
+@media (max-width: 1180px) {
+  .ciclo-head-total {
+    display: flex; align-items: baseline; gap: 8px; flex-shrink: 0;
+    margin-left: auto;
+  }
 }
 
 /* Fila de un plato en la cuenta de la mesa. */
@@ -3114,11 +3303,11 @@ html[data-platform] .asphalt::after { display: none; }
      quedan arriba —que es lo que se lee— y lo demás baja. */
   .ciclo-item {
     display: grid; min-height: 52px; padding: 12px 13px;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
     grid-template-areas: "qty name price" "meta meta meta";
     column-gap: 11px; row-gap: 8px; align-items: center;
   }
-  .ciclo-qty { grid-area: qty; width: 28px; height: 28px; border-radius: 8px; font-size: 13.5px; }
+  .ciclo-qty { grid-area: qty; width: 34px; height: 28px; border-radius: 8px; font-size: 13.5px; }
   .ciclo-name { grid-area: name; }
   .ciclo-price { grid-area: price; width: auto !important; font-size: 14.5px; }
   .ciclo-meta {
@@ -3130,7 +3319,7 @@ html[data-platform] .asphalt::after { display: none; }
 /* Chip de asiento / de cantidad. */
 .ciclo-chip {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px;
+  min-width: 32px; padding: 0 5px; height: 26px; flex-shrink: 0; border-radius: 7px;
   font-family: var(--ui-font-mono); font-size: 13px; font-weight: 700;
   background: color-mix(in srgb, var(--u-text) 7%, transparent); color: var(--u-text);
 }
@@ -3146,9 +3335,10 @@ html[data-platform] .asphalt::after { display: none; }
    · la PÍLDORA de cada fila dice de quién es ese plato, y tocarla lo
      corrige sin salir del renglón.
 
-   La píldora es más ancha que alta a propósito: al lado del chip de
-   cantidad —cuadrado de 26 px— hay que poder distinguir de un vistazo
-   cuál es el «2» de dos platos y cuál el «2» del asiento dos. */
+   Distinguirlos por la FORMA no funcionó: a tamaño real, la píldora
+   ancha y el chip de cantidad se leían igual y «Servido 3» parecía una
+   cantidad. Ahora lo dicen con palabras —«×2» y «As. 3»— y la anchura
+   es solo lo que pide el texto. */
 .ciclo-seats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ciclo-seats > button {
   display: inline-flex; align-items: center; justify-content: center;
@@ -3166,7 +3356,7 @@ html[data-platform] .asphalt::after { display: none; }
 
 .ciclo-seat {
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-  min-width: 30px; height: 24px; padding: 0 8px; cursor: pointer;
+  min-width: 30px; height: 24px; padding: 0 9px; cursor: pointer; white-space: nowrap;
   border: none; border-radius: 7px;
   background: color-mix(in srgb, var(--u-text) 7%, transparent); color: var(--u-text-3);
   font-family: var(--ui-font-mono); font-size: 12px; font-weight: 700;
@@ -3361,3 +3551,6 @@ html[data-platform] .asphalt::after { display: none; }
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+

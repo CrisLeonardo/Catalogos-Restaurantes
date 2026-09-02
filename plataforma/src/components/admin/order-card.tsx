@@ -3,6 +3,7 @@
 import { useTransition, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
+import { labelOf, countsAsCash } from '@/lib/payment-method';
 import { updateOrderStatus, printReceiptViaAgent, reprintKitchenTicket } from '@/lib/actions/orders';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import { printTicket, isKitchenAutoPrintEnabled, markKitchenPrinted, hasPrinterConfigured } from '@/lib/printing';
@@ -153,6 +154,15 @@ export function printKitchenTicket(order: OrderWithItems, restaurantName: string
   );
 }
 
+
+/** ¿Se puede decir ya cómo se pagó este pedido?
+    En domicilio y para llevar se sabe desde que entra. En una mesa no se
+    sabe hasta que alguien la cobra, así que solo se enseña una vez cerrada
+    (`freeTable` es quien lo escribe). */
+function showsPayment(order: { order_type: string; status: string }): boolean {
+  return order.order_type !== 'DINE_IN' || order.status === 'DELIVERED';
+}
+
 function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restaurantName: string, format: TicketFormat): string {
   function fmt(n: number) { return money(n, currency); }
 
@@ -188,10 +198,10 @@ function buildReceiptHtml(order: OrderWithItems, currency: PanelCurrency, restau
     extraRows.push(`<tr class="sub discount"><td colspan="2">Puntos canjeados (${Number(order.loyalty_points_redeemed)})</td><td class="amount">−${fmt(Number(order.loyalty_discount))}</td></tr>`);
   }
 
-  const paymentHtml = order.order_type !== 'DINE_IN' ? (() => {
-    const method = order.payment_method === 'CARD' ? 'Tarjeta al recibir' : 'Efectivo';
+  const paymentHtml = showsPayment(order) ? (() => {
+    const method = labelOf(order.payment_method);
     let changeHtml = '';
-    if (order.payment_method !== 'CARD' && order.cash_amount && order.cash_amount > 0) {
+    if (countsAsCash(order.payment_method) && order.cash_amount && order.cash_amount > 0) {
       const change = Number(order.cash_amount) - Number(order.total);
       changeHtml = `<p class="small">Paga con ${fmt(Number(order.cash_amount))} · Cambio: ${fmt(change)}</p>`;
     }
@@ -599,14 +609,15 @@ export default function OrderCard({
             </span>
           </div>
         </div>
-        {/* Método de pago — no aplica para DINE_IN (mesero lo maneja) */}
-        {order.order_type !== 'DINE_IN' && (
+        {/* Método de pago. En una mesa no se sabe hasta que se cobra, así
+            que solo se enseña una vez cerrada (ver freeTable). */}
+        {showsPayment(order) && (
           <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span className={`chip ${order.payment_method === 'CARD' ? 'chip-alt' : 'chip-ok'}`} style={{ alignSelf: 'flex-start' }}>
-              <Icon name={order.payment_method === 'CARD' ? 'creditCard' : 'banknote'} size={12} />
-              {order.payment_method === 'CARD' ? 'Tarjeta al recibir' : 'Efectivo'}
+            <span className={`chip ${countsAsCash(order.payment_method) ? 'chip-ok' : 'chip-alt'}`} style={{ alignSelf: 'flex-start' }}>
+              <Icon name={countsAsCash(order.payment_method) ? 'banknote' : 'creditCard'} size={12} />
+              {labelOf(order.payment_method)}
             </span>
-            {order.payment_method !== 'CARD' && order.cash_amount != null && order.cash_amount > 0 && (
+            {countsAsCash(order.payment_method) && order.cash_amount != null && order.cash_amount > 0 && (
               <p style={{ fontSize: 11.5, color: 'var(--u-text-3)', margin: 0 }}>
                 Paga con <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount), currency)}</strong>
                 {' · '}cambio: <strong style={{ color: 'var(--u-text-2)' }}>{money(Number(order.cash_amount) - Number(order.total), currency)}</strong>

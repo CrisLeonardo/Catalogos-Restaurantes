@@ -238,6 +238,43 @@ export function countUnassignedLines(lines: BillLine[], assignment: BillAssignme
   ).length;
 }
 
+/**
+ * El reparto que YA se hizo al tomar la comanda.
+ *
+ * Cada plato lleva su asiento desde que se pidió (`seat_no`, migración
+ * 123) porque quien sabe de quién es el pepián es el mesero en ese
+ * momento, no el cajero media hora después. Hasta ahora ese dato se
+ * enseñaba en la pantalla de la mesa y se tiraba al llegar al cobro:
+ * «Cada quien lo suyo» arrancaba en blanco y había que rehacerlo plato
+ * por plato con la gente delante esperando.
+ *
+ * Aquí se convierte en el reparto de partida: un comensal por asiento
+ * usado y cada plato con el suyo.
+ *
+ * Lo que se pidió «para la mesa» (sin asiento) se queda SIN ASIGNAR a
+ * propósito: es una decisión que alguien tiene que tomar, y la pantalla
+ * ya la reclama en su propio renglón. Repartirlo en silencio es
+ * exactamente lo que descuadra un cobro.
+ *
+ * `null` si no hay ni un solo asiento apuntado — entonces no hay nada
+ * que sembrar y vale más dejar el reparto como estaba.
+ */
+export function splitFromSeats(
+  lines: BillLine[],
+): { peopleIds: string[]; assignment: BillAssignment } | null {
+  const conAsiento = lines.filter((l) => l.quantity > 0 && l.seat != null);
+  if (conAsiento.length === 0) return null;
+
+  const peopleIds = [...new Set(conAsiento.map((l) => l.seat as number))]
+    .sort((a, b) => a - b)
+    .map(String);
+
+  const assignment: BillAssignment = {};
+  for (const l of conAsiento) assignment[l.itemId] = [String(l.seat)];
+
+  return { peopleIds, assignment };
+}
+
 /* ── Interno ──────────────────────────────────────────────── */
 
 /** Cuadra los centavos para que la suma de las partes dé EXACTO el total de la

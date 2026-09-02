@@ -59,6 +59,9 @@ export default async function AdminPedidosAjustesPage() {
           kdsYellowMin: resolved.config.kdsYellowMin,
           kdsRedMin: resolved.config.kdsRedMin,
           kdsConfirmFirst: resolved.config.kdsConfirmFirst,
+          salonReadyMin: resolved.config.salonReadyMin,
+          salonUnpaidMin: resolved.config.salonUnpaidMin,
+          salonUnacceptedMin: resolved.config.salonUnacceptedMin,
           autoConfirmEnabled: resolved.config.autoConfirmEnabled,
           autoConfirmMinutes: resolved.config.autoConfirmMinutes,
         }}

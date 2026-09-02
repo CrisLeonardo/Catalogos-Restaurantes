@@ -9,14 +9,15 @@ import type { TimesData } from '@/components/admin/times-widget';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import OrdersPanel from '@/components/admin/orders-panel';
 import { getDrivers } from '@/lib/db/drivers';
+import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 
 /** Cómo se nombra un pedido en una frase: la mesa si la hay, si no el canal. */
-function orderShortLabel(type: string, address: string | null): string {
-  if (type === 'DINE_IN') {
-    const m = address?.match(/Mesa\s+(\d+)/i);
-    return m ? `la Mesa ${m[1]}` : 'un pedido en local';
+function orderShortLabel(o: { order_type: string; address: string | null; table_number?: number | null }): string {
+  if (o.order_type === 'DINE_IN') {
+    const n = mesaDeFila(o);
+    return n != null ? `la ${direccionDeMesa(n)}` : 'un pedido en local';
   }
-  return type === 'PICKUP' ? 'un pedido para llevar' : 'un domicilio';
+  return o.order_type === 'PICKUP' ? 'un pedido para llevar' : 'un domicilio';
 }
 
 export default async function PedidosPage() {
@@ -98,7 +99,7 @@ export default async function PedidosPage() {
       slow,
       sample: duraciones.length,
       worst: peorMin > SLOW_MINUTES && peor
-        ? { label: orderShortLabel(peor.order_type, peor.address), minutes: Math.round(peorMin) }
+        ? { label: orderShortLabel(peor), minutes: Math.round(peorMin) }
         : null,
     };
   }

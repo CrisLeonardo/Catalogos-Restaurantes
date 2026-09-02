@@ -137,6 +137,11 @@ export interface FloorTable {
   y: number;        // 0..1 posición vertical relativa al lienzo
   shape?: TableShape;
   seats?: number;   // sillas (opcional, informativo)
+  /** Cómo se llama esta mesa en voz alta: «Terraza 2», «Barra A».
+      Opcional y solo para mirar: la IDENTIDAD sigue siendo `n` (el QR, el
+      pedido y la cuenta van por número). Se pudo añadir cuando la mesa
+      dejó de deducirse leyendo el texto del pedido — migración 127. */
+  label?: string;
 }
 
 export interface FloorLevel {
@@ -267,6 +272,13 @@ export interface ThemeConfig {
   kdsYellowMin: number;           // minutos de espera para que la tarjeta pase a ámbar
   kdsRedMin: number;              // minutos de espera para que la tarjeta pase a rojo
   kdsConfirmFirst: boolean;       // true = solo muestra pedidos PREP (confirmados); false = muestra NEW+PREP
+
+  // ── Salón (cuándo una mesa pide atención) ──
+  // Al cruzar el umbral la mesa queda "pendiente" (tinta, sin color); al
+  // DOBLE pasa a alarma y lleva acento. Ver lib/table-state.ts.
+  salonReadyMin: number;          // minutos con la comida lista sin llevarla
+  salonUnpaidMin: number;         // minutos servida sin cobrar
+  salonUnacceptedMin: number;     // minutos sin que cocina acepte la comanda
 
   // ── Moneda ──
   currencySymbol: string;       // 'Q', '$', '€'
@@ -454,6 +466,10 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   kdsYellowMin: 10,
   kdsRedMin: 20,
   kdsConfirmFirst: false,
+
+  salonReadyMin: 8,
+  salonUnpaidMin: 15,
+  salonUnacceptedMin: 5,
 
   currencySymbol: 'Q',
   currencyPosition: 'prefix',

@@ -40,10 +40,21 @@ function timeAgo(iso: string): string {
 export default function WaiterCallsAlert({
   restaurantId,
   muteChime = false,
+  showCards = true,
 }: {
   restaurantId: string;
   /** true en /admin/pedidos (vivo) y /admin/cocina — la tarjeta se sigue viendo, solo se silencia el chime. */
   muteChime?: boolean;
+  /**
+   * false en las pantallas que YA enseñan la llamada en la propia mesa
+   * (el salón del dueño, Tomar pedidos): ahí la tarjeta flotante repetía
+   * un hecho que estaba a la vista y tapaba la comanda.
+   *
+   * Apaga la TARJETA, no el componente: este sigue siendo la única
+   * fuente del sonido y su canal Realtime alimenta al resto. Montarlo y
+   * desmontarlo para esconder la tarjeta dejaría al mesero sin chime.
+   */
+  showCards?: boolean;
 }) {
   const [calls, setCalls] = useState<WaiterCall[]>([]);
   const [, setTick] = useState(0);
@@ -208,7 +219,7 @@ export default function WaiterCallsAlert({
     startResolve(async () => { await resolveWaiterCall(id); });
   }
 
-  if (calls.length === 0) return null;
+  if (calls.length === 0 || !showCards) return null;
 
   const MAX_VISIBLE = 3;
   // Más antiguas primero: son las mesas que llevan más tiempo esperando.
@@ -217,11 +228,11 @@ export default function WaiterCallsAlert({
   const hiddenCount = sorted.length - visible.length;
 
   return (
-    <div className="adm-float-alert" data-side="left" style={{
-      // `position` y `bottom` viven en globals.css (.adm-float-alert): en el
-      // teléfono tienen que esquivar la barra inferior, y un valor EN LÍNEA
-      // le gana siempre a la media query.
-      zIndex: 70,
+    /* Sin `position` propia: la pone el contenedor único de avisos del
+       armazón (.adm-float-alert en shell.tsx). Antes cada aviso se
+       plantaba en una esquina distinta y en el teléfono los dos juntos
+       tapaban unos 300 px de comanda. */
+    <div className="adm-float-stack" style={{
       display: 'flex', flexDirection: 'column', gap: 8,
       maxWidth: 'min(360px, calc(100vw - 32px))',
       // Expandida, la lista es desplazable en vez de crecer sin límite.

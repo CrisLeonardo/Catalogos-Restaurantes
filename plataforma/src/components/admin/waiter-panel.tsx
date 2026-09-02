@@ -27,13 +27,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { syncRealtimeAuth } from '@/lib/supabase/realtime-auth';
 import { Icon, ICON_PATHS } from '@/components/icons';
-import FloorMap, { TableToken } from '@/components/admin/floor-map';
+import SalonCanvas, {
+  SalonViewSwitch, SalonLegend, useSalonView,
+} from '@/components/admin/salon/salon-canvas';
+import { buildSalonTables, type SalonTable } from '@/components/admin/salon/pieces';
+import { useSalonLive } from '@/components/admin/salon/use-salon-live';
 import {
   createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables,
-  serveTableReady, setTableParty, setItemSeat, moveTableOrders, printTableBillShare,
+  serveTableReady, resolveTableCalls, setTableParty, setItemSeat, moveTableOrders,
+  printTableBillShare,
 } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
@@ -49,8 +52,7 @@ import {
   selectionFromParams, selectionToQuery, sameSelection,
   type Selection,
 } from '@/components/admin/waiter/types';
-import { tablesWithState, needsAttention, tableStage, type TableWithState } from '@/lib/table-state';
-import { REASON_ICON } from '@/components/admin/waiter/reason-icon';
+import { tablesWithState, tableStage, type TableWithState, type SalonUmbrales } from '@/lib/table-state';
 import {
   STATUS_LABEL_SHORT, STATUS_CHIP, nextStatus, nextLabel, isCardTerminal,
   stageClock, fmtElapsed, clockChipClass,
@@ -59,6 +61,7 @@ import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types
 import type { FloorPlan } from '@/lib/theme/defaults';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
 import type { PanelCurrency } from '@/components/admin/order-card';
+import type { PaymentMethod } from '@/lib/payment-method';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -131,6 +134,9 @@ interface Props {
   tipPercent: number;
   currency: PanelCurrency;
   floorPlan: FloorPlan | null;
+  /** Los relojes del salón de este restaurante (Ajustes › Pedidos).
+      Sin ellos se usan los de fábrica: ver lib/table-state.ts. */
+  umbrales?: SalonUmbrales;
   /** Hub local del restaurante (Fase 2 offline) — respaldo cuando la nube
       no responde, antes de encolar el pedido en este dispositivo. */
   hubUrl: string | null;
@@ -161,7 +167,7 @@ type View = 'tables' | 'ciclo' | 'menu' | 'review' | 'orders' | 'bill';
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
   categories, products, initialOrders, occupiedSince, tableCalls,
-  tableCount, tipEnabled, tipEnabledPickup, pickupEnabled, tipPercent, currency, floorPlan,
+  tableCount, tipEnabled, tipEnabledPickup, pickupEnabled, tipPercent, currency, floorPlan, umbrales,
   hubUrl, hubToken,
 }: Props) {
   const router = useRouter();
@@ -388,35 +394,20 @@ export default function WaiterPanel({
     loadTableBill(selection.n);
   }, [selection, loadTableBill, orders]);
 
-  /* Coalescer de router.refresh(): una ráfaga de eventos Realtime (la cola
-     del hub sincronizando 20 pedidos de golpe) disparaba un re-render
-     completo POR EVENTO y congelaba la tablet. Máximo uno cada 2,5 s. */
-  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastRefresh = useRef(0);
-  const refreshSoon = useCallback(() => {
-    if (refreshTimer.current) return;
-    const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
-    refreshTimer.current = setTimeout(() => {
-      refreshTimer.current = null;
-      lastRefresh.current = Date.now();
-      router.refresh();
-    }, wait);
-  }, [router]);
-  useEffect(() => () => {
-    if (refreshTimer.current) clearTimeout(refreshTimer.current);
-  }, []);
+  /* El salón cambia aunque nadie toque esta tablet.
+     El canal, el freno de ráfagas y la reconexión viven en el mismo
+     sitio que los del tablero del dueño (salon/use-salon-live.ts): eran
+     dos copias del mismo montaje, y solo una de las dos sabía
+     reconectarse. */
+  useSalonLive(`waiter-${waiterId}`);
 
   /* Precalienta el hub HTTPS (DNS + permiso de red local) mientras hay
      señal, para que el respaldo funcione si el internet se cae a media
      faena. */
   useEffect(() => { warmUpHub(hubUrl); }, [hubUrl]);
 
-  const planEnabled = !!floorPlan?.enabled && (floorPlan?.levels.length ?? 0) > 0;
-  const levels = useMemo(() => floorPlan?.levels ?? [], [floorPlan]);
-  const [activeLevel, setActiveLevel] = useState<string>('');
-  useEffect(() => {
-    setActiveLevel((prev) => (prev && levels.some((l) => l.id === prev) ? prev : levels[0]?.id ?? ''));
-  }, [levels]);
+  /* El nivel del plano y si hay plano dibujado los resuelve ahora el
+     propio lienzo (salon/salon-canvas.tsx), que es quien los dibuja. */
 
   /** Reintenta los pedidos que quedaron en la cola local (sin conexión
       total: ni la nube ni el hub respondieron). Éxito o rechazo definitivo
@@ -455,35 +446,6 @@ export default function WaiterPanel({
     };
   }, [queuedCount, retryWaiterQueue]);
 
-  /* Realtime: el salón cambia aunque nadie toque esta tablet. */
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
-    const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-    const { ready, stop: stopAuthSync } = syncRealtimeAuth(supabase);
-
-    (async () => {
-      await ready;
-      if (cancelled) return;
-      channel = supabase
-        .channel(`waiter-orders-${waiterId}-${crypto.randomUUID().slice(0, 8)}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, refreshSoon)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, refreshSoon)
-        /* Una llamada del comensal cambia el salón tanto como un pedido:
-           sin esto, "pidió la cuenta" no aparecía hasta el próximo toque. */
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls' }, refreshSoon)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'waiter_calls' }, refreshSoon)
-        .subscribe();
-    })();
-
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-      stopAuthSync();
-    };
-  }, [waiterId, refreshSoon]);
-
   useEffect(() => { setOrders(initialOrders); }, [initialOrders]);
 
   /* Reloj de los temporizadores. Arranca en null: servidor y primer
@@ -496,17 +458,39 @@ export default function WaiterPanel({
     return () => { clearTimeout(t0); clearInterval(id); };
   }, []);
 
-  /* ── El salón, resuelto por la regla única ─────────────────── */
+  /* ── El salón, resuelto por la regla única ───────────────────
+     `tables` es el salón crudo (lo usan el salto de mesa y mover/juntar);
+     `salonTables` es el mismo salón ya listo para pintar, construido con
+     la MISMA función que usa el tablero del dueño — si una pantalla se
+     lo montara por su cuenta volverían a contar historias distintas del
+     mismo local. */
   const tables = useMemo(
-    () => tablesWithState(tableCount, occupiedSince, tableCalls, now),
-    [tableCount, occupiedSince, tableCalls, now],
+    () => tablesWithState(tableCount, occupiedSince, tableCalls, now, umbrales),
+    [tableCount, occupiedSince, tableCalls, now, umbrales],
   );
-  const attention = useMemo(() => needsAttention(tables), [tables]);
-  /** Ya comieron y nadie las cerró — la fuga de dinero más común de un
-      salón lleno. Es más ancho que "atención": esa solo entra a los 15
-      minutos; esto enseña TODAS las que están en ese estado. */
-  const servidasSinCobrar = useMemo(() => tables.filter((t) => t.occ?.status === 'SERVED'), [tables]);
-  const occupiedSet = useMemo(() => new Set(Object.keys(occupiedSince).map(Number)), [occupiedSince]);
+
+  /** Monto abreviado para el pin del plano: «Q412», «Q1.2k». */
+  const fmtCorto = useCallback((n: number) => (
+    n >= 1000
+      ? `${currency.position === 'suffix' ? '' : currency.symbol}${(n / 1000).toFixed(1)}k${currency.position === 'suffix' ? currency.symbol : ''}`
+      : money(n, currency, 0)
+  ), [currency]);
+
+  const salonTables = useMemo(
+    () => buildSalonTables({
+      tableCount,
+      occupancy: occupiedSince,
+      calls: tableCalls,
+      now,
+      floorPlan,
+      money: (n) => money(n, currency),
+      moneyShort: fmtCorto,
+      umbrales,
+    }),
+    [tableCount, occupiedSince, tableCalls, now, floorPlan, currency, fmtCorto, umbrales],
+  );
+
+  const [salonView, setSalonView] = useSalonView('leogin:salon-vista-mesero', 'fichas');
 
   const abandonedCount = useMemo(() => {
     if (now == null) return 0;
@@ -766,10 +750,13 @@ export default function WaiterPanel({
     setView('ciclo');
   }
 
-  /** Libera la mesa `n` y vuelve a "Mesas". */
-  function liberar(n: number) {
+  /** Cobra y cierra la mesa `n`, y vuelve a "Mesas".
+      `method` es cómo pagó: sin él, el pedido se quedaba con el 'CASH' de
+      fábrica y el arqueo de la noche contaba como efectivo lo que se pagó
+      con tarjeta (ver lib/payment-method.ts). */
+  function liberar(n: number, method: PaymentMethod, cashReceived: number | null) {
     startFree(async () => {
-      const res = await freeTable(restaurantId, n);
+      const res = await freeTable(restaurantId, n, { method, cashReceived });
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
       /* La mesa se fue: su reparto ya no le sirve a nadie, y heredarlo a
          los próximos comensales sería peor que empezar de cero. */
@@ -886,6 +873,52 @@ export default function WaiterPanel({
     });
   }
 
+  /* ── La única acción de una mesa, desde el salón ─────────────
+     El lienzo del salón ofrece UNA acción por mesa, la que toca ahora
+     (`tableAction()` en lib/table-state.ts). Antes esta pantalla no la
+     usaba: tenía dos listas de pendientes escritas a mano, y la misma
+     mesa aparecía en las dos con gestos distintos.
+
+     El dueño hace exactamente lo mismo desde su tablero; lo único que
+     cambia es a dónde lleva «cobrar» y «agregar», porque aquí ya
+     estamos dentro del panel que los hace. */
+  const [mesaOcupada, setMesaOcupada] = useState<number | null>(null);
+
+  function hacerEnMesa(t: SalonTable) {
+    switch (t.action.kind) {
+      case 'llevar':
+        setMesaOcupada(t.n);
+        startStatus(async () => {
+          const res = await serveTableReady(restaurantId, t.n);
+          setMesaOcupada(null);
+          if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+          setAviso({ text: `Mesa ${t.n}: servida.`, bad: false });
+          router.refresh();
+        });
+        return;
+      case 'atender':
+        setMesaOcupada(t.n);
+        startStatus(async () => {
+          const res = await resolveTableCalls(restaurantId, t.n);
+          setMesaOcupada(null);
+          if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+          setAviso({ text: `Mesa ${t.n}: llamada atendida.`, bad: false });
+          router.refresh();
+        });
+        return;
+      case 'cobrar':
+        elegir({ kind: 'mesa', n: t.n });
+        loadTableBill(t.n);
+        setView('bill');
+        return;
+      case 'revisar':
+      case 'agregar':
+      case 'abrir':
+      default:
+        selectTable(t.n);
+    }
+  }
+
   /** La cuenta entera a la impresora de caja (sin repartir). */
   function handlePrintBill() {
     if (selection.kind !== 'mesa') return;
@@ -960,6 +993,8 @@ export default function WaiterPanel({
     showOrders: view !== 'orders',
     ordersCount: orders.length,
     onShowOrders: () => setView('orders'),
+    // Solo cuando hay algo que encender: en pantalla completa ya no aplica.
+    onModoServicio: servicio && !servicio.active ? servicio.toggle : null,
   };
 
   /* El acuse de recibo del envío ("Pedido #123 enviado a cocina"), y
@@ -1011,8 +1046,8 @@ export default function WaiterPanel({
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title="Mis pedidos" onBack={() => setView(selection.kind !== 'none' ? 'menu' : 'tables')} />
         {exitGuard}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="waiter-scroll">
+          <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {avisoBanner}
             <button type="button" onClick={() => setView('tables')} className="press btn-accent" style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
               ＋ Nuevo pedido
@@ -1149,8 +1184,8 @@ export default function WaiterPanel({
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title={`Cuenta · Mesa ${billTable}`} onBack={() => { setView('tables'); setBillTable(null); setBillOrders(null); }} />
         {exitGuard}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="waiter-scroll">
+          <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {avisoBanner}
             {billLoading && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)' }}>Cargando la cuenta…</div>
@@ -1164,7 +1199,7 @@ export default function WaiterPanel({
                 currency={currency}
                 freeing={freeing}
                 onVoidItem={setVoidTarget}
-                onFreeTable={() => liberar(billTable)}
+                onFreeTable={(method, cash) => liberar(billTable, method, cash)}
               />
             )}
           </div>
@@ -1189,8 +1224,8 @@ export default function WaiterPanel({
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title={`Revisar · ${destLabel}`} onBack={() => setView('menu')} />
         {exitGuard}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="waiter-scroll">
+          <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {avisoBanner}
             <div>
               <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Orden ({cartCount})</div>
@@ -1244,7 +1279,7 @@ export default function WaiterPanel({
 
         {/* Barra fija inferior: total + enviar. */}
         <div style={{ borderTop: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--brand-bg) 82%, transparent)', backdropFilter: 'blur(16px)' }}>
-          <div className="waiter-wrap-narrow waiter-pad" style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tipApplies && tipAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Subtotal</span>
@@ -1289,8 +1324,8 @@ export default function WaiterPanel({
     const mesaN = selection.kind === 'mesa' ? selection.n : null;
     const occSel = mesaN != null ? occupiedSince[mesaN] : undefined;
     const stateSel = mesaN != null
-      ? (tables[mesaN - 1]?.state ?? { kind: 'libre' as const, reason: null, label: 'Libre', short: 'Libre', since: null, priority: 99 })
-      : { kind: 'libre' as const, reason: null, label: 'Sin enviar', short: 'Sin enviar', since: null, priority: 99 };
+      ? (tables[mesaN - 1]?.state ?? { kind: 'libre' as const, reason: null, level: null, label: 'Libre', short: 'Libre', since: null, priority: 99 })
+      : { kind: 'libre' as const, reason: null, level: null, label: 'Sin enviar', short: 'Sin enviar', since: null, priority: 99 };
     const stageSel = tableStage(occSel, stateSel);
     const ordersSel = mesaN != null && billTable === mesaN ? (billOrders ?? []) : [];
 
@@ -1298,8 +1333,8 @@ export default function WaiterPanel({
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title={destLabel} onBack={() => { elegir({ kind: 'none' }); setView('tables'); }} />
         {exitGuard}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap waiter-pad" style={{ padding: '14px 0 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="waiter-scroll">
+          <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '14px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {avisoBanner}
             {statusError && <Banner tone="danger" icon="alertCircle" text={statusError} />}
 
@@ -1381,68 +1416,33 @@ export default function WaiterPanel({
     );
   }
 
-  /* ════════════════ VISTA: MESAS ════════════════ */
-  if (view === 'tables') {
-    const planTables = planEnabled
-      ? (floorPlan?.tables ?? []).filter((t) => t.level === activeLevel && t.n <= tableCount)
-      : [];
-    const planFixtures = planEnabled
-      ? (floorPlan?.fixtures ?? []).filter((f) => f.level === activeLevel)
-      : [];
-    const placedNums = new Set((floorPlan?.tables ?? []).filter((t) => t.n <= tableCount).map((t) => t.n));
-    const otherTables = planEnabled
-      ? Array.from({ length: tableCount }, (_, i) => i + 1).filter((n) => !placedNums.has(n))
-      : [];
-    const states: Record<number, TableWithState['state']> = {};
-    for (const t of tables) states[t.n] = t.state;
+  /* ════════════════ VISTA: MESAS ════════════════
+     El MISMO lienzo que Pedidos › Mesas (salon/salon-canvas.tsx). Esta
+     vista tenía su propio plano —con pellizco y zoom—, su rejilla de
+     cuadritos y DOS listas de pendientes que se pisaban: la mesa 4 salía
+     en «Te necesitan ahora» y otra vez, doscientos píxeles más abajo, en
+     «Servidas sin cobrar», con dos gestos distintos para la misma mesa.
 
+     Ya no hacen falta: el lienzo ordena por urgencia y cada mesa lleva
+     su única acción, que es lo que esas dos listas intentaban ser. */
+  if (view === 'tables') {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
         <WaiterHeader {...headerProps} title={restaurantName} />
         {exitGuard}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div className="waiter-wrap waiter-pad" style={{ padding: '18px 0 40px' }}>
+        <div className="waiter-scroll">
+          <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '18px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {avisoBanner}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesas</div>
-              {/* El botón que enciende el modo servicio (shell.tsx lo consume vía
-                  el context de service-mode.tsx) vive AQUÍ y no en el chrome del
-                  panel: hacerlo fácil de alcanzar es lo que convierte un rincón
-                  olvidado en el sitio donde más falta hace, sobre todo en la
-                  tablet que se queda sola en el mostrador. */}
-              {servicio && !servicio.active && (
-                <button
-                  type="button"
-                  onClick={servicio.toggle}
-                  className="press"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
-                    height: 36, padding: '0 13px', borderRadius: 9, cursor: 'pointer',
-                    border: '1px solid var(--adm-border-2)', background: 'none',
-                    color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
-                  }}
-                >
-                  <Icon name="monitor" size={15} />
-                  <span>Modo servicio</span>
-                </button>
-              )}
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--u-text-4)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'transparent', border: '1.5px dashed var(--u-hair-2)' }} /> Libre
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1.5px solid var(--u-hair-2)' }} /> Abierta
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--brand-accent) 10%, transparent)', border: '1.5px solid var(--brand-accent)' }} /> Necesita atención
-              </span>
-            </div>
+
+            {/* El título y nada más: el modo servicio se mudó a la cabecera
+                (WaiterHeader), que está en TODAS las vistas del mesero. Aquí
+                solo lo veía quien entraba por «Mesas». */}
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesas</div>
 
             {/* Borrador rescatado: el pedido que se estaba tomando la última
                 vez y nunca salió a cocina. */}
             {draft && totalPendiente === 0 && (
-              <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, marginBottom: 14, border: '1px solid color-mix(in srgb, var(--c-warn) 35%, transparent)' }}>
+              <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-warn) 35%, transparent)' }}>
                 <Icon name="alertCircle" size={17} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 170 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
@@ -1461,83 +1461,8 @@ export default function WaiterPanel({
               </div>
             )}
 
-            {/* Pedido sin mesa. Va ARRIBA del plano y no escondido al final. */}
-            {pickupEnabled && (
-              <button
-                type="button"
-                onClick={startTakeaway}
-                className="press glass"
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '13px 15px', marginBottom: 16, borderRadius: 14,
-                  border: '1.5px dashed var(--u-hair-2)', cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
-                  <Icon name="bag" size={19} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Para llevar · sin mesa</span>
-                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Mostrador, barra o alguien que pasa a recoger</span>
-                </span>
-                <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-              </button>
-            )}
-
-            {/* "Te necesitan ahora": pidió la cuenta, llamó al mesero, tiene
-                comida lista sin llevar, o cocina no ha visto la comanda. */}
-            {attention.length > 0 && (
-              <div className="glass" style={{ borderRadius: 16, padding: '6px 4px', marginBottom: 14 }}>
-                <div style={{ padding: '10px 14px 6px', fontSize: 12.5, fontWeight: 700, color: 'var(--brand-accent-ink)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Te necesitan ahora
-                </div>
-                {attention.map((t, i) => (
-                  <button
-                    key={t.n}
-                    type="button"
-                    onClick={() => selectTable(t.n)}
-                    className="press"
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--u-hair)' : 'none' }}
-                  >
-                    <span style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
-                      <Icon name={REASON_ICON[t.state.reason ?? 'llamada']} size={15} />
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>Mesa {t.n}</span>
-                      <span style={{ display: 'block', fontSize: 12.5, color: 'var(--brand-accent-ink)', fontWeight: 600, marginTop: 1 }}>{t.state.label}</span>
-                    </span>
-                    <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* "Servidas sin cobrar": ya comieron y nadie las cerró — la fuga
-                de dinero más común de un salón lleno. */}
-            {servidasSinCobrar.length > 0 && (
-              <div className="glass" style={{ borderRadius: 16, padding: '6px 4px', marginBottom: 14 }}>
-                <div style={{ padding: '10px 14px 6px', fontSize: 12.5, fontWeight: 700, color: 'var(--u-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Servidas sin cobrar
-                </div>
-                {servidasSinCobrar.map((t, i) => (
-                  <div key={t.n} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i > 0 ? '1px solid var(--u-hair)' : 'none' }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--u-text)' }}>Mesa {t.n}</span>
-                    <span className="t-mono" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>{fmt(t.occ!.total)}</span>
-                    <button
-                      type="button"
-                      onClick={() => { elegir({ kind: 'mesa', n: t.n }); loadTableBill(t.n); setView('bill'); }}
-                      className="press btn-accent"
-                      style={{ padding: '7px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}
-                    >
-                      Cobrar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {abandonedCount > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, marginBottom: 14, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
                 <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)', flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger)' }}>
                   {abandonedCount} mesa{abandonedCount === 1 ? '' : 's'} con más de 24h ocupada{abandonedCount === 1 ? '' : 's'} — probablemente un pedido olvidado.
@@ -1554,53 +1479,49 @@ export default function WaiterPanel({
               </div>
             )}
             {archiveMsg && (
-              <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', marginBottom: 14, padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}>
                 {archiveMsg}
               </div>
             )}
 
-            {planEnabled ? (
-              <>
-                {levels.length > 1 && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                    {levels.map((l) => {
-                      const on = l.id === activeLevel;
-                      return (
-                        <button
-                          key={l.id}
-                          type="button"
-                          onClick={() => setActiveLevel(l.id)}
-                          className="press"
-                          style={{ padding: '9px 16px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`, background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600 }}
-                        >
-                          {l.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <FloorMap tables={planTables} fixtures={planFixtures} occupied={occupiedSet} occupiedSince={occupiedSince} states={states} now={now} onSelect={selectTable} />
-
-                {otherTables.length > 0 && (
-                  <div style={{ marginTop: 18 }}>
-                    <div style={{ fontSize: 11.5, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Otras mesas</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
-                      {otherTables.map((n) => {
-                        const t = tables[n - 1];
-                        return <TableToken key={n} n={n} state={t.state} total={t.occ ? fmt(t.occ.total) : null} onTap={() => selectTable(n)} style={{ aspectRatio: '1 / 1' }} />;
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="waiter-tables-grid">
-                {tables.map((t) => (
-                  <TableToken key={t.n} n={t.n} state={t.state} total={t.occ ? fmt(t.occ.total) : null} onTap={() => selectTable(t.n)} style={{ aspectRatio: '1 / 1' }} />
-                ))}
-              </div>
+            {/* Pedido sin mesa. Va ARRIBA del salón y no escondido al final. */}
+            {pickupEnabled && (
+              <button
+                type="button"
+                onClick={startTakeaway}
+                className="press glass"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 15px', borderRadius: 14,
+                  border: '1.5px dashed var(--u-hair-2)', cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
+                  <Icon name="bag" size={19} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Para llevar · sin mesa</span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Mostrador, barra o alguien que pasa a recoger</span>
+                </span>
+                <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+              </button>
             )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <SalonViewSwitch view={salonView} onChange={setSalonView} />
+              <span style={{ flex: 1 }} />
+              {salonView !== 'plano' && <SalonLegend />}
+            </div>
+
+            <SalonCanvas
+              view={salonView}
+              tables={salonTables}
+              floorPlan={floorPlan}
+              selected={selection.kind === 'mesa' ? selection.n : null}
+              onOpen={selectTable}
+              onAction={hacerEnMesa}
+              busyTable={mesaOcupada}
+            />
           </div>
         </div>
 
@@ -1640,7 +1561,7 @@ export default function WaiterPanel({
       {avisoBanner && <div className="waiter-wrap waiter-pad" style={{ paddingTop: 10 }}>{avisoBanner}</div>}
 
       {/* Buscador */}
-      <div className="waiter-wrap waiter-pad" style={{ width: '100%', padding: '12px 0 6px', flexShrink: 0 }}>
+      <div className="waiter-wrap waiter-pad" style={{ width: '100%', paddingBlock: '12px 6px', flexShrink: 0 }}>
         <div style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-4)', display: 'grid', placeItems: 'center' }}>
             <Icon name="search" size={17} />
@@ -1673,7 +1594,7 @@ export default function WaiterPanel({
 
       {/* Categorías (ocultas al buscar) */}
       {!query && (
-        <div className="waiter-wrap waiter-pad" style={{ width: '100%', display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 0 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
+        <div className="waiter-wrap waiter-pad" style={{ width: '100%', display: 'flex', gap: 8, overflowX: 'auto', paddingBlock: '6px 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
           <button
             type="button"
             onClick={() => setActiveCat(null)}
@@ -1711,8 +1632,8 @@ export default function WaiterPanel({
       )}
 
       {/* Productos */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div className="waiter-wrap waiter-pad" style={{ padding: '4px 0 96px' }}>
+      <div className="waiter-scroll">
+        <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '4px 96px' }}>
           {visibleProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
               {query ? 'Ningún plato coincide con tu búsqueda.' : 'Sin productos disponibles en esta categoría.'}
@@ -1776,7 +1697,7 @@ export default function WaiterPanel({
       {/* Barra flotante del carrito → Revisar, con mini-carrito desplegable. */}
       {cartCount > 0 && (
         <div className="waiter-cart-bar" style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
-          <div className="waiter-wrap waiter-pad" style={{ padding: '0 0 12px' }}>
+          <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '0 12px' }}>
             {miniCartOpen && (
               <div className="glass anim-slide-up" style={{ borderRadius: 16, padding: '8px 10px', marginBottom: 8, maxHeight: '34vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {cart.map((line) => (
@@ -1890,7 +1811,7 @@ function NotaDeMesa({ valor, titulo, onGuardar, onClose }: {
 
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, showOrders, ordersCount, onShowOrders,
+  title, waiterName, onBack, showOrders, ordersCount, onShowOrders, onModoServicio,
 }: {
   title: string;
   waiterName: string;
@@ -1898,6 +1819,8 @@ function WaiterHeader({
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
+  /** Encender el modo servicio. `null` si ya está encendido o no existe aquí. */
+  onModoServicio: (() => void) | null;
 }) {
   return (
     <header style={{
@@ -1905,7 +1828,7 @@ function WaiterHeader({
       borderBottom: '1px solid var(--u-hair)',
       borderRadius: 16,
     }}>
-      <div className="waiter-wrap waiter-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+      <div className="waiter-wrap waiter-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBlock: 12 }}>
         {onBack && (
           <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="chevronLeft" size={20} />
@@ -1917,6 +1840,22 @@ function WaiterHeader({
           </div>
           <div style={{ fontSize: 11, color: 'var(--u-text-3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="userPlus" size={12} /> {waiterName}</div>
         </div>
+        {/* El modo servicio vive AQUÍ desde el rediseño de 2026-09-01. Antes
+            estaba solo en la vista «Mesas», así que quien llegaba desde el
+            salón del dueño con `?mesa=4` no lo veía nunca — y es justo el
+            modo que le devuelve media pantalla en el teléfono. */}
+        {onModoServicio && (
+          <button
+            type="button"
+            onClick={onModoServicio}
+            className="press glass-quiet"
+            aria-label="Modo servicio: pantalla completa"
+            title="Modo servicio"
+            style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', flexShrink: 0 }}
+          >
+            <Icon name="monitor" size={17} />
+          </button>
+        )}
         {showOrders && (
           <button type="button" onClick={onShowOrders} className="press glass-quiet" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
             <Icon name="list" size={14} /> Pedidos{ordersCount > 0 ? ` (${ordersCount})` : ''}

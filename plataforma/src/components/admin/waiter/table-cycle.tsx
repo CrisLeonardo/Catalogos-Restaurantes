@@ -21,7 +21,7 @@
    mismo se mire desde donde se mire.
    ============================================================ */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon, type IconName } from '@/components/icons';
 import DishFinder from '@/components/admin/waiter/dish-finder';
 import type { CartLine } from '@/components/admin/waiter/cart';
@@ -175,6 +175,12 @@ export default function TableCycle(p: Props) {
   const lineas = useMemo(() => [...enviadas, ...pendientes], [enviadas, pendientes]);
   const porEnviar = cart.reduce((s, l) => s + l.quantity, 0);
 
+  /* ¿Hay ciclo que contar? En una mesa sin abrir los cuatro tramos son
+     cuatro barras grises que no dicen nada, y en el teléfono empujaban el
+     buscador otro renglón hacia abajo. La mesa libre se calla, aquí
+     también. */
+  const hayCiclo = !!occ || porEnviar > 0;
+
   /* ── Totales ────────────────────────────────────────────────
      Lo enviado ya trae su propina dentro del total del pedido; lo del
      carrito todavía no existe, así que se estima con el mismo
@@ -287,7 +293,7 @@ export default function TableCycle(p: Props) {
           en todas las pantallas del mesero: repetirlo aquí serían dos
           flechas atrás a diez píxeles una de otra. */}
       <div className="ciclo-head">
-        <div style={{ flex: 1, minWidth: 160 }}>
+        <div className="ciclo-head-id">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <span className="t-display" style={{ fontSize: 24, lineHeight: 1.1 }}>{titulo}</span>
             <span style={{ fontSize: 13.5, color: 'var(--u-text-3)' }}>
@@ -300,20 +306,37 @@ export default function TableCycle(p: Props) {
           </div>
         </div>
 
-        {mesa != null && (
-          <>
-            <PersonasCtl personas={personas} onParty={onParty} />
-            <AccionCorta icon="list" label="Juntar mesas" onClick={onJuntar} disabled={!occ || ocupado} />
-            <AccionCorta icon="arrowRight" label="Mover a otra" onClick={onMover} disabled={!occ || ocupado} />
-          </>
+        {/* El total sube aquí cuando la columna derecha se pliega (tablet y
+            teléfono). Es el número que más veces se mira en un turno y
+            estaba quedando al final de un scroll de menú entero. */}
+        {total > 0 && (
+          <span className="ciclo-head-total">
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Total</span>
+            <span className="t-mono" style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+              {money(total)}
+            </span>
+          </span>
         )}
-        <AccionCorta icon="edit" label="Nota de mesa" onClick={onNota} />
+
+        {mesa != null && <PersonasCtl personas={personas} onParty={onParty} />}
+        {/* Juntar, mover y la nota son cosas que se hacen un par de veces
+            por turno, y estaban tratadas como acciones principales: tres
+            botones a todo lo ancho —dos de ellos GRISES en una mesa libre—
+            justo encima de la comanda. En el teléfono eran dos renglones
+            del sitio más caro de la pantalla. Ahora es un botón, y dentro
+            solo aparece lo que de verdad se puede hacer. */}
+        <MasAcciones
+          puedeMover={mesa != null && !!occ && !ocupado}
+          onJuntar={onJuntar}
+          onMover={onMover}
+          onNota={onNota}
+        />
       </div>
 
       {/* ── En qué va la comida ────────────────────────────────
              Solo tiene sentido en una mesa: un pedido para llevar no se
              sienta, no se sirve y no pide la cuenta. */}
-      {mesa != null && (
+      {mesa != null && hayCiclo && (
       <div className="ciclo-line">
         {tramos.map((t, i) => {
           const ahora = i === stage.index;
@@ -346,7 +369,7 @@ export default function TableCycle(p: Props) {
 
       {/* En el teléfono los cuatro tramos se comprimen a cuatro barras:
           cuatro bloques de texto en 358 px no se leen. */}
-      {mesa != null && (
+      {mesa != null && hayCiclo && (
       <div className="ciclo-bars" aria-hidden>
         {STAGES.map((s, i) => (
           <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
@@ -369,14 +392,21 @@ export default function TableCycle(p: Props) {
       {/* ── La cuenta y el reparto ───────────────────────────── */}
       <div className="ciclo-body">
         <div className="ciclo-main">
+          {/* El rótulo solo cuando hay cuenta que rotular: encabezar la nada
+              con «La cuenta de la mesa» empuja el buscador y no dice nada. */}
+          {(lineas.length > 0 || ordersLoading) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '0 4px' }}>
             <div className="adm-label adm-label-caps" style={{ flex: 1, minWidth: 140, color: 'var(--u-text-3)' }}>
               {mesa != null ? 'La cuenta de la mesa' : 'El pedido'}
             </div>
             {/* A qué asiento van los platos que se agreguen ahora. Se elige
                 UNA vez y lo demás se apunta solo: preguntarlo plato por
-                plato es lo que hace que nadie lo use. */}
-            {mesa != null && (
+                plato es lo que hace que nadie lo use.
+
+                No aparece en una mesa vacía ni en una de una persona: ahí
+                no hay nada que repartir, y en el teléfono eran dos renglones
+                de píldoras de 44 px por delante del buscador. */}
+            {mesa != null && lineas.length > 0 && (personas ?? 2) > 1 && (
               <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Asiento</span>
                 {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, 12)) }, (_, i) => i + 1)].map((n) => (
@@ -394,7 +424,13 @@ export default function TableCycle(p: Props) {
               </div>
             )}
           </div>
+          )}
 
+          {/* La comanda. En una mesa vacía se calla del todo: el buscador
+              de abajo ya invita a escribir, y una tarjeta diciendo «todavía
+              no hay nada apuntado» solo empujaba el campo fuera de la
+              primera pantalla del teléfono. */}
+          {(lineas.length > 0 || ordersLoading) && (
           <div
             style={{
               borderRadius: 13, border: '1px solid var(--u-hair)', overflow: 'hidden',
@@ -405,16 +441,15 @@ export default function TableCycle(p: Props) {
               <p style={{ margin: 0, padding: '22px 15px', fontSize: 13.5, color: 'var(--u-text-3)' }}>
                 Cargando la cuenta…
               </p>
-            ) : lineas.length === 0 ? (
-              <p style={{ margin: 0, padding: '22px 15px', fontSize: 13.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
-                Todavía no hay nada apuntado. Escribe abajo el primer plato —también vale «2 café».
-              </p>
             ) : lineas.map((l) => (
               <div key={l.key} className="ciclo-item">
                 {/* La cantidad primero, como se lee una comanda; el asiento
                     va al otro extremo, junto al precio, que es donde importa
                     al repartir la cuenta. */}
-                <span className="ciclo-chip ciclo-qty" aria-hidden>{l.qty}</span>
+                {/* «×2», no «2»: al otro extremo del renglón hay otro
+                    número suelto —el asiento— y a tamaño real los dos se
+                    leían igual. La cruz es como se apunta una comanda. */}
+                <span className="ciclo-chip ciclo-qty" aria-hidden>×{l.qty}</span>
                 <span className="ciclo-name" style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>{l.name}</span>
                   <span style={{ display: 'block', fontSize: 12.5, marginTop: 1, color: l.note || l.detail ? 'var(--brand-accent-ink)' : 'var(--u-text-4)' }}>
@@ -469,6 +504,7 @@ export default function TableCycle(p: Props) {
               </div>
             ))}
           </div>
+          )}
 
           {/* El buscador de siempre, debajo de la comanda. No cambia nada
               de su comportamiento: «3 lim» + Enter agrega, «/» devuelve el
@@ -620,7 +656,13 @@ function SeatChip({ seat, personas, disabled, onChange }: {
       aria-label={seat == null ? 'Sin asiento: es de la mesa. Tocar para asignarlo al asiento 1' : `Asiento ${seat}. Tocar para cambiarlo`}
       title="Asiento"
     >
-      {seat ?? 'Mesa'}
+      {/* Con la palabra delante. El chip de cantidad del otro extremo del
+          renglón también es un número desnudo, y «Servido 3» se leía como
+          una cantidad aunque la cantidad ya dijera 2. El CSS lo intentaba
+          resolver haciendo esta píldora más ancha que alta; a tamaño real
+          no se distinguía. Dos caracteres arreglan lo que ningún tamaño
+          iba a arreglar. */}
+      {seat == null ? 'Mesa' : `As. ${seat}`}
     </button>
   );
 }
@@ -629,6 +671,10 @@ function SeatChip({ seat, personas, disabled, onChange }: {
    Un dato de dos segundos que la mesa lleva encima toda la noche: es
    la base del reparto por asiento y de la ocupación real del salón. */
 function PersonasCtl({ personas, onParty }: { personas: number | null; onParty: (n: number | null) => void }) {
+  /* Sin nadie apuntado todavía, «−» no tiene nada que quitar. Antes
+     restaba sobre un 1 imaginario, así que el botón de QUITAR acababa
+     poniendo una persona: el control decía «—» y al tocar «−» decía 1. */
+  const puedeQuitar = (personas ?? 0) > 1;
   return (
     <span
       style={{
@@ -642,7 +688,8 @@ function PersonasCtl({ personas, onParty }: { personas: number | null; onParty: 
       </span>
       <button
         type="button"
-        onClick={() => onParty(Math.max(1, (personas ?? 1) - 1))}
+        onClick={() => onParty((personas ?? 1) - 1)}
+        disabled={!puedeQuitar}
         aria-label="Una persona menos"
         className="wp-step press"
       >
@@ -661,25 +708,94 @@ function PersonasCtl({ personas, onParty }: { personas: number | null; onParty: 
   );
 }
 
-function AccionCorta({ icon, label, onClick, disabled }: {
-  icon: IconName; label: string; onClick: () => void; disabled?: boolean;
+/* ── Lo que se hace un par de veces por turno ──────────────────
+   Juntar dos mesas, pasar la cuenta a otra y la nota para cocina. No
+   son la acción principal de nadie —esa vive en la barra de abajo y
+   siempre dice el siguiente paso—, así que aquí van detrás de un
+   botón. Dentro solo aparece lo que se puede hacer ahora: en una mesa
+   sin abrir no hay nada que juntar ni que mover. */
+function MasAcciones({ puedeMover, onJuntar, onMover, onNota }: {
+  puedeMover: boolean;
+  onJuntar: () => void;
+  onMover: () => void;
+  onNota: () => void;
 }) {
+  const [abierto, setAbierto] = useState(false);
+
+  const opciones: { icon: IconName; label: string; hint: string; onClick: () => void }[] = [
+    ...(puedeMover ? [
+      { icon: 'list' as IconName, label: 'Juntar con otra mesa', hint: 'Las dos cuentas pasan a ser una', onClick: onJuntar },
+      { icon: 'arrowRight' as IconName, label: 'Mover a otra mesa', hint: 'Se cambiaron de sitio', onClick: onMover },
+    ] : []),
+    { icon: 'edit', label: 'Nota de mesa', hint: 'Sale impresa con la siguiente comanda', onClick: onNota },
+  ];
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="press"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 14px', flexShrink: 0,
-        borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none',
-        color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
-        cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <Icon name={icon} size={15} />
-      {label}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="press"
+        aria-label="Más acciones de la mesa"
+        aria-haspopup="dialog"
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          height: 40, minWidth: 44, padding: '0 14px', flexShrink: 0,
+          borderRadius: 11, border: '1px solid var(--u-hair-2)', background: 'none',
+          color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+        }}
+      >
+        <Icon name="more" size={17} />
+        <span className="wp-wide-only">Más</span>
+      </button>
+
+      {abierto && (
+        <div
+          onClick={() => setAbierto(false)}
+          className="waiter-sheet-scrim"
+          style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="glass anim-slide-up waiter-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Más acciones de la mesa"
+            style={{ width: '100%', maxWidth: 420, padding: '14px 12px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}
+          >
+            {opciones.map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => { setAbierto(false); o.onClick(); }}
+                className="press"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 13, width: '100%', minHeight: 56,
+                  padding: '10px 12px', borderRadius: 12, border: 'none', background: 'none',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', color: 'var(--u-text-2)' }}>
+                  <Icon name={o.icon} size={17} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--u-text)' }}>{o.label}</span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>{o.hint}</span>
+                </span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setAbierto(false)}
+              className="press glass-quiet"
+              style={{ marginTop: 8, width: '100%', minHeight: 46, borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, color: 'var(--u-text-2)' }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -697,3 +813,4 @@ function Fila({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
