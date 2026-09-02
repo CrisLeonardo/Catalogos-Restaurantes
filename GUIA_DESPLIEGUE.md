@@ -306,6 +306,92 @@ Después, en el menú público, el botón flotante ofrece las dos opciones
 
 ---
 
+# PARTE 7c — Migraciones 123 a 127: el salón, la caja y la anulación
+
+Son las que quedaron **pendientes en producción** después del rediseño de
+Mesas / Tomar pedidos / Caja (123) y de la auditoría del salón (124-127).
+Van **en orden**: la 126 y la 127 instalan disparadores que dependen de lo
+que dejan las anteriores.
+
+Todas son **idempotentes** (probado: ejecutarlas dos veces seguidas no
+cambia nada ni da error). Si una falla a la mitad, se puede volver a pegar
+entera.
+
+| # | Archivo | Qué hace | Si NO se aplica |
+|---|---------|----------|-----------------|
+| 123 | `123_salon_caja_rediseno.sql` | `orders.party_size`, `order_items.seat_no`, `cash_expenses`, columnas de `cash_counts` | El salón no sabe cuánta gente hay, el reparto por asiento no se guarda y el cierre de caja pierde gastos y propinas |
+| 124 | `124_anular_recalcula_propina.sql` | `void_order_item` recalcula la propina en proporción | Se sigue cobrando la propina de un plato anulado |
+| 125 | `125_reparto_de_mesa_compartido.sql` | Tabla `table_splits` | El reparto de la cuenta vive solo en el navegador que lo hizo |
+| 126 | `126_anulacion_firma_siempre.sql` | Exige `approved_by` al anular fuera de `NEW`; `void_order` audita antes de cancelar | La app sigue pidiendo el PIN, pero la base no lo obliga |
+| 127 | `127_mesa_por_numero.sql` | `orders.table_number` + relleno hacia atrás + disparador | Todo sigue funcionando leyendo `address` (hay red de respaldo), pero no se pueden usar mesas con nombre |
+
+**Cómo aplicarlas:** una por una, pegando el archivo entero en el
+**SQL Editor** de Supabase, en orden 123 → 124 → 125 → 126 → 127.
+
+### Comprobar que quedaron
+
+```sql
+-- 123 y 127: las columnas nuevas
+select table_name, column_name
+  from information_schema.columns
+ where (table_name = 'orders'      and column_name in ('party_size','table_number'))
+    or (table_name = 'order_items' and column_name = 'seat_no')
+ order by 1, 2;
+-- se esperan 3 filas
+
+-- 125: la tabla del reparto
+select to_regclass('public.table_splits') as table_splits;   -- no debe ser null
+
+-- 126 y 127: los dos disparadores
+select tgname from pg_trigger
+ where tgname in ('order_voids_exige_firma_trg', 'orders_set_table_number_trg');
+-- se esperan 2 filas
+
+-- 127: cuántos pedidos de mesa quedaron con número
+select count(*) filter (where table_number is not null) as con_numero,
+       count(*)                                          as total_dine_in
+  from orders where order_type = 'DINE_IN';
+-- los que queden sin número son los que no tienen dirección: es correcto
+```
+
+### Después de la 124, una comprobación con dinero
+
+La propina tiene que seguir cuadrando con el subtotal. En cualquier pedido
+con propina:
+
+```sql
+select id, subtotal, tip, total, round(subtotal + tip, 2) as suma
+  from orders where tip > 0 order by created_at desc limit 5;
+-- `total` y `suma` deben coincidir en las cinco filas
+```
+
+### Si hay que echar atrás
+
+Ninguna borra datos, así que revertir es quitar lo que añaden:
+
+```sql
+-- 126: deja de exigir la firma (las filas ya firmadas se quedan)
+drop trigger if exists order_voids_exige_firma_trg on order_voids;
+
+-- 127: deja de mantener la columna (la app vuelve sola a leer `address`)
+drop trigger if exists orders_set_table_number_trg on orders;
+-- y si además hay que quitar la columna:
+-- alter table orders drop column if exists table_number;
+```
+
+La 124 y la 125 no tienen vuelta atrás útil: la 124 solo corrige una cuenta
+mal hecha, y borrar `table_splits` tiraría repartos en curso.
+
+### Orden respecto al despliegue del código
+
+El código sabe funcionar **sin** la 127 (`lib/db/mesa-columna.ts` lo detecta
+y vuelve a leer `address`), así que da igual si va antes o después. La 126
+sí conviene aplicarla **con o después** del código: si va antes, un panel
+viejo intentaría anular sin firma y le saldría un error de base en vez del
+mensaje amable.
+
+---
+
 # PARTE 8 — Poner la nube al día (módulos, recetas, llamada al mesero)
 
 El esquema fue creciendo. Si tu Supabase de producción está **atrasado**, aplica
@@ -354,3 +440,4 @@ solo funciona si su migración ya está aplicada en la nube.
 - [ ] (con dominio) Render: custom domains + wildcard con SSL
 - [ ] (con dominio) `NEXT_PUBLIC_ROOT_DOMAIN` = tudominio.com
 - [ ] Primer restaurante real creado y probado
+- [ ] Supabase: migraciones 123 → 124 → 125 → 126 → 127 aplicadas **en orden** (PARTE 7c)
