@@ -8,7 +8,6 @@
    ============================================================ */
 
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -204,7 +203,17 @@ export async function lookupInvitation(token: string): Promise<InviteLookup> {
   };
 }
 
-export type AcceptState = { error: string } | null;
+/**
+ * `url` = entra aquí, con una navegación de DOCUMENTO desde el cliente.
+ *
+ * Antes esto terminaba en `redirect(adminUrl(...))`, y funcionaba solo porque
+ * el panel vivía en OTRO host. Con el origen único el destino comparte host
+ * con esta página, y ahí Next deja de tratarlo como una salida: lo resuelve
+ * por dentro (`getAppRelativeRedirectUrl`, fetch interno) SIN pasar por el
+ * proxy — o sea, sin la reescritura de `/panel/<slug>` ni el `x-tenant-slug`.
+ * Es la misma trampa que se midió el 2026-08-26 con `enterRestaurant`.
+ */
+export type AcceptState = { error: string } | { url: string } | null;
 
 /**
  * Acepta la invitación y entra.
@@ -336,7 +345,8 @@ export async function acceptInvitation(prevState: AcceptState, formData: FormDat
     meta: { accepted: true, role: invitation.role },
   });
 
-  redirect(`${adminUrl(invitation.restaurantSlug)}?welcome=1`);
+  // Se DEVUELVE la URL en vez de `redirect()` — ver la nota en AcceptState.
+  return { url: `${adminUrl(invitation.restaurantSlug)}?welcome=1` };
 }
 
 /**

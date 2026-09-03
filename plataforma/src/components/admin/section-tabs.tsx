@@ -1,5 +1,8 @@
 'use client';
 
+import { usePathname as useRealPathname } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 
@@ -31,6 +34,10 @@ interface Props {
 }
 
 export default function SectionTabs({ group, pathname, preview = false }: Props) {
+  /* `pathname` llega ya normalizado a la ruta interna (`/admin/...`) para que
+     `isActivePath` siga valiendo; el prefijo del origen único se saca aparte,
+     de la ruta real del navegador. Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRealPathname());
   const ref = useRef<HTMLDivElement>(null);
 
   /* En un teléfono cinco pestañas no caben (484 px de pestañas en 347 px de
@@ -68,7 +75,7 @@ export default function SectionTabs({ group, pathname, preview = false }: Props)
         return (
           <Link
             key={it.href}
-            href={it.locked ? '/admin/suscripcion' : it.href}
+            href={panelHref(base, it.locked ? '/admin/suscripcion' : it.href)}
             className="admin-tab press"
             data-active={active ? '1' : '0'}
             data-locked={it.locked ? '1' : '0'}

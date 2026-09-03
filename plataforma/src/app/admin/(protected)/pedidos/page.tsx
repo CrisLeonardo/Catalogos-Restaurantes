@@ -10,6 +10,7 @@ import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import OrdersPanel from '@/components/admin/orders-panel';
 import { getDrivers } from '@/lib/db/drivers';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
+import { panelLink } from '@/lib/panel-links-server';
 
 /** Cómo se nombra un pedido en una frase: la mesa si la hay, si no el canal. */
 function orderShortLabel(o: { order_type: string; address: string | null; table_number?: number | null }): string {
@@ -43,7 +44,7 @@ export default async function PedidosPage() {
     restaurantId = profile.restaurant_id;
   }
 
-  if (!restaurantId) redirect('/admin');
+  if (!restaurantId) redirect(await panelLink('/admin'));
 
   // Zona horaria + moneda reales del restaurante (KPIs y montos honestos).
   const db = createServiceClient();

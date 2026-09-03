@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getCustomers, getCustomersSummary, getCustomerOrders } from '@/lib/db/customers';

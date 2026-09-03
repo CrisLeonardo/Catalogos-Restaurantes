@@ -3,12 +3,13 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { resolveModuleContext } from '@/lib/modules-server';
 import { getFelSettings, getFelEstadoConfig, listFelDocuments, getFelSummary, getInvoiceableOrders } from '@/lib/db/fel';
 import FacturacionPanel from '@/components/admin/facturacion-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Facturación (FEL) – Panel admin' };
 
 export default async function FacturacionPage() {
   const mc = await resolveModuleContext('fel');
-  if (!mc.ok) redirect('/admin/modulos');
+  if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
   const db = createServiceClient();
   const { count } = await db

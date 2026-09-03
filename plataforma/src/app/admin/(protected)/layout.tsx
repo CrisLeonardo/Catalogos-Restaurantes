@@ -22,6 +22,7 @@ import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
+import { panelLink } from '@/lib/panel-links-server';
 
 export default async function AdminProtectedLayout({
   children,
@@ -56,7 +57,7 @@ export default async function AdminProtectedLayout({
 
   // El "mesero puro" (solo sección mesero) no entra al panel admin.
   if (isMeseroOnly(profile.role, profile.permissions)) {
-    redirect('/admin/mesero');
+    redirect(await panelLink('/admin/mesero'));
   }
 
   const cookieStore = await cookies();

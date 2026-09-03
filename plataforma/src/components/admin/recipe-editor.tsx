@@ -4,6 +4,10 @@ import { useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { saveProductRecipe, type RecipeLineInput } from '@/lib/actions/recipes';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
+/* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
+   `<Link>`). Fuera del panel devuelve la ruta tal cual. */
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 interface Props {
   productId: string;
@@ -36,6 +40,8 @@ const labelStyle: React.CSSProperties = {
 };
 
 export default function RecipeEditor({ productId, restaurantId, ingredients, initialRecipe, onCostChange }: Props) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const [lines, setLines] = useState<RecipeItem[]>(initialRecipe);
   const [selIngredient, setSelIngredient] = useState('');
   const [selQty, setSelQty] = useState('');
@@ -121,7 +127,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
         <Icon name="flask" size={16} />
         <span>
           Aún no tienes insumos registrados.{' '}
-          <a href="/admin/ingredientes" style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
+          <a href={panelHref(base, '/admin/ingredientes')} style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none' }}>
             Crea tus insumos
           </a>{' '}
           para armar la receta de este platillo.

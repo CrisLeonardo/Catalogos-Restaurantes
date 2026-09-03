@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createOAuthCallbackClient } from '@/lib/supabase/server';
 import { DINER_COOKIE_NAME } from '@/lib/supabase/cookies';
+import { publicOrigin } from '@/lib/public-origin';
 
 export const runtime = 'nodejs';
 
@@ -14,10 +15,9 @@ export const runtime = 'nodejs';
  * `next` se sanea: solo se permiten rutas relativas del mismo origen para
  * evitar redirecciones abiertas.
  *
- * El origen se arma con las cabeceras `x-forwarded-*` / `host` (igual que
- * src/proxy.ts), NO con `request.nextUrl.origin`: detrás del proxy de Render
- * esa propiedad puede resolver al host/puerto interno del contenedor
- * (`localhost:10000`, el puerto por defecto de Render) en vez del dominio
+ * El origen sale de `publicOrigin()` (lib/public-origin.ts), NO de
+ * `request.nextUrl.origin`: detrás del proxy de Render esa propiedad resuelve
+ * al host/puerto interno del contenedor (`localhost:10000`) en vez del dominio
  * público, mandando al comensal a una URL que no existe tras un login exitoso.
  */
 export async function GET(request: NextRequest) {
@@ -26,9 +26,7 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get('next') || '/';
   const safeNext = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
 
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host;
-  const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
-  const origin = `${proto}://${host}`;
+  const origin = publicOrigin(request);
 
   if (code) {
     // Cliente del COMENSAL: la sesión de Google se guarda en su propia cookie

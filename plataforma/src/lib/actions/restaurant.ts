@@ -11,6 +11,7 @@ import type { HourInterval, WeeklyHours, HourExceptions } from '@/lib/hours';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 import { extractVisualConfig, type TemplateConfig } from '@/lib/theme/templates';
 import { ESTANDAR_MAX_ORDER_TYPES } from '@/lib/plans';
+import { panelLink } from '@/lib/panel-links-server';
 
 export type RestaurantState = { error: string } | null;
 
@@ -92,7 +93,7 @@ export async function updateRestaurantInfo(
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
-  redirect('/admin/perfil?saved=1');
+  redirect(await panelLink('/admin/perfil?saved=1'));
 }
 
 /**
@@ -151,7 +152,7 @@ export async function updateRestaurantTheme(
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
-  redirect('/admin/perfil?saved=1');
+  redirect(await panelLink('/admin/perfil?saved=1'));
 }
 
 /* ── Operación: horarios, pausa de pedidos, zona horaria ──── */
@@ -305,7 +306,7 @@ export async function updateDeliveryZones(
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
-  redirect('/admin/perfil?saved=1');
+  redirect(await panelLink('/admin/perfil?saved=1'));
 }
 
 /* ── Geolocalización del restaurante + radio de entrega ─────── */
@@ -354,7 +355,7 @@ export async function updateRestaurantLocation(
   }
   revalidatePath('/admin/perfil');
   revalidatePath('/');
-  redirect('/admin/perfil?saved=1');
+  redirect(await panelLink('/admin/perfil?saved=1'));
 }
 
 export async function updateRestaurantOps(
@@ -393,7 +394,7 @@ export async function updateRestaurantOps(
   revalidatePath('/admin/perfil');
   revalidatePath('/');
   updateTag(`restaurant:${ctx.restaurantId}`);
-  redirect('/admin/perfil?saved=1');
+  redirect(await panelLink('/admin/perfil?saved=1'));
 }
 
 /** Idiomas de menú soportados hoy además del español (siempre disponible). */

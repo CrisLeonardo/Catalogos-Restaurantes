@@ -1,5 +1,8 @@
 import * as React from 'react';
-import Link from 'next/link';
+/* Los enlaces pasan por `PanelLink`: traduce las rutas del panel al origen
+   desde el que se sirve la pagina (subdominio o `/panel/<slug>`). Fuera del
+   panel no hace nada. Ver components/admin/panel-link.tsx. */
+import PanelLink from '@/components/admin/panel-link';
 
 import { cn } from '@/lib/utils';
 
@@ -34,13 +37,13 @@ function Section({ title, action, aside, className, children, ...props }: Props)
       <div className="mb-2 flex items-center gap-3 px-1">
         <h3 className="adm-label flex-1">{title}</h3>
         {action && (
-          <Link
+          <PanelLink
             href={action.href}
             className="text-[12.5px] font-semibold no-underline"
             style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
           >
             {action.label}
-          </Link>
+          </PanelLink>
         )}
         {aside}
       </div>

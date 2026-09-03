@@ -45,6 +45,7 @@ import {
 } from '@/lib/sounds';
 import { getPendingNewOrders, type PendingNewOrder } from '@/lib/actions/orders';
 import type { Order } from '@/types';
+import { panelBaseFrom, panelHref, internalPanelPath } from '@/lib/panel-links';
 
 /** Pedidos ya descartados en esta pestaña — sobrevive a la navegación entre
     pantallas del panel (el shell se remonta) para que una tarjeta que ya
@@ -112,7 +113,9 @@ export default function NewOrdersAlert({
 
   // En /admin/pedidos el propio panel ya refresca los datos del server
   // component; refrescar también desde aquí duplicaría el re-render.
-  const isOrdersPage = pathname?.startsWith('/admin/pedidos') ?? false;
+  // `internalPanelPath` traduce `/panel/<slug>/pedidos` a `/admin/pedidos`,
+  // asi que esta comparacion vale en los dos origenes.
+  const isOrdersPage = internalPanelPath(pathname).startsWith('/admin/pedidos');
   const isOrdersPageRef = useRef(isOrdersPage);
   useEffect(() => { isOrdersPageRef.current = isOrdersPage; }, [isOrdersPage]);
 
@@ -429,7 +432,7 @@ export default function NewOrdersAlert({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
             <button
               type="button"
-              onClick={() => { dismiss(o.id); router.push('/admin/pedidos'); }}
+              onClick={() => { dismiss(o.id); router.push(panelHref(panelBaseFrom(pathname), '/admin/pedidos')); }}
               className="press"
               style={{
                 padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer',

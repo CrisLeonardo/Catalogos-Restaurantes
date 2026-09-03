@@ -3,27 +3,18 @@
 /* ============================================================
    AVISO "AÑADE LEOGIN AL INICIO" — web comercial y Mi cuenta.
    ------------------------------------------------------------
-   Dos modos, según si quien lo ve ya tiene un panel propio:
+   Instalar aquí SIEMPRE es correcto, tenga quien lo ve cero restaurantes o
+   diez: desde la migración a origen único, el ícono cubre este dominio
+   entero — Mi cuenta y el panel de cualquier restaurante (`/panel/<slug>/…`)
+   viven en él. Mismo patrón que components/install-banner.tsx (el del menú
+   del comensal): Android intercepta `beforeinstallprompt`, iOS enseña los
+   pasos manuales.
 
-   · SIN restaurante (prospecto en la web comercial, o cuenta nueva en Mi
-     cuenta): instalar AQUÍ es correcto — no hay otro sitio al que mandarlo
-     todavía. Mismo patrón que components/install-banner.tsx (el del menú
-     del comensal): Android intercepta `beforeinstallprompt`, iOS enseña los
-     pasos manuales.
-
-   · CON un restaurante propio (`redirectUrl`): instalar AQUÍ sería un error
-     — el panel real vive en `<slug>-admin.<dominio>`, un origen DISTINTO de
-     este (dominio raíz), y un ícono instalado aquí queda con el scope
-     equivocado. Android no soporta que una PWA abarque dos orígenes
-     (`scope_extensions` existe pero solo en escritorio, no en móvil — ver
-     [[feature-set-2026-09-01-pwa-scope-cruce-subdominios]]), así que la
-     única salida real es instalarlo DESDE el panel. Este modo no ofrece
-     instalar nada: manda para allá.
-
-   Con 2+ restaurantes no aplica ninguno de los dos textos especiales: no
-   hay un panel único al que mandar, así que el llamador simplemente no pasa
-   `redirectUrl` y este componente ofrece instalar aquí mismo (ver
-   mi-cuenta-client.tsx).
+   Hasta 2026-09-02 esto tenía un segundo modo (`redirectUrl`) que, al dueño
+   de UN restaurante, en vez de instalar lo mandaba a hacerlo desde
+   `<slug>-admin.<dominio>`: el panel vivía en otro ORIGEN y el scope de una
+   PWA no puede abarcar dos (`scope_extensions` no existe en Android). Ese
+   desvío se borró con la migración — ya no hay dos orígenes que reconciliar.
    ============================================================ */
 
 import { useEffect, useRef, useState } from 'react';
@@ -89,42 +80,6 @@ function CloseButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Manda al panel en vez de instalar aquí — dueño con un solo restaurante. */
-function RedirectCard({ redirectUrl, onDismiss }: { redirectUrl: string; onDismiss: () => void }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div>
-          <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--u-text)', lineHeight: 1.3 }}>Añade Leogin al inicio</p>
-          <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 2, lineHeight: 1.5 }}>
-            Hazlo desde tu panel, no desde aquí — así abre como una app de
-            verdad y no como una página suelta.
-          </p>
-        </div>
-        <CloseButton onClick={onDismiss} />
-      </div>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button
-          onClick={onDismiss}
-          style={{
-            flex: 1, padding: '12px', borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--u-hair-2)', background: 'transparent',
-            color: 'var(--u-text-3)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-          }}
-        >
-          Ahora no
-        </button>
-        <button
-          onClick={() => window.location.assign(redirectUrl)}
-          className="btn-accent"
-          style={{ flex: 2, padding: '12px', borderRadius: 'var(--radius-lg)', fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none' }}
-        >
-          Ir a mi panel
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function IOSSteps({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -210,7 +165,7 @@ function AndroidCard({ onInstall, onDismiss }: { onInstall: () => void; onDismis
   );
 }
 
-export default function LeoginInstallBanner({ redirectUrl = null }: { redirectUrl?: string | null }) {
+export default function LeoginInstallBanner() {
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [visible, setVisible] = useState(false);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
@@ -219,15 +174,6 @@ export default function LeoginInstallBanner({ redirectUrl = null }: { redirectUr
     if (isStandaloneMode() || wasDismissed()) return;
     const plat = getPlatform();
     if (!plat) return; // escritorio: sin flujo de instalación aquí
-
-    // Con destino de panel, no hace falta esperar el prompt nativo ni el
-    // retraso de iOS: el aviso no instala nada por sí mismo, así que puede
-    // mostrarse de inmediato.
-    if (redirectUrl) {
-      setPlatform(plat);
-      setVisible(true);
-      return;
-    }
 
     if (plat === 'android') {
       const handler = (e: Event) => {
@@ -247,7 +193,7 @@ export default function LeoginInstallBanner({ redirectUrl = null }: { redirectUr
       }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [redirectUrl]);
+  }, []);
 
   function dismiss() {
     saveDismiss();
@@ -275,9 +221,7 @@ export default function LeoginInstallBanner({ redirectUrl = null }: { redirectUr
       }}
     >
       <Glass style={{ padding: '18px 16px', borderRadius: 'var(--radius-xl)', maxWidth: 460, margin: '0 auto' }}>
-        {redirectUrl ? (
-          <RedirectCard redirectUrl={redirectUrl} onDismiss={dismiss} />
-        ) : platform === 'ios' ? (
+        {platform === 'ios' ? (
           <IOSSteps onDismiss={dismiss} />
         ) : (
           <AndroidCard onInstall={install} onDismiss={dismiss} />

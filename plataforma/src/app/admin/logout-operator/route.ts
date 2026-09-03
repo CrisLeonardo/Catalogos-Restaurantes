@@ -9,6 +9,7 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
+import { publicUrl } from '@/lib/public-origin';
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -16,5 +17,8 @@ export async function GET(req: Request) {
   const store = await cookies();
   store.delete(OPERATOR_COOKIE);
   store.delete(SESSION_SEEN_COOKIE);
-  return NextResponse.redirect(new URL('/admin/login', req.url));
+  // `req.url` NO sirve para esto: detrás del proxy de Render devolvía
+  // `https://localhost:10000/admin/login`. Ver lib/public-origin.ts — esta
+  // ruta era la que rompía "Continuar como {nombre}".
+  return NextResponse.redirect(publicUrl(req, '/admin/login'));
 }

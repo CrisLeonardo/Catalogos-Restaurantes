@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
 import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
 import WhatsAppPanel, { type WhatsAppAccountView } from '@/components/admin/whatsapp-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'WhatsApp – Panel admin' };
 
@@ -23,7 +24,7 @@ export const metadata = { title: 'WhatsApp – Panel admin' };
 export default async function AdminWhatsAppPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'whatsapp')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'whatsapp')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
 

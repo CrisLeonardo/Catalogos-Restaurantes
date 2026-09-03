@@ -48,6 +48,8 @@ import {
   type SoundSettings,
 } from '@/lib/sounds';
 import type { Order } from '@/types';
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 /* ── Leogin Desktop (Tauri): notificaciones nativas ──────────────────────
    Dentro del webview de escritorio, Notification.requestPermission()/
@@ -146,6 +148,8 @@ export default function AdminNotifications({
   kitchenMode?: boolean;
 }) {
   const router = useRouter();
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
 
   const [state,          setState]          = useState<BellState>('off');
   const [toast,          setToast]          = useState<string | null>(null);
@@ -319,7 +323,7 @@ export default function AdminNotifications({
               order.order_type === 'DELIVERY' ? 'A domicilio'
               : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
             const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
-            notifyUser('🛎 Nuevo pedido', body, { tag: order.id, url: '/admin/pedidos', vibrate: [200, 100, 200] });
+            notifyUser('🛎 Nuevo pedido', body, { tag: order.id, url: panelHref(base, '/admin/pedidos'), vibrate: [200, 100, 200] });
           }
         })
 
@@ -349,7 +353,7 @@ export default function AdminNotifications({
           {
             const body = `Un cliente${tableLabel} necesita atención.`;
             notifyUser('🔔 Llamada al mesero', body, {
-              url: '/admin/mesas',
+              url: panelHref(base, '/admin/mesas'),
               vibrate: [300, 100, 300, 100, 300, 200, 600],
               requireInteraction: true,
             });

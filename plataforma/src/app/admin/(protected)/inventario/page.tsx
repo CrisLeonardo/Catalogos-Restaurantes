@@ -4,6 +4,7 @@ import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import InventoryPanel from '@/components/admin/inventory-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Inventario – Panel admin' };
 
@@ -17,7 +18,7 @@ export const metadata = { title: 'Inventario – Panel admin' };
 export default async function AdminInventarioPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'inventario')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'inventario')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
 

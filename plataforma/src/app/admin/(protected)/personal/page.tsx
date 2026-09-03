@@ -15,6 +15,7 @@ import InvitationsPanel from '@/components/admin/invitations-panel';
 import { listPendingInvitations } from '@/lib/auth/invitations';
 import { getPanelAccessLog } from '@/lib/auth/access-log';
 import { listTrustedDevices } from '@/lib/auth/trusted-device';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Personal – Panel admin' };
 
@@ -28,7 +29,7 @@ export default async function AdminPersonalPage() {
   // escondiendo la pantalla.
   const isManager = ctx.memberRole === 'MANAGER';
   if (!isManager && ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
-    redirect('/admin');
+    redirect(await panelLink('/admin'));
   }
 
   let restaurantId: string | null = null;

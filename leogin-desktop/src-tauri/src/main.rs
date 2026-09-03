@@ -123,15 +123,15 @@ const EXTERNAL_LINKS_JS: &str = r#"
 /// (cookie), sin pasar por IPC ni exponer un comando nuevo al contenido
 /// remoto. `{VERSION}` se sustituye al construir la ventana.
 ///
-/// OJO con la condición de "estoy en el panel": en producción el panel vive
-/// en su PROPIO subdominio (`<slug>-admin.leogin.online`) y el proxy de la
-/// web reescribe las rutas por dentro — el navegador ve `/menu`, `/pedidos`…
-/// y NUNCA `/admin`. Chequear solo la ruta (la versión anterior) hacía que
-/// la telemetría jamás se enviara en producción; se reconoce también el
-/// hostname `*-admin.*`.
+/// OJO con la condición de "estoy en el panel": ha tenido tres formas. Hoy
+/// (origen único) el navegador ve `/panel/<slug>/…`. Antes el panel vivía en
+/// su propio subdominio (`<slug>-admin.<raíz>`) y el proxy reescribía las
+/// rutas por dentro, así que se veía `/menu`, `/pedidos`… y NUNCA `/admin`
+/// —chequear solo la ruta hacía que la telemetría no se enviara jamás en
+/// producción—. Se reconocen las tres.
 const SHELL_TELEMETRY_JS_TEMPLATE: &str = r#"
 (function () {
-  var isPanel = /\/admin(\/|$)/.test(location.pathname) || /-admin\./.test(location.hostname);
+  var isPanel = /\/panel\/[^/]+/.test(location.pathname) || /\/admin(\/|$)/.test(location.pathname) || /-admin\./.test(location.hostname);
   if (!isPanel) return;
   function send() {
     try {
@@ -846,18 +846,41 @@ fn begin_relink() -> String {
     central_login_url()
 }
 
-/// ¿Esta URL es el PANEL de un restaurante? Reconoce las DOS formas reales
-/// que arma la web (`adminUrl()` en plataforma/src/lib/tenant.ts):
-///   · producción: `https://<slug>-admin.<root>/…` — host dedicado. El proxy
-///     reescribe las rutas POR DENTRO (`/menu` → `/admin/menu`), así que el
-///     navegador nunca muestra `/admin` en la ruta.
+/// ¿Esta URL es el PANEL de un restaurante? Reconoce las TRES formas que ha
+/// tenido (`adminUrl()` en plataforma/src/lib/tenant.ts):
+///   · HOY, origen único: `https://<raíz>/panel/<slug>/…` — el panel es una
+///     RUTA del mismo dominio que el login central.
+///   · producción anterior: `https://<slug>-admin.<root>/…` — host dedicado.
+///     Sigue llegando por el 308 de la web y por PCs ya vinculadas.
 ///   · local / montaje por ruta: `http://<slug>.localhost:3000/admin/…`.
 /// Nunca el propio login central, ni el hub local, ni las páginas
 /// empaquetadas de esta app.
+/// ¿La ruta es la de un panel en el origen único? `/panel/<slug>/…`, con slug
+/// no vacío — `/panel` a secas no es de ningún restaurante.
+fn es_ruta_de_panel(path: &str) -> bool {
+    match path.strip_prefix("/panel/") {
+        Some(resto) => !resto.split('/').next().unwrap_or("").is_empty(),
+        None => false,
+    }
+}
+
 fn is_panel_location(url: &Url, central: &Url) -> bool {
     if url.scheme() != "http" && url.scheme() != "https" {
         return false;
     }
+
+    // El origen único va PRIMERO, y es imprescindible que sea antes del
+    // rechazo por "mismo origen que el central": desde 2026-09-02 el panel
+    // vive en `<raíz>/panel/<slug>`, o sea EXACTAMENTE en el origen del login
+    // central. Esa regla —correcta cuando el panel tenía subdominio propio—
+    // rechazaría hoy todos los paneles, y esta PC volvería a no adoptar nada:
+    // el mismo fallo que ya se sufrió al migrar a distleogin.com (ver la nota
+    // de CENTRAL_LOGIN_URL). `/panel/<slug>` no es ambiguo, así que no hace
+    // falta la protección del origen para descartar el login.
+    if es_ruta_de_panel(url.path()) {
+        return true;
+    }
+
     if url.origin() == central.origin() {
         return false;
     }
@@ -1374,4 +1397,78 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("no se pudo arrancar Leogin");
+}
+
+/* ============================================================
+   PRUEBAS DE `is_panel_location`
+   ------------------------------------------------------------
+   Esta función ya rompió dos veces en producción, y las dos con el mismo
+   síntoma mudo: la PC "no reconocía" la cuenta al arrancar y volvía a pedir
+   iniciar sesión, porque `detect_resolved_panel()` solo adopta un panel que
+   reconozca. La primera vez fue la migración a distleogin.com; la segunda
+   habría sido el origen único, donde el panel pasó a vivir en el MISMO origen
+   que el login central — justo lo que la regla de abajo rechazaba.
+   ============================================================ */
+#[cfg(test)]
+mod pruebas_panel {
+    use super::{es_ruta_de_panel, is_panel_location};
+    // `Url` se reexporta desde tauri; el crate `url` no es dependencia directa.
+    use tauri::Url;
+
+    fn central() -> Url {
+        Url::parse("https://distleogin.com/admin/login").unwrap()
+    }
+
+    fn es_panel(u: &str) -> bool {
+        is_panel_location(&Url::parse(u).unwrap(), &central())
+    }
+
+    #[test]
+    fn origen_unico_el_panel_es_una_ruta_del_dominio_central() {
+        assert!(es_panel("https://distleogin.com/panel/azucar-negra"));
+        assert!(es_panel("https://distleogin.com/panel/azucar-negra/menu"));
+        assert!(es_panel("https://distleogin.com/panel/azucar-negra/menu/productos/1"));
+    }
+
+    #[test]
+    fn el_login_central_y_mi_cuenta_no_son_un_panel() {
+        assert!(!es_panel("https://distleogin.com/admin/login"));
+        assert!(!es_panel("https://distleogin.com/mi-cuenta"));
+        assert!(!es_panel("https://distleogin.com/"));
+        // `/panel` a secas no es de ningún restaurante.
+        assert!(!es_panel("https://distleogin.com/panel"));
+        assert!(!es_panel("https://distleogin.com/panel/"));
+    }
+
+    #[test]
+    fn el_subdominio_anterior_se_sigue_reconociendo() {
+        // Llega por el 308 de la web y por PCs vinculadas antes de la migración.
+        assert!(es_panel("https://azucar-negra-admin.distleogin.com/"));
+        assert!(es_panel("https://azucar-negra-admin.distleogin.com/menu"));
+        // Y el dominio anterior a distleogin.com.
+        assert!(es_panel("https://azucar-negra-admin.leogin.online/pedidos"));
+    }
+
+    #[test]
+    fn el_montaje_por_ruta_sigue_valiendo() {
+        assert!(es_panel("https://azucar-negra.distleogin.com/admin"));
+        assert!(es_panel("https://azucar-negra.distleogin.com/admin/caja"));
+    }
+
+    #[test]
+    fn ni_el_hub_local_ni_las_paginas_de_la_app() {
+        assert!(!es_panel("http://localhost:7777/admin"));
+        assert!(!es_panel("http://127.0.0.1:7777/admin"));
+        assert!(!es_panel("tauri://localhost/index.html"));
+    }
+
+    #[test]
+    fn ruta_de_panel_aislada() {
+        assert!(es_ruta_de_panel("/panel/demo"));
+        assert!(es_ruta_de_panel("/panel/demo/menu"));
+        assert!(!es_ruta_de_panel("/panel"));
+        assert!(!es_ruta_de_panel("/panel/"));
+        assert!(!es_ruta_de_panel("/paneles/demo"));
+        assert!(!es_ruta_de_panel("/admin/menu"));
+    }
 }

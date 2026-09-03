@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { Icon } from '@/components/icons';
 import { planPriceLabel, planPriceQ } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
+/* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
+   `<Link>`). Fuera del panel devuelve la ruta tal cual. */
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 interface UpgradeFeature {
   icon: string;
@@ -84,6 +88,8 @@ interface Props {
 }
 
 export default function LockedFeatureSection({ restaurantName, planActual = 'BASICO' }: Props) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const [selected, setSelected] = useState<UpgradeFeature | null>(null);
   const pricing = usePlanPricing();
 
@@ -197,7 +203,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
           Actualizar a Premium — {planPriceLabel(pricing, 'PREMIUM')}
         </a>
         <a
-          href="/admin/suscripcion"
+          href={panelHref(base, '/admin/suscripcion')}
           style={{
             fontSize: 13, color: 'var(--brand-accent-ink)', textDecoration: 'none',
             fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5,

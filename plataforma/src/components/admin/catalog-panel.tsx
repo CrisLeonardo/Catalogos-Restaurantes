@@ -9,7 +9,10 @@
    otro) y el formulario de página completa es el que queda como único. */
 
 import { useState, useTransition } from 'react';
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import Image from 'next/image';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
@@ -20,6 +23,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useToastManager } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import type { Category, Product } from '@/types';
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 /* ── constantes ───────────────────────────────────────────── */
 
@@ -49,6 +54,8 @@ interface Props {
 }
 
 export default function CatalogPanel({ restaurantId, categories, products, maxProducts }: Props) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const [activeCat, setActiveCat] = useState<string>('todos');
   const { add: toast } = useToastManager();
   const [, startAvail] = useTransition();
@@ -97,8 +104,8 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
   // El editor de platillo vive en su propia página (product-form.tsx); si hay
   // un filtro de categoría activo, se preselecciona ahí mismo por query param.
   const newProductHref = activeCat === 'todos'
-    ? '/admin/menu/productos/new'
-    : `/admin/menu/productos/new?cat=${activeCat}`;
+    ? panelHref(base, '/admin/menu/productos/new')
+    : panelHref(base, `/admin/menu/productos/new?cat=${activeCat}`);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -294,7 +301,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
 
                 {/* Acciones */}
                 <div className="catalog-cell-actions" style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                  <Link href={`/admin/menu/productos/${p.id}`}>
+                  <Link href={panelHref(base, `/admin/menu/productos/${p.id}`)}>
                     <Button variant="secondary" size="sm">
                       <Icon name="edit" size={13} /> Editar
                     </Button>

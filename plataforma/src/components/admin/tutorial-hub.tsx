@@ -14,7 +14,10 @@
    ============================================================ */
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +34,8 @@ import {
   type TutorialSectionDef,
   type TutorialStep,
 } from '@/lib/tutorial/content';
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 interface Props {
   plan: string | null;
@@ -45,6 +50,8 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function TutorialHub({ plan, modules, contact }: Props) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const planNum = getPlanLevelNum(plan);
   const [query, setQuery] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -129,7 +136,7 @@ export default function TutorialHub({ plan, modules, contact }: Props) {
             onClick={() => {
               if (typeof window !== 'undefined') {
                 window.localStorage.removeItem('leogin_tour_completed');
-                window.location.href = '/admin';
+                window.location.href = panelHref(base, '/admin');
               }
             }}
           >

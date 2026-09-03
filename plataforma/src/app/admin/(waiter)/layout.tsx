@@ -15,6 +15,7 @@ import AdminShell from '@/components/admin/shell';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import type { Metadata } from 'next';
+import { panelLink } from '@/lib/panel-links-server';
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: 'Panel de Mesero' };
@@ -123,7 +124,7 @@ export default async function WaiterLayout({ children }: { children: React.React
   // SUPER_ADMIN sí entra (soporte/pruebas), el resto va al upsell de suscripción.
   const hasWaiterPanel = PLANS[(planActual ?? 'BASICO') as PlanCode]?.hasWaiterPanel ?? false;
   if (profile.role !== 'SUPER_ADMIN' && !hasWaiterPanel) {
-    redirect('/admin/suscripcion');
+    redirect(await panelLink('/admin/suscripcion'));
   }
 
   return (

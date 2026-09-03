@@ -6,6 +6,8 @@ import {
   isGroupSubdomain,
   getGroupSlug,
   legacyDomainRedirectHost,
+  panelPath,
+  rootDomainForUrls,
 } from "@/lib/tenant";
 import {
   DINER_COOKIE_NAME,
@@ -32,10 +34,20 @@ import {
  *     redirigiéndolo. A diferencia del punto 4, este SÍ es un salto de
  *     origen real: es la migración de dominio que se pidió a propósito, no
  *     una resolución interna de tenant.
- *  2. Resuelve el subdominio → slug del restaurante y lo propaga como
- *     header interno `x-tenant-slug` para que la app lo lea.
- *  3. Si el host es admin.SLUG.dominio, reescribe la ruta a /admin/* para que
- *     el panel de administración viva en un origen separado (PWA independiente).
+ *  1d. El subdominio VIEJO del panel (`<slug>-admin.<raíz>`) se manda con un
+ *     308 a su ruta en el origen único (`/panel/<slug>/...`). Desde la
+ *     migración de 2026-09-02 el panel vive en el dominio raíz —el scope de
+ *     una PWA es por origen, y tener el panel aparte era lo que hacía que
+ *     Android pintara la barra del navegador encima— pero el host viejo tiene
+ *     que seguir respondiendo: hay íconos instalados y marcadores apuntando
+ *     ahí. Ver PLAN_ORIGEN_UNICO.md.
+ *  2. Resuelve el tenant → slug del restaurante y lo propaga como header
+ *     interno `x-tenant-slug` para que la app lo lea. Sale de la RUTA
+ *     (`/panel/<slug>`, §2a) o del subdominio, según por dónde entre.
+ *  3. Si el host es `<slug>-admin.dominio`, reescribe la ruta a /admin/*.
+ *     Hoy solo lo alcanzan las peticiones que §1d deja pasar (POST de una
+ *     pestaña ya abierta, `/api/*`, `/auth/*`): todo lo demás se fue al
+ *     origen único antes de llegar aquí.
  *  4. Resuelve el link ESTABLE de mesa/menú (`/m/<restaurantId>/...` en el
  *     dominio raíz — ver `stableTableUrl`/`stableMenuUrl` en lib/tenant.ts) y
  *     lo reescribe (rewrite, no redirect) al tenant vigente. A propósito NO es
@@ -143,11 +155,91 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // 1d) Subdominio viejo del panel (`<slug>-admin.<raíz>`) → su ruta en el
+  // origen único. Es lo que permite terminar la migración sin romperle el
+  // acceso a nadie: hay íconos ya instalados en teléfonos, marcadores
+  // guardados y Leogin Desktop apuntando a ese host. Se queda puesto como
+  // mínimo un año (ver PLAN_ORIGEN_UNICO.md, fase 5).
+  //
+  // 308 y no 301: el 308 conserva el método. Da igual para lo que dejamos
+  // pasar —solo GET— pero un 301 le da permiso al navegador para convertir
+  // un POST en GET, y eso convierte un fallo ruidoso en uno silencioso.
+  //
+  // Tres exclusiones, y las tres son a propósito:
+  //  · Solo GET. Un salto de origen sobre un POST llega con el `Origin` del
+  //    host viejo y Next rechaza la Server Action; una pestaña que ya estaba
+  //    abierta sigue funcionando por §3 hasta que la persona navegue.
+  //  · `/api/*` no se toca: el agente de impresión y los webhooks pueden
+  //    tener esa URL fija y muchos clientes no siguen redirects.
+  //  · `/auth/*` tampoco: el canje del `code` de Google costó dos sesiones
+  //    afinarlo (ver §1b/§1c) y un salto de origen a mitad del canje no
+  //    aporta nada — los accesos nuevos ya nacen en el dominio raíz.
+  if (
+    request.method === "GET" &&
+    isAdminSubdomain(host) &&
+    !pathname.startsWith("/api/") &&
+    !pathname.startsWith("/_next") &&
+    !pathname.includes("/auth/")
+  ) {
+    const slugViejo = getTenantSlug(host);
+    const raiz = rootDomainForUrls();
+    if (slugViejo && raiz) {
+      const proto = raiz.includes("localhost") || raiz.startsWith("127.") ? "http" : "https";
+      // La guarda es por HOST, no por ruta: `/mi-cuenta` y `/preview/<id>`
+      // conservan su ruta a propósito (no son de un restaurante) y aun así
+      // tienen que cambiar de origen. Lo único que no sirve de nada es
+      // redirigir a uno mismo.
+      const hostActual = (host ?? "").toLowerCase();
+      if (hostActual !== raiz.toLowerCase()) {
+        const rutaNueva = rutaEnOrigenUnico(pathname, slugViejo);
+        const destino = `${proto}://${raiz}${rutaNueva}${request.nextUrl.search}`;
+        // `Response` cruda en vez de `NextResponse.redirect`: esa API ACORTA
+        // el `Location` a ruta relativa cuando el destino le parece del mismo
+        // origen que `request.nextUrl` — y el objetivo entero de este redirect
+        // es CAMBIAR de origen. Con un `Location` relativo el navegador lo
+        // resuelve contra el subdominio VIEJO, la petición vuelve a caer aquí
+        // y el prefijo se apila:
+        //
+        //   /menu → /panel/demo/menu → /panel/demo/panel/demo/menu → …
+        //
+        // Visto de verdad con `curl -L` mientras se escribía esto. Que la URL
+        // salga absoluta no es un detalle de estilo: es lo único que hace que
+        // este redirect signifique algo.
+        return new Response(null, { status: 308, headers: { location: destino } });
+      }
+    }
+  }
+
   // 2) Tenant + detección de subdominio admin
   let slug = getTenantSlug(host);
   const adminSub = isAdminSubdomain(host);
   const groupSub = isGroupSubdomain(host);
   const groupSlug = getGroupSlug(host);
+
+  // 2a) EL PANEL POR RUTA — la base del origen único (PLAN_ORIGEN_UNICO.md).
+  //
+  //   distleogin.com/panel/<slug>/menu  →  /admin/menu  ·  x-tenant-slug=<slug>
+  //
+  // Es exactamente lo que hace §3 con el subdominio, leyendo el slug de la
+  // ruta en vez del host. Por eso el árbol `/admin/*` no se mueve de sitio y
+  // los 54 archivos que resuelven el restaurante siguen leyendo la misma
+  // cabecera sin enterarse.
+  //
+  // ⚠️ HOY NADIE ENLAZA AQUÍ TODAVÍA, y es a propósito. Verificado el
+  // 2026-09-02 con el panel abierto en `/panel/azucar-negra`: la pantalla se
+  // pinta bien, pero 20 de sus 21 enlaces apuntan a `/admin/…` — que en el
+  // dominio raíz no lleva restaurante y cae en "Restaurante no encontrado".
+  // Hasta que esos 46 destinos de navegación lleven el prefijo, `adminUrl()`
+  // sigue devolviendo el subdominio y esta rama solo se alcanza a mano.
+  let panelRewritePath: string | null = null;
+  if (!slug && !adminSub && !groupSub) {
+    const m = pathname.match(/^\/panel\/([a-z0-9][a-z0-9-]*)(\/.*)?$/i);
+    if (m) {
+      const [, slugRuta, resto = ""] = m;
+      slug = slugRuta.toLowerCase();
+      panelRewritePath = resto === "" || resto === "/" ? "/admin" : `/admin${resto}`;
+    }
+  }
 
   // 2b) Link estable de mesa/menú: solo aplica en el dominio raíz (sin slug,
   // sin subdominio admin/central) y con forma /m/<uuid>(/resto). El resto
@@ -207,6 +299,7 @@ export async function proxy(request: NextRequest) {
   // vars de html[data-admin-area] pisarían el tema del tenant en la vista previa.
   const isAdminArea =
     (adminSub || groupSub ||
+      panelRewritePath !== null ||
       pathname.startsWith("/admin") ||
       pathname.startsWith("/central") ||
       pathname.startsWith("/super")) &&
@@ -278,6 +371,10 @@ export async function proxy(request: NextRequest) {
       rewriteUrl = request.nextUrl.clone();
       rewriteUrl.pathname = pathname === "/" ? "/central" : `/central${pathname}`;
     }
+  } else if (panelRewritePath !== null) {
+    // /panel/<slug>(/resto) → /admin(/resto) — ver §2a más arriba.
+    rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = panelRewritePath;
   } else if (stableRewritePath !== null) {
     // /m/<id>(/resto) → mismo origen, sin el prefijo — ver 1b) más arriba.
     rewriteUrl = request.nextUrl.clone();
@@ -552,6 +649,35 @@ export async function proxy(request: NextRequest) {
 
   applySecurityHeaders(response.headers, csp);
   return response;
+}
+
+/**
+ * Dónde vive ahora una ruta que llegó al subdominio viejo del panel
+ * (`<slug>-admin.<raíz>`), ya en el origen único. Ver §1d.
+ *
+ *   /                → /panel/<slug>
+ *   /menu            → /panel/<slug>/menu     · el proxy viejo (§3) reescribía
+ *   /admin/menu      → /panel/<slug>/menu       las dos a la misma pantalla
+ *   /mi-cuenta/...   → /mi-cuenta/...          · son de la PERSONA, no de un
+ *   /preview/<id>    → /preview/<id>             restaurante: no llevan slug
+ */
+function rutaEnOrigenUnico(pathname: string, slug: string): string {
+  const base = panelPath(slug);
+  // Ya viene traducida: no se vuelve a prefijar. Es el cinturón contra el
+  // apilado descrito en §1d — con el `Location` absoluto no debería llegar
+  // aquí nunca, pero esta función tiene que ser idempotente por si acaso.
+  if (pathname === base || pathname.startsWith(`${base}/`)) return pathname;
+
+  if (pathname === "/mi-cuenta" || pathname.startsWith("/mi-cuenta/")) return pathname;
+  if (pathname === "/preview" || pathname.startsWith("/preview/")) return pathname;
+
+  const sinAdmin =
+    pathname === "/admin"
+      ? ""
+      : pathname.startsWith("/admin/")
+        ? pathname.slice("/admin".length)
+        : pathname;
+  return `${base}${sinAdmin === "/" ? "" : sinAdmin}`;
 }
 
 /** `pathname` de una URL potencialmente inválida (Referer ausente/malformado → null). */

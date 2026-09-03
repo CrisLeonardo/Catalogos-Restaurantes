@@ -1,5 +1,9 @@
 import * as React from 'react';
 import Link from 'next/link';
+/* Los enlaces pasan por `PanelLink`: traduce las rutas del panel al origen
+   desde el que se sirve la pagina (subdominio o `/panel/<slug>`). Fuera del
+   panel no hace nada. Ver components/admin/panel-link.tsx. */
+import PanelLink from '@/components/admin/panel-link';
 
 import { cn } from '@/lib/utils';
 
@@ -44,7 +48,7 @@ function ListRow({ className, ...props }: React.ComponentProps<'div'>) {
  *  otra pestaña, se anuncia como enlace y funciona sin JavaScript. */
 function ListLink({ className, ...props }: React.ComponentProps<typeof Link>) {
   return (
-    <Link
+    <PanelLink
       data-slot="list-link"
       className={cn(
         rowClass,

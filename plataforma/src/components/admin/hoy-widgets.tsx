@@ -3,6 +3,8 @@ import { List, ListLink, ListRow, ListText, StatusDot } from '@/components/ui/li
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import type { HouseData, OnlineData, RatingsData, StockData } from '@/lib/db/hoy';
+import { panelBase } from '@/lib/panel-links-server';
+import { panelHref } from '@/lib/panel-links';
 
 /* ============================================================
    WIDGETS DE "HOY"
@@ -96,23 +98,25 @@ function TableDots({ occupied, total }: { occupied: number; total: number }) {
  * renglones de información. Cada fila desaparece por su cuenta si su módulo
  * está apagado o si hoy no tiene nada.
  */
-export function HouseWidget({
+export async function HouseWidget({
   data, now, canSeeTables,
 }: {
   data: HouseData;
   now: number;
   canSeeTables: boolean;
 }) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = await panelBase();
   const { tables, waiting, reservation } = data;
 
   return (
     <Section
       title="La casa"
-      action={canSeeTables ? { href: '/admin/mesas', label: 'Ver mesas' } : undefined}
+      action={canSeeTables ? { href: panelHref(base, '/admin/mesas'), label: 'Ver mesas' } : undefined}
     >
       <List>
         {tables && (
-          <ListLink href="/admin/mesas">
+          <ListLink href={panelHref(base, "/admin/mesas")}>
             <TableDots occupied={tables.occupied} total={tables.total} />
             <ListText
               title={
@@ -131,7 +135,7 @@ export function HouseWidget({
         )}
 
         {waiting && (
-          <ListLink href="/admin/lista-espera">
+          <ListLink href={panelHref(base, "/admin/lista-espera")}>
             <span className="t-mono w-11 shrink-0 text-[19px] font-semibold text-adm-text">
               {waiting.count}
             </span>
@@ -149,7 +153,7 @@ export function HouseWidget({
         )}
 
         {reservation && (
-          <ListLink href="/admin/reservaciones">
+          <ListLink href={panelHref(base, "/admin/reservaciones")}>
             <span className="t-mono w-11 shrink-0 text-[14px] font-semibold text-adm-text-2">
               {reservation.time}
             </span>
@@ -182,7 +186,10 @@ export function HouseWidget({
  * lib/product-availability.ts— y esa segunda pregunta la contesta el widget de
  * la pantalla Menú. Lo agotado va primero y en rojo; lo bajo, en ámbar.
  */
-export function StockWidget({ data, canSeeInventory }: { data: StockData; canSeeInventory: boolean }) {
+export async function StockWidget({ data, canSeeInventory }: { data: StockData; canSeeInventory: boolean }) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = await panelBase();
+
   const filas = [
     ...data.out.map((p) => ({ ...p, agotado: true })),
     ...data.low.map((p) => ({ ...p, agotado: false })),
@@ -192,7 +199,7 @@ export function StockWidget({ data, canSeeInventory }: { data: StockData; canSee
   return (
     <Section
       title="Se está acabando"
-      action={canSeeInventory ? { href: '/admin/inventario', label: 'Ver inventario' } : undefined}
+      action={canSeeInventory ? { href: panelHref(base, '/admin/inventario'), label: 'Ver inventario' } : undefined}
     >
       <List>
         {filas.map((p) => (
@@ -216,7 +223,7 @@ export function StockWidget({ data, canSeeInventory }: { data: StockData; canSee
         ))}
         {resto > 0 && canSeeInventory && (
           <ListLink
-            href="/admin/inventario"
+            href={panelHref(base, "/admin/inventario")}
             className="gap-2 text-[14px] font-semibold"
             style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
           >
@@ -238,17 +245,19 @@ export function StockWidget({ data, canSeeInventory }: { data: StockData; canSee
  * mueve y no es noticia; el de esta semana sí, y el comentario es lo que de
  * verdad se lee.
  */
-export function RatingsWidget({ data, now, canSeeSurveys }: {
+export async function RatingsWidget({ data, now, canSeeSurveys }: {
   data: RatingsData;
   now: number;
   canSeeSurveys: boolean;
 }) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = await panelBase();
   const max = Math.max(...data.distribution, 1);
 
   return (
     <Section
       title="Lo que dicen tus clientes"
-      action={canSeeSurveys ? { href: '/admin/encuestas', label: 'Ver encuestas' } : undefined}
+      action={canSeeSurveys ? { href: panelHref(base, '/admin/encuestas'), label: 'Ver encuestas' } : undefined}
     >
       <List>
         <ListRow>

@@ -1,5 +1,7 @@
 import { List, ListLink, ListRow, ListText, StatusDot } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
+import { panelBase } from '@/lib/panel-links-server';
+import { panelHref } from '@/lib/panel-links';
 
 /* ── Menú · Fuera del menú ahora mismo ───────────────────────── */
 
@@ -25,14 +27,16 @@ export interface OffMenuItem {
  *
  * No cuesta ni una consulta: la pantalla ya carga el catálogo entero.
  */
-export function OffMenuWidget({ items, total }: { items: OffMenuItem[]; total: number }) {
+export async function OffMenuWidget({ items, total }: { items: OffMenuItem[]; total: number }) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = await panelBase();
   const resto = total - items.length;
 
   return (
     <Section title="No se puede pedir ahora">
       <List>
         {items.map((p) => (
-          <ListLink key={p.id} href={`/admin/menu/productos/${p.id}`}>
+          <ListLink key={p.id} href={panelHref(base, `/admin/menu/productos/${p.id}`)}>
             <StatusDot tone={p.reason === 'inventario' ? 'danger' : 'neutral'} size={9} />
             <ListText
               title={p.name}

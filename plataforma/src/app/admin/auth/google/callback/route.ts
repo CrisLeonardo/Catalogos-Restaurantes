@@ -4,6 +4,7 @@ import { createOAuthCallbackClient } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
+import { publicOrigin } from '@/lib/public-origin';
 
 export const runtime = 'nodejs';
 
@@ -22,18 +23,16 @@ export const runtime = 'nodejs';
  *  · Algo falló (código inválido, Google canceló) → de vuelta al login con
  *    `?auth_error=1`, sin pantalla en blanco.
  *
- * El origen se arma con las cabeceras `x-forwarded-*` (igual que
- * /auth/callback): detrás del proxy de Render `request.nextUrl.origin` puede
- * resolver al host interno del contenedor en vez del dominio público.
+ * El origen sale de `publicOrigin()` (lib/public-origin.ts), igual que en
+ * /auth/callback: detrás del proxy de Render `request.nextUrl.origin` resuelve
+ * al host interno del contenedor en vez del dominio público.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
   const intent = searchParams.get('intent') === 'signup' ? 'signup' : 'login';
 
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host;
-  const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
-  const origin = `${proto}://${host}`;
+  const origin = publicOrigin(request);
 
   /** Solo rutas relativas del mismo origen (evita redirecciones abiertas). */
   const rawNext = searchParams.get('next') ?? '';
@@ -61,7 +60,7 @@ export async function GET(request: NextRequest) {
     .map(({ name }) => name)
     .filter((n) => n.endsWith('-code-verifier'));
   console.warn(
-    `[admin/auth/google/callback] entrada · host=${host} · intent=${intent}` +
+    `[admin/auth/google/callback] entrada · origen=${origin} · intent=${intent}` +
       ` · next=${safeNext ?? '(ninguno)'} · verificadores=[${verificadores.join(', ') || 'NINGUNO'}]`,
   );
 
@@ -76,7 +75,7 @@ export async function GET(request: NextRequest) {
     const llegaron = (await cookies()).getAll().map(({ name }) => name);
     const verificadores = llegaron.filter((n) => n.endsWith('-code-verifier'));
     return fail(
-      `exchangeCodeForSession falló: ${error.message} · host=${host}` +
+      `exchangeCodeForSession falló: ${error.message} · origen=${origin}` +
         ` · verificadores=[${verificadores.join(', ') || 'NINGUNO'}]` +
         ` · cookies sb-=[${llegaron.filter((n) => n.startsWith('sb-')).join(', ') || 'ninguna'}]`,
     );

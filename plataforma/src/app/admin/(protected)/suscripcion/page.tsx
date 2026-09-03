@@ -21,6 +21,8 @@ import { Stat, StatGroup } from '@/components/ui/stat';
 import { List, ListRow, ListText } from '@/components/ui/list';
 import { cn } from '@/lib/utils';
 import ReceiptDownloadButton from '@/components/super/receipt-download-button';
+import { panelLink, panelBase } from '@/lib/panel-links-server';
+import { panelHref } from '@/lib/panel-links';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -51,7 +53,7 @@ function upgradeHref(restaurantName: string, targetPlan: string): string {
 export default async function SuscripcionPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'suscripcion')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'suscripcion')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
   let restaurantName = 'mi restaurante';
@@ -462,7 +464,9 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
   );
 }
 
-function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
+async function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: string; autoPrice: boolean }) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = await panelBase();
   return (
     <Card className="p-5" style={{ border: '1px solid var(--u-hair-2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -471,7 +475,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
       </div>
       <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Precio fijo de tu plan: prender o apagar funciones y modos de pedido desde{' '}
-        <a href="/admin/modulos" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a> no cambia tu mensualidad.
+        <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Funciones</a> no cambia tu mensualidad.
       </div>
 
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -493,7 +497,7 @@ function MeasureCard({ b, currency, autoPrice }: { b: FeeBreakdown; currency: st
         </div>
       )}
 
-      <a href="/admin/modulos" className="adm-action-link" style={{ marginTop: 10, fontSize: 12.5 }}>
+      <a href={panelHref(base, '/admin/modulos')} className="adm-action-link" style={{ marginTop: 10, fontSize: 12.5 }}>
         Gestionar mis modos de pedido y funciones <Icon name="arrowRight" size={13} />
       </a>
     </Card>

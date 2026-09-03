@@ -1,10 +1,11 @@
 import 'server-only';
 import { myOrganizationId } from '@/lib/db/admin';
 
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { isLowPrivilegeRole, shouldHideResume } from '@/lib/auth/resume-policy';
+import { SESSION_SEEN_COOKIE, isSessionStale } from '@/lib/auth/session-activity';
 
 /**
  * Sesión de personal ya iniciada, lista para "Continuar como {nombre}" en las
@@ -46,6 +47,17 @@ export async function getResumeSession(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
+
+  /* Vencida por inactividad: NO se ofrece continuar.
+     La cookie de Supabase puede seguir viva días, pero los layouts de destino
+     (mi-cuenta, admin, super) aplican su propia ventana de 30 min y rebotan a
+     /admin/logout-operator. Sin esta comprobación, "Continuar como {nombre}"
+     prometía algo que la pantalla siguiente deshacía: el dueño pulsaba su
+     nombre y aterrizaba de vuelta en el login con la sesión ya cerrada, que
+     es exactamente lo que se reportó el 2026-09-02. Un solo reloj para las
+     dos pantallas — el mismo `isSessionStale` que usan los layouts. */
+  const seen = (await cookies()).get(SESSION_SEEN_COOKIE)?.value;
+  if (isSessionStale(seen, user.id)) return null;
 
   const { data: profile } = await supabase
     .from('profiles')

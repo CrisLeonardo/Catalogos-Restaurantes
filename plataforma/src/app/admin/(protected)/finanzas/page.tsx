@@ -6,12 +6,16 @@ import { getSalesReport, type Split } from '@/lib/db/reports';
 import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Finanzas – Panel admin' };
 
@@ -50,7 +54,7 @@ export default async function AdminFinanzasPage({
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';

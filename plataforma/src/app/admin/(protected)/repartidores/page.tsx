@@ -8,6 +8,7 @@ import { getDrivers, getDriversCashToday } from '@/lib/db/drivers';
 import { getDeliveryZones } from '@/lib/db/zones';
 import DriversPanel from '@/components/admin/drivers-panel';
 import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Repartidores – Panel admin' };
 
@@ -21,7 +22,7 @@ export const metadata = { title: 'Repartidores – Panel admin' };
 export default async function AdminRepartidoresPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'repartidores')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'repartidores')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
 

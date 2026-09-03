@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import GoogleStaffButton from '@/components/auth/google-staff-button';
@@ -44,6 +44,14 @@ export default function AcceptInviteClient({
   googleEnabled: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<AcceptState, FormData>(acceptInvitation, null);
+
+  // Navegación de DOCUMENTO, no `redirect()` del servidor: el panel comparte
+  // host con esta página y ese redirect se resolvería por dentro, sin pasar
+  // por el proxy (mismo motivo que en login-client.tsx y enterRestaurant).
+  const entrando = !!state && 'url' in state;
+  useEffect(() => {
+    if (state && 'url' in state) window.location.assign(state.url);
+  }, [state]);
 
   return (
     <Glass style={{ padding: '28px 24px' }}>
@@ -120,15 +128,16 @@ export default function AcceptInviteClient({
 
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || entrando}
           className="press btn-accent"
           style={{
             width: '100%', padding: '13px', borderRadius: 'var(--radius-full)',
             fontWeight: 600, fontSize: 15, border: 'none',
-            cursor: isPending ? 'wait' : 'pointer', opacity: isPending ? 0.7 : 1,
+            cursor: isPending || entrando ? 'wait' : 'pointer',
+            opacity: isPending || entrando ? 0.7 : 1,
           }}
         >
-          {isPending ? 'Entrando…' : 'Aceptar y entrar'}
+          {isPending || entrando ? 'Entrando…' : 'Aceptar y entrar'}
         </button>
       </form>
 

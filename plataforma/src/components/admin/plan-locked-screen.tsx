@@ -1,4 +1,7 @@
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { Icon } from '@/components/icons';
 import { planPriceLabel } from '@/lib/plans';
 import { getEffectivePlanPricing } from '@/lib/db/billing';

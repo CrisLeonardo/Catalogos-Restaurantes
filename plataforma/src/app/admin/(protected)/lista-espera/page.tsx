@@ -4,6 +4,7 @@ import { resolveModuleContext } from '@/lib/modules-server';
 import { can } from '@/lib/permissions';
 import { getActiveWaitlist, getRecentWaitlist, getWaitlistSummary } from '@/lib/db/waitlist';
 import WaitlistPanel from '@/components/admin/waitlist-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Lista de espera – Panel admin' };
 
@@ -13,10 +14,10 @@ export default async function AdminListaEsperaPage() {
   // Delegable como permiso propio (ver PLAN_AUDITORIA_LANZAMIENTO.md Fase 3):
   // a diferencia de otros módulos activables, este SÍ respeta permissions[]
   // para que el dueño pueda dárselo a un host/mesero sin abrir el resto del panel.
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'lista_espera')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'lista_espera')) redirect(await panelLink('/admin'));
 
   const mc = await resolveModuleContext('lista_espera');
-  if (!mc.ok) redirect('/admin/modulos');
+  if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
   const [entries, recent, summary] = await Promise.all([
     getActiveWaitlist(mc.restaurantId),

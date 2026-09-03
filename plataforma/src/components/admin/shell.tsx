@@ -8,6 +8,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { panelBaseFrom, internalPanelPath, panelHref } from '@/lib/panel-links';
 import { Icon } from '@/components/icons';
 import { ServiceModeContext } from '@/components/admin/service-mode';
 import { Badge } from '@/components/ui/badge';
@@ -130,7 +131,17 @@ export default function AdminShell({
      ver globals.css). Una barra de pestañas que se desplaza esconde destinos
      y ninguna app la tiene así. */
 
-  const pathname = preview ? '/admin/menu' : realPathname;
+  /* Prefijo del origen único: '/panel/<slug>' si el navegador ya está ahí,
+     cadena vacía en el subdominio de hoy. Ver lib/panel-links.ts. */
+  const panelBase = panelBaseFrom(realPathname);
+  /** Enlace a pintar para una ruta interna del panel. */
+  const enlace = (ruta: string) => panelHref(panelBase, ruta);
+
+  /* `pathname` es siempre la ruta INTERNA (`/admin/...`), venga el navegador
+     por el subdominio o por `/panel/<slug>`. Así toda la lógica de abajo
+     —pestaña activa, títulos, modo servicio— sigue comparando contra las
+     mismas rutas de siempre y no se entera del cambio de origen. */
+  const pathname = preview ? '/admin/menu' : internalPanelPath(realPathname);
 
   /* "Modo servicio" (Cocina y Mesero, rediseño 2026-08-22): quita el
      armazón del panel y deja la pantalla entera para el trabajo. Vive aquí
@@ -456,7 +467,7 @@ export default function AdminShell({
       );
     }
     return (
-      <Link key={g.key} href={g.href} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={g.key}>
+      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={g.key}>
         <Icon name={g.icon} size={18} />
         <span className="nav-label">{g.label}</span>
         <NavPending />
@@ -492,7 +503,7 @@ export default function AdminShell({
           return preview ? (
             <div className="admin-brand" style={brandStyle}>{brandInner}</div>
           ) : (
-            <Link href="/admin" className="admin-brand press" style={{ ...brandStyle, textDecoration: 'none', color: 'inherit' }} title="Ir al inicio">{brandInner}</Link>
+            <Link href={enlace('/admin')} className="admin-brand press" style={{ ...brandStyle, textDecoration: 'none', color: 'inherit' }} title="Ir al inicio">{brandInner}</Link>
           );
         })()}
 
@@ -522,7 +533,7 @@ export default function AdminShell({
         {/* Plan badge — link to /admin/suscripcion, hides its label on mobile bottom bar */}
         {planActual && !preview && (
           <Link
-            href="/admin/suscripcion"
+            href={enlace('/admin/suscripcion')}
             className="admin-navlink press"
             data-active="0"
             style={{ gap: 8, marginBottom: 4 }}
@@ -629,7 +640,7 @@ export default function AdminShell({
         {activeGroup && showSubbar && (
           <div className="admin-subbar">
             {backToIndex ? (
-              <Link href={activeGroup.href} className="admin-back press">
+              <Link href={enlace(activeGroup.href)} className="admin-back press">
                 <Icon name="chevronLeft" size={15} />
                 {activeGroup.label}
               </Link>

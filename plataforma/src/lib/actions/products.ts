@@ -16,6 +16,7 @@ import type { DocumentBranding } from '@/lib/documents/types';
 import { sanitizeDietaryTags } from '@/lib/dietary-tags';
 import { PLANS, type PlanCode } from '@/lib/plans';
 import type { Category, Product, ProductOptionGroup } from '@/types';
+import { panelLink } from '@/lib/panel-links-server';
 
 export type ProductState = { error: string } | null;
 
@@ -218,7 +219,7 @@ export async function createProduct(prevState: ProductState, formData: FormData)
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
-  redirect(`/admin/menu/productos/${created.id}`);
+  redirect(await panelLink(`/admin/menu/productos/${created.id}`));
 }
 
 export async function updateProduct(prevState: ProductState, formData: FormData): Promise<ProductState> {
@@ -262,7 +263,7 @@ export async function updateProduct(prevState: ProductState, formData: FormData)
 
   revalidatePath('/admin/menu');
   updateTag(`menu:${ctx.restaurantId}`);
-  redirect('/admin/menu');
+  redirect(await panelLink('/admin/menu'));
 }
 
 export async function deleteProduct(formData: FormData) {

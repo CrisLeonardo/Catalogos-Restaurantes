@@ -22,6 +22,7 @@ import CashClose from '@/components/admin/caja/cash-close';
 import CashHistoryPanel from '@/components/admin/cash-history-panel';
 import { getCashHistory } from '@/lib/actions/finanzas';
 import { EmptyState } from '@/components/ui/empty-state';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Caja – Panel admin' };
 
@@ -42,7 +43,7 @@ function fechaLarga(timezone: string): string {
 export default async function AdminCajaPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'finanzas')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';

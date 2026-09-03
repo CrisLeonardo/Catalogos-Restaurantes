@@ -17,7 +17,10 @@
    "más"; navegación abajo. Nada se pierde, todo baja un nivel.
    ============================================================ */
 
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { Icon } from '@/components/icons';
 import { useAdminScheme } from '@/components/admin/theme-toggle';
 import { logout } from '@/lib/actions/auth';
@@ -29,6 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 interface Props {
   restaurantName: string;
@@ -45,6 +50,8 @@ export default function AdminMoreMenu({
   restaurantName, roleLabel, planLabel, planColor,
   hasMultipleRestaurants = false, helpSection, isOperatorSession = false,
 }: Props) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const { scheme, toggle } = useAdminScheme();
 
   return (
@@ -79,7 +86,7 @@ export default function AdminMoreMenu({
         </DropdownMenuItem>
 
         {helpSection && (
-          <DropdownMenuItem render={<Link href={`/admin/ayuda#${helpSection}`} />}>
+          <DropdownMenuItem render={<Link href={`${panelHref(base, '/admin/ayuda')}#${helpSection}`} />}>
             <Icon name="helpCircle" size={16} /> Ayuda de esta pantalla
           </DropdownMenuItem>
         )}

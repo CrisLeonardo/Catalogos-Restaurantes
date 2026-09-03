@@ -7,7 +7,7 @@ import { Icon } from '@/components/icons';
 import { enterRestaurant, type EntryState } from '@/lib/actions/mi-cuenta';
 import { roleLabel, type MembershipCard } from '@/lib/membership-roles';
 import { type PlanPricing } from '@/lib/plans';
-import { adminUrl, isAdminSubdomain } from '@/lib/tenant';
+import { adminUrl } from '@/lib/tenant';
 import LeoginInstallBanner from '@/components/leogin-install-banner';
 
 const inputStyle: React.CSSProperties = {
@@ -38,7 +38,6 @@ export default function MiCuentaClient({
       invitado al local de otro ya tiene una tarjeta y sigue yendo por el
       primero suyo — con su prueba gratis, que es de la persona. */
   const esElPrimero = !cards.some((c) => c.role === 'OWNER');
-  const unico = cards.length === 1 ? cards[0] : null;
 
   return (
     <>
@@ -57,15 +56,13 @@ export default function MiCuentaClient({
               : `Tienes ${cards.length} restaurantes. Elige a cuál quieres entrar.`}
         </p>
 
-        {unico && <WrongScopeHint card={unico} />}
-
-        {/* Con un solo restaurante, instalar aquí deja un ícono con el
-            scope equivocado (raíz, no el subdominio del panel) — el aviso
-            manda para allá en vez de instalar. Con 0 o 2+ restaurantes,
-            Mi cuenta SÍ es el sitio correcto para instalar (no hay un panel
-            único al que mandar), así que ofrece el flujo normal. Ver
-            leogin-install-banner.tsx y [[feature-set-2026-09-01-pwa-scope-cruce-subdominios]]. */}
-        <LeoginInstallBanner redirectUrl={unico ? adminUrl(unico.slug) : null} />
+        {/* Desde el origen único, Mi cuenta ES el sitio correcto para
+            instalar, tenga uno o diez restaurantes: el ícono cubre este
+            dominio entero, paneles incluidos (`/panel/<slug>/…`). Antes había
+            que desviar al dueño de UN restaurante a instalar desde el
+            subdominio de su panel, porque el scope de una PWA no puede
+            abarcar dos orígenes — ese desvío murió con la migración. */}
+        <LeoginInstallBanner />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cards.map((c) => (
@@ -132,85 +129,6 @@ function useEnterPanel(state: EntryState) {
   useEffect(() => {
     if (state && 'url' in state) window.location.assign(state.url);
   }, [state]);
-}
-
-const WRONG_SCOPE_DISMISS_KEY = 'mi-cuenta-wrong-scope-hint-v1';
-
-/**
- * Aviso de "instalaste el acceso directo en el sitio equivocado".
- *
- * Un dueño con un solo restaurante que agrega "Leogin" al inicio DESDE Mi
- * cuenta (dominio raíz) se queda con una PWA cuyo scope es ese dominio — y
- * `/mi-cuenta` es la única pantalla que vive ahí. Su panel real vive en
- * `<slug>-admin.<dominio>`, un origen DISTINTO, así que cada vez que entra a
- * trabajar Android lo trata como "salir de la app": pinta una barra de
- * navegador (título + dominio + ✕) encima de Hoy/Pedidos/etc. y no hay forma
- * de que se sienta como una app instalada. No es un bug de esta app: Chrome
- * en Android no soporta `scope_extensions` (sí en escritorio), así que el
- * scope de una PWA no puede abarcar dos subdominios — hay que instalarla
- * desde el origen correcto.
- *
- * Por eso el aviso solo aparece cuando las tres cosas son ciertas: se abrió
- * como PWA instalada (`display-mode: standalone`), el origen NO es ya el
- * subdominio del panel (si lo fuera, no habría nada que corregir) y hay
- * EXACTAMENTE un restaurante (con dos o más, Mi cuenta sigue siendo el mejor
- * sitio para instalar — no hay un "panel correcto" único al que mandar).
- */
-function WrongScopeHint({ card }: { card: MembershipCard }) {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(WRONG_SCOPE_DISMISS_KEY)) return;
-    } catch { /* sin storage → se muestra igual, no hay forma de recordar */ }
-
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (standalone && !isAdminSubdomain(window.location.host)) setShow(true);
-  }, []);
-
-  function dismiss() {
-    setShow(false);
-    try { localStorage.setItem(WRONG_SCOPE_DISMISS_KEY, '1'); } catch { /* no-op */ }
-  }
-
-  if (!show) return null;
-
-  return (
-    <Glass style={{ padding: '16px 18px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)', margin: 0 }}>
-        Este acceso directo no abre en tu panel
-      </p>
-      <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.55 }}>
-        Lo agregaste desde aquí (Mi cuenta), y tu restaurante vive en otra
-        dirección — por eso Android le pone una barra de navegador encima
-        cada vez que entras a trabajar. Bórralo y entra a tu panel: ahí puedes
-        agregar el acceso correcto y se abrirá como una app de verdad.
-      </p>
-      <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-        <button
-          type="button"
-          onClick={() => window.location.assign(adminUrl(card.slug))}
-          className="press btn-accent"
-          style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, border: 'none' }}
-        >
-          Ir a mi panel
-        </button>
-        <button
-          type="button"
-          onClick={dismiss}
-          className="press"
-          style={{
-            padding: '9px 14px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600,
-            border: '1px solid var(--u-hair-2)', background: 'transparent', color: 'var(--u-text-3)',
-          }}
-        >
-          Ya lo sé
-        </button>
-      </div>
-    </Glass>
-  );
 }
 
 /* ── Una tarjeta de restaurante ──────────────────────────────── */

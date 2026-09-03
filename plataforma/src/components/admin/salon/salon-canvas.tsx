@@ -24,7 +24,10 @@
    ============================================================ */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { Icon, type IconName } from '@/components/icons';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
 import { TableCard, TableRow, TablePin, type SalonTable } from '@/components/admin/salon/pieces';

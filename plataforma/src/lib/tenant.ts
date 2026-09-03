@@ -42,17 +42,41 @@ export function subdomainUrl(sub: string): string {
 }
 
 /**
- * URL del PANEL de administración de un restaurante.
- *   prod:  https://mi-restaurante-admin.leogin.online
- *   local: http://mi-restaurante.localhost:3000/admin
- * En prod el panel vive en su propio subdominio (PWA aparte); en local se
- * sirve bajo /admin del subdominio del tenant.
+ * Prefijo del panel de un restaurante DENTRO del origen único.
+ *   panelPath("mi-restaurante") → "/panel/mi-restaurante"
+ *
+ * El proxy reconoce esta forma y la reescribe a `/admin/...` poniendo
+ * `x-tenant-slug` (proxy.ts §2a) — el mismo mecanismo que antes hacía el
+ * subdominio, pero leyendo el slug de la ruta.
+ */
+export function panelPath(slug: string): string {
+  return `/panel/${slug}`;
+}
+
+/**
+ * A dónde se entra al PANEL de un restaurante: una RUTA del mismo origen.
+ *
+ *   adminUrl("mi-restaurante") → "/panel/mi-restaurante"
+ *
+ * Antes esto devolvía `https://<slug>-admin.<raíz>`, y ese subdominio ERA el
+ * problema: el `scope` de una PWA es por ORIGEN, así que cruzar de Mi cuenta
+ * (dominio raíz) al panel hacía que Android pintara la barra del navegador
+ * encima — "salir de la app instalada". No hay arreglo de plataforma para eso:
+ * `scope_extensions` no existe en Android. Ver PLAN_ORIGEN_UNICO.md.
+ *
+ * Lo que hace que esto funcione, y que hubo que construir ANTES (fases 1-3):
+ *  · el proxy reconoce `/panel/<slug>/…` y lo reescribe a `/admin/…` poniendo
+ *    `x-tenant-slug` (proxy.ts §2a);
+ *  · los enlaces internos del panel llevan el prefijo cuando toca
+ *    (lib/panel-links.ts) — sin eso, entrar aquí dejaba un panel cuyos enlaces
+ *    caían todos en "Restaurante no encontrado".
+ *
+ * El subdominio viejo sigue vivo hasta la fase 5, que le pone un 308 a esta
+ * misma ruta: hay íconos ya instalados, marcadores y Leogin Desktop apuntando
+ * ahí.
  */
 export function adminUrl(slug: string): string {
-  const root = rootDomainForUrls();
-  const isLocal = root.includes("localhost") || root.startsWith("127.");
-  if (isLocal) return `http://${slug}.${root}/admin`;
-  return `https://${slug}-admin.${root}`;
+  return panelPath(slug);
 }
 
 /**

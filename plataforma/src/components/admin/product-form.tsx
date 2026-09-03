@@ -23,6 +23,10 @@ import { createProduct, updateProduct, type ProductState } from '@/lib/actions/p
 import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
+/* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
+   `<Link>`). Fuera del panel devuelve la ruta tal cual. */
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 interface ProductFormProps {
   restaurantId: string;
@@ -117,6 +121,8 @@ function ToggleSwitch({ checked, onChange, ariaLabel }: { checked: boolean; onCh
 }
 
 export default function ProductForm({ restaurantId, categories, product, defaultCategoryId, ingredients, initialRecipe }: ProductFormProps) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const isEdit = Boolean(product);
   const action = isEdit ? updateProduct : createProduct;
 
@@ -488,7 +494,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
               <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0 }}>
                 Activa el módulo <strong style={{ color: 'var(--u-text-2)' }}>Recetas e ingredientes</strong> desde tu{' '}
-                <a href="/admin/modulos" style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
+                <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   panel de Módulos
                 </a>{' '}
                 para gestionar el food cost de tus platillos.

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
+import { publicUrl } from '@/lib/public-origin';
 
 /**
  * Aterrizaje del enlace "confirma tu correo" (ver lib/auth/email-verification.ts).
@@ -14,8 +15,11 @@ import { writeSessionActivity } from '@/lib/auth/session-activity';
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
+  // El origen sale de las cabeceras del proxy, no de `request.nextUrl.origin`:
+  // en Render esa propiedad resuelve al host interno del contenedor y el
+  // enlace del correo terminaba en `localhost:10000`. Ver lib/public-origin.ts.
   const failed = NextResponse.redirect(
-    new URL('/admin/login?correo=no-verificado', request.nextUrl.origin),
+    publicUrl(request, '/admin/login?correo=no-verificado'),
   );
   if (!token) return failed;
 
@@ -47,7 +51,12 @@ export async function GET(request: NextRequest) {
       )
     : '/admin/login';
 
-  return NextResponse.redirect(new URL(destination, request.nextUrl.origin));
+  // `resolveStaffDestination` devuelve una ruta relativa ("/mi-cuenta") o ya
+  // una URL absoluta al panel de otro subdominio (adminUrl); solo la primera
+  // necesita que le pongamos el origen delante.
+  return NextResponse.redirect(
+    destination.startsWith('/') ? publicUrl(request, destination) : destination,
+  );
 }
 
 export const dynamic = 'force-dynamic';

@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation';
 import TablesPanel from '@/components/admin/tables-panel';
 import PlanLockedScreen from '@/components/admin/plan-locked-screen';
 import { getSalonData } from '../../mesas/salon-data';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Salón — Panel Admin' };
 
@@ -31,7 +32,7 @@ export default async function AjustesSalonPage() {
     );
   }
 
-  if (!restaurantId || !config) redirect('/admin/mesas');
+  if (!restaurantId || !config) redirect(await panelLink('/admin/mesas'));
 
   return (
     <TablesPanel

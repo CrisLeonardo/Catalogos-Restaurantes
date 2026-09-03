@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 const DISMISS_KEY = 'leogin-main-pc-banner';
 
@@ -22,6 +24,8 @@ const DISMISS_KEY = 'leogin-main-pc-banner';
  * porque la clave de descarte incluye el estado.
  */
 export default function MainPcBanner({ state }: { state: 'missing' | 'off' }) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const [visible, setVisible] = useState(false);
   const key = `${DISMISS_KEY}-${state}`;
 
@@ -54,7 +58,7 @@ export default function MainPcBanner({ state }: { state: 'missing' | 'off' }) {
       </span>
       <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
         <Link
-          href="/admin/mi-pc"
+          href={panelHref(base, "/admin/mi-pc")}
           style={{
             fontSize: 12, fontWeight: 700, color: accent, textDecoration: 'none',
             padding: '6px 12px', borderRadius: 99,

@@ -8,6 +8,7 @@ import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 import { getFeeBreakdown } from '@/lib/db/billing';
 import type { ModulesMap, ModuleSettings } from '@/lib/modules';
 import type { OrderType } from '@/lib/theme/defaults';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Módulos – Panel admin' };
 
@@ -17,7 +18,7 @@ export default async function ModulosPage() {
 
   // Activar módulos es decisión de propietario (o Leogin).
   if (ctx.profile.role !== 'RESTAURANT_OWNER' && ctx.profile.role !== 'SUPER_ADMIN') {
-    redirect('/admin');
+    redirect(await panelLink('/admin'));
   }
 
   let restaurantId: string | null = null;

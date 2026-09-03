@@ -28,6 +28,8 @@ import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widge
 import type { ResolvedTheme } from '@/lib/theme/resolve';
 import type { OrderStatus, Restaurant } from '@/types';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
+import { panelBase } from '@/lib/panel-links-server';
+import { panelHref } from '@/lib/panel-links';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -94,6 +96,8 @@ function orderLabel(o: ActiveOrderPreview): string {
 }
 
 export default async function AdminHomePage() {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = await panelBase();
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
   const { profile } = ctx;
@@ -186,11 +190,11 @@ export default async function AdminHomePage() {
     ]);
     const hasLogo = !!resolved?.config.logoUrl;
     onboardingSteps = [
-      { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: '/admin/personalizacion', done: hasLogo },
-      { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: '/admin/categorias', done: (catCount ?? 0) > 0 },
-      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: '/admin/menu/productos/new', done: (prodCount ?? 0) > 0 },
-      { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: '/admin/qr', done: false },
-      { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: '/admin/mi-pc', done: false },
+      { key: 'marca', label: 'Personaliza tu marca', desc: 'Logo, colores y estilo', icon: 'sparkle', href: panelHref(base, '/admin/personalizacion'), done: hasLogo },
+      { key: 'categoria', label: 'Crea una categoría', desc: 'Organiza tu menú', icon: 'tag', href: panelHref(base, '/admin/categorias'), done: (catCount ?? 0) > 0 },
+      { key: 'platillo', label: 'Agrega tu primer platillo', desc: 'Suma un producto', icon: 'plus', href: panelHref(base, '/admin/menu/productos/new'), done: (prodCount ?? 0) > 0 },
+      { key: 'qr', label: 'Comparte tu menú', desc: 'Descarga tu código QR', icon: 'image', href: panelHref(base, '/admin/qr'), done: false },
+      { key: 'escritorio', label: 'Elige la PC del local', desc: 'Para que imprima sola y no te frene un corte de internet', icon: 'monitor', href: panelHref(base, '/admin/mi-pc'), done: false },
     ];
   }
 
@@ -239,7 +243,7 @@ export default async function AdminHomePage() {
   const alerts: Alert[] = [];
   if (agentOffline) {
     alerts.push({
-      key: 'pc', href: '/admin/mi-pc', level: 'urgente',
+      key: 'pc', href: panelHref(base, '/admin/mi-pc'), level: 'urgente',
       title: 'La PC del local dejó de responder',
       desc: 'Revisa que esté encendida y con internet — mientras tanto no se imprimen comandas solas.',
       action: 'Revisar',
@@ -247,7 +251,7 @@ export default async function AdminHomePage() {
   }
   if (onTrial && trialLeft <= 3) {
     alerts.push({
-      key: 'trial', href: '/admin/suscripcion', level: 'urgente',
+      key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'urgente',
       title: `Tu prueba termina en ${trialLeft} día${trialLeft !== 1 ? 's' : ''}`,
       desc: 'Contáctanos para continuar sin interrupciones.',
       action: 'Ver planes',
@@ -255,7 +259,7 @@ export default async function AdminHomePage() {
   }
   if (visitWarning && visitStats) {
     alerts.push({
-      key: 'visitas', href: '/admin/suscripcion', level: 'aviso',
+      key: 'visitas', href: panelHref(base, '/admin/suscripcion'), level: 'aviso',
       title: `Tu menú va muy bien: ${visitStats.last30.toLocaleString('es-GT')} visitas este mes`,
       desc: 'Pasaste el uso típico del plan gratuito. Sube de plan para pedidos en línea, WhatsApp y avisos en tiempo real.',
       action: 'Ver planes',
@@ -263,7 +267,7 @@ export default async function AdminHomePage() {
   }
   if (onTrial && trialLeft > 3) {
     alerts.push({
-      key: 'trial', href: '/admin/suscripcion', level: 'info',
+      key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'info',
       title: `Te quedan ${trialLeft} días de prueba`,
       desc: 'Tu menú ya está en vivo. Aprovéchalo al máximo.',
       action: 'Ver planes',
@@ -306,7 +310,7 @@ export default async function AdminHomePage() {
           </a>
           {allow('catalogo') && (
             <Link
-              href="/admin/menu/productos/new"
+              href={panelHref(base, "/admin/menu/productos/new")}
               className="btn-accent press inline-flex items-center gap-2 rounded-adm-md px-3.5 py-2 no-underline"
               style={{ fontSize: 13.5, fontWeight: 600 }}
             >
@@ -346,7 +350,7 @@ export default async function AdminHomePage() {
       {stats && (
         <Section
           title="Resumen del día"
-          action={allow('metricas') ? { href: '/admin/metricas', label: 'Ver el mes' } : undefined}
+          action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
         >
           <StatGroup>
             <Stat label="Ventas" value={fmt(stats.todaySales)} />
@@ -361,7 +365,7 @@ export default async function AdminHomePage() {
         <Section title="En curso">
           <List>
             {live.orders.map((o) => (
-              <ListLink key={o.id} href="/admin/pedidos">
+              <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")}>
                 <span className="w-26 shrink-0 text-[14.5px] font-semibold text-adm-text">
                   {orderLabel(o)}
                 </span>
@@ -377,7 +381,7 @@ export default async function AdminHomePage() {
               </ListLink>
             ))}
             <ListLink
-              href="/admin/pedidos"
+              href={panelHref(base, "/admin/pedidos")}
               className="gap-2 text-[14px] font-semibold"
               style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
             >

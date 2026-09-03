@@ -28,7 +28,10 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
+   Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { Icon } from '@/components/icons';
 import { List, ListLink, ListRow, ListText } from '@/components/ui/list';
 import { Section, SectionNote } from '@/components/ui/section';
@@ -48,6 +51,8 @@ import {
 import { ESTANDAR_MAX_ORDER_TYPES, INCLUDED_MODULES, PLANS, PUBLIC_PLANS, planPriceLabel, type PlanCode } from '@/lib/plans';
 import { usePlanPricing } from '@/components/plan-pricing-context';
 import type { OrderType } from '@/lib/theme/defaults';
+import { usePathname as useRutaNavegador } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 const q = (n: number) => 'Q' + Math.round(n).toLocaleString('es-GT');
 
@@ -150,6 +155,8 @@ function LockedRow({ icon, label, description, lockLabel }: {
 }
 
 export default function ModulesPanel({ restaurantId, modules, settings, orderTypes, supportWhatsapp, planActual, billedNow = null }: Props) {
+  /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(useRutaNavegador());
   const router = useRouter();
   const pricing = usePlanPricing();
   const [isPending, startTransition] = useTransition();
@@ -410,7 +417,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           en cada una de las quince tarjetas se dice UNA vez, aquí. */}
       <Section title="Tu plan">
         <List>
-          <ListLink href="/admin/suscripcion">
+          <ListLink href={panelHref(base, "/admin/suscripcion")}>
             <RowIcon name="wallet" on />
             <ListText
               title={`Plan ${PLANS[currentPlan].name}`}
@@ -459,7 +466,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           </List>
           <SectionNote>
             Esto es lo que tu plan {PLANS[currentPlan].name} todavía no incluye.{' '}
-            <Link href="/admin/suscripcion" className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+            <Link href={panelHref(base, "/admin/suscripcion")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
               Ver la comparativa →
             </Link>
           </SectionNote>
@@ -469,7 +476,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       <p className="px-4 text-[12.5px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         ¿Tenés varias sucursales? Se unen en un panel de grupo con métricas
         consolidadas.{' '}
-        <Link href="/admin/ayuda" className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+        <Link href={panelHref(base, "/admin/ayuda")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
           Hablar con Leogin →
         </Link>
       </p>

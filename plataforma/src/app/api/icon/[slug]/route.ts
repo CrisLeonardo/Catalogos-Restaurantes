@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { isAllowedAssetUrl } from '@/lib/asset-url';
+import { publicUrl } from '@/lib/public-origin';
 
 /**
  * Proxy del ícono de la PWA del restaurante (mismo origen que el manifest).
@@ -34,7 +35,7 @@ export async function GET(
   }
 
   if (!iconUrl || !isAllowedAssetUrl(iconUrl)) {
-    return Response.redirect(new URL('/icon-512.png', request.url));
+    return Response.redirect(publicUrl(request, '/icon-512.png'));
   }
 
   try {
@@ -43,7 +44,7 @@ export async function GET(
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok || !res.body) {
-      return Response.redirect(new URL('/icon-512.png', request.url));
+      return Response.redirect(publicUrl(request, '/icon-512.png'));
     }
     const contentType = (res.headers.get('content-type') ?? 'image/png').split(';')[0].trim();
     // Si viene con ?v= (hash del asset) la URL es inmutable → cache largo.
@@ -59,6 +60,6 @@ export async function GET(
       },
     });
   } catch {
-    return Response.redirect(new URL('/icon-512.png', request.url));
+    return Response.redirect(publicUrl(request, '/icon-512.png'));
   }
 }

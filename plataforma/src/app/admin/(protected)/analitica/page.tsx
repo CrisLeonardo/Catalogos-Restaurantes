@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Analítica – Panel admin' };
 
@@ -39,7 +40,7 @@ export default async function AdminAnaliticaPage({
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'analitica')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'analitica')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';

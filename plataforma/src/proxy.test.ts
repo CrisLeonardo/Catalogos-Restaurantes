@@ -316,3 +316,189 @@ describe('cookie fantasma del personal', () => {
     expect(setCookies(res).some((c) => c.startsWith(`${STAFF}=;`))).toBe(false);
   });
 });
+
+/* ============================================================
+   EL PANEL POR RUTA (§2a) — la base del origen único
+   ------------------------------------------------------------
+   `distleogin.com/panel/<slug>/menu` tiene que resolverse igual que lo hacía
+   `<slug>-admin.distleogin.com/menu`: mismo rewrite a `/admin/menu`, mismo
+   `x-tenant-slug`. Es lo que permite que los 54 archivos que resuelven el
+   restaurante no se enteren del cambio de arquitectura.
+
+   Verificado a mano el 2026-09-02 contra el entorno local (el panel se pinta
+   entero en `/panel/azucar-negra`); esto lo fija para que no se caiga solo.
+   ============================================================ */
+
+/** Destino del rewrite que pidió el proxy, o null si no reescribió. */
+function rewriteA(res: Response): string | null {
+  const raw = res.headers.get('x-middleware-rewrite');
+  return raw ? new URL(raw).pathname : null;
+}
+
+/** El `x-tenant-slug` que verá el render. */
+function tenantQueVeElRender(res: Response): string | null {
+  return res.headers.get('x-middleware-request-x-tenant-slug');
+}
+
+describe('el panel por ruta (origen único)', () => {
+  beforeEach(() => {
+    h.behaviour = async () => ({ error: null });
+  });
+
+  const raiz = (path: string) => new NextRequest(`https://distleogin.com${path}`);
+
+  it('/panel/<slug> → /admin, con el restaurante resuelto', async () => {
+    const res = await proxy(raiz('/panel/azucar-negra'));
+
+    expect(rewriteA(res)).toBe('/admin');
+    expect(tenantQueVeElRender(res)).toBe('azucar-negra');
+  });
+
+  it('/panel/<slug>/<seccion> conserva la sección', async () => {
+    const res = await proxy(raiz('/panel/azucar-negra/menu/productos/new'));
+
+    expect(rewriteA(res)).toBe('/admin/menu/productos/new');
+    expect(tenantQueVeElRender(res)).toBe('azucar-negra');
+  });
+
+  it('marca área de personal: el panel usa sus 2 temas fijos, no el del restaurante', async () => {
+    const res = await proxy(raiz('/panel/azucar-negra/caja'));
+
+    expect(res.headers.get('x-middleware-request-x-admin-area')).toBe('1');
+  });
+
+  it('/panel a secas no es de nadie: no resuelve restaurante ni reescribe', async () => {
+    const res = await proxy(raiz('/panel'));
+
+    expect(rewriteA(res)).toBe(null);
+    expect(tenantQueVeElRender(res)).toBe(null);
+  });
+
+  it('Mi cuenta NO se toca: es de la persona, no de un restaurante', async () => {
+    const res = await proxy(raiz('/mi-cuenta'));
+
+    expect(rewriteA(res)).toBe(null);
+    expect(tenantQueVeElRender(res)).toBe(null);
+  });
+
+  it('un `x-tenant-slug` mandado por el cliente no elige el restaurante', async () => {
+    // Mismo candado que ya cubre tenant-guard.test.ts, ahora por la ruta: la
+    // cabecera interna se borra SIEMPRE antes de escribirla, así que lo único
+    // que decide el tenant es `/panel/<slug>`.
+    const res = await proxy(
+      new NextRequest('https://distleogin.com/panel/azucar-negra/caja', {
+        headers: { 'x-tenant-slug': 'otro-restaurante' },
+      }),
+    );
+
+    expect(tenantQueVeElRender(res)).toBe('azucar-negra');
+  });
+});
+
+/* ============================================================
+   EL SUBDOMINIO VIEJO DEL PANEL (§1d) — fase 5 del origen único
+   ------------------------------------------------------------
+   `<slug>-admin.<raíz>` dejó de ser a donde apunta nadie, pero NO puede dejar
+   de funcionar: hay íconos ya instalados en teléfonos, marcadores guardados y
+   Leogin Desktop apuntando ahí. Este bloque fija el 308 y, sobre todo, las
+   tres exclusiones — que son las que evitan romper cosas que hoy funcionan.
+   ============================================================ */
+
+/** Petición al subdominio viejo. El `host` va explícito: es lo que mira §1d. */
+function subdominioViejo(path: string, method = 'GET') {
+  return new NextRequest(`https://demo-admin.distleogin.com${path}`, {
+    method,
+    headers: { host: 'demo-admin.distleogin.com' },
+  });
+}
+
+describe('el subdominio viejo del panel redirige al origen único', () => {
+  beforeEach(() => {
+    h.behaviour = async () => ({ error: null });
+  });
+
+  it('la raíz del panel → /panel/<slug>', async () => {
+    const res = await proxy(subdominioViejo('/'));
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('https://distleogin.com/panel/demo');
+  });
+
+  it('una sección, con y sin el prefijo /admin, llega al mismo sitio', async () => {
+    // El proxy viejo (§3) reescribía `/menu` a `/admin/menu`, así que los dos
+    // están por ahí en marcadores y en enlaces de correos antiguos.
+    for (const ruta of ['/menu', '/admin/menu']) {
+      const res = await proxy(subdominioViejo(ruta));
+      expect(res.headers.get('location')).toBe('https://distleogin.com/panel/demo/menu');
+    }
+  });
+
+  it('conserva la query', async () => {
+    const res = await proxy(subdominioViejo('/menu/productos/new?cat=postres'));
+
+    expect(res.headers.get('location'))
+      .toBe('https://distleogin.com/panel/demo/menu/productos/new?cat=postres');
+  });
+
+  it('Mi cuenta NO se cuelga del restaurante: es de la persona', async () => {
+    const res = await proxy(subdominioViejo('/mi-cuenta'));
+
+    expect(res.headers.get('location')).toBe('https://distleogin.com/mi-cuenta');
+  });
+
+  it('la vista previa tampoco lleva slug', async () => {
+    const res = await proxy(subdominioViejo('/preview/abc-123'));
+
+    expect(res.headers.get('location')).toBe('https://distleogin.com/preview/abc-123');
+  });
+
+  /* ── Las tres exclusiones ─────────────────────────────────────────── */
+
+  it('un POST NO se redirige: llegaría con el Origin viejo y Next lo rechazaría', async () => {
+    // Una pestaña que ya estaba abierta sigue trabajando por §3 hasta que la
+    // persona navegue. Redirigir aquí rompería su Server Action a media faena.
+    const res = await proxy(subdominioViejo('/menu', 'POST'));
+
+    expect(res.status).not.toBe(308);
+  });
+
+  it('/api/* NO se redirige: el agente de impresión tiene esa URL fija', async () => {
+    const res = await proxy(subdominioViejo('/api/agent/shell-heartbeat'));
+
+    expect(res.status).not.toBe(308);
+  });
+
+  it('/auth/* NO se redirige: no se toca el canje del code de Google', async () => {
+    const res = await proxy(subdominioViejo('/admin/auth/google/callback?code=xyz'));
+
+    expect(res.status).not.toBe(308);
+  });
+
+  /* ── El bucle ────────────────────────────────────────────────────── */
+
+  it('el Location va ABSOLUTO: un relativo se resolvía contra el subdominio viejo', async () => {
+    // Este es el bug que apareció al probarlo con `curl -L`: NextResponse
+    // .redirect acorta el destino a ruta relativa cuando le parece del mismo
+    // origen, el navegador lo resolvía contra `<slug>-admin.…` y la petición
+    // volvía a caer en §1d apilando el prefijo, sin fin.
+    const res = await proxy(subdominioViejo('/menu'));
+
+    expect(res.headers.get('location')).toMatch(/^https:\/\/distleogin\.com\//);
+  });
+
+  it('una ruta ya traducida no se vuelve a prefijar (idempotente)', async () => {
+    const res = await proxy(subdominioViejo('/panel/demo/menu'));
+
+    expect(res.headers.get('location')).toBe('https://distleogin.com/panel/demo/menu');
+  });
+
+  it('el dominio raíz no se toca (no es el subdominio viejo)', async () => {
+    const res = await proxy(
+      new NextRequest('https://distleogin.com/panel/demo/menu', {
+        headers: { host: 'distleogin.com' },
+      }),
+    );
+
+    expect(res.status).not.toBe(308);
+  });
+});

@@ -2,12 +2,13 @@ import { redirect } from 'next/navigation';
 import { resolveModuleContext } from '@/lib/modules-server';
 import { getLoyaltySettings, getLoyaltyAccounts, getLoyaltySummary, getCustomersForLoyalty, loyaltySettingsExist, getRewards, getProductsForRewards } from '@/lib/db/loyalty';
 import LoyaltyPanel from '@/components/admin/loyalty-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Lealtad – Panel admin' };
 
 export default async function LealtadPage() {
   const mc = await resolveModuleContext('loyalty');
-  if (!mc.ok) redirect('/admin/modulos');
+  if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
   const [settings, accounts, summary, customers, hasSettings, rewards, products] = await Promise.all([
     getLoyaltySettings(mc.restaurantId),

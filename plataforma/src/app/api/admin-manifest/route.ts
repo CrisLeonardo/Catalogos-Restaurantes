@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { headers } from 'next/headers';
+import { getTenantSlug, isAdminSubdomain } from '@/lib/tenant';
 
 /**
  * Manifiesto PWA del panel de administración.
@@ -26,20 +27,31 @@ export async function GET(_request: NextRequest) {
   const iconSrc = '/icon-512.png';
   const iconType = 'image/png';
 
-  // Cuando se sirve desde el subdominio admin.* (origen separado), las rutas
-  // son relativas a ese origen: scope='/'. Desde el subdominio del catálogo
-  // (acceso directo a /admin/) usamos id/scope='/admin/' para distinguirlo
-  // del catálogo (id='/').
-  const isAdminSub = headersList.get('x-is-admin-subdomain') === '1';
-  const appId       = isAdminSub ? '/' : '/admin/';
-  const scope       = isAdminSub ? '/' : '/admin/';
+  // El scope tiene que cubrir la URL que ve el navegador, y eso depende del
+  // origen desde el que se sirva esto:
+  //
+  //  · Dominio raíz (el ORIGEN ÚNICO, que es donde vive todo hoy): scope '/'.
+  //    Es la razón de ser de la migración — un solo ícono que cubre Mi cuenta
+  //    Y el panel de cualquier restaurante (`/panel/<slug>/…`), sin que Android
+  //    pinte la barra al pasar de uno a otro. Con scope '/admin/' el manifest
+  //    ni siquiera abarcaría la página que lo pide.
+  //  · Subdominio del catálogo (`<slug>.<raíz>/admin`, que es como se sirve el
+  //    panel en local): ahí el '/' es del MENÚ del comensal, así que el panel
+  //    se angosta a '/admin/' para instalarse como una app aparte.
+  //  · Subdominio viejo `<slug>-admin.*`: scope '/' como siempre. Hoy solo lo
+  //    alcanzan las pestañas que ya estaban abiertas (el proxy §1d manda todo
+  //    lo demás al origen único).
+  const host = headersList.get('x-forwarded-host') ?? headersList.get('host');
+  const enSubdominioDelCatalogo = !!getTenantSlug(host) && !isAdminSubdomain(host);
+  const appId       = enSubdominioDelCatalogo ? '/admin/' : '/';
+  const scope       = appId;
   // start_url SIEMPRE cae en /login, nunca en la raíz: el ícono "Leogin"
   // añadido al inicio es una puerta de entrada, no el dashboard del último
   // restaurante abierto. Así sirve igual para el dueño con varios
   // restaurantes (elige cuál abrir) y para el empleado (su PIN/cuenta) —
   // si ya hay sesión viva, /admin/login ofrece "Continuar como {nombre}"
   // en vez de forzar un login desde cero (ver admin/login/page.tsx).
-  const startUrl    = isAdminSub ? '/login' : '/admin/login';
+  const startUrl    = isAdminSubdomain(host) ? '/login' : '/admin/login';
 
   const manifest = {
     name,

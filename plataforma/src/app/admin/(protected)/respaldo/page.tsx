@@ -4,6 +4,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import RespaldoPanel from '@/components/admin/respaldo-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Respaldo de datos – Panel admin' };
 
@@ -20,7 +21,7 @@ export const metadata = { title: 'Respaldo de datos – Panel admin' };
 export default async function AdminRespaldoPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
-  if (!can(ctx.profile.role, ctx.profile.permissions, 'respaldo')) redirect('/admin');
+  if (!can(ctx.profile.role, ctx.profile.permissions, 'respaldo')) redirect(await panelLink('/admin'));
 
   let restaurantId: string | null = null;
 

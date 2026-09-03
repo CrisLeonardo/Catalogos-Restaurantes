@@ -3,12 +3,13 @@ import { resolveModuleContext } from '@/lib/modules-server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getCoupons } from '@/lib/db/cupones';
 import CuponesPanel from '@/components/admin/cupones-panel';
+import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Cupones – Panel admin' };
 
 export default async function CuponesPage() {
   const mc = await resolveModuleContext('cupones');
-  if (!mc.ok) redirect('/admin/modulos');
+  if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
   const db = createServiceClient();
   const { data: rest } = await db
