@@ -267,7 +267,7 @@ export default function AdminNotifications({
       const reg = swRegRef.current;
       if (reg) {
         reg.showNotification(title, {
-          body, badge: '/badge.svg',
+          body, icon: '/icon-192.png', badge: '/badge.svg',
           tag: opts?.tag,
           data: opts?.url ? { url: opts.url } : undefined,
           vibrate: opts?.vibrate,
@@ -483,6 +483,7 @@ export default function AdminNotifications({
           showPopup('¡Listo! Recibirás notificaciones en este dispositivo aunque cierres el navegador.', 'info');
           reg.showNotification('Notificaciones push activadas', {
             body: 'Te avisaremos aquí cuando entre un pedido nuevo.',
+            icon: '/icon-192.png',
             badge: '/badge.svg',
           });
         } else {

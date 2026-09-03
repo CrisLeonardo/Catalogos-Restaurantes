@@ -127,6 +127,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || '🛎 Nuevo pedido';
   const options = {
     body:               data.body || 'Revisa los pedidos.',
+    icon:               data.icon || '/icon-192.png',
     badge:              '/badge.svg',
     tag:                data.tag  || 'new-order',
     requireInteraction: data.requireInteraction === true,

@@ -103,7 +103,7 @@ export function stableMenuUrl(restaurantId: string): string {
   return `${stableRootUrl()}/m/${restaurantId}`;
 }
 
-function stableRootUrl(): string {
+export function stableRootUrl(): string {
   const root = rootDomainForUrls();
   const isLocal = root.includes("localhost") || root.startsWith("127.");
   const proto = isLocal ? "http" : "https";

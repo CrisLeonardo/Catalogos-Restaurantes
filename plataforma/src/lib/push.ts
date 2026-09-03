@@ -6,6 +6,7 @@
 
 import webpush from 'web-push';
 import { createServiceClient } from '@/lib/supabase/service';
+import { stableRootUrl } from '@/lib/tenant';
 
 const vapidConfigured =
   process.env.VAPID_PRIVATE_KEY &&
@@ -34,6 +35,12 @@ export interface PushPayload {
    * Realtime — el push ya llega rápido y confiable independientemente de él.
    */
   type?: string;
+  /**
+   * URL del ícono grande de la notificación. Si no se pasa, sendPushToRestaurant
+   * la rellena con el logo del restaurante (vía /api/icon/[slug]) para que se
+   * distinga de un vistazo cuál restaurante mandó el aviso.
+   */
+  icon?: string;
 }
 
 /**
@@ -48,12 +55,19 @@ export async function sendPushToRestaurant(
   if (!vapidConfigured) return;
 
   const db = createServiceClient();
-  const { data: subs } = await db
-    .from('push_subscriptions')
-    .select('id, endpoint, p256dh, auth')
-    .eq('restaurant_id', restaurantId);
+  const [{ data: subs }, { data: restaurant }] = await Promise.all([
+    db
+      .from('push_subscriptions')
+      .select('id, endpoint, p256dh, auth')
+      .eq('restaurant_id', restaurantId),
+    db.from('restaurants').select('slug').eq('id', restaurantId).single(),
+  ]);
 
   if (!subs || subs.length === 0) return;
+
+  const icon = payload.icon
+    ?? (restaurant?.slug ? `${stableRootUrl()}/api/icon/${restaurant.slug}` : undefined);
+  const body = JSON.stringify({ ...payload, icon });
 
   const expiredIds: string[] = [];
 
@@ -65,7 +79,7 @@ export async function sendPushToRestaurant(
             endpoint: sub.endpoint as string,
             keys: { p256dh: sub.p256dh as string, auth: sub.auth as string },
           },
-          JSON.stringify(payload),
+          body,
         );
       } catch (err: unknown) {
         // 410 Gone = suscripción expirada o el usuario la desactivó manualmente.
