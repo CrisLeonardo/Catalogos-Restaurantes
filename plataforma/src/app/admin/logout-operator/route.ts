@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 import { OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { publicUrl } from '@/lib/public-origin';
+import { authPathFor } from '@/lib/tenant';
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -20,5 +21,12 @@ export async function GET(req: Request) {
   // `req.url` NO sirve para esto: detrás del proxy de Render devolvía
   // `https://localhost:10000/admin/login`. Ver lib/public-origin.ts — esta
   // ruta era la que rompía "Continuar como {nombre}".
-  return NextResponse.redirect(publicUrl(req, '/admin/login'));
+  //
+  // El slug sale del header que puso el proxy al reescribir la petición que
+  // llegó aquí (`/panel/<slug>/logout-operator` — ver los layouts que
+  // redirigen a esta ruta con authPathFor()). Sin esto, la sesión vencida por
+  // inactividad devolvía siempre a un login genérico sin PIN ni marca del
+  // local, aunque la persona llevara un segundo antes en su propio panel.
+  const tenantSlug = req.headers.get('x-tenant-slug');
+  return NextResponse.redirect(publicUrl(req, authPathFor('/admin/login', tenantSlug)));
 }

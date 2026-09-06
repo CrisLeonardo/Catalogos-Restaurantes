@@ -70,6 +70,39 @@ export async function getPinAccess(restaurantId: string): Promise<PinAccess> {
   return decidePinAccess({ requiresTrusted, trusted });
 }
 
+/**
+ * ¿A qué restaurante pertenece ESTE aparato, sin saber de antemano cuál es?
+ *
+ * Para qué sirve: `/admin/login` en seco (dominio raíz, sin slug en la ruta
+ * ni en el host) es exactamente lo que queda tras cerrar sesión desde un
+ * favorito/ícono que apunta ahí, o tras semanas sin abrir el panel — no hay
+ * ninguna URL con el restaurante puesto de la que partir. `restaurant_devices`
+ * ya es justo esa lista (se llena sola al primer PIN correcto, ver
+ * `rememberDevice`) y no depende de ninguna sesión ni cookie de actividad:
+ * sigue ahí aunque pasen días o semanas, que es lo que hace falta para que el
+ * mostrador siga reconociendo su propio aparato.
+ *
+ * Si el mismo aparato quedó registrado en más de un restaurante (un tablet de
+ * pruebas, por ejemplo) se toma el que se usó más recientemente — el error
+ * prudente cuando hay que elegir uno solo.
+ */
+export async function restaurantIdForDevice(deviceId: string): Promise<string | null> {
+  if (!isValidDeviceId(deviceId)) return null;
+  try {
+    const db = createServiceClient();
+    const { data } = await db
+      .from('restaurant_devices')
+      .select('restaurant_id')
+      .eq('device_id', deviceId)
+      .order('last_seen_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (data?.restaurant_id as string | null) ?? null;
+  } catch {
+    return null; // migración sin aplicar, o tabla caída: sin pista, login genérico
+  }
+}
+
 /** ¿Está este aparato en la lista del restaurante? */
 export async function isDeviceTrusted(restaurantId: string, deviceId: string): Promise<boolean> {
   if (!isValidDeviceId(deviceId)) return false;

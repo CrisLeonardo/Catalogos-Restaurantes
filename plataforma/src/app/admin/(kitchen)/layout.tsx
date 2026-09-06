@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
 import type { ModulesMap } from '@/lib/modules';
-import { adminUrl } from '@/lib/tenant';
+import { adminUrl, authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
@@ -30,9 +30,15 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     redirect('/');
   }
 
+  // Se adelanta antes de comprobar sesión/perfil: sin esto, quien llega sin
+  // sesión (o con sesión pero sin perfil) a `/panel/<slug>/cocina` se
+  // devolvía a un login genérico sin el restaurante puesto — authPathFor().
+  const headersList = await headers();
+  const tenantSlug = headersList.get('x-tenant-slug');
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/admin/login');
+  if (!user) redirect(authPathFor('/admin/login', tenantSlug));
 
   const db = createServiceClient();
   const { data: profile } = await db
@@ -41,18 +47,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     .eq('id', user.id)
     .single();
 
-  if (!profile) redirect('/admin/login');
-
-  const cookieStore = await cookies();
-  const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
-  const isOperatorSession = !!opCookie;
-  if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
-    redirect('/admin/logout-operator');
-  }
-  // Checklist 2026-08-25 §2 — ver (protected)/layout.tsx.
-  if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
-    redirect('/admin/logout-operator');
-  }
+  if (!profile) redirect(authPathFor('/admin/login', tenantSlug));
 
   // ── Candado de tenant ──────────────────────────────────────────────
   // El KDS no tenía ninguno: con la cookie del personal (que vale en todo el
@@ -61,8 +56,17 @@ export default async function KitchenLayout({ children }: { children: React.Reac
   // eran los propios —cocina/page.tsx filtra por profile.restaurant_id— pero
   // el panel no tiene por qué abrir donde no le toca. Verificado en local el
   // 2026-08-08: GET /admin/cocina en el subdominio ajeno respondía 200.
-  const headersList = await headers();
-  const tenantSlug = headersList.get('x-tenant-slug');
+  const cookieStore = await cookies();
+  const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
+  const isOperatorSession = !!opCookie;
+  if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
+    redirect(authPathFor('/admin/logout-operator', tenantSlug));
+  }
+  // Checklist 2026-08-25 §2 — ver (protected)/layout.tsx.
+  if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
+    redirect(authPathFor('/admin/logout-operator', tenantSlug));
+  }
+
   const tenant = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
   const own = profile.restaurant_id
     ? await db.from('restaurants').select('slug').eq('id', profile.restaurant_id).maybeSingle()
@@ -74,7 +78,7 @@ export default async function KitchenLayout({ children }: { children: React.Reac
     { role: profile.role as string, permissions: profile.permissions as string[] | null },
     tenant?.restaurant.id ?? null,
   );
-  if (!can(effective.role, effective.permissions, 'cocina')) redirect('/admin/login');
+  if (!can(effective.role, effective.permissions, 'cocina')) redirect(authPathFor('/admin/login', tenantSlug));
 
   const access = decideTenantAccess({
     role: profile.role as string,

@@ -80,6 +80,27 @@ export function adminUrl(slug: string): string {
 }
 
 /**
+ * `/admin/login` y `/admin/logout-operator` viven en el dominio raíz porque
+ * NO son de un restaurante (lib/panel-links.ts las marca "sin restaurante" a
+ * propósito: admiten la credencial completa `usuario@slug` sin saber de
+ * antemano de qué local es). Pero cuando SÍ se sabe el restaurante —porque la
+ * persona estaba dentro de su panel un segundo antes de cerrar sesión, o
+ * porque el aparato ya demostró pertenecer a uno (ver
+ * `restaurantIdForDevice`)— conviene volver ahí, no a un login genérico: es
+ * lo que le devuelve al mostrador su marca y su grilla de PIN en vez de
+ * dejarlo pidiendo un correo y contraseña que el personal nunca tuvo.
+ *
+ * Sin slug, se queda exactamente como hoy (ruta plana, dominio raíz).
+ */
+export function authPathFor(
+  path: '/admin/login' | '/admin/logout-operator',
+  slug: string | null | undefined,
+): string {
+  if (!slug) return path;
+  return `${panelPath(slug)}${path.slice('/admin'.length)}`;
+}
+
+/**
  * URL pública y ESTABLE de una mesa, pensada para grabarse en el QR/NFC
  * que se IMPRIME y se pega en la mesa física.
  *

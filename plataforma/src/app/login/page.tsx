@@ -1,10 +1,11 @@
+import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { getRestaurantBySlug } from '@/lib/db/restaurants';
-import { DEMO_SLUG } from '@/lib/tenant';
+import { getRestaurantBySlug, getRestaurantSlugById } from '@/lib/db/restaurants';
+import { DEMO_SLUG, authPathFor } from '@/lib/tenant';
 import { getResumeSession } from '@/lib/auth/resume';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
-import { getPinAccess } from '@/lib/auth/trusted-device';
+import { getPinAccess, readDeviceId, restaurantIdForDevice } from '@/lib/auth/trusted-device';
 import LoginClient from './login-client';
 
 export default async function LoginPage({
@@ -14,6 +15,19 @@ export default async function LoginPage({
 }) {
   const slug = (await headers()).get('x-tenant-slug');
   const authError = (await searchParams).auth_error === '1';
+
+  // Ver la misma comprobación en /admin/login/page.tsx: un aparato que ya
+  // demostró ser de un restaurante (PIN, o autorizado a mano) vuelve a su
+  // propia pantalla en vez de un login genérico, sin importar cuánto tiempo
+  // haya pasado.
+  if (!slug && !authError) {
+    const deviceId = await readDeviceId();
+    const restaurantIdConocido = deviceId ? await restaurantIdForDevice(deviceId) : null;
+    if (restaurantIdConocido) {
+      const known = await getRestaurantSlugById(restaurantIdConocido);
+      if (known?.status === 'active') redirect(authPathFor('/admin/login', known.slug));
+    }
+  }
 
   let restaurantName: string | null = null;
   let restaurantId: string | null = null;

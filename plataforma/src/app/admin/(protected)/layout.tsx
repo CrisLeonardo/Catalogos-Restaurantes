@@ -15,7 +15,7 @@ import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import { isMeseroOnly } from '@/lib/permissions';
 import { isModuleActive } from '@/lib/modules';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
-import { adminUrl } from '@/lib/tenant';
+import { adminUrl, authPathFor } from '@/lib/tenant';
 import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-session';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
@@ -36,12 +36,15 @@ export default async function AdminProtectedLayout({
     redirect('/');
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/admin/login');
-
+  // Se lee ANTES de comprobar la sesión: sin esto, a alguien sin sesión (o con
+  // el candado de tenant vencido) que entra a `/panel/<slug>/menu` se le
+  // devolvía a un login genérico sin el restaurante puesto — ver authPathFor().
   const headersList = await headers();
   const tenantSlug  = headersList.get('x-tenant-slug');
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect(authPathFor('/admin/login', tenantSlug));
 
   // ctx (perfil/permite) y tenantData (datos del restaurante del subdominio)
   // son consultas independientes — tenantSlug sale de headers, no de ctx.
@@ -51,7 +54,7 @@ export default async function AdminProtectedLayout({
     getAdminContext(),
     tenantSlug ? getRestaurantBySlug(tenantSlug) : Promise.resolve(null),
   ]);
-  if (!ctx) redirect('/admin/login');
+  if (!ctx) redirect(authPathFor('/admin/login', tenantSlug));
 
   const { profile } = ctx;
 
@@ -64,13 +67,13 @@ export default async function AdminProtectedLayout({
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role, ctx.userId)) {
-    redirect('/admin/logout-operator');
+    redirect(authPathFor('/admin/logout-operator', tenantSlug));
   }
   // Checklist 2026-08-25 §2: la sesión de correo/Google (dueño, super admin,
   // o staff que entró por ahí en vez de PIN) también vence a los 30 min sin
   // actividad — antes no tenía ningún límite.
   if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, ctx.userId)) {
-    redirect('/admin/logout-operator');
+    redirect(authPathFor('/admin/logout-operator', tenantSlug));
   }
 
   // ── Candado de tenant ──────────────────────────────────────────────

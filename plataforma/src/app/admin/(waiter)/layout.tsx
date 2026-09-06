@@ -10,7 +10,7 @@ import { isOperatorSessionStale, OPERATOR_COOKIE } from '@/lib/auth/operator-ses
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import { decideTenantAccess } from '@/lib/auth/tenant-guard';
 import { resolveEffectiveRole } from '@/lib/db/membership';
-import { adminUrl } from '@/lib/tenant';
+import { adminUrl, authPathFor } from '@/lib/tenant';
 import AdminShell from '@/components/admin/shell';
 import OperatorHeartbeat from '@/components/admin/operator-heartbeat';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
@@ -26,9 +26,15 @@ export default async function WaiterLayout({ children }: { children: React.React
     redirect('/');
   }
 
+  // Se adelanta antes de comprobar sesión/perfil: sin esto, quien llega sin
+  // sesión (o con sesión pero sin perfil) a `/panel/<slug>/mesero` se
+  // devolvía a un login genérico sin el restaurante puesto — authPathFor().
+  const headersList = await headers();
+  const tenantSlug = headersList.get('x-tenant-slug');
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/admin/login');
+  if (!user) redirect(authPathFor('/admin/login', tenantSlug));
 
   const db = createServiceClient();
   const { data: profile } = await db
@@ -37,21 +43,19 @@ export default async function WaiterLayout({ children }: { children: React.React
     .eq('id', user.id)
     .single();
 
-  if (!profile) redirect('/admin/login');
+  if (!profile) redirect(authPathFor('/admin/login', tenantSlug));
 
   const cookieStore = await cookies();
   const opCookie = cookieStore.get(OPERATOR_COOKIE)?.value;
   const isOperatorSession = !!opCookie;
   if (isOperatorSessionStale(opCookie, profile.role as string, user.id)) {
-    redirect('/admin/logout-operator');
+    redirect(authPathFor('/admin/logout-operator', tenantSlug));
   }
   // Checklist 2026-08-25 §2 — ver (protected)/layout.tsx.
   if (isSessionStale(cookieStore.get(SESSION_SEEN_COOKIE)?.value, user.id)) {
-    redirect('/admin/logout-operator');
+    redirect(authPathFor('/admin/logout-operator', tenantSlug));
   }
 
-  const headersList = await headers();
-  const tenantSlug = headersList.get('x-tenant-slug');
   const tenantData = tenantSlug ? await getRestaurantBySlug(tenantSlug) : null;
 
   // Qué es esta persona EN ESTE restaurante (migración 113). Se resuelve
@@ -61,7 +65,7 @@ export default async function WaiterLayout({ children }: { children: React.React
     { role: profile.role as string, permissions: profile.permissions as string[] | null },
     tenantData?.restaurant.id ?? null,
   );
-  if (!can(effective.role, effective.permissions, 'mesero')) redirect('/admin/login');
+  if (!can(effective.role, effective.permissions, 'mesero')) redirect(authPathFor('/admin/login', tenantSlug));
 
   // ── Candado de tenant ──────────────────────────────────────────────
   // Misma regla que el resto del panel (lib/auth/tenant-guard.ts). Antes esta

@@ -7,10 +7,11 @@
    /admin/logout-operator (route handler: ahí sí se pueden escribir
    cookies, a diferencia de un Server Component). */
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { OPERATOR_COOKIE, writeOperatorCookie } from '@/lib/auth/operator-session';
+import { authPathFor } from '@/lib/tenant';
 
 /**
  * Renueva la marca de actividad de la sesión de operador.
@@ -33,8 +34,13 @@ export async function touchOperatorSession(): Promise<void> {
 /** "Cambiar de usuario": cierra la sesión de operador. Capa A (el dispositivo
     ya vinculado a su restaurante) no se toca — solo se vuelve a "¿Quién eres?". */
 export async function changeOperatorUser(): Promise<void> {
+  // Igual que logout() (lib/actions/auth.ts): el restaurante sale del header
+  // que puso el proxy para la página de la que se pulsó "Cambiar de usuario",
+  // no de la sesión que se está cerrando. Sin esto, quien tocaba "Cambiar"
+  // volvía a un login genérico sin PIN ni marca del local.
+  const tenantSlug = (await headers()).get('x-tenant-slug');
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: 'local' });
   (await cookies()).delete(OPERATOR_COOKIE);
-  redirect('/admin/login');
+  redirect(authPathFor('/admin/login', tenantSlug));
 }

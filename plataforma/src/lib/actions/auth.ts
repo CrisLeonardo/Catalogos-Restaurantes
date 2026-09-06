@@ -9,6 +9,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { logPanelAccess } from '@/lib/auth/access-log';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
+import { authPathFor } from '@/lib/tenant';
 
 /**
  * `url` = entra aquí con una navegación de DOCUMENTO desde el cliente
@@ -140,7 +141,12 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
 }
 
 export async function logout() {
+  // Se lee ANTES de cerrar sesión, pero no depende de la sesión: sale del
+  // header que puso el proxy para la página desde la que se pulsó "Salir"
+  // (`/panel/<slug>/...`). Sin esto, "Salir" devolvía a un login genérico sin
+  // marca ni PIN — ver authPathFor().
+  const tenantSlug = (await headers()).get('x-tenant-slug');
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: 'local' });
-  redirect('/admin/login');
+  redirect(authPathFor('/admin/login', tenantSlug));
 }
