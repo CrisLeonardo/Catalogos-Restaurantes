@@ -202,47 +202,59 @@ export default function SalonCanvas({
   const { vistas, cambio, congelar, soltar, reordenar } = useOrdenEstable(tables);
 
   if (view === 'fichas' || view === 'lista') {
+    /* La cuenta va AL LADO también aquí. Estaba solo en el plano —
+       `{aside}` vivía únicamente en el otro return— así que en Fichas y
+       Lista, que es la vista con la que arranca el salón, tocar una mesa
+       en PC no abría nada: el estado cambiaba y en la pantalla no pasaba
+       nada. En el teléfono no se notaba porque ahí la cuenta sube como
+       hoja desde salon-board.tsx, que sí es común a las tres vistas.
+
+       `.salon-floor` con un solo hijo es una fila de un elemento: sin
+       mesa elegida esto se pinta exactamente igual que antes. */
     return (
-      <div
-        style={{ position: 'relative' }}
-        onPointerOver={congelar}
-        onPointerDown={congelar}
-        onPointerLeave={soltar}
-      >
-        {cambio && <BotonReordenar onClick={reordenar} />}
-        {view === 'fichas' ? (
-          <div className="salon-grid">
-            {vistas.map((t) => (
-              <TableCard
-                key={t.n}
-                t={t}
-                onOpen={() => onOpen(t.n)}
-                onAction={() => onAction(t)}
-                disabled={disabled(t)}
-                busy={busyTable === t.n}
-              />
+      <div className="salon-floor">
+        <div
+          style={{ flex: 1, minWidth: 0, position: 'relative' }}
+          onPointerOver={congelar}
+          onPointerDown={congelar}
+          onPointerLeave={soltar}
+        >
+          {cambio && <BotonReordenar onClick={reordenar} />}
+          {view === 'fichas' ? (
+            <div className="salon-grid">
+              {vistas.map((t) => (
+                <TableCard
+                  key={t.n}
+                  t={t}
+                  onOpen={() => onOpen(t.n)}
+                  onAction={() => onAction(t)}
+                  disabled={disabled(t)}
+                  busy={busyTable === t.n}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                borderRadius: 14, border: '1px solid var(--u-hair)', overflow: 'hidden',
+                background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
+              }}
+            >
+              {vistas.map((t, i) => (
+                <TableRow
+                  key={t.n}
+                  t={t}
+                  primera={i === 0}
+                  onOpen={() => onOpen(t.n)}
+                  onAction={() => onAction(t)}
+                  disabled={disabled(t)}
+                  busy={busyTable === t.n}
+                />
             ))}
-          </div>
-        ) : (
-          <div
-            style={{
-              borderRadius: 14, border: '1px solid var(--u-hair)', overflow: 'hidden',
-              background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
-            }}
-          >
-            {vistas.map((t, i) => (
-              <TableRow
-                key={t.n}
-                t={t}
-                primera={i === 0}
-                onOpen={() => onOpen(t.n)}
-                onAction={() => onAction(t)}
-                disabled={disabled(t)}
-                busy={busyTable === t.n}
-              />
-            ))}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+        {aside}
       </div>
     );
   }

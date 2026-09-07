@@ -147,12 +147,19 @@ export default function SalonBoard({
   const [, startAction] = useTransition();
   const [aviso, setAviso] = useState<string | null>(null);
 
+  /* Ir al mesero es un viaje de IDA Y VUELTA, no una puerta de un solo
+     sentido. Antes se llegaba allí y no había forma de volver al salón:
+     la única salida era el menú —Pedidos › Mesas, tres toques— y quien
+     tocaba «Cobrar» en una ficha para atender UNA mesa se quedaba en la
+     otra pantalla. `volver=salon` hace que la flecha de la cabecera
+     devuelva aquí. */
   const irAlMesero = useCallback((n: number | null, intent?: 'cobrar' | 'dividir' | 'agregar') => {
     if (!waiterHref) return;
     const q = new URLSearchParams();
     if (n != null) q.set('mesa', String(n));
     if (intent) q.set('ir', intent);
-    router.push(q.size > 0 ? `${waiterHref}?${q.toString()}` : waiterHref);
+    q.set('volver', 'salon');
+    router.push(`${waiterHref}?${q.toString()}`);
   }, [waiterHref, router]);
 
   const hacer = useCallback((t: SalonTable) => {
@@ -180,10 +187,26 @@ export default function SalonBoard({
       case 'cobrar':
         irAlMesero(t.n, 'cobrar');
         return;
+      /* «Ver la comanda» y «Revisar la mesa» NO se van a ninguna parte: lo
+         que piden es mirar, y la cuenta ya se abre aquí al lado (o como
+         hoja en el teléfono) con el salón todavía a la vista. Mandar al
+         mesero para leer una lista que esta pantalla ya sabe pintar era
+         cambiar de aplicación para no hacer nada.
+
+         Además así funciona sin el panel de mesero: un Estándar con
+         «comer en local» puede revisar una mesa aunque su plan no incluya
+         tomar pedidos. Ver `accionDeshabilitada`. */
       case 'revisar':
+        setSel(t.n);
+        return;
       case 'agregar':
       case 'abrir':
       default:
+        /* Estas dos SÍ siguen viajando, y es a propósito: abrir una mesa y
+           agregar platillos necesitan el motor de la comanda —carrito,
+           borrador, cola sin conexión, respaldo al hub— que vive entero en
+           waiter-panel.tsx. Rehacerlo aquí sería una segunda verdad sobre
+           la misma mesa, que es justo lo que bill-panel.tsx se prohíbe. */
         irAlMesero(t.n, 'agregar');
     }
   }, [restaurantId, router, irAlMesero]);
@@ -195,8 +218,10 @@ export default function SalonBoard({
     return () => clearTimeout(t);
   }, [aviso]);
 
+  /* Sin panel de mesero solo se apagan las acciones que de verdad viajan
+     allí. «Revisar» salió de la lista al dejar de ser un viaje. */
   const accionDeshabilitada = useCallback(
-    (t: SalonTable) => !waiterHref && (t.action.kind === 'cobrar' || t.action.kind === 'agregar' || t.action.kind === 'abrir' || t.action.kind === 'revisar'),
+    (t: SalonTable) => !waiterHref && (t.action.kind === 'cobrar' || t.action.kind === 'agregar' || t.action.kind === 'abrir'),
     [waiterHref],
   );
 

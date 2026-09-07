@@ -26,7 +26,8 @@
    local; si no, se usa la cuadrícula automática. */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import SalonCanvas, {
   SalonViewSwitch, SalonLegend, useSalonView,
@@ -171,6 +172,27 @@ export default function WaiterPanel({
   hubUrl, hubToken,
 }: Props) {
   const router = useRouter();
+
+  /* ¿Se llegó aquí desde el salón (Pedidos › Mesas) A TRABAJAR UNA MESA?
+     ------------------------------------------------------------------
+     Solo cuenta si la URL además traía la mesa: es la marca de «me
+     mandaron a hacer ESTO», y es lo que hace que la flecha devuelva al
+     salón en vez de a la lista de mesas de esta pantalla. Tocar «Tomar
+     pedido» en el salón sin mesa elegida deja al mesero en su propia
+     lista, y ahí la flecha correcta es la de siempre.
+
+     Se lee UNA vez al montar y se queda: `elegir()` reescribe la barra de
+     direcciones con `history.replaceState` en cada cambio de mesa, así
+     que el parámetro desaparece al primer toque. Si esto lo leyera de la
+     URL cada vez, el camino de vuelta se borraría solo.
+
+     Sin esto, llegar desde una ficha del salón era una puerta de un solo
+     sentido: la flecha de la cabecera devolvía a la lista de mesas de
+     ESTA pantalla, no al salón del que se venía. */
+  const [vueltaAlSalon, setVueltaAlSalon] = useState(false);
+  const rutaNavegador = usePathname();
+  const salonHref = panelHref(panelBaseFrom(rutaNavegador), '/admin/mesas');
+  const volverAlSalon = useCallback(() => { router.push(salonHref); }, [router, salonHref]);
   const servicio = useServiceMode();
 
   const [view, setView] = useState<View>('tables');
@@ -214,7 +236,9 @@ export default function WaiterPanel({
            dueño (Pedidos › Mesas): tocar «Cobrar» en una ficha tiene que
            aterrizar en el cobro, no en una pantalla desde la que haya que
            volver a buscarlo. */
-        const ir = new URLSearchParams(window.location.search).get('ir');
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('volver') === 'salon') setVueltaAlSalon(true);
+        const ir = params.get('ir');
         if ((ir === 'cobrar' || ir === 'dividir') && sel.kind === 'mesa') {
           setBillTable(sel.n);
           setView('bill');
@@ -1182,7 +1206,12 @@ export default function WaiterPanel({
   if (view === 'bill') {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-        <WaiterHeader {...headerProps} title={`Cuenta · Mesa ${billTable}`} onBack={() => { setView('tables'); setBillTable(null); setBillOrders(null); }} />
+        <WaiterHeader
+          {...headerProps}
+          title={`Cuenta · Mesa ${billTable}`}
+          backLabel={vueltaAlSalon ? 'Volver al salón' : 'Volver a las mesas'}
+          onBack={vueltaAlSalon ? volverAlSalon : () => { setView('tables'); setBillTable(null); setBillOrders(null); }}
+        />
         {exitGuard}
         <div className="waiter-scroll">
           <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1331,7 +1360,12 @@ export default function WaiterPanel({
 
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-        <WaiterHeader {...headerProps} title={destLabel} onBack={() => { elegir({ kind: 'none' }); setView('tables'); }} />
+        <WaiterHeader
+          {...headerProps}
+          title={destLabel}
+          backLabel={vueltaAlSalon ? 'Volver al salón' : 'Volver a las mesas'}
+          onBack={vueltaAlSalon ? volverAlSalon : () => { elegir({ kind: 'none' }); setView('tables'); }}
+        />
         {exitGuard}
         <div className="waiter-scroll">
           <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '14px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1811,11 +1845,15 @@ function NotaDeMesa({ valor, titulo, onGuardar, onClose }: {
 
 /* ── Encabezado compartido ─────────────────────────────────── */
 function WaiterHeader({
-  title, waiterName, onBack, showOrders, ordersCount, onShowOrders, onModoServicio,
+  title, waiterName, onBack, backLabel, showOrders, ordersCount, onShowOrders, onModoServicio,
 }: {
   title: string;
   waiterName: string;
   onBack?: () => void;
+  /** A dónde lleva la flecha. Una flecha pelada no distingue «a las mesas
+      de aquí» de «al salón del que vine», y desde el rediseño son dos
+      sitios distintos. */
+  backLabel?: string;
   showOrders: boolean;
   ordersCount: number;
   onShowOrders: () => void;
@@ -1830,7 +1868,7 @@ function WaiterHeader({
     }}>
       <div className="waiter-wrap waiter-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBlock: 12 }}>
         {onBack && (
-          <button type="button" onClick={onBack} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
+          <button type="button" onClick={onBack} aria-label={backLabel ?? 'Volver'} title={backLabel} className="press glass-quiet" style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text)', flexShrink: 0 }}>
             <Icon name="chevronLeft" size={20} />
           </button>
         )}

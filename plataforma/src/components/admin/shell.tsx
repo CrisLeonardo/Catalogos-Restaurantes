@@ -265,6 +265,50 @@ export default function AdminShell({
   });
   const activeGroup = findGroup(groups, pathname);
 
+  /* ── EL BOTÓN DE TOMAR PEDIDO ───────────────────────────────────
+     Lo primero que hace cualquiera con este sistema es apuntar un
+     pedido, y hasta ahora eso estaban tres toques: Pedidos, la pestaña
+     "Tomar pedidos", la mesa. La barra decía a dónde ir y nunca qué
+     hacer.
+
+     Lleva a `/admin/mesero` a secas, sin hoja de opciones por delante:
+     esa pantalla ARRANCA en la vista del salón, que ya es exactamente
+     la pregunta —qué mesa, o "Para llevar · sin mesa"— dibujada con el
+     plano real del local. Una hoja intermedia habría sido una copia
+     peor de algo que ya existe.
+
+     Solo aparece si el restaurante puede tomar pedidos desde el panel.
+     En Básico y Estándar no existe esa pantalla, y ahí un candado en el
+     sitio más visible del teléfono sería un anuncio, no una
+     herramienta: esos vuelven a los seis destinos repartidos.
+
+     No se pinta en escritorio (ver globals.css): allí el nav es la
+     barra lateral y "Tomar pedidos" ya es una pestaña con su nombre
+     entero. */
+
+  /** Los destinos que se quedan en la barra cuando el botón ocupa el centro. */
+  const BARRA_CON_BOTON = ['hoy', 'pedidos', 'menu', 'ajustes'];
+
+  const puedeTomarPedidos = groups
+    .some((g) => g.items.some((it) => it.href === '/admin/mesero' && !it.locked));
+
+  const conBoton = !preview && puedeTomarPedidos;
+
+  /** Los dos que ceden su sitio (Clientes y Negocio) — bajan al "⋯". */
+  const enElMas = conBoton ? groups.filter((g) => !BARRA_CON_BOTON.includes(g.key)) : [];
+
+  /* El botón se aparta donde la pantalla ya tiene su propia barra pegada
+     abajo, porque ahí se montaría encima: en Tomar pedidos está la barra
+     del carrito y la del siguiente paso de la mesa, y en Caja la del
+     cierre. Además, en Tomar pedidos el botón sobra por definición: ya
+     estás tomando ese pedido.
+
+     Se aparta SIN ceder la ranura (`visibility`, no `display`): si el
+     hueco se cerrara, los cuatro destinos cambiarían de sitio al pasar de
+     una pantalla a otra, y una barra de navegación que se recoloca sola
+     es lo que hace que se falle el toque. */
+  const botonOculto = pathname.startsWith('/admin/mesero') || pathname.startsWith('/admin/caja');
+
   const TITLES: Record<string, string> = {
     '/admin/mesero': 'Tomar pedidos',
     '/admin/mesas': 'Mesas · Comer en local',
@@ -458,19 +502,46 @@ export default function AdminShell({
    *  plan no incluye se enseña dentro de su sección, no aquí. */
   function renderGroup(g: NavGroup) {
     const active = activeGroup?.key === g.key;
+    /* `data-overflow` NO quita nada aquí: la barra lateral de escritorio
+       sigue enseñando los seis. Es la media query del teléfono la que
+       esconde estos dos, porque allí su sitio lo ocupa el botón. */
+    const overflow = conBoton && !BARRA_CON_BOTON.includes(g.key) ? '1' : '0';
     if (preview) {
       return (
-        <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={g.key} style={{ cursor: 'default' }}>
+        <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-overflow={overflow} data-tour-step={g.key} style={{ cursor: 'default' }}>
           <Icon name={g.icon} size={18} />
           <span className="nav-label">{g.label}</span>
         </div>
       );
     }
     return (
-      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={g.key}>
+      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-overflow={overflow} data-tour-step={g.key}>
         <Icon name={g.icon} size={18} />
         <span className="nav-label">{g.label}</span>
         <NavPending />
+      </Link>
+    );
+  }
+
+  /** El botón central. Su ranura vive DENTRO de la barra, entre Pedidos y Menú. */
+  function renderTomarPedido() {
+    return (
+      <Link
+        key="tomar-pedido"
+        href={enlace('/admin/mesero')}
+        className="admin-fab press"
+        data-hidden={botonOculto ? '1' : '0'}
+        aria-label="Tomar un pedido"
+        title="Tomar un pedido"
+      >
+        <span className="admin-fab-dot" aria-hidden>
+          <Icon name="plus" size={26} strokeWidth={2.4} />
+        </span>
+        {/* "Tomar pedido", no "Pedido": el destino de al lado se llama
+            "Pedidos" y a 10 px, uno al lado del otro, la única diferencia
+            era una ese. El verbo dice además que esto se toca para HACER
+            algo, no para ir a alguna parte. */}
+        <span className="nav-label">Tomar pedido</span>
       </Link>
     );
   }
@@ -527,7 +598,11 @@ export default function AdminShell({
             misma lista se convierte en la barra inferior fija (ver globals.css).
             Ya no hay secciones plegables: con seis ítems no hay nada que plegar. */}
         <nav className="admin-nav" data-tour-step="nav">
-          {groups.map(renderGroup)}
+          {groups.map((g) => (
+            conBoton && g.key === 'pedidos'
+              ? [renderGroup(g), renderTomarPedido()]
+              : renderGroup(g)
+          ))}
         </nav>
 
         {/* Plan badge — link to /admin/suscripcion, hides its label on mobile bottom bar */}
@@ -634,6 +709,7 @@ export default function AdminShell({
               hasMultipleRestaurants={hasMultipleRestaurants}
               helpSection={helpSection}
               isOperatorSession={isOperatorSession}
+              extraNav={enElMas.map((g) => ({ href: g.href, label: g.label, icon: g.icon }))}
             />
           )}
         </div>

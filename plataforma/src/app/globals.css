@@ -1125,6 +1125,76 @@ html[data-scheme="light"] .btn-white {
   box-shadow: var(--adm-shadow-lg, 0 16px 40px rgba(0, 0, 0, 0.18));
 }
 
+/* Barra de guardar del formulario de platillo.
+   ------------------------------------------------------------------
+   No es `.adm-savebar` y no debe serlo: aquella es una pastilla que
+   flota ("Cambios sin publicar" + Guardar, en una fila); esta es el pie
+   del formulario, a todo el ancho, en columna, porque encima del botón
+   aparece el aviso de error. Lo que sí comparte es el deber de esquivar
+   la barra de destinos — ver el bloque de `--adm-nav-h` justo abajo. */
+.pform-savebar {
+  position: sticky; bottom: 0; z-index: 20;
+  display: flex; flex-direction: column; gap: 10px;
+  margin: 4px -4px 0;
+  padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--admin-content-bg-solid, var(--brand-bg)) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--u-hair);
+}
+
+/* ============================================================
+   ALTO DE LA BARRA INFERIOR DE DESTINOS
+   ------------------------------------------------------------
+   En el teléfono `.admin-nav` es una barra FIJA: tapa esos píxeles en
+   todas las pantallas del panel, así que todo lo que se ancle «abajo»
+   tiene que esquivarla. Eran CINCO números escritos a mano —56, 66, 68,
+   72 y otro 56— contra una altura que en ningún sitio estaba declarada,
+   repartidos por cuatro zonas del archivo. Subir la barra un píxel
+   obligaba a acordarse de los cinco; el que se olvidara quedaba tapado.
+   Un sexto ni siquiera tenía número: la barra de guardar del formulario
+   de platillo se anclaba a `bottom: 0` con estilos en línea y salía al
+   teléfono tapada entera, con el botón «Crear platillo» asomando 3 px
+   por encima de la barra de destinos.
+
+   Ahora la altura se declara UNA vez y los seis la leen sumándole su
+   propio colchón:
+
+     · `.admin-content`   la barra + 12  (colchón del final de la lista)
+     · `.adm-savebar`     la barra + 10  (pastilla de guardado, flota)
+     · `.adm-float-alert` la barra + 16  (pedido nuevo, llamada de mesa)
+     · `.waiter-cart-bar` la barra       (carrito del mesero)
+     · `.pform-savebar`   la barra       (guardar del formulario de platillo)
+     · `.ciclo-next`, `.caja-foot`  la barra
+
+   Las que suman 0 son las que van a TODO EL ANCHO: pegadas, la línea de
+   una hace de canto de la otra. Los 10 y los 16 son para las que flotan,
+   que necesitan aire para que se les vea la sombra.
+
+   El valor NO incluye `env(safe-area-inset-bottom)`: ese lo añade cada
+   uno, porque la barra ya lo lleva en su padding y sumarlo aquí lo
+   contaría dos veces. Ojo con quien además lo tenga en su propio
+   `padding-bottom` de escritorio: ahí se MUDA al `bottom`, no se suma
+   (ver `.pform-savebar`, que si no deja ~34 px muertos en un iPhone).
+
+   · 0 px en escritorio — ahí el nav es la barra lateral y no hay nada
+     que esquivar. El corte está en 1024 y no en 820 a propósito: entre
+     821 y 1024 tampoco hay barra, pero `.adm-float-alert` ya reservaba
+     su hueco desde 1024 y cambiarlo movería los avisos de sitio.
+   · En modo servicio no hay barra: `.admin-kiosk` la pone a 0 y los
+     seguidores se pegan al canto solos.
+
+   Quien cambie este número cambia la barra entera. Es el punto.
+   ============================================================ */
+:root { --adm-nav-h: 0px; }
+@media (max-width: 1024px) { :root { --adm-nav-h: 56px; } }
+.admin-kiosk { --adm-nav-h: 0px; }
+
+/* El botón de tomar pedido es cosa del teléfono. En escritorio el nav es
+   la barra lateral y "Tomar pedidos" ya es una pestaña con su nombre
+   entero dentro de Pedidos: un botón redondo sería una tercera forma de
+   llegar al mismo sitio. */
+.admin-fab { display: none; }
+
 .admin-nav {
   display: flex; flex-direction: column; gap: 4px;
   flex: 1; min-height: 0; overflow-y: auto;
@@ -1405,6 +1475,11 @@ html[data-scheme="light"] .btn-white {
   .admin-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
     flex-direction: row; gap: 0; align-items: stretch;
+    /* La altura declarada, no la que salga del contenido. Sin esto la
+       barra medía 55 px (6 + 5 + 18 del icono + 3 + 12 de etiqueta + 5
+       + 6) y los cuatro seguidores reservaban 56: un pelo de fondo se
+       colaba por debajo de la barra del carrito. */
+    min-height: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--admin-panel-hair);
     background: color-mix(in srgb, var(--admin-panel-bg) 88%, transparent);
@@ -1438,6 +1513,65 @@ html[data-scheme="light"] .btn-white {
      texto: en columna reservaba 17 px de alto en CADA destino. */
   .admin-navlink-pending { position: absolute; top: 3px; right: 8px; }
 
+  /* ── EL BOTÓN DE TOMAR PEDIDO ─────────────────────────────────────
+     Seis destinos y ninguna acción: la barra decía a dónde ir y nunca
+     qué hacer. Ahora el centro lo ocupa lo único que todo el mundo hace
+     todos los días, y Clientes y Negocio —las dos que nadie toca con el
+     local lleno— bajan al "⋯" de la barra de título.
+
+     LA GEOMETRÍA, que es lo que hay que respetar si se toca:
+
+       · La ranura mide 76 px y los otros cuatro destinos se reparten el
+         resto. Es una casilla más de la barra, no algo flotante: así,
+         cuando el botón se aparta, nada se mueve de sitio.
+       · El círculo mide 56 px y va centrado en el BORDE SUPERIOR de la
+         barra, de modo que sobresale 28 px por encima. Ese voladizo es
+         lo que lo hace legible como acción y no como quinto destino.
+       · `bottom: 22px` sale de esa cuenta: la ranura acaba 6 px por
+         encima del canto de la barra (su padding), así que 22 + 28 de
+         radio deja el centro justo en el borde, a 56 px del suelo —
+         `--adm-nav-h`. Con muesca (`env`) o sin ella, porque los 6 px
+         de la ranura y los de la barra son los mismos.
+
+     Los 28 px de voladizo son también los que se comen la franja donde
+     viven la barra del carrito (56), la de guardado (66) y los avisos
+     (72). Por eso el botón se aparta en cuanto alguna aparece — abajo. */
+  .admin-navlink[data-overflow="1"] { display: none; }
+
+  .admin-fab {
+    display: flex; flex: 0 0 86px; min-width: 0;
+    position: relative;
+    flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 5px 2px; border-radius: 12px;
+    text-decoration: none;
+    /* Tinta normal, NO el acento. En esta barra el acento significa "aquí
+       estás", y una etiqueta de acento al lado de "Pedidos" —el destino—
+       se leía como si fueran el mismo sitio, o como si ya estuvieras en
+       él. El círculo ya lleva todo el color que hace falta. */
+    color: var(--u-text-2);
+  }
+  .admin-fab .nav-label {
+    flex: none; font-size: calc(10px * var(--admin-panel-scale, 1)); font-weight: 600;
+    line-height: 1.2; letter-spacing: 0; white-space: nowrap;
+  }
+  .admin-fab-dot {
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    width: 56px; height: 56px; border-radius: 999px;
+    display: grid; place-items: center;
+    background: var(--admin-panel-btn, var(--admin-panel-accent));
+    color: var(--admin-panel-btn-text, #ffffff);
+    /* Sin aro de fondo: el círculo es hijo de la barra y se pinta encima
+       de su borde superior, que queda tapado sin tener que repintarlo. */
+    box-shadow: 0 6px 18px -5px color-mix(in srgb, var(--admin-panel-accent) 60%, transparent);
+  }
+
+  /* Donde la pantalla ya tiene su propia barra pegada abajo, el botón se
+     aparta: encima de "Revisar pedido" o de "Guardar" no es un atajo, es
+     un estorbo. `visibility` y no `display` — ver el porqué en shell.tsx. */
+  .admin-fab[data-hidden="1"],
+  .admin-shell:has(.adm-savebar) .admin-fab,
+  .admin-shell:has(.pform-savebar) .admin-fab { visibility: hidden; }
+
   /* Portada de Ajustes: en el teléfono la lista se queda con los nombres.
      Diez filas con su renglón de explicación son 1.166 px de scroll para un
      índice que cabe en una pantalla, y el nombre ya dice a dónde lleva. La
@@ -1445,9 +1579,32 @@ html[data-scheme="light"] .btn-white {
   .adm-settings-index [data-slot="list-desc"] { display: none; }
 
   /* Aire para que la barra inferior no tape el final del contenido. */
-  .admin-content { padding: 16px 14px calc(68px + env(safe-area-inset-bottom, 0px)); }
+  .admin-content { padding: 16px 14px calc(var(--adm-nav-h) + 12px + env(safe-area-inset-bottom, 0px)); }
   /* La barra de guardado se pega ENCIMA de la barra de destinos, no debajo. */
-  .adm-savebar { bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+  .adm-savebar { bottom: calc(var(--adm-nav-h) + 10px + env(safe-area-inset-bottom, 0px)); }
+
+  /* La del formulario de platillo, PEGADA a la de destinos y sin los 10 px
+     de aire. Los 10 son para la pastilla de `.adm-savebar`, que flota y
+     tiene sombra; esta va a todo el ancho y con su propia línea arriba, y
+     con hueco se veía una tira del formulario desfilando entre las dos
+     barras. Pegada, la línea de una hace de canto de la otra.
+
+     Y el `env()` se MUDA del padding al `bottom`: no se suma. Estando la
+     barra en el canto, ese padding era lo que apartaba el botón del
+     indicador de inicio; ahora quien reserva la muesca es la barra de
+     destinos (su propio padding), y dejarlo en los dos sitios la contaría
+     dos veces — unos 34 px de nada en un iPhone. */
+  .pform-savebar {
+    bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 10px;
+  }
+  /* En modo servicio no hay barra de destinos: la muesca vuelve al padding
+     y la barra al canto, o quedaría flotando sobre una franja transparente
+     (mismo trato que `.waiter-cart-bar`, unas líneas más abajo). */
+  .admin-kiosk .pform-savebar {
+    bottom: 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
 
   /* Botones del panel en el teléfono. El tamaño `sm` mide 32 px, que en
      escritorio con un ratón está bien y con el pulgar no: son los "Editar",
@@ -1461,7 +1618,7 @@ html[data-scheme="light"] .btn-white {
      del panel — mismo colchón que .admin-content de arriba, para que el botón
      "Revisar pedido" no quede tapado. En modo "Pantalla completa"
      (.admin-kiosk, ver shell.tsx) no hay barra que evitar: ahí va al borde. */
-  .waiter-cart-bar { bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; }
+  .waiter-cart-bar { bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px)) !important; }
   .admin-kiosk .waiter-cart-bar { bottom: 0 !important; }
 
   /* Catálogo: cada fila se vuelve tarjeta de 2 líneas */
@@ -2200,7 +2357,7 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
 .adm-float-alert[data-side="right"] { right: 16px; }
 
 @media (max-width: 1024px) {
-  .adm-float-alert { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .adm-float-alert { bottom: calc(var(--adm-nav-h) + 16px + env(safe-area-inset-bottom, 0px)); }
   /* En modo servicio los avisos se montan DENTRO de .admin-kiosk, que no
      tiene barra inferior: ahí vuelven al borde. */
   .admin-kiosk .adm-float-alert { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
@@ -3530,23 +3687,45 @@ html[data-platform] .asphalt::after { display: none; }
 @media (min-width: 900px) { .wp-wide-only { display: inline; } }
 
 /* ── Las barras pegadas, por encima de la barra de destinos ────
-   La del siguiente paso de la mesa, la del cierre de caja y la hoja de
-   la mesa elegida son `sticky bottom: 0`, y en el teléfono ese borde lo
-   ocupa la barra inferior de destinos del panel (fija, z-index 60). Sin
-   este colchón tapaba justo el botón que dice qué hacer.
+   La del siguiente paso de la mesa y la del cierre de caja son
+   `sticky bottom: 0`, y en el teléfono ese borde lo ocupa la barra
+   inferior de destinos del panel (fija, z-index 60). Sin este colchón
+   tapaba justo el botón que dice qué hacer.
 
    Va al FINAL del archivo a propósito: las reglas de cada pantalla se
    declaran más abajo y ganarían por orden si esto viviera arriba.
+
+   Y son DOS cortes, no uno, porque cada barra se pega en un tramo
+   distinto y el colchón solo se debe donde la de destinos existe — hasta
+   820 px, que es donde `.admin-nav` se vuelve fija:
+
+     · `.ciclo-next` se pega desde 1180 px hacia abajo (el mismo corte que
+       pliega la columna del total). En la franja 768–820 estaba pegada y
+       NO reservaba hueco: en una tablet de 800 px el botón que dice qué
+       hacer quedaba debajo de la barra de destinos. Va a 820.
+     · `.caja-foot` hace lo contrario: a partir de 768 px vuelve a
+       `position: static` (regla propia, más arriba). En esa franja no se
+       pega a nada, así que no hay nada que esquivar; y de paso, metida en
+       un corte de 820 px, su `padding-bottom` volvería a pisar el
+       `padding: 0` que la deja plana. Se queda en 767.
    ------------------------------------------------------------------ */
-@media (max-width: 767px) {
-  .ciclo-next, .caja-foot, .salon-sheet {
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+@media (max-width: 820px) {
+  .ciclo-next {
+    bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
     padding-bottom: 14px;
   }
   /* En modo servicio no hay barra de destinos que evitar: al borde. */
-  .admin-kiosk .ciclo-next,
-  .admin-kiosk .caja-foot,
-  .admin-kiosk .salon-sheet {
+  .admin-kiosk .ciclo-next {
+    bottom: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (max-width: 767px) {
+  .caja-foot {
+    bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 14px;
+  }
+  .admin-kiosk .caja-foot {
     bottom: 0;
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }

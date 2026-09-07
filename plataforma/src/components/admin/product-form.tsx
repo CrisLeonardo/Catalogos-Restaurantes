@@ -608,23 +608,12 @@ export default function ProductForm({ restaurantId, categories, product, default
         </div>
       </div>
 
-      {/* ── Barra de guardar fija: el botón nunca queda fuera de alcance ── */}
-      <div
-        style={{
-          position: 'sticky',
-          bottom: 0,
-          zIndex: 20,
-          margin: '4px -4px 0',
-          padding: '10px 4px calc(10px + env(safe-area-inset-bottom, 0px))',
-          background: 'color-mix(in srgb, var(--admin-content-bg-solid, var(--brand-bg)) 88%, transparent)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderTop: '1px solid var(--u-hair)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}
-      >
+      {/* ── Barra de guardar fija: el botón nunca queda fuera de alcance ──
+          Vive en globals.css (`.pform-savebar`) y no aquí en línea, porque
+          en el teléfono tiene que esquivar la barra de destinos y el hueco
+          de la muesca cambia de sitio al hacerlo: eso es una media query, y
+          una media query no cabe en un atributo `style`. */}
+      <div className="pform-savebar">
         {state?.error && (
           <div
             style={{
