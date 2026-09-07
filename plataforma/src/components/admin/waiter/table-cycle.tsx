@@ -53,7 +53,11 @@ export interface NextStep {
   icon: IconName;
   /** El atajo, cuando lo tiene. */
   kbd?: string;
-  kind: 'enviar' | 'agregar' | 'cobrar' | 'servir';
+  /* `enviar` manda el CARRITO (platos que todavía no son un pedido);
+     `mandar` manda una comanda que YA existe y que nadie pasó a cocina —
+     un pedido que el comensal hizo desde el QR y que sigue en NEW. Son dos
+     momentos distintos y nunca coinciden en pantalla: el carrito manda. */
+  kind: 'enviar' | 'mandar' | 'agregar' | 'cobrar' | 'servir';
   /** Acción secundaria (imprimir la cuenta), si toca. */
   secundaria?: 'imprimir';
 }
@@ -128,6 +132,9 @@ interface Props {
   onCobrar: () => void;
   onImprimir: () => void;
   onServir: () => void;
+  /** Pasa a cocina la comanda que el comensal dejó pedida desde el QR y que
+      sigue sin enviar (NEW → PREP: es lo que imprime el papel). */
+  onMandarACocina: () => void;
   onVerMenu: () => void;
   ocupado: boolean;
 }
@@ -138,7 +145,7 @@ export default function TableCycle(p: Props) {
     products, categories, money, tipPercent, tipApplies,
     onPick, qtyOf, onDec, onSend, finderFocus,
     asiento, onAsiento, onSeatCart, onSeatItem, onIncCart, onDecCart, onEditCart,
-    onParty, onJuntar, onMover, onNota, onCobrar, onImprimir, onServir, onVerMenu,
+    onParty, onJuntar, onMover, onNota, onCobrar, onImprimir, onServir, onMandarACocina, onVerMenu,
     ocupado,
   } = p;
 
@@ -214,10 +221,23 @@ export default function TableCycle(p: Props) {
      Una sola barra, y lo que dice depende del momento de la mesa. Es
      lo que evita tener que aprenderse dónde vive cada botón. */
   const paso: NextStep = useMemo(() => {
+    /* El destino va DENTRO del botón, no solo en el título de arriba.
+       ------------------------------------------------------------------
+       Mandar la comanda es lo único de esta pantalla que no se puede
+       deshacer —sale el papel, la cocina empieza— y el botón decía
+       «Enviar a cocina» a secas: el único sitio donde aparecía «Mesa 7»
+       era el título, fuera del recorrido del pulgar. Con dos mesas
+       abiertas y prisa, ese es el error más caro y más silencioso que
+       puede cometer el sistema. Nombrar el destino cuesta un renglón y no
+       cuesta un toque, que es lo que costaría un diálogo de confirmación.
+
+       Para llevar no lleva sufijo: no hay mesa que confundir. */
+    const aDonde = mesa != null ? ` · ${titulo}` : '';
+
     if (porEnviar > 0) {
       return {
         nota: `${porEnviar} ${porEnviar === 1 ? 'plato' : 'platos'} por enviar. Cocina todavía no los ha visto.`,
-        accion: 'Enviar a cocina',
+        accion: `Enviar a cocina${aDonde}`,
         icon: 'bell',
         kbd: 'Ctrl+Enter',
         kind: 'enviar',
@@ -262,6 +282,38 @@ export default function TableCycle(p: Props) {
         secundaria: 'imprimir',
       };
     }
+    /* NEW no es "en cocina": es "SIN ENVIAR a cocina".
+       ------------------------------------------------------------------
+       Un pedido de mesero NACE en PREP con su hora (createWaiterOrder lo
+       pone y encola la comanda), así que una mesa en NEW solo puede venir
+       del QR: el comensal pidió desde su teléfono y NADIE lo ha pasado a
+       cocina. El papel no se ha impreso —el encolado vive en el paso a
+       PREP— y en el KDS sigue sin aceptar.
+
+       Sin esta rama caía en el fondo de saco de abajo, que da por hecho
+       que la comida se está haciendo: decía «En cocina desde las 11:49»
+       usando `occ.firedAt ?? occ.since`, y como en NEW `firedAt` es null,
+       esas eran las HORAS DE CREACIÓN del pedido presentadas como hora de
+       salida a cocina. En la misma pantalla los cuatro tramos decían «En
+       cocina · pendiente» y cada plato decía «Sin aceptar»: la barra que
+       existe para decir el paso siguiente era la única de las tres que
+       mentía, y encima ofrecía «Agregar platillos» sobre una comanda
+       parada.
+
+       El paso correcto ya lo nombra el sistema en todas partes
+       (`nextLabel(NEW, …)` = «Enviar a cocina») y es el que imprime. */
+    if (occ.status === 'NEW') {
+      const m = desde(occ.since, now);
+      return {
+        nota: state.reason === 'sin-aceptar' && m
+          ? `Cocina todavía no tiene esta comanda: lleva ${m} sin salir.`
+          : 'Este pedido llegó del menú y todavía no ha salido a cocina.',
+        accion: `Enviar a cocina${aDonde}`,
+        icon: 'bell',
+        kind: 'mandar',
+      };
+    }
+
     const h = now != null ? hora(occ.firedAt ?? occ.since) : null;
     return {
       nota: h ? `En cocina desde las ${h}.` : 'La comanda está en cocina.',
@@ -269,10 +321,11 @@ export default function TableCycle(p: Props) {
       icon: 'plus',
       kind: 'agregar',
     };
-  }, [porEnviar, occ, state, now, mesa, money, total]);
+  }, [porEnviar, occ, state, now, mesa, titulo, money, total]);
 
   function accionPrincipal() {
     if (paso.kind === 'enviar') { onSend?.(); return; }
+    if (paso.kind === 'mandar') { onMandarACocina(); return; }
     if (paso.kind === 'cobrar') { onCobrar(); return; }
     if (paso.kind === 'servir') { onServir(); return; }
     onVerMenu();

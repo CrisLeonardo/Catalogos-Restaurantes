@@ -77,20 +77,39 @@ export default function DishFinder({
     return m;
   }, [categories]);
 
+  /* El agotado se ESCONDÍA, y esconderlo no contesta la pregunta.
+     ------------------------------------------------------------------
+     El filtro era `is_available && is_active` siempre, así que un plato
+     agotado sencillamente no salía: el mesero escribía «roll», leía
+     «ningún plato disponible se llama roll» y se quedaba sin saber si lo
+     había escrito mal, si el dueño no lo dio de alta o si se acabó — que
+     es lo único que le puede decir al cliente que tiene delante.
+
+     Ahora, AL BUSCAR, el agotado aparece: al final de la lista, apagado y
+     sin poder tocarse. Sin nada escrito no sale, porque ahí gastaría uno
+     de los seis huecos sin que nadie lo haya pedido.
+
+     `is_active` sigue mandando y no se toca: eso no es "se acabó", es
+     "este plato ya no existe en la carta". */
   const results = useMemo(() => {
-    const disponibles = products.filter((p) => p.is_available && p.is_active);
+    const activos = products.filter((p) => p.is_active);
     const q = term.toLowerCase();
-    if (!q) return disponibles.slice(0, MAX_RESULTS);
+    if (!q) return activos.filter((p) => p.is_available).slice(0, MAX_RESULTS);
     /* Lo que EMPIEZA por lo tecleado va primero: quien escribe "car"
        quiere Carne asada, no "Tacos de carnitas". */
     const empieza: Product[] = [];
     const contiene: Product[] = [];
-    for (const p of disponibles) {
+    for (const p of activos) {
       const n = p.name.toLowerCase();
       if (n.startsWith(q)) empieza.push(p);
       else if (n.includes(q)) contiene.push(p);
     }
-    return [...empieza, ...contiene].slice(0, MAX_RESULTS);
+    const orden = [...empieza, ...contiene];
+    // Lo que se puede pedir primero; lo agotado después, pero visible.
+    return [
+      ...orden.filter((p) => p.is_available),
+      ...orden.filter((p) => !p.is_available),
+    ].slice(0, MAX_RESULTS);
   }, [products, term]);
 
   // Al cambiar la búsqueda, el resaltado vuelve arriba: si se quedara
@@ -123,6 +142,9 @@ export default function DishFinder({
   }, [onSend]);
 
   function agregar(p: Product) {
+    /* Un agotado se puede resaltar con las flechas —para leerlo— pero no
+       se agrega ni con Enter ni con el toque. */
+    if (!p.is_available) { inputRef.current?.focus(); return; }
     onPick(p, qty);
     // El campo se limpia y el foco se queda: esto es lo que permite
     // teclear "2car⏎1sop⏎3lim⏎" de corrido, sin volver a tocar nada.
@@ -202,24 +224,35 @@ export default function DishFinder({
       <div className="wp-finder-res" style={{ marginTop: 8 }}>
         {results.length === 0 ? (
           <div style={{ padding: '18px 6px', fontSize: 13.5, color: 'var(--u-text-3)', textAlign: 'center' }}>
-            Ningún plato disponible se llama «{term}».
+            {/* Sin «disponible»: ahora los agotados SÍ salen, así que si no
+                hay nada es que ese plato no está en la carta. La palabra
+                sobraba y además insinuaba una respuesta que no era. */}
+            Ningún plato se llama «{term}».
           </div>
         ) : (
           <Group>
             {results.map((p, i) => {
               const enCarrito = qtyOf(p.id);
               const resaltado = i === active;
+              const agotado = !p.is_available;
               return (
                 <div key={p.id}>
                   {i > 0 && <Hr />}
-                  <div className="wp-res" data-on={resaltado ? '1' : '0'}>
+                  <div className="wp-res" data-on={resaltado && !agotado ? '1' : '0'} style={agotado ? { opacity: 0.6 } : undefined}>
                     <button
                       type="button"
                       onClick={() => agregar(p)}
+                      disabled={agotado}
                       className="press"
-                      style={{ flex: 1, minWidth: 0, textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                      style={{ flex: 1, minWidth: 0, textAlign: 'left', border: 'none', background: 'none', cursor: agotado ? 'default' : 'pointer', padding: 0 }}
                     >
-                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>{p.name}</span>
+                      <span style={{
+                        display: 'block', fontSize: 14.5, fontWeight: 500,
+                        color: agotado ? 'var(--u-text-3)' : 'var(--u-text)',
+                        textDecoration: agotado ? 'line-through' : 'none',
+                      }}>
+                        {p.name}
+                      </span>
                       <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
                         {catName.get(p.category_id ?? '') ?? 'Sin categoría'}
                       </span>
@@ -227,9 +260,23 @@ export default function DishFinder({
                     {/* Qué agrega Enter, dicho en el propio renglón. El tinte
                         solo no basta: quien no lo distingue tiene que poder
                         VER cuál es. Se apaga solo donde no hay teclado. */}
-                    {resaltado && <Key>↵</Key>}
+                    {resaltado && !agotado && <Key>↵</Key>}
                     <Mono size={14} color="var(--u-text-2)">{money(p.price)}</Mono>
-                    {enCarrito > 0 ? (
+                    {/* «Agotado» con todas sus letras, en el sitio donde
+                        estaría el botón de agregar: el renglón contesta la
+                        pregunta sin que haya que preguntarle a nadie. */}
+                    {agotado ? (
+                      <span
+                        style={{
+                          flexShrink: 0, padding: '3px 9px', borderRadius: 7, whiteSpace: 'nowrap',
+                          fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
+                          background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)',
+                          color: 'var(--c-warn)',
+                        }}
+                      >
+                        Agotado
+                      </span>
+                    ) : enCarrito > 0 ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <button type="button" className="wp-step press" onClick={() => onDec(p.id)} aria-label={`Quitar uno de ${p.name}`}>
                           <Icon name="minus" size={15} />

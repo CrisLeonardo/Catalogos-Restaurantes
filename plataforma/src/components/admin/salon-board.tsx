@@ -30,7 +30,10 @@ import BillPanel, { type BillData } from '@/components/admin/salon/bill-panel';
 import SalonCanvas, { SalonViewSwitch, useSalonView } from '@/components/admin/salon/salon-canvas';
 import { buildSalonTables, type SalonTable } from '@/components/admin/salon/pieces';
 import { useSalonLive } from '@/components/admin/salon/use-salon-live';
-import { getTableBill, serveTableReady, resolveTableCalls } from '@/lib/actions/orders';
+import {
+  getTableBill, serveTableReady, resolveTableCalls,
+  undoServeTable, undoResolveTableCalls,
+} from '@/lib/actions/orders';
 import { buildBillLines, billBreakdown } from '@/lib/bill-split';
 import { fmtMin, type SalonUmbrales } from '@/lib/table-state';
 import type { TableOccupancy, TableCall } from '@/lib/db/orders';
@@ -73,11 +76,28 @@ export default function SalonBoard({
 
   const [view, elegirVista] = useSalonView('leogin:salon-vista', 'fichas');
 
-  /* En el teléfono la cuenta no cabe al lado de nada: sube como hoja. */
-  const [esTelefono, setEsTelefono] = useState(false);
+  /* Cuando la cuenta no cabe AL LADO, sube como hoja.
+     ------------------------------------------------------------------
+     El corte tiene que ser el MISMO en el que `.salon-floor` deja de ser
+     una fila (1180 px), y estaba en 767. Entre esos dos anchos —que es
+     justo la tablet del encargado— el panel dejaba de ir al lado pero
+     tampoco subía como hoja: se montaba a todo el ancho DEBAJO de las
+     veinte fichas, y nada desplazaba la pantalla hasta él. Medido a
+     1024×768: la cuenta aparecía en `top: 1334px` con `scrollTop 0`, o sea
+     566 px por debajo del borde inferior. Tocar una mesa parecía no hacer
+     nada.
+
+     Es el mismo fallo que se arregló el 2026-09-06 (`{aside}` vivía solo
+     en la vista Plano) un paso más allá: el panel ya se monta, pero donde
+     nadie mira. Lo que se abre tiene que verse.
+
+     La hoja ya sabe comportarse en pantalla ancha: `.waiter-sheet` se
+     centra y se redondea a partir de 720 px, así que en la tablet sale
+     como un diálogo de 460 px, no como una hoja pegada abajo. */
+  const [comoHoja, setComoHoja] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const apply = () => setEsTelefono(mq.matches);
+    const mq = window.matchMedia('(max-width: 1180px)');
+    const apply = () => setComoHoja(mq.matches);
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
@@ -145,7 +165,13 @@ export default function SalonBoard({
   /* ── Las acciones ─────────────────────────────────────────── */
   const [pendiente, setPendiente] = useState<number | null>(null);
   const [, startAction] = useTransition();
-  const [aviso, setAviso] = useState<string | null>(null);
+  /* El acuse lleva su propio DESHACER cuando lo que se hizo se puede
+     deshacer. «Servido» y «Atendida» son de un solo toque, desde una ficha
+     de una rejilla que se reordena sola: acertar en la mesa de al lado
+     dejaba comida dada por servida (y su reloj de «sin cobrar» corriendo)
+     o borraba a alguien con la mano levantada, y lo único que quedaba era
+     este aviso de cuatro segundos sin salida. */
+  const [aviso, setAviso] = useState<{ text: string; undo?: () => void } | null>(null);
 
   /* Ir al mesero es un viaje de IDA Y VUELTA, no una puerta de un solo
      sentido. Antes se llegaba allí y no había forma de volver al salón:
@@ -162,6 +188,28 @@ export default function SalonBoard({
     router.push(`${waiterHref}?${q.toString()}`);
   }, [waiterHref, router]);
 
+  /** Devuelve a «lista» la comida que se acaba de dar por servida. */
+  const deshacerServir = useCallback((n: number, ids: string[]) => {
+    setPendiente(n);
+    startAction(async () => {
+      const res = await undoServeTable(restaurantId, ids);
+      setPendiente(null);
+      setAviso({ text: res.error ?? `Mesa ${n}: deshecho. La comida vuelve a estar lista.` });
+      router.refresh();
+    });
+  }, [restaurantId, router]);
+
+  /** Devuelve a pendientes las llamadas que se acaban de dar por atendidas. */
+  const deshacerAtender = useCallback((n: number, ids: string[]) => {
+    setPendiente(n);
+    startAction(async () => {
+      const res = await undoResolveTableCalls(restaurantId, ids);
+      setPendiente(null);
+      setAviso({ text: res.error ?? `Mesa ${n}: deshecho. Vuelve a estar llamando.` });
+      router.refresh();
+    });
+  }, [restaurantId, router]);
+
   const hacer = useCallback((t: SalonTable) => {
     switch (t.action.kind) {
       case 'llevar':
@@ -169,8 +217,12 @@ export default function SalonBoard({
         startAction(async () => {
           const res = await serveTableReady(restaurantId, t.n);
           setPendiente(null);
-          if (res.error) { setAviso(res.error); return; }
-          setAviso(`Mesa ${t.n}: comida marcada como servida.`);
+          if (res.error) { setAviso({ text: res.error }); return; }
+          const ids = res.ids ?? [];
+          setAviso({
+            text: `Mesa ${t.n}: comida marcada como servida.`,
+            undo: ids.length > 0 ? () => deshacerServir(t.n, ids) : undefined,
+          });
           router.refresh();
         });
         return;
@@ -179,8 +231,12 @@ export default function SalonBoard({
         startAction(async () => {
           const res = await resolveTableCalls(restaurantId, t.n);
           setPendiente(null);
-          if (res.error) { setAviso(res.error); return; }
-          setAviso(`Mesa ${t.n}: llamada atendida.`);
+          if (res.error) { setAviso({ text: res.error }); return; }
+          const ids = res.ids ?? [];
+          setAviso({
+            text: `Mesa ${t.n}: llamada atendida.`,
+            undo: ids.length > 0 ? () => deshacerAtender(t.n, ids) : undefined,
+          });
           router.refresh();
         });
         return;
@@ -209,12 +265,14 @@ export default function SalonBoard({
            la misma mesa, que es justo lo que bill-panel.tsx se prohíbe. */
         irAlMesero(t.n, 'agregar');
     }
-  }, [restaurantId, router, irAlMesero]);
+  }, [restaurantId, router, irAlMesero, deshacerServir, deshacerAtender]);
 
-  // El acuse dura lo que tarda en leerse y se va solo.
+  /* El acuse dura lo que tarda en leerse y se va solo. Con «deshacer»
+     dura más: cuatro segundos son los que tarda alguien en LEER que se
+     equivocó, y para entonces el botón ya no estaría. */
   useEffect(() => {
     if (!aviso) return;
-    const t = setTimeout(() => setAviso(null), 4000);
+    const t = setTimeout(() => setAviso(null), aviso.undo ? 9000 : 4000);
     return () => clearTimeout(t);
   }, [aviso]);
 
@@ -289,11 +347,28 @@ export default function SalonBoard({
         <div
           role="status"
           style={{
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
             padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 500, color: 'var(--u-text-2)',
             border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
           }}
         >
-          {aviso}
+          <span style={{ flex: 1, minWidth: 160 }}>{aviso.text}</span>
+          {aviso.undo && (
+            <button
+              type="button"
+              onClick={aviso.undo}
+              className="press"
+              style={{
+                flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
+                height: 34, padding: '0 14px', borderRadius: 9, cursor: 'pointer',
+                border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
+                color: 'var(--u-text)', fontSize: 13, fontWeight: 600,
+              }}
+            >
+              <Icon name="clock" size={14} />
+              Deshacer
+            </button>
+          )}
         </div>
       )}
 
@@ -306,12 +381,13 @@ export default function SalonBoard({
         onAction={hacer}
         actionDisabled={accionDeshabilitada}
         busyTable={pendiente}
-        aside={!esTelefono ? panel : null}
+        aside={!comoHoja ? panel : null}
       />
 
-      {/* En el teléfono la mesa elegida sube como hoja, en cualquier vista:
-          336 px de panel al lado no existen a 390 px de ancho. */}
-      {esTelefono && panel && (
+      {/* Sin sitio al lado, la mesa elegida sube como hoja, en cualquier
+          vista: 336 px de panel al lado no existen ni a 390 px de ancho ni
+          en una tablet de 1024, donde la fila ya se partió en columna. */}
+      {comoHoja && panel && (
         <div
           onClick={() => setSel(null)}
           className="waiter-sheet-scrim"

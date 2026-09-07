@@ -37,7 +37,7 @@ import { useSalonLive } from '@/components/admin/salon/use-salon-live';
 import {
   createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables,
   serveTableReady, resolveTableCalls, setTableParty, setItemSeat, moveTableOrders,
-  printTableBillShare,
+  printTableBillShare, undoServeTable, undoResolveTableCalls,
 } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
@@ -267,7 +267,10 @@ export default function WaiterPanel({
   const [pendingQty, setPendingQty] = useState(1);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [submitting, startSubmit] = useTransition();
-  const [aviso, setAviso] = useState<{ text: string; bad: boolean } | null>(null);
+  /* `undo` sale como botón dentro del propio acuse cuando lo que se acaba
+     de hacer se puede deshacer («servido», «atendida»): las dos son de un
+     solo toque desde una ficha y hasta ahora no tenían vuelta atrás. */
+  const [aviso, setAviso] = useState<{ text: string; bad: boolean; undo?: () => void } | null>(null);
 
   const key = cartKey(selection);
   const cart = useMemo(() => carts[key] ?? [], [carts, key]);
@@ -750,10 +753,13 @@ export default function WaiterPanel({
     });
   }
 
-  /* Los avisos de envío se van solos: son acuse de recibo, no un estado. */
+  /* Los avisos de envío se van solos: son acuse de recibo, no un estado.
+     El que trae «deshacer» aguanta más: cuatro segundos es lo que se tarda
+     en LEER que uno se equivocó de mesa, y para entonces el botón ya no
+     estaría. */
   useEffect(() => {
     if (!aviso) return;
-    const t = setTimeout(() => setAviso(null), aviso.bad ? 7000 : 4000);
+    const t = setTimeout(() => setAviso(null), aviso.undo ? 9000 : aviso.bad ? 7000 : 4000);
     return () => clearTimeout(t);
   }, [aviso]);
 
@@ -884,6 +890,62 @@ export default function WaiterPanel({
     });
   }
 
+  /** «Enviar a cocina» desde la pantalla de la mesa.
+      ------------------------------------------------------------------
+      Solo aparece cuando la mesa tiene una comanda en NEW, que —como el
+      pedido del mesero nace ya en PREP— únicamente puede venir del QR: el
+      comensal pidió desde su teléfono y nadie lo pasó a cocina. Se reusa
+      `updateOrderStatus`, que es quien pone `accepted_at` Y encola el papel
+      al agente de impresión; hacerlo aquí a mano habría sido una segunda
+      verdad sobre el mismo paso. */
+  function handleMandarACocina() {
+    if (selection.kind !== 'mesa') return;
+    const mesa = selection.n;
+    const sinEnviar = (billTable === mesa ? billOrders ?? [] : []).filter((o) => o.status === 'NEW');
+    if (sinEnviar.length === 0) {
+      setAviso({ text: 'Esta mesa ya no tiene comandas sin enviar.', bad: true });
+      return;
+    }
+    startStatus(async () => {
+      // Una mesa puede acumular varias rondas del QR sin aceptar: van todas.
+      for (const o of sinEnviar) {
+        const res = await updateOrderStatus(o.id, 'PREP');
+        if (res.error) { setAviso({ text: res.error, bad: true }); return; }
+      }
+      setAviso({
+        text: sinEnviar.length === 1
+          ? `Mesa ${mesa}: la comanda salió a cocina.`
+          : `Mesa ${mesa}: ${sinEnviar.length} comandas salieron a cocina.`,
+        bad: false,
+      });
+      loadTableBill(mesa);
+      router.refresh();
+    });
+  }
+
+  /** Devuelve a «lista» la comida que se acaba de dar por servida. */
+  function deshacerServir(mesa: number, ids: string[]) {
+    startStatus(async () => {
+      const res = await undoServeTable(restaurantId, ids);
+      setAviso(res.error
+        ? { text: res.error, bad: true }
+        : { text: `Mesa ${mesa}: deshecho. La comida vuelve a estar lista.`, bad: false });
+      loadTableBill(mesa);
+      router.refresh();
+    });
+  }
+
+  /** Devuelve a pendientes las llamadas que se acaban de atender. */
+  function deshacerAtender(mesa: number, ids: string[]) {
+    startStatus(async () => {
+      const res = await undoResolveTableCalls(restaurantId, ids);
+      setAviso(res.error
+        ? { text: res.error, bad: true }
+        : { text: `Mesa ${mesa}: deshecho. Vuelve a estar llamando.`, bad: false });
+      router.refresh();
+    });
+  }
+
   /** «Llevar a la mesa»: lo que estaba listo en la barra ya está puesto. */
   function handleServe() {
     if (selection.kind !== 'mesa') return;
@@ -891,7 +953,12 @@ export default function WaiterPanel({
     startStatus(async () => {
       const res = await serveTableReady(restaurantId, mesa);
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      setAviso({ text: `Mesa ${mesa}: servida.`, bad: false });
+      const ids = res.ids ?? [];
+      setAviso({
+        text: `Mesa ${mesa}: servida.`,
+        bad: false,
+        undo: ids.length > 0 ? () => deshacerServir(mesa, ids) : undefined,
+      });
       loadTableBill(mesa);
       router.refresh();
     });
@@ -916,7 +983,12 @@ export default function WaiterPanel({
           const res = await serveTableReady(restaurantId, t.n);
           setMesaOcupada(null);
           if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-          setAviso({ text: `Mesa ${t.n}: servida.`, bad: false });
+          const ids = res.ids ?? [];
+          setAviso({
+            text: `Mesa ${t.n}: servida.`,
+            bad: false,
+            undo: ids.length > 0 ? () => deshacerServir(t.n, ids) : undefined,
+          });
           router.refresh();
         });
         return;
@@ -926,7 +998,12 @@ export default function WaiterPanel({
           const res = await resolveTableCalls(restaurantId, t.n);
           setMesaOcupada(null);
           if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-          setAviso({ text: `Mesa ${t.n}: llamada atendida.`, bad: false });
+          const ids = res.ids ?? [];
+          setAviso({
+            text: `Mesa ${t.n}: llamada atendida.`,
+            bad: false,
+            undo: ids.length > 0 ? () => deshacerAtender(t.n, ids) : undefined,
+          });
           router.refresh();
         });
         return;
@@ -1028,7 +1105,12 @@ export default function WaiterPanel({
      el envío puede tardar en llevarlo de vuelta a "Mesas". */
   const avisoBanner = aviso ? (
     <div style={{ marginBottom: 4 }}>
-      <Banner tone={aviso.bad ? 'danger' : 'ok'} icon={aviso.bad ? 'alertCircle' : 'checkCircle'} text={aviso.text} />
+      <Banner
+        tone={aviso.bad ? 'danger' : 'ok'}
+        icon={aviso.bad ? 'alertCircle' : 'checkCircle'}
+        text={aviso.text}
+        acciones={aviso.undo ? <BannerBtn onClick={aviso.undo}>Deshacer</BannerBtn> : undefined}
+      />
     </div>
   ) : null;
 
@@ -1410,6 +1492,7 @@ export default function WaiterPanel({
               onCobrar={irACobrar}
               onImprimir={handlePrintBill}
               onServir={handleServe}
+              onMandarACocina={handleMandarACocina}
               onVerMenu={() => setView('menu')}
               ocupado={submitting}
             />
@@ -1574,9 +1657,16 @@ export default function WaiterPanel({
   /* ════════════════ VISTA: MENÚ (agregar platos) ════════════════ */
   const { qty: searchQty, term: searchTerm } = parseQuery(search);
   const query = searchTerm.trim().toLowerCase();
+  /* Misma regla que el buscador de la mesa (waiter/dish-finder.tsx): al
+     BUSCAR, el agotado aparece apagado en vez de desaparecer —esconderlo
+     deja al mesero sin saber si se acabó o si lo escribió mal—; navegando
+     por categorías no sale, para no llenar la rejilla de platos que no se
+     pueden pedir. `is_active` es otra cosa y sigue mandando: eso es un
+     plato retirado de la carta, no uno que se acabó hoy. */
   const visibleProducts = products.filter((p) => {
-    if (!p.is_available || !p.is_active) return false;
+    if (!p.is_active) return false;
     if (query) return p.name.toLowerCase().includes(query);
+    if (!p.is_available) return false;
     if (activeCat !== null) return p.category_id === activeCat;
     return true;
   });
@@ -1677,16 +1767,19 @@ export default function WaiterPanel({
               {visibleProducts.map((p) => {
                 const qty = cartQtyOf(p.id);
                 const hasOptions = ((p.options as ProductOptionGroup[] | null) ?? []).length > 0;
+                const agotado = !p.is_available;
                 return (
                   <div
                     key={p.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => tapProduct(p)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapProduct(p); } }}
-                    className="press glass"
+                    role={agotado ? undefined : 'button'}
+                    tabIndex={agotado ? undefined : 0}
+                    aria-disabled={agotado || undefined}
+                    onClick={agotado ? undefined : () => tapProduct(p)}
+                    onKeyDown={agotado ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapProduct(p); } }}
+                    className={agotado ? 'glass' : 'press glass'}
                     style={{
-                      borderRadius: 14, padding: '12px 12px 11px', position: 'relative', cursor: 'pointer',
+                      borderRadius: 14, padding: '12px 12px 11px', position: 'relative',
+                      cursor: agotado ? 'default' : 'pointer', opacity: agotado ? 0.6 : 1,
                       display: 'flex', flexDirection: 'column', gap: 6,
                       border: qty > 0 ? '1.5px solid var(--brand-accent)' : '1.5px solid transparent',
                     }}
@@ -1706,7 +1799,14 @@ export default function WaiterPanel({
                       <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{fmt(p.price)}</span>
                     </div>
 
-                    {hasOptions ? (
+                    {agotado ? (
+                      /* En el sitio del botón, la respuesta: se acabó. Antes
+                         la tarjeta no se pintaba y buscar el plato no decía
+                         nada. Ver `visibleProducts` arriba. */
+                      <div style={{ marginTop: 2, padding: '10px', borderRadius: 10, textAlign: 'center', background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)', color: 'var(--c-warn)', fontSize: 13, fontWeight: 700 }}>
+                        Agotado
+                      </div>
+                    ) : hasOptions ? (
                       <button type="button" onClick={(e) => { e.stopPropagation(); tapProduct(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                         {qty > 0 ? 'Agregar otro' : '+ Elegir opciones'}
                       </button>

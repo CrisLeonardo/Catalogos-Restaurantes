@@ -1366,7 +1366,7 @@ export async function getTableBill(
 export async function serveTableReady(
   restaurantId: string,
   tableNumber: number,
-): Promise<{ error?: string; served?: number }> {
+): Promise<{ error?: string; served?: number; ids?: string[] }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
   const acceso = await assertTableAccess(restaurantId);
@@ -1389,7 +1389,58 @@ export async function serveTableReady(
   revalidatePath('/admin/mesero');
   revalidatePath('/admin/cocina');
   revalidatePath('/admin/pedidos');
-  return { served: data?.length ?? 0 };
+  /* Se devuelven los ids, y no solo cuántos, para poder DESHACER: sin
+     ellos el «deshacer» tendría que adivinar qué pedidos tocó esta
+     llamada y podría revertir uno que cocina acaba de marcar. */
+  const ids = (data ?? []).map((r) => r.id as string);
+  return { served: ids.length, ids };
+}
+
+/** Cuántas filas puede revertir un deshacer. Una mesa no acumula más. */
+const MAX_DESHACER = 50;
+
+/**
+ * Deshace un «Llevar a la mesa».
+ *
+ * «Servido» se marca de UN toque desde una ficha del salón, en una rejilla
+ * que se reordena sola: acertar en la mesa de al lado deja un plato dado
+ * por servido, arranca el reloj de «sin cobrar» sobre comida que sigue en
+ * la barra, y hasta ahora lo único que quedaba era un aviso de cuatro
+ * segundos sin salida.
+ *
+ * Solo revierte lo que sigue EXACTAMENTE como lo dejó la acción
+ * (`status = SERVED`): si mientras tanto la mesa se cobró o cocina movió
+ * el pedido, deshacer sería pisar un cambio más nuevo, así que esa fila se
+ * queda como está.
+ */
+export async function undoServeTable(
+  restaurantId: string,
+  orderIds: string[],
+): Promise<{ error?: string; undone?: number }> {
+  if (!restaurantId || !Array.isArray(orderIds) || orderIds.length === 0) {
+    return { error: 'Datos inválidos.' };
+  }
+  if (orderIds.length > MAX_DESHACER) return { error: 'Demasiados pedidos que deshacer.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('orders')
+    .update({ status: 'READY', served_at: null })
+    .eq('restaurant_id', restaurantId)
+    .in('id', orderIds)
+    .eq('status', 'SERVED')
+    .select('id');
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/cocina');
+  revalidatePath('/admin/pedidos');
+  return { undone: data?.length ?? 0 };
 }
 
 /**
@@ -1401,7 +1452,7 @@ export async function serveTableReady(
 export async function resolveTableCalls(
   restaurantId: string,
   tableNumber: number,
-): Promise<{ error?: string; resolved?: number }> {
+): Promise<{ error?: string; resolved?: number; ids?: string[] }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
 
   const acceso = await assertTableAccess(restaurantId);
@@ -1420,7 +1471,48 @@ export async function resolveTableCalls(
 
   revalidatePath('/admin/mesas');
   revalidatePath('/admin/mesero');
-  return { resolved: data?.length ?? 0 };
+  const ids = (data ?? []).map((r) => r.id as string);
+  return { resolved: ids.length, ids };
+}
+
+/**
+ * Deshace un «Atender».
+ *
+ * «Atender» da por resueltas TODAS las llamadas pendientes de la mesa —
+ * incluida la que entró mientras el mesero iba caminando—, y es también
+ * un toque desde una ficha. Devolverlas a pendiente es lo único que hace
+ * que equivocarse de mesa no borre a alguien que sigue con la mano
+ * levantada.
+ *
+ * Igual que el otro deshacer, solo toca lo que sigue resuelto: si el
+ * comensal volvió a llamar, esa llamada es nueva y no se toca.
+ */
+export async function undoResolveTableCalls(
+  restaurantId: string,
+  callIds: string[],
+): Promise<{ error?: string; undone?: number }> {
+  if (!restaurantId || !Array.isArray(callIds) || callIds.length === 0) {
+    return { error: 'Datos inválidos.' };
+  }
+  if (callIds.length > MAX_DESHACER) return { error: 'Demasiadas llamadas que deshacer.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('waiter_calls')
+    .update({ resolved_at: null })
+    .eq('restaurant_id', restaurantId)
+    .in('id', callIds)
+    .not('resolved_at', 'is', null)
+    .select('id');
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/mesero');
+  return { undone: data?.length ?? 0 };
 }
 
 /**
