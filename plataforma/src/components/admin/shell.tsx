@@ -532,7 +532,10 @@ export default function AdminShell({
     );
   }
 
-  /** El botón central. Su ranura vive DENTRO de la barra, entre Pedidos y Menú. */
+  /** El botón central. Su ranura vive DENTRO de la barra, entre Menú y
+   *  Clientes — así queda 3 destinos a cada lado (Hoy/Pedidos/Menú y
+   *  Clientes/Negocio/Ajustes) y el botón cae en el centro real de los
+   *  siete huecos, no solo entre los dos primeros. */
   function renderTomarPedido() {
     return (
       <Link
@@ -616,7 +619,7 @@ export default function AdminShell({
             Ya no hay secciones plegables: con seis ítems no hay nada que plegar. */}
         <nav className="admin-nav" data-tour-step="nav">
           {groups.map((g) => (
-            conBoton && g.key === 'pedidos'
+            conBoton && g.key === 'menu'
               ? [renderGroup(g), renderTomarPedido()]
               : renderGroup(g)
           ))}
