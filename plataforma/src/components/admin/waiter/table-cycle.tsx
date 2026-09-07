@@ -24,7 +24,7 @@
 import { useMemo, useState } from 'react';
 import { Icon, type IconName } from '@/components/icons';
 import DishFinder from '@/components/admin/waiter/dish-finder';
-import type { CartLine } from '@/components/admin/waiter/cart';
+import { TIEMPOS, type CartLine } from '@/components/admin/waiter/cart';
 import { fmtMin, STAGES, type TableState, type TableStage } from '@/lib/table-state';
 import { buildBillLines, billBreakdown } from '@/lib/bill-split';
 import type { OrderWithItems, TableOccupancy } from '@/lib/db/orders';
@@ -42,6 +42,9 @@ interface CycleLine {
   seat: number | null;
   /** null = todavía sin enviar a cocina. */
   status: OrderStatus | null;
+  /** Tiempo de la comida (M-06). Solo lo llevan las líneas del carrito:
+      lo ya enviado se lee del papel, no de aquí. */
+  course?: number;
   itemId?: string;
   lineId?: string;
   /** Solo en las líneas YA enviadas: a qué pedido pertenecen. Es lo que
@@ -61,8 +64,11 @@ export interface NextStep {
      un pedido que el comensal hizo desde el QR y que sigue en NEW. Son dos
      momentos distintos y nunca coinciden en pantalla: el carrito manda. */
   kind: 'enviar' | 'mandar' | 'agregar' | 'cobrar' | 'servir';
-  /** Acción secundaria (imprimir la cuenta), si toca. */
-  secundaria?: 'imprimir';
+  /** Acción secundaria, si toca: imprimir la cuenta, o mandar de una vez
+      todo lo apuntado cuando la barra está ofreciendo marchar un tiempo. */
+  secundaria?: 'imprimir' | 'enviar-todo';
+  /** Con `kind: 'enviar'`, qué tiempo se manda. `null` = todo (M-06). */
+  tiempo?: number | null;
 }
 
 /**
@@ -125,8 +131,9 @@ interface Props {
   onPick: (p: Product, qty: number) => void;
   qtyOf: (productId: string) => number;
   onDec: (productId: string) => void;
-  /** null cuando no hay nada que enviar (apaga Ctrl+Enter). */
-  onSend: (() => void) | null;
+  /** null cuando no hay nada que enviar (apaga Ctrl+Enter). Con un tiempo
+      manda SOLO ese (marchar, M-06); sin él, todo lo apuntado. */
+  onSend: ((soloTiempo?: number | null) => void) | null;
   finderFocus: boolean;
 
   /* El resto del ciclo. */
@@ -135,6 +142,11 @@ interface Props {
   asiento: number | null;
   onAsiento: (s: number | null) => void;
   onSeatCart: (lineId: string, seat: number | null) => void;
+  /** Tiempo al que van los platos que se agreguen ahora. `null` = ninguno:
+      salen con lo que haya (M-06). */
+  tiempo: number | null;
+  onTiempo: (t: number | null) => void;
+  onCourseCart: (lineId: string, course: number | undefined) => void;
   onSeatItem: (itemId: string, seat: number | null) => void;
   onIncCart: (lineId: string) => void;
   onDecCart: (lineId: string) => void;
@@ -171,6 +183,7 @@ export default function TableCycle(p: Props) {
     products, categories, money, tipPercent, tipApplies,
     onPick, qtyOf, onDec, onSend, finderFocus,
     asiento, onAsiento, onSeatCart, onSeatItem, onIncCart, onDecCart, onEditCart,
+    tiempo, onTiempo, onCourseCart,
     onParty, onJuntar, onMover, onNota, onCobrar, onImprimir, onServir, onMandarACocina,
     onCorregir, onArticuloLibre, onVerMenu,
     ocupado,
@@ -204,6 +217,7 @@ export default function TableCycle(p: Props) {
     price: l.price * l.quantity,
     seat: l.seat ?? null,
     status: null,
+    course: l.course,
     lineId: l.lineId,
   })), [cart]);
 
@@ -281,12 +295,40 @@ export default function TableCycle(p: Props) {
     const aDonde = mesa != null ? ` · ${titulo}` : '';
 
     if (porEnviar > 0) {
+      /* MARCHAR (M-06).
+         ------------------------------------------------------------
+         Si lo apuntado va a tiempos distintos, la barra deja de ofrecer
+         «mándalo todo» y ofrece mandar el PRIMERO que falte. Eso es lo
+         que hace que en una mesa de seis las entradas salgan antes que
+         los fuertes; y «retener» no necesita botón propio, porque lo
+         retenido es sencillamente lo que todavía no se marchó.
+
+         Un plato sin tiempo marcado cuenta como del primero: no marcar
+         nada tiene que seguir significando «esto sale ya». */
+      const grupos = [...new Set(cart.map((l) => l.course ?? 1))].sort((a, b) => a - b);
+      if (grupos.length > 1) {
+        const primero = grupos[0];
+        const cuantos = cart
+          .filter((l) => (l.course ?? 1) === primero)
+          .reduce((s, l) => s + l.quantity, 0);
+        const nombre = TIEMPOS.find((t) => t.n === primero)?.label ?? 'primer tiempo';
+        return {
+          nota: `${cuantos} ${cuantos === 1 ? 'plato' : 'platos'} del ${nombre.toLowerCase()}. El resto se queda apuntado aquí.`,
+          accion: `Marchar ${nombre.toLowerCase()}${aDonde}`,
+          icon: 'bell',
+          kbd: 'Ctrl+Enter',
+          kind: 'enviar',
+          tiempo: primero,
+          secundaria: 'enviar-todo',
+        };
+      }
       return {
         nota: `${porEnviar} ${porEnviar === 1 ? 'plato' : 'platos'} por enviar. Cocina todavía no los ha visto.`,
         accion: `Enviar a cocina${aDonde}`,
         icon: 'bell',
         kbd: 'Ctrl+Enter',
         kind: 'enviar',
+        tiempo: null,
       };
     }
     if (!occ) {
@@ -384,10 +426,10 @@ export default function TableCycle(p: Props) {
       icon: 'plus',
       kind: 'agregar',
     };
-  }, [porEnviar, occ, state, now, mesa, titulo, money, total]);
+  }, [porEnviar, cart, occ, state, now, mesa, titulo, money, total]);
 
   function accionPrincipal() {
-    if (paso.kind === 'enviar') { onSend?.(); return; }
+    if (paso.kind === 'enviar') { onSend?.(paso.tiempo ?? null); return; }
     if (paso.kind === 'mandar') { onMandarACocina(); return; }
     if (paso.kind === 'cobrar') { onCobrar(); return; }
     if (paso.kind === 'servir') { onServir(); return; }
@@ -517,7 +559,7 @@ export default function TableCycle(p: Props) {
               hace falta —el primer plato de cada persona caía siempre en
               «Mesa»—. Por eso el bloque se abre si hay cuenta O si hay
               asientos que ofrecer, y el rótulo se pinta por su cuenta. */}
-          {(lineas.length > 0 || ordersLoading || puedeRepartir) && (
+          {(lineas.length > 0 || ordersLoading || puedeRepartir || mesa != null) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '0 4px' }}>
             {(lineas.length > 0 || ordersLoading) && (
               <div className="adm-label adm-label-caps" style={{ flex: 1, minWidth: 140, color: 'var(--u-text-3)' }}>
@@ -542,6 +584,39 @@ export default function TableCycle(p: Props) {
                 la razón buena de la condición vieja: ahí no hay nadie a
                 quien repartirle nada y en el teléfono son dos renglones de
                 píldoras por delante del buscador. */}
+            {/* A qué TIEMPO van los platos que se agreguen ahora (M-06).
+                Mismo criterio que el asiento —se elige una vez y lo demás
+                se apunta solo— y en el mismo renglón, porque son las dos
+                marcas que lleva un plato al apuntarlo. Solo en mesa: un
+                pedido para llevar no tiene tiempos que repartir. */}
+            {mesa != null && (
+              <div className="ciclo-seats" role="group" aria-label="Tiempo al que se apuntan los platos nuevos">
+                <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Tiempo</span>
+                <button
+                  type="button"
+                  className="press"
+                  data-on={tiempo == null ? '1' : '0'}
+                  onClick={() => onTiempo(null)}
+                  aria-pressed={tiempo == null}
+                  title="Sale con lo que haya"
+                >
+                  Ya
+                </button>
+                {TIEMPOS.map((t) => (
+                  <button
+                    key={t.n}
+                    type="button"
+                    className="press"
+                    data-on={tiempo === t.n ? '1' : '0'}
+                    onClick={() => onTiempo(t.n)}
+                    aria-pressed={tiempo === t.n}
+                    title={t.label}
+                  >
+                    {t.corto}
+                  </button>
+                ))}
+              </div>
+            )}
             {puedeRepartir && (
               <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Asiento</span>
@@ -606,6 +681,15 @@ export default function TableCycle(p: Props) {
                 >
                   {l.status === null ? 'Por enviar' : ESTADO_PLATO[l.status] ?? ''}
                 </span>
+                {/* Solo en el carrito: un plato que ya salió a cocina no
+                    puede cambiar de tiempo sin mentirle al papel que el
+                    cocinero tiene delante (M-06). */}
+                {l.lineId && mesa != null && (
+                  <CourseChip
+                    course={l.course}
+                    onChange={(c) => onCourseCart(l.lineId!, c)}
+                  />
+                )}
                 <SeatChip
                   seat={l.seat}
                   personas={personas}
@@ -757,6 +841,23 @@ export default function TableCycle(p: Props) {
       {/* ── La barra del siguiente paso ──────────────────────── */}
       <div className="ciclo-next">
         <span className="ciclo-next-note">{paso.nota}</span>
+        {paso.secundaria === 'enviar-todo' && (
+          <button
+            type="button"
+            onClick={() => onSend?.(null)}
+            disabled={ocupado}
+            className="press"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              height: 46, padding: '0 16px', borderRadius: 12, cursor: 'pointer',
+              border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
+              color: 'var(--u-text-2)', fontSize: 14.5, fontWeight: 500,
+            }}
+          >
+            <Icon name="bell" size={16} />
+            Enviar todo
+          </button>
+        )}
         {paso.secundaria === 'imprimir' && (
           <button
             type="button"
@@ -826,6 +927,36 @@ function SeatChip({ seat, personas, disabled, onChange }: {
           no se distinguía. Dos caracteres arreglan lo que ningún tamaño
           iba a arreglar. */}
       {seat == null ? 'Mesa' : `As. ${seat}`}
+    </button>
+  );
+}
+
+/* ── La marca de tiempo de la fila ─────────────────────────────
+   Un toque avanza: Ya → 1.º → 2.º → Postre → Ya. Igual que la píldora
+   del asiento, y por la misma razón: un desplegable por plato, en una
+   tablet y con el salón lleno, no lo usa nadie. */
+function CourseChip({ course, onChange }: {
+  course: number | undefined;
+  onChange: (c: number | undefined) => void;
+}) {
+  const actual = TIEMPOS.find((t) => t.n === course);
+  const siguiente = () => {
+    if (course == null) return TIEMPOS[0].n;
+    const i = TIEMPOS.findIndex((t) => t.n === course);
+    return i < 0 || i === TIEMPOS.length - 1 ? undefined : TIEMPOS[i + 1].n;
+  };
+  return (
+    <button
+      type="button"
+      className="ciclo-seat press"
+      data-on={actual ? '1' : '0'}
+      onClick={() => onChange(siguiente())}
+      aria-label={actual
+        ? `${actual.label}. Tocar para cambiarlo`
+        : 'Sale con lo que haya. Tocar para marcarle un tiempo'}
+      title="Tiempo de la comida"
+    >
+      {actual ? actual.corto : 'Ya'}
     </button>
   );
 }

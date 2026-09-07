@@ -48,7 +48,7 @@ import OpenItemDialog, { type OpenItemDraft } from '@/components/admin/waiter/op
 import TableJump from '@/components/admin/waiter/table-jump';
 import { parseQuery } from '@/components/admin/waiter/dish-finder';
 import TableCycle from '@/components/admin/waiter/table-cycle';
-import { money, newLineId, LIBRE_ID, type CartLine } from '@/components/admin/waiter/cart';
+import { money, newLineId, LIBRE_ID, tiempoTexto, type CartLine } from '@/components/admin/waiter/cart';
 import { useServiceMode } from '@/components/admin/service-mode';
 import {
   selectionFromParams, selectionToQuery, sameSelection,
@@ -213,6 +213,11 @@ export default function WaiterPanel({
      elige UNA vez y lo demás se apunta solo: preguntarlo plato por plato
      es lo que hace que nadie lo use. `null` = a la mesa, sin dueño. */
   const [asiento, setAsiento] = useState<number | null>(null);
+
+  /* Y a qué TIEMPO de la comida (M-06). Mismo criterio que el asiento: se
+     elige una vez y lo demás se apunta solo. `null` = sin marcar, sale
+     cuando salga el resto. */
+  const [tiempo, setTiempo] = useState<number | null>(null);
 
   /* ── Cuenta de mesa / dividir cuenta ──────────────────────────
      Vive aquí arriba porque el efecto de montaje ya la necesita: al
@@ -570,8 +575,9 @@ export default function WaiterPanel({
   }, [key]);
 
   function addToCart(line: CartLine) {
-    // El plato nace con el asiento que está elegido arriba.
+    // El plato nace con el asiento y el tiempo que están elegidos arriba.
     if (line.seat === undefined) line = { ...line, seat: asiento };
+    if (line.course === undefined && tiempo != null) line = { ...line, course: tiempo };
     setCart((prev) => {
       /* La nota entra en la clave de fusión: dos líneas con las mismas
          opciones pero notas distintas ("sin sal" vs. sin nota) son platos
@@ -587,7 +593,10 @@ export default function WaiterPanel({
           && l.name === line.name
           && l.price === line.price
           && JSON.stringify(l.options) === JSON.stringify(line.options)
-          && (l.note ?? '') === (line.note ?? ''),
+          && (l.note ?? '') === (line.note ?? '')
+          // Dos platos iguales de tiempos distintos son dos líneas: uno sale
+          // ahora y el otro cuando se marche el segundo (M-06).
+          && (l.course ?? 0) === (line.course ?? 0),
       );
       if (idx >= 0) {
         const next = [...prev];
@@ -708,9 +717,23 @@ export default function WaiterPanel({
       ) || partyDraft[selection.n] || null)
     : null;
 
-  function handleSubmit() {
+  /**
+   * Manda el pedido a cocina.
+   *
+   * `soloTiempo` es MARCHAR (M-06): manda solo los platos de ese tiempo y
+   * deja el resto apuntado en la mesa. Eso —y no un botón de «retener»— es
+   * lo que hace que en una mesa de seis las entradas salgan antes que los
+   * fuertes: lo retenido es sencillamente lo que todavía no se marchó.
+   */
+  function handleSubmit(soloTiempo?: number | null) {
     if (selection.kind === 'none') return;
-    if (cart.length === 0) { setAviso({ text: 'No hay platos que enviar.', bad: true }); return; }
+    /* Un plato SIN tiempo marcado cuenta como del primero: no marcar nada
+       tiene que seguir queriendo decir «esto sale ya». Es el mismo `?? 1`
+       con el que la barra decide qué tiempo ofrecer marchar. */
+    const aEnviar = soloTiempo == null
+      ? cart
+      : cart.filter((l) => (l.course ?? 1) === soloTiempo);
+    if (aEnviar.length === 0) { setAviso({ text: 'No hay platos que enviar.', bad: true }); return; }
     setAviso(null);
 
     const mesa = selection.kind === 'mesa' ? selection.n : null;
@@ -729,7 +752,7 @@ export default function WaiterPanel({
          artículo libre no tiene con qué contrastarse: ese es justo su
          motivo de existir. Viaja en `openItems`, que solo acepta el camino
          del mesero y queda escrito en la bitácora. */
-      items: cart.filter((l) => !l.open).map((l) => ({
+      items: aEnviar.filter((l) => !l.open).map((l) => ({
         productId: l.productId,
         name: l.name,
         price: l.price,
@@ -738,16 +761,20 @@ export default function WaiterPanel({
            (resolveItemOptions lo exige): sin él, TODO pedido de mesero con
            combo + variantes era rechazado con "Elige una variante". */
         options: l.options.map((o) => ({ groupId: o.groupId, choiceId: o.choiceId, ...(o.variantId ? { variantId: o.variantId } : {}) })),
-        ...(l.note ? { note: l.note } : {}),
+        /* El tiempo viaja DENTRO de la nota del plato (M-06). Es lo que se
+           imprime en la comanda, que es donde cocina lo tiene que leer:
+           «Segundo tiempo · sin cebolla». Sin columna nueva y sin tocar
+           `place_order`, que ya tiene diecinueve parámetros. */
+        ...(notaConTiempo(l) ? { note: notaConTiempo(l) } : {}),
         /* El asiento se decide AL PEDIR, no al cobrar: quien sabe de quién
            es el pepián es el mesero en ese momento (migración 123). */
         ...(l.seat ? { seat: l.seat } : {}),
       })),
-      openItems: cart.filter((l) => l.open).map((l) => ({
+      openItems: aEnviar.filter((l) => l.open).map((l) => ({
         name: l.name,
         price: l.price,
         quantity: l.quantity,
-        ...(l.note ? { note: l.note } : {}),
+        ...(notaConTiempo(l) ? { note: notaConTiempo(l) } : {}),
         ...(l.seat ? { seat: l.seat } : {}),
       })),
       customer: {
@@ -763,14 +790,22 @@ export default function WaiterPanel({
       tipAccepted: tipApplies && subtotal > 0,
     };
 
-    /** Vacía SOLO el carrito que se acaba de enviar: las demás mesas
-        siguen con lo suyo apuntado. */
+    /** Quita del carrito lo que se acaba de enviar, y SOLO eso.
+        ------------------------------------------------------------
+        Con «marchar» el carrito no se vacía: lo que queda son los tiempos
+        que todavía no salieron, y esa es precisamente la comanda retenida.
+        Las demás mesas siguen con lo suyo apuntado, como siempre. */
+    const enviados = new Set(aEnviar.map((l) => l.lineId));
     const limpiar = () => {
       setCarts((prev) => {
         const resto = { ...prev };
-        delete resto[enviadoDe];
+        const quedan = (prev[enviadoDe] ?? []).filter((l) => !enviados.has(l.lineId));
+        if (quedan.length > 0) resto[enviadoDe] = quedan;
+        else delete resto[enviadoDe];
         return resto;
       });
+      // La nota de mesa se va con la comanda que la lleva; si queda algo
+      // retenido, ya no se repite en el siguiente envío.
       setNotes('');
       if (!mesa) setGuestName('');
     };
@@ -811,7 +846,7 @@ export default function WaiterPanel({
            reenvía el payload ENTERO a `createWaiterOrder` en cuanto vuelve
            la señal. Se pierde el papel de cocina de ese momento; no se
            pierde el cobro. */
-        const conArticulosLibres = cart.some((l) => l.open);
+        const conArticulosLibres = aEnviar.some((l) => l.open);
         if (hubUrl && !conArticulosLibres) {
           const hubResult = await tryHubOrder(hubUrl, hubToken, input);
           if (hubResult?.success) {
@@ -885,9 +920,30 @@ export default function WaiterPanel({
      Las acciones que antes obligaban a salirse de la pantalla —o que
      sencillamente no existían— y que ahora viven junto a la comanda. */
 
-  /** Asiento de un plato que TODAVÍA no ha salido a cocina. */
+  /**
+   * La nota que se imprime, con el TIEMPO delante si lo tiene (M-06).
+   *
+   * El tiempo viaja dentro de la nota del plato y no en una columna nueva:
+   * es lo que sale en el papel —«Segundo tiempo · sin cebolla»— y es ahí
+   * donde el cocinero tiene que leerlo. Añadirle un parámetro veinte a
+   * `place_order` habría creado una sobrecarga ambigua (el aviso de la
+   * migración 031), y una columna que solo se imprime no vale eso.
+   */
+  function notaConTiempo(l: CartLine): string | undefined {
+    const t = tiempoTexto(l.course);
+    const partes = [t, l.note?.trim()].filter(Boolean);
+    return partes.length > 0 ? partes.join(' · ') : undefined;
+  }
+
   function setCartSeat(lineId: string, seat: number | null) {
     setCart((prev) => prev.map((l) => (l.lineId === lineId ? { ...l, seat } : l)));
+  }
+
+  /** El tiempo de un plato del carrito (M-06). Solo del CARRITO: lo que ya
+      salió a cocina ya salió, y cambiarle el tiempo ahí sería mentirle al
+      papel que el cocinero tiene delante. */
+  function setCartCourse(lineId: string, course: number | undefined) {
+    setCart((prev) => prev.map((l) => (l.lineId === lineId ? { ...l, course } : l)));
   }
 
   /** Asiento de un plato ya enviado. Va a la BD porque el reparto tiene
@@ -1412,6 +1468,7 @@ export default function WaiterPanel({
                 currency={currency}
                 freeing={freeing}
                 onVoidItem={setVoidTarget}
+                onDiscountApplied={() => { loadTableBill(billTable); router.refresh(); }}
                 onFreeTable={(method, cash) => liberar(billTable, method, cash)}
               />
             )}
@@ -1511,7 +1568,7 @@ export default function WaiterPanel({
             </div>
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={submitting || cart.length === 0}
               className="press btn-accent"
               style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', cursor: submitting || cart.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 16, opacity: submitting || cart.length === 0 ? 0.6 : 1 }}
@@ -1589,6 +1646,9 @@ export default function WaiterPanel({
               finderFocus={conTeclado && !productModal && !jumpOpen && moveMode === null && pendingHref === null}
               asiento={asiento}
               onAsiento={setAsiento}
+              tiempo={tiempo}
+              onTiempo={setTiempo}
+              onCourseCart={setCartCourse}
               onSeatCart={setCartSeat}
               onSeatItem={setSentSeat}
               onIncCart={incLine}

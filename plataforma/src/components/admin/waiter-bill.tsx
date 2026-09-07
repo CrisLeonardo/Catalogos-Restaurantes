@@ -25,6 +25,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
+import DiscountDialog from '@/components/admin/waiter/discount-dialog';
 import { Group, Hr, Mono, Seg } from '@/components/admin/waiter/pieces';
 import {
   buildBillLines, computeSplit, countUnassignedLines, splitFromSeats, UNASSIGNED_ID,
@@ -50,6 +51,9 @@ interface Props {
   currency: PanelCurrency;
   freeing: boolean;
   onVoidItem: (target: VoidTarget) => void;
+  /** Se acaba de aplicar (o quitar) un descuento: hay que recargar la
+      cuenta desde el servidor o el total de pantalla sería el viejo. */
+  onDiscountApplied: () => void;
   /** Cierra la mesa. Recibe cómo se pagó: sin eso, el arqueo de caja
       cuenta como efectivo hasta lo que se pagó con tarjeta. */
   onFreeTable: (method: PaymentMethod, cashReceived: number | null) => void;
@@ -161,7 +165,7 @@ const MODE_TABS: { id: SplitMode; label: string; hint: string }[] = [
 /* ── Componente ───────────────────────────────────────────── */
 
 export default function WaiterBill({
-  restaurantId, tableNumber, orders, currency, freeing, onVoidItem, onFreeTable,
+  restaurantId, tableNumber, orders, currency, freeing, onVoidItem, onDiscountApplied, onFreeTable,
 }: Props) {
   const [mode, setMode] = useState<SplitMode>('single');
   const [peopleIds, setPeopleIds] = useState<string[]>(['1', '2']);
@@ -178,6 +182,9 @@ export default function WaiterBill({
      cobrar. Cerrar una mesa dispara la facturación y no se deshace, así
      que ya no es un botón suelto. */
   const [closing, setClosing] = useState(false);
+  /* El descuento de la mesa (M-10): invitar un postre por una queja, un
+     10 % de cumpleaños. Lo firma un encargado, igual que anular. */
+  const [descuentoAbierto, setDescuentoAbierto] = useState(false);
 
   const lines = useMemo(() => buildBillLines(orders), [orders]);
   const liveLines = useMemo(() => lines.filter((l) => l.quantity > 0), [lines]);
@@ -661,7 +668,29 @@ export default function WaiterBill({
         <BillRow label={`Consumo · ${liveLines.length} plato${liveLines.length === 1 ? '' : 's'}`} value={money(breakdown.items, currency)} />
         {breakdown.tip > 0 && <><Hr /><BillRow label="Propina" value={money(breakdown.tip, currency)} /></>}
         {breakdown.delivery > 0 && <><Hr /><BillRow label="Envío" value={money(breakdown.delivery, currency)} /></>}
-        {breakdown.discount > 0 && <><Hr /><BillRow label="Descuento" value={`−${money(breakdown.discount, currency)}`} accent /></>}
+        {/* El descuento deja de ser un renglón que solo se LEE (M-10).
+            Tocarlo abre quién firma, cuánto y por qué; y si no hay ninguno,
+            la fila sigue estando para poder ponerlo — que era justo lo que
+            faltaba: el número se pintaba y no había forma de crearlo. */}
+        <Hr />
+        <button
+          type="button"
+          onClick={() => setDescuentoAbierto(true)}
+          className="press"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+            padding: '11px 16px', minHeight: 46, border: 'none', background: 'none',
+            cursor: 'pointer', textAlign: 'left',
+          }}
+        >
+          <span style={{ flex: 1, fontSize: 14, color: breakdown.discount > 0 ? 'var(--u-text-2)' : 'var(--u-text-3)' }}>
+            {breakdown.discount > 0 ? 'Descuento' : 'Descuento o cortesía'}
+          </span>
+          {breakdown.discount > 0 && (
+            <Mono size={15} color="var(--brand-accent-ink)">{`−${money(breakdown.discount, currency)}`}</Mono>
+          )}
+          <Icon name="chevronRight" size={16} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
+        </button>
         {breakdown.orderCount > 1 && <><Hr /><BillRow label={`${breakdown.orderCount} rondas de pedidos`} value="" /></>}
         <Hr full />
         <div style={{
@@ -723,6 +752,36 @@ export default function WaiterBill({
           )}
         </button>
       </div>
+
+      {descuentoAbierto && (
+        <DiscountDialog
+          restaurantId={restaurantId}
+          tableNumber={tableNumber}
+          /* La base es `orders.subtotal`, NO la suma de las líneas vivas.
+             Son el mismo número en un pedido sano —place_order escribe uno
+             desde las otras— pero el servidor calcula el porcentaje sobre
+             `subtotal`, y si aquí se usara otra cifra el botón prometería
+             un descuento y se aplicaría otro. Una sola regla, la del
+             servidor. */
+          consumo={orders.reduce((s, o) => s + Number(o.subtotal ?? 0), 0)}
+          descuentoActual={breakdown.discount}
+          money={(n) => money(n, currency)}
+          onClose={() => setDescuentoAbierto(false)}
+          onDone={(monto) => {
+            setDescuentoAbierto(false);
+            setPrintMsg({
+              text: monto > 0
+                ? `Descuento de ${money(monto, currency)} aplicado a la mesa.`
+                : 'Descuento quitado.',
+              bad: false,
+            });
+            /* La cuenta vive en el padre (`billOrders`), así que hay que
+               pedirla de nuevo: sin esto el total de aquí seguiría siendo
+               el de antes del descuento y se cobraría de más. */
+            onDiscountApplied();
+          }}
+        />
+      )}
 
       {closing && (
         <CloseTableSheet

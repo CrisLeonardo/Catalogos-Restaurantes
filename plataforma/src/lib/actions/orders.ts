@@ -812,6 +812,186 @@ export interface TablePayment {
   cashReceived?: number | null;
 }
 
+/* ════════════════════════════════════════════════════════════
+   DESCUENTO Y CORTESÍA DE MESA (M-10)
+   ------------------------------------------------------------
+   `breakdown.discount` se pintaba en la cuenta desde siempre, pero solo
+   podía llegar de un cupón del pedido público: el encargado no podía
+   invitar un postre por una queja ni aplicar un 10 % de cumpleaños sin
+   salirse del sistema. Y salirse del sistema significa, en la práctica,
+   restar a mano en la calculadora y cobrar un número que no cuadra con
+   nada de lo que queda escrito.
+
+   Tres decisiones que sostienen esto:
+
+   1. **Lo firma un encargado.** Es la MISMA regla que anular un plato ya
+      cocinado (`puedeAprobar`, migración 079): quien no es mesero puro
+      firma solo; un mesero le pasa la tablet a alguien de la lista y
+      teclea su PIN. No hace falta un permiso nuevo ni una credencial
+      nueva.
+   2. **El motivo es obligatorio.** Un descuento sin motivo es un agujero
+      en el arqueo con forma de función. Con motivo es una decisión que
+      alguien tomó y que se puede leer después.
+   3. **SUSTITUYE, no suma.** «10 %» aplicado dos veces por dos personas
+      distintas no debe ser 20 %: el segundo recalcula sobre el consumo y
+      deja el descuento en lo que dice. Aplicar 0 es quitarlo.
+
+   La propina NO baja. Un plato anulado sí la baja (migración 124) porque
+   nunca se sirvió; un descuento es comida que sí se sirvió y por la que
+   se cobró menos por decisión del local — el mesero la trabajó igual.
+   ════════════════════════════════════════════════════════════ */
+
+export interface TableDiscountInput {
+  restaurantId: string;
+  tableNumber: number;
+  /** 'percent' = sobre el consumo · 'amount' = un importe fijo. */
+  kind: 'percent' | 'amount';
+  /** 0 = quitar el descuento que hubiera. */
+  value: number;
+  reason: string;
+  /** El encargado que autoriza, si quien lo aplica no puede firmar solo. */
+  approverId?: string | null;
+  approverPin?: string | null;
+}
+
+/** Lo que el diálogo de descuento necesita saber antes de pintarse. */
+export async function getDiscountApproval(restaurantId: string): Promise<VoidApproval> {
+  if (!restaurantId) return BLOQUEADO;
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return BLOQUEADO;
+
+  const db = createServiceClient();
+  const { data: perfil } = await db
+    .from('profiles').select('role, permissions').eq('id', acceso.actor.userId).maybeSingle();
+  const selfApproves = puedeAprobar(
+    perfil?.role as string | null,
+    perfil?.permissions as string[] | null,
+  );
+
+  return {
+    // Un descuento SIEMPRE necesita firma: no hay un caso «esto todavía no
+    // ha salido a cocina» que lo haga inocuo, como en la anulación.
+    required: true,
+    selfApproves,
+    approvers: selfApproves ? [] : await listarAprobadores(db, restaurantId),
+  };
+}
+
+export async function applyTableDiscount(
+  input: TableDiscountInput,
+): Promise<{ error?: string; applied?: number }> {
+  const { restaurantId, tableNumber, kind, value, reason } = input;
+  if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
+  if (!Number.isFinite(value) || value < 0) return { error: 'El descuento no es un número válido.' };
+  if (kind === 'percent' && value > 100) return { error: 'Un descuento no puede pasar del 100 %.' };
+
+  const motivo = reason?.trim() ?? '';
+  // Quitar el descuento también lleva motivo: es la misma decisión al revés.
+  if (motivo.length < 3) return { error: 'Escribe el motivo del descuento.' };
+  if (motivo.length > 200) return { error: 'El motivo es demasiado largo.' };
+
+  const acceso = await assertTableAccess(restaurantId);
+  if ('error' in acceso) return acceso;
+
+  const db = createServiceClient();
+
+  /* Quién firma. Mismo camino que la anulación: si quien lo aplica es
+     encargado firma él; si es un mesero, hace falta el PIN de alguien de
+     la lista. */
+  const { data: perfil } = await db
+    .from('profiles').select('role, permissions').eq('id', acceso.actor.userId).maybeSingle();
+  const firmaSolo = puedeAprobar(
+    perfil?.role as string | null,
+    perfil?.permissions as string[] | null,
+  );
+  let firmante = acceso.actor.userId;
+  if (!firmaSolo) {
+    if (!input.approverId || !input.approverPin) {
+      return { error: 'Un descuento lo autoriza un encargado.' };
+    }
+    const v = await verificarAprobador(db, restaurantId, input.approverId, input.approverPin);
+    if ('error' in v) return v;
+    firmante = v.id;
+  }
+
+  const [colMesa, valMesa] = campoMesa(await hayColumnaMesa(), tableNumber);
+  const { data: vivos, error: errLeer } = await db
+    .from('orders')
+    .select('id, subtotal, total, discount, loyalty_discount, coupon_id')
+    .eq('restaurant_id', restaurantId)
+    .eq(colMesa, valMesa)
+    .eq('order_type', 'DINE_IN')
+    .not('status', 'in', '("DELIVERED","CANCEL")');
+
+  if (errLeer) return { error: errLeer.message };
+  const pedidos = vivos ?? [];
+  if (pedidos.length === 0) return { error: 'Esta mesa no tiene nada que descontar.' };
+
+  /* Con cupón o puntos de por medio no se toca nada.
+     ------------------------------------------------------------
+     `orders.discount` es UNA columna y no distingue de dónde vino cada
+     quetzal. Si esta mesa ya trae un cupón del menú público o un canje de
+     puntos, sustituirlo aquí borraría ese descuento sin que nadie se
+     entere — y el cliente ya lo vio aplicado en su pantalla. Antes que
+     descuadrar dos cuentas a la vez, se dice que no y por qué. */
+  const conCupon = pedidos.some((o) => o.coupon_id != null || Number(o.loyalty_discount ?? 0) > 0);
+  if (conCupon) {
+    return { error: 'Esta mesa ya trae un cupón o un canje de puntos. Cóbrala como está.' };
+  }
+
+  const consumo = pedidos.reduce((s, o) => s + Number(o.subtotal ?? 0), 0);
+  if (consumo <= 0) return { error: 'Esta mesa no tiene consumo que descontar.' };
+
+  const bruto = kind === 'percent' ? (consumo * value) / 100 : value;
+  const monto = Math.min(Math.round(bruto * 100) / 100, consumo);
+
+  /* Se reparte entre los pedidos vivos en proporción a lo que vale cada
+     uno, y el ÚLTIMO se lleva lo que sobre del redondeo: sin eso, tres
+     pedidos con un 33 % dejan un céntimo suelto que nadie cuadra. */
+  let repartido = 0;
+  for (let i = 0; i < pedidos.length; i++) {
+    const o = pedidos[i];
+    const previo = Number(o.discount ?? 0);
+    const parte = i === pedidos.length - 1
+      ? Math.round((monto - repartido) * 100) / 100
+      : Math.round((monto * (Number(o.subtotal ?? 0) / consumo)) * 100) / 100;
+    repartido = Math.round((repartido + parte) * 100) / 100;
+
+    // El total se mueve por la DIFERENCIA con lo que ya tenía descontado:
+    // así aplicar 10 % dos veces deja un 10 %, no un 20 %.
+    const delta = Math.round((parte - previo) * 100) / 100;
+    const { error } = await db
+      .from('orders')
+      .update({
+        discount: parte,
+        total: Math.max(0, Math.round((Number(o.total ?? 0) - delta) * 100) / 100),
+      })
+      .eq('id', o.id);
+    if (error) return { error: error.message };
+  }
+
+  await logActivity({
+    restaurantId,
+    actorId: acceso.actor.userId,
+    action: 'descuento_mesa',
+    entity: String(tableNumber),
+    meta: {
+      tipo: kind,
+      valor: value,
+      monto,
+      motivo,
+      firmante,
+      // Queda escrito si lo firmó otro: es la mitad del rastro.
+      firmadoPorOtro: firmante !== acceso.actor.userId,
+    },
+  });
+
+  revalidatePath('/admin/mesero');
+  revalidatePath('/admin/mesas');
+  revalidatePath('/admin/caja');
+  return { applied: monto };
+}
+
 /**
  * Libera una mesa marcando como DELIVERED todos sus pedidos DINE_IN activos.
  * Solo el personal con permiso 'mesero' puede hacerlo.
@@ -1111,17 +1291,35 @@ export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
   const selfApproves = puedeAprobar(quien.role as string | null, quien.permissions as string[] | null);
   if (!required || selfApproves) return { required, selfApproves, approvers: [] };
 
+  return { required, selfApproves, approvers: await listarAprobadores(db, restaurantId) };
+}
+
+/**
+ * A quién se le puede pasar la tablet para que firme.
+ *
+ * Solo quien tiene PIN puesto: es la lista de quien puede autorizar AHORA,
+ * no la de quien podría en teoría. Y solo nombre y cargo, los mismos datos
+ * que ya enseña la pantalla de entrar con PIN.
+ *
+ * Vive aparte desde M-10 porque la comparten dos firmas distintas —anular
+ * un plato ya cocinado y descontar de una cuenta—: si cada una armara su
+ * lista, una podría quedarse sin el candado del PIN al cambiar la otra.
+ */
+async function listarAprobadores(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+): Promise<Aprobador[]> {
   const { data: pins } = await db
     .from('staff_pins').select('profile_id').eq('restaurant_id', restaurantId);
   const conPin = new Set((pins ?? []).map((p) => p.profile_id as string));
-  if (conPin.size === 0) return { required, selfApproves, approvers: [] };
+  if (conPin.size === 0) return [];
 
   const { data: perfiles } = await db
     .from('profiles')
     .select('id, full_name, role, permissions')
     .eq('restaurant_id', restaurantId);
 
-  const approvers = (perfiles ?? [])
+  return (perfiles ?? [])
     .filter((p) => conPin.has(p.id as string))
     .filter((p) => puedeAprobar(p.role as string | null, p.permissions as string[] | null))
     .map((p) => ({
@@ -1130,8 +1328,6 @@ export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
       role: p.role === 'RESTAURANT_OWNER' ? 'Dueño' : 'Encargado',
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
-
-  return { required, selfApproves, approvers };
 }
 
 /**
