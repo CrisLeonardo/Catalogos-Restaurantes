@@ -279,35 +279,45 @@ export default function AdminShell({
 
      Solo aparece si el restaurante puede tomar pedidos desde el panel.
      En Básico y Estándar no existe esa pantalla, y ahí un candado en el
-     sitio más visible del teléfono sería un anuncio, no una
-     herramienta: esos vuelven a los seis destinos repartidos.
+     sitio más visible del teléfono sería un anuncio, no una herramienta.
 
      No se pinta en escritorio (ver globals.css): allí el nav es la
      barra lateral y "Tomar pedidos" ya es una pestaña con su nombre
-     entero. */
+     entero.
 
-  /** Los destinos que se quedan en la barra cuando el botón ocupa el centro. */
-  const BARRA_CON_BOTON = ['hoy', 'pedidos', 'menu', 'ajustes'];
+     LOS SEIS DESTINOS SE QUEDAN (corregido el 2026-09-07). El botón nació
+     echando a Clientes y Negocio al menú "⋯", y eso resultó ser un cambio
+     con dos costes que no se vieron al medirlo:
 
-  const puedeTomarPedidos = groups
+       · Los dos destinos desaparecían sin dejar rastro. Quien los buscaba
+         en la barra —donde llevaban meses— no tenía ninguna pista de que
+         se habían mudado a un menú de la barra de ARRIBA.
+       · Y peor: estando EN Clientes o en Negocio, la barra no marcaba
+         nada. Ninguno de los cuatro destinos visibles estaba activo, así
+         que la pantalla no decía dónde estabas.
+
+     Medido en pantalla: con el botón puesto, los seis destinos caben a
+     47 px cada uno en un teléfono de 375 px, con las seis etiquetas
+     enteras y sin recortes (`scrollWidth === clientWidth`). Por debajo de
+     360 px la ranura del botón se estrecha para dejarles sitio, ver
+     globals.css. */
+
+  const conBoton = !preview && groups
     .some((g) => g.items.some((it) => it.href === '/admin/mesero' && !it.locked));
 
-  const conBoton = !preview && puedeTomarPedidos;
+  /* "Aquí estás", no "aquí no estoy". El botón se APARTABA en
+     `/admin/mesero` y `/admin/caja` —`visibility: hidden`— y lo que se veía
+     era un hueco de 86 px en mitad de la barra, sin nada que dijera que la
+     pantalla abierta era justamente esa. Ahora se queda y se marca como
+     cualquier otro destino.
 
-  /** Los dos que ceden su sitio (Clientes y Negocio) — bajan al "⋯". */
-  const enElMas = conBoton ? groups.filter((g) => !BARRA_CON_BOTON.includes(g.key)) : [];
-
-  /* El botón se aparta donde la pantalla ya tiene su propia barra pegada
-     abajo, porque ahí se montaría encima: en Tomar pedidos está la barra
-     del carrito y la del siguiente paso de la mesa, y en Caja la del
-     cierre. Además, en Tomar pedidos el botón sobra por definición: ya
-     estás tomando ese pedido.
-
-     Se aparta SIN ceder la ranura (`visibility`, no `display`): si el
-     hueco se cerrara, los cuatro destinos cambiarían de sitio al pasar de
-     una pantalla a otra, y una barra de navegación que se recoloca sola
-     es lo que hace que se falle el toque. */
-  const botonOculto = pathname.startsWith('/admin/mesero') || pathname.startsWith('/admin/caja');
+     Lo único que sigue apartándose es el CÍRCULO, y solo cuando la pantalla
+     tiene de verdad una barra pegada abajo (el carrito del mesero, el paso
+     siguiente de la mesa, la de guardar): sus 28 px de voladizo caen justo
+     encima de "Revisar pedido". Se aparta el círculo, no la ranura: la
+     etiqueta se queda con su icono en línea, como los demás destinos, así
+     que ni se abre un hueco ni se recoloca nada. Ver globals.css. */
+  const enTomarPedido = pathname.startsWith('/admin/mesero');
 
   const TITLES: Record<string, string> = {
     '/admin/mesero': 'Tomar pedidos',
@@ -501,21 +511,20 @@ export default function AdminShell({
   /** Un destino de la barra lateral. Seis en total, sin candados: lo que el
    *  plan no incluye se enseña dentro de su sección, no aquí. */
   function renderGroup(g: NavGroup) {
-    const active = activeGroup?.key === g.key;
-    /* `data-overflow` NO quita nada aquí: la barra lateral de escritorio
-       sigue enseñando los seis. Es la media query del teléfono la que
-       esconde estos dos, porque allí su sitio lo ocupa el botón. */
-    const overflow = conBoton && !BARRA_CON_BOTON.includes(g.key) ? '1' : '0';
+    /* Un solo sitio marcado en la barra. En `/admin/mesero` el grupo activo
+       es "Pedidos" (ahí vive esa pantalla), pero quien marca es el botón
+       central: dejar los dos en acento decía "estás en dos sitios". */
+    const active = activeGroup?.key === g.key && !(conBoton && enTomarPedido && g.key === 'pedidos');
     if (preview) {
       return (
-        <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-overflow={overflow} data-tour-step={g.key} style={{ cursor: 'default' }}>
+        <div key={g.key} className="admin-navlink" data-active={active ? '1' : '0'} data-tour-step={g.key} style={{ cursor: 'default' }}>
           <Icon name={g.icon} size={18} />
           <span className="nav-label">{g.label}</span>
         </div>
       );
     }
     return (
-      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-overflow={overflow} data-tour-step={g.key}>
+      <Link key={g.key} href={enlace(g.href)} className="admin-navlink press" data-active={active ? '1' : '0'} data-tour-step={g.key}>
         <Icon name={g.icon} size={18} />
         <span className="nav-label">{g.label}</span>
         <NavPending />
@@ -530,12 +539,20 @@ export default function AdminShell({
         key="tomar-pedido"
         href={enlace('/admin/mesero')}
         className="admin-fab press"
-        data-hidden={botonOculto ? '1' : '0'}
+        data-active={enTomarPedido ? '1' : '0'}
+        aria-current={enTomarPedido ? 'page' : undefined}
         aria-label="Tomar un pedido"
         title="Tomar un pedido"
       >
         <span className="admin-fab-dot" aria-hidden>
           <Icon name="plus" size={26} strokeWidth={2.4} />
+        </span>
+        {/* El mismo icono, del tamaño de los demás destinos. Solo se ve
+            cuando el círculo se aparta por una barra pegada abajo: sin él
+            la ranura se quedaba con la etiqueta suelta y media casilla
+            vacía. Ver `.admin-fab-flat` en globals.css. */}
+        <span className="admin-fab-flat" aria-hidden>
+          <Icon name="plus" size={18} />
         </span>
         {/* "Tomar pedido", no "Pedido": el destino de al lado se llama
             "Pedidos" y a 10 px, uno al lado del otro, la única diferencia
@@ -709,7 +726,6 @@ export default function AdminShell({
               hasMultipleRestaurants={hasMultipleRestaurants}
               helpSection={helpSection}
               isOperatorSession={isOperatorSession}
-              extraNav={enElMas.map((g) => ({ href: g.href, label: g.label, icon: g.icon }))}
             />
           )}
         </div>

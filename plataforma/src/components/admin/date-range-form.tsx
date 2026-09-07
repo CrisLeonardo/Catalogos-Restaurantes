@@ -4,7 +4,8 @@
    la página (server component) re-renderiza con el nuevo rango. */
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -12,11 +13,15 @@ function ymd(d: Date): string {
 
 export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }: { from: string; to: string; basePath?: string }) {
   const router = useRouter();
+  /* `basePath` es una ruta INTERNA (`/admin/finanzas`). Sin traducirla, cambiar
+     el rango de fechas sacaba del panel a quien entró por el origen único: se
+     tocaba "30 días" y se aterrizaba fuera. Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(usePathname());
   const [f, setF] = useState(from);
   const [t, setT] = useState(to);
 
   function go(nf: string, nt: string) {
-    router.push(`${basePath}?from=${nf}&to=${nt}`);
+    router.push(`${panelHref(base, basePath)}?from=${nf}&to=${nt}`);
   }
 
   function rangeFor(days: number): { nf: string; nt: string } {

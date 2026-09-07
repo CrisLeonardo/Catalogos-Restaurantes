@@ -44,21 +44,11 @@ interface Props {
   /** Sección del centro de ayuda de la pantalla actual, si tiene. */
   helpSection?: string | null;
   isOperatorSession?: boolean;
-  /**
-   * Destinos que en el teléfono cedieron su sitio de la barra al botón de
-   * tomar pedido (hoy: Clientes y Negocio). Van ARRIBA del todo y con su
-   * propio icono, no mezclados con buscar/tema/sesión: son sitios a los
-   * que se va, no ajustes que se tocan, y quien los busca los está
-   * buscando en la barra. Vacío cuando el botón no se pinta, que es
-   * cuando los seis siguen abajo.
-   */
-  extraNav?: { href: string; label: string; icon: string }[];
 }
 
 export default function AdminMoreMenu({
   restaurantName, roleLabel, planLabel, planColor,
   hasMultipleRestaurants = false, helpSection, isOperatorSession = false,
-  extraNav = [],
 }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
@@ -88,17 +78,6 @@ export default function AdminMoreMenu({
           <div className="mt-0.5 text-[12px] text-adm-text-3">{roleLabel}</div>
         </div>
         <DropdownMenuSeparator />
-
-        {extraNav.length > 0 && (
-          <>
-            {extraNav.map((d) => (
-              <DropdownMenuItem key={d.href} render={<Link href={panelHref(base, d.href)} />}>
-                <Icon name={d.icon} size={16} /> {d.label}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-          </>
-        )}
 
         <DropdownMenuItem
           onClick={() => window.dispatchEvent(new Event('admin:search'))}

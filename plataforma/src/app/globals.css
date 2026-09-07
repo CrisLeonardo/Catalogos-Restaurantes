@@ -1535,8 +1535,13 @@ html[data-scheme="light"] .btn-white {
 
      Los 28 px de voladizo son también los que se comen la franja donde
      viven la barra del carrito (56), la de guardado (66) y los avisos
-     (72). Por eso el botón se aparta en cuanto alguna aparece — abajo. */
-  .admin-navlink[data-overflow="1"] { display: none; }
+     (72). Por eso el CÍRCULO se aparta en cuanto alguna aparece — abajo.
+
+     LOS SEIS DESTINOS SE QUEDAN (2026-09-07). El botón nació echando a
+     Clientes y Negocio al menú "⋯" y eso costaba más de lo que ahorraba:
+     desaparecían sin rastro, y estando EN una de esas dos pantallas la
+     barra no marcaba nada. Medido a 375 px: seis destinos a 47 px con las
+     seis etiquetas enteras (`scrollWidth === clientWidth`). */
 
   .admin-fab {
     display: flex; flex: 0 0 86px; min-width: 0;
@@ -1554,6 +1559,17 @@ html[data-scheme="light"] .btn-white {
     flex: none; font-size: calc(10px * var(--admin-panel-scale, 1)); font-weight: 600;
     line-height: 1.2; letter-spacing: 0; white-space: nowrap;
   }
+  /* En la pantalla a la que lleva. Mismo acento que marca destino en esta
+     barra: el botón es un sitio más y tiene que poder decir "aquí estás". */
+  .admin-fab[data-active="1"] { color: var(--brand-accent-ink, var(--admin-panel-accent)); }
+  .admin-fab[data-active="1"] .admin-fab-dot {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--admin-panel-accent) 26%, transparent),
+      0 6px 18px -5px color-mix(in srgb, var(--admin-panel-accent) 60%, transparent);
+  }
+  /* El icono en línea: solo se enseña cuando el círculo se aparta. Así la
+     ranura no queda con la etiqueta suelta y media casilla vacía. */
+  .admin-fab-flat { display: none; }
   .admin-fab-dot {
     position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
     width: 56px; height: 56px; border-radius: 999px;
@@ -1565,12 +1581,47 @@ html[data-scheme="light"] .btn-white {
     box-shadow: 0 6px 18px -5px color-mix(in srgb, var(--admin-panel-accent) 60%, transparent);
   }
 
-  /* Donde la pantalla ya tiene su propia barra pegada abajo, el botón se
-     aparta: encima de "Revisar pedido" o de "Guardar" no es un atajo, es
-     un estorbo. `visibility` y no `display` — ver el porqué en shell.tsx. */
-  .admin-fab[data-hidden="1"],
+  /* Donde la pantalla ya tiene su propia barra pegada abajo, el CÍRCULO se
+     aparta: sus 28 px de voladizo caen encima de "Revisar pedido" o de
+     "Guardar", y ahí no es un atajo sino un estorbo.
+
+     Se aparta el círculo y NO la ranura entera (que es lo que se hacía
+     antes, con `data-hidden` en `/admin/mesero` y `/admin/caja`): un hueco
+     de 86 px en mitad de la barra no dice nada, y menos aún dice que la
+     pantalla abierta es justo la del botón. El destino se queda con su
+     icono en línea y su etiqueta, como los otros seis.
+
+     Se condiciona a que la barra ESTÉ, no a la ruta: la del carrito solo
+     existe con algo en el carrito, así que en el salón del mesero —que es
+     donde arranca esa pantalla— no hay nada que esquivar. */
+  .admin-shell:has(.waiter-cart-bar) .admin-fab-dot,
+  .admin-shell:has(.ciclo-next) .admin-fab-dot,
+  .admin-shell:has(.adm-savebar) .admin-fab-dot,
+  .admin-shell:has(.pform-savebar) .admin-fab-dot { display: none; }
+
+  .admin-shell:has(.waiter-cart-bar) .admin-fab-flat,
+  .admin-shell:has(.ciclo-next) .admin-fab-flat,
+  .admin-shell:has(.adm-savebar) .admin-fab-flat,
+  .admin-shell:has(.pform-savebar) .admin-fab-flat { display: block; }
+
+  .admin-shell:has(.waiter-cart-bar) .admin-fab,
+  .admin-shell:has(.ciclo-next) .admin-fab,
   .admin-shell:has(.adm-savebar) .admin-fab,
-  .admin-shell:has(.pform-savebar) .admin-fab { visibility: hidden; }
+  .admin-shell:has(.pform-savebar) .admin-fab {
+    justify-content: center; gap: 3px;
+  }
+
+  /* La caja cierra con su propia barra a pie de pantalla, pero SOLO por
+     debajo de 768 px: de ahí para arriba `.caja-foot` vuelve a
+     `position: static` y no hay nada que esquivar. Su regla vive en el
+     bloque de 767 px del final del archivo, junto a la de la propia barra
+     —un `@media` dentro de otro `@media` NO llegó a la hoja de estilos
+     (comprobado en pantalla: la regla no existía en `document.styleSheets`),
+     así que ese atajo no está disponible aquí. */
+
+  /* Teléfonos muy estrechos: la ranura del botón cede sitio. La regla está
+     al final del archivo, en su propio corte de 359 px — ver la nota de
+     arriba sobre por qué un `@media` dentro de otro no vale aquí. */
 
   /* Portada de Ajustes: en el teléfono la lista se queda con los nombres.
      Diez filas con su renglón de explicación son 1.166 px de scroll para un
@@ -3729,6 +3780,34 @@ html[data-platform] .asphalt::after { display: none; }
     bottom: 0;
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
+  /* Y aquí, en el MISMO corte, el círculo de "tomar pedido" se retrae: sus
+     28 px de voladizo caerían justo sobre los botones del cierre. La ranura
+     se queda con su icono en línea y su etiqueta, como los otros destinos
+     —ver `.admin-fab` en el bloque de 820 px—, así que no se abre un hueco.
+     Va aquí y no allí porque el corte es 767: en la franja 768–820 la barra
+     de la caja ya no se pega y no hay nada que esquivar. */
+  .admin-shell:has(.caja-foot) .admin-fab-dot { display: none; }
+  .admin-shell:has(.caja-foot) .admin-fab-flat { display: block; }
+  .admin-shell:has(.caja-foot) .admin-fab { justify-content: center; gap: 3px; }
+}
+
+/* Teléfonos muy estrechos (un SE de primera hornada, la tapa de un plegable).
+   A 375 px los seis destinos y el botón caben con las seis etiquetas enteras;
+   a 320 px los destinos caen a 38 px y cuatro se recortan a "Pedid…". La
+   ranura del botón cede 18 px —el círculo mide 56 y le sobra sitio de todos
+   modos— y con eso vuelven a caber: medido, 41,7 px por destino contra los
+   40 que pide la etiqueta más larga.
+
+   Va en su propio corte de primer nivel y NO dentro del bloque de 820 px:
+   un `@media` anidado en otro `@media` no llega a la hoja de estilos que
+   sirve esta app (comprobado en pantalla — la regla no existía en
+   `document.styleSheets` y el botón seguía midiendo 86 px a 320). */
+@media (max-width: 359px) {
+  .admin-fab { flex-basis: 68px; }
+  /* Y los 2 px de aire lateral de cada destino, que a este ancho son lo que
+     separa "Clientes" entero de "Cliente…". El área tocable no cambia: el
+     ancho lo reparte `flex`, el padding solo recortaba el texto. */
+  .admin-navlink { padding-left: 0; padding-right: 0; }
 }
 
 

@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { Icon } from '@/components/icons';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { NavGroup } from '@/lib/admin-nav';
+import { panelBaseFrom, panelHref } from '@/lib/panel-links';
 
 /* ============================================================
    BUSCADOR DEL PANEL (rediseño 2026-08-21, Fase 4)
@@ -79,6 +80,11 @@ interface Props {
 
 export default function CommandSearch({ groups }: Props) {
   const router = useRouter();
+  /* Los `href` de los grupos son rutas INTERNAS (`/admin/caja`). Empujarlas
+     tal cual sacaba del panel a quien entró por el origen único —el buscador
+     es la pieza más usada del "⋯" del teléfono, así que se salía por la
+     puerta más transitada. Ver lib/panel-links.ts. */
+  const base = panelBaseFrom(usePathname());
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -151,8 +157,8 @@ export default function CommandSearch({ groups }: Props) {
 
   const go = useCallback((h: Hit) => {
     setOpen(false);
-    router.push(h.href);
-  }, [router]);
+    router.push(panelHref(base, h.href));
+  }, [router, base]);
 
   function onInputKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, hits.length - 1)); }

@@ -4,12 +4,13 @@
      incluso cuando el navegador está cerrado (sin cambios, ver abajo).
    · Fetch: precache del shell + caché del catálogo para que el comensal
      siga viendo el último menú si se corta la señal. Nunca cachea
-     /admin, /super ni /central — mostrar ahí un estado viejo (pedidos,
-     cocina) como si fuera el actual es peligroso, no solo desactualizado.
+     /admin, /panel, /super ni /central — mostrar ahí un estado viejo
+     (pedidos, cocina) como si fuera el actual es peligroso, no solo
+     desactualizado.
    Ver plataforma/docs/ARQUITECTURA_OFFLINE.md.
    ============================================================ */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `leogin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `leogin-pages-${CACHE_VERSION}`;
 const CACHE_NAMES = [STATIC_CACHE, PAGES_CACHE];
@@ -61,6 +62,15 @@ self.addEventListener('activate', (event) => {
 function isBackofficePath(pathname) {
   return BACKOFFICE_HOST
     || pathname.startsWith('/admin')
+    /* `/panel/<slug>/...` es el panel desde el ORIGEN ÚNICO (migración del
+       2026-09-02, ver lib/panel-links.ts). El proxy lo reescribe a `/admin/...`
+       del lado del SERVIDOR, así que aquí llega siempre como `/panel/...` y
+       sin esta línea el candado no lo veía: el panel entero —nav, Ajustes,
+       Pedidos— pasaba por `networkFirstPage` y se guardaba en caché. Se nota
+       como pantallas viejas que reaparecen (pestañas que faltan, una portada
+       de Ajustes de hace dos versiones) sin que nadie haya tocado nada, y
+       como fallback offline donde debería salir un error. */
+    || pathname.startsWith('/panel')
     || pathname.startsWith('/super')
     || pathname.startsWith('/central');
 }
@@ -148,17 +158,46 @@ self.addEventListener('push', (event) => {
   event.waitUntil(Promise.all([self.registration.showNotification(title, options), notifyClients]));
 });
 
-/* ── Clic en la notificación (sin cambios) ──────────────────── */
+/* ── Clic en la notificación ─────────────────────────────────
+   Con el ORIGEN ÚNICO el panel puede estar abierto en `/panel/<slug>/...`
+   además de en `/admin/...`. Dos cosas dependían de reconocerlo:
+
+     · La pestaña ya abierta. El filtro miraba solo `/admin`, así que una
+       pestaña en `/panel/azucar-negra/pedidos` no contaba y CADA aviso
+       abría una ventana nueva encima de la que ya estaba trabajando.
+     · La ruta a la que se va. El servidor manda `/admin/pedidos` (no sabe
+       por dónde entró esta persona); si la pestaña vive en `/panel/<slug>`,
+       navegar a `/admin/pedidos` la saca de su sitio —y en un teléfono con
+       la app instalada, del ámbito de la PWA, que es justo lo que la
+       migración del 2026-09-02 vino a arreglar. Se traduce aquí, con el
+       prefijo que la propia pestaña ya demuestra. */
+
+/** `/panel/<slug>` de una URL abierta, o '' si no es del origen único. */
+function panelBaseOf(href) {
+  try {
+    const m = new URL(href).pathname.match(/^\/panel\/([a-z0-9][a-z0-9-]*)(?=\/|$)/i);
+    return m ? m[0] : '';
+  } catch { return ''; }
+}
+
+/** `/admin/pedidos` + `/panel/x` → `/panel/x/pedidos`. Sin base, tal cual. */
+function toPanelUrl(url, base) {
+  if (!base || !url.startsWith('/admin')) return url;
+  if (url === '/admin') return base;
+  return url.startsWith('/admin/') ? base + url.slice('/admin'.length) : url;
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/admin/pedidos';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      // Si ya hay una pestaña del admin abierta, navega en ella.
+      // Si ya hay una pestaña del panel abierta, navega en ella.
       for (const client of list) {
-        if (client.url.includes('/admin') && 'focus' in client) {
-          if ('navigate' in client) client.navigate(url);
+        const base = panelBaseOf(client.url);
+        if ((base || client.url.includes('/admin')) && 'focus' in client) {
+          if ('navigate' in client) client.navigate(toPanelUrl(url, base));
           return client.focus();
         }
       }

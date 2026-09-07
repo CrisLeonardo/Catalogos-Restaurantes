@@ -6,7 +6,7 @@
 
 import webpush from 'web-push';
 import { createServiceClient } from '@/lib/supabase/service';
-import { stableRootUrl } from '@/lib/tenant';
+import { panelPath, stableRootUrl } from '@/lib/tenant';
 
 const vapidConfigured =
   process.env.VAPID_PRIVATE_KEY &&
@@ -44,6 +44,32 @@ export interface PushPayload {
 }
 
 /**
+ * A DÓNDE lleva el aviso al tocarlo.
+ *
+ * Quien lo llama escribe la ruta interna de siempre (`/admin/pedidos`): es la
+ * que renderiza Next y la única que tiene sentido en el código del servidor,
+ * que no sabe por qué origen entró cada aparato. Pero el service worker abre
+ * lo que reciba TAL CUAL, y desde la migración del 2026-09-02 el panel vive en
+ * `<raíz>/panel/<slug>/...` — así que `/admin/pedidos` a secas sacaba a la
+ * persona de su panel y, en un teléfono con la app instalada, del ámbito de la
+ * PWA: la barra del navegador encima, que es justo lo que aquella migración
+ * vino a quitar.
+ *
+ * Se manda ABSOLUTA a propósito. La notificación puede tocarse con la app
+ * cerrada, sin ninguna pestaña que diga por dónde entró esta persona; una ruta
+ * relativa se resolvería contra el origen del service worker, que puede ser
+ * todavía el subdominio viejo del panel.
+ *
+ * Lo que no sea una ruta del panel (o si no se sabe el slug) pasa de largo.
+ */
+function destino(url: string | undefined, slug: string | null | undefined): string | undefined {
+  if (!url || !slug || !url.startsWith('/admin')) return url;
+  const resto = url === '/admin' ? '' : url.startsWith('/admin/') ? url.slice('/admin'.length) : null;
+  if (resto === null) return url;
+  return `${stableRootUrl()}${panelPath(slug)}${resto}`;
+}
+
+/**
  * Envía una notificación push a todos los dispositivos suscritos
  * del restaurante. Las suscripciones expiradas o inválidas se borran
  * automáticamente.
@@ -67,7 +93,7 @@ export async function sendPushToRestaurant(
 
   const icon = payload.icon
     ?? (restaurant?.slug ? `${stableRootUrl()}/api/icon/${restaurant.slug}` : undefined);
-  const body = JSON.stringify({ ...payload, icon });
+  const body = JSON.stringify({ ...payload, icon, url: destino(payload.url, restaurant?.slug) });
 
   const expiredIds: string[] = [];
 

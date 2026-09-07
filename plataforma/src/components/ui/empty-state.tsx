@@ -1,5 +1,10 @@
 import * as React from 'react';
-import Link from 'next/link';
+/* `Link` es aquí `PanelLink`: traduce las rutas del panel al origen desde el
+   que se sirve la página (`/admin/qr` → `/panel/<slug>/qr`). Con `next/link`
+   a secas, el botón de CADA pantalla vacía del panel —"Comparte tu código
+   QR", "Agregá tu primer platillo"— sacaba del panel a quien entró por el
+   origen único. Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 
 import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';

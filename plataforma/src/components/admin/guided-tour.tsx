@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { internalPanelPath, panelBaseFrom, panelHref } from '@/lib/panel-links';
 import { Icon } from '@/components/icons';
 import { getGuidedTour, type GuidedTourDef } from '@/lib/tutorial/tours';
 
@@ -58,7 +59,14 @@ function writeStore(v: Stored | null): void {
 
 export default function GuidedTourHost() {
   const router = useRouter();
-  const pathname = usePathname();
+  /* El tour compara contra rutas INTERNAS (`/admin/menu`) y `usePathname()`
+     devuelve la del NAVEGADOR, que en el origen único es
+     `/panel/<slug>/menu`. Sin traducir, ninguna comparación acertaba nunca:
+     el tour se creía siempre en la página equivocada, empujaba a `/admin/...`
+     —fuera del panel— y volvía a empujar en bucle. Ver lib/panel-links.ts. */
+  const rutaNavegador = usePathname();
+  const base = panelBaseFrom(rutaNavegador);
+  const pathname = internalPanelPath(rutaNavegador);
   const [tour, setTour] = useState<GuidedTourDef | null>(null);
   const [step, setStep] = useState(0);
   const [spotRect, setSpotRect] = useState<DOMRect | null>(null);
@@ -139,7 +147,7 @@ export default function GuidedTourHost() {
       navigatedForStepRef.current = step;
       setSettling(true);
       setSpotRect(null);
-      router.push(def.path);
+      router.push(panelHref(base, def.path));
       return; // el cambio de pathname re-dispara este efecto
     }
     navigatedForStepRef.current = step;
@@ -175,7 +183,7 @@ export default function GuidedTourHost() {
     attempt();
     locateTimer.current = window.setInterval(attempt, LOCATE_MS);
     return stopLocating;
-  }, [tour, step, pathname, router, finish, stopLocating]);
+  }, [tour, step, pathname, base, router, finish, stopLocating]);
 
   // Mantener el spotlight pegado al elemento en resize/scroll.
   useEffect(() => {

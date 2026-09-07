@@ -1,5 +1,9 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+/* `Link` es aquí `PanelLink`: el "Volver" llevaba a `/admin/menu` a secas y
+   eso saca del panel a quien entró por el origen único (`/panel/<slug>/...`)
+   — el botón de salir del formulario de un platillo, que es de los más
+   pulsados. Ver components/admin/panel-link.tsx. */
+import Link from '@/components/admin/panel-link';
 import { headers } from 'next/headers';
 import { getAdminContext, getAdminMenu } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';

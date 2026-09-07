@@ -57,9 +57,13 @@ export default async function AdminAjustesPage() {
 
   const slug = (await headers()).get('x-tenant-slug');
   let restaurant: Restaurant | null = ctx.restaurant ?? null;
+  let dineInEnabled = false;
   if (slug) {
     const data = await getRestaurantBySlug(slug);
-    if (data) restaurant = data.restaurant;
+    if (data) {
+      restaurant = data.restaurant;
+      dineInEnabled = data.resolved.config.orderTypes.includes('dine_in');
+    }
   }
 
   const restaurantId = restaurant?.id ?? profile.restaurant_id ?? null;
@@ -88,12 +92,29 @@ export default async function AdminAjustesPage() {
     }
   }
 
+  /* Mismo criterio que `admin-nav.ts`: el plano del salón se configura si el
+     plan trae panel de mesero, o si el restaurante encendió "comer en local"
+     (un ESTÁNDAR puede elegirlo). Los dos sitios tienen que decir lo mismo o
+     el menú vuelve a prometer una pantalla que la portada no enseña. */
+  const plan = (restaurant?.plan_actual ?? 'BASICO') as PlanCode;
+  const mesasAccesible = (plan !== 'BASICO' && plan !== 'ESTANDAR') || dineInEnabled;
+
   const activeModules = modules ? Object.values(modules).filter(Boolean).length : 0;
   const planLabel = restaurant?.plan_actual ? (PLANS[restaurant.plan_actual as PlanCode]?.name ?? restaurant.plan_actual) : undefined;
 
   const negocio: Row[] = [
     { href: '/admin/perfil', icon: 'user', label: 'Perfil del negocio', desc: 'Nombre, contacto y datos de tu cuenta', key: 'perfil' },
     { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abrís cada día y la pausa de pedidos', key: 'ajustes' },
+    /* Salón. ESTABA EN EL MENÚ Y NO EN ESTA LISTA (corregido el 2026-09-07):
+       `admin-nav.ts` lo cuenta como pestaña del grupo Ajustes, pero el grupo
+       tiene `index: true` —no dibuja fila de pestañas, dibuja esta portada—
+       así que la única forma de llegar al plano del salón, a los QR de mesa
+       y a la propina era el enlace de Pedidos › Mesas. Desde Ajustes, la
+       pantalla sencillamente no existía. Ver la prueba de admin-nav.test.ts,
+       que ahora compara las dos listas. */
+    ...(mesasAccesible
+      ? [{ href: '/admin/ajustes/salon', icon: 'grid', label: 'Salón', desc: 'Cuántas mesas hay, el plano del local y el QR de cada mesa', key: 'mesas' } as Row]
+      : []),
     ...(ordersEnabled
       ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartís a domicilio', key: 'ajustes' } as Row]
       : []),
@@ -135,6 +156,28 @@ export default async function AdminAjustesPage() {
     .filter((g) => g.rows.length > 0);
 
   const canEditIdiomas = allow('ajustes') && !!restaurant;
+
+  /* Sin una sola fila que enseñar. Pasa de verdad: a alguien del personal se
+     le reparten permisos de operación (pedidos, mesas, cocina) y ninguno de
+     ellos abre una pantalla de esta portada — y aun así el menú sigue
+     enseñando "Ajustes", porque el grupo tiene otras pestañas que esa persona
+     SÍ puede ver. Lo que salía era el título, una frase suelta y nada más:
+     una pantalla que parece rota. Decirlo es más barato que esconder el
+     destino, que dejaría al menú cambiando de forma según quién entre. */
+  if (groups.length === 0) {
+    return (
+      <div className="anim-fade-up flex flex-col items-center gap-2.5 rounded-adm-xl border border-adm-border bg-adm-card px-6 py-9 text-center shadow-adm-sm">
+        <span className="mb-1 grid size-11 place-items-center rounded-adm-lg bg-adm-bg-2 text-adm-text-3">
+          <Icon name="settings" size={20} />
+        </span>
+        <div className="text-[15px] font-semibold text-adm-text">Aquí no hay nada para vos</div>
+        <p className="max-w-[46ch] text-[13.5px] leading-snug text-adm-text-3">
+          Los ajustes del restaurante los lleva quien tenga el permiso. Si necesitás
+          cambiar algo de esta pantalla, pedíselo a la persona dueña de la cuenta.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
