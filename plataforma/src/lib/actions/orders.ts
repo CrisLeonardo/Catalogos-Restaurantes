@@ -30,6 +30,8 @@ import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalt
 import { resolveItemOptions } from '@/lib/order-options';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
+import { assertTableAccess } from '@/lib/auth/table-access';
+import { cerrarTurnoDeMesa } from '@/lib/db/table-sessions';
 
 /**
  * «Los pedidos de la mesa N», como par columna/valor.
@@ -833,6 +835,11 @@ export async function freeTable(
     .eq('restaurant_id', restaurantId)
     .eq('table_number', tableNumber);
 
+  /* Y el turno se cierra aquí (migración 128). Cobrar es lo que vacía una
+     mesa: si el turno siguiera abierto, la mesa quedaría «sentada» para
+     siempre y el salón no se vaciaría nunca. */
+  await cerrarTurnoDeMesa(restaurantId, tableNumber);
+
   // Una factura por pedido cerrado. En `after` para no dejar al mesero
   // esperando al certificador con la mesa ocupada en pantalla.
   const ids = (cerrados ?? []).map((r) => r.id as string);
@@ -1253,79 +1260,10 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
   return { success: true };
 }
 
-/** Autorización compartida de la cuenta de mesa: sesión válida, del mismo
- *  restaurante y con permiso de mesero. */
-/** Quién está tocando la mesa, ya comprobado. */
-interface TableActor {
-  userId: string;
-  role: string;
-  /** El restaurante del perfil. `null` en el super admin, que no tiene uno. */
-  profileRestaurantId: string | null;
-}
-
-/**
- * ¿Puede esta persona operar las mesas de este restaurante?
- *
- * Es la ÚNICA regla, y devuelve al actor para que quien la llame no tenga
- * que volver a pedir el perfil. Antes estaba copiada palabra por palabra en
- * `freeTable`, `archiveAbandonedTables` y aquí: tres sitios donde arreglar
- * lo mismo, y de hecho ya habían empezado a separarse.
- *
- * Pasa quien: administra el grupo de esta sucursal, es su propio restaurante
- * (migración 116: ya no hay un rol que preguntar), tiene membresía aquí —el
- * caso del dueño desde el modelo de membresías, cuyo `restaurant_id` nace en
- * null— o es el super admin.
- *
- * SUPER_ADMIN (2026-08-26): las tres funciones de mesa eran las únicas del
- * archivo que lo dejaban fuera. `updateOrderStatus`, `getPendingNewOrders` y
- * `resolveOrderRestaurant` ya lo admiten, y el layout del panel de mesero
- * también ("SUPER_ADMIN sí entra, soporte/pruebas"). El resultado no era un
- * candado sino una pantalla rota: en Tomar pedidos veía el salón entero con
- * sus totales —`getActiveTableNumbers` no filtra por persona— y al abrir una
- * mesa le salía "No autorizado" en la comanda. Se estaba escondiendo el
- * detalle de un dinero que ya se enseñaba dos centímetros más arriba.
- */
-async function assertTableAccess(
-  restaurantId: string,
-): Promise<{ error: string } | { actor: TableActor }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'No autorizado.' };
-
-  const db = createServiceClient();
-  const { data: profile } = await db
-    .from('profiles')
-    .select('role, restaurant_id, permissions')
-    .eq('id', user.id)
-    .single();
-  if (!profile) return { error: 'No autorizado.' };
-
-  const role = profile.role as string;
-  const esSuper = role === 'SUPER_ADMIN';
-
-  const efectivo = await resolveEffectiveRole(
-    { role, permissions: (profile.permissions as string[] | null) ?? null },
-    restaurantId,
-  );
-  const ownsBranch = esSuper
-    || (await canActOnGroupBranch(restaurantId))
-    || efectivo.isMember
-    || profile.restaurant_id === restaurantId;
-
-  // El super admin no tiene permisos de restaurante que consultar: su rol ES
-  // el permiso, igual que en el resto de acciones de este archivo.
-  if (!ownsBranch || (!esSuper && !can(efectivo.role, efectivo.permissions, 'mesero'))) {
-    return { error: 'No autorizado.' };
-  }
-
-  return {
-    actor: {
-      userId: user.id,
-      role,
-      profileRestaurantId: (profile.restaurant_id as string | null) ?? null,
-    },
-  };
-}
+/* El guardián de la mesa se mudó a `lib/auth/table-access.ts`: desde la
+   migración 128 lo comparten las acciones de pedido y las de sentar, y
+   exportarlo desde un archivo 'use server' lo habría publicado como una
+   acción más. La regla no cambió ni una línea. */
 
 /** Todos los pedidos activos de una mesa (todas las rondas acumuladas),
  *  base de la "cuenta de mesa" / dividir cuenta en el panel de mesero. */

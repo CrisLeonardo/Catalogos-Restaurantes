@@ -34,15 +34,21 @@ import {
   getTableBill, serveTableReady, resolveTableCalls,
   undoServeTable, undoResolveTableCalls,
 } from '@/lib/actions/orders';
+import { seatTable, updateSeating, unseatTable } from '@/lib/actions/table-sessions';
 import { buildBillLines, billBreakdown } from '@/lib/bill-split';
 import { fmtMin, type SalonUmbrales } from '@/lib/table-state';
 import type { TableOccupancy, TableCall } from '@/lib/db/orders';
+import type { TableSeating, WaiterOption } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 
 interface Props {
   tableCount: number;
   occupancy: Record<number, TableOccupancy>;
   calls: Record<number, TableCall>;
+  /** Mesas sentadas sin pedido todavía (migración 128). */
+  seatings: Record<number, TableSeating>;
+  /** A quién se le puede dar una mesa. */
+  waiters: WaiterOption[];
   currency: PanelCurrency;
   restaurantId: string;
   /** A dónde manda tomar/cobrar un pedido; null si el plan no lo incluye. */
@@ -55,7 +61,8 @@ interface Props {
 }
 
 export default function SalonBoard({
-  tableCount, occupancy, calls, currency, restaurantId, waiterHref, floorPlan, turnsToday, umbrales,
+  tableCount, occupancy, calls, seatings, waiters, currency, restaurantId,
+  waiterHref, floorPlan, turnsToday, umbrales,
 }: Props) {
   const router = useRouter();
 
@@ -112,9 +119,17 @@ export default function SalonBoard({
       : fmtMoney(n, currency, 0)
   ), [currency]);
 
+  /* `puesto: 'mando'` es lo único que se le dice distinto al lienzo respecto
+     de «Tomar pedidos», y cambia una palabra: sobre una mesa libre, aquí el
+     verbo es «Sentar» —anotar quién llegó, aunque tarden en pedir— y allá es
+     «Abrir mesa» —voy a apuntarles ya—. Todo lo demás lo deciden las mismas
+     reglas, que es lo que impide que las dos pantallas se contradigan. */
   const salon = useMemo(
-    () => buildSalonTables({ tableCount, occupancy, calls, now, floorPlan, money, moneyShort: moneyCorto, umbrales }),
-    [tableCount, occupancy, calls, now, floorPlan, money, moneyCorto, umbrales],
+    () => buildSalonTables({
+      tableCount, occupancy, calls, now, floorPlan, money, moneyShort: moneyCorto, umbrales,
+      seatings, puesto: 'mando',
+    }),
+    [tableCount, occupancy, calls, now, floorPlan, money, moneyCorto, umbrales, seatings],
   );
 
   /* «Te necesitan» cuenta las ALARMAS, no todo lo que tiene un reloj
@@ -122,8 +137,15 @@ export default function SalonBoard({
      salón normal, y un número que casi siempre es «casi todas» no es un
      número: es ruido con cifras. Lo pendiente se ve en la ficha. */
   const urgentes = useMemo(() => salon.filter((t) => t.state.level === 'alarma'), [salon]);
-  const abiertas = useMemo(() => salon.filter((t) => t.occ), [salon]);
+  /* «Mesas con gente» cuenta también las SENTADAS sin pedido (migración 128).
+     Antes solo contaba las que ya tenían comanda, así que el número mentía
+     durante los primeros minutos de cada mesa —justo cuando el encargado
+     mira la tira para saber si le queda sitio—. */
+  const abiertas = useMemo(() => salon.filter((t) => t.occ || t.seat), [salon]);
   const sinCobrar = useMemo(() => abiertas.reduce((s, t) => s + (t.occ?.total ?? 0), 0), [abiertas]);
+  /* El denominador incluye las mesas fuera de configuración: si hay gente en
+     la 25 de un salón de 20, «8 / 20» sería mentira en las dos cifras. */
+  const totalMesas = useMemo(() => Math.max(tableCount, salon.length), [tableCount, salon.length]);
 
   /* ── La mesa elegida y su cuenta ──────────────────────────── */
   const [sel, setSel] = useState<number | null>(null);
@@ -137,7 +159,10 @@ export default function SalonBoard({
   useEffect(() => {
     if (sel == null) { billFor.current = null; setBill(null); setBillError(null); return; }
     const mesa = salon.find((s) => s.n === sel);
-    if (!mesa || mesa.state.kind === 'libre') { setBill(null); setBillError(null); return; }
+    /* Sin pedidos no hay cuenta que traer: una mesa libre, y desde la
+       migración 128 también una recién sentada. Pedirla igual sería un
+       viaje al servidor para que devolviera una lista vacía. */
+    if (!mesa || !mesa.occ) { setBill(null); setBillError(null); return; }
     if (billFor.current === sel) return;
 
     billFor.current = sel;
@@ -210,6 +235,52 @@ export default function SalonBoard({
     });
   }, [restaurantId, router]);
 
+  /* ── El puesto de mando: sentar y repartir ────────────────
+     Estas cuatro no tocan pedidos, y por eso viven aquí y no en el panel
+     de mesero: son el reparto del salón. El acuse es corto porque nada de
+     esto se pierde —queda escrito en la mesa, a la vista— y porque las
+     cuatro se deshacen haciendo lo contrario. */
+  const conMesa = useCallback((n: number, fn: () => Promise<{ error?: string }>, hecho: string) => {
+    setPendiente(n);
+    startAction(async () => {
+      const res = await fn();
+      setPendiente(null);
+      setAviso({ text: res.error ?? hecho });
+      router.refresh();
+    });
+  }, [router]);
+
+  const sentar = useCallback((n: number, pax: number | null, waiterId: string | null) => {
+    const quien = waiters.find((w) => w.id === waiterId)?.name;
+    conMesa(
+      n,
+      () => seatTable(restaurantId, n, { partySize: pax, waiterId }),
+      `Mesa ${n}: sentada${pax ? ` · ${pax} personas` : ''}${quien ? ` · atiende ${quien}` : ''}.`,
+    );
+  }, [restaurantId, waiters, conMesa]);
+
+  const asignar = useCallback((n: number, waiterId: string | null) => {
+    const quien = waiters.find((w) => w.id === waiterId)?.name;
+    conMesa(
+      n,
+      () => updateSeating(restaurantId, n, { waiterId }),
+      quien ? `Mesa ${n}: la atiende ${quien}.` : `Mesa ${n}: sin mesero asignado.`,
+    );
+  }, [restaurantId, waiters, conMesa]);
+
+  const cambiarPersonas = useCallback((n: number, pax: number | null) => {
+    conMesa(
+      n,
+      () => updateSeating(restaurantId, n, { partySize: pax }),
+      pax ? `Mesa ${n}: ${pax} personas.` : `Mesa ${n}: sin contar personas.`,
+    );
+  }, [restaurantId, conMesa]);
+
+  const soltar = useCallback((n: number) => {
+    conMesa(n, () => unseatTable(restaurantId, n), `Mesa ${n}: libre otra vez.`);
+    setSel(null);
+  }, [restaurantId, conMesa]);
+
   const hacer = useCallback((t: SalonTable) => {
     switch (t.action.kind) {
       case 'llevar':
@@ -255,6 +326,16 @@ export default function SalonBoard({
       case 'revisar':
         setSel(t.n);
         return;
+      /* «Sentar» abre la mesa AQUÍ. No viaja al panel de mesero y no lo
+         necesita: anotar quién llegó es trabajo de esta pantalla, y tiene
+         que funcionar en un plan que no incluya tomar pedidos. Se abre el
+         panel en vez de sentar de un toque porque cuántos son y a quién le
+         toca se preguntan una sola vez, al sentar; después ya nadie
+         vuelve a apuntarlo. */
+      case 'sentar':
+        setSel(t.n);
+        return;
+      case 'tomar':
       case 'agregar':
       case 'abrir':
       default:
@@ -279,7 +360,10 @@ export default function SalonBoard({
   /* Sin panel de mesero solo se apagan las acciones que de verdad viajan
      allí. «Revisar» salió de la lista al dejar de ser un viaje. */
   const accionDeshabilitada = useCallback(
-    (t: SalonTable) => !waiterHref && (t.action.kind === 'cobrar' || t.action.kind === 'agregar' || t.action.kind === 'abrir'),
+    (t: SalonTable) => !waiterHref && (
+      t.action.kind === 'cobrar' || t.action.kind === 'agregar'
+      || t.action.kind === 'abrir' || t.action.kind === 'tomar'
+    ),
     [waiterHref],
   );
 
@@ -291,13 +375,25 @@ export default function SalonBoard({
     );
   }
 
+  /* «Sentados hace…» cuenta desde lo PRIMERO que pasó en la mesa: sentarse,
+     si alguien la sentó, y si no el primer pedido. Al revés diría que una
+     mesa que lleva media hora esperando la carta lleva cinco minutos.
+     El orden no se da por hecho: asignarle mesero a una mesa que ya tenía
+     pedidos abre un turno posterior a ellos. */
   const sentadosDe = (t: SalonTable) => {
-    if (!t.occ || now == null) return null;
-    return fmtMin((now - new Date(t.occ.since).getTime()) / 60000);
+    const a = t.seat?.seatedAt;
+    const b = t.occ?.since;
+    const desde = a && b ? (a < b ? a : b) : a ?? b;
+    if (!desde || now == null) return null;
+    return fmtMin((now - new Date(desde).getTime()) / 60000);
   };
 
   const panel = elegida ? (
+    /* `key` con el número: el borrador de «cuántos son» y «a quién le toca»
+       vive dentro del panel, y al saltar de una mesa a otra tiene que
+       empezar en blanco. Sin esto, sentar la 5 heredaría lo tecleado en la 4. */
     <BillPanel
+      key={elegida.n}
       t={elegida}
       data={bill}
       loading={billLoading}
@@ -305,10 +401,16 @@ export default function SalonBoard({
       money={money}
       sentados={sentadosDe(elegida)}
       canWaiter={!!waiterHref}
+      waiters={waiters}
+      busy={pendiente === elegida.n}
       onClose={() => setSel(null)}
       onCobrar={() => irAlMesero(elegida.n, 'cobrar')}
       onDividir={() => irAlMesero(elegida.n, 'dividir')}
       onAgregar={() => irAlMesero(elegida.n, 'agregar')}
+      onSentar={(pax, waiterId) => sentar(elegida.n, pax, waiterId)}
+      onAsignar={(waiterId) => asignar(elegida.n, waiterId)}
+      onPersonas={(pax) => cambiarPersonas(elegida.n, pax)}
+      onSoltar={() => soltar(elegida.n)}
     />
   ) : null;
 
@@ -318,7 +420,7 @@ export default function SalonBoard({
              que cambia al tocar el interruptor es el lienzo de abajo. ── */}
       <div className="salon-top">
         <div className="salon-summary">
-          <Celda label="Mesas con gente" value={`${abiertas.length} / ${tableCount}`} />
+          <Celda label="Mesas con gente" value={`${abiertas.length} / ${totalMesas}`} />
           <Celda label="Te necesitan" value={String(urgentes.length)} accent={urgentes.length > 0} />
           <Celda label="Sin cobrar" value={money(sinCobrar)} />
           <Celda label="Rotación hoy" value={String(turnsToday)} />

@@ -25,6 +25,7 @@ import SalonBoard from '@/components/admin/salon-board';
 import PlanLockedScreen from '@/components/admin/plan-locked-screen';
 import { Icon } from '@/components/icons';
 import { getActiveTableNumbers, getPendingTableCalls, getTableTurnsToday } from '@/lib/db/orders';
+import { getOpenTableSessions, getWaiterRoster } from '@/lib/db/table-sessions';
 import { getSalonData } from './salon-data';
 
 export const metadata = { title: 'Mesas — Panel Admin' };
@@ -54,10 +55,17 @@ export default async function MesasPage() {
     );
   }
 
-  const [occupancy, calls, turnsToday] = await Promise.all([
+  /* La ocupación del salón son DOS cosas desde la migración 128: las mesas
+     con pedido vivo (como siempre) y las que alguien sentó y todavía no han
+     pedido. Van en el mismo `Promise.all` porque la pantalla no puede
+     pintarse a medias: sin las sentadas, «Mesas con gente» mentiría durante
+     los primeros minutos de cada mesa. */
+  const [occupancy, calls, turnsToday, seatings, waiters] = await Promise.all([
     getActiveTableNumbers(restaurantId),
     getPendingTableCalls(restaurantId),
     getTableTurnsToday(restaurantId, timezone),
+    getOpenTableSessions(restaurantId),
+    getWaiterRoster(restaurantId),
   ]);
 
   return (
@@ -66,6 +74,8 @@ export default async function MesasPage() {
         tableCount={config.dineInTableCount}
         occupancy={occupancy}
         calls={calls}
+        seatings={seatings}
+        waiters={waiters}
         restaurantId={restaurantId}
         turnsToday={turnsToday}
         floorPlan={config.floorPlan ?? null}

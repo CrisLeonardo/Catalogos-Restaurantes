@@ -17,6 +17,7 @@
  */
 import type { OrderStatus } from '@/types';
 import type { TableOccupancy, TableCall } from '@/lib/db/orders';
+import type { TableSeating } from '@/lib/db/table-sessions';
 
 export type TableStateKind = 'libre' | 'abierta' | 'atencion';
 
@@ -42,6 +43,7 @@ export type TableReason =
   | 'cuenta'        // el comensal pidió la cuenta desde el menú
   | 'llamada'       // el comensal llamó al mesero
   | 'lista'         // hay comida lista sin que nadie la lleve
+  | 'sin-pedir'     // se sentaron y nadie les ha tomado el pedido
   | 'sin-cobrar'    // la mesa ya comió y nadie la cerró
   | 'sin-aceptar'   // el pedido lleva rato sin que cocina lo acepte
   | 'abandonada';   // lleva más de un día abierta
@@ -80,6 +82,10 @@ export interface TableState {
 export const READY_ALERT_MIN = 8;
 export const UNPAID_ALERT_MIN = 15;
 export const UNACCEPTED_ALERT_MIN = 5;
+/** Minutos sentados sin que nadie les tome el pedido (migración 128).
+    Es el reloj que un local pierde sin darse cuenta: la mesa está ocupada,
+    la cocina está parada y el cliente lleva ocho minutos con la carta. */
+export const SEATED_ALERT_MIN = 7;
 /** Más de esto abierta y no es una mesa: es un pedido olvidado. */
 export const ABANDONED_HOURS = 24;
 
@@ -90,24 +96,33 @@ export interface SalonUmbrales {
   unpaidMin: number;
   /** Minutos con la comanda sin que cocina la acepte. */
   unacceptedMin: number;
+  /** Minutos sentados sin pedido. Opcional mientras Ajustes › Pedidos no lo
+      exponga: los otros tres sí se configuran, este todavía no. */
+  seatedMin?: number;
 }
 
 export const UMBRALES_SALON: SalonUmbrales = {
   readyMin: READY_ALERT_MIN,
   unpaidMin: UNPAID_ALERT_MIN,
   unacceptedMin: UNACCEPTED_ALERT_MIN,
+  seatedMin: SEATED_ALERT_MIN,
 };
 
 /** Pasado el doble del umbral, el pendiente deja de esperar y grita. */
 export const ALARMA_FACTOR = 2;
 
+/* «Sin pedir» va detrás de la mano levantada y DELANTE de «sin aceptar»:
+   en las dos hay alguien esperando y nada moviéndose, pero una comanda que
+   cocina no ha confirmado ya está dentro del sistema, y una mesa sin pedido
+   es una persona sentada con la carta en la mano y la cocina parada. */
 const PRIORITY: Record<TableReason, number> = {
   cuenta: 0,
   lista: 1,
   llamada: 2,
-  'sin-aceptar': 3,
-  'sin-cobrar': 4,
-  abandonada: 5,
+  'sin-pedir': 3,
+  'sin-aceptar': 4,
+  'sin-cobrar': 5,
+  abandonada: 6,
 };
 
 /** La abreviatura de cada motivo. "Cuenta" y "Lista" son las que el mesero
@@ -117,6 +132,7 @@ const SHORT: Record<TableReason, string> = {
   cuenta: 'Cuenta',
   lista: 'Lista',
   llamada: 'Te llaman',
+  'sin-pedir': 'Sin pedir',
   'sin-aceptar': 'Sin aceptar',
   'sin-cobrar': 'Sin cobrar',
   abandonada: 'Abandonada',
@@ -222,8 +238,22 @@ export function tableState(
   callRaw: TableCall | undefined,
   now: number | null,
   umbrales: SalonUmbrales = UMBRALES_SALON,
+  seat?: TableSeating | undefined,
 ): TableState {
-  if (!occ) return LIBRE;
+  if (!occ && !seat) return LIBRE;
+
+  /* DESDE CUÁNDO está ocupada la mesa.
+     ------------------------------------------------------------
+     Hasta la migración 128 solo había una respuesta posible: el pedido
+     más antiguo. Ahora una mesa puede estar ocupada ANTES de pedir, y
+     entonces el reloj de la mesa empieza al sentarse — que además es la
+     verdad que el comensal vive: lleva veinte minutos aquí, no cinco.
+
+     Esto también arregla, de paso, un caso que se descartaba mal: una
+     llamada hecha entre sentarse y pedir quedaba fuera por `call1`, que
+     la comparaba contra la hora del PEDIDO. Ahora se compara contra la
+     hora de sentarse, que es cuando esta gente llegó. */
+  const desde = seat && (!occ || seat.seatedAt < occ.since) ? seat.seatedAt : occ!.since;
 
   /* Una llamada ANTERIOR a que se abriera la mesa es de la gente que se
      sentó antes: se fueron, la mesa se liberó y nadie resolvió el aviso.
@@ -231,10 +261,10 @@ export function tableState(
      pasada secuestra una mesa que acaba de sentarse — visto tal cual en
      el entorno local: «Pidió la cuenta · 145 h 53 min» en una mesa de
      diecisiete minutos. El aviso muere con la mesa que lo pidió. */
-  const call = call1(callRaw, occ.since);
+  const call = call1(callRaw, desde);
 
   const abierta = (label: string, short = label): TableState => ({
-    kind: 'abierta', reason: null, level: null, label, short, since: occ.since, priority: 50,
+    kind: 'abierta', reason: null, level: null, label, short, since: desde, priority: 50,
   });
   /** `level` va explícito en cada llamada: es la decisión de si esto grita. */
   const atencion = (
@@ -247,6 +277,47 @@ export function tableState(
     min >= umbral * ALARMA_FACTOR ? 'alarma' : 'aviso'
   );
 
+  /* ── Sentada, y todavía sin pedir (migración 128) ─────────────
+     La mesa está ocupada y no hay nada que cocinar: no hay estado de
+     pedido ni etapa de comida que enseñar. Lo único que corre es el
+     reloj de que alguien vaya a tomarles la orden — que es justo el
+     minuto que un local pierde sin enterarse.
+
+     Va aquí, antes de tocar `occ`, porque a partir de esta línea el
+     resto de la función da por hecho que hay pedido. */
+  if (!occ) {
+    const sentados = seat!;
+    if (call) {
+      /* Sin pedido no hay nada que cobrar, así que «pidió la cuenta» no
+         se puede leer como tal: mandaría al mesero a cobrar una mesa
+         vacía. Cualquier botón del QR se lee como lo único que es
+         seguro —hay alguien esperándote— y la acción es atender. */
+      const m = now == null ? null : minutosDesde(call.since, now);
+      return atencion(
+        'llamada', 'alarma',
+        m == null ? 'Te llamaron' : `Te llamaron · ${fmtMin(m)}`, call.since,
+      );
+    }
+
+    const pax = sentados.partySize;
+    const quien = pax == null ? 'Sentada' : pax === 1 ? '1 persona' : `${pax} personas`;
+    if (now == null) return abierta(quien, 'Sentada');
+
+    const min = minutosDesde(sentados.seatedAt, now) ?? 0;
+    // Sentada de ayer: igual que un pedido olvidado, es basura que archivar.
+    if (min >= ABANDONED_HOURS * 60) {
+      return atencion('abandonada', 'aviso', `Sentada hace ${fmtMin(min)}`, sentados.seatedAt);
+    }
+    const umbralSentada = umbrales.seatedMin ?? SEATED_ALERT_MIN;
+    if (min >= umbralSentada) {
+      return atencion(
+        'sin-pedir', porReloj(min, umbralSentada),
+        `Sin pedir hace ${fmtMin(min)}`, sentados.seatedAt,
+      );
+    }
+    return abierta(`${quien} · ${fmtMin(min)}`, 'Sentada');
+  }
+
   const platos = occ.itemCount === 1 ? '1 plato' : `${occ.itemCount} platos`;
 
   // Sin reloj todavía (primer render del servidor): se muestra lo que no
@@ -257,7 +328,18 @@ export function tableState(
     return abierta(platos);
   }
 
-  const abiertaMin = minutosDesde(occ.since, now) ?? 0;
+  /* DOS relojes, y confundirlos inventa avisos.
+     ------------------------------------------------------------
+     `ocupadaMin` es lo que lleva la MESA con gente —desde que la sentaron,
+     si alguien la sentó—, y es lo que se dice en la ficha y lo que decide
+     si está abandonada.
+
+     `comandaMin` es lo que lleva el PEDIDO, y solo sirve para «cocina no ha
+     visto la comanda». Tienen que ser distintos: una mesa sentada hace
+     media hora que acaba de pedir NO lleva media hora esperando a cocina, y
+     con un solo reloj saldría en aviso desde el primer segundo. */
+  const ocupadaMin = minutosDesde(desde, now) ?? 0;
+  const comandaMin = minutosDesde(occ.since, now) ?? 0;
 
   // 1. Lo que el comensal pidió explícitamente manda sobre cualquier reloj, y
   //    es alarma desde el primer segundo: no hay umbral que discutir cuando
@@ -277,8 +359,8 @@ export function tableState(
   //    basura que hay que archivar, y así se llama. (Lo pide menos que lo
   //    demás; de eso se encarga PRIORITY, no el orden de estas comprobaciones.)
   //    Nunca es alarma: lleva un día ahí, un minuto más no cambia nada.
-  if (abiertaMin >= ABANDONED_HOURS * 60) {
-    return atencion('abandonada', 'aviso', `Abierta hace ${fmtMin(abiertaMin)}`, occ.since);
+  if (ocupadaMin >= ABANDONED_HOURS * 60) {
+    return atencion('abandonada', 'aviso', `Abierta hace ${fmtMin(ocupadaMin)}`, desde);
   }
 
   // 3. Comida lista que nadie ha llevado: se enfría mientras tanto.
@@ -293,10 +375,10 @@ export function tableState(
   }
 
   // 4. Cocina que no ha visto la comanda.
-  if (occ.status === 'NEW' && abiertaMin >= umbrales.unacceptedMin) {
+  if (occ.status === 'NEW' && comandaMin >= umbrales.unacceptedMin) {
     return atencion(
-      'sin-aceptar', porReloj(abiertaMin, umbrales.unacceptedMin),
-      `Sin aceptar hace ${fmtMin(abiertaMin)}`, occ.since,
+      'sin-aceptar', porReloj(comandaMin, umbrales.unacceptedMin),
+      `Sin aceptar hace ${fmtMin(comandaMin)}`, occ.since,
     );
   }
 
@@ -309,13 +391,19 @@ export function tableState(
     );
   }
 
-  // 6. Nada urgente: la mesa cuenta qué está pasando, sin color.
+  /* 6. Nada urgente: la mesa cuenta qué está pasando, sin color.
+
+     Cada frase con SU reloj. «3 platos · 25 min» habla de la MESA —cuánto
+     lleva la gente aquí, contando desde que se sentó—, mientras que «Sin
+     aceptar», «Lista» o «Servida» hablan del PEDIDO y llevan el suyo. Con
+     un solo reloj, una mesa sentada hace media hora que acaba de pedir
+     decía «Sin aceptar · 30 min» y mandaba a alguien a reclamarle a cocina
+     una comanda que le acababa de entrar. */
   const estado = STATUS_LABEL[occ.status];
-  const tiempo = fmtMin(abiertaMin);
-  const corto = fmtMinShort(abiertaMin);
-  if (occ.status === 'SERVED') return abierta(`Servida · ${tiempo}`, `Servida ${corto}`);
-  if (estado && occ.status !== 'PREP') return abierta(`${estado} · ${tiempo}`, corto);
-  return abierta(`${platos} · ${tiempo}`, corto);
+  if (estado && occ.status !== 'PREP') {
+    return abierta(`${estado} · ${fmtMin(comandaMin)}`, `${estado} ${fmtMinShort(comandaMin)}`);
+  }
+  return abierta(`${platos} · ${fmtMin(ocupadaMin)}`, fmtMinShort(ocupadaMin));
 }
 
 /** Todas las mesas del salón, ya resueltas y ordenadas por urgencia. */
@@ -323,19 +411,55 @@ export interface TableWithState {
   n: number;
   state: TableState;
   occ: TableOccupancy | undefined;
+  /** El turno abierto de la mesa, si alguien la sentó (migración 128). */
+  seat: TableSeating | undefined;
+  /** Tiene gente y su número se sale de las mesas configuradas: existe de
+      verdad, pero el salón no la tiene dada de alta. Ver M-03. */
+  fuera: boolean;
 }
 
+/**
+ * El salón entero, mesa por mesa.
+ *
+ * **Por qué esto no es un simple `for (n = 1; n <= tableCount)`** (M-03):
+ * hasta la auditoría lo era, y cualquier mesa con número mayor que
+ * `tableCount` se descartaba en silencio. Pasa más de lo que parece —el
+ * dueño baja el número de mesas en Ajustes › Salón después del servicio,
+ * o un QR viejo mete un pedido en la 25 de un salón de 20— y el resultado
+ * era que el pedido **desaparecía del salón y del total «Sin cobrar»**,
+ * mientras seguía vivo en la base. Reproducido: Q144.10 fuera de la vista
+ * del dueño.
+ *
+ * Ahora esas mesas se dibujan igual, marcadas `fuera`. Se añaden UNA A UNA
+ * y no rellenando el hueco hasta el máximo: un pedido en la 25 de un salón
+ * de 20 significa que existe la 25, no que existan la 21, 22, 23 y 24.
+ */
 export function tablesWithState(
   tableCount: number,
   occupancy: Record<number, TableOccupancy>,
   calls: Record<number, TableCall>,
   now: number | null,
   umbrales: SalonUmbrales = UMBRALES_SALON,
+  seatings: Record<number, TableSeating> = {},
 ): TableWithState[] {
+  const una = (n: number, fuera: boolean): TableWithState => ({
+    n,
+    state: tableState(occupancy[n], calls[n], now, umbrales, seatings[n]),
+    occ: occupancy[n],
+    seat: seatings[n],
+    fuera,
+  });
+
   const out: TableWithState[] = [];
-  for (let n = 1; n <= tableCount; n++) {
-    out.push({ n, state: tableState(occupancy[n], calls[n], now, umbrales), occ: occupancy[n] });
+  for (let n = 1; n <= tableCount; n++) out.push(una(n, false));
+
+  const desbordadas = new Set<number>();
+  for (const clave of [...Object.keys(occupancy), ...Object.keys(seatings)]) {
+    const n = Number(clave);
+    if (Number.isFinite(n) && n > tableCount) desbordadas.add(n);
   }
+  for (const n of [...desbordadas].sort((a, b) => a - b)) out.push(una(n, true));
+
   return out;
 }
 
@@ -395,8 +519,20 @@ const LIBRE_STAGE: TableStage = { index: -1, label: 'Sin abrir', since: null };
  * sin que nadie la cierre). Por eso necesita el estado resuelto y no le
  * basta con `occ.status`.
  */
-export function tableStage(occ: TableOccupancy | undefined, state: TableState): TableStage {
-  if (!occ) return LIBRE_STAGE;
+export function tableStage(
+  occ: TableOccupancy | undefined,
+  state: TableState,
+  seat?: TableSeating | undefined,
+): TableStage {
+  /* Sentada sin pedido: la comida no ha empezado, así que ninguno de los
+     cuatro tramos está en marcha —y decir que sí lo está sería la misma
+     mentira que arreglamos en M-27—. Se queda en -1, como la mesa libre,
+     pero con nombre propio y con reloj: lo que corre no es la comida, es
+     el rato que llevan esperando a que alguien les tome la orden. */
+  if (!occ) {
+    if (seat) return { index: -1, label: 'Sentada', since: seat.seatedAt };
+    return LIBRE_STAGE;
+  }
 
   const esperandoCuenta = state.reason === 'cuenta' || state.reason === 'sin-cobrar';
 
@@ -417,25 +553,60 @@ export function tableStage(occ: TableOccupancy | undefined, state: TableState): 
    ofrece lo que toca hacer AHORA. El verbo sale del motivo, no del
    estado del pedido, porque es el motivo el que dice qué está
    esperando alguien. */
-export type TableActionKind = 'cobrar' | 'llevar' | 'atender' | 'agregar' | 'abrir' | 'revisar';
+export type TableActionKind =
+  | 'cobrar' | 'llevar' | 'atender' | 'agregar' | 'abrir' | 'revisar'
+  | 'sentar'   // apuntar quién llegó, sin tomarle el pedido todavía
+  | 'tomar';   // ya están sentados: ir a tomarles la orden
 
 export interface TableAction {
   kind: TableActionKind;
   label: string;
 }
 
+/**
+ * Desde qué puesto se mira el salón.
+ *
+ * Es la respuesta a «¿por qué son dos pantallas?». Las dos dibujan el mismo
+ * local con las mismas reglas —eso no se toca, es lo que impide que cuenten
+ * historias distintas—, pero no hacen el mismo trabajo:
+ *
+ *   · `mando`    — Mesas. Reparte el salón: sienta, asigna, vigila tiempos.
+ *   · `servicio` — Tomar pedidos. Atiende: apunta, lleva, cobra.
+ *
+ * Sobre una mesa libre eso es la diferencia entre «Sentar» (anoto que llegó
+ * gente, aunque no pidan en diez minutos) y «Abrir mesa» (voy a apuntarles
+ * ya). Antes las dos decían «Abrir mesa», y por eso parecían lo mismo.
+ */
+export type SalonPuesto = 'mando' | 'servicio';
+
 const ACTION_BY_REASON: Record<TableReason, TableAction> = {
   cuenta: { kind: 'cobrar', label: 'Cobrar' },
   lista: { kind: 'llevar', label: 'Llevar a la mesa' },
   llamada: { kind: 'atender', label: 'Atender' },
+  'sin-pedir': { kind: 'tomar', label: 'Tomar el pedido' },
   'sin-cobrar': { kind: 'cobrar', label: 'Cobrar' },
   'sin-aceptar': { kind: 'revisar', label: 'Ver la comanda' },
   abandonada: { kind: 'revisar', label: 'Revisar la mesa' },
 };
 
-export function tableAction(state: TableState): TableAction {
-  if (state.kind === 'libre') return { kind: 'abrir', label: 'Abrir mesa' };
+export function tableAction(
+  state: TableState,
+  opts: {
+    /** La mesa está ocupada pero todavía no tiene ni un plato apuntado. */
+    sinPedido?: boolean;
+    puesto?: SalonPuesto;
+  } = {},
+): TableAction {
+  const { sinPedido = false, puesto = 'servicio' } = opts;
+  if (state.kind === 'libre') {
+    return puesto === 'mando'
+      ? { kind: 'sentar', label: 'Sentar' }
+      : { kind: 'abrir', label: 'Abrir mesa' };
+  }
   if (state.kind === 'atencion' && state.reason) return ACTION_BY_REASON[state.reason];
+  // Sentados y sin pedir, pero sin pasarse del reloj: el verbo sigue siendo
+  // tomarles la orden, no «agregar platillos» a una comanda que no existe.
+  if (sinPedido) return { kind: 'tomar', label: 'Tomar el pedido' };
   return { kind: 'agregar', label: 'Agregar platillos' };
 }
 

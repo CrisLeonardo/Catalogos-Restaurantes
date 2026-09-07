@@ -16,8 +16,10 @@ import { Icon } from '@/components/icons';
 import {
   byUrgency, fmtMin, tableAction, tableStage, tablesWithState, tableTone,
   type TableState, type TableStage, type TableAction, type SalonUmbrales,
+  type SalonPuesto,
 } from '@/lib/table-state';
 import type { TableCall, TableOccupancy } from '@/lib/db/orders';
+import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { OrderStatus } from '@/types';
 
@@ -27,6 +29,15 @@ export interface SalonTable {
   state: TableState;
   stage: TableStage;
   occ: TableOccupancy | undefined;
+  /** El turno abierto, si alguien la sentó (migración 128). Una mesa puede
+      tener `seat` sin `occ`: sentados y sin pedir todavía. */
+  seat: TableSeating | undefined;
+  /** Tiene gente y su número se sale de las mesas configuradas (M-03). */
+  fuera: boolean;
+  /** Quién atiende: el mesero al que se le asignó la mesa y, si no hay,
+      el que apuntó el primer plato. `null` = de nadie todavía. */
+  waiterName: string | null;
+  waiterId: string | null;
   action: TableAction;
   /** Ya formateado por quien pinta (símbolo y separadores del país). */
   total: string | null;
@@ -65,6 +76,12 @@ export interface BuildSalonInput {
   moneyShort: (n: number) => string;
   /** Los relojes del salón de ESTE restaurante. Sin ellos, los de fábrica. */
   umbrales?: SalonUmbrales;
+  /** Mesas sentadas sin pedido (migración 128). Sin esto, una mesa recién
+      sentada es invisible hasta que alguien apunta el primer plato. */
+  seatings?: Record<number, TableSeating>;
+  /** Desde qué puesto se mira: cambia el verbo de la mesa libre, y solo eso.
+      Ver `SalonPuesto` en lib/table-state.ts. */
+  puesto?: SalonPuesto;
 }
 
 /**
@@ -73,7 +90,10 @@ export interface BuildSalonInput {
  * Dentro de cada grupo manda el número.
  */
 export function buildSalonTables(input: BuildSalonInput): SalonTable[] {
-  const { tableCount, occupancy, calls, now, floorPlan, money, moneyShort, umbrales } = input;
+  const {
+    tableCount, occupancy, calls, now, floorPlan, money, moneyShort, umbrales,
+    seatings = {}, puesto = 'servicio',
+  } = input;
 
   const sillas: Record<number, number> = {};
   const nombres: Record<number, string> = {};
@@ -83,19 +103,32 @@ export function buildSalonTables(input: BuildSalonInput): SalonTable[] {
     if (nombre) nombres[t.n] = nombre;
   }
 
-  const base = tablesWithState(tableCount, occupancy, calls, now, umbrales);
+  const base = tablesWithState(tableCount, occupancy, calls, now, umbrales, seatings);
 
   return byUrgency(base).map((t) => {
-    const stage = tableStage(t.occ, t.state);
-    // Con gente, las personas que hay; libre, las sillas que tiene.
-    const pax = t.occ?.partySize ?? (t.occ ? null : sillas[t.n] ?? null);
+    const stage = tableStage(t.occ, t.state, t.seat);
+    const ocupada = Boolean(t.occ || t.seat);
+    /* Con gente, las personas que hay; libre, las sillas que tiene.
+       Entre lo que anotó quien la sentó y lo que anotó quien tomó el pedido
+       manda el número MAYOR, por el mismo criterio con que se juntan dos
+       comandas de la misma mesa: si la segunda se apuntó sin preguntar, no
+       por eso se sentó menos gente. */
+    const pax = ocupada
+      ? Math.max(t.occ?.partySize ?? 0, t.seat?.partySize ?? 0) || null
+      : sillas[t.n] ?? null;
     const desde = stage.since ? new Date(stage.since).getTime() : NaN;
     return {
       n: t.n,
       state: t.state,
       stage,
       occ: t.occ,
-      action: tableAction(t.state),
+      seat: t.seat,
+      fuera: t.fuera,
+      // El asignado manda sobre el que apuntó: repartir el salón es una
+      // decisión, quedarse la mesa por apuntar primero es una casualidad.
+      waiterName: t.seat?.waiterName ?? t.occ?.waiterName ?? null,
+      waiterId: t.seat?.waiterId ?? null,
+      action: tableAction(t.state, { sinPedido: !t.occ, puesto }),
       total: t.occ ? money(t.occ.total) : null,
       totalCorto: t.occ ? moneyShort(t.occ.total) : null,
       pax: pax != null ? `${pax} pers` : null,
@@ -230,7 +263,10 @@ export function TableCard({
         className="press salon-card salon-hueco"
         data-kind="libre"
         data-tone="libre"
-        aria-label={`Mesa ${t.n}, libre. Tocar para abrirla`}
+        /* El verbo sale de la acción y no de una frase fija: en Mesas la
+           mesa libre se SIENTA y en Tomar pedidos se ABRE, y quien navega
+           con lector de pantalla tiene que oír lo mismo que el resto lee. */
+        aria-label={`Mesa ${t.n}, libre. ${t.action.label}`}
       >
         <span className="t-mono" style={num(24)}>{t.n}</span>
         {t.nombre && <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)' }}>{t.nombre}</span>}
@@ -270,6 +306,7 @@ export function TableCard({
                   </span>
                 )}
                 {t.pax && <span style={{ fontSize: 12, color: 'var(--u-text-4)', flexShrink: 0 }}>{t.pax}</span>}
+                {t.fuera && <FueraChip />}
               </span>
               <span style={{ display: 'block', fontSize: 12.5, marginTop: 5, fontWeight: 600, color: estadoInk(t) }}>
                 {estadoDeFicha(t)}
@@ -296,7 +333,7 @@ export function TableCard({
           <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--u-text-3)' }}>
             <Icon name="user" size={13} style={{ flexShrink: 0 }} />
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {t.occ?.waiterName ?? 'Sin asignar'}
+              {t.waiterName ?? 'Sin asignar'}
             </span>
           </span>
         </span>
@@ -308,7 +345,7 @@ export function TableCard({
               {estadoDeFicha(t)}
             </span>
             <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
-              {[t.nombre, t.pax, t.occ?.waiterName ?? 'Sin asignar', t.tiempo].filter(Boolean).join(' · ')}
+              {[t.fuera && 'Sin configurar', t.nombre, t.pax, t.waiterName ?? 'Sin asignar', t.tiempo].filter(Boolean).join(' · ')}
             </span>
           </span>
           <span
@@ -333,6 +370,28 @@ export function TableCard({
         {busy ? 'Un momento…' : t.action.label}
       </button>
     </div>
+  );
+}
+
+/* ── La mesa que el salón no tiene dada de alta ────────────────
+   Tiene gente y su número se sale de `dineInTableCount`: pasa cuando el
+   dueño baja el número de mesas después del servicio, o cuando un QR
+   viejo mete un pedido en la 25 de un salón de 20. Antes desaparecía en
+   silencio del salón y del total «Sin cobrar», con el dinero encima
+   (M-03). Ahora se dibuja, y se dice por qué llama la atención. */
+function FueraChip() {
+  return (
+    <span
+      title="Esta mesa no está en las mesas configuradas del salón"
+      style={{
+        flexShrink: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.02em',
+        padding: '1px 6px', borderRadius: 6, textTransform: 'uppercase',
+        color: 'var(--c-warn)',
+        background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)',
+      }}
+    >
+      Sin configurar
+    </span>
   );
 }
 
@@ -390,7 +449,7 @@ export function TableRow({
               contar: ya lo dijo la palabra «Libre» de arriba. */}
           {!libre && (
             <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-              {[t.nombre, t.pax, t.occ?.waiterName ?? 'Sin asignar', t.tiempo && `${t.stage.label} · ${t.tiempo}`]
+              {[t.fuera && 'Sin configurar', t.nombre, t.pax, t.waiterName ?? 'Sin asignar', t.tiempo && `${t.stage.label} · ${t.tiempo}`]
                 .filter(Boolean).join(' · ')}
             </span>
           )}
@@ -495,7 +554,7 @@ export function TablePin({
       {/* En una mesa libre tampoco hay mesero que nombrar. */}
       {!libre && (
         <span style={{ fontSize: 10.5, color: 'var(--u-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {t.occ?.waiterName ?? 'Sin asignar'}
+          {t.waiterName ?? 'Sin asignar'}
         </span>
       )}
     </button>

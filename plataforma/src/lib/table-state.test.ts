@@ -3,9 +3,11 @@ import {
   tableState, tablesWithState, needsAttention, fmtMin, fmtMinShort,
   tableStage, tableAction, byUrgency,
   READY_ALERT_MIN, UNPAID_ALERT_MIN, UNACCEPTED_ALERT_MIN, ABANDONED_HOURS,
+  SEATED_ALERT_MIN,
   type TableState,
 } from './table-state';
 import type { TableOccupancy, TableCall } from './db/orders';
+import type { TableSeating } from './db/table-sessions';
 
 const NOW = new Date('2026-08-25T13:00:00Z').getTime();
 
@@ -356,5 +358,161 @@ describe('byUrgency — el salón se ordena por lo que pide, no por número', ()
     const orden = byUrgency(salon());
     expect(orden).toHaveLength(6);
     expect(new Set(orden.map((t) => t.n)).size).toBe(6);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   SENTAR LA MESA (migración 128 · M-02, M-03, M-05)
+   ------------------------------------------------------------
+   El caso que no existía: una mesa OCUPADA SIN PEDIDO. Todo lo de
+   abajo es la diferencia entre «hay cuatro personas en la 7 desde
+   hace seis minutos» y «la 7 está libre».
+   ════════════════════════════════════════════════════════════ */
+
+function sentada(over: Partial<TableSeating> = {}): TableSeating {
+  return {
+    id: 's1',
+    partySize: 4,
+    waiterId: null,
+    waiterName: null,
+    seatedByName: 'Ana',
+    seatedAt: haceMin(3),
+    source: 'walk_in',
+    note: null,
+    ...over,
+  };
+}
+
+describe('mesa sentada sin pedido', () => {
+  it('ocupa la mesa aunque no haya ni un plato', () => {
+    const s = tableState(undefined, undefined, NOW, undefined, sentada());
+    expect(s.kind).toBe('abierta');
+    expect(s.label).toBe('4 personas · 3 min');
+    // En una ficha de 95 px no cabe la frase entera.
+    expect(s.short).toBe('Sentada');
+  });
+
+  it('sin contar personas dice «Sentada», no «0 personas»', () => {
+    const s = tableState(undefined, undefined, NOW, undefined, sentada({ partySize: null }));
+    expect(s.label).toBe('Sentada · 3 min');
+  });
+
+  it('pasado el umbral pide que alguien vaya a tomarles el pedido', () => {
+    const s = tableState(undefined, undefined, NOW, undefined, sentada({ seatedAt: haceMin(SEATED_ALERT_MIN + 1) }));
+    expect(s.kind).toBe('atencion');
+    expect(s.reason).toBe('sin-pedir');
+    expect(s.level).toBe('aviso');
+  });
+
+  it('al doble del umbral deja de esperar y grita', () => {
+    const s = tableState(undefined, undefined, NOW, undefined, sentada({ seatedAt: haceMin(SEATED_ALERT_MIN * 2) }));
+    expect(s.level).toBe('alarma');
+  });
+
+  it('«sin pedir» apura más que «sin aceptar»: hay alguien esperando con la carta', () => {
+    const orden = needsAttention(tablesWithState(
+      6,
+      { 2: ocupada({ status: 'NEW', since: haceMin(UNACCEPTED_ALERT_MIN + 1) }) },
+      {},
+      NOW,
+      undefined,
+      { 5: sentada({ seatedAt: haceMin(SEATED_ALERT_MIN + 1) }) },
+    ));
+    expect(orden.map((t) => t.n)).toEqual([5, 2]);
+  });
+
+  it('sin pedido, cualquier botón del QR se lee como «te llamaron»', () => {
+    // «Pidió la cuenta» mandaría al mesero a cobrar una mesa sin consumo.
+    const s = tableState(undefined, { reason: 'bill', since: haceMin(1) }, NOW, undefined, sentada());
+    expect(s.reason).toBe('llamada');
+  });
+
+  it('el reloj de la mesa empieza al SENTARSE, no al pedir', () => {
+    const s = tableState(ocupada({ since: haceMin(5) }), undefined, NOW, undefined, sentada({ seatedAt: haceMin(25) }));
+    expect(s.label).toBe('3 platos · 25 min');
+  });
+
+  it('sentarse hace rato NO cuenta como comanda parada en cocina', () => {
+    /* El reloj de la mesa y el de la comanda son dos. Con uno solo, una mesa
+       sentada hace media hora que acaba de pedir salía «sin aceptar» desde
+       el primer segundo: un aviso falso en cada mesa del salón. */
+    const s = tableState(
+      ocupada({ status: 'NEW', since: haceMin(1) }),
+      undefined, NOW, undefined,
+      sentada({ seatedAt: haceMin(30) }),
+    );
+    expect(s.kind).toBe('abierta');
+    // Y el minuto que se dice es el de la comanda, que es de lo que habla
+    // la frase — no el de la mesa.
+    expect(s.label).toBe('Sin aceptar · 1 min');
+  });
+
+  it('una llamada hecha entre sentarse y pedir SÍ es de esta gente', () => {
+    // Antes se comparaba contra la hora del pedido y se descartaba.
+    const s = tableState(
+      ocupada({ since: haceMin(5) }),
+      { reason: 'call', since: haceMin(15) },
+      NOW, undefined,
+      sentada({ seatedAt: haceMin(25) }),
+    );
+    expect(s.reason).toBe('llamada');
+  });
+
+  it('la comida no ha empezado: ningún tramo de la barra está en marcha', () => {
+    const seat = sentada();
+    const s = tableState(undefined, undefined, NOW, undefined, seat);
+    const stage = tableStage(undefined, s, seat);
+    expect(stage.index).toBe(-1);
+    expect(stage.label).toBe('Sentada');
+    expect(stage.since).toBe(seat.seatedAt);
+  });
+});
+
+describe('el verbo depende del puesto', () => {
+  it('en el puesto de mando una mesa libre se SIENTA', () => {
+    const libre = tableState(undefined, undefined, NOW);
+    expect(tableAction(libre, { puesto: 'mando' })).toEqual({ kind: 'sentar', label: 'Sentar' });
+  });
+
+  it('en servicio se ABRE: el mesero va a apuntarles ya', () => {
+    const libre = tableState(undefined, undefined, NOW);
+    expect(tableAction(libre, { puesto: 'servicio' }).kind).toBe('abrir');
+    // Sin decir nada, servicio: es como se llamaba antes de la 128.
+    expect(tableAction(libre).kind).toBe('abrir');
+  });
+
+  it('sentados y sin comanda, el verbo es tomarles el pedido', () => {
+    const s = tableState(undefined, undefined, NOW, undefined, sentada());
+    expect(tableAction(s, { sinPedido: true })).toEqual({ kind: 'tomar', label: 'Tomar el pedido' });
+  });
+
+  it('con comanda vuelve a ser agregar', () => {
+    expect(tableAction(tableState(ocupada(), undefined, NOW), { sinPedido: false }).kind).toBe('agregar');
+  });
+});
+
+describe('mesa fuera de las configuradas (M-03)', () => {
+  it('una mesa con dinero encima NO desaparece por salirse del número', () => {
+    const t = tablesWithState(20, { 25: ocupada({ total: 144.1 }) }, {}, NOW);
+    const veinticinco = t.find((x) => x.n === 25);
+    expect(veinticinco).toBeDefined();
+    expect(veinticinco!.fuera).toBe(true);
+    expect(veinticinco!.state.kind).toBe('abierta');
+  });
+
+  it('no se inventa el hueco: la 25 no trae consigo la 21, 22, 23 y 24', () => {
+    const t = tablesWithState(20, { 25: ocupada() }, {}, NOW);
+    expect(t).toHaveLength(21);
+    expect(t.map((x) => x.n).filter((n) => n > 20)).toEqual([25]);
+  });
+
+  it('una mesa sentada fuera de rango también se ve', () => {
+    const t = tablesWithState(4, {}, {}, NOW, undefined, { 9: sentada() });
+    expect(t.find((x) => x.n === 9)?.fuera).toBe(true);
+  });
+
+  it('las de dentro del número no se marcan', () => {
+    const t = tablesWithState(20, { 7: ocupada() }, {}, NOW);
+    expect(t.every((x) => !x.fuera)).toBe(true);
   });
 });

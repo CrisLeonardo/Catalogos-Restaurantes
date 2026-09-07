@@ -3,6 +3,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { resolveModuleContext } from '@/lib/modules-server';
 import { can } from '@/lib/permissions';
 import { getActiveWaitlist, getRecentWaitlist, getWaitlistSummary } from '@/lib/db/waitlist';
+import { getFreeTableNumbers } from '@/lib/db/table-sessions';
 import WaitlistPanel from '@/components/admin/waitlist-panel';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -19,15 +20,18 @@ export default async function AdminListaEsperaPage() {
   const mc = await resolveModuleContext('lista_espera');
   if (!mc.ok) redirect(await panelLink('/admin/modulos'));
 
-  const [entries, recent, summary] = await Promise.all([
+  const [entries, recent, summary, freeTables] = await Promise.all([
     getActiveWaitlist(mc.restaurantId),
     getRecentWaitlist(mc.restaurantId),
     getWaitlistSummary(mc.restaurantId),
+    /* Dónde se puede sentar a quien lleva media hora esperando (M-04).
+       Hasta la migración 128 esta pantalla no tenía forma de decirlo. */
+    getFreeTableNumbers(mc.restaurantId),
   ]);
 
   return (
     <div className="anim-fade-up">
-      <WaitlistPanel restaurantId={mc.restaurantId} entries={entries} recent={recent} summary={summary} />
+      <WaitlistPanel restaurantId={mc.restaurantId} entries={entries} recent={recent} summary={summary} freeTables={freeTables} />
     </div>
   );
 }

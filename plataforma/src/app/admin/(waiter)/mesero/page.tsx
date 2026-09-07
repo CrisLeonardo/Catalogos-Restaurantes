@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers, getPendingTableCalls } from '@/lib/db/orders';
+import { getOpenTableSessions } from '@/lib/db/table-sessions';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
@@ -69,7 +70,7 @@ export default async function MeseroPage() {
     }
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedSince, tableCalls, hubInfo] = await Promise.all([
+  const [categoriesRes, productsRes, activeOrders, occupiedSince, tableCalls, seatings, hubInfo] = await Promise.all([
     db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
     getWaiterActiveOrders(restaurantId, user.id),
@@ -77,6 +78,11 @@ export default async function MeseroPage() {
     // Quién llamó al mesero y para qué. Es la mitad de la regla que decide
     // qué mesa pide atención (ver lib/table-state.ts).
     getPendingTableCalls(restaurantId),
+    /* Las mesas que alguien sentó y todavía no han pedido (migración 128).
+       Sin esto el mesero vería libre una mesa que la hostess acaba de
+       sentar, que es la mitad del hallazgo M-02: dos meseros yendo a la
+       misma mesa sin saberlo. */
+    getOpenTableSessions(restaurantId),
     getAgentHubInfo(restaurantId),
   ]);
 
@@ -93,6 +99,7 @@ export default async function MeseroPage() {
       products={products}
       initialOrders={activeOrders}
       occupiedSince={occupiedSince}
+      seatings={seatings}
       tableCalls={tableCalls}
       tableCount={resolvedConfig?.dineInTableCount ?? 20}
       floorPlan={resolvedConfig?.floorPlan ?? null}

@@ -61,6 +61,8 @@ import {
 import type { Category, Product, ProductOptionGroup, OrderStatus } from '@/types';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import { remainingQuantity, type OrderWithItems, type TableOccupancy, type TableCall } from '@/lib/db/orders';
+import type { TableSeating } from '@/lib/db/table-sessions';
+import { updateSeating } from '@/lib/actions/table-sessions';
 import type { PanelCurrency } from '@/components/admin/order-card';
 import type { PaymentMethod } from '@/lib/payment-method';
 
@@ -128,6 +130,11 @@ interface Props {
   occupiedSince: Record<number, TableOccupancy>;
   /** Mesa → llamada del comensal sin resolver (migración 048 + 122). */
   tableCalls: Record<number, TableCall>;
+  /** Mesa → turno abierto sin pedido: alguien la sentó y todavía no piden
+      (migración 128). Llega aquí para que el mesero NO vea libre una mesa
+      que la hostess acaba de sentar — que es la mitad del hallazgo M-02:
+      dos meseros yendo a la misma mesa sin saberlo. */
+  seatings: Record<number, TableSeating>;
   tableCount: number;
   tipEnabled: boolean;
   tipEnabledPickup: boolean;
@@ -167,7 +174,7 @@ type View = 'tables' | 'ciclo' | 'menu' | 'review' | 'orders' | 'bill';
 
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
-  categories, products, initialOrders, occupiedSince, tableCalls,
+  categories, products, initialOrders, occupiedSince, tableCalls, seatings,
   tableCount, tipEnabled, tipEnabledPickup, pickupEnabled, tipPercent, currency, floorPlan, umbrales,
   hubUrl, hubToken,
 }: Props) {
@@ -492,8 +499,8 @@ export default function WaiterPanel({
      lo montara por su cuenta volverían a contar historias distintas del
      mismo local. */
   const tables = useMemo(
-    () => tablesWithState(tableCount, occupiedSince, tableCalls, now, umbrales),
-    [tableCount, occupiedSince, tableCalls, now, umbrales],
+    () => tablesWithState(tableCount, occupiedSince, tableCalls, now, umbrales, seatings),
+    [tableCount, occupiedSince, tableCalls, now, umbrales, seatings],
   );
 
   /** Monto abreviado para el pin del plano: «Q412», «Q1.2k». */
@@ -513,8 +520,14 @@ export default function WaiterPanel({
       money: (n) => money(n, currency),
       moneyShort: fmtCorto,
       umbrales,
+      seatings,
+      /* Aquí el puesto es SERVICIO: sobre una mesa libre el verbo sigue
+         siendo «Abrir mesa» —voy a apuntarles ya—, no «Sentar», que es el
+         trabajo del encargado en Pedidos › Mesas. Es la única palabra que
+         las dos pantallas dicen distinto, y a propósito. */
+      puesto: 'servicio',
     }),
-    [tableCount, occupiedSince, tableCalls, now, floorPlan, currency, fmtCorto, umbrales],
+    [tableCount, occupiedSince, tableCalls, now, floorPlan, currency, fmtCorto, umbrales, seatings],
   );
 
   const [salonView, setSalonView] = useSalonView('leogin:salon-vista-mesero', 'fichas');
@@ -650,10 +663,14 @@ export default function WaiterPanel({
     if (mesa != null) loadTableBill(mesa);
   }
 
-  /** Las personas de la mesa elegida: lo que dice la BD manda, y si la
-      mesa aún no está abierta, lo que el mesero acaba de anotar. */
+  /** Las personas de la mesa elegida: lo que dice la BD manda —el turno de
+      la mesa o su comanda, lo que haya— y si no hay nada escrito todavía,
+      lo que el mesero acaba de anotar en este aparato. */
   const personasMesa = selection.kind === 'mesa'
-    ? (occupiedSince[selection.n]?.partySize ?? partyDraft[selection.n] ?? null) || null
+    ? (Math.max(
+        seatings[selection.n]?.partySize ?? 0,
+        occupiedSince[selection.n]?.partySize ?? 0,
+      ) || partyDraft[selection.n] || null)
     : null;
 
   function handleSubmit() {
@@ -831,9 +848,25 @@ export default function WaiterPanel({
     if (selection.kind !== 'mesa') return;
     const mesa = selection.n;
     setPartyDraft((prev) => ({ ...prev, [mesa]: n ?? 0 }));
-    // La mesa todavía no existe en la BD: el dato viaja con la primera
-    // comanda (ver handleSubmit) en vez de fallar en silencio.
-    if (!occupiedSince[mesa]) return;
+
+    /* Sin comanda todavía no hay pedido donde escribirlo, pero desde la
+       migración 128 sí hay dónde: el turno de la mesa. Contar cuatro
+       personas SIENTA la mesa, y eso es justo lo que se quería —el número
+       deja de vivir en la memoria de este teléfono, y ningún otro mesero
+       ve libre una mesa que este acaba de contar—.
+
+       Borrar el número en una mesa que nadie sentó no abre turno: sería
+       ocupar una mesa para no anotar nada. Y si la 128 aún no corrió, se
+       calla y se queda el borrador de siempre. */
+    if (!occupiedSince[mesa]) {
+      if (n == null && !seatings[mesa]) return;
+      startStatus(async () => {
+        const res = await updateSeating(restaurantId, mesa, { partySize: n });
+        if (res.error && !res.needsMigration) { setAviso({ text: res.error, bad: true }); return; }
+        if (!res.error) router.refresh();
+      });
+      return;
+    }
     setBillOrders((prev) => prev?.map((o) => ({ ...o, party_size: n })) ?? prev);
     startStatus(async () => {
       const res = await setTableParty(restaurantId, mesa, n);
@@ -1012,6 +1045,10 @@ export default function WaiterPanel({
         loadTableBill(t.n);
         setView('bill');
         return;
+      /* «Tomar el pedido» (mesa sentada y sin comanda) es lo mismo que
+         abrir: la pantalla de la mesa. El verbo cambia porque el trabajo
+         empieza distinto —ya hay gente—, no porque lleve a otro sitio. */
+      case 'tomar':
       case 'revisar':
       case 'agregar':
       case 'abrir':
@@ -1434,10 +1471,17 @@ export default function WaiterPanel({
   if (view === 'ciclo' && selection.kind !== 'none') {
     const mesaN = selection.kind === 'mesa' ? selection.n : null;
     const occSel = mesaN != null ? occupiedSince[mesaN] : undefined;
+    /* POR NÚMERO, no por posición (M-03). Esto era `tables[mesaN - 1]`, que
+       da por hecho que la mesa N es la fila N-1 del salón. Deja de ser
+       cierto en cuanto una mesa se sale de las configuradas —un QR viejo
+       pidiendo en la 25 de un salón de 20—: el índice no existía, el estado
+       caía al respaldo «Libre» y la pantalla pintaba como VACÍA una mesa
+       con cuatrocientos quetzales encima. */
+    const filaSel = mesaN != null ? tables.find((t) => t.n === mesaN) : undefined;
     const stateSel = mesaN != null
-      ? (tables[mesaN - 1]?.state ?? { kind: 'libre' as const, reason: null, level: null, label: 'Libre', short: 'Libre', since: null, priority: 99 })
+      ? (filaSel?.state ?? { kind: 'libre' as const, reason: null, level: null, label: 'Libre', short: 'Libre', since: null, priority: 99 })
       : { kind: 'libre' as const, reason: null, level: null, label: 'Sin enviar', short: 'Sin enviar', since: null, priority: 99 };
-    const stageSel = tableStage(occSel, stateSel);
+    const stageSel = tableStage(occSel, stateSel, filaSel?.seat);
     const ordersSel = mesaN != null && billTable === mesaN ? (billOrders ?? []) : [];
 
     return (

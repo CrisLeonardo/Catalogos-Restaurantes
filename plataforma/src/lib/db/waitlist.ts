@@ -13,7 +13,9 @@ export interface WaitlistEntry {
   created_at: string;
   notified_at: string | null;
   seated_at: string | null;
-  cancelled_at: string | null;
+  /** Mesa donde se sentaron (migración 128). `null` mientras no llegan, y
+      también en una base donde la 128 todavía no corrió. */
+  table_number?: number | null;
 }
 
 export interface WaitlistSummary {

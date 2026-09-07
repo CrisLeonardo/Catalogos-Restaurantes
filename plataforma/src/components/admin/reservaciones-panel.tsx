@@ -18,6 +18,10 @@ interface Props {
   restaurantId: string;
   reservations: Reservation[];
   summary: ReservationSummary;
+  /** Mesas libres ahora mismo, para decir EN CUÁL se sienta la reserva
+      (migración 128, M-04). Vacío = no queda ninguna, o el local no usa
+      mesas numeradas: «En mesa →» sigue funcionando sin número. */
+  freeTables: number[];
 }
 
 type ReservationStatus = Reservation['status'];
@@ -81,7 +85,7 @@ function groupByDate(reservations: Reservation[]): [string, Reservation[]][] {
   return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
-export default function ReservacionesPanel({ restaurantId, reservations, summary }: Props) {
+export default function ReservacionesPanel({ restaurantId, reservations, summary, freeTables }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<'activas' | 'nueva'>('activas');
   const [error, setError] = useState<string | null>(null);
@@ -110,12 +114,21 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
     });
   }
 
+  /* La mesa elegida para cada reserva, mientras no llegan. Por reserva y no
+     una sola: en un servicio entran varias a la vez. */
+  const [mesaDe, setMesaDe] = useState<Record<string, string>>({});
+
   function handleStatus(id: string, status: ReservationStatus) {
+    const mesa = Number(mesaDe[id]);
     setBusyId(id);
     startTransition(async () => {
-      const res = await updateReservationStatus(restaurantId, id, status);
+      const res = await updateReservationStatus(
+        restaurantId, id, status,
+        status === 'SEATED' && Number.isFinite(mesa) && mesa > 0 ? mesa : null,
+      );
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
+      setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
       router.refresh();
     });
   }
@@ -217,6 +230,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                         <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)' }}>{r.customer_name}</div>
                         <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
                           {formatTime(r.time)} · {r.party_size} {r.party_size === 1 ? 'persona' : 'personas'}
+                          {r.table_number ? ` · mesa ${r.table_number}` : ''}
                           {r.customer_phone ? ` · ${r.customer_phone}` : ''}
                         </div>
                         {r.notes && <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3, fontStyle: 'italic' }}>{r.notes}</div>}
@@ -225,9 +239,31 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                         <span style={{ fontSize: 11.5, fontWeight: 600, color: STATUS_COLOR[r.status] }}>
                           {STATUS_LABEL[r.status]}
                         </span>
+                        {/* En qué mesa se sientan (M-04). Solo en el paso que
+                            los mete al salón: en «Confirmar» o «Completar» un
+                            número de mesa no significa nada. */}
+                        {nextStatus === 'SEATED' && freeTables.length > 0 && (
+                          <select
+                            value={mesaDe[r.id] ?? ''}
+                            onChange={(e) => setMesaDe((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                            aria-label={`Mesa para ${r.customer_name}`}
+                            style={{
+                              height: 32, borderRadius: 999, padding: '0 10px',
+                              border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
+                              color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
+                            }}
+                          >
+                            <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
+                            {freeTables.map((n) => (
+                              <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}</option>
+                            ))}
+                          </select>
+                        )}
                         {nextStatus && (
                           <Button type="button" onClick={() => handleStatus(r.id, nextStatus)} disabled={busy} variant="secondary" size="sm" className="rounded-adm-full">
-                            {STATUS_LABEL[nextStatus]} →
+                            {nextStatus === 'SEATED' && mesaDe[r.id]
+                              ? `En mesa ${mesaDe[r.id]} →`
+                              : `${STATUS_LABEL[nextStatus]} →`}
                           </Button>
                         )}
                         {r.status !== 'CANCELLED' && (

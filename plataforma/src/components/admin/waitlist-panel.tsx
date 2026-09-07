@@ -22,6 +22,10 @@ interface Props {
   entries: WaitlistEntry[];
   recent: WaitlistEntry[];
   summary: WaitlistSummary;
+  /** Mesas sin gente ni turno abierto, para sentar ahí a quien esperaba
+      (migración 128, M-04). Vacío = el local no usa mesas numeradas, o no
+      queda ninguna: entonces «Sentar» funciona como siempre, sin mesa. */
+  freeTables: number[];
 }
 
 const inputStyle: React.CSSProperties = {
@@ -49,7 +53,7 @@ function whatsappHref(phone: string, restaurantName: string): string {
   return `https://wa.me/${digits}?text=${msg}`;
 }
 
-export default function WaitlistPanel({ restaurantId, entries, recent, summary }: Props) {
+export default function WaitlistPanel({ restaurantId, entries, recent, summary, freeTables }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<'cola' | 'nueva'>('cola');
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +65,10 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  /* La mesa elegida para cada quien, mientras no se les sienta. Por entrada
+     y no una sola: el host puede tener dos grupos a punto de entrar. */
+  const [mesaDe, setMesaDe] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({ customer_name: '', party_size: 2, phone: '', notes: '' });
   function setField(k: string, v: string | number) {
@@ -85,6 +93,19 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
       const res = await action(restaurantId, id);
       setBusyId(null);
       if (res.error) { setError(res.error); return; }
+      router.refresh();
+    });
+  }
+
+  /** Sentarlos, con mesa si se eligió una. */
+  function handleSeat(id: string) {
+    const mesa = Number(mesaDe[id]);
+    setBusyId(id);
+    startTransition(async () => {
+      const res = await markWaitlistSeated(restaurantId, id, Number.isFinite(mesa) && mesa > 0 ? mesa : null);
+      setBusyId(null);
+      if (res.error) { setError(res.error); return; }
+      setMesaDe((prev) => { const next = { ...prev }; delete next[id]; return next; });
       router.refresh();
     });
   }
@@ -187,8 +208,33 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
                       Avisar
                     </Button>
                   )}
-                  <Button type="button" onClick={() => handleAction(w.id, markWaitlistSeated)} disabled={busy} size="sm" className="rounded-adm-full">
-                    Sentar
+                  {/* En qué mesa (M-04). Antes «Sentar» marcaba la ficha y el
+                      salón no se enteraba: la mesa seguía saliendo libre. */}
+                  {freeTables.length > 0 && (
+                    <select
+                      value={mesaDe[w.id] ?? ''}
+                      onChange={(e) => setMesaDe((prev) => ({ ...prev, [w.id]: e.target.value }))}
+                      aria-label={`Mesa para ${w.customer_name}`}
+                      style={{
+                        height: 32, borderRadius: 999, padding: '0 10px',
+                        border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
+                        color: 'var(--u-text)', fontSize: 12.5, cursor: 'pointer',
+                      }}
+                    >
+                      <option value="" style={{ color: 'var(--u-text)' }}>Sin mesa</option>
+                      {freeTables.map((n) => (
+                        <option key={n} value={n} style={{ color: 'var(--u-text)' }}>Mesa {n}</option>
+                      ))}
+                    </select>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={() => handleSeat(w.id)}
+                    disabled={busy}
+                    size="sm"
+                    className="rounded-adm-full"
+                  >
+                    {mesaDe[w.id] ? `Sentar en ${mesaDe[w.id]}` : 'Sentar'}
                   </Button>
                   <Button type="button" onClick={() => handleAction(w.id, cancelWaitlistEntry)} disabled={busy} variant="outline" size="sm"
                     className="rounded-adm-full border-[var(--c-danger-line)] text-[var(--c-danger)]">
@@ -210,7 +256,11 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary }
                 <span style={{ width: 6, height: 6, borderRadius: 99, background: w.status === 'SEATED' ? 'var(--c-ok)' : 'var(--c-danger)', flexShrink: 0 }} />
                 <span style={{ color: 'var(--u-text-2)', fontWeight: 600 }}>{w.customer_name}</span>
                 <span>{w.party_size} {w.party_size === 1 ? 'persona' : 'personas'}</span>
-                <span>· {w.status === 'SEATED' ? 'sentados' : 'cancelado'}</span>
+                <span>
+                  · {w.status === 'SEATED'
+                    ? `sentados${w.table_number ? ` en la mesa ${w.table_number}` : ''}`
+                    : 'cancelado'}
+                </span>
               </div>
             ))}
           </div>

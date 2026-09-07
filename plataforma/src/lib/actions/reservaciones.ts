@@ -6,6 +6,7 @@ import { canActOnRestaurant } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
+import { seatTable } from '@/lib/actions/table-sessions';
 
 export type ReservationResult = { error?: string; ok?: boolean };
 
@@ -67,23 +68,60 @@ export async function createReservation(
   return { ok: true };
 }
 
+/**
+ * Mueve la reserva de estado y, al pasarla a «En mesa», dice en cuál.
+ *
+ * `SEATED` existía desde la migración 043 y no guardaba número de mesa: una
+ * reserva «En mesa» no decía en cuál, y el salón no se enteraba de que esa
+ * gente ya estaba dentro (hallazgo M-04). Ahora el mismo toque abre el turno
+ * de la mesa con las personas que dice la reserva.
+ *
+ * `tableNumber` es opcional: se puede seguir marcando «En mesa» sin anotarla.
+ */
 export async function updateReservationStatus(
   restaurantId: string,
   reservationId: string,
   status: ReservationStatus,
+  tableNumber?: number | null,
 ): Promise<ReservationResult> {
   const auth = await getAuthorizedRestaurantId(restaurantId);
   if (!auth.ok) return { error: auth.error };
 
+  const mesa = status === 'SEATED'
+    && tableNumber != null && Number.isInteger(tableNumber) && tableNumber >= 1 && tableNumber <= 999
+    ? tableNumber
+    : null;
+
   const db = createServiceClient();
-  const { error } = await db
+  const base: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+  const pedir = (cols: Record<string, unknown>) => db
     .from('reservations')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(cols)
     .eq('id', reservationId)
-    .eq('restaurant_id', restaurantId);
+    .eq('restaurant_id', restaurantId)
+    .select('party_size')
+    .maybeSingle();
+
+  let { data, error } = await pedir(mesa != null ? { ...base, table_number: mesa } : base);
+  // 42703 = la 128 no ha corrido aquí. Cambiar de estado no puede depender
+  // de una columna que todavía no existe.
+  if (error && error.code === '42703' && mesa != null) ({ data, error } = await pedir(base));
   if (error) return { error: error.message };
 
+  if (mesa != null) {
+    const res = await seatTable(restaurantId, mesa, {
+      partySize: (data?.party_size as number | null) ?? null,
+      source: 'reservation',
+      originId: reservationId,
+    });
+    if (res.error && !res.needsMigration) {
+      revalidatePath('/admin/reservaciones');
+      return { error: res.error };
+    }
+  }
+
   revalidatePath('/admin/reservaciones');
+  if (mesa != null) revalidatePath('/admin/mesas');
   return { ok: true };
 }
 

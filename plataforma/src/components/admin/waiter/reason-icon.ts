@@ -17,6 +17,9 @@ export const REASON_ICON: Record<TableReason, IconName> = {
   cuenta: 'wallet',
   lista: 'clock',
   llamada: 'bell',
+  // Gente sentada esperando que alguien vaya. El icono es la gente, no la
+  // comida: todavía no hay comida de la que hablar.
+  'sin-pedir': 'users',
   'sin-aceptar': 'alertCircle',
   'sin-cobrar': 'receipt',
   abandonada: 'clock',

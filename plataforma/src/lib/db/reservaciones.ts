@@ -13,7 +13,9 @@ export interface Reservation {
   notes: string | null;
   status: ReservationStatus;
   created_at: string;
-  updated_at: string;
+  /** Mesa donde se sentaron (migración 128). `null` mientras no llegan, y
+      también en una base donde la 128 todavía no corrió. */
+  table_number?: number | null;
 }
 
 export interface ReservationSummary {
