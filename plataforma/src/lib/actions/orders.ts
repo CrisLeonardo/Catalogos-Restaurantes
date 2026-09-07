@@ -7,7 +7,7 @@ import { canActOnGroupBranch } from '@/lib/db/admin';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
-import { createOrderSchema, type CreateOrderInput } from '@/lib/schemas';
+import { createOrderSchema, waiterOrderSchema, type CreateOrderInput } from '@/lib/schemas';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendPushToRestaurant } from '@/lib/push';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
@@ -590,13 +590,18 @@ export interface WaiterOrderResult {
  * Salta rate limit y pausa (el mesero está físicamente en el local).
  */
 export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderResult> {
-  const parsed = createOrderSchema.safeParse(rawInput);
+  /* El esquema del MESERO, no el del público: el suyo admite artículos
+     libres (M-09) y cuenta con ellos al comprobar que el pedido no está
+     vacío — una comanda de solo un descorche es un pedido legítimo aquí.
+     El camino del cliente sigue parseando `createOrderSchema`, que ni
+     siquiera conoce ese campo. */
+  const parsed = waiterOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
     const first = parsed.error.errors[0];
     return { error: first?.message ?? 'Datos del pedido inválidos.' };
   }
 
-  const { restaurantId, items, customer, tipAccepted, clientId } = parsed.data;
+  const { restaurantId, items, customer, tipAccepted, clientId, openItems } = parsed.data;
 
   // Autenticación obligatoria (es mesero, no cliente anónimo).
   const supabase = await createClient();
@@ -650,7 +655,25 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   // Validar productos desde BD (precio autoritativo).
   const priced = await verifyAndPriceItems(db, restaurantId, items);
   if ('error' in priced) return { error: priced.error };
-  const verifiedItems: VerifiedOrderItem[] = priced.items;
+
+  /* Y los que no están en la carta. Van DESPUÉS de los verificados para
+     que salgan al final de la comanda: cocina lee primero lo que sabe
+     hacer. Sin producto no hay costo, así que el margen de estas líneas
+     queda vacío en vez de fingir un cero. */
+  const verifiedItems: VerifiedOrderItem[] = [
+    ...priced.items,
+    ...openItems.map((o) => ({
+      productId: null,
+      name: o.name,
+      price: o.price,
+      cost: null,
+      quantity: o.quantity,
+      options: [],
+      note: o.note,
+      seat: o.seat ?? null,
+    })),
+  ];
+  if (verifiedItems.length === 0) return { error: 'El pedido no tiene nada que enviar.' };
 
   // Propina (si el restaurante la habilita para este tipo de pedido).
   const { data: themeRow } = await db
@@ -741,6 +764,23 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     .from('orders')
     .update({ status: 'PREP', accepted_at: firedAt })
     .eq('id', order.id);
+
+  /* Los artículos libres quedan por escrito (M-09). Es la contrapartida de
+     dejar que el precio lo ponga una persona: no hay catálogo contra el que
+     comprobarlo, así que lo que hay es un rastro con nombre, importe y quién
+     lo apuntó. Sin bloquear el pedido si la bitácora falla. */
+  if (openItems.length > 0) {
+    await logActivity({
+      restaurantId,
+      actorId: user.id,
+      action: 'articulo_libre',
+      entity: order.order_number,
+      meta: {
+        lineas: openItems.map((o) => ({ nombre: o.name, precio: o.price, cantidad: o.quantity })),
+        total: openItems.reduce((sum, o) => sum + o.price * o.quantity, 0),
+      },
+    });
+  }
 
   notifyNewOrder(
     restaurantId,

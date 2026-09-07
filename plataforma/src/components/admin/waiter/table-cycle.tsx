@@ -44,6 +44,9 @@ interface CycleLine {
   status: OrderStatus | null;
   itemId?: string;
   lineId?: string;
+  /** Solo en las líneas YA enviadas: a qué pedido pertenecen. Es lo que
+      permite corregirlas sin salir de esta pantalla (M-08). */
+  orderId?: string;
 }
 
 /** Lo que la barra de abajo dice y ofrece en este momento. */
@@ -61,6 +64,17 @@ export interface NextStep {
   /** Acción secundaria (imprimir la cuenta), si toca. */
   secundaria?: 'imprimir';
 }
+
+/**
+ * Cuántos asientos se pueden repartir como mucho.
+ *
+ * Estaba en 12 y escrito a mano en dos sitios, así que una mesa larga de
+ * catorce —cumpleaños, empresa: la que más factura de la noche— no se
+ * podía repartir por asiento (M-13). El número real lo pone la mesa; esto
+ * es solo el techo para que un `party_size` tecleado mal (la base admite
+ * 100) no llene el teléfono del mesero de píldoras.
+ */
+const MAX_ASIENTOS = 40;
 
 const ESTADO_PLATO: Partial<Record<OrderStatus, string>> = {
   NEW: 'Sin aceptar',
@@ -135,6 +149,18 @@ interface Props {
   /** Pasa a cocina la comanda que el comensal dejó pedida desde el QR y que
       sigue sin enviar (NEW → PREP: es lo que imprime el papel). */
   onMandarACocina: () => void;
+  /** Abre la anulación de un plato YA enviado (motivo + aprobación de
+      encargado si hace falta). Es el mismo camino que la pantalla de
+      cobro: aquí solo se le da una puerta desde la mesa (M-08). */
+  onCorregir: (t: {
+    orderId: string;
+    orderStatus: OrderStatus;
+    item: { id: string; name: string; remainingQty: number };
+  }) => void;
+  /** Cobrar algo que no está en la carta (M-09). Recibe lo que el mesero
+      hubiera escrito en el buscador, o cadena vacía si se abrió desde el
+      menú de acciones. */
+  onArticuloLibre: (nombre: string) => void;
   onVerMenu: () => void;
   ocupado: boolean;
 }
@@ -145,7 +171,8 @@ export default function TableCycle(p: Props) {
     products, categories, money, tipPercent, tipApplies,
     onPick, qtyOf, onDec, onSend, finderFocus,
     asiento, onAsiento, onSeatCart, onSeatItem, onIncCart, onDecCart, onEditCart,
-    onParty, onJuntar, onMover, onNota, onCobrar, onImprimir, onServir, onMandarACocina, onVerMenu,
+    onParty, onJuntar, onMover, onNota, onCobrar, onImprimir, onServir, onMandarACocina,
+    onCorregir, onArticuloLibre, onVerMenu,
     ocupado,
   } = p;
 
@@ -162,6 +189,7 @@ export default function TableCycle(p: Props) {
       seat: l.seat,
       status: l.orderStatus,
       itemId: l.itemId,
+      orderId: l.orderId,
     })), [orders]);
 
   const pendientes: CycleLine[] = useMemo(() => cart.map((l) => ({
@@ -187,6 +215,24 @@ export default function TableCycle(p: Props) {
      buscador otro renglón hacia abajo. La mesa libre se calla, aquí
      también. */
   const hayCiclo = !!occ || porEnviar > 0;
+
+  /* ¿Hay a quién repartirle los platos? (M-12)
+     ------------------------------------------------------------
+     Esto exigía que YA hubiera líneas en la cuenta, así que el primer
+     plato de cada persona caía siempre en «Mesa» y había que corregirlo
+     después, uno por uno — que es exactamente lo que hacía que nadie
+     usara el reparto por asiento. El trabajo se pagaba al final, en vez
+     de al apuntar, que es cuando el mesero sabe de quién es el pepián.
+
+     Ahora basta con que la mesa esté ocupada: o tiene platos, o alguien
+     la sentó y contó cuánta gente hay (migración 128). Sigue callándose
+     en una mesa vacía sin sentar —ahí no hay nadie a quien repartirle
+     nada— y en una de una sola persona, que era la razón buena de la
+     condición vieja: en el teléfono son dos renglones de píldoras de
+     44 px por delante del buscador. */
+  const puedeRepartir = mesa != null
+    && (lineas.length > 0 || personas != null)
+    && (personas ?? 2) > 1;
 
   /* ── Totales ────────────────────────────────────────────────
      Lo enviado ya trae su propina dentro del total del pedido; lo del
@@ -244,6 +290,23 @@ export default function TableCycle(p: Props) {
       };
     }
     if (!occ) {
+      /* SENTADA pero sin comanda (migración 128). Decir «la mesa está
+         libre» con cuatro personas sentadas es la misma mentira que
+         arreglamos en M-27, en el caso nuevo: el estado ya sabe que está
+         ocupada —lo dice la ficha del salón— y solo esta barra seguía
+         contando otra cosa. Y el minuto importa: es el rato que llevan
+         esperando a que alguien les tome la orden. */
+      const sentadaMin = mesa != null && state.kind !== 'libre' ? desde(state.since, now) : null;
+      if (sentadaMin != null) {
+        return {
+          nota: state.reason === 'sin-pedir'
+            ? `Llevan ${sentadaMin} sentados y nadie les ha tomado el pedido.`
+            : `Sentados hace ${sentadaMin}. Todavía no han pedido nada.`,
+          accion: `Tomar el pedido${aDonde}`,
+          icon: 'plus',
+          kind: 'agregar',
+        };
+      }
       return {
         nota: mesa
           ? 'La mesa está libre. Apunta el primer plato y queda abierta.'
@@ -383,6 +446,7 @@ export default function TableCycle(p: Props) {
           onJuntar={onJuntar}
           onMover={onMover}
           onNota={onNota}
+          onArticuloLibre={() => onArticuloLibre('')}
         />
       </div>
 
@@ -446,12 +510,20 @@ export default function TableCycle(p: Props) {
       <div className="ciclo-body">
         <div className="ciclo-main">
           {/* El rótulo solo cuando hay cuenta que rotular: encabezar la nada
-              con «La cuenta de la mesa» empuja el buscador y no dice nada. */}
-          {(lineas.length > 0 || ordersLoading) && (
+              con «La cuenta de la mesa» empuja el buscador y no dice nada.
+
+              La FILA es otra cosa: desde M-12 puede aparecer sola, en una
+              mesa sentada y todavía sin platos, porque ahí es justo donde
+              hace falta —el primer plato de cada persona caía siempre en
+              «Mesa»—. Por eso el bloque se abre si hay cuenta O si hay
+              asientos que ofrecer, y el rótulo se pinta por su cuenta. */}
+          {(lineas.length > 0 || ordersLoading || puedeRepartir) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '0 4px' }}>
-            <div className="adm-label adm-label-caps" style={{ flex: 1, minWidth: 140, color: 'var(--u-text-3)' }}>
-              {mesa != null ? 'La cuenta de la mesa' : 'El pedido'}
-            </div>
+            {(lineas.length > 0 || ordersLoading) && (
+              <div className="adm-label adm-label-caps" style={{ flex: 1, minWidth: 140, color: 'var(--u-text-3)' }}>
+                {mesa != null ? 'La cuenta de la mesa' : 'El pedido'}
+              </div>
+            )}
             {/* A qué asiento van los platos que se agreguen ahora. Se elige
                 UNA vez y lo demás se apunta solo: preguntarlo plato por
                 plato es lo que hace que nadie lo use.
@@ -459,10 +531,21 @@ export default function TableCycle(p: Props) {
                 No aparece en una mesa vacía ni en una de una persona: ahí
                 no hay nada que repartir, y en el teléfono eran dos renglones
                 de píldoras de 44 px por delante del buscador. */}
-            {mesa != null && lineas.length > 0 && (personas ?? 2) > 1 && (
+            {/* Antes esto exigía `lineas.length > 0`, así que el PRIMER plato de
+                cada persona caía siempre en «Mesa» y había que corregirlo
+                después, uno por uno — que es exactamente lo que hacía que
+                nadie usara el reparto por asiento (M-12).
+
+                Ahora basta con que la mesa esté ocupada: o tiene platos, o
+                alguien la sentó y contó cuánta gente hay (migración 128).
+                Sigue sin aparecer en una mesa vacía y sin sentar, que era
+                la razón buena de la condición vieja: ahí no hay nadie a
+                quien repartirle nada y en el teléfono son dos renglones de
+                píldoras por delante del buscador. */}
+            {puedeRepartir && (
               <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
                 <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Asiento</span>
-                {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, 12)) }, (_, i) => i + 1)].map((n) => (
+                {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, MAX_ASIENTOS)) }, (_, i) => i + 1)].map((n) => (
                   <button
                     key={n ?? 'mesa'}
                     type="button"
@@ -549,6 +632,32 @@ export default function TableCycle(p: Props) {
                       <Icon name="edit" size={14} />
                     </button>
                   </span>
+                ) : l.orderId && l.itemId ? (
+                  /* Corregir lo YA enviado, desde aquí (M-08).
+                     ------------------------------------------------------
+                     Las líneas enviadas no llevaban ningún control: para
+                     quitar un plato que salió mal había que irse a «Cobrar»
+                     y volver, desde la pantalla hecha justamente para no
+                     tener que salirse. Y es el gesto más frecuente después
+                     de agregar.
+
+                     No anula: ABRE la anulación, que sigue pidiendo motivo
+                     y —si ya salió a cocina— aprobación de encargado. Va
+                     solo, sin −/+ al lado, porque no es un vecino de
+                     «quitar uno»: es otra cosa y se paga distinto. */
+                  <button
+                    type="button"
+                    className="wp-step press"
+                    onClick={() => onCorregir({
+                      orderId: l.orderId!,
+                      orderStatus: (l.status ?? 'NEW') as OrderStatus,
+                      item: { id: l.itemId!, name: l.name, remainingQty: l.qty },
+                    })}
+                    aria-label={`Anular ${l.name}`}
+                    title="Anular este plato"
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
                 ) : null}
                 </span>
                 <span className="t-mono ciclo-price" style={{ width: 74, textAlign: 'right', flexShrink: 0, fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
@@ -572,6 +681,7 @@ export default function TableCycle(p: Props) {
             money={money}
             onSend={onSend}
             autoFocus={finderFocus}
+            onOpenItem={onArticuloLibre}
           />
 
           <button
@@ -698,7 +808,7 @@ function SeatChip({ seat, personas, disabled, onChange }: {
   disabled?: boolean;
   onChange: (s: number | null) => void;
 }) {
-  const max = Math.max(2, Math.min(personas ?? 4, 12));
+  const max = Math.max(2, Math.min(personas ?? 4, MAX_ASIENTOS));
   if (disabled) return null;
   return (
     <button
@@ -767,11 +877,12 @@ function PersonasCtl({ personas, onParty }: { personas: number | null; onParty: 
    siempre dice el siguiente paso—, así que aquí van detrás de un
    botón. Dentro solo aparece lo que se puede hacer ahora: en una mesa
    sin abrir no hay nada que juntar ni que mover. */
-function MasAcciones({ puedeMover, onJuntar, onMover, onNota }: {
+function MasAcciones({ puedeMover, onJuntar, onMover, onNota, onArticuloLibre }: {
   puedeMover: boolean;
   onJuntar: () => void;
   onMover: () => void;
   onNota: () => void;
+  onArticuloLibre: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
 
@@ -781,6 +892,10 @@ function MasAcciones({ puedeMover, onJuntar, onMover, onNota }: {
       { icon: 'arrowRight' as IconName, label: 'Mover a otra mesa', hint: 'Se cambiaron de sitio', onClick: onMover },
     ] : []),
     { icon: 'edit', label: 'Nota de mesa', hint: 'Sale impresa con la siguiente comanda', onClick: onNota },
+    /* La puerta principal del artículo libre está en el buscador, cuando
+       no encuentra nada. Esta es para quien YA sabe que no está en la
+       carta y no quiere teclear para comprobarlo (M-09). */
+    { icon: 'tag', label: 'Artículo libre', hint: 'Algo que no está en la carta: descorche, plato del día', onClick: onArticuloLibre },
   ];
 
   return (

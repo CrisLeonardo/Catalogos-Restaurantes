@@ -44,10 +44,11 @@ import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order
 import WaiterBill, { clearSavedSplit } from '@/components/admin/waiter-bill';
 import VoidOrderDialog from '@/components/admin/void-order-dialog';
 import ProductOptionsModal from '@/components/admin/waiter/product-options-modal';
+import OpenItemDialog, { type OpenItemDraft } from '@/components/admin/waiter/open-item-dialog';
 import TableJump from '@/components/admin/waiter/table-jump';
 import { parseQuery } from '@/components/admin/waiter/dish-finder';
 import TableCycle from '@/components/admin/waiter/table-cycle';
-import { money, newLineId, type CartLine } from '@/components/admin/waiter/cart';
+import { money, newLineId, LIBRE_ID, type CartLine } from '@/components/admin/waiter/cart';
 import { useServiceMode } from '@/components/admin/service-mode';
 import {
   selectionFromParams, selectionToQuery, sameSelection,
@@ -301,6 +302,9 @@ export default function WaiterPanel({
 
   /* ── Anulación (motivo + aprobación) ───────────────────────── */
   const [voidTarget, setVoidTarget] = useState<VoidTarget | null>(null);
+  /* El artículo libre en curso (M-09). `null` = cerrado; una cadena —incluso
+     vacía— = abierto con ese nombre de partida. */
+  const [libreDraft, setLibreDraft] = useState<string | null>(null);
 
   /* Mover a otra mesa o juntar con otra: las dos eligen mesa destino
      con el mismo selector, y lo único que cambia es si el destino
@@ -572,8 +576,16 @@ export default function WaiterPanel({
       /* La nota entra en la clave de fusión: dos líneas con las mismas
          opciones pero notas distintas ("sin sal" vs. sin nota) son platos
          distintos para cocina y no deben mezclarse en una cantidad. */
+      /* El NOMBRE y el PRECIO entran en la clave desde M-09: todos los
+         artículos libres comparten `productId` (no tienen producto), así
+         que sin esto un descorche de Q50 y un plato del día de Q75 se
+         fundirían en una sola línea de dos unidades. Para un plato de la
+         carta no cambia nada: mismo id implica mismo nombre, y el precio
+         de las opciones ya viaja en `options`. */
       const idx = prev.findIndex(
         (l) => l.productId === line.productId
+          && l.name === line.name
+          && l.price === line.price
           && JSON.stringify(l.options) === JSON.stringify(line.options)
           && (l.note ?? '') === (line.note ?? ''),
       );
@@ -591,6 +603,14 @@ export default function WaiterPanel({
   }
 
   function openEditLine(line: CartLine) {
+    /* Un artículo libre no tiene hoja de opciones que abrir: se quita y se
+       vuelve a poner, que es lo que el lápiz hace aquí. Sin esto el botón
+       de editar no hacía nada en esas líneas. */
+    if (line.open) {
+      decLine(line.lineId);
+      setLibreDraft(line.name);
+      return;
+    }
     const product = products.find((p) => p.id === line.productId);
     if (!product) return;
     setEditingLine(line);
@@ -629,6 +649,21 @@ export default function WaiterPanel({
   }
 
   /** Agrega (o abre la hoja de opciones de) un producto con `qty` unidades. */
+  /** Mete a la cuenta algo que no está en la carta (M-09). */
+  function agregarArticuloLibre(d: OpenItemDraft) {
+    addToCart({
+      lineId: newLineId(LIBRE_ID),
+      productId: LIBRE_ID,
+      name: d.name,
+      price: d.price,
+      quantity: d.quantity,
+      options: [],
+      open: true,
+      ...(d.note ? { note: d.note } : {}),
+    });
+    setLibreDraft(null);
+  }
+
   function handlePick(product: Product, qty: number) {
     const groups: ProductOptionGroup[] = (product.options as ProductOptionGroup[] | null) ?? [];
     if (groups.length === 0) {
@@ -689,7 +724,12 @@ export default function WaiterPanel({
       /* Solo lo usa el camino del hub sin conexión: la nube resuelve el
          mesero de la sesión real (ver createWaiterOrder). */
       waiterId,
-      items: cart.map((l) => ({
+      /* Los artículos libres NO van aquí (M-09). `items` se contrasta
+         contra el catálogo —precio autoritativo desde la base— y un
+         artículo libre no tiene con qué contrastarse: ese es justo su
+         motivo de existir. Viaja en `openItems`, que solo acepta el camino
+         del mesero y queda escrito en la bitácora. */
+      items: cart.filter((l) => !l.open).map((l) => ({
         productId: l.productId,
         name: l.name,
         price: l.price,
@@ -701,6 +741,13 @@ export default function WaiterPanel({
         ...(l.note ? { note: l.note } : {}),
         /* El asiento se decide AL PEDIR, no al cobrar: quien sabe de quién
            es el pepián es el mesero en ese momento (migración 123). */
+        ...(l.seat ? { seat: l.seat } : {}),
+      })),
+      openItems: cart.filter((l) => l.open).map((l) => ({
+        name: l.name,
+        price: l.price,
+        quantity: l.quantity,
+        ...(l.note ? { note: l.note } : {}),
         ...(l.seat ? { seat: l.seat } : {}),
       })),
       customer: {
@@ -751,8 +798,21 @@ export default function WaiterPanel({
         volverAlCiclo(mesa);
       } catch {
         /* La nube no respondió: se intenta el hub local del restaurante
-           antes de dejarlo encolado en este aparato. */
-        if (hubUrl) {
+           antes de dejarlo encolado en este aparato.
+
+           SALVO si el pedido lleva artículos libres (M-09). El hub arma el
+           pedido contra su copia del menú —`createHubOrder` en
+           agente-impresion/src/hub.ts solo lee `items`— así que un
+           descorche o un plato del día se perdería EN SILENCIO: el mesero
+           vería «impreso» y ese dinero no llegaría nunca a la cuenta. Y los
+           agentes ya instalados no se pueden actualizar desde aquí.
+
+           Así que ese pedido se queda en la cola de este aparato, que
+           reenvía el payload ENTERO a `createWaiterOrder` en cuanto vuelve
+           la señal. Se pierde el papel de cocina de ese momento; no se
+           pierde el cobro. */
+        const conArticulosLibres = cart.some((l) => l.open);
+        if (hubUrl && !conArticulosLibres) {
           const hubResult = await tryHubOrder(hubUrl, hubToken, input);
           if (hubResult?.success) {
             removeQueuedOrder(restaurantId, clientId, 'waiter');
@@ -763,7 +823,12 @@ export default function WaiterPanel({
           }
         }
         setQueuedCount(getQueuedOrders(restaurantId, 'waiter').length);
-        setAviso({ text: 'Sin conexión: el pedido quedó guardado en este aparato y se enviará solo cuando vuelva la señal.', bad: false });
+        setAviso({
+          text: conArticulosLibres
+            ? 'Sin conexión: el pedido quedó guardado en este aparato con su artículo libre y se enviará entero cuando vuelva la señal. Avisa a cocina a mano.'
+            : 'Sin conexión: el pedido quedó guardado en este aparato y se enviará solo cuando vuelva la señal.',
+          bad: false,
+        });
         limpiar();
         volverAlCiclo(mesa);
       }
@@ -1537,6 +1602,8 @@ export default function WaiterPanel({
               onImprimir={handlePrintBill}
               onServir={handleServe}
               onMandarACocina={handleMandarACocina}
+              onCorregir={setVoidTarget}
+              onArticuloLibre={setLibreDraft}
               onVerMenu={() => setView('menu')}
               ocupado={submitting}
             />
@@ -1545,6 +1612,15 @@ export default function WaiterPanel({
 
         {productModal && (
           <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} initialQty={pendingQty} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
+        )}
+
+        {libreDraft !== null && (
+          <OpenItemDialog
+            nombreInicial={libreDraft}
+            money={fmt}
+            onAdd={agregarArticuloLibre}
+            onClose={() => setLibreDraft(null)}
+          />
         )}
 
         {notaOpen && (
@@ -1571,6 +1647,24 @@ export default function WaiterPanel({
             money={fmt}
             onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('ciclo'); }}
             onClose={() => setJumpOpen(false)}
+          />
+        )}
+
+        {/* La anulación vivía solo en la pantalla de cobro; desde M-08 se
+            puede corregir un plato sin salir de la mesa, así que el diálogo
+            tiene que existir también aquí. Es el MISMO: motivo, y
+            aprobación de encargado si el plato ya salió a cocina. */}
+        {voidTarget && (
+          <VoidOrderDialog
+            orderId={voidTarget.orderId}
+            orderStatus={voidTarget.orderStatus}
+            item={voidTarget.item}
+            onClose={() => setVoidTarget(null)}
+            onDone={() => {
+              setVoidTarget(null);
+              if (mesaN != null) loadTableBill(mesaN);
+              router.refresh();
+            }}
           />
         )}
       </div>

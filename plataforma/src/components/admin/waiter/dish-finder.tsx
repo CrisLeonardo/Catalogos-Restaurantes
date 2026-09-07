@@ -60,10 +60,15 @@ interface Props {
   /** El buscador reclama el foco al montar y tras cada Enter. Se apaga
       mientras hay un diálogo encima, para no robárselo. */
   autoFocus: boolean;
+  /** Cobrar algo que no está en la carta (M-09). Se ofrece justo cuando la
+      búsqueda no encuentra nada: ese es el momento en que el mesero acaba
+      de comprobar que el plato no existe. `undefined` = esta pantalla no
+      lo permite. */
+  onOpenItem?: (nombre: string) => void;
 }
 
 export default function DishFinder({
-  products, categories, onPick, qtyOf, onDec, money, onSend, autoFocus,
+  products, categories, onPick, qtyOf, onDec, money, onSend, autoFocus, onOpenItem,
 }: Props) {
   const [raw, setRaw] = useState('');
   const [active, setActive] = useState(0);
@@ -228,6 +233,25 @@ export default function DishFinder({
                 hay nada es que ese plato no está en la carta. La palabra
                 sobraba y además insinuaba una respuesta que no era. */}
             Ningún plato se llama «{term}».
+            {/* Y aquí, justo aquí, la salida (M-09). No es un botón más del
+                menú: es la respuesta a lo que el mesero acaba de descubrir,
+                y llega con el nombre ya escrito. */}
+            {onOpenItem && (
+              <button
+                type="button"
+                onClick={() => onOpenItem(term)}
+                className="press"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  width: '100%', marginTop: 12, height: 44, borderRadius: 12, cursor: 'pointer',
+                  border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
+                  color: 'var(--u-text)', fontSize: 14, fontWeight: 600,
+                }}
+              >
+                <Icon name="plus" size={16} />
+                Cobrarlo como artículo libre
+              </button>
+            )}
           </div>
         ) : (
           <Group>

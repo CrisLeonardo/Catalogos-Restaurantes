@@ -30,7 +30,21 @@ export interface CartLine {
    * momento, no el cajero dos horas después.
    */
   seat?: number | null;
+  /**
+   * Artículo que NO está en la carta (M-09): el plato del día que nadie dio
+   * de alta, un descorche, un recargo. Su `productId` es la constante
+   * `LIBRE_ID` —no hay producto al que apuntar— y su precio lo escribió una
+   * persona, así que viaja por su propio camino al servidor
+   * (`openItems` en createWaiterOrder) y no por el de los platos, que se
+   * contrastan contra el catálogo.
+   */
+  open?: boolean;
 }
+
+/** El `productId` de un artículo libre. No es un uuid a propósito: así no
+    puede chocar nunca con un producto de verdad ni colarse en una
+    búsqueda por id. */
+export const LIBRE_ID = 'libre';
 
 let _lineSeq = 0;
 
