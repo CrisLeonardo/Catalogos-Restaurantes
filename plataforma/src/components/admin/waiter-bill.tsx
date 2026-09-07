@@ -56,7 +56,7 @@ interface Props {
   onDiscountApplied: () => void;
   /** Cierra la mesa. Recibe cómo se pagó: sin eso, el arqueo de caja
       cuenta como efectivo hasta lo que se pagó con tarjeta. */
-  onFreeTable: (method: PaymentMethod, cashReceived: number | null) => void;
+  onFreeTable: (pagos: { method: PaymentMethod; amount?: number | null; cashReceived?: number | null }[]) => void;
 }
 
 /* ── Estado persistido por mesa ───────────────────────────── */
@@ -791,7 +791,7 @@ export default function WaiterBill({
           money={(n) => money(n, currency)}
           busy={freeing}
           onCancel={() => setClosing(false)}
-          onConfirm={(method, cashReceived) => { setClosing(false); onFreeTable(method, cashReceived); }}
+          onConfirm={(pagos) => { setClosing(false); onFreeTable(pagos); }}
         />
       )}
     </div>

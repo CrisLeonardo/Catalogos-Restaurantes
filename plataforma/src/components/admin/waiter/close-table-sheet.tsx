@@ -35,7 +35,9 @@ interface Props {
   money: (n: number) => string;
   busy: boolean;
   onCancel: () => void;
-  onConfirm: (method: PaymentMethod, cashReceived: number | null) => void;
+  /** Cómo se cobró. Uno o varios: una mesa puede pagar mitad en efectivo
+      y mitad con tarjeta (M-11). */
+  onConfirm: (pagos: { method: PaymentMethod; amount?: number | null; cashReceived?: number | null }[]) => void;
 }
 
 /** Los billetes con los que de verdad se paga una cuenta de este tamaño.
@@ -55,6 +57,15 @@ export default function CloseTableSheet({
 }: Props) {
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [recibido, setRecibido] = useState('');
+
+  /* PAGO MIXTO (M-11).
+     ------------------------------------------------------------
+     Apagado por omisión y a propósito: la mesa que paga de una sola
+     forma es la mayoría, y es un toque. Al encenderlo, cada método pone
+     lo suyo y la hoja va diciendo cuánto falta — que es la cuenta que el
+     cajero hace en la cabeza mientras cobra. */
+  const [mixto, setMixto] = useState(false);
+  const [partes, setPartes] = useState<Record<string, string>>({});
   const cashRef = useRef<HTMLInputElement | null>(null);
 
   /* Escape cierra, como cualquier otra hoja del panel. Se registra en
@@ -79,6 +90,26 @@ export default function CloseTableSheet({
      medias o falta cobrar, y en los dos casos cerrar sería peor que
      esperar. Dejarlo vacío sí vale — significa "no lo apunto". */
   const faltaEfectivo = esEfectivo && recibidoNum > 0 && recibidoNum < total - 0.004;
+
+  /* Lo puesto en cada método, ya en números. */
+  const puesto = useMemo(() => {
+    const out: { method: PaymentMethod; amount: number }[] = [];
+    for (const m of PAYMENT_METHODS) {
+      const n = Number((partes[m] ?? '').replace(',', '.'));
+      if (Number.isFinite(n) && n > 0) out.push({ method: m, amount: Math.round(n * 100) / 100 });
+    }
+    return out;
+  }, [partes]);
+  const sumaMixta = useMemo(
+    () => Math.round(puesto.reduce((s, p) => s + p.amount, 0) * 100) / 100,
+    [puesto],
+  );
+  const faltaMixto = Math.round((total - sumaMixta) * 100) / 100;
+  /* Se admite pagar de MÁS solo en efectivo, que es vuelto; de más con
+     tarjeta no es nada que este sistema sepa explicar. */
+  const sobraNoEfectivo = faltaMixto < -0.004
+    && !puesto.some((p) => p.method === 'CASH');
+  const mixtoListo = mixto && puesto.length > 0 && Math.abs(faltaMixto) < 0.005;
 
   const quedaSaldo = pending > 0.004;
 
@@ -127,19 +158,93 @@ export default function CloseTableSheet({
           <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)', paddingBottom: 8 }}>
             ¿Cómo pagó?
           </div>
-          <Seg
-            value={method}
-            onChange={(v) => {
-              setMethod(v);
-              if (v !== 'CASH') setRecibido('');
+          {!mixto && (
+            <Seg
+              value={method}
+              onChange={(v) => {
+                setMethod(v);
+                if (v !== 'CASH') setRecibido('');
+              }}
+              ariaLabel="Forma de pago"
+              options={PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_LABEL[m] }))}
+            />
+          )}
+
+          {/* Con dos formas de pago cada una pone lo suyo (M-11). Antes
+              había que elegir UNA para toda la mesa, así que una cuenta
+              partida entre efectivo y tarjeta salía entera en el bucket
+              equivocado y la caja no cuadraba esa noche. */}
+          {mixto && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {PAYMENT_METHODS.map((m) => (
+                <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: 'var(--u-text-2)' }}>
+                    {PAYMENT_LABEL[m]}
+                  </span>
+                  <input
+                    value={partes[m] ?? ''}
+                    onChange={(e) => setPartes((prev) => ({ ...prev, [m]: e.target.value.replace(/[^\d.,]/g, '') }))}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    aria-label={`Cuánto se pagó en ${PAYMENT_LABEL[m].toLowerCase()}`}
+                    style={{
+                      width: 130, height: 46, padding: '0 12px', borderRadius: 11, outline: 'none',
+                      border: '1px solid var(--u-hair-2)',
+                      background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                      color: 'var(--u-text)', fontFamily: 'var(--ui-font-mono)',
+                      fontVariantNumeric: 'tabular-nums',
+                      fontSize: 17, fontWeight: 600, textAlign: 'right',
+                    }}
+                  />
+                </label>
+              ))}
+
+              {/* La cuenta que el cajero lleva en la cabeza mientras cobra,
+                  dicha en voz alta. */}
+              <div
+                style={{
+                  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                  padding: '10px 13px', borderRadius: 11, marginTop: 2,
+                  background: mixtoListo
+                    ? 'color-mix(in srgb, var(--c-ok) 10%, transparent)'
+                    : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                  border: `1px solid ${mixtoListo
+                    ? 'color-mix(in srgb, var(--c-ok) 30%, transparent)'
+                    : 'var(--u-hair)'}`,
+                }}
+              >
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>
+                  {mixtoListo ? 'Cuadra' : faltaMixto > 0 ? 'Falta' : 'Sobra'}
+                </span>
+                <span className="t-mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--u-text)' }}>
+                  {money(Math.abs(mixtoListo ? 0 : faltaMixto))}
+                </span>
+              </div>
+
+              {sobraNoEfectivo && (
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-danger)' }}>
+                  Pagar de más solo tiene sentido en efectivo, que es vuelto. Ajusta los importes.
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => { setMixto((v) => !v); setPartes({}); setRecibido(''); }}
+            className="press"
+            style={{
+              marginTop: 10, minHeight: 38, padding: '0 14px', borderRadius: 99, cursor: 'pointer',
+              border: '1px solid var(--u-hair-2)', background: 'none',
+              color: 'var(--u-text-2)', fontSize: 13, fontWeight: 600,
             }}
-            ariaLabel="Forma de pago"
-            options={PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_LABEL[m] }))}
-          />
+          >
+            {mixto ? 'Pagó de una sola forma' : 'Pagó de dos formas'}
+          </button>
         </div>
 
         {/* ── Efectivo: con cuánto pagó y cuánto se devuelve ─── */}
-        {esEfectivo && (
+        {esEfectivo && !mixto && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)' }}>
               Recibí <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(opcional)</span>
@@ -211,16 +316,30 @@ export default function CloseTableSheet({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 2 }}>
           <button
             type="button"
-            disabled={busy || faltaEfectivo}
-            onClick={() => onConfirm(method, esEfectivo && recibidoNum > 0 ? recibidoNum : null)}
+            disabled={busy || faltaEfectivo || (mixto && (!mixtoListo || sobraNoEfectivo))}
+            onClick={() => onConfirm(
+              mixto
+                ? puesto.map((p) => ({ method: p.method, amount: p.amount }))
+                : [{
+                  method,
+                  /* Sin importe: «lo que quede», que es la mesa entera. Es
+                     la misma llamada de siempre. */
+                  cashReceived: esEfectivo && recibidoNum > 0 ? recibidoNum : null,
+                }],
+            )}
             className="press btn-accent"
             style={{
               width: '100%', minHeight: 50, padding: '14px', borderRadius: 13, border: 'none',
               cursor: busy || faltaEfectivo ? 'not-allowed' : 'pointer',
-              fontWeight: 700, fontSize: 15.5, opacity: busy || faltaEfectivo ? 0.55 : 1,
+              fontWeight: 700, fontSize: 15.5,
+              opacity: busy || faltaEfectivo || (mixto && (!mixtoListo || sobraNoEfectivo)) ? 0.55 : 1,
             }}
           >
-            {busy ? 'Cerrando…' : `Cobrar ${money(total)} en ${PAYMENT_LABEL[method].toLowerCase()}`}
+            {busy
+              ? 'Cerrando…'
+              : mixto
+                ? `Cobrar ${money(total)} repartido`
+                : `Cobrar ${money(total)} en ${PAYMENT_LABEL[method].toLowerCase()}`}
           </button>
           <button
             type="button"

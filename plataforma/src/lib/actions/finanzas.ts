@@ -100,6 +100,39 @@ const EMPTY_SUMMARY = (date: string): CashSummary => ({
   date, expectedCash: 0, byMethod: {}, orders: 0, totalSales: 0,
 });
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Lo cobrado de estos pedidos, por método (migración 129).
+ *
+ * Devuelve `null` si la tabla todavía no existe en este entorno: el
+ * arqueo sigue funcionando con `orders.payment_method`, que es lo que
+ * hacía antes. Un informe no puede caerse por una migración pendiente.
+ */
+async function pagosDelDia(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+  orderIds: string[],
+): Promise<{ porPedido: Map<string, Map<string, number>> } | null> {
+  const { data, error } = await db
+    .from('order_payments')
+    .select('order_id, method, amount')
+    .eq('restaurant_id', restaurantId)
+    .in('order_id', orderIds.slice(0, 1000));
+
+  if (error) return null;
+
+  const porPedido = new Map<string, Map<string, number>>();
+  for (const row of data ?? []) {
+    const id = row.order_id as string;
+    const metodo = ((row.method as string) || 'CASH').toUpperCase();
+    const suyo = porPedido.get(id) ?? new Map<string, number>();
+    suyo.set(metodo, round2((suyo.get(metodo) ?? 0) + Number(row.amount ?? 0)));
+    porPedido.set(id, suyo);
+  }
+  return { porPedido };
+}
+
 /** Resumen de caja de HOY (zona horaria del restaurante). */
 export async function getCashSummary(restaurantId: string): Promise<CashSummary> {
   const ctx = await authRestaurant(restaurantId);
@@ -114,7 +147,7 @@ export async function getCashSummary(restaurantId: string): Promise<CashSummary>
 
   const { data } = await db
     .from('orders')
-    .select('created_at, payment_method, total')
+    .select('id, created_at, payment_method, total')
     .eq('restaurant_id', restaurantId)
     .neq('status', 'CANCEL')
     .gte('created_at', since.toISOString())
@@ -122,12 +155,48 @@ export async function getCashSummary(restaurantId: string): Promise<CashSummary>
 
   const byMethod: Record<string, number> = {};
   let orders = 0, totalSales = 0;
+  /* Los pedidos de hoy, para poder preguntar por SUS pagos sin traerse el
+     histórico entero del local. */
+  const deHoy: string[] = [];
   for (const o of data ?? []) {
     if (localDateKey(new Date(o.created_at as string), tz) !== todayKey) continue;
     const pm = ((o.payment_method as string) || 'CASH').toUpperCase();
     byMethod[pm] = (byMethod[pm] ?? 0) + Number(o.total);
     totalSales += Number(o.total);
     orders += 1;
+    deHoy.push(o.id as string);
+  }
+
+  /* EL REPARTO DE VERDAD, cuando lo hay (migración 129, M-11).
+     ------------------------------------------------------------
+     Arriba se agrupa por `orders.payment_method`, que es UNA palabra por
+     pedido: una mesa que pagó Q250 en efectivo y Q150 con tarjeta caía
+     entera en un bucket, y la caja salía larga o corta cada noche que
+     alguien partiera el pago. Donde hay filas en `order_payments` mandan
+     ellas, porque son el dinero que de verdad entró.
+
+     Los pedidos SIN filas —los de antes de la 129, y los canales
+     externos— se quedan con su columna: mezclar las dos fuentes por
+     pedido y no a medias es lo que hace que el total siga cuadrando. */
+  const pagos = deHoy.length > 0 ? await pagosDelDia(db, restaurantId, deHoy) : null;
+  if (pagos && pagos.porPedido.size > 0) {
+    /* SOLO los de hoy. La consulta trae 24 h para no depender de la zona
+       horaria al filtrar en SQL, y el primer bucle ya descartó los de
+       ayer: recorrer aquí `data` entero restaría el total de un pedido
+       que nunca se sumó, y el bucket saldría en negativo. */
+    const hoy = new Set(deHoy);
+    for (const o of data ?? []) {
+      const id = o.id as string;
+      if (!hoy.has(id)) continue;
+      const suyos = pagos.porPedido.get(id);
+      if (!suyos) continue;
+      const pm = ((o.payment_method as string) || 'CASH').toUpperCase();
+      byMethod[pm] = round2((byMethod[pm] ?? 0) - Number(o.total));
+      if (byMethod[pm] === 0) delete byMethod[pm];
+      for (const [metodo, monto] of suyos) {
+        byMethod[metodo] = round2((byMethod[metodo] ?? 0) + monto);
+      }
+    }
   }
 
   return { date: todayKey, expectedCash: byMethod.CASH ?? 0, byMethod, orders, totalSales };

@@ -38,6 +38,7 @@ import {
   createWaiterOrder, updateOrderStatus, freeTable, getTableBill, archiveAbandonedTables,
   serveTableReady, resolveTableCalls, setTableParty, setItemSeat, moveTableOrders,
   printTableBillShare, undoServeTable, undoResolveTableCalls,
+  type TablePayment,
 } from '@/lib/actions/orders';
 import { tryHubOrder, warmUpHub } from '@/lib/hub-fallback';
 import { getQueuedOrders, saveQueuedOrder, removeQueuedOrder } from '@/lib/order-queue';
@@ -65,7 +66,6 @@ import { remainingQuantity, type OrderWithItems, type TableOccupancy, type Table
 import type { TableSeating } from '@/lib/db/table-sessions';
 import { updateSeating } from '@/lib/actions/table-sessions';
 import type { PanelCurrency } from '@/components/admin/order-card';
-import type { PaymentMethod } from '@/lib/payment-method';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -901,9 +901,11 @@ export default function WaiterPanel({
       `method` es cómo pagó: sin él, el pedido se quedaba con el 'CASH' de
       fábrica y el arqueo de la noche contaba como efectivo lo que se pagó
       con tarjeta (ver lib/payment-method.ts). */
-  function liberar(n: number, method: PaymentMethod, cashReceived: number | null) {
+  /** Cierra y cobra la mesa. `pagos` puede traer más de uno: una mesa que
+      paga mitad en efectivo y mitad con tarjeta (M-11). */
+  function liberar(n: number, pagos: TablePayment[]) {
     startFree(async () => {
-      const res = await freeTable(restaurantId, n, { method, cashReceived });
+      const res = await freeTable(restaurantId, n, pagos);
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
       /* La mesa se fue: su reparto ya no le sirve a nadie, y heredarlo a
          los próximos comensales sería peor que empezar de cero. */
@@ -1469,7 +1471,7 @@ export default function WaiterPanel({
                 freeing={freeing}
                 onVoidItem={setVoidTarget}
                 onDiscountApplied={() => { loadTableBill(billTable); router.refresh(); }}
-                onFreeTable={(method, cash) => liberar(billTable, method, cash)}
+                onFreeTable={(pagos) => liberar(billTable, pagos)}
               />
             )}
           </div>

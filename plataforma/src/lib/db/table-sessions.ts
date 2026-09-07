@@ -71,6 +71,37 @@ export function _resetCacheTurnos() {
   cache = null;
 }
 
+/**
+ * ¿Existe ya `order_payments`? (migración 129)
+ *
+ * Mismo motivo y misma vida corta que `hayTurnosDeMesa`: entre que el
+ * código sale y la migración corre hay una ventana, y en esa ventana
+ * COBRAR no se puede caer. Sin la tabla, la mesa se cierra igual con su
+ * método dominante —exactamente como antes de la 129— y lo único que se
+ * pierde es el detalle del reparto.
+ */
+let cachePagos: Promise<boolean> | null = null;
+
+export function hayPagosDeMesa(): Promise<boolean> {
+  if (!cachePagos) {
+    cachePagos = (async () => {
+      try {
+        const db = createServiceClient();
+        const { error } = await db.from('order_payments').select('id').limit(1);
+        return !(error && error.code === '42P01');
+      } catch {
+        return true;
+      }
+    })();
+  }
+  return cachePagos;
+}
+
+/** Solo para las pruebas. */
+export function _resetCachePagos() {
+  cachePagos = null;
+}
+
 /** Las mesas sentadas ahora mismo, por número. */
 export async function getOpenTableSessions(
   restaurantId: string,

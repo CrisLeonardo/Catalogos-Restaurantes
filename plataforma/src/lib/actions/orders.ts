@@ -29,9 +29,10 @@ import { notifyOrderStatus } from '@/lib/whatsapp/notify';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
+import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-payments';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
-import { cerrarTurnoDeMesa } from '@/lib/db/table-sessions';
+import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
 
 /**
  * «Los pedidos de la mesa N», como par columna/valor.
@@ -807,6 +808,13 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
 /** Cómo pagó la mesa al cerrarse. */
 export interface TablePayment {
   method: PaymentMethod;
+  /**
+   * Cuánto se paga con este método (M-11). Omitirlo significa «lo que
+   * quede», que es el caso de siempre —toda la mesa de una forma— y por
+   * eso sigue siendo opcional: ninguna de las llamadas que ya existían
+   * tiene que cambiar para seguir cobrando como cobraba.
+   */
+  amount?: number | null;
   /** Lo que puso el cliente en efectivo, para dejar el vuelto por escrito.
       Solo se guarda con `method: 'CASH'`. */
   cashReceived?: number | null;
@@ -1007,35 +1015,83 @@ export async function applyTableDiscount(
 export async function freeTable(
   restaurantId: string,
   tableNumber: number,
-  payment?: TablePayment,
+  payment?: TablePayment | TablePayment[],
 ): Promise<{ error?: string }> {
   if (!restaurantId || !tableNumber) return { error: 'Datos inválidos.' };
-  if (payment && !isPaymentMethod(payment.method)) return { error: 'Forma de pago inválida.' };
+
+  /* Uno o varios. Se admite el valor suelto de siempre porque media
+     aplicación llama así —el salón, la caja, el cierre rápido— y M-11 no
+     tiene por qué obligarlas a cambiar para cobrar de una sola forma. */
+  const pagos = payment == null ? [] : Array.isArray(payment) ? payment : [payment];
+  if (pagos.some((p) => !isPaymentMethod(p.method))) return { error: 'Forma de pago inválida.' };
+  if (pagos.some((p) => p.amount != null && !(Number.isFinite(p.amount) && p.amount > 0))) {
+    return { error: 'Importe de pago inválido.' };
+  }
 
   const acceso = await assertTableAccess(restaurantId);
   if ('error' in acceso) return acceso;
 
   const db = createServiceClient();
   const porNumero = await hayColumnaMesa();
-  // Se piden los ids de vuelta: cerrar la mesa es el momento en que la venta
-  // de comer en local queda cobrada, y es cuando toca facturarla. Sin el
-  // `select` no habría a qué pedido emitirle factura — este camino no pasa
-  // por updateOrderStatus().
-  /* El efectivo recibido se guarda SOLO cuando de verdad cubre la cuenta:
-     un "recibí" menor que el total es un teclazo a medias, y dejarlo escrito
-     haría que el ticket prometiera un vuelto que nadie dio. */
+  const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
+
+  /* Los pedidos ANTES de cerrarlos: hace falta el total de cada uno para
+     repartir el dinero entre ellos, y después del UPDATE ya no se pueden
+     distinguir de los que se cerraron esta noche por otra vía. */
+  const { data: vivos, error: errLeer } = await db
+    .from('orders')
+    .select('id, total, created_at')
+    .eq('restaurant_id', restaurantId)
+    .eq(colMesa, valMesa)
+    .eq('order_type', 'DINE_IN')
+    .not('status', 'in', '("DELIVERED","CANCEL")')
+    .order('created_at', { ascending: true });
+
+  if (errLeer) return { error: errLeer.message };
+  const ordenes = (vivos ?? []).map((o) => ({ id: o.id as string, total: Number(o.total ?? 0) }));
+
+  /* Cómo se reparte el dinero entre los pedidos de la mesa (M-11).
+     ------------------------------------------------------------
+     Sin importe, un pago cubre lo que quede: es el caso de siempre —«toda
+     la mesa en efectivo»— y así una sola llamada sigue significando lo
+     mismo que antes de esta migración. Con importes, cada uno pone lo
+     suyo y la aritmética vive en `lib/table-payments.ts`, probada aparte
+     porque de aquí sale lo que el dueño cuenta en el cajón. */
+  const totalMesa = ordenes.reduce((s, o) => s + o.total, 0);
+  const puesto = pagos.reduce((s, p) => s + (p.amount ?? 0), 0);
+  const entradas: PagoEntrada[] = pagos.map((p) => ({
+    method: p.method,
+    amount: p.amount ?? Math.max(0, totalMesa - puesto),
+    cashReceived: p.method === 'CASH' ? p.cashReceived ?? null : null,
+  }));
+  const filas = repartirPagos(ordenes, entradas);
+
+  /* Qué método se escribe en cada pedido. Sigue siendo UNA palabra por
+     pedido —el ticket, los informes y analítica la leen así desde
+     siempre— y es la del método que más puso. El detalle exacto está en
+     `order_payments`. */
+  const metodoDe = new Map<string, string>();
+  const recibidoDe = new Map<string, number | null>();
+  for (const o of ordenes) {
+    const suyas = filas.filter((f) => f.orderId === o.id);
+    if (suyas.length === 0) continue;
+    metodoDe.set(o.id, metodoDominante(suyas));
+    /* El efectivo recibido se guarda SOLO cuando de verdad cubre lo que
+       se le aplicó: un "recibí" menor es un teclazo a medias, y dejarlo
+       escrito haría que el ticket prometiera un vuelto que nadie dio. */
+    const enEfectivo = suyas.filter((f) => f.method === 'CASH');
+    const recibido = enEfectivo.find((f) => f.cashReceived != null)?.cashReceived ?? null;
+    const aplicado = enEfectivo.reduce((s, f) => s + f.amount, 0);
+    recibidoDe.set(o.id, recibido != null && recibido >= aplicado ? recibido : null);
+  }
+
   const cierre: Record<string, unknown> = {
     status: 'DELIVERED',
     delivered_at: new Date().toISOString(),
   };
-  if (payment) {
-    cierre.payment_method = payment.method;
-    cierre.cash_amount = payment.method === 'CASH' && (payment.cashReceived ?? 0) > 0
-      ? payment.cashReceived
-      : null;
-  }
 
-  const [colMesa, valMesa] = campoMesa(porNumero, tableNumber);
+  /* Se cierran de una vez los que comparten método —que es el caso normal,
+     y sigue siendo UN update— y aparte los que no. */
   const { data: cerrados, error } = await db
     .from('orders')
     .update(cierre)
@@ -1046,6 +1102,27 @@ export async function freeTable(
     .select('id');
 
   if (error) return { error: error.message };
+
+  for (const [orderId, metodo] of metodoDe) {
+    await db
+      .from('orders')
+      .update({ payment_method: metodo, cash_amount: recibidoDe.get(orderId) ?? null })
+      .eq('id', orderId);
+  }
+
+  /* Y el detalle, fila por fila. Si la 129 todavía no corrió aquí, el
+     cobro NO se cae: la mesa se cierra igual con su método dominante,
+     que es exactamente lo que hacía antes de esta migración. */
+  if (filas.length > 0 && (await hayPagosDeMesa())) {
+    await db.from('order_payments').insert(filas.map((f) => ({
+      restaurant_id: restaurantId,
+      order_id: f.orderId,
+      method: f.method,
+      amount: f.amount,
+      cash_received: f.cashReceived,
+      taken_by: acceso.actor.userId,
+    })));
+  }
 
   /* El reparto era de la gente que se acaba de ir: heredarlo a los
      próximos comensales mezclaría dos cuentas que no tienen nada que
