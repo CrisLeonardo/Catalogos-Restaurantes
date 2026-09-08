@@ -579,6 +579,38 @@ export interface TableAction {
  */
 export type SalonPuesto = 'mando' | 'servicio';
 
+/**
+ * QUÉ NÚMERO GRANDE LLEVA LA FICHA (M-21)
+ * ------------------------------------------------------------
+ * La ficha decía número, nombre, personas, monto, estado, cuatro tramos,
+ * etapa, tiempo y mesero — en 168 px. Todo a la vez es lo mismo que nada:
+ * el ojo no sabe dónde caer.
+ *
+ * Lightspeed lo resuelve dejando elegir UNA métrica (Covers / Total /
+ * Time / Status), porque en cada momento del turno solo una importa. Y
+ * aquí eso hace algo más: **separa las dos pantallas sin escribir dos
+ * lienzos**. Mesas arranca en «tiempo» —lo que el encargado vigila— y
+ * Tomar pedidos en «total» —lo que el mesero va a cobrar—, así que dejan
+ * de dibujarse igual el primer día, sin que nadie toque un ajuste.
+ *
+ * Lo demás no desaparece: sigue en la ficha, más pequeño. Lo que cambia
+ * es qué ocupa el sitio grande.
+ */
+export type SalonMetrica = 'total' | 'tiempo' | 'pax' | 'etapa';
+
+export const METRICA_LABEL: Record<SalonMetrica, string> = {
+  total: 'Cuenta',
+  tiempo: 'Tiempo',
+  pax: 'Personas',
+  etapa: 'En qué va',
+};
+
+/** Con qué arranca cada puesto, si nadie ha elegido. */
+export const METRICA_POR_PUESTO: Record<SalonPuesto, SalonMetrica> = {
+  mando: 'tiempo',
+  servicio: 'total',
+};
+
 const ACTION_BY_REASON: Record<TableReason, TableAction> = {
   cuenta: { kind: 'cobrar', label: 'Cobrar' },
   lista: { kind: 'llevar', label: 'Llevar a la mesa' },

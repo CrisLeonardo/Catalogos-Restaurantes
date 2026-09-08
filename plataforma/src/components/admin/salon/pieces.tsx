@@ -15,8 +15,9 @@
 import { Icon } from '@/components/icons';
 import {
   byUrgency, fmtMin, tableAction, tableStage, tablesWithState, tableTone,
+  METRICA_POR_PUESTO,
   type TableState, type TableStage, type TableAction, type SalonUmbrales,
-  type SalonPuesto,
+  type SalonPuesto, type SalonMetrica,
 } from '@/lib/table-state';
 import type { TableCall, TableOccupancy } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
@@ -38,6 +39,15 @@ export interface SalonTable {
       el que apuntó el primer plato. `null` = de nadie todavía. */
   waiterName: string | null;
   waiterId: string | null;
+  /** Las iniciales del mesero y su color, para reconocer «mis mesas» de un
+      vistazo en vez de leer veinte líneas de 12 px (M-05). `null` = de
+      nadie todavía. */
+  waiterMark: { iniciales: string; tono: string } | null;
+  /** El número grande de la ficha: cuál es, su valor y cómo se llama
+      (M-21). `cual` sirve para que el resto de la ficha NO lo repita:
+      decir dos veces «8 h 10 min» en 168 px es exactamente el problema
+      que este hallazgo venía a arreglar. */
+  metrica: { cual: SalonMetrica; valor: string; etiqueta: string };
   action: TableAction;
   /** Ya formateado por quien pinta (símbolo y separadores del país). */
   total: string | null;
@@ -82,6 +92,9 @@ export interface BuildSalonInput {
   /** Desde qué puesto se mira: cambia el verbo de la mesa libre, y solo eso.
       Ver `SalonPuesto` en lib/table-state.ts. */
   puesto?: SalonPuesto;
+  /** Qué número lleva grande la ficha (M-21). Sin decir nada, el de este
+      puesto: «tiempo» en el mando y «total» en servicio. */
+  metrica?: SalonMetrica;
 }
 
 /**
@@ -93,6 +106,7 @@ export function buildSalonTables(input: BuildSalonInput): SalonTable[] {
   const {
     tableCount, occupancy, calls, now, floorPlan, money, moneyShort, umbrales,
     seatings = {}, puesto = 'servicio',
+    metrica = METRICA_POR_PUESTO[puesto],
   } = input;
 
   const sillas: Record<number, number> = {};
@@ -128,6 +142,15 @@ export function buildSalonTables(input: BuildSalonInput): SalonTable[] {
       // decisión, quedarse la mesa por apuntar primero es una casualidad.
       waiterName: t.seat?.waiterName ?? t.occ?.waiterName ?? null,
       waiterId: t.seat?.waiterId ?? null,
+      waiterMark: marcaDeMesero(t.seat?.waiterName ?? t.occ?.waiterName ?? null),
+      metrica: metricaDe(
+        metrica,
+        ocupada,
+        t.occ ? money(t.occ.total) : null,
+        now != null && Number.isFinite(desde) ? fmtMin((now - desde) / 60000) : null,
+        pax,
+        stage,
+      ),
       action: tableAction(t.state, { sinPedido: !t.occ, puesto }),
       total: t.occ ? money(t.occ.total) : null,
       totalCorto: t.occ ? moneyShort(t.occ.total) : null,
@@ -136,6 +159,84 @@ export function buildSalonTables(input: BuildSalonInput): SalonTable[] {
       tiempo: now != null && Number.isFinite(desde) ? fmtMin((now - desde) / 60000) : null,
     };
   });
+}
+
+/**
+ * El número grande de la ficha (M-21).
+ *
+ * Devuelve siempre algo: una ficha con el hueco vacío se lee como un
+ * fallo. Si la métrica elegida no aplica —«Cuenta» en una mesa sentada
+ * que aún no pidió— se cae a la raya, que es la respuesta honesta.
+ */
+function metricaDe(
+  cual: SalonMetrica,
+  ocupada: boolean,
+  total: string | null,
+  tiempo: string | null,
+  pax: number | null,
+  stage: TableStage,
+): { cual: SalonMetrica; valor: string; etiqueta: string } {
+  if (!ocupada) return { cual, valor: '—', etiqueta: 'Libre' };
+  switch (cual) {
+    case 'tiempo':
+      return { cual, valor: tiempo ?? '—', etiqueta: stage.label };
+    case 'pax':
+      return { cual, valor: pax != null ? String(pax) : '—', etiqueta: pax === 1 ? 'persona' : 'personas' };
+    case 'etapa':
+      return { cual, valor: stage.label, etiqueta: tiempo ?? '' };
+    case 'total':
+    default:
+      return { cual, valor: total ?? '—', etiqueta: 'Cuenta' };
+  }
+}
+
+/**
+ * Lo que la ficha dice EN PEQUEÑO, sin repetir la métrica grande.
+ *
+ * El nombre del plano, las personas, quién atiende y el reloj. Se quita
+ * el que ya está ocupando el sitio grande: leer «8 h 10 min · 8 h 10 min»
+ * en una ficha de 168 px es peor que no tener métrica intercambiable.
+ */
+export function detalleDeFicha(t: SalonTable): string {
+  const cual = t.metrica.cual;
+  return [
+    t.fuera && 'Sin configurar',
+    t.nombre,
+    cual !== 'pax' && t.pax,
+    t.waiterName ?? 'Sin asignar',
+    cual !== 'tiempo' && t.tiempo,
+  ].filter(Boolean).join(' · ');
+}
+
+/* ── El color de cada mesero (M-05) ────────────────────────────
+   Quién atiende cada mesa se decía con una línea de texto gris de 12 px.
+   Con veinte mesas y cuatro meseros en hora pico, cada uno leía las
+   veinte fichas para encontrar las suyas. Toast pone las iniciales sobre
+   el color de esa persona; Lightspeed, el color en el borde.
+
+   El color sale del NOMBRE, no de una tabla de asignaciones: así es
+   estable entre pantallas y entre sesiones sin guardar nada, y no hay un
+   ajuste más que administrar. Seis tonos —más se vuelven indistinguibles
+   de un vistazo, que es justo lo que se venía a arreglar. */
+const TONOS_MESERO = [
+  '#2563eb', '#c2410c', '#7c3aed', '#0f766e', '#b91c1c', '#a16207',
+] as const;
+
+function marcaDeMesero(nombre: string | null): { iniciales: string; tono: string } | null {
+  const limpio = nombre?.trim();
+  if (!limpio) return null;
+
+  const partes = limpio.split(/\s+/).filter(Boolean);
+  const iniciales = (partes.length > 1
+    ? partes[0][0] + partes[partes.length - 1][0]
+    : limpio.slice(0, 2)).toUpperCase();
+
+  /* Suma de códigos: no hace falta un hash de verdad para repartir seis
+     colores entre cuatro personas, y así el mismo nombre cae siempre en
+     el mismo tono en las dos pantallas. */
+  let n = 0;
+  for (let i = 0; i < limpio.length; i++) n = (n + limpio.charCodeAt(i)) % 4096;
+  return { iniciales, tono: TONOS_MESERO[n % TONOS_MESERO.length] };
 }
 
 /* ── Cómo se lee el estado en una ficha ────────────────────────
@@ -312,26 +413,45 @@ export function TableCard({
                 {estadoDeFicha(t)}
               </span>
             </span>
-            <span
-              className="t-mono"
-              style={{
-                fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em', flexShrink: 0,
-                color: 'var(--u-text-2)',
-              }}
-            >
-              {t.total ?? '—'}
+            {/* EL número de la ficha (M-21). Cuál es depende del puesto:
+                el encargado mira tiempos y el mesero mira la cuenta, así
+                que las dos pantallas dejan de dibujarse igual el primer
+                día sin que nadie toque un ajuste. Lo demás no desaparece;
+                lo que cambia es qué ocupa el sitio grande. */}
+            <span style={{ flexShrink: 0, textAlign: 'right', minWidth: 0 }}>
+              <span
+                className="t-mono"
+                style={{
+                  display: 'block', fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em',
+                  color: 'var(--u-text-2)', whiteSpace: 'nowrap',
+                }}
+              >
+                {t.metrica.valor}
+              </span>
+              {t.metrica.etiqueta && (
+                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                  {t.metrica.etiqueta}
+                </span>
+              )}
             </span>
           </span>
 
           <StageBars stage={t.stage} urgente={urgente} />
 
+          {/* La etapa y su reloj, salvo lo que la métrica grande ya esté
+              diciendo (M-21). Si el sitio grande lleva el tiempo, aquí
+              queda solo la etapa; si lleva la etapa, queda solo el reloj. */}
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--u-text-3)' }}>
-            <span>{t.stage.label}</span>
-            {t.tiempo && <span className="t-mono" style={{ fontWeight: 600 }}>{t.tiempo}</span>}
+            <span>{t.metrica.cual === 'etapa' ? '' : t.stage.label}</span>
+            {t.tiempo && t.metrica.cual !== 'tiempo' && (
+              <span className="t-mono" style={{ fontWeight: 600 }}>{t.tiempo}</span>
+            )}
           </span>
 
           <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--u-text-3)' }}>
-            <Icon name="user" size={13} style={{ flexShrink: 0 }} />
+            {t.waiterMark
+              ? <MeseroMark mark={t.waiterMark} />
+              : <Icon name="user" size={13} style={{ flexShrink: 0 }} />}
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {t.waiterName ?? 'Sin asignar'}
             </span>
@@ -341,21 +461,27 @@ export function TableCard({
         <span className="salon-card-compact">
           <span className="t-mono" style={num(26, 34)}>{t.n}</span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: estadoInk(t) }}>
-              {estadoDeFicha(t)}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {t.waiterMark && <MeseroMark mark={t.waiterMark} />}
+              <span style={{ fontSize: 15, fontWeight: 600, color: estadoInk(t), minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {estadoDeFicha(t)}
+              </span>
             </span>
             <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1 }}>
-              {[t.fuera && 'Sin configurar', t.nombre, t.pax, t.waiterName ?? 'Sin asignar', t.tiempo].filter(Boolean).join(' · ')}
+              {detalleDeFicha(t)}
             </span>
           </span>
+          {/* El mismo número que en la maqueta ancha (M-21): si el
+              interruptor no llegara aquí, en el teléfono no haría nada —
+              y el teléfono es donde más se mira este salón. */}
           <span
             className="t-mono"
             style={{
               fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', flexShrink: 0,
-              color: 'var(--u-text)',
+              color: 'var(--u-text)', whiteSpace: 'nowrap',
             }}
           >
-            {t.total ?? '—'}
+            {t.metrica.valor}
           </span>
         </span>
       </button>
@@ -370,6 +496,29 @@ export function TableCard({
         {busy ? 'Un momento…' : t.action.label}
       </button>
     </div>
+  );
+}
+
+/* ── Quién atiende, de un vistazo (M-05) ───────────────────────
+   Las iniciales sobre el color de esa persona. El nombre sigue al lado:
+   el color es para encontrar la mesa de lejos, no para adivinar de quién
+   es. `aria-hidden` porque el nombre completo ya está en el mismo
+   renglón — un lector de pantalla no necesita oír «CE» y luego «Carlos
+   Encargado». */
+function MeseroMark({ mark }: { mark: { iniciales: string; tono: string } }) {
+  return (
+    <span
+      aria-hidden
+      className="t-mono"
+      style={{
+        display: 'grid', placeItems: 'center', flexShrink: 0,
+        width: 18, height: 18, borderRadius: 6,
+        fontSize: 9.5, fontWeight: 700, letterSpacing: '0.02em',
+        color: '#fff', background: mark.tono,
+      }}
+    >
+      {mark.iniciales}
+    </span>
   );
 }
 
@@ -449,8 +598,15 @@ export function TableRow({
               contar: ya lo dijo la palabra «Libre» de arriba. */}
           {!libre && (
             <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-              {[t.fuera && 'Sin configurar', t.nombre, t.pax, t.waiterName ?? 'Sin asignar', t.tiempo && `${t.stage.label} · ${t.tiempo}`]
-                .filter(Boolean).join(' · ')}
+              {[
+                t.fuera && 'Sin configurar',
+                t.nombre,
+                t.metrica.cual !== 'pax' && t.pax,
+                t.waiterName ?? 'Sin asignar',
+                t.tiempo && (t.metrica.cual === 'tiempo'
+                  ? t.stage.label
+                  : `${t.stage.label} · ${t.tiempo}`),
+              ].filter(Boolean).join(' · ')}
             </span>
           )}
           {libre && (t.nombre || t.pax) && (
@@ -459,6 +615,8 @@ export function TableRow({
             </span>
           )}
         </span>
+        {/* La fila también sigue la métrica (M-21): si el encargado eligió
+            mirar tiempos, la vista Lista no puede seguir alineando montos. */}
         <span
           className="t-mono"
           style={{
@@ -466,7 +624,7 @@ export function TableRow({
             color: libre ? 'var(--u-text-4)' : 'var(--u-text)',
           }}
         >
-          {t.total ?? ''}
+          {libre ? '' : t.metrica.valor}
         </span>
       </button>
       {/* Sin botón en la mesa libre: «Abrir mesa» al lado de «Cobrar», con

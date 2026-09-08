@@ -36,7 +36,7 @@ import {
 } from '@/lib/actions/orders';
 import { seatTable, updateSeating, unseatTable } from '@/lib/actions/table-sessions';
 import { buildBillLines, billBreakdown } from '@/lib/bill-split';
-import { fmtMin, type SalonUmbrales } from '@/lib/table-state';
+import { fmtMin, METRICA_LABEL, METRICA_POR_PUESTO, type SalonUmbrales, type SalonMetrica } from '@/lib/table-state';
 import type { TableOccupancy, TableCall } from '@/lib/db/orders';
 import type { TableSeating, WaiterOption } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
@@ -83,6 +83,22 @@ export default function SalonBoard({
 
   const [view, elegirVista] = useSalonView('leogin:salon-vista', 'fichas');
 
+  /* ── Qué número lleva grande cada ficha (M-21) ────────────
+     Arranca en «tiempo», que es lo que vigila el encargado, y se recuerda
+     por aparato: la tablet del mostrador y el teléfono del dueño no miran
+     lo mismo. La del mesero arranca en «total» y no se toca desde aquí. */
+  const [metrica, setMetrica] = useState<SalonMetrica>(METRICA_POR_PUESTO.mando);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('leogin:salon-metrica');
+      if (v === 'total' || v === 'tiempo' || v === 'pax' || v === 'etapa') setMetrica(v);
+    } catch { /* navegador sin almacenamiento: se queda con la de fábrica */ }
+  }, []);
+  const elegirMetrica = useCallback((m: SalonMetrica) => {
+    setMetrica(m);
+    try { localStorage.setItem('leogin:salon-metrica', m); } catch { /* no-op */ }
+  }, []);
+
   /* Cuando la cuenta no cabe AL LADO, sube como hoja.
      ------------------------------------------------------------------
      El corte tiene que ser el MISMO en el que `.salon-floor` deja de ser
@@ -127,9 +143,9 @@ export default function SalonBoard({
   const salon = useMemo(
     () => buildSalonTables({
       tableCount, occupancy, calls, now, floorPlan, money, moneyShort: moneyCorto, umbrales,
-      seatings, puesto: 'mando',
+      seatings, puesto: 'mando', metrica,
     }),
-    [tableCount, occupancy, calls, now, floorPlan, money, moneyCorto, umbrales, seatings],
+    [tableCount, occupancy, calls, now, floorPlan, money, moneyCorto, umbrales, seatings, metrica],
   );
 
   /* «Te necesitan» cuenta las ALARMAS, no todo lo que tiene un reloj
@@ -146,6 +162,24 @@ export default function SalonBoard({
   /* El denominador incluye las mesas fuera de configuración: si hay gente en
      la 25 de un salón de 20, «8 / 20» sería mentira en las dos cifras. */
   const totalMesas = useMemo(() => Math.max(tableCount, salon.length), [tableCount, salon.length]);
+
+  /* ── El filtro de la tira (M-19) ──────────────────────────
+     Tocar «Te necesitan · 5» deja en pantalla esas cinco mesas. Antes la
+     tira contaba y el encargado tenía que volver a buscarlas con los ojos
+     entre las veinte. Volver a tocar la misma celda lo apaga. */
+  const [filtro, setFiltro] = useState<'todas' | 'urgentes' | 'abiertas' | 'sin-cobrar'>('todas');
+  const alFiltrar = useCallback((f: 'urgentes' | 'abiertas' | 'sin-cobrar') => {
+    setFiltro((prev) => (prev === f ? 'todas' : f));
+  }, []);
+
+  const salonVisible = useMemo(() => {
+    if (filtro === 'urgentes') return salon.filter((t) => t.state.level === 'alarma');
+    if (filtro === 'abiertas') return salon.filter((t) => t.occ || t.seat);
+    /* «Sin cobrar» es dinero, no ocupación: una mesa sentada sin pedir no
+       debe nada, así que no entra aunque tenga gente. */
+    if (filtro === 'sin-cobrar') return salon.filter((t) => (t.occ?.total ?? 0) > 0);
+    return salon;
+  }, [salon, filtro]);
 
   /* ── La mesa elegida y su cuenta ──────────────────────────── */
   const [sel, setSel] = useState<number | null>(null);
@@ -420,13 +454,59 @@ export default function SalonBoard({
              que cambia al tocar el interruptor es el lienzo de abajo. ── */}
       <div className="salon-top">
         <div className="salon-summary">
-          <Celda label="Mesas con gente" value={`${abiertas.length} / ${totalMesas}`} />
-          <Celda label="Te necesitan" value={String(urgentes.length)} accent={urgentes.length > 0} />
-          <Celda label="Sin cobrar" value={money(sinCobrar)} />
-          <Celda label="Rotación hoy" value={String(turnsToday)} />
+          <Celda
+            label="Mesas con gente"
+            value={`${abiertas.length} / ${totalMesas}`}
+            activo={filtro === 'abiertas'}
+            onClick={abiertas.length > 0 ? () => alFiltrar('abiertas') : undefined}
+          />
+          <Celda
+            label="Te necesitan"
+            value={String(urgentes.length)}
+            accent={urgentes.length > 0}
+            activo={filtro === 'urgentes'}
+            onClick={urgentes.length > 0 ? () => alFiltrar('urgentes') : undefined}
+          />
+          <Celda
+            label="Sin cobrar"
+            value={money(sinCobrar)}
+            activo={filtro === 'sin-cobrar'}
+            onClick={sinCobrar > 0 ? () => alFiltrar('sin-cobrar') : undefined}
+          />
+          {/* «Rotación hoy · 12» en un salón de 20 no dice si es bueno ni si
+              son 12 mesas o 12 vueltas. Es el número de CIERRES de mesa de
+              hoy, así que eso es lo que dice ahora, con la vuelta por mesa
+              debajo para darle escala (M-20). Y no filtra nada: lo cerrado
+              ya no está en el salón. */}
+          <Celda
+            label="Mesas cerradas hoy"
+            value={String(turnsToday)}
+            hint={tableCount > 0 && turnsToday > 0
+              ? `${(turnsToday / tableCount).toFixed(1)} vueltas por mesa`
+              : null}
+          />
         </div>
 
         <SalonViewSwitch view={view} onChange={elegirVista} />
+
+        {/* Cuál de los cuatro datos va grande en la ficha (M-21). Solo en
+            Fichas y Lista: en el plano los pines ya enseñan lo suyo, y no
+            hay sitio para otro renglón. */}
+        {view !== 'plano' && (
+          <div className="salon-seg" role="group" aria-label="Qué dato enseña cada mesa">
+            {(['tiempo', 'total', 'pax', 'etapa'] as SalonMetrica[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                data-on={metrica === m ? '1' : '0'}
+                aria-pressed={metrica === m}
+                onClick={() => elegirMetrica(m)}
+              >
+                {METRICA_LABEL[m]}
+              </button>
+            ))}
+          </div>
+        )}
 
         <button
           type="button"
@@ -441,7 +521,10 @@ export default function SalonBoard({
           }}
         >
           <Icon name="plus" size={17} strokeWidth={2} />
-          Tomar pedido
+          {/* Con una mesa abierta al lado, este botón lleva A ESA MESA, no a
+              un pedido nuevo — es la conducta correcta y la que nadie
+              anunciaba (M-17). Nombrar el destino cuesta dos palabras. */}
+          {sel != null ? `Tomar pedido · Mesa ${sel}` : 'Tomar pedido'}
         </button>
       </div>
 
@@ -476,7 +559,7 @@ export default function SalonBoard({
 
       <SalonCanvas
         view={view}
-        tables={salon}
+        tables={salonVisible}
         floorPlan={floorPlan}
         selected={sel}
         onOpen={setSel}
@@ -505,7 +588,42 @@ export default function SalonBoard({
         </div>
       )}
 
-      {view !== 'plano' && (
+      {/* Filtrar esconde mesas, y esconder sin decirlo es la forma más
+          rápida de que alguien crea que el salón se vació. La salida está
+          en el mismo renglón. */}
+      {filtro !== 'todas' && (
+        <div
+          role="status"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            padding: '9px 13px', borderRadius: 11, fontSize: 13,
+            border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
+            background: 'color-mix(in srgb, var(--brand-accent) 7%, transparent)',
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 180, color: 'var(--u-text-2)' }}>
+            Viendo {salonVisible.length}{' '}
+            {salonVisible.length === 1 ? 'mesa' : 'mesas'} de {salon.length}:{' '}
+            {filtro === 'urgentes' ? 'las que te necesitan ya'
+              : filtro === 'abiertas' ? 'las que tienen gente'
+                : 'las que deben algo'}.
+          </span>
+          <button
+            type="button"
+            onClick={() => setFiltro('todas')}
+            className="press"
+            style={{
+              flexShrink: 0, height: 32, padding: '0 13px', borderRadius: 9, cursor: 'pointer',
+              border: '1px solid var(--u-hair-2)', background: 'var(--adm-card)',
+              color: 'var(--u-text)', fontSize: 12.5, fontWeight: 600,
+            }}
+          >
+            Ver todas
+          </button>
+        </div>
+      )}
+
+      {view !== 'plano' && filtro === 'todas' && (
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
           Las mesas se ordenan por urgencia, no por número. Una mesa libre no dice nada: solo se pinta la que
           necesita a alguien ahora.
@@ -517,13 +635,46 @@ export default function SalonBoard({
 
 /* ── Piezas de la barra superior ──────────────────────────────── */
 
-function Celda({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div>
+/**
+ * Una celda de la tira de resumen.
+ *
+ * Con `onClick` es un BOTÓN que filtra el salón a lo que acaba de contar
+ * (M-19). Antes las cuatro eran `<div>` pelados: «Te necesitan · 5» es el
+ * número más importante de la pantalla y era texto muerto, así que quien
+ * lo leía tenía que volver a buscar con los ojos las cinco mesas que la
+ * tira acababa de contar. Las que no filtran nada —«Mesas cerradas hoy»,
+ * que no es un subconjunto del salón— siguen siendo texto.
+ */
+function Celda({ label, value, hint, accent, activo, onClick }: {
+  label: string;
+  value: string;
+  hint?: string | null;
+  accent?: boolean;
+  activo?: boolean;
+  onClick?: () => void;
+}) {
+  const cuerpo = (
+    <>
       <div className="salon-summary-label">{label}</div>
       <div className="salon-summary-value" style={accent ? { color: 'var(--brand-accent-ink)' } : undefined}>
         {value}
       </div>
-    </div>
+      {hint && (
+        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
+          {hint}
+        </div>
+      )}
+    </>
+  );
+
+  if (!onClick) return <div>{cuerpo}</div>;
+
+  /* Sin estilos en línea: el relleno, la línea que separa y la marca de
+     «filtrando» las pone `.salon-summary > button` en globals.css, para que
+     una celda tocable y una que no lo es midan exactamente igual. */
+  return (
+    <button type="button" onClick={onClick} aria-pressed={!!activo} className="press">
+      {cuerpo}
+    </button>
   );
 }
