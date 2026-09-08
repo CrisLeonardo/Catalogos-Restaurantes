@@ -7,6 +7,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getPanelOrders, getOrderStats, getDayPace, orderClosedAt } from '@/lib/db/orders';
 import type { TimesData } from '@/components/admin/times-widget';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { getFallosDeImpresion } from '@/lib/db/print-stations';
 import OrdersPanel from '@/components/admin/orders-panel';
 import { getDrivers } from '@/lib/db/drivers';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
@@ -79,6 +80,16 @@ export default async function PedidosPage() {
      pedido que nunca se sirvió no mide a la cocina— y también los que salen
      por debajo de un minuto, que en la práctica son cierres a mano de algo
      que ya se había entregado. */
+  /* Qué estaciones NO imprimieron (migración 130, M-07). Va después de
+     los pedidos porque necesita sus ids, y solo sobre los VIVOS: un fallo
+     de impresión de un pedido ya entregado no tiene remedio útil.
+     Devuelve {} donde no hay estaciones, que es como estaba todo hasta la
+     fase 3 de M-07. */
+  const fallosDeImpresion = await getFallosDeImpresion(
+    restaurantId,
+    panelOrders.active.map((o) => o.id),
+  );
+
   const SLOW_MINUTES = 30;
   const duraciones = panelOrders.closedToday
     .filter((o) => o.status === 'DELIVERED')
@@ -128,6 +139,7 @@ export default async function PedidosPage() {
       kitchenRedMin={themeConfig.kdsRedMin}
       agentKitchen={agentKitchen}
       agentReceipt={agentReceipt}
+      fallosDeImpresion={fallosDeImpresion}
       autoConfirmEnabled={themeConfig.autoConfirmEnabled}
       autoConfirmMinutes={themeConfig.autoConfirmMinutes}
       drivers={activeDrivers}

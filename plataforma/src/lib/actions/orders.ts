@@ -2226,13 +2226,18 @@ async function authorizeOrderAccess(
 
 /** Mensaje humano para un intento de impresión que no llegó a la cola. */
 function printFailureMessage(
-  reason: 'no-printer' | 'pc-off' | 'not-found' | 'error' | 'already-printed',
+  reason: 'no-printer' | 'pc-off' | 'not-found' | 'error' | 'already-printed' | 'sin-lineas',
   role: 'cocina' | 'caja',
   message?: string,
 ): string {
   switch (reason) {
     case 'no-printer':
-      return `No hay impresora de ${role} asignada. Configúrala en «Impresión».`;
+      return `No hay impresora de ${role} asignada. Configúrala en «Mi PC del local».`;
+    case 'sin-lineas':
+      // Se pidió reimprimir una estación concreta y el pedido no tiene ni
+      // una línea suya. Pasa si alguien cambió el mapa entre que salió el
+      // papel y se pulsó «Reintentar».
+      return 'Ese pedido ya no tiene platos de esa estación.';
     case 'pc-off':
       return 'La PC principal del local está apagada: enciéndela en «Mi PC del local» para poder imprimir.';
     case 'not-found':
@@ -2271,13 +2276,20 @@ export async function printReceiptViaAgent(orderId: string): Promise<{ error?: s
  * impresora, se perdió el papel). Salta el candado anti-duplicado y el ticket
  * sale marcado como "COPIA - NO COCINAR" para que la cocina no prepare el
  * pedido dos veces.
+ *
+ * Con `stationId` reimprime SOLO esa estación (migración 130). Es lo que hace
+ * que «la barra no imprimió · Reintentar» no vuelva a sacar por la cocina un
+ * plato que ya está en la plancha.
  */
-export async function reprintKitchenTicket(orderId: string): Promise<{ error?: string; ok?: boolean }> {
+export async function reprintKitchenTicket(
+  orderId: string,
+  stationId?: string,
+): Promise<{ error?: string; ok?: boolean }> {
   const auth = await authorizeOrderAccess(orderId);
   if ('error' in auth) return { error: auth.error };
 
   try {
-    const res = await enqueueKitchenForOrder(auth.restaurantId, orderId, { force: true });
+    const res = await enqueueKitchenForOrder(auth.restaurantId, orderId, { force: true, stationId });
     if (!res.queued) return { error: printFailureMessage(res.reason, 'cocina', res.message) };
   } catch (e) {
     return { error: (e as Error).message };

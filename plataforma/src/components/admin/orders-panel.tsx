@@ -42,6 +42,8 @@ interface Props {
   /** El restaurante usa el Agente Leogin para cocina / caja (evita doble impresión). */
   agentKitchen?:      boolean;
   agentReceipt?:      boolean;
+  /** Estaciones que no lograron imprimir, por id de pedido (M-07). */
+  fallosDeImpresion?: Record<string, { stationId: string; stationName: string }[]>;
   autoConfirmEnabled?: boolean;
   autoConfirmMinutes?: number;
   /** Repartidores activos, para asignar entregas (Fase 2). Lista vacía = el
@@ -98,6 +100,7 @@ function OrdersPanelInner({
   activeOrders, closedToday, restaurantId, restaurantName, stats, times, pace, currency, timezone,
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
+  fallosDeImpresion = {},
   autoConfirmEnabled = false, autoConfirmMinutes = 1,
   drivers = [],
 }: Props) {
@@ -356,6 +359,7 @@ function OrdersPanelInner({
     currency, restaurantName, ticketFormat, now,
     kitchenYellowMin, kitchenRedMin,
     agentKitchen, agentReceipt,
+    fallosDeImpresion,
     drivers, restaurantId,
   };
 

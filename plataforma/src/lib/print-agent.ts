@@ -14,6 +14,8 @@ import { getFelDocumentForOrder } from '@/lib/db/fel';
 import { urlVerificacion } from '@/lib/fel/verificacion';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 import type { OrderWithItems } from '@/lib/db/orders';
+import { getPrintStations, getStationMap, type PrintStation } from '@/lib/db/print-stations';
+import { repartirPorEstacion, etiquetaDeParte, estacionesConPapel } from '@/lib/print-routing';
 
 export type PrintJobRole = 'kitchen' | 'receipt';
 
@@ -133,6 +135,10 @@ export async function enqueuePrintJob(opts: {
   bytes: Uint8Array;
   orderId?: string | null;
   targetOverride?: string | null;
+  /** Por qué estación salió este papel (migración 130). Es lo que permite
+      que el candado anti-duplicado razone por estación en vez de por
+      pedido, y que «reintentar la barra» no reimprima la cocina. */
+  stationId?: string | null;
 }): Promise<EnqueueResult> {
   const db = createServiceClient();
 
@@ -164,6 +170,13 @@ export async function enqueuePrintJob(opts: {
       payload_b64,
       status: 'pending',
       order_id: opts.orderId ?? null,
+      /* La columna solo se NOMBRA cuando hay estación que escribir. Donde
+         la migración 130 todavía no corrió, `print_jobs.station_id` no
+         existe y mencionarla tumbaría el insert entero: el local se
+         quedaría sin comanda, que es infinitamente peor que quedarse sin
+         estaciones. Y sin estaciones nadie pasa `stationId`, así que este
+         camino es exactamente el de antes de la 130. */
+      ...(opts.stationId ? { station_id: opts.stationId } : {}),
     })
     .select('id')
     .single();
@@ -212,16 +225,46 @@ async function ticketHeader(
 }
 
 /**
- * ¿Ya se encoló (y por tanto se imprimió, o está por imprimirse) la comanda de
- * cocina de este pedido?
+ * ¿Por qué estaciones de este pedido YA salió papel (o está por salir)?
  *
- * Es el candado central contra la DOBLE COMANDA: un mismo pedido pasaba por
- * aquí hasta tres veces —al crearlo el mesero, al confirmarlo en el panel y al
- * pulsar "Comenzar" en la pantalla de cocina— y la cocina recibía dos o tres
- * papeles del mismo plato. Los trabajos fallidos NO cuentan: si la impresora
- * se quedó sin papel, ese ticket nunca salió y hay que reintentarlo.
+ * Es el candado central contra la DOBLE COMANDA: un mismo pedido pasa por
+ * aquí hasta tres veces —al crearlo el mesero, al confirmarlo en el panel y
+ * al pulsar "Comenzar" en la pantalla de cocina— y sin candado la cocina
+ * recibía dos o tres papeles del mismo plato.
+ *
+ * Antes preguntaba por PEDIDO. Con estaciones esa pregunta está mal en las
+ * dos direcciones: si la barra falló y la cocina salió, reintentar tiene que
+ * reenviar SOLO la de la barra.
+ *
+ * Los trabajos FALLIDOS no cuentan: si la impresora se quedó sin papel, ese
+ * ticket nunca salió y hay que reintentarlo.
+ *
+ * La regla de los trabajos SIN estación —los de antes de la migración 130—
+ * vive en `estacionesConPapel`, que es pura y está probada: es la que evita
+ * que aplicar la 130 reimprima la comanda de cada pedido abierto del local.
  */
-async function kitchenTicketAlreadyQueued(
+async function estacionesYaImpresas(
+  db: ReturnType<typeof createServiceClient>,
+  restaurantId: string,
+  orderId: string,
+  porDefectoId: string | null,
+): Promise<Set<string>> {
+  const { data } = await db
+    .from('print_jobs')
+    .select('station_id')
+    .eq('restaurant_id', restaurantId)
+    .eq('order_id', orderId)
+    .eq('role', 'kitchen')
+    .in('status', ['pending', 'printing', 'done']);
+
+  return estacionesConPapel(
+    (data ?? []) as { station_id?: string | null }[],
+    porDefectoId,
+  );
+}
+
+/** El mismo candado, para el camino de un solo papel (sin estaciones). */
+async function comandaYaEncolada(
   db: ReturnType<typeof createServiceClient>,
   restaurantId: string,
   orderId: string,
@@ -238,57 +281,130 @@ async function kitchenTicketAlreadyQueued(
 }
 
 export type KitchenEnqueueOutcome =
-  | { queued: true }
+  /** `papeles` = cuántos salieron, uno por estación con líneas. */
+  | { queued: true; papeles: number }
   /** No se encoló, con el motivo — quien lo pidió a mano merece saberlo. */
-  | { queued: false; reason: 'already-printed' | 'no-printer' | 'pc-off' | 'not-found' | 'error'; message?: string };
+  | {
+      queued: false;
+      reason: 'already-printed' | 'no-printer' | 'pc-off' | 'not-found' | 'sin-lineas' | 'error';
+      message?: string;
+    };
 
 /**
- * Encola la comanda de cocina de un pedido al agente del restaurante.
- * No-op si el restaurante no tiene agente con destino de cocina configurado
- * (así convive con la impresión por USB del navegador) y — salvo `force` —
- * si ese pedido YA tiene su comanda encolada.
- * Best-effort: nunca debe romper el cambio de estado del pedido.
+ * Encola la comanda de cocina de un pedido al agente del restaurante,
+ * partida en un papel por estación con líneas (migración 130, M-07).
  *
- * @param opts.force  Reimpresión pedida a mano: salta el candado anti-duplicado
- *                    y marca el papel como COPIA para que la cocina no lo
- *                    prepare dos veces.
+ * No-op si el restaurante no tiene a dónde imprimir (así convive con la
+ * impresión por USB del navegador) y —salvo `force`— si esa estación YA
+ * tiene su papel encolado. Best-effort: nunca debe romper el cambio de
+ * estado del pedido.
+ *
+ * @param opts.force      Reimpresión pedida a mano: salta el candado y marca
+ *                        el papel como COPIA para que la cocina no lo prepare
+ *                        dos veces.
+ * @param opts.stationId  Solo esa estación. Es lo que hace que «la barra no
+ *                        imprimió · Reintentar» no vuelva a sacar la comanda
+ *                        entera por la cocina.
  */
 export async function enqueueKitchenForOrder(
   restaurantId: string,
   orderId: string,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; stationId?: string } = {},
 ): Promise<KitchenEnqueueOutcome> {
   const db = createServiceClient();
 
-  const { data: agent } = await db
-    .from('print_agents')
-    .select('kitchen_target, is_active')
-    .eq('restaurant_id', restaurantId)
-    .single();
-  // Sin agente/destino, o con la PC principal apagada a propósito (mig. 094),
-  // no se encola: acumular comandas viejas que nadie va a imprimir es peor
-  // que no imprimir.
-  if (!agent?.kitchen_target) return { queued: false, reason: 'no-printer' };
-  if ((agent.is_active as boolean | null) === false) return { queued: false, reason: 'pc-off' };
+  const [{ data: agent }, estaciones] = await Promise.all([
+    db.from('print_agents').select('kitchen_target, is_active').eq('restaurant_id', restaurantId).single(),
+    getPrintStations(restaurantId),
+  ]);
 
-  if (!opts.force && await kitchenTicketAlreadyQueued(db, restaurantId, orderId)) {
-    return { queued: false, reason: 'already-printed' };
+  // Sin agente ni estaciones con impresora no se encola: acumular comandas
+  // viejas que nadie va a imprimir es peor que no imprimir.
+  const destinoDeSiempre = (agent?.kitchen_target as string | null) ?? null;
+  if (!destinoDeSiempre && !estaciones.some((e) => e.target)) {
+    return { queued: false, reason: 'no-printer' };
   }
+  // PC principal apagada a propósito (migración 094).
+  if ((agent?.is_active as boolean | null) === false) return { queued: false, reason: 'pc-off' };
 
   const order = await loadOrderWithItems(db, restaurantId, orderId);
   if (!order) return { queued: false, reason: 'not-found' };
 
+  const mapa = await getStationMap(restaurantId, order.items.map((i) => i.product_id));
+  const partes = mapa ? repartirPorEstacion(order.items, mapa) : [];
   const { name, format } = await ticketHeader(db, restaurantId);
-  const bytes = buildKitchenEscPos(order, name, { format, reprint: !!opts.force });
-  const res = await enqueuePrintJob({
-    restaurantId,
-    role: 'kitchen',
-    bytes,
-    orderId,
-    targetOverride: agent.kitchen_target as string,
-  });
-  if ('error' in res) return { queued: false, reason: 'error', message: res.error };
-  return { queued: true };
+
+  /* ── Camino de siempre: un papel, al destino de print_agents ──
+     Es lo que pasa donde la 130 no ha corrido, donde el local no ha
+     configurado ninguna estación, y —ojo— donde el pedido no tiene ni una
+     línea. Bit a bit el mismo ticket que antes de esta fase. */
+  if (partes.length === 0) {
+    if (!destinoDeSiempre) return { queued: false, reason: 'no-printer' };
+    if (!opts.force && await comandaYaEncolada(db, restaurantId, orderId)) {
+      return { queued: false, reason: 'already-printed' };
+    }
+    const bytes = buildKitchenEscPos(order, name, { format, reprint: !!opts.force });
+    const res = await enqueuePrintJob({
+      restaurantId, role: 'kitchen', bytes, orderId, targetOverride: destinoDeSiempre,
+    });
+    if ('error' in res) return { queued: false, reason: 'error', message: res.error };
+    return { queued: true, papeles: 1 };
+  }
+
+  // ── Por estación ─────────────────────────────────────────────
+  const elegidas = opts.stationId
+    ? partes.filter((p) => p.estacion.id === opts.stationId)
+    : partes;
+  if (elegidas.length === 0) return { queued: false, reason: 'sin-lineas' };
+
+  const yaImpresas = opts.force
+    ? new Set<string>()
+    : await estacionesYaImpresas(db, restaurantId, orderId, mapa?.porDefecto?.id ?? null);
+  const pendientes = elegidas.filter((p) => !yaImpresas.has(p.estacion.id));
+  if (pendientes.length === 0) return { queued: false, reason: 'already-printed' };
+
+  /* La coletilla «Parte 2 de 3» cuenta sobre TODOS los papeles de la
+     comanda, no sobre los que se reenvían ahora: si el cantinero recibe una
+     copia suelta, «Parte 2 de 3» le dice la verdad de lo que se pidió. Con
+     «Parte 1 de 1» le estaría diciendo que no había más. */
+  const total = partes.length;
+  let encolados = 0;
+  let ultimoError: string | null = null;
+
+  for (const parte of pendientes) {
+    const station: PrintStation = parte.estacion;
+    const bytes = buildKitchenEscPos(
+      { ...order, items: parte.items },
+      name,
+      {
+        format,
+        reprint: !!opts.force,
+        station: {
+          name: station.name,
+          parte: etiquetaDeParte(partes.indexOf(parte), total),
+        },
+      },
+    );
+    const res = await enqueuePrintJob({
+      restaurantId,
+      role: 'kitchen',
+      bytes,
+      orderId,
+      /* El destino de la estación, y si aún no tiene impresora el de
+         siempre: `repartirPorEstacion` ya movió las líneas de una estación
+         sin impresora al refugio, así que llegar aquí sin `target` solo
+         pasa cuando el refugio TAMPOCO tenía. */
+      targetOverride: station.target ?? destinoDeSiempre,
+      stationId: station.id,
+    });
+    if ('error' in res) ultimoError = res.error;
+    else encolados += 1;
+  }
+
+  if (encolados === 0) {
+    return { queued: false, reason: 'error', message: ultimoError ?? 'No se pudo encolar ningún papel.' };
+  }
+  return { queued: true, papeles: encolados };
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { repartirPorEstacion, etiquetaDeParte } from './print-routing';
+import { repartirPorEstacion, etiquetaDeParte, estacionesConPapel } from './print-routing';
 import type { MapaDeEstaciones, PrintStation } from '@/lib/db/print-stations';
 
 /* ════════════════════════════════════════════════════════════
@@ -247,5 +247,35 @@ describe('etiquetaDeParte', () => {
   it('con varios numera desde 1, que es como cuenta la gente', () => {
     expect(etiquetaDeParte(0, 3)).toBe('Parte 1 de 3');
     expect(etiquetaDeParte(2, 3)).toBe('Parte 3 de 3');
+  });
+});
+
+// ── La trampa del despliegue ─────────────────────────────────
+
+describe('estacionesConPapel', () => {
+  it('un trabajo SIN estación cuenta como la de por defecto', () => {
+    // Es LA regla del despliegue: los papeles impresos antes de la
+    // migración 130 no dicen de qué estación fueron. Sin esto, aplicar la
+    // migración reimprime la comanda de cada pedido abierto del local.
+    const set = estacionesConPapel([{ station_id: null }], 'est-cocina');
+    expect(set.has('est-cocina')).toBe(true);
+  });
+
+  it('con la cocina ya impresa, la barra sigue pendiente', () => {
+    const set = estacionesConPapel([{ station_id: null }], 'est-cocina');
+    expect(set.has('est-barra')).toBe(false);
+  });
+
+  it('sin estación por defecto, un trabajo sin estación no bloquea a nadie', () => {
+    // Preferimos un papel de más que un plato sin cocinar.
+    expect(estacionesConPapel([{ station_id: null }], null).size).toBe(0);
+  });
+
+  it('junta las estaciones de varios trabajos sin repetirlas', () => {
+    const set = estacionesConPapel(
+      [{ station_id: 'est-barra' }, { station_id: 'est-barra' }, { station_id: null }],
+      'est-cocina',
+    );
+    expect([...set].sort()).toEqual(['est-barra', 'est-cocina']);
   });
 });

@@ -167,6 +167,16 @@ export interface KitchenTicketOptions {
   /** Copia pedida a mano ("Reimprimir comanda"): la cocina NO debe cocinarlo
       otra vez. Sin este aviso, un papel repetido es un plato repetido. */
   reprint?: boolean;
+  /** De qué estación es este papel (migración 130, M-07). Sin esto la
+      cabecera decía «COCINA» fija, y en un local con barra el cantinero
+      recibía un papel que se anunciaba como de cocina. */
+  station?: {
+    /** Va en grande, arriba del todo: es lo primero que se lee. */
+    name: string;
+    /** «Parte 2 de 3», o `null` si esta comanda salió en un solo papel.
+        Quien encuentra un ticket suelto necesita saber que había más. */
+    parte: string | null;
+  };
 }
 
 export function buildKitchenEscPos(
@@ -188,10 +198,16 @@ export function buildKitchenEscPos(
     b.bold(true).line('** COPIA - NO COCINAR **').bold(false);
   }
 
-  b.bold(true).size(2).line('COCINA').size(1).bold(false)
+  // El nombre de la estación, no «COCINA» a secas: en un local con barra
+  // ese papel lo recoge el cantinero. En mayúsculas porque a doble tamaño
+  // y a un metro de distancia es lo que se lee.
+  b.bold(true).size(2).line((opts.station?.name ?? 'Cocina').toUpperCase()).size(1).bold(false)
    .bold(true).size(2).line(`#${order.order_number}`).size(1).bold(false)
-   .line(`${timeStr}  ${typeLabel}`)
-   .align('left')
+   .line(`${timeStr}  ${typeLabel}`);
+
+  if (opts.station?.parte) b.line(opts.station.parte);
+
+  b.align('left')
    .sep('=');
 
   b.bold(true).line(order.customer_name).bold(false);

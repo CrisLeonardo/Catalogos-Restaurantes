@@ -114,3 +114,29 @@ export function etiquetaDeParte(indice: number, total: number): string | null {
   if (total <= 1) return null;
   return `Parte ${indice + 1} de ${total}`;
 }
+
+/**
+ * De qué estaciones hay ya papel, a partir de los trabajos de un pedido.
+ *
+ * ── LA TRAMPA DEL DESPLIEGUE ───────────────────────────────────
+ * Los trabajos creados ANTES de la migración 130 tienen `station_id` nulo.
+ * Cuentan como la estación POR DEFECTO. Sin esa regla, el primer refresco
+ * del panel tras aplicar la 130 vuelve a imprimir la comanda de cada pedido
+ * abierto del local, en plena cena — porque ninguno de esos papeles viejos
+ * diría de qué estación fue.
+ *
+ * Vive aquí, y no dentro de la consulta, para que se pueda escribir como
+ * prueba: es una regla de una línea que solo se puede comprobar de verdad
+ * el día que se aplica la migración, y ese día es tarde.
+ */
+export function estacionesConPapel(
+  trabajos: readonly { station_id?: string | null }[],
+  porDefectoId: string | null,
+): Set<string> {
+  const out = new Set<string>();
+  for (const t of trabajos) {
+    const id = t.station_id ?? porDefectoId;
+    if (id) out.add(id);
+  }
+  return out;
+}

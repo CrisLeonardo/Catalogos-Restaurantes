@@ -307,6 +307,7 @@ export default function OrderCard({
   kitchenRedMin = 20,
   agentKitchen = false,
   agentReceipt = false,
+  fallosDeImpresion = {},
   drivers = [],
   restaurantId,
 }: {
@@ -321,6 +322,8 @@ export default function OrderCard({
   kitchenRedMin?: number;
   /** El Agente Leogin imprime la comanda (servidor) → no imprimir también desde el navegador. */
   agentKitchen?: boolean;
+  /** Estaciones que no imprimieron, por id de pedido (M-07). */
+  fallosDeImpresion?: Record<string, { stationId: string; stationName: string }[]>;
   /** El Agente Leogin imprime el recibo (servidor) → el botón encola en vez de usar el navegador. */
   agentReceipt?: boolean;
   /** Repartidores activos (Fase 2). Vacío o ausente = no se ofrece asignar:
@@ -361,14 +364,27 @@ export default function OrderCard({
     );
   }
 
-  /** Copia de la comanda, marcada "NO COCINAR" para que no salga el plato dos veces. */
-  async function handleReprintKitchen() {
+  /** Copia de la comanda, marcada "NO COCINAR" para que no salga el plato dos veces.
+   *  Con `stationId` reintenta SOLO esa estación: si la barra no imprimió,
+   *  volver a sacar la comanda entera por la cocina pondría a la plancha a
+   *  cocinar dos veces lo mismo. */
+  async function handleReprintKitchen(stationId?: string, stationName?: string) {
     setPrintMsg(null);
     setPrinting('kitchen');
-    const res = await reprintKitchenTicket(order.id);
+    const res = await reprintKitchenTicket(order.id, stationId);
     setPrinting(null);
-    flashPrint(res.error ?? 'Copia de la comanda enviada a cocina.', !res.error);
+    flashPrint(
+      res.error ?? (stationName ? `Comanda reenviada a ${stationName}.` : 'Copia de la comanda enviada a cocina.'),
+      !res.error,
+    );
   }
+
+  /* Estaciones que no lograron imprimir este pedido (M-07). Sin este aviso,
+     repartir la comanda cambiaría un fallo RUIDOSO —hoy no sale ningún
+     papel y todos se enteran en dos minutos— por uno callado: la cocina
+     imprime, la barra no, y nadie lo sabe hasta que el cliente pregunta por
+     su cerveza. */
+  const fallos = fallosDeImpresion[order.id] ?? [];
 
   async function handleAdvance() {
     if (!next) return;
@@ -699,6 +715,42 @@ export default function OrderCard({
         </div>
       )}
 
+      {/* Una estación que no imprimió, con su remedio al lado: el aviso y
+          el botón que lo arregla tienen que estar en el mismo sitio. */}
+      {fallos.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {fallos.map((f) => (
+            <div
+              key={f.stationId}
+              className="chip-danger"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 10px', borderRadius: 'var(--radius-lg)',
+                fontSize: 12.5, fontWeight: 600,
+              }}
+            >
+              <Icon name="alertCircle" size={14} />
+              <span style={{ flex: 1, minWidth: 0 }}>{f.stationName}: no imprimió</span>
+              <button
+                type="button"
+                onClick={() => handleReprintKitchen(f.stationId, f.stationName)}
+                disabled={printing !== null}
+                className="press"
+                style={{
+                  padding: '4px 10px', borderRadius: 'var(--radius-md)',
+                  fontSize: 12, fontWeight: 700, cursor: printing ? 'wait' : 'pointer',
+                  background: 'color-mix(in srgb, currentColor 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, currentColor 35%, transparent)',
+                  color: 'inherit',
+                }}
+              >
+                {printing === 'kitchen' ? 'Enviando…' : 'Reintentar'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Impresión — separada de las acciones de estado para que nadie
           confunda "imprimir" con "avanzar el pedido". */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -723,7 +775,7 @@ export default function OrderCard({
         {agentKitchen && (
           <button
             type="button"
-            onClick={handleReprintKitchen}
+            onClick={() => handleReprintKitchen()}
             disabled={printing !== null}
             title="Vuelve a sacar la comanda en cocina, marcada como COPIA para que no la preparen dos veces."
             className="press"

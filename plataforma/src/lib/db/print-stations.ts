@@ -185,3 +185,67 @@ export async function getStationMap(
 
   return { estaciones, porDefecto, porProducto };
 }
+
+/** Una estación que no logró imprimir el papel de un pedido. */
+export interface FalloDeImpresion {
+  stationId: string;
+  stationName: string;
+}
+
+/**
+ * Qué estaciones NO lograron imprimir, por pedido.
+ *
+ * Esto no lo pedía el hallazgo y es lo que hace que la función sea segura.
+ * Hoy, con una sola impresora, un fallo es ruidoso: **no sale ninguna
+ * comanda y todo el mundo se entera en dos minutos**. Con tres estaciones,
+ * la cocina imprime, la barra no, y nadie se entera hasta que el cliente
+ * pregunta por su cerveza. Repartir la comanda sin esto sería cambiar un
+ * fallo ruidoso por uno callado.
+ *
+ * Se reporta la estación solo si su ÚLTIMO papel de ese pedido falló: un
+ * reintento que sí salió tiene que apagar el aviso.
+ */
+export async function getFallosDeImpresion(
+  restaurantId: string,
+  orderIds: readonly string[],
+): Promise<Record<string, FalloDeImpresion[]>> {
+  if (orderIds.length === 0) return {};
+  const estaciones = await getPrintStations(restaurantId);
+  if (estaciones.length === 0) return {};
+
+  const db = createServiceClient();
+  const { data } = await db
+    .from('print_jobs')
+    .select('order_id, station_id, status, created_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('role', 'kitchen')
+    .in('order_id', [...orderIds])
+    .order('created_at');
+
+  const porDefecto = estaciones.find((e) => e.isDefault) ?? null;
+  const nombre = new Map(estaciones.map((e) => [e.id, e.name]));
+
+  // Último estado conocido de cada par (pedido, estación). Como la consulta
+  // viene ordenada por fecha, el último que se escribe gana.
+  const ultimo = new Map<string, { orderId: string; stationId: string; status: string }>();
+  for (const job of data ?? []) {
+    // Un trabajo anterior a la migración 130 no tiene estación: es de la de
+    // por defecto, igual que para el candado anti-duplicado.
+    const stationId = (job.station_id as string | null) ?? porDefecto?.id ?? null;
+    if (!stationId || !nombre.has(stationId)) continue;
+    const orderId = job.order_id as string;
+    ultimo.set(`${orderId}|${stationId}`, { orderId, stationId, status: job.status as string });
+  }
+
+  const fallos: Record<string, FalloDeImpresion[]> = {};
+  for (const { orderId, stationId, status } of ultimo.values()) {
+    if (status !== 'failed') continue;
+    (fallos[orderId] ??= []).push({ stationId, stationName: nombre.get(stationId)! });
+  }
+  // Mismo orden que los papeles, para que el aviso no baile entre refrescos.
+  const orden = new Map(estaciones.map((e, i) => [e.id, i]));
+  for (const lista of Object.values(fallos)) {
+    lista.sort((a, b) => (orden.get(a.stationId) ?? 0) - (orden.get(b.stationId) ?? 0));
+  }
+  return fallos;
+}
