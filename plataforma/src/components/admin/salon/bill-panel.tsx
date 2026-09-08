@@ -20,11 +20,12 @@ import { useState } from 'react';
 import { Icon } from '@/components/icons';
 import type { SalonTable } from '@/components/admin/salon/pieces';
 import { estadoDeFicha, estadoInk } from '@/components/admin/salon/pieces';
-import type { BillLine, BillBreakdown } from '@/lib/bill-split';
+import type { BillLine as LineaDeCuenta, BillBreakdown } from '@/lib/bill-split';
+import BillLine from '@/components/admin/salon/bill-line';
 import type { WaiterOption } from '@/lib/db/table-sessions';
 
 export interface BillData {
-  lines: BillLine[];
+  lines: LineaDeCuenta[];
   breakdown: BillBreakdown;
 }
 
@@ -174,20 +175,25 @@ export default function BillPanel({
             {vivas.length === 0 ? (
               <p style={{ margin: 0, fontSize: 13.5, color: 'var(--u-text-3)' }}>Todavía no hay platos apuntados.</p>
             ) : vivas.map((l) => (
-              <div key={l.itemId} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13.5 }}>
-                <span className="t-mono" style={{ width: 22, flexShrink: 0, fontWeight: 600, color: 'var(--u-text-3)' }}>
-                  {l.quantity}
-                </span>
-                <span style={{ flex: 1, minWidth: 0, color: 'var(--u-text-2)' }}>
-                  {l.name}
-                  {l.note && (
-                    <span style={{ display: 'block', fontSize: 12, color: 'var(--brand-accent-ink)', marginTop: 1 }}>
-                      {l.note}
-                    </span>
-                  )}
-                </span>
-                <span className="t-mono" style={{ fontWeight: 600, color: 'var(--u-text)' }}>{money(l.lineTotal)}</span>
-              </div>
+              /* LA MISMA fila que la pantalla del mesero (M-22). Antes eran
+                 dos árboles distintos y ya divergían: aquí no se veían ni
+                 el asiento ni en qué iba cada plato, que es justo lo que un
+                 encargado mira al abrir una mesa. */
+              <BillLine
+                key={l.itemId}
+                compacta
+                money={money}
+                l={{
+                  key: l.itemId,
+                  qty: l.quantity,
+                  name: l.name,
+                  detail: l.options,
+                  note: l.note,
+                  price: l.lineTotal,
+                  seat: l.seat,
+                  status: l.orderStatus,
+                }}
+              />
             ))}
 
             {data && (

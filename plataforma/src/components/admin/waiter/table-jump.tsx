@@ -1,8 +1,12 @@
 'use client';
 
-/* Cambiar de mesa sin soltar el teclado (Ctrl/⌘ + K).
+/* Cambiar de mesa sin soltar el teclado (Ctrl/⌘ + M).
    ------------------------------------------------------------------
-   Es la primera pulsación de la comanda tecleada: ⌘K, el número, y ya
+   Aquí decía «Ctrl/⌘ + K» y el atajo real es **M**: la K se la quedó el
+   buscador global del panel. Documentar un atajo que no existe es peor
+   que no documentarlo — quien lo lea lo va a probar (M-26).
+
+   Es la primera pulsación de la comanda tecleada: ⌘M, el número, y ya
    se está apuntando en esa mesa. Sin esto, el mesero que teclea rápido
    tenía que soltar el teclado, buscar la mesa con el ratón y volver —
    que es justo el gesto que hace que la gente siga apuntando en papel.
@@ -13,7 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { Group, Hr, Key, Mono, Row } from '@/components/admin/waiter/pieces';
-import type { TableWithState } from '@/lib/table-state';
+import { byUrgency, type TableWithState } from '@/lib/table-state';
 
 const MAX = 7;
 
@@ -34,10 +38,15 @@ export default function TableJump({ tables, money, onPick, onClose }: {
     if (!t) {
       /* Sin escribir nada, lo primero son las mesas que piden algo: si
          abro el salto de mesa en hora pico, casi seguro voy a una de
-         ellas. */
-      return [...tables]
-        .sort((a, b) => a.state.priority - b.state.priority || a.n - b.n)
-        .slice(0, MAX);
+         ellas.
+
+         Y en el MISMO orden que el salón (M-26). Ordenaba por
+         `state.priority` a secas, que solo mira el motivo; el salón usa
+         `byUrgency`, que pesa primero el NIVEL —una llamada antes que un
+         reloj corrido—. Con dos criterios, el salto de mesa proponía una
+         lista distinta de la que el mesero estaba viendo dos centímetros
+         más allá. */
+      return byUrgency(tables).slice(0, MAX);
     }
     return tables.filter((x) => String(x.n).startsWith(t)).slice(0, MAX);
   }, [tables, q]);

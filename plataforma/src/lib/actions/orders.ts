@@ -4,7 +4,7 @@ import { createClient, createDinerClient } from '@/lib/supabase/server';
 import { canActOnRestaurant, resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
-import { revalidatePath } from 'next/cache';
+import { revalidarSalon } from '@/lib/salon-cache';
 import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { createOrderSchema, waiterOrderSchema, type CreateOrderInput } from '@/lib/schemas';
@@ -799,9 +799,7 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     // No bloquea el pedido del mesero si la impresión falla.
   }
 
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/pedidos');
-  revalidatePath('/admin/cocina');
+  revalidarSalon();
   return { success: true, orderId: order.id, orderNumber: order.order_number };
 }
 
@@ -994,9 +992,7 @@ export async function applyTableDiscount(
     },
   });
 
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/caja');
+  revalidarSalon();
   return { applied: monto };
 }
 
@@ -1146,8 +1142,7 @@ export async function freeTable(
     });
   }
 
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/pedidos');
+  revalidarSalon();
   return {};
 }
 
@@ -1293,9 +1288,7 @@ export async function updateOrderStatus(
     });
   }
 
-  revalidatePath('/admin/pedidos');
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/cocina');
+  revalidarSalon();
   return {};
 }
 
@@ -1567,9 +1560,7 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
     meta: { orderId: order.id, itemId: input.itemId ?? null, approvedBy },
   });
 
-  revalidatePath('/admin/pedidos');
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/cocina');
+  revalidarSalon();
   return { success: true };
 }
 
@@ -1636,10 +1627,7 @@ export async function serveTableReady(
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/cocina');
-  revalidatePath('/admin/pedidos');
+  revalidarSalon();
   /* Se devuelven los ids, y no solo cuántos, para poder DESHACER: sin
      ellos el «deshacer» tendría que adivinar qué pedidos tocó esta
      llamada y podría revertir uno que cocina acaba de marcar. */
@@ -1687,10 +1675,7 @@ export async function undoServeTable(
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/cocina');
-  revalidatePath('/admin/pedidos');
+  revalidarSalon();
   return { undone: data?.length ?? 0 };
 }
 
@@ -1720,8 +1705,7 @@ export async function resolveTableCalls(
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
+  revalidarSalon();
   const ids = (data ?? []).map((r) => r.id as string);
   return { resolved: ids.length, ids };
 }
@@ -1761,8 +1745,7 @@ export async function undoResolveTableCalls(
 
   if (error) return { error: error.message };
 
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
+  revalidarSalon();
   return { undone: data?.length ?? 0 };
 }
 
@@ -1803,8 +1786,7 @@ export async function setTableParty(
     return { error: error.message };
   }
 
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
+  revalidarSalon();
   return {};
 }
 
@@ -1878,10 +1860,7 @@ export async function moveTableOrders(
     .eq('table_number', from)
     .is('resolved_at', null);
 
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/pedidos');
-  revalidatePath('/admin/cocina');
+  revalidarSalon();
   return { moved: data?.length ?? 0 };
 }
 
@@ -2063,7 +2042,7 @@ export async function setItemSeat(
     return { error: error.message };
   }
 
-  revalidatePath('/admin/mesero');
+  revalidarSalon();
   return {};
 }
 
@@ -2204,9 +2183,7 @@ export async function archiveAbandonedTables(restaurantId: string): Promise<{ er
     logActivity({ restaurantId, actorId: actor.userId, action: 'auto_archive', entity: `${archived} mesa(s)` });
   }
 
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/pedidos');
-  revalidatePath('/admin/cocina');
+  revalidarSalon();
   return { archived };
 }
 

@@ -164,7 +164,19 @@ function ProductOptionsModal({
 
   return (
     <div onClick={onClose} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
-      <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}>
+      {/* `role` y `aria-modal` (M-29). Esta es la hoja que más se abre del
+          panel —decenas de veces por turno— y era la única de las tres que
+          no se anunciaba como diálogo: para un lector de pantalla era
+          contenido normal apilado sobre la página. Las otras dos, que
+          salen un par de veces por turno, sí lo declaraban. */}
+      <div
+        className="glass anim-slide-up waiter-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Opciones de ${product.name}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 460, maxHeight: '88dvh', display: 'flex', flexDirection: 'column' }}
+      >
         {/* Header */}
         <div style={{ padding: '18px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--u-hair)' }}>
           <div style={{ minWidth: 0 }}>

@@ -83,3 +83,52 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
     { revalidate: 60, tags: [`menu:${restaurantId}`] },
   )();
 }
+
+/**
+ * EL CATÁLOGO DEL MESERO, CACHEADO ENTRE PETICIONES (M-23)
+ * ------------------------------------------------------------
+ * `mesero/page.tsx` pedía `categories` y `products` completos en el mismo
+ * `Promise.all` que la ocupación de las mesas. Y `useSalonLive` dispara
+ * `router.refresh()` ante cualquier cambio en `orders` o `waiter_calls`
+ * —hasta cada 2,5 s en hora pico—, así que el menú entero se volvía a
+ * consultar en Postgres con cada plato que cocina aceptaba. Medido: 5 de
+ * 5 cargas hicieron su `select products.*`, y un solo evento costó 24,2 KB
+ * de recarga con un menú de SEIS platos.
+ *
+ * Los productos cambian una vez al día; la ocupación, cada minuto. Aquí se
+ * separan: la ocupación sigue viniendo fresca en cada refresco y el
+ * catálogo se sirve de la caché, con la MISMA etiqueta `menu:<id>` que ya
+ * invalidan todas las acciones de productos, categorías e inventario. O
+ * sea que un cambio de carta se ve al instante, igual que hoy.
+ *
+ * Se piden las columnas completas a propósito —el panel del mesero es
+ * interno y ya las recibía— para que este cambio sea de RENDIMIENTO y no
+ * cambie ni un dato de lo que la pantalla enseña.
+ *
+ * El minuto de `revalidate` es el techo del único caso que la etiqueta no
+ * cubre: `place_order` puede agotar un producto desde SQL sin pasar por
+ * una acción que invalide. Es el mismo compromiso que ya tenía el menú
+ * público.
+ */
+export function getWaiterCatalogCached(restaurantId: string): Promise<MenuData> {
+  return unstable_cache(
+    async () => {
+      const db = createServiceClient();
+      const [{ data: categories }, { data: products }] = await Promise.all([
+        db.from('categories').select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('sort_order', { ascending: true }),
+        db.from('products').select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('sort_order', { ascending: true }),
+      ]);
+
+      return {
+        categories: (categories as Category[]) ?? [],
+        products: (products as Product[]) ?? [],
+      };
+    },
+    ['waiter-catalog', restaurantId],
+    { revalidate: 60, tags: [`menu:${restaurantId}`] },
+  )();
+}

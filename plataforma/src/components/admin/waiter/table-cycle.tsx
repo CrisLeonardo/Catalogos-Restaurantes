@@ -25,6 +25,7 @@ import { useMemo, useState } from 'react';
 import { Icon, type IconName } from '@/components/icons';
 import DishFinder from '@/components/admin/waiter/dish-finder';
 import { TIEMPOS, type CartLine } from '@/components/admin/waiter/cart';
+import BillLine, { estadoDePlato } from '@/components/admin/salon/bill-line';
 import { fmtMin, STAGES, type TableState, type TableStage } from '@/lib/table-state';
 import { buildBillLines, billBreakdown } from '@/lib/bill-split';
 import type { OrderWithItems, TableOccupancy } from '@/lib/db/orders';
@@ -81,14 +82,6 @@ export interface NextStep {
  * 100) no llene el teléfono del mesero de píldoras.
  */
 const MAX_ASIENTOS = 40;
-
-const ESTADO_PLATO: Partial<Record<OrderStatus, string>> = {
-  NEW: 'Sin aceptar',
-  PREP: 'En cocina',
-  READY: 'Lista',
-  TRANSIT: 'En camino',
-  SERVED: 'Servido',
-};
 
 /** "20:12" en la hora del aparato. Solo se llama con el reloj ya montado. */
 function hora(iso: string | null): string | null {
@@ -653,53 +646,45 @@ export default function TableCycle(p: Props) {
                 Cargando la cuenta…
               </p>
             ) : lineas.map((l) => (
-              <div key={l.key} className="ciclo-item">
-                {/* La cantidad primero, como se lee una comanda; el asiento
-                    va al otro extremo, junto al precio, que es donde importa
-                    al repartir la cuenta. */}
-                {/* «×2», no «2»: al otro extremo del renglón hay otro
-                    número suelto —el asiento— y a tamaño real los dos se
-                    leían igual. La cruz es como se apunta una comanda. */}
-                <span className="ciclo-chip ciclo-qty" aria-hidden>×{l.qty}</span>
-                <span className="ciclo-name" style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>{l.name}</span>
-                  <span style={{ display: 'block', fontSize: 12.5, marginTop: 1, color: l.note || l.detail ? 'var(--brand-accent-ink)' : 'var(--u-text-4)' }}>
-                    {[l.detail, l.note].filter(Boolean).join(' · ') || 'Sin notas'}
-                  </span>
-                </span>
-                {/* Estado, asiento y pasos van juntos: en el teléfono bajan a
-                    su propio renglón (`display: contents` los deja planos en
-                    escritorio, donde sí caben en la misma línea). */}
-                <span className="ciclo-meta">
-                <span
-                  style={{
-                    fontSize: 12.5, fontWeight: 600, flexShrink: 0,
-                    color: l.status === null ? 'var(--brand-accent-ink)'
-                      : l.status === 'SERVED' ? 'var(--u-text-4)'
-                      : 'var(--brand-accent-ink)',
-                  }}
-                >
-                  {l.status === null ? 'Por enviar' : ESTADO_PLATO[l.status] ?? ''}
-                </span>
-                {/* Solo en el carrito: un plato que ya salió a cocina no
-                    puede cambiar de tiempo sin mentirle al papel que el
-                    cocinero tiene delante (M-06). */}
-                {l.lineId && mesa != null && (
-                  <CourseChip
-                    course={l.course}
-                    onChange={(c) => onCourseCart(l.lineId!, c)}
-                  />
+              /* LA MISMA fila que el panel del salón (M-22). Los datos y la
+                 maqueta viven en `salon/bill-line.tsx`; aquí solo entran
+                 los MANDOS, que es lo único que de verdad distingue esta
+                 pantalla: el mesero toca, el encargado mira. */
+              <BillLine
+                key={l.key}
+                l={l}
+                money={money}
+                meta={(
+                  <>
+                    <span
+                      style={{
+                        fontSize: 12.5, fontWeight: 600, flexShrink: 0,
+                        color: l.status === 'SERVED' ? 'var(--u-text-4)' : 'var(--brand-accent-ink)',
+                      }}
+                    >
+                      {estadoDePlato(l.status ?? null)}
+                    </span>
+                    {/* Solo en el carrito: un plato que ya salió a cocina no
+                        puede cambiar de tiempo sin mentirle al papel que el
+                        cocinero tiene delante (M-06). */}
+                    {l.lineId && mesa != null && (
+                      <CourseChip
+                        course={l.course}
+                        onChange={(c) => onCourseCart(l.lineId!, c)}
+                      />
+                    )}
+                    <SeatChip
+                      seat={l.seat}
+                      personas={personas}
+                      disabled={mesa == null}
+                      onChange={(s) => {
+                        if (l.lineId) onSeatCart(l.lineId, s);
+                        else if (l.itemId) onSeatItem(l.itemId, s);
+                      }}
+                    />
+                  </>
                 )}
-                <SeatChip
-                  seat={l.seat}
-                  personas={personas}
-                  disabled={mesa == null}
-                  onChange={(s) => {
-                    if (l.lineId) onSeatCart(l.lineId, s);
-                    else if (l.itemId) onSeatItem(l.itemId, s);
-                  }}
-                />
-                {l.lineId ? (
+                controles={l.lineId ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     <button type="button" className="wp-step press" onClick={() => onDecCart(l.lineId!)} aria-label={`Quitar uno de ${l.name}`}>
                       <Icon name="minus" size={15} />
@@ -717,18 +702,11 @@ export default function TableCycle(p: Props) {
                     </button>
                   </span>
                 ) : l.orderId && l.itemId ? (
-                  /* Corregir lo YA enviado, desde aquí (M-08).
-                     ------------------------------------------------------
-                     Las líneas enviadas no llevaban ningún control: para
-                     quitar un plato que salió mal había que irse a «Cobrar»
-                     y volver, desde la pantalla hecha justamente para no
-                     tener que salirse. Y es el gesto más frecuente después
-                     de agregar.
-
-                     No anula: ABRE la anulación, que sigue pidiendo motivo
-                     y —si ya salió a cocina— aprobación de encargado. Va
-                     solo, sin −/+ al lado, porque no es un vecino de
-                     «quitar uno»: es otra cosa y se paga distinto. */
+                  /* Corregir lo YA enviado, desde aquí (M-08). No anula:
+                     ABRE la anulación, que sigue pidiendo motivo y —si ya
+                     salió a cocina— aprobación de encargado. Va solo, sin
+                     −/+ al lado, porque no es un vecino de «quitar uno»:
+                     es otra cosa y se paga distinto. */
                   <button
                     type="button"
                     className="wp-step press"
@@ -743,11 +721,7 @@ export default function TableCycle(p: Props) {
                     <Icon name="trash" size={14} />
                   </button>
                 ) : null}
-                </span>
-                <span className="t-mono ciclo-price" style={{ width: 74, textAlign: 'right', flexShrink: 0, fontSize: 14, fontWeight: 600, color: 'var(--u-text)' }}>
-                  {money(l.price)}
-                </span>
-              </div>
+              />
             ))}
           </div>
           )}

@@ -428,14 +428,32 @@ export default function WaiterPanel({
     }
   }, [restaurantId]);
 
+  /* Una FIRMA de los pedidos, no el array (M-24).
+     ------------------------------------------------------------------
+     El efecto de abajo dependía de `orders`, que es una prop que el
+     servidor REASIGNA en cada refresco del salón — con el mismo
+     contenido. Como la identidad cambiaba, se disparaba un
+     `getTableBill()` de más por cada evento del salón, aunque la mesa
+     abierta no hubiera cambiado. Medido: un evento en la base producía
+     dos peticiones, el refresco y este POST.
+     (El tablero del dueño ya se protegía con `billFor.current`.)
+
+     La firma lleva lo único que puede cambiar la cuenta: qué pedidos hay,
+     en qué estado y por cuánto. El total entra porque una anulación baja
+     el importe sin quitar la línea (migración 124). */
+  const firmaPedidos = useMemo(
+    () => orders.map((o) => `${o.id}:${o.status}:${o.total}:${o.items?.length ?? 0}`).join('|'),
+    [orders],
+  );
+
   /* La pantalla de la mesa enseña la cuenta COMPLETA, no solo lo que
      apuntó este mesero: si el turno anterior tomó la primera ronda,
      esos platos son de la misma mesa y del mismo total. Se recarga al
-     cambiar de mesa y cada vez que llegan pedidos nuevos. */
+     cambiar de mesa y cada vez que de verdad cambian los pedidos. */
   useEffect(() => {
     if (selection.kind !== 'mesa') return;
     loadTableBill(selection.n);
-  }, [selection, loadTableBill, orders]);
+  }, [selection, loadTableBill, firmaPedidos]);
 
   /* El salón cambia aunque nadie toque esta tablet.
      El canal, el freno de ráfagas y la reconexión viven en el mismo

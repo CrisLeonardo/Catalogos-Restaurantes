@@ -4,11 +4,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getWaiterActiveOrders, getActiveTableNumbers, getPendingTableCalls } from '@/lib/db/orders';
 import { getOpenTableSessions } from '@/lib/db/table-sessions';
+import { getWaiterCatalogCached } from '@/lib/db/menu';
 import { getAgentHubInfo } from '@/lib/print-agent';
 import WaiterPanel from '@/components/admin/waiter-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
-import type { Category, Product } from '@/types';
 
 export const metadata = { title: 'Panel de Mesero' };
 
@@ -70,9 +70,16 @@ export default async function MeseroPage() {
     }
   }
 
-  const [categoriesRes, productsRes, activeOrders, occupiedSince, tableCalls, seatings, hubInfo] = await Promise.all([
-    db.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
-    db.from('products').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true }),
+  /* El CATÁLOGO va cacheado y la ocupación no (M-23).
+     ------------------------------------------------------------------
+     Estaban los dos en el mismo `Promise.all`, así que el menú entero se
+     volvía a consultar en Postgres con cada refresco del salón —y el
+     salón se refresca con cada plato que cocina acepta—. Los productos
+     cambian una vez al día; las mesas, cada minuto. `getWaiterCatalogCached`
+     usa la etiqueta `menu:<id>` que ya invalidan las acciones de carta e
+     inventario, así que un cambio de menú se sigue viendo al instante. */
+  const [catalogo, activeOrders, occupiedSince, tableCalls, seatings, hubInfo] = await Promise.all([
+    getWaiterCatalogCached(restaurantId),
     getWaiterActiveOrders(restaurantId, user.id),
     getActiveTableNumbers(restaurantId),
     // Quién llamó al mesero y para qué. Es la mitad de la regla que decide
@@ -86,8 +93,7 @@ export default async function MeseroPage() {
     getAgentHubInfo(restaurantId),
   ]);
 
-  const categories = (categoriesRes.data ?? []) as Category[];
-  const products = (productsRes.data ?? []) as Product[];
+  const { categories, products } = catalogo;
 
   return (
     <WaiterPanel

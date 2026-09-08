@@ -16,12 +16,12 @@
    existía.
    ============================================================ */
 
-import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { hayTurnosDeMesa } from '@/lib/db/table-sessions';
 import { hayColumnaMesa } from '@/lib/db/mesa-columna';
 import { logActivity } from '@/lib/activity';
+import { revalidarSalon } from '@/lib/salon-cache';
 
 /** `needsMigration` distingue «no se pudo» de «esto todavía no existe aquí»:
     quien pulsó «Sentar» merece leer por qué, pero quien solo estaba contando
@@ -42,14 +42,6 @@ export interface SeatInput {
 
 const SIN_TABLA = 'Esta función necesita la migración 128 (sentar la mesa). '
   + 'Pídele a soporte que la corra y vuelve a intentar.';
-
-/** Las dos pantallas del salón, más la caja: cualquiera de ellas enseña
-    quién está sentado, así que las tres tienen que refrescarse. */
-function refrescarSalon() {
-  revalidatePath('/admin/mesas');
-  revalidatePath('/admin/mesero');
-  revalidatePath('/admin/caja');
-}
 
 function numeroValido(n: number): boolean {
   return Number.isInteger(n) && n >= 1 && n <= 999;
@@ -111,7 +103,7 @@ export async function seatTable(
     meta: { sentar: true, pax: paxLimpio(input.partySize), source: input.source ?? 'walk_in' },
   });
 
-  refrescarSalon();
+  revalidarSalon();
   return { ok: true };
 }
 
@@ -169,7 +161,7 @@ export async function updateSeating(
     }
   }
 
-  refrescarSalon();
+  revalidarSalon();
   return { ok: true };
 }
 
@@ -228,6 +220,6 @@ export async function unseatTable(
     meta: { soltar: true },
   });
 
-  refrescarSalon();
+  revalidarSalon();
   return { ok: true };
 }
