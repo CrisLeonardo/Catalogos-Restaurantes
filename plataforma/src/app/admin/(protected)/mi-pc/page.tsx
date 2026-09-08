@@ -8,6 +8,7 @@ import CollapsibleCard from '@/components/admin/collapsible-card';
 import MainPcSwitch from '@/components/admin/main-pc-switch';
 import PrintAgentSettings from '@/components/admin/print-agent-settings';
 import KitchenPrintSettings from '@/components/admin/kitchen-print-settings';
+import PrintStationsSettings from '@/components/admin/print-stations-settings';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
@@ -221,6 +222,21 @@ export default async function AdminMiPcPage() {
           )}
         </Card>
       </Section>
+
+      {/* ── Más de una impresora (M-07) ───────────────────────
+          Plegada porque un local con una sola impresora no tiene nada que
+          hacer aquí, y con una sola estación esta pantalla no cambia nada.
+          Pero está a la vista de quien vende cerveza, que es quien hoy
+          manda las bebidas a la plancha. */}
+      <CollapsibleCard
+        title="Cocina, barra, parrilla: una impresora para cada una"
+        icon="print"
+        storageKey="mi-pc-estaciones"
+        defaultOpen={false}
+        subtitle="Manda las bebidas a la barra y la comida a la cocina. Cada una recibe solo lo suyo, y una mesa que pide solo comida no gasta papel en la barra."
+      >
+        <PrintStationsSettings />
+      </CollapsibleCard>
 
       {/* ── Otras opciones (plegadas: casi nadie las necesita) ─ */}
       <CollapsibleCard

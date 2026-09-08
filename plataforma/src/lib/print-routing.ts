@@ -140,3 +140,34 @@ export function estacionesConPapel(
   }
   return out;
 }
+
+/**
+ * ¿Entiende el agente este destino de impresión?
+ *
+ * Espeja `parseTarget` de `agente-impresion/src/printer/index.ts`, que es
+ * quien de verdad lo abre. La columna es texto libre y el selector deja
+ * escribir a mano, así que sin esto se puede guardar una estación con un
+ * destino que el agente rechaza — y eso es exactamente una estación que
+ * NUNCA imprime y que nadie echa en falta hasta que el cliente pregunta
+ * por su cerveza. Es el mismo fallo callado que esta fase vino a cerrar,
+ * entrando por la puerta de al lado.
+ *
+ * (Este archivo y el agente son dos entregables separados, sin paquete
+ * compartido: la copia es deliberada. Si un día `parseTarget` acepta un
+ * formato nuevo, aquí hay que añadirlo.)
+ */
+export function destinoValido(target: string): boolean {
+  const v = target.trim();
+  if (v === 'preview' || v === 'preview:') return true;
+  if (v.startsWith('doc:') || v.startsWith('windows:') || v.startsWith('win:')) {
+    return v.slice(v.indexOf(':') + 1).trim().length > 0;
+  }
+  if (v.startsWith('tcp://')) {
+    const rest = v.slice('tcp://'.length);
+    const idx = rest.lastIndexOf(':');
+    const host = idx === -1 ? rest : rest.slice(0, idx);
+    const puerto = idx === -1 ? '9100' : rest.slice(idx + 1);
+    return host.length > 0 && Number.isInteger(Number(puerto)) && Number(puerto) > 0;
+  }
+  return false;
+}

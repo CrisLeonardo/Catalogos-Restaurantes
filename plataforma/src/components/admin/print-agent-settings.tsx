@@ -54,17 +54,27 @@ const MANUAL = '__manual__';
 
 // ── Selector de impresora por rol ─────────────────────────────────────────────
 
-function PrinterPicker({
+/* Exportado para que el editor de estaciones (M-07) use el MISMO selector:
+   la advertencia de «esta impresora no la reporta la PC principal» es
+   justo la que hace falta cuando hay tres destinos en vez de dos. */
+export function PrinterPicker({
   label,
   value,
   printers,
   onChange,
+  onCommit,
   onTest,
 }: {
   label: string;
   value: string;
   printers: ReportedPrinter[];
+  /** En CADA tecla del campo manual. Para el estado de la pantalla. */
   onChange: (v: string) => void;
+  /** Cuando el valor está TERMINADO: se eligió del desplegable, o se salió
+      del campo manual. Quien guarde contra el servidor debe usar este —con
+      `onChange` guardaría una vez por letra, y casi todas esas veces el
+      destino está a medio escribir. */
+  onCommit?: (v: string) => void;
   onTest: () => void;
 }) {
   const known = printers.flatMap((p) => [p.target, `doc:${p.name}`]);
@@ -95,7 +105,13 @@ function PrinterPicker({
       <Select
         options={options}
         value={selectValue}
-        onValueChange={(v) => onChange(v === MANUAL ? 'tcp://' : v)}
+        onValueChange={(v) => {
+          const nuevo = v === MANUAL ? 'tcp://' : v;
+          onChange(nuevo);
+          // «tcp://» a secas es el arranque del campo manual, no un destino:
+          // guardarlo sería guardar basura antes de que escriban la IP.
+          if (v !== MANUAL) onCommit?.(nuevo);
+        }}
       />
 
       {(isManual || selectValue === MANUAL) && (
@@ -103,6 +119,7 @@ function PrinterPicker({
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={(e) => onCommit?.(e.target.value)}
           placeholder="tcp://192.168.1.50:9100"
           style={{ ...selectStyle, marginTop: 6, fontFamily: 'monospace', fontSize: 12 }}
         />

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { repartirPorEstacion, etiquetaDeParte, estacionesConPapel } from './print-routing';
+import { repartirPorEstacion, etiquetaDeParte, estacionesConPapel, destinoValido } from './print-routing';
 import type { MapaDeEstaciones, PrintStation } from '@/lib/db/print-stations';
 
 /* ════════════════════════════════════════════════════════════
@@ -12,15 +12,15 @@ import type { MapaDeEstaciones, PrintStation } from '@/lib/db/print-stations';
    ════════════════════════════════════════════════════════════ */
 
 const cocina: PrintStation = {
-  id: 'est-cocina', name: 'Cocina', target: 'winspool:COCINA',
+  id: 'est-cocina', name: 'Cocina', target: 'windows:COCINA',
   sortOrder: 0, isDefault: true,
 };
 const barra: PrintStation = {
-  id: 'est-barra', name: 'Barra', target: 'tcp:192.168.1.51:9100',
+  id: 'est-barra', name: 'Barra', target: 'tcp://192.168.1.51:9100',
   sortOrder: 1, isDefault: false,
 };
 const parrilla: PrintStation = {
-  id: 'est-parrilla', name: 'Parrilla', target: 'winspool:PARRILLA',
+  id: 'est-parrilla', name: 'Parrilla', target: 'windows:PARRILLA',
   sortOrder: 2, isDefault: false,
 };
 
@@ -277,5 +277,33 @@ describe('estacionesConPapel', () => {
       'est-cocina',
     );
     expect([...set].sort()).toEqual(['est-barra', 'est-cocina']);
+  });
+});
+
+// ── Un destino que el agente no entiende ─────────────────────
+
+describe('destinoValido', () => {
+  it('acepta los cuatro formatos que abre el agente', () => {
+    expect(destinoValido('windows:EPSON TM-T20')).toBe(true);
+    expect(destinoValido('win:EPSON')).toBe(true);
+    expect(destinoValido('tcp://192.168.1.50:9100')).toBe(true);
+    expect(destinoValido('tcp://192.168.1.50')).toBe(true);   // puerto 9100 por defecto
+    expect(destinoValido('doc:HP LaserJet')).toBe(true);
+    expect(destinoValido('preview:')).toBe(true);
+  });
+
+  it('rechaza «tcp:» sin las dos barras', () => {
+    // El error real que se coló al sembrar datos de prueba: la columna es
+    // texto libre, la base lo tragó, y el agente lo habria rechazado al
+    // imprimir. Una estación que nunca imprime y que nadie echa en falta.
+    expect(destinoValido('tcp:192.168.1.51:9100')).toBe(false);
+  });
+
+  it('rechaza lo que no lleva ningún formato', () => {
+    expect(destinoValido('EPSON TM-T20')).toBe(false);
+    expect(destinoValido('192.168.1.50')).toBe(false);
+    expect(destinoValido('windows:')).toBe(false);
+    expect(destinoValido('tcp://')).toBe(false);
+    expect(destinoValido('tcp://impresora:puerto')).toBe(false);
   });
 });

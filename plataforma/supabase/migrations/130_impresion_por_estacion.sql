@@ -60,7 +60,8 @@ create table if not exists print_stations (
   name          text        not null,
 
   -- Mismo formato que print_agents.kitchen_target, porque acaba en el
-  -- mismo sitio: "winspool:EPSON TM-T20" | "tcp:192.168.1.51:9100".
+  -- mismo sitio y lo lee el mismo `parseTarget` del agente:
+  --   "windows:EPSON TM-T20" | "tcp://192.168.1.51:9100" | "doc:NOMBRE" | "preview:"
   -- NULL = estación declarada pero todavía sin impresora asignada.
   target        text,
 

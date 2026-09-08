@@ -23,8 +23,9 @@ import { faltaLaTabla } from '@/lib/db/migracion-ausente';
 export interface PrintStation {
   id: string;
   name: string;
-  /** "winspool:EPSON TM-T20" | "tcp:192.168.1.51:9100". `null` = declarada
-      pero todavía sin impresora asignada. */
+  /** Lo que entiende `parseTarget` del agente: "windows:EPSON TM-T20",
+      "tcp://192.168.1.51:9100", "doc:NOMBRE" o "preview:". `null` =
+      declarada pero todavía sin impresora asignada. */
   target: string | null;
   sortOrder: number;
   /** La que recoge lo que nadie mapeó, artículos libres incluidos. */
