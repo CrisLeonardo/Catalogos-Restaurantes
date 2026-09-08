@@ -136,6 +136,12 @@ export interface LocalKitchenOrder {
   address: string | null;
   items: LocalKitchenItem[];
   notes?: string | null;
+  /** De qué estación es este papel (M-07). Sin esto la cabecera decía
+      «COCINA» fija, y en un local con barra el cantinero recibía un papel
+      que se anunciaba como de cocina. */
+  station?: string;
+  /** «Parte 2 de 3», si la comanda salió en varios papeles. */
+  parte?: string | null;
 }
 
 export function buildLocalKitchenTicket(order: LocalKitchenOrder, restaurantName: string): Uint8Array {
@@ -150,10 +156,15 @@ export function buildLocalKitchenTicket(order: LocalKitchenOrder, restaurantName
   b.push(0x1b, 0x61, 0x01);        // centrar
 
   b.push(0x1d, 0x21, 0x11);        // doble alto+ancho
-  b.push(...enc('COCINA (SIN CONEXION)'), 0x0a);
+  b.push(...enc((order.station ?? 'Cocina').toUpperCase()), 0x0a);
   b.push(...enc(`#${order.orderNumber}`), 0x0a);
   b.push(0x1d, 0x21, 0x00);        // tamaño normal
+  // «SIN CONEXION» baja a su propia línea: el sitio grande es para el
+  // nombre de la estación, que es lo que el cocinero necesita leer de
+  // lejos. Que el pedido se tomó sin nube importa, pero menos.
+  b.push(...enc('** SIN CONEXION **'), 0x0a);
   b.push(...enc(`${now}  ${typeLabel}`), 0x0a);
+  if (order.parte) b.push(...enc(order.parte), 0x0a);
 
   b.push(0x1b, 0x61, 0x00);        // alinear a la izquierda
   b.push(...enc('='.repeat(42)), 0x0a);

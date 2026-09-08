@@ -16,6 +16,19 @@ export interface MenuCategory {
   name: string;
   icon: string | null;
   sort_order: number;
+  /** Estación donde se prepara (M-07). Ausente en nubes anteriores. */
+  station_id?: string | null;
+}
+
+/** Dónde se hace la comida: Cocina, Barra, Parrilla (M-07, migración 130).
+    Ausente en nubes anteriores y donde la migración no ha corrido — y en
+    ese caso todo sale por `kitchenTarget`, como toda la vida. */
+export interface MenuStation {
+  id: string;
+  name: string;
+  target: string | null;
+  sort_order: number;
+  is_default: boolean;
 }
 
 // Mismo shape que PUBLIC_PRODUCT_COLUMNS en plataforma/src/lib/db/menu.ts.
@@ -26,6 +39,8 @@ export interface MenuProduct {
   price: number;
   is_available: boolean;
   options: unknown;
+  /** Anulación por producto, por encima de la de su categoría (M-07). */
+  station_id?: string | null;
 }
 
 export type PendingOrderStatus = 'pending' | 'failed' | 'synced';
@@ -62,7 +77,12 @@ export interface MenuSnapshot {
   categories: MenuCategory[];
   products: MenuProduct[];
   restaurantName: string;
+  /** Destino de cocina de siempre. Desde la migración 130 es el ESPEJO del
+      de la estación principal, así que sigue siendo la respuesta correcta
+      cuando no se puede repartir. */
   kitchenTarget: string | null;
+  /** M-07. Opcional a propósito: sin ellas se imprime como siempre. */
+  stations?: MenuStation[];
 }
 
 /** PIN de operador cacheado (login sin conexión, ver PLAN_LOGIN_STAFF_PIN.md).

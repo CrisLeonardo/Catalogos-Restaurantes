@@ -9,6 +9,7 @@
 
 import { getMenuSnapshot, getPendingOrders, enqueuePendingOrder, type MenuProduct, type PendingOrder } from './store.ts';
 import { buildLocalKitchenTicket, type LocalKitchenItem } from './escpos.ts';
+import { repartirComandaLocal } from './routing.ts';
 import { parseTarget, printRaw } from './printer/index.ts';
 import { logger } from './logger.ts';
 
@@ -109,7 +110,9 @@ export async function acceptOfflineOrder(rawBody: unknown): Promise<OrderIntakeR
   }
 
   const productById = new Map(snapshot.products.map((p) => [p.id, p]));
-  const verified: { name: string; quantity: number; price: number; options: string[] }[] = [];
+  // `productId` se conserva —antes se tiraba aquí— porque es lo único
+  // contra lo que se puede resolver a qué estación va cada línea (M-07).
+  const verified: { productId: string; name: string; quantity: number; price: number; options: string[] }[] = [];
 
   for (const raw of items as RawItem[]) {
     // Misma forma mínima que exige createOrderSchema en la nube (name y price
@@ -130,6 +133,7 @@ export async function acceptOfflineOrder(rawBody: unknown): Promise<OrderIntakeR
     }
     const picks = Array.isArray(raw.options) ? (raw.options as RawOptionPick[]) : [];
     verified.push({
+      productId: product.id,
       name: product.name,
       quantity: raw.quantity,
       price: priceItem(product, picks),
@@ -166,22 +170,30 @@ export async function acceptOfflineOrder(rawBody: unknown): Promise<OrderIntakeR
   // Imprimir al instante: es lo que de verdad importa durante un corte —
   // best-effort, un fallo de impresión NO debe hacer fallar la aceptación
   // del pedido (ya quedó en cola para sincronizar).
-  if (snapshot.kitchenTarget) {
-    try {
-      const ticketItems: LocalKitchenItem[] = verified.map((i) => ({
-        name: i.name, quantity: i.quantity, options: i.options,
-      }));
-      const bytes = buildLocalKitchenTicket({
-        orderNumber,
-        customerName: customer.name.trim(),
-        orderType,
-        address,
-        items: ticketItems,
-        notes: typeof customer.notes === 'string' ? customer.notes : null,
-      }, snapshot.restaurantName);
-      await printRaw(parseTarget(snapshot.kitchenTarget), bytes);
-    } catch (e) {
-      logger.warn(`No se pudo imprimir la comanda local de ${orderNumber}:`, (e as Error).message);
+  const partes = repartirComandaLocal(verified, snapshot, snapshot.kitchenTarget);
+  if (partes.length > 0) {
+    for (let i = 0; i < partes.length; i++) {
+      const parte = partes[i];
+      try {
+        const ticketItems: LocalKitchenItem[] = parte.items.map((it) => ({
+          name: it.name, quantity: it.quantity, options: it.options,
+        }));
+        const bytes = buildLocalKitchenTicket({
+          orderNumber,
+          customerName: customer.name.trim(),
+          orderType,
+          address,
+          items: ticketItems,
+          notes: typeof customer.notes === 'string' ? customer.notes : null,
+          station: parte.nombre,
+          parte: partes.length > 1 ? `Parte ${i + 1} de ${partes.length}` : null,
+        }, snapshot.restaurantName);
+        await printRaw(parseTarget(parte.target), bytes);
+      } catch (e) {
+        // Cada papel por su cuenta: que falle la barra no puede dejar a la
+        // cocina sin su comanda.
+        logger.warn(`No se pudo imprimir la comanda de ${parte.nombre} (${orderNumber}):`, (e as Error).message);
+      }
     }
   } else {
     logger.warn(`Pedido ${orderNumber} aceptado sin imprimir: no hay destino de cocina cacheado.`);

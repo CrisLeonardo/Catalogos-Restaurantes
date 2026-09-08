@@ -11,7 +11,8 @@
     "start": "node src/index.ts",
     "list": "node src/index.ts list",
     "build:exe": "node build-exe.mjs",
-    "release": "node scripts/publish-release.mjs"
+    "release": "node scripts/publish-release.mjs",
+    "test": "node scripts/check-routing.ts"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
