@@ -18,6 +18,7 @@
  * carta. `lib/table-state.ts` recibe las dos y decide.
  */
 import { createServiceClient } from '@/lib/supabase/service';
+import { faltaLaTabla } from '@/lib/db/migracion-ausente';
 import { getActiveTableNumbers } from '@/lib/db/orders';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
 
@@ -54,10 +55,10 @@ export function hayTurnosDeMesa(): Promise<boolean> {
       try {
         const db = createServiceClient();
         const { error } = await db.from('table_sessions').select('id').limit(1);
-        // 42P01 = undefined_table. Cualquier otro fallo (red, permisos) NO
-        // significa que la tabla falte: se asume que sí y el error se
-        // manifiesta donde de verdad esté.
-        return !(error && error.code === '42P01');
+        // Cualquier otro fallo (red, permisos) NO significa que la tabla
+        // falte: se asume que sí y el error se manifiesta donde de verdad
+        // esté. Ver `migracion-ausente.ts` para los códigos.
+        return !faltaLaTabla(error);
       } catch {
         return true;
       }
@@ -88,7 +89,7 @@ export function hayPagosDeMesa(): Promise<boolean> {
       try {
         const db = createServiceClient();
         const { error } = await db.from('order_payments').select('id').limit(1);
-        return !(error && error.code === '42P01');
+        return !faltaLaTabla(error);
       } catch {
         return true;
       }

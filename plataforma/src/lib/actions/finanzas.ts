@@ -22,6 +22,7 @@ import { localDateKey } from '@/lib/hours';
 import { getSalesReport } from '@/lib/db/reports';
 import type { SalesReport, Split } from '@/lib/db/reports';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
+import { faltaLaMigracion } from '@/lib/db/migracion-ausente';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import {
   createBrandedWorkbook, addBrandedHeader, styleTableHeaderRow, freezeHeaderRow,
@@ -529,7 +530,7 @@ const EMPTY_CAJA = (date: string): CajaState => ({
 
 /** Una columna que la migración 123 todavía no creó en este entorno. */
 function faltaMigracion(error: { code?: string } | null): boolean {
-  return error?.code === '42703' || error?.code === '42P01';
+  return faltaLaMigracion(error);
 }
 
 /**

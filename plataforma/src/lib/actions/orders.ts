@@ -33,6 +33,7 @@ import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-pa
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
+import { faltaLaTabla } from '@/lib/db/migracion-ausente';
 
 /**
  * «Los pedidos de la mesa N», como par columna/valor.
@@ -1956,7 +1957,7 @@ export async function getTableSplit(
      sigue funcionando con el suyo en memoria. (Mismo criterio que
      `party_size` en getActiveTableNumbers.) */
   if (error) {
-    if (error.code === '42P01') return { split: null };
+    if (faltaLaTabla(error)) return { split: null };
     return { error: error.message };
   }
   if (!data) return { split: null };
@@ -1999,7 +2000,7 @@ export async function saveTableSplit(
     }, { onConflict: 'restaurant_id,table_number' });
 
   if (error) {
-    if (error.code === '42P01') return {};
+    if (faltaLaTabla(error)) return {};
     return { error: error.message };
   }
   return { savedAt };
