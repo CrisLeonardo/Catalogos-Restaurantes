@@ -3,7 +3,18 @@
 **Fecha:** 8 de septiembre de 2026
 **Origen:** hallazgo M-07 de la auditoría «Mesas vs Tomar pedidos» (7 de septiembre), el único
 crítico que quedó sin arreglar.
-**Estado:** plan. Nada de esto está construido todavía.
+**Estado:** **CONSTRUIDO — las cinco fases** (8 de septiembre).
+Commits: `8cce060` el modelo · `34787ff` el reparto · `38f1841` los papeles ·
+`d5fd0a9` la pantalla · `12db70e` sin conexión. Más `b4cd34b`, un fallo aparte que
+apareció al verificar la fase 1.
+
+**Falta lo que solo puede hacer el dueño:** pegar la migración 130 en el editor SQL
+de producción, y publicar el release del agente **v0.8.0** (`npm run release` en
+`agente-impresion/`) — eso lo reparte el auto-update a todos los locales, así que
+no se hizo desde aquí.
+
+El documento de abajo se conserva **tal como se escribió**, en presente y antes de
+construir nada. Lo que no anticipó está en la §10.
 
 ---
 
@@ -329,3 +340,43 @@ y ese componente es el camino del navegador, no el del agente — ver §7.)
 Este plan **no depende** de las siete migraciones pendientes en producción (123-129), pero
 comparte su cuello de botella: la 130 también hay que pegarla a mano en el SQL Editor. Conviene
 ponerla en la misma tanda.
+
+---
+
+## 10. Lo que apareció al construirlo
+
+Cuatro fallos reales, ninguno en el plan, todos salidos de **verificar** y no de leer.
+
+1. **La guarda de migración ausente comprobaba un código que nunca llega.** Los
+   sitios que preguntan «¿falló porque la migración no ha corrido?» por una TABLA
+   comprobaban `42P01` (lo que devuelve Postgres), pero entre nosotros y Postgres
+   está PostgREST, que contesta `PGRST205`. Nunca se disparaban. En producción eso
+   significa que **«Sentar» (migración 128) enseña el error crudo de la base** en vez
+   de callarse. Arreglado en `b4cd34b` con `lib/db/migracion-ausente.ts`. Las de
+   COLUMNA (`42703` al leer, `PGRST204` al escribir) sí eran correctas.
+
+2. **Nombrar `station_id` siempre habría dejado al local sin comanda.** Donde la 130
+   no ha corrido, la columna no existe y mencionarla tumba el `insert` entero. Solo
+   se nombra cuando hay estación que escribir. El mismo cuidado en la fase 5 con
+   `/api/agent/menu`: sin él, un corte de internet encontraba al hub **sin menú**.
+
+3. **Un destino que el agente no entiende se podía guardar** (`tcp:` sin las dos
+   barras). Una estación que nunca imprime y que nadie echa en falta. Lo valida ahora
+   `destinoValido`, que espeja `parseTarget` del agente.
+
+4. **`PrinterPicker` guardaba una vez por letra.** Tiene ahora `onCommit`, que salta
+   al elegir del desplegable y al salir del campo manual.
+
+**Formato canónico de destino** (lo fija `parseTarget` del agente, y el plan lo tenía
+mal): `windows:NOMBRE` · `tcp://IP:9100` · `doc:NOMBRE` · `preview:`.
+
+**Dónde vive cada cosa, al final:**
+
+| pieza | archivo |
+|---|---|
+| el modelo | `supabase/migrations/130_impresion_por_estacion.sql` |
+| leer el mapa | `plataforma/src/lib/db/print-stations.ts` |
+| repartir (nube) | `plataforma/src/lib/print-routing.ts` + 25 pruebas |
+| encolar los papeles | `plataforma/src/lib/print-agent.ts` |
+| la pantalla | `plataforma/src/components/admin/print-stations-settings.tsx` |
+| repartir (sin nube) | `agente-impresion/src/routing.ts` + `npm test` (11) |
