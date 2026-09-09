@@ -4,21 +4,23 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
-import { stableMenuUrl } from '@/lib/tenant';
+import { subdomainUrl } from '@/lib/tenant';
 
 interface Props {
   restaurantName: string;
-  restaurantId: string;
+  slug: string;
 }
 
-export default function QRDisplay({ restaurantName, restaurantId }: Props) {
+export default function QRDisplay({ restaurantName, slug }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const toast = useToastManager();
-  // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
-  // restaurante cambie de slug o la plataforma de dominio — ver
-  // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
-  const menuUrl = stableMenuUrl(restaurantId);
+  // Este link SÍ lleva el slug (a diferencia del de las mesas): no se
+  // imprime, es el que la gente teclea, pega en redes o pone en su bio para
+  // pedir en línea — ahí lo memorable importa más que la permanencia. Los QR
+  // de mesa siguen en /m/<id>/<mesa> (stableTableUrl, tables-panel.tsx)
+  // porque esos sí se imprimen y no se pueden reimprimir si cambia el slug.
+  const menuUrl = subdomainUrl(slug);
 
   const qrSrc = `/api/qr?url=${encodeURIComponent(menuUrl)}`;
   const fileName = `qr-${restaurantName.toLowerCase().replace(/\s+/g, '-')}.png`;
