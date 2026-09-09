@@ -1,0 +1,37 @@
+#!/bin/sh
+# Recuerda publicar el release del agente cuando AGENT_VERSION sube y ese
+# número todavía no existe como release en GitHub. No publica solo —eso es
+# una acción que toca las PC de producción en ~1h (agent-updates.ts), así
+# que se queda como aviso, no como automatismo.
+#
+# Instalado vía `core.hooksPath = .githooks` (ver README del repo o
+# corre `git config core.hooksPath .githooks` si clonaste de nuevo).
+
+VERSION_FILE="agente-impresion/src/version.ts"
+
+# Solo interesa si este commit tocó el archivo de versión.
+if ! git diff --name-only HEAD~1 HEAD -- "$VERSION_FILE" 2>/dev/null | grep -q .; then
+  exit 0
+fi
+
+VERSION=$(grep -oE "AGENT_VERSION = '[^']+'" "$VERSION_FILE" | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+if [ -z "$VERSION" ]; then
+  exit 0
+fi
+
+REPO="CrisLeonardo/leogin-agente-releases"
+TAG="agent-v$VERSION"
+
+if ! command -v gh >/dev/null 2>&1; then
+  printf '\n\033[33m⚠ AGENT_VERSION cambió a %s pero no pude checar GitHub (falta gh CLI).\033[0m\n' "$VERSION"
+  printf '  Publica a mano: node agente-impresion/scripts/publish-release.mjs\n\n'
+  exit 0
+fi
+
+if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+  exit 0
+fi
+
+printf '\n\033[33m⚠ AGENT_VERSION subió a %s y ese release TODAVÍA NO existe en GitHub.\033[0m\n' "$VERSION"
+printf '  Publícalo con:\n'
+printf '    cd agente-impresion && npm run build:exe && node scripts/publish-release.mjs\n\n'
