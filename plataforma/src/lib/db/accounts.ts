@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { faltaLaTabla } from '@/lib/db/migracion-ausente';
 import { armarCuenta, type AccountLocal, type AccountRow, type CuentaCruda, type LocalBasico } from '@/lib/account-classification';
 import type { MemberRole } from '@/lib/membership-roles';
+import { dejariaSinDueño } from '@/lib/membership-rules';
 
 /* ============================================================
    CUENTAS DE LEOGIN — el índice por PERSONA (migración 131)
@@ -190,4 +191,56 @@ export async function findAccountIdByEmail(email: string): Promise<string | null
     .eq('email', email.trim().toLowerCase())
     .maybeSingle();
   return (data?.id as string | undefined) ?? null;
+}
+
+/** Un local que se quedaría sin nadie. */
+export type LocalHuerfanable = { restaurantId: string; name: string };
+
+/**
+ * ¿Qué restaurantes se quedarían SIN NINGUNA persona dueña si esta cuenta
+ * desapareciera?
+ *
+ * Se pregunta en dos sitios y por eso vive aquí: la ficha lo enseña antes de
+ * ofrecer el botón de borrar, y la acción lo vuelve a comprobar antes de
+ * borrar de verdad. Enseñarlo sin comprobarlo sería un aviso decorativo.
+ *
+ * Es la misma regla que impide quitar al último dueño desde la pestaña
+ * Accesos (fase 4). Borrar la cuenta es el otro camino al mismo sitio, y si
+ * no se cerrara, la regla no serviría de nada.
+ */
+export async function localesQueSeQuedanSinDueño(userId: string): Promise<LocalHuerfanable[]> {
+  const db = createServiceClient();
+
+  const { data: suyos } = await db
+    .from('restaurant_members')
+    .select('restaurant_id')
+    .eq('user_id', userId)
+    .eq('role', 'OWNER')
+    .eq('status', 'active');
+
+  const ids = (suyos ?? []).map((m) => m.restaurant_id as string);
+  if (!ids.length) return [];
+
+  // Todos los dueños de esos locales, en UNA consulta.
+  const { data: dueños } = await db
+    .from('restaurant_members')
+    .select('restaurant_id, user_id')
+    .in('restaurant_id', ids)
+    .eq('role', 'OWNER')
+    .eq('status', 'active');
+
+  const porLocal = new Map<string, string[]>();
+  for (const d of dueños ?? []) {
+    const rid = d.restaurant_id as string;
+    porLocal.set(rid, [...(porLocal.get(rid) ?? []), d.user_id as string]);
+  }
+
+  const solos = ids.filter((rid) => dejariaSinDueño(porLocal.get(rid) ?? [], userId));
+  if (!solos.length) return [];
+
+  const { data: restaurantes } = await db.from('restaurants').select('id, name').in('id', solos);
+  return (restaurantes ?? []).map((r) => ({
+    restaurantId: r.id as string,
+    name: (r.name as string) ?? '',
+  }));
 }

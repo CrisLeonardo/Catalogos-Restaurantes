@@ -47,6 +47,10 @@ export type AccionSuper =
   | 'cuenta.contrasena'
   | 'cuenta.correo'
   | 'cuenta.enlace-recuperacion'
+  | 'cuenta.verificado'
+  | 'cuenta.suspender'
+  | 'cuenta.reactivar'
+  | 'cuenta.borrar'
   // Los accesos desde la ficha de un restaurante
   | 'acceso.crear'
   | 'acceso.dar'

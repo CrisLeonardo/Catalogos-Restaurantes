@@ -38,9 +38,10 @@
    ============================================================ */
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { currentSuperAdmin, type SuperAdminSession } from '@/lib/auth/super-admin-guard';
 import { logSuper } from '@/lib/super-admin-log';
-import { getAccountById, findAccountIdByEmail } from '@/lib/db/accounts';
+import { getAccountById, findAccountIdByEmail, localesQueSeQuedanSinDueño } from '@/lib/db/accounts';
 import { sendRecoveryEmail } from '@/lib/auth/recovery-email';
 import { sendEmailVerification } from '@/lib/auth/email-verification';
 import { emailEnabled } from '@/lib/email';
@@ -255,4 +256,115 @@ export async function sendAccountRecoveryLink(
     return { error: 'Supabase no reconoce ese correo. Revisa que sea el de la cuenta.' };
   }
   return { error: 'El proveedor no aceptó el envío. Inténtalo de nuevo en unos minutos.' };
+}
+
+/* ── 4. Dar el correo por bueno a mano ──────────────────────
+   Para cuando te consta por teléfono que el buzón es suyo pero el
+   enlace no llegó —lo más común: se fue a spam, o el proveedor de
+   correo todavía no está puesto—. Sin esto, esa cuenta se queda
+   marcada «sin verificar» para siempre aunque sepas que está bien. */
+
+export async function markAccountVerified(
+  prevState: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = (formData.get('userId') as string)?.trim();
+
+  const ctx = await objetivo(userId);
+  if ('fallo' in ctx) return ctx.fallo;
+  const { sesion, cuenta } = ctx;
+
+  if (cuenta.esPin) {
+    return { error: 'Una credencial por PIN no tiene buzón: no hay nada que verificar.' };
+  }
+  if (cuenta.verificado) return { error: 'Su correo ya está verificado.' };
+
+  const { error } = await sesion.db
+    .from('profiles')
+    .update({ email_verified_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (error) return { error: error.message };
+
+  await logSuper(sesion, {
+    action: 'cuenta.verificado',
+    targetUserId: userId,
+    targetLabel: cuenta.email,
+  });
+  refrescar(userId);
+  return { ok: 'Correo dado por bueno. Queda registrado que lo confirmaste tú, no la persona.' };
+}
+
+/* ── 5. Suspender y reactivar ───────────────────────────────
+   El hallazgo M-12: se podía apagar un RESTAURANTE, no una PERSONA.
+   Si el problema es alguien —un cobro rebotado, alguien abriendo diez
+   locales de prueba— había que ir apagando local por local, y nada le
+   impedía abrir el once. */
+
+export async function toggleAccountSuspension(
+  prevState: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = (formData.get('userId') as string)?.trim();
+  const suspender = formData.get('suspender') === 'true';
+
+  const ctx = await objetivo(userId);
+  if ('fallo' in ctx) return ctx.fallo;
+  const { sesion, cuenta } = ctx;
+
+  // Un siglo. GoTrue no tiene «para siempre»: pide una duración, así que la
+  // suspensión es indefinida en la práctica y se levanta desde aquí.
+  const { error } = await sesion.db.auth.admin.updateUserById(userId, {
+    ban_duration: suspender ? '876000h' : 'none',
+  });
+  if (error) return { error: error.message };
+
+  await logSuper(sesion, {
+    action: suspender ? 'cuenta.suspender' : 'cuenta.reactivar',
+    targetUserId: userId,
+    targetLabel: cuenta.email,
+  });
+  refrescar(userId);
+
+  return {
+    ok: suspender
+      ? 'Cuenta suspendida. No podrá volver a entrar; si tiene una sesión abierta, se le cae cuando caduque su token (dentro de una hora como mucho).'
+      : 'Cuenta reactivada. Ya puede entrar con lo de siempre.',
+  };
+}
+
+/* ── 6. Borrar la cuenta ────────────────────────────────────
+   Lo único de esta pantalla que no tiene vuelta atrás. */
+
+export async function deleteAccount(formData: FormData) {
+  const userId = (formData.get('userId') as string)?.trim();
+
+  const ctx = await objetivo(userId);
+  if ('fallo' in ctx) return;
+  const { sesion, cuenta } = ctx;
+
+  /* El candado de la fase 4, por el otro camino. Quitarle a alguien el
+     último acceso de dueño está prohibido porque deja el local funcionando
+     y facturando sin que nadie pueda entrar a su panel; borrar su cuenta
+     llega exactamente ahí, y si no se cerrara, la regla de la pestaña
+     Accesos no serviría de nada. La salida es nombrar otro dueño primero,
+     que ahora sí se puede.
+
+     Se vuelve a comprobar aquí y no solo en la pantalla: entre que se pinta
+     el botón y se pulsa puede haber pasado cualquier cosa. */
+  const sinDueño = await localesQueSeQuedanSinDueño(userId);
+  if (sinDueño.length) return;
+
+  await sesion.db.auth.admin.deleteUser(userId);
+
+  // El correo se congela en la propia fila: dentro de un segundo esta cuenta
+  // ya no existe y sin él la bitácora diría «se borró la cuenta 77991e3c…».
+  await logSuper(sesion, {
+    action: 'cuenta.borrar',
+    targetUserId: userId,
+    targetLabel: cuenta.email,
+    meta: { locales: cuenta.locales.length },
+  });
+
+  revalidatePath('/super/cuentas');
+  redirect('/super/cuentas');
 }

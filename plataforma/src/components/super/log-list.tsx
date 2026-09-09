@@ -44,6 +44,19 @@ const ACCION: Record<AccionSuper, {
   'cuenta.enlace-recuperacion': {
     conObjetivo: 'Mandó el enlace de recuperación a', solo: 'Mandó el enlace de recuperación', icon: 'mail',
   },
+  'cuenta.verificado': {
+    conObjetivo: 'Dio por bueno el correo de', solo: 'Dio su correo por bueno', icon: 'checkCircle',
+  },
+  'cuenta.suspender': {
+    conObjetivo: 'Suspendió la cuenta de', solo: 'Suspendió su cuenta', icon: 'alertCircle', grave: true,
+  },
+  'cuenta.reactivar': {
+    conObjetivo: 'Reactivó la cuenta de', solo: 'Reactivó su cuenta', icon: 'checkCircle',
+  },
+  'cuenta.borrar': {
+    conObjetivo: 'Borró la cuenta de', solo: 'Borró esta cuenta', icon: 'trash',
+    grave: true, borraElObjetivo: true,
+  },
   'acceso.crear': {
     conObjetivo: 'Creó el acceso', solo: 'Creó un acceso', icon: 'userPlus',
   },

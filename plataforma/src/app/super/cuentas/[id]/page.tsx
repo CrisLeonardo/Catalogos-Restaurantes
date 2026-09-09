@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icons';
 import { PageHeader, PlanChip, StatusChip } from '@/components/super/ui';
 import AccountRescue from '@/components/super/account-rescue';
+import AccountDanger from '@/components/super/account-danger';
 import LogList from '@/components/super/log-list';
-import { getAccountById } from '@/lib/db/accounts';
+import { getAccountById, localesQueSeQuedanSinDueño } from '@/lib/db/accounts';
 import { listSuperAdminLog } from '@/lib/db/super-admin-log';
 import { emailEnabled } from '@/lib/email';
 
@@ -27,6 +28,9 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
   // botones que lo escriben: cuando alguien llama preguntando qué pasó con
   // su acceso, la respuesta tiene que estar donde ya estás mirando.
   const bitacora = await listSuperAdminLog({ targetUserId: id, limit: 30 });
+  // Qué se rompería al borrarla. Se pregunta aquí para poder AVISAR antes de
+  // enseñar el botón; la acción lo vuelve a comprobar por su cuenta.
+  const sinDueño = await localesQueSeQuedanSinDueño(id);
 
   if (detalle.estado === 'migracion-pendiente') {
     return (
@@ -137,10 +141,32 @@ export default async function CuentaPage({ params }: { params: Promise<{ id: str
             : 'Todo esto queda registrado —quién, cuándo y desde qué IP— y se ve abajo, en el historial de la cuenta.'}
         </p>
         <AccountRescue
-          cuenta={{ id: c.id, email: c.email, providers: c.providers, esPin: c.esPin }}
+          cuenta={{
+            id: c.id,
+            email: c.email,
+            providers: c.providers,
+            esPin: c.esPin,
+            verificado: c.verificado,
+          }}
           correoDisponible={emailEnabled()}
         />
       </section>
+
+      {/* Lo que no tiene vuelta atrás, al final y separado: son las dos cosas
+          que se hacen CONTRA alguien, no para ayudarle. Al super admin no se
+          le enseñan —el candado de las acciones lo rechazaría igual, pero un
+          botón que siempre falla no debería existir. */}
+      {c.role !== 'SUPER_ADMIN' && (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <SectionTitle>Zona peligrosa</SectionTitle>
+          <AccountDanger
+            userId={c.id}
+            email={c.email}
+            suspendida={c.suspendida}
+            sinDueño={sinDueño}
+          />
+        </section>
+      )}
 
       {/* Lo que se le ha hecho a esta cuenta */}
       <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -4,9 +4,10 @@
 **Origen:** pregunta del dueño — *"si un cliente olvida su contraseña yo no puedo ayudarle,
 ni siquiera puedo ver los usuarios de Leogin"*.
 **Estado:** auditoría hecha y verificada contra el código.
-**Fases 1, 2, 3 y 4 CONSTRUIDAS** (8 de septiembre) — ver §8 a §11. Falta la **fase 5**.
-Y faltan las migraciones **131** y **132** en el editor SQL de producción; hasta entonces las
-pantallas lo dicen ellas mismas y nada revienta.
+**LAS CINCO FASES CONSTRUIDAS** (8 de septiembre) — ver §8 a §12, y §13 para lo que queda.
+Falta pegar las migraciones **131** y **132** en el editor SQL de producción; hasta entonces
+las pantallas lo dicen ellas mismas y nada revienta. Y falta la **fase 0**, poner
+`RESEND_API_KEY`, que es lo más barato de todo y nunca se hizo.
 
 > **Nota de numeración:** la fase 1 se llevó la migración **131** (la vista de cuentas), que
 > en la tabla de abajo no tenía ninguna asignada. La bitácora de la fase 3 es la **132**.
@@ -702,3 +703,77 @@ la fase 2 evita con las cuentas de Google—.
   y marcar un correo como verificado a mano.
 - Las migraciones **131 y 132** en producción.
 - **`RESEND_API_KEY`**, que sigue siendo lo más barato de la lista.
+
+---
+
+## 12. Lo que se construyó de la fase 5 (8 de septiembre) — el plan queda cerrado
+
+Las tres acciones que quedaban de la §4.2, todas en la ficha de la persona.
+
+| Archivo | Qué es |
+|---|---|
+| `src/components/super/account-danger.tsx` | La zona peligrosa: suspender y borrar |
+| `src/lib/actions/accounts.ts` | `markAccountVerified`, `toggleAccountSuspension`, `deleteAccount` |
+| `src/lib/db/accounts.ts` | `localesQueSeQuedanSinDueño()` |
+| `src/components/super/account-rescue.tsx` | La tarjeta «Dar el correo por bueno» |
+
+**Dar el correo por bueno.** Para cuando te consta por teléfono que el buzón es suyo pero el
+enlace nunca llegó —se fue a spam, o todavía no hay proveedor—. Sin esto la cuenta se quedaba
+marcada «sin verificar» para siempre aunque supieras que estaba bien. La tarjeta solo existe
+mientras hay algo que dar por bueno: al pulsarla desaparece, y la etiqueta del encabezado con
+ella. Queda escrito que lo confirmaste **tú**, no la persona.
+
+**Suspender (M-12).** Se podía apagar un restaurante, no una persona: si el problema era
+alguien —un cobro rebotado, alguien abriendo diez locales de prueba— había que ir apagando
+local por local y nada le impedía abrir el once. Ahora se apaga la cuenta. Sus restaurantes
+siguen funcionando y cobrando; lo que se corta es que ella entre.
+
+**Borrar.** Con el candado de la fase 4 aplicado por el otro camino.
+
+### La decisión que cambia lo que decía el plan
+
+La §4.2.6 decía «borrar **con el aviso** contado». Ahora **no avisa: bloquea**. Cuando se
+escribió, el traspaso no existía y avisar era lo único que se podía hacer. Con la fase 4 hecha
+hay una salida real —nombrar otro dueño— y dejar pasar el borrado sería abrir por detrás
+exactamente lo que la pestaña Accesos cierra por delante: un local funcionando y facturando
+sin que nadie pueda entrar a su panel. El aviso nombra los locales y enlaza a los Accesos de
+cada uno.
+
+Si la persona no es la única dueña de nada, el botón está y borra sin ceremonia.
+
+### Verificado contra la base
+
+- **Dar por bueno**: `profiles.email_verified_at` escrito, la etiqueta desaparece del
+  encabezado y la acción queda en el historial.
+- **Suspender**: `banned_until` a un siglo y —lo que importa— GoTrue responde
+  **`user_banned`** a un intento de login real. Reactivar lo levanta y el mismo login vuelve a
+  devolver un `access_token`.
+- **Borrar**: cuenta desechable creada y borrada; desapareció de Auth con sus membresías, y su
+  entrada en la bitácora **sigue ahí con el correo congelado**. La misma decisión de la
+  migración 132 sirviendo otra vez.
+- **El bloqueo no es solo de pantalla**: se creó un restaurante desechable con una única
+  dueña, y desde la ficha de OTRA cuenta se falsificó el campo oculto `userId` para apuntar a
+  ella y se pulsó Borrar. **La cuenta sigue viva y no se registró nada.** El candado está en
+  el servidor, no en el botón.
+- 686 pruebas verdes. Tema claro y oscuro.
+
+---
+
+## 13. Dónde queda todo
+
+**Construido y commiteado**: las cinco fases. Commits `c96713b` (fase 1), `ca181ce` (fases 2 y
+3), `bcd900f` (fase 4) y el de esta.
+
+**Lo que falta, y no lo puede hacer nadie más que el dueño:**
+
+1. **Las migraciones 131 y 132 en producción.** Hasta entonces las pantallas lo dicen ellas
+   mismas y nada revienta: la lista de cuentas avisa, y la ficha dice que no se está
+   registrando nada.
+2. **`RESEND_API_KEY`** — la fase 0, que nunca se hizo y sigue siendo lo más barato de la
+   lista. Sin ella el 100 % de las recuperaciones pasa por ti: la pantalla pública de «Olvidé
+   mi contraseña» ni siquiera enseña el formulario, manda a escribirte.
+
+**Lo que se decidió NO hacer** (§7): «entrar como» el cliente, y el segundo factor para el
+Super Admin. Este último sigue siendo la debilidad conocida (M-13) y su mitigación barata
+sigue en pie: **crear una segunda cuenta `SUPER_ADMIN`** guardada en un gestor de contraseñas,
+por si se pierde la primera.

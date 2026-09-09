@@ -16,6 +16,7 @@ import {
   resetAccountPassword,
   changeAccountEmail,
   sendAccountRecoveryLink,
+  markAccountVerified,
   type AccountActionState,
 } from '@/lib/actions/accounts';
 import {
@@ -30,6 +31,7 @@ export type RescueAccount = {
   email: string | null;
   providers: string[];
   esPin: boolean;
+  verificado: boolean;
 };
 
 export default function AccountRescue({
@@ -46,6 +48,9 @@ export default function AccountRescue({
       <ResetPasswordCard cuenta={cuenta} conGoogle={conGoogle} />
       <RecoveryLinkCard cuenta={cuenta} correoDisponible={correoDisponible} />
       <ChangeEmailCard cuenta={cuenta} />
+      {/* Solo cuando hay algo que dar por bueno: una tarjeta que dice «ya
+          está verificado» no hace falta que exista. */}
+      {!cuenta.verificado && !cuenta.esPin && <VerifyEmailCard cuenta={cuenta} />}
     </div>
   );
 }
@@ -202,6 +207,31 @@ function ChangeEmailCard({ cuenta }: { cuenta: RescueAccount }) {
         </p>
       )}
 
+      <Resultado state={state} />
+    </Seccion>
+  );
+}
+
+/* ── Dar el correo por bueno ────────────────────────────────── */
+
+function VerifyEmailCard({ cuenta }: { cuenta: RescueAccount }) {
+  const [state, action, pending] = useActionState(markAccountVerified, vacio);
+
+  return (
+    <Seccion
+      icon="checkCircle"
+      titulo="Dar el correo por bueno"
+      descripcion="Cuando te consta por teléfono que el buzón es suyo pero el enlace nunca llegó — se fue a spam, o todavía no hay proveedor de correo. Sin esto la cuenta se queda marcada «sin verificar» para siempre aunque sepas que está bien."
+    >
+      <form action={action}>
+        <input type="hidden" name="userId" value={cuenta.id} />
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {pending ? 'Guardando…' : 'Confirmo que es suyo'}
+        </Button>
+      </form>
+      <p style={notaStyle}>
+        Queda registrado que lo diste por bueno <strong>tú</strong>, no la persona.
+      </p>
       <Resultado state={state} />
     </Seccion>
   );
