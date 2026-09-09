@@ -9,14 +9,16 @@
  *
  * Así que el código sabe funcionar de las dos formas y lo pregunta UNA vez
  * por proceso. Es el mismo problema que `party_size` resuelve reintentando
- * con `42703` en `getActiveTableNumbers`; aquí no basta con reintentar
- * porque la columna no solo se LEE, también se FILTRA, y un filtro por una
- * columna que no existe no devuelve datos incompletos: devuelve error.
+ * cuando falta la columna en `getActiveTableNumbers`; aquí no basta con
+ * reintentar porque la columna no solo se LEE, también se FILTRA, y un
+ * filtro por una columna que no existe no devuelve datos incompletos:
+ * devuelve error.
  *
  * **Esto es temporal.** El día que la 127 esté en producción se borra este
  * archivo y `mesaDeFila` se queda solo con `row.table_number`.
  */
 import { createServiceClient } from '@/lib/supabase/service';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 let cache: Promise<boolean> | null = null;
 
@@ -26,10 +28,10 @@ export function hayColumnaMesa(): Promise<boolean> {
       try {
         const db = createServiceClient();
         const { error } = await db.from('orders').select('table_number').limit(1);
-        // 42703 = undefined_column. Cualquier otro fallo (red, permisos) NO
-        // significa que la columna no exista: en ese caso se asume que sí y
-        // el error se manifiesta donde de verdad esté.
-        return !(error && error.code === '42703');
+        // Cualquier otro fallo (red, permisos) NO significa que la columna
+        // no exista: en ese caso se asume que sí y el error se manifiesta
+        // donde de verdad esté.
+        return !faltaLaColumna(error);
       } catch {
         return true;
       }

@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 import { hayColumnaMesa, mesaDeFila, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { localDateKey } from '@/lib/hours';
 import type { Order, OrderItem, OrderStatus, OrderVoid } from '@/types';
@@ -281,7 +282,7 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
      la ficha sabe omitir. (Mismo patrón que `reason` en las llamadas.) */
   const conPax = await pedir(`${BASE}${MESA}, party_size`);
   const { error } = conPax;
-  const data = error && error.code === '42703' && /party_size/i.test(error.message ?? '')
+  const data = error && faltaLaColumna(error) && /party_size/i.test(error.message ?? '')
     ? (await pedir(`${BASE}${MESA}`)).data
     : conPax.data;
 
@@ -360,7 +361,7 @@ export async function getPendingTableCalls(restaurantId: string): Promise<Record
      las llamadas cuentan como genéricas, que es justo lo que eran. */
   const conMotivo = await pedir('table_number, reason, created_at');
   const { error } = conMotivo;
-  const data = error && error.code === '42703' && /reason/i.test(error.message ?? '')
+  const data = error && faltaLaColumna(error) && /reason/i.test(error.message ?? '')
     ? (await pedir('table_number, created_at')).data
     : conMotivo.data;
 

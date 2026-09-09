@@ -18,6 +18,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { can } from '@/lib/permissions';
 import { seatTable } from '@/lib/actions/table-sessions';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 export type WaitlistResult = { error?: string; ok?: boolean };
 
@@ -124,10 +125,10 @@ export async function markWaitlistSeated(
     .maybeSingle();
 
   let { data, error } = await pedir(cambios);
-  /* 42703 = la 128 todavía no corrió aquí. Sentar tiene que seguir
-     funcionando: se reintenta sin la mesa, igual que `party_size` en el
-     salón. Perder el número es malo; no poder sentar, peor. */
-  if (error && error.code === '42703' && mesa != null) {
+  /* Si falta la columna, la 128 todavía no corrió aquí. Sentar tiene que
+     seguir funcionando: se reintenta sin la mesa, igual que `party_size` en
+     el salón. Perder el número es malo; no poder sentar, peor. */
+  if (faltaLaColumna(error) && mesa != null) {
     ({ data, error } = await pedir({ status: 'SEATED', seated_at: new Date().toISOString() }));
   }
   if (error) return { error: error.message };

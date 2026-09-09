@@ -7,6 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import type { ReservationStatus } from '@/lib/db/reservaciones';
 import { seatTable } from '@/lib/actions/table-sessions';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 export type ReservationResult = { error?: string; ok?: boolean };
 
@@ -103,9 +104,9 @@ export async function updateReservationStatus(
     .maybeSingle();
 
   let { data, error } = await pedir(mesa != null ? { ...base, table_number: mesa } : base);
-  // 42703 = la 128 no ha corrido aquí. Cambiar de estado no puede depender
-  // de una columna que todavía no existe.
-  if (error && error.code === '42703' && mesa != null) ({ data, error } = await pedir(base));
+  // Si falta la columna, la 128 no ha corrido aquí. Cambiar de estado no
+  // puede depender de una columna que todavía no existe.
+  if (faltaLaColumna(error) && mesa != null) ({ data, error } = await pedir(base));
   if (error) return { error: error.message };
 
   if (mesa != null) {

@@ -22,7 +22,7 @@ import { localDateKey } from '@/lib/hours';
 import { getSalesReport } from '@/lib/db/reports';
 import type { SalesReport, Split } from '@/lib/db/reports';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
-import { faltaLaMigracion } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaMigracion } from '@/lib/db/migracion-ausente';
 import { resolveRestaurantBranding } from '@/lib/documents/branding';
 import {
   createBrandedWorkbook, addBrandedHeader, styleTableHeaderRow, freezeHeaderRow,
@@ -243,7 +243,7 @@ export async function getCashHistory(
 
   const cerrados = await pedir(true);
   const { error } = cerrados;
-  const data = error && error.code === '42703'
+  const data = faltaLaColumna(error)
     ? (await pedir(false)).data
     : cerrados.data;
   return (data ?? []) as CashCount[];

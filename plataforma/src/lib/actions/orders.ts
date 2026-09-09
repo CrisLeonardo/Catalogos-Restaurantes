@@ -33,7 +33,7 @@ import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-pa
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
 import { assertTableAccess } from '@/lib/auth/table-access';
 import { cerrarTurnoDeMesa, hayPagosDeMesa } from '@/lib/db/table-sessions';
-import { faltaLaTabla } from '@/lib/db/migracion-ausente';
+import { faltaLaColumna, faltaLaTabla } from '@/lib/db/migracion-ausente';
 
 /**
  * «Los pedidos de la mesa N», como par columna/valor.
@@ -1783,7 +1783,7 @@ export async function setTableParty(
   // La columna es de la migración 123: donde no ha corrido, anotar las
   // personas no debe romper la pantalla — simplemente no se guarda.
   if (error) {
-    if (error.code === '42703') return { error: 'Falta la migración 123 para poder anotar las personas.' };
+    if (faltaLaColumna(error)) return { error: 'Falta la migración 123 para poder anotar las personas.' };
     return { error: error.message };
   }
 
@@ -2039,7 +2039,7 @@ export async function setItemSeat(
 
   const { error } = await db.from('order_items').update({ seat_no: seatNo }).eq('id', itemId);
   if (error) {
-    if (error.code === '42703') return { error: 'Falta la migración 123 para poder repartir por asiento.' };
+    if (faltaLaColumna(error)) return { error: 'Falta la migración 123 para poder repartir por asiento.' };
     return { error: error.message };
   }
 

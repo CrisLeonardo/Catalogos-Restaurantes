@@ -7,6 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { sendPushToRestaurant } from '@/lib/push';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { faltaLaColumna } from '@/lib/db/migracion-ausente';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -25,17 +26,18 @@ export type CallReason = 'call' | 'bill';
 /**
  * ¿Este error es «la columna `reason` todavía no existe aquí»?
  *
- * PGRST204 (escritura) y 42703 (lectura) son los dos síntomas de que la
- * migración 122 no ha corrido en este entorno. Se comprueba el código Y que
- * el mensaje hable de `reason`, para no tragarse por accidente otro fallo de
+ * `faltaLaColumna` cubre los dos síntomas —escribir y leer— de que la
+ * migración 122 no ha corrido en este entorno. Se comprueba eso Y que el
+ * mensaje hable de `reason`, para no tragarse por accidente otro fallo de
  * esquema y dejarlo pasar como si nada.
  *
  * Mensaje real: "Could not find the 'reason' column of 'waiter_calls' in the
  * schema cache".
  */
 function isMissingReason(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (error.code !== 'PGRST204' && error.code !== '42703') return false;
+  // El `!error` sobra para la comprobación —`faltaLaColumna` ya trata el
+  // null— pero es lo que le dice a TypeScript que abajo hay mensaje.
+  if (!error || !faltaLaColumna(error)) return false;
   return /reason/i.test(error.message ?? '');
 }
 
