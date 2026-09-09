@@ -820,7 +820,14 @@ function buildCsp(nonce: string): string {
     // blob: y data: los usan los QR y las vistas previas de imagen antes
     // de subirlas. El resto de las fotos vive en Supabase Storage — es el
     // único dominio remoto que next.config.ts permite para <Image>.
-    `img-src 'self' blob: data: ${supabaseHttp}`,
+    //
+    // Los tiles de OpenStreetMap (delivery-map.tsx, restaurant-location-map.tsx)
+    // y la foto de perfil de Google (account-sheet.tsx) son <img> normales,
+    // fuera de next/image — sin sus dominios aquí, el navegador los descarta
+    // en silencio (sin excepción JS, solo un aviso de CSP en consola) y el
+    // mapa se ve vacío / el avatar se ve como imagen rota, aunque el
+    // componente esté bien.
+    `img-src 'self' blob: data: ${supabaseHttp} https://*.tile.openstreetmap.org https://*.googleusercontent.com`,
 
     "font-src 'self' data: https://fonts.gstatic.com",
 
