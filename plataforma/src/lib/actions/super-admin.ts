@@ -3,6 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { verifySuperAdmin, currentSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { logSuper } from '@/lib/super-admin-log';
+import { faltaLaTabla } from '@/lib/db/migracion-ausente';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PRICING_SETTINGS_TAG } from '@/lib/db/billing';
@@ -556,6 +557,32 @@ export async function createRestaurantUser(
     // Rollback: no dejar un usuario de Auth huérfano sin profile.
     await db.auth.admin.deleteUser(created.user.id);
     return { error: profErr.message };
+  }
+
+  /* 3) Y su MEMBRESÍA (migración 113). Hallazgo A-09: esto solo escribía
+     `profiles.restaurant_id`, el camino viejo, y el acceso nacía a medias —
+     entraba a su panel bien, pero al abrir «Mi cuenta» no le salía ninguna
+     tarjeta y la pantalla lo mandaba a /registro a crear un restaurante que
+     ya tenía. El Super Admin podía fabricar una cuenta que el resto del
+     producto no reconocía.
+
+     Se escriben las DOS cosas, no una en vez de la otra: `restaurant_id`
+     sigue siendo su «restaurante de casa» y lo miran el candado de tenant y
+     el destino del login (lo dice la propia migración 113). */
+  const { error: memberErr } = await db.from('restaurant_members').upsert(
+    {
+      user_id: created.user.id,
+      restaurant_id: restaurantId,
+      role: role === 'RESTAURANT_OWNER' ? 'OWNER' : 'STAFF',
+      status: 'active',
+    },
+    { onConflict: 'user_id,restaurant_id' },
+  );
+  // Si la 113 no ha corrido en esta base, el acceso sirve igual por el camino
+  // viejo: no se tira un alta que ya funciona por una fila de más.
+  if (memberErr && !faltaLaTabla(memberErr)) {
+    await db.auth.admin.deleteUser(created.user.id);
+    return { error: memberErr.message };
   }
 
   await logSuper(sesion, {

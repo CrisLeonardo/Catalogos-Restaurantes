@@ -47,6 +47,12 @@ const ACCION: Record<AccionSuper, {
   'acceso.crear': {
     conObjetivo: 'Creó el acceso', solo: 'Creó un acceso', icon: 'userPlus',
   },
+  'acceso.dar': {
+    conObjetivo: 'Dio acceso a', solo: 'Le dio acceso al restaurante', icon: 'userPlus',
+  },
+  'acceso.rol': {
+    conObjetivo: 'Cambió el papel de', solo: 'Cambió su papel', icon: 'users',
+  },
   'acceso.contrasena': {
     conObjetivo: 'Repuso la contraseña del acceso', solo: 'Repuso la contraseña de su acceso', icon: 'key',
   },
@@ -153,6 +159,10 @@ function LogRowCard({ row, ocultarObjetivo }: { row: LogRow; ocultarObjetivo: bo
   );
 }
 
+const PAPEL: Record<string, string> = {
+  OWNER: 'dueño', MANAGER: 'gerente', STAFF: 'personal', WAITER: 'mesero',
+};
+
 /** El «de X a Y» de las acciones que cambian un valor. */
 function detalle(row: LogRow): string | null {
   const m = row.meta;
@@ -167,6 +177,10 @@ function detalle(row: LogRow): string | null {
   }
   if (row.action === 'acceso.crear' && m.rol) {
     return m.rol === 'RESTAURANT_OWNER' ? 'como dueño' : 'como personal';
+  }
+  if (row.action === 'acceso.dar' && m.rol) return `como ${PAPEL[String(m.rol)] ?? String(m.rol)}`;
+  if (row.action === 'acceso.rol') {
+    return `${PAPEL[String(m.antes)] ?? '—'} → ${PAPEL[String(m.despues)] ?? '—'}`;
   }
   return null;
 }

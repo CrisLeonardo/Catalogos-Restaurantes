@@ -49,6 +49,8 @@ export type AccionSuper =
   | 'cuenta.enlace-recuperacion'
   // Los accesos desde la ficha de un restaurante
   | 'acceso.crear'
+  | 'acceso.dar'
+  | 'acceso.rol'
   | 'acceso.contrasena'
   | 'acceso.quitar'
   // El restaurante. Crear y duplicar NO se registran: no son

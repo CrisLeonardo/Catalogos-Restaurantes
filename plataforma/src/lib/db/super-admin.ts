@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { createServiceClient } from '@/lib/supabase/service';
+import type { MemberRole } from '@/lib/membership-roles';
 import type { Organization, Profile, Restaurant, RestaurantTheme } from '@/types';
 
 export type RestaurantRow = Restaurant & {
@@ -21,6 +22,12 @@ export type RestaurantUser = {
    * Auth desde la ficha de uno lo dejaría fuera de los tres.
    */
   viaMembership: boolean;
+  /**
+   * Su papel EN ESTE LOCAL, en el vocabulario de las membresías
+   * (migración 113). `null` = solo cuelga de `profiles.restaurant_id`, el
+   * camino viejo, y por tanto no hay fila que cambiarle ni quitarle.
+   */
+  memberRole: MemberRole | null;
 };
 
 export type GlobalMetrics = {
@@ -83,8 +90,14 @@ export const getRestaurantUsers = cache(
     const db = createServiceClient();
     const [{ data: profiles }, { data: members }] = await Promise.all([
       db.from('profiles').select('id, role, full_name').eq('restaurant_id', restaurantId),
-      db.from('restaurant_members').select('user_id').eq('restaurant_id', restaurantId).eq('status', 'active'),
+      db.from('restaurant_members').select('user_id, role').eq('restaurant_id', restaurantId).eq('status', 'active'),
     ]);
+
+    // Su papel aquí según la membresía. Es lo que decide qué se le puede
+    // cambiar y qué se le puede quitar: sin fila, no hay nada que tocar.
+    const rolDeMembresia = new Map<string, MemberRole>(
+      (members ?? []).map((m) => [m.user_id as string, m.role as MemberRole]),
+    );
 
     const porPerfil = new Set((profiles ?? []).map((p) => p.id as string));
     // Solo los que NO salían ya por su perfil: quien está en los dos sitios
@@ -113,6 +126,7 @@ export const getRestaurantUsers = cache(
           role: p.role as Profile['role'],
           full_name: (p.full_name as string | null) ?? null,
           viaMembership,
+          memberRole: rolDeMembresia.get(p.id as string) ?? null,
         };
       }),
     );
@@ -162,10 +176,37 @@ export const getOrganizationDetail = cache(
       db.from('profiles').select('id, full_name').eq('organization_id', orgId),
     ]);
 
+    /* Los dueños del grupo salían SOLO de `profiles.organization_id`, y esa
+       columna es la marca del grupo, no el acceso: quien administra los
+       locales por membresía —un socio, el gerente al que invitaron— no
+       aparecía aquí aunque entrara a los cinco. Se juntan las dos vías, igual
+       que hace `getRestaurantUsers` con las personas de un local. */
+    const idsSucursales = (branches ?? []).map((b) => b.id as string);
+    const { data: dueñosPorMembresia } = idsSucursales.length
+      ? await db
+          .from('restaurant_members')
+          .select('user_id')
+          .in('restaurant_id', idsSucursales)
+          .eq('role', 'OWNER')
+          .eq('status', 'active')
+      : { data: [] as { user_id: unknown }[] };
+
+    const ids = new Set<string>((ownerProfiles ?? []).map((p) => p.id as string));
+    for (const m of dueñosPorMembresia ?? []) ids.add(m.user_id as string);
+
+    const nombrePorId = new Map<string, string | null>(
+      (ownerProfiles ?? []).map((p) => [p.id as string, (p.full_name as string | null) ?? null]),
+    );
+    const faltanNombre = [...ids].filter((id) => !nombrePorId.has(id));
+    if (faltanNombre.length) {
+      const { data: extra } = await db.from('profiles').select('id, full_name').in('id', faltanNombre);
+      for (const p of extra ?? []) nombrePorId.set(p.id as string, (p.full_name as string | null) ?? null);
+    }
+
     const owners = await Promise.all(
-      (ownerProfiles ?? []).map(async (p) => {
-        const { data } = await db.auth.admin.getUserById(p.id as string);
-        return { id: p.id as string, email: data.user?.email ?? null, full_name: (p.full_name as string | null) ?? null };
+      [...ids].map(async (id) => {
+        const { data } = await db.auth.admin.getUserById(id);
+        return { id, email: data.user?.email ?? null, full_name: nombrePorId.get(id) ?? null };
       }),
     );
 

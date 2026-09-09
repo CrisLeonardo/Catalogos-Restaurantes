@@ -10,9 +10,24 @@ import {
   deleteRestaurantUser,
   type SuperState,
 } from '@/lib/actions/super-admin';
+import {
+  grantMembership,
+  changeMembershipRole,
+  revokeMembership,
+  type MembershipState,
+} from '@/lib/actions/memberships';
 import type { RestaurantUser } from '@/lib/db/super-admin';
+import type { MemberRole } from '@/lib/membership-roles';
 
 const empty: SuperState = null;
+const emptyMembership: MembershipState = null;
+
+const PAPEL: { v: MemberRole; l: string }[] = [
+  { v: 'OWNER',   l: 'Dueño' },
+  { v: 'MANAGER', l: 'Gerente' },
+  { v: 'STAFF',   l: 'Personal' },
+  { v: 'WAITER',  l: 'Mesero' },
+];
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -64,6 +79,10 @@ export default function RestaurantUsers({
           ))}
         </div>
       )}
+
+      {/* Dar acceso a alguien que YA tiene cuenta: es lo que faltaba para
+          poder traspasar un restaurante sin borrarlo (hallazgo A-08). */}
+      <GrantAccessForm restaurantId={restaurantId} />
 
       {/* Alta de nuevo acceso */}
       <AddUserForm restaurantId={restaurantId} slug={slug} />
@@ -127,7 +146,11 @@ function UserRow({
             </div>
           )}
         </div>
-        <RoleBadge role={user.role} />
+        {user.memberRole ? (
+          <RoleSelect restaurantId={restaurantId} userId={user.id} role={user.memberRole} />
+        ) : (
+          <RoleBadge role={user.role} />
+        )}
         <button
           type="button"
           onClick={() => setShowReset((v) => !v)}
@@ -145,15 +168,20 @@ function UserRow({
         >
           Contraseña
         </button>
-        {/* Quien aparece por su MEMBRESÍA no se quita desde aquí, y el botón
-            ni siquiera se enseña: "Quitar" borra el usuario de Auth, y esa
-            cuenta puede ser la de un dueño con tres restaurantes — lo
-            dejaría fuera de los tres desde la ficha de uno. Reponerle la
-            contraseña (el rescate) sí se puede, que es a lo que se viene. */}
-        {user.viaMembership ? (
-          <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', whiteSpace: 'nowrap' }}>
-            Su cuenta puede tener más locales
-          </span>
+        {/* Con membresía se quita el ACCESO A ESTE LOCAL y nada más: esa
+            cuenta puede ser la de un dueño con tres restaurantes, y borrarla
+            desde la ficha de uno lo dejaría fuera de los tres. Borrar la
+            cuenta entera vive en su ficha, en Cuentas.
+
+            Sin membresía —el camino viejo— la cuenta no administra nada más,
+            así que «Quitar» sigue siendo lo que era: borrarla. */}
+        {user.memberRole ? (
+          <DeleteButton
+            action={revokeMembership}
+            hiddenFields={{ userId: user.id, restaurantId }}
+            label="Quitar de aquí"
+            confirm={`¿Quitarle a ${user.email ?? 'esta persona'} el acceso a este restaurante? Su cuenta de Leogin y sus otros locales no se tocan.`}
+          />
         ) : (
           <DeleteButton
             action={deleteRestaurantUser}
@@ -245,6 +273,112 @@ function ResetPasswordForm({
       </div>
       {state?.error && <ErrorMsg msg={state.error} />}
     </form>
+  );
+}
+
+/* El papel de alguien en ESTE local, cambiable en el sitio.
+   Se envía al elegir: un botón «Guardar» al lado de un desplegable de cuatro
+   opciones es un paso de más para algo que ya es explícito. */
+function RoleSelect({
+  restaurantId,
+  userId,
+  role,
+}: {
+  restaurantId: string;
+  userId: string;
+  role: MemberRole;
+}) {
+  const [state, formAction, isPending] = useActionState(changeMembershipRole, emptyMembership);
+
+  return (
+    <form action={formAction} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <input type="hidden" name="restaurantId" value={restaurantId} />
+      <input type="hidden" name="userId" value={userId} />
+      <select
+        name="role"
+        defaultValue={role}
+        disabled={isPending}
+        aria-label="Papel en este restaurante"
+        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        style={{
+          height: 32, padding: '0 8px', borderRadius: 'var(--radius-full)',
+          fontSize: 12, fontWeight: 600,
+          background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+          color: 'var(--u-text-2, var(--u-text))',
+          border: '1px solid var(--u-hair)', cursor: 'pointer',
+        }}
+      >
+        {PAPEL.map((p) => (
+          <option key={p.v} value={p.v} style={{ color: 'var(--u-text)' }}>{p.l}</option>
+        ))}
+      </select>
+      {/* El único caso que importa es el candado del último dueño, y hay que
+          poder leerlo: si se callara, el desplegable volvería a su sitio sin
+          que nadie supiera por qué. */}
+      {state && 'error' in state && (
+        <span style={{ fontSize: 11, color: 'var(--c-danger)', maxWidth: 260, lineHeight: 1.4 }}>
+          {state.error}
+        </span>
+      )}
+    </form>
+  );
+}
+
+/* Dar acceso a alguien que YA tiene su cuenta de Leogin.
+   Es la mitad del traspaso —la otra es «Quitar de aquí»— y por eso pide un
+   correo existente en vez de crear nada: la persona que compra el local ya
+   tiene cuenta, y fabricarle otra la partiría en dos. */
+function GrantAccessForm({ restaurantId }: { restaurantId: string }) {
+  const [state, formAction, isPending] = useActionState(grantMembership, emptyMembership);
+
+  return (
+    <Glass variant="quiet" style={{ padding: 16 }}>
+      <p style={{ ...labelStyle, marginBottom: 4 }}>Dar acceso a alguien que ya tiene cuenta</p>
+      <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.55 }}>
+        Para traspasar el restaurante: nombra dueño al nuevo aquí y después quita al anterior
+        arriba. En ese orden — un local no puede quedarse sin ninguna persona dueña.
+      </p>
+
+      <form action={formAction} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <input type="hidden" name="restaurantId" value={restaurantId} />
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <label htmlFor="grant_email" style={labelStyle}>Su correo de Leogin</label>
+          <input
+            id="grant_email"
+            name="email"
+            type="email"
+            required
+            placeholder="persona@ejemplo.com"
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label htmlFor="grant_role" style={labelStyle}>Papel</label>
+          <select id="grant_role" name="role" defaultValue="OWNER" style={{ ...inputStyle, cursor: 'pointer' }}>
+            {PAPEL.map((p) => (
+              <option key={p.v} value={p.v} style={{ color: 'var(--u-text)' }}>{p.l}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="press btn-accent"
+          style={{
+            padding: '12px 18px', borderRadius: 'var(--radius-md)', fontWeight: 600,
+            fontSize: 14, border: 'none', color: '#fff',
+            cursor: isPending ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          {isPending ? 'Dando…' : 'Dar acceso'}
+        </button>
+      </form>
+
+      {state && 'error' in state && <ErrorMsg msg={state.error} />}
+      {state && 'ok' in state && (
+        <p style={{ fontSize: 12.5, color: 'var(--c-ok)', margin: '10px 0 0' }}>{state.ok}</p>
+      )}
+    </Glass>
   );
 }
 

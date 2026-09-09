@@ -4,9 +4,9 @@
 **Origen:** pregunta del dueño — *"si un cliente olvida su contraseña yo no puedo ayudarle,
 ni siquiera puedo ver los usuarios de Leogin"*.
 **Estado:** auditoría hecha y verificada contra el código.
-**Fases 1, 2 y 3 CONSTRUIDAS** (8 de septiembre) — ver §8, §9 y §10. Faltan las migraciones
-**131** y **132** en el editor SQL de producción; hasta entonces las dos pantallas lo dicen
-ellas mismas y nada revienta.
+**Fases 1, 2, 3 y 4 CONSTRUIDAS** (8 de septiembre) — ver §8 a §11. Falta la **fase 5**.
+Y faltan las migraciones **131** y **132** en el editor SQL de producción; hasta entonces las
+pantallas lo dicen ellas mismas y nada revienta.
 
 > **Nota de numeración:** la fase 1 se llevó la migración **131** (la vista de cuentas), que
 > en la tabla de abajo no tenía ninguna asignada. La bitácora de la fase 3 es la **132**.
@@ -621,3 +621,84 @@ con su acceso, la respuesta está en la pantalla que ya estás mirando.
   de escribir el modelo viejo) y **fase 5** (suspender, borrar con aviso, verificar a mano).
   Las dos ya nacen registradas: solo tienen que llamar a `logSuper`.
 - **`RESEND_API_KEY`** sigue siendo la fase 0 y lo más barato de todo.
+
+---
+
+## 11. Lo que se construyó de la fase 4 (8 de septiembre)
+
+**Membresías desde `/super`.** Tres hallazgos de una vez: A-08 (no había forma de pasar un
+restaurante a otro dueño), A-09 (el acceso que creabas nacía a medias) y M-10 (Grupos miraba
+la columna equivocada). Sin migración.
+
+| Archivo | Qué es |
+|---|---|
+| `src/lib/actions/memberships.ts` | Dar acceso, cambiar el papel, quitar de este local |
+| `src/lib/membership-rules.ts` | La regla del último dueño, en puro |
+| `src/lib/membership-rules.test.ts` | 5 pruebas |
+| `src/components/super/restaurant-users.tsx` | La pestaña Accesos, rehecha |
+| `src/lib/db/super-admin.ts` | `getRestaurantUsers` trae el papel; los dueños del grupo salen de las dos vías |
+| `src/lib/actions/super-admin.ts` | `createRestaurantUser` crea también la membresía |
+| `src/app/super/restaurantes/[id]/accesos/page.tsx` | El texto que llevaba dos meses mintiendo |
+
+### El traspaso
+
+Es lo que faltaba desde siempre y ahora son dos pasos en la misma pantalla: **«Dar acceso a
+alguien que ya tiene cuenta»** → nombras dueño al comprador; **«Quitar de aquí»** → sacas al
+anterior. En ese orden, y la pantalla lo dice.
+
+El formulario pide un **correo que ya existe** en vez de crear una cuenta: la persona que
+compra el local ya tiene la suya, y fabricarle otra la partiría en dos —el mismo problema que
+la fase 2 evita con las cuentas de Google—.
+
+### Las decisiones
+
+1. **Un restaurante no puede quedarse sin dueño.** Ni quitando al último ni bajándole el
+   papel, que son dos caminos al mismo sitio. Un local sin dueño **sigue funcionando y
+   facturando** y nadie entra a su panel: no se nota hasta que hace falta. La regla vive
+   aparte y con pruebas porque es la única de esta fase que puede fallar en silencio; el caso
+   de un local que YA está sin dueño se deja pasar a propósito, o sería imposible arreglarlo.
+
+2. **Quitar no es borrar.** «Quitar de aquí» retira la membresía y, si el
+   `profiles.restaurant_id` apuntaba a este local, también lo limpia —dejarlo puesto le
+   devolvería el acceso por la otra puerta, que es la que miran el candado de tenant y el
+   destino del login—. La cuenta de Auth **no se toca**: puede ser la de un dueño con tres
+   restaurantes. Borrarla entera es la ficha de la persona (fase 5).
+
+   El botón viejo, el que sí borra la cuenta, se conserva **solo** para los accesos del camino
+   viejo sin membresía: esa cuenta no administra nada más, así que ahí «Quitar» sigue
+   significando lo que significaba.
+
+3. **`createRestaurantUser` escribe las DOS cosas**, no una en vez de la otra. La membresía
+   arregla A-09 —antes esa persona abría «Mi cuenta» y la pantalla la mandaba a `/registro` a
+   crear un restaurante que ya tenía— y `profiles.restaurant_id` se queda porque sigue siendo
+   su «restaurante de casa», como dice la propia migración 113. Si la 113 no ha corrido en esa
+   base, el alta no se tira: el acceso sirve igual por el camino viejo.
+
+4. **El papel se cambia en el sitio**, con un desplegable que envía al elegir. Y cuando la
+   regla del último dueño lo impide, el motivo se lee al lado: si se callara, el desplegable
+   volvería solo a su posición y nadie sabría por qué.
+
+5. **La pantalla dejó de mentir.** *«Crea el usuario y contraseña con los que el dueño
+   entrará… Tú controlas estos accesos»* era verdad antes del registro self-service y llevaba
+   meses siendo falsa. Ahora dice lo que es: quién entra y con qué papel, y que la cuenta en
+   sí se administra en Cuentas.
+
+### Verificado contra la base
+
+- **El traspaso completo**: se dio OWNER a otra cuenta, se quitó a la dueña original. Quedó
+  con el dueño nuevo, la membresía de la anterior borrada **y su `restaurant_id` limpiado**, y
+  su cuenta de Leogin intacta. Las dos acciones en la bitácora. Después se revirtió todo.
+- **La regla del último dueño**: intentar bajar a la única dueña a Gerente devuelve *«Es la
+  única persona dueña de este restaurante…»* y —comprobado en la tabla— **el papel no cambió**.
+- **A-09**: un acceso creado desde `/super` sale ahora con `profiles.restaurant_id` **y**
+  membresía OWNER. Antes solo lo primero.
+- **M-10**: se le dio a otra persona una membresía OWNER en una sucursal del grupo y aparece
+  en «Quién lo administra». Antes era invisible ahí aunque administrara los cinco locales.
+- 686 pruebas verdes (5 nuevas).
+
+### Lo que queda
+
+- **Fase 5**: suspender una cuenta, borrarla con el aviso de cuántos locales quedan sin dueño,
+  y marcar un correo como verificado a mano.
+- Las migraciones **131 y 132** en producción.
+- **`RESEND_API_KEY`**, que sigue siendo lo más barato de la lista.
