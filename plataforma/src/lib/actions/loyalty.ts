@@ -209,7 +209,13 @@ export async function getMyAccount(restaurantId: string): Promise<MyAccount> {
       identified: !!checkout,
       email: user?.email ?? null,
       name: (user?.user_metadata?.full_name as string | undefined) ?? null,
-      avatarUrl: (user?.user_metadata?.avatar_url as string | undefined) ?? null,
+      // Google mete la foto en `avatar_url`, pero algunas cuentas viejas o
+      // según el scope que se pidió la traen solo en `picture` — sin el
+      // fallback, esas cuentas se quedaban sin imagen aunque Google sí la
+      // hubiera mandado.
+      avatarUrl: (user?.user_metadata?.avatar_url as string | undefined)
+        ?? (user?.user_metadata?.picture as string | undefined)
+        ?? null,
       checkout,
       loyalty: loyalty.active ? loyalty : null,
     };

@@ -47,6 +47,7 @@ export default function DeliveryMap({
   const mapRef            = useRef<unknown>(null);
   const markerRef         = useRef<unknown>(null);
   const notifyChangeRef   = useRef<((lat: number, lng: number) => void) | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [calibrating, setCalibrating] = useState(false);
 
   const hasRestaurant = restaurantLat !== undefined && restaurantLat !== null
@@ -179,6 +180,19 @@ export default function DeliveryMap({
       // Notificar posición inicial
       notifyChange(startLat, startLng);
 
+      // El contenedor vive dentro de un sheet/checkout que entra con
+      // animación (fade-up, blur de Glass): Leaflet calcula el tamaño del
+      // grid de tiles en el instante exacto de L.map(), y si en ese momento
+      // el contenedor todavía no tiene su tamaño final, se queda pintando
+      // solo un área vacía aunque el contenedor termine bien. Un
+      // invalidateSize() inmediato no basta (mismo problema), así que se
+      // fuerza uno tras el primer frame Y se sigue vigilando por si el
+      // contenedor todavía cambia de tamaño después (ResizeObserver).
+      requestAnimationFrame(() => map.invalidateSize());
+      const ro = new ResizeObserver(() => map.invalidateSize());
+      ro.observe(containerRef.current!);
+      resizeObserverRef.current = ro;
+
       // Geolocalización: centrar en la posición real del usuario
       if (navigator.geolocation && initialLat === undefined) {
         navigator.geolocation.getCurrentPosition(
@@ -194,6 +208,8 @@ export default function DeliveryMap({
     });
 
     return () => {
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       (mapRef.current as { remove?: () => void })?.remove?.();
       mapRef.current = null;
     };

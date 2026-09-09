@@ -231,6 +231,9 @@ function RewardsMenu({
   const [total, setTotal] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // Igual que en account-sheet.tsx: no mostrar el formulario de teléfono+
+  // total hasta que la persona confirme que sí había pedido antes.
+  const [wantsLink, setWantsLink] = useState<boolean | null>(null);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -300,18 +303,42 @@ function RewardsMenu({
           ) : loggedIn ? (
             <div>
               <div className="t-display" style={{ fontSize: 'var(--m-fs-lg)', fontWeight: 700 }}>Recupera tu historial</div>
-              <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
-                ¿Ya habías pedido antes? Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) para enlazar tu historial a esta cuenta.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--m-r-md)', padding: '11px 13px', minHeight: 'var(--m-tap)', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }} />
-                <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="Total de tu pedido más reciente (Q)"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--m-r-md)', padding: '11px 13px', minHeight: 'var(--m-tap)', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }} />
-                <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer' }}>
-                  {busy ? '…' : 'Enlazar'}
-                </button>
-              </div>
+              {wantsLink === null ? (
+                <div style={{ marginTop: 4, marginBottom: 4 }}>
+                  <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 12, lineHeight: 1.5 }}>
+                    ¿Ya habías pedido antes en este restaurante?
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setWantsLink(true)} className="press"
+                      style={{ flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'var(--surface-2)', color: 'var(--u-text)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', cursor: 'pointer' }}>
+                      Sí, ya había pedido
+                    </button>
+                    <button onClick={() => setWantsLink(false)} className="press"
+                      style={{ flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--u-hair-2)', background: 'none', color: 'var(--u-text-3)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', cursor: 'pointer' }}>
+                      No, es mi primera vez
+                    </button>
+                  </div>
+                </div>
+              ) : wantsLink === false ? (
+                <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginTop: 4, lineHeight: 1.5 }}>
+                  Perfecto — en tu primer pedido con esta cuenta empiezas a acumular puntos solo.
+                </p>
+              ) : (
+                <>
+                  <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginTop: 4, marginBottom: 13, lineHeight: 1.5 }}>
+                    Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) para enlazar tu historial a esta cuenta.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <input inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Tu número (8 dígitos)"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--m-r-md)', padding: '11px 13px', minHeight: 'var(--m-tap)', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }} />
+                    <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="Total de tu pedido más reciente (Q)"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--u-hair-2)', borderRadius: 'var(--m-r-md)', padding: '11px 13px', minHeight: 'var(--m-tap)', color: 'var(--u-text)', fontSize: 'max(16px, var(--m-fs-md))', outline: 'none' }} />
+                    <button onClick={link} disabled={busy} className="press btn-accent" style={{ padding: '11px 18px', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer' }}>
+                      {busy ? '…' : 'Enlazar'}
+                    </button>
+                  </div>
+                </>
+              )}
               <button onClick={signOut} disabled={busy} className="press" style={{ marginTop: 10, background: 'none', border: 'none', color: 'var(--u-text-3)', fontSize: 'var(--m-fs-xs)', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Cerrar sesión</button>
             </div>
           ) : (

@@ -85,6 +85,11 @@ export default function AccountSheet({
   const [linkTotal, setLinkTotal] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMsg, setLinkMsg] = useState<string | null>(null);
+  // null = todavía no contestó; el formulario de teléfono+total (que exige
+  // escribir datos) solo aparece si dice que sí. Antes se mostraba siempre,
+  // aunque fuera la primera vez que esa persona pedía — quien nunca había
+  // pedido veía un formulario que no le servía de nada.
+  const [wantsLink, setWantsLink] = useState<boolean | null>(null);
 
   const loadAccount = useCallback(async () => {
     const local = getLocalProfile(restaurantId);
@@ -291,35 +296,65 @@ export default function AccountSheet({
                     <div className="t-mute" style={{ fontSize: 'var(--m-fs-xs)' }}>Cuenta de Google</div>
                   </div>
                 </div>
-                <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 10, lineHeight: 1.5 }}>
-                  ¿Ya habías pedido antes? Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) y enlazamos tu historial y tus datos a esta cuenta.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <input
-                    inputMode="numeric"
-                    value={linkPhone}
-                    onChange={(e) => setLinkPhone(e.target.value)}
-                    placeholder="Tu número (8 dígitos)"
-                    style={inputStyle}
-                  />
-                  <input
-                    inputMode="decimal"
-                    value={linkTotal}
-                    onChange={(e) => setLinkTotal(e.target.value)}
-                    placeholder="Total de tu pedido más reciente (Q)"
-                    style={inputStyle}
-                  />
-                  <button
-                    onClick={handleLink}
-                    disabled={linkBusy}
-                    className="press btn-accent"
-                    style={{ padding: '11px 18px', borderRadius: 'var(--m-r-md)', fontWeight: 600, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer' }}
-                  >
-                    {linkBusy ? '…' : 'Enlazar'}
-                  </button>
-                </div>
-                {linkMsg && (
-                  <p style={{ fontSize: 'var(--m-fs-sm)', marginTop: 8, color: linkMsg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{linkMsg}</p>
+                {wantsLink === null ? (
+                  <div>
+                    <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 12, lineHeight: 1.5 }}>
+                      ¿Ya habías pedido antes en este restaurante?
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setWantsLink(true)}
+                        className="press"
+                        style={{ flex: 1, padding: '10px 16px', borderRadius: 'var(--m-r-md)', border: '1px solid var(--u-hair)', background: 'var(--surface-2)', color: 'var(--u-text)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', cursor: 'pointer' }}
+                      >
+                        Sí, ya había pedido
+                      </button>
+                      <button
+                        onClick={() => setWantsLink(false)}
+                        className="press"
+                        style={{ flex: 1, padding: '10px 16px', borderRadius: 'var(--m-r-md)', border: '1px solid var(--u-hair)', background: 'none', color: 'var(--u-text-3)', fontWeight: 600, fontSize: 'var(--m-fs-sm)', cursor: 'pointer' }}
+                      >
+                        No, es mi primera vez
+                      </button>
+                    </div>
+                  </div>
+                ) : wantsLink === false ? (
+                  <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', lineHeight: 1.5 }}>
+                    Perfecto — cuando hagas tu primer pedido con esta cuenta, tus datos quedan guardados solos para la próxima vez.
+                  </p>
+                ) : (
+                  <>
+                    <p className="t-mute" style={{ fontSize: 'var(--m-fs-sm)', marginBottom: 10, lineHeight: 1.5 }}>
+                      Ingresa el número con el que pediste y el total de tu pedido más reciente (para confirmar que el número es tuyo) y enlazamos tu historial y tus datos a esta cuenta.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input
+                        inputMode="numeric"
+                        value={linkPhone}
+                        onChange={(e) => setLinkPhone(e.target.value)}
+                        placeholder="Tu número (8 dígitos)"
+                        style={inputStyle}
+                      />
+                      <input
+                        inputMode="decimal"
+                        value={linkTotal}
+                        onChange={(e) => setLinkTotal(e.target.value)}
+                        placeholder="Total de tu pedido más reciente (Q)"
+                        style={inputStyle}
+                      />
+                      <button
+                        onClick={handleLink}
+                        disabled={linkBusy}
+                        className="press btn-accent"
+                        style={{ padding: '11px 18px', borderRadius: 'var(--m-r-md)', fontWeight: 600, fontSize: 'var(--m-fs-md)', border: 'none', cursor: 'pointer' }}
+                      >
+                        {linkBusy ? '…' : 'Enlazar'}
+                      </button>
+                    </div>
+                    {linkMsg && (
+                      <p style={{ fontSize: 'var(--m-fs-sm)', marginTop: 8, color: linkMsg.startsWith('¡') ? 'var(--c-ok, #4ade80)' : 'var(--c-danger, #f87171)' }}>{linkMsg}</p>
+                    )}
+                  </>
                 )}
                 <button
                   onClick={handleSignOut}
