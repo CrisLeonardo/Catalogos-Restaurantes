@@ -1,7 +1,8 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { verifySuperAdmin, currentSuperAdmin } from '@/lib/auth/super-admin-guard';
+import { logSuper } from '@/lib/super-admin-log';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PRICING_SETTINGS_TAG } from '@/lib/db/billing';
@@ -13,23 +14,6 @@ import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults'
 
 export type SuperState = { error: string } | null;
 export type SaveThemeResult = { error?: string; ok?: boolean };
-
-async function verifySuperAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profile?.role !== 'SUPER_ADMIN') return null;
-  return createServiceClient();
-}
 
 // Generación/validación de slugs vive en lib/slug.ts (compartido con el
 // registro self-serve para aplicar exactamente las mismas reglas).
@@ -146,8 +130,9 @@ export async function updateRestaurantPlan(
   prevState: SuperState,
   formData: FormData,
 ): Promise<SuperState> {
-  const db = await verifySuperAdmin();
-  if (!db) return { error: 'No autorizado.' };
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return { error: 'No autorizado.' };
+  const { db } = sesion;
 
   const id = formData.get('id') as string;
   const plan_actual = formData.get('plan_actual') as string;
@@ -177,12 +162,28 @@ export async function updateRestaurantPlan(
     ...managedFlags,
   });
 
+  // El plan de ANTES se lee antes de pisarlo: sin eso la bitácora dice que
+  // alguien cambió el plan pero no desde cuál, que es la mitad de la
+  // pregunta cuando un cliente reclama su factura.
+  const { data: previo } = await db
+    .from('restaurants')
+    .select('name, plan_actual')
+    .eq('id', id)
+    .maybeSingle();
+
   const { error } = await db
     .from('restaurants')
     .update({ plan_actual, modules })
     .eq('id', id);
 
   if (error) return { error: error.message };
+
+  await logSuper(sesion, {
+    action: 'restaurante.plan',
+    targetRestaurantId: id,
+    targetLabel: (previo?.name as string | null) ?? null,
+    meta: { antes: previo?.plan_actual ?? null, despues: plan_actual },
+  });
 
   // El plan determina el precio: refresca la mensualidad si está en automático.
   await db.rpc('leogin_apply_auto_price', { p_restaurant_id: id });
@@ -451,14 +452,23 @@ export async function duplicateRestaurant(formData: FormData) {
 
 /** Suspender / reactivar en un clic (desde Finanzas → Cobranza). */
 export async function setRestaurantStatusSuper(formData: FormData) {
-  const db = await verifySuperAdmin();
-  if (!db) return;
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return;
+  const { db } = sesion;
 
   const id = (formData.get('id') as string)?.trim();
   const status = formData.get('status') === 'suspended' ? 'suspended' : 'active';
   if (!id) return;
 
+  const { data: previo } = await db.from('restaurants').select('name').eq('id', id).maybeSingle();
   await db.from('restaurants').update({ status }).eq('id', id);
+
+  await logSuper(sesion, {
+    action: 'restaurante.estado',
+    targetRestaurantId: id,
+    targetLabel: (previo?.name as string | null) ?? null,
+    meta: { estado: status },
+  });
 
   revalidatePath('/super/restaurantes');
   revalidatePath('/super/finanzas', 'layout');
@@ -466,11 +476,26 @@ export async function setRestaurantStatusSuper(formData: FormData) {
 }
 
 export async function deleteRestaurant(formData: FormData) {
-  const db = await verifySuperAdmin();
-  if (!db) return;
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return;
+  const { db } = sesion;
 
   const id = formData.get('id') as string;
+
+  // El nombre se guarda ANTES de borrar. Después ya no existe, y una fila
+  // que dijera solo «se borró el restaurante 3f2a…» no le explica nada a
+  // nadie. Por lo mismo la tabla no tiene clave foránea aquí: si la
+  // tuviera en cascada, este borrado se llevaría su propio registro.
+  const { data: previo } = await db.from('restaurants').select('name, slug').eq('id', id).maybeSingle();
+
   await db.from('restaurants').delete().eq('id', id);
+
+  await logSuper(sesion, {
+    action: 'restaurante.borrar',
+    targetRestaurantId: id,
+    targetLabel: (previo?.name as string | null) ?? null,
+    meta: { slug: previo?.slug ?? null },
+  });
 
   revalidatePath('/super/restaurantes');
   redirect('/super/restaurantes');
@@ -485,8 +510,9 @@ export async function createRestaurantUser(
   prevState: SuperState,
   formData: FormData,
 ): Promise<SuperState> {
-  const db = await verifySuperAdmin();
-  if (!db) return { error: 'No autorizado.' };
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return { error: 'No autorizado.' };
+  const { db } = sesion;
 
   const restaurantId = (formData.get('restaurantId') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -532,6 +558,14 @@ export async function createRestaurantUser(
     return { error: profErr.message };
   }
 
+  await logSuper(sesion, {
+    action: 'acceso.crear',
+    targetUserId: created.user.id,
+    targetRestaurantId: restaurantId,
+    targetLabel: email,
+    meta: { rol: role },
+  });
+
   revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
   redirect(`/super/restaurantes/${restaurantId}/accesos?saved=user`);
 }
@@ -540,8 +574,9 @@ export async function resetRestaurantUserPassword(
   prevState: SuperState,
   formData: FormData,
 ): Promise<SuperState> {
-  const db = await verifySuperAdmin();
-  if (!db) return { error: 'No autorizado.' };
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return { error: 'No autorizado.' };
+  const { db } = sesion;
 
   const userId = formData.get('userId') as string;
   const restaurantId = formData.get('restaurantId') as string;
@@ -580,13 +615,23 @@ export async function resetRestaurantUserPassword(
   const { error } = await db.auth.admin.updateUserById(userId, { password });
   if (error) return { error: error.message };
 
+  // La contraseña no se registra. Solo que se cambió, a quién y cuándo.
+  const { data: quien } = await db.auth.admin.getUserById(userId);
+  await logSuper(sesion, {
+    action: 'acceso.contrasena',
+    targetUserId: userId,
+    targetRestaurantId: restaurantId,
+    targetLabel: quien.user?.email ?? null,
+  });
+
   revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
   redirect(`/super/restaurantes/${restaurantId}/accesos?saved=pass`);
 }
 
 export async function deleteRestaurantUser(formData: FormData) {
-  const db = await verifySuperAdmin();
-  if (!db) return;
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return;
+  const { db } = sesion;
 
   const userId = formData.get('userId') as string;
   const restaurantId = formData.get('restaurantId') as string;
@@ -602,8 +647,19 @@ export async function deleteRestaurantUser(formData: FormData) {
   if (!prof || prof.role === 'SUPER_ADMIN' || prof.restaurant_id !== restaurantId)
     return;
 
+  // El correo, antes de que deje de existir.
+  const { data: quien } = await db.auth.admin.getUserById(userId);
+  const correo = quien.user?.email ?? null;
+
   // Borra el usuario de Auth; el profile cae por FK on delete cascade.
   await db.auth.admin.deleteUser(userId);
+
+  await logSuper(sesion, {
+    action: 'acceso.quitar',
+    targetUserId: userId,
+    targetRestaurantId: restaurantId,
+    targetLabel: correo,
+  });
 
   revalidatePath(`/super/restaurantes/${restaurantId}`, 'layout');
 }
@@ -684,12 +740,21 @@ export async function unassignRestaurant(formData: FormData) {
    cuenta sin credenciales aparte. */
 
 export async function deleteOrganization(formData: FormData) {
-  const db = await verifySuperAdmin();
-  if (!db) return;
+  const sesion = await currentSuperAdmin();
+  if (!sesion) return;
+  const { db } = sesion;
   const id = (formData.get('id') as string)?.trim();
   if (!id) return;
+  const { data: previo } = await db.from('organizations').select('name').eq('id', id).maybeSingle();
   // Las sucursales quedan independientes (organization_id → null por FK).
   await db.from('organizations').delete().eq('id', id);
+
+  await logSuper(sesion, {
+    action: 'grupo.borrar',
+    targetLabel: (previo?.name as string | null) ?? null,
+    meta: { organizationId: id },
+  });
+
   revalidatePath('/super/grupos');
   redirect('/super/grupos');
 }

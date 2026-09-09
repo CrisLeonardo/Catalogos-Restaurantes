@@ -9,22 +9,21 @@
    decía "contáctanos por WhatsApp" y alguien de Leogin tenía que
    entrar al super admin a resetear a mano.
 
-   El enlace lo genera Supabase (auth.admin.generateLink, el mismo
-   mecanismo que ya usa el login por PIN) y lo manda nuestro enviador
-   (lib/email), no el SMTP de GoTrue: así el correo lleva la marca
-   Leogin y el enlace apunta a donde nosotros queremos.
+   El enlace y el cuerpo del correo viven en `lib/auth/recovery-email.ts`,
+   porque el Super Admin también los manda desde la ficha de una cuenta.
+   Lo que NO se comparte es la respuesta: aquí es la misma exista o no la
+   cuenta (ver NEUTRAL); allí, si algo falla, se dice.
    ============================================================ */
 
 import { cookies, headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
-import { sendEmail, emailEnabled } from '@/lib/email';
+import { emailEnabled } from '@/lib/email';
+import { sendRecoveryEmail } from '@/lib/auth/recovery-email';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { readResetPass, RESET_COOKIE, resetCookieOptions } from '@/lib/auth/reset-session';
 import { writeSessionActivity } from '@/lib/auth/session-activity';
 import { splitLoginIdentifier } from '@/lib/staff-email';
-import { rootDomainForUrls } from '@/lib/tenant';
 
 /**
  * `url` (solo la devuelve `setNewPassword`) = entra aquí con una navegación
@@ -87,33 +86,13 @@ export async function requestPasswordReset(
     };
   }
 
-  const db = createServiceClient();
-  const { data, error } = await db.auth.admin.generateLink({
-    type: 'recovery',
-    email,
-    options: { redirectTo: resetLandingUrl() },
-  });
+  const result = await sendRecoveryEmail(email);
+  if (result.ok) return NEUTRAL;
 
-  // Correo sin cuenta: generateLink falla. Se responde igual que si hubiera
-  // salido bien (ver NEUTRAL).
-  if (error || !data?.properties?.hashed_token) return NEUTRAL;
-
-  const url = `${resetLandingUrl()}?token=${encodeURIComponent(data.properties.hashed_token)}`;
-  const result = await sendEmail({
-    to: email,
-    subject: 'Recupera el acceso a tu panel de Leogin',
-    heading: 'Recupera tu contraseña',
-    body: [
-      'Recibimos una solicitud para cambiar la contraseña con la que entras a tu panel de Leogin.',
-      'El enlace funciona una sola vez y caduca en una hora.',
-    ],
-    cta: { label: 'Crear una contraseña nueva', url },
-    note: 'Si no fuiste tú, ignora este correo: tu contraseña sigue siendo la misma.',
-  });
-
-  // Un fallo del proveedor sí se dice: callarlo dejaría al dueño esperando un
-  // correo que nunca va a llegar.
-  if (!result.ok) {
+  // Correo sin cuenta: se responde igual que si hubiera salido bien (NEUTRAL).
+  // Un fallo del PROVEEDOR sí se dice, que es otra cosa: callarlo dejaría al
+  // dueño esperando un correo que nunca va a llegar.
+  if (result.reason === 'envio') {
     return { error: 'No pudimos enviar el correo en este momento. Inténtalo de nuevo en unos minutos.' };
   }
   return NEUTRAL;
@@ -169,19 +148,4 @@ export async function setNewPassword(
       (await headers()).get('x-tenant-slug'),
     ),
   };
-}
-
-/**
- * A dónde apunta el enlace del correo: SIEMPRE el dominio raíz.
- *
- * El panel de cada restaurante vive en su propio subdominio, pero quien pide
- * recuperar su contraseña puede no acordarse de cuál es el suyo —y el correo
- * llega a un cliente que quizá abre el enlace en otro dispositivo—. La cookie
- * de sesión del personal es de dominio ancho, así que entrar por la raíz
- * funciona igual y después se le manda a SU panel (resolveStaffDestination).
- */
-function resetLandingUrl(): string {
-  const root = rootDomainForUrls();
-  const proto = root.includes('localhost') || root.startsWith('127.') ? 'http' : 'https';
-  return `${proto}://${root}/admin/auth/recuperar`;
 }
