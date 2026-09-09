@@ -16,6 +16,10 @@ import { ToastProvider, Toaster } from '@/components/ui/toast';
 const NAV = [
   { href: '/super',               label: 'Inicio',        icon: 'home' },
   { href: '/super/restaurantes',  label: 'Restaurantes',  icon: 'utensils' },
+  // El panel entra por el restaurante en todas partes menos aquí. Esta es la
+  // misma información por el otro lado —la persona— que es como llega un
+  // problema de acceso: un nombre y un correo, sin saber de qué local.
+  { href: '/super/cuentas',       label: 'Cuentas',       icon: 'user' },
   { href: '/super/grupos',        label: 'Grupos',        icon: 'users' },
   { href: '/super/metricas',      label: 'Métricas',      icon: 'chart' },
   { href: '/super/finanzas',      label: 'Finanzas',      icon: 'wallet' },
