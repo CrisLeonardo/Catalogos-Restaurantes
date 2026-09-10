@@ -201,20 +201,6 @@ export default function SalonCanvas({
      mesa está donde está el mueble: ahí nada se mueve nunca. */
   const { vistas, cambio, congelar, soltar, reordenar } = useOrdenEstable(tables);
 
-  /* ── La mesa libre no es una tarjeta ──────────────────────────
-     «Una mesa libre no dice nada» es la regla con la que se dibujó este
-     lienzo, y por eso una libre ya venía sin estado, sin mesero y sin
-     botón: solo el número. Pero seguía costando lo mismo que una
-     ocupada. Medido en un teléfono de 375×812 con el salón vacío de un
-     local de veinte mesas: 19 libres × 50 px = 950 px de los 1 957 del
-     documento — el 49 % del alto para enseñar diecinueve números.
-
-     Diecinueve números caben en tres renglones. Se agrupan en una tira
-     al final, cada uno tocable (44 px), y el salón vuelve a ser lo que
-     tiene que ser: las mesas que necesitan a alguien, arriba y juntas. */
-  const conGente = vistas.filter((t) => t.state.kind !== 'libre');
-  const libres = vistas.filter((t) => t.state.kind === 'libre').sort((a, b) => a.n - b.n);
-
   if (view === 'fichas' || view === 'lista') {
     /* La cuenta va AL LADO también aquí. Estaba solo en el plano —
        `{aside}` vivía únicamente en el otro return— así que en Fichas y
@@ -234,13 +220,9 @@ export default function SalonCanvas({
           onPointerLeave={soltar}
         >
           {cambio && <BotonReordenar onClick={reordenar} />}
-          {conGente.length === 0 ? (
-            <p className="salon-vacio">
-              El salón está vacío. Toca una mesa para abrirla.
-            </p>
-          ) : view === 'fichas' ? (
+          {view === 'fichas' ? (
             <div className="salon-grid">
-              {conGente.map((t) => (
+              {vistas.map((t) => (
                 <TableCard
                   key={t.n}
                   t={t}
@@ -258,7 +240,7 @@ export default function SalonCanvas({
                 background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
               }}
             >
-              {conGente.map((t, i) => (
+              {vistas.map((t, i) => (
                 <TableRow
                   key={t.n}
                   t={t}
@@ -270,10 +252,6 @@ export default function SalonCanvas({
                 />
             ))}
             </div>
-          )}
-
-          {libres.length > 0 && (
-            <TiraDeLibres tables={libres} selected={selected} onOpen={onOpen} />
           )}
         </div>
         {aside}
@@ -314,47 +292,6 @@ export default function SalonCanvas({
 
       {aside}
     </div>
-  );
-}
-
-/* ── Las mesas libres, en una tira ─────────────────────────────
-   Un renglón por cada tres o cuatro números en vez de una tarjeta por
-   mesa. Cada número es un botón de 44 px que abre esa mesa: se pierde
-   la tarjeta, no el gesto.
-
-   Va DEBAJO y no arriba a propósito: lo primero que tiene que ver
-   quien mira el salón son las mesas que necesitan a alguien. Y lleva
-   el nombre del plano cuando lo tiene («Terraza 3»), porque en un
-   local con nombres de mesa el número solo no siempre basta. */
-function TiraDeLibres({ tables, selected, onOpen }: {
-  tables: SalonTable[];
-  selected: number | null;
-  onOpen: (n: number) => void;
-}) {
-  return (
-    <section className="salon-libres" aria-label={`${tables.length} mesas libres`}>
-      <div className="salon-libres-tit">
-        <span aria-hidden data-tone="libre" />
-        {tables.length} {tables.length === 1 ? 'mesa libre' : 'mesas libres'}
-      </div>
-      <div className="salon-libres-tira">
-        {tables.map((t) => (
-          <button
-            key={t.n}
-            type="button"
-            onClick={() => onOpen(t.n)}
-            className="press"
-            data-sel={selected === t.n ? '1' : '0'}
-            /* El verbo sale de la acción de la mesa, igual que en la
-               tarjeta: en Mesas se SIENTA y en Tomar pedidos se ABRE. */
-            aria-label={`Mesa ${t.n}${t.nombre ? `, ${t.nombre}` : ''}, libre. ${t.action.label}`}
-            title={t.nombre ?? undefined}
-          >
-            {t.n}
-          </button>
-        ))}
-      </div>
-    </section>
   );
 }
 

@@ -21,12 +21,9 @@
    mismo se mire desde donde se mire.
    ============================================================ */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon, type IconName } from '@/components/icons';
-import {
-  DishFinderInput, DishResults, useDishFinder,
-} from '@/components/admin/waiter/dish-finder';
-import MenuGrid from '@/components/admin/waiter/menu-grid';
+import DishFinder from '@/components/admin/waiter/dish-finder';
 import { TIEMPOS, type CartLine } from '@/components/admin/waiter/cart';
 import BillLine, { estadoDePlato } from '@/components/admin/salon/bill-line';
 import { fmtMin, STAGES, type TableState, type TableStage } from '@/lib/table-state';
@@ -67,7 +64,7 @@ export interface NextStep {
      `mandar` manda una comanda que YA existe y que nadie pasó a cocina —
      un pedido que el comensal hizo desde el QR y que sigue en NEW. Son dos
      momentos distintos y nunca coinciden en pantalla: el carrito manda. */
-  kind: 'enviar' | 'mandar' | 'cobrar' | 'servir' | 'ninguna';
+  kind: 'enviar' | 'mandar' | 'agregar' | 'cobrar' | 'servir';
   /** Acción secundaria, si toca: imprimir la cuenta, o mandar de una vez
       todo lo apuntado cuando la barra está ofreciendo marchar un tiempo. */
   secundaria?: 'imprimir' | 'enviar-todo';
@@ -169,32 +166,8 @@ interface Props {
       hubiera escrito en el buscador, o cadena vacía si se abrió desde el
       menú de acciones. */
   onArticuloLibre: (nombre: string) => void;
-  /** Qué categoría de la carta está abierta en el cuerpo. `null` = todas.
-      Vive en el panel y no aquí para que cambiar de mesa no la reinicie:
-      el mesero que está sirviendo bebidas sigue en «Bebidas». */
-  activeCat: string | null;
-  onActiveCat: (id: string | null) => void;
+  onVerMenu: () => void;
   ocupado: boolean;
-}
-
-/**
- * ¿La cuenta cabe AL LADO, o tiene que ser una gaveta?
- *
- * El corte es el mismo en el que `.ciclo-body` deja de ser una fila
- * (1180 px), que es el que ya usa el salón para decidir si la cuenta se
- * abre al lado o como hoja. Por encima, la cuenta se ve entera sin
- * pedir nada; por debajo, vive en una gaveta que sube desde abajo.
- */
-function useGaveta(): boolean {
-  const [enGaveta, setEnGaveta] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1180px)');
-    const apply = () => setEnGaveta(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
-  return enGaveta;
 }
 
 export default function TableCycle(p: Props) {
@@ -205,43 +178,9 @@ export default function TableCycle(p: Props) {
     asiento, onAsiento, onSeatCart, onSeatItem, onIncCart, onDecCart, onEditCart,
     tiempo, onTiempo, onCourseCart,
     onParty, onJuntar, onMover, onNota, onCobrar, onImprimir, onServir, onMandarACocina,
-    onCorregir, onArticuloLibre, activeCat, onActiveCat,
+    onCorregir, onArticuloLibre, onVerMenu,
     ocupado,
   } = p;
-
-  /* El buscador de siempre, pero PARTIDO (T-01): el campo va en la banda
-     fija de arriba y sus resultados ocupan el cuerpo, en el sitio donde
-     el resto del tiempo vive la carta. El estado y la capa de teclado son
-     los mismos de antes y viven aquí, que es el único sitio desde el que
-     se ven las dos mitades.
-
-     El techo de resultados sube de 6 a 40: los seis eran para que la
-     lista no desbordara una tarjeta metida bajo la comanda. Ahora la
-     lista ES el cuerpo y no le quita el sitio a nada. */
-  const fin = useDishFinder({
-    products,
-    onPick,
-    onSend: onSend ? () => onSend(null) : null,
-    max: 40,
-  });
-  const buscando = fin.term.length > 0;
-
-  const enGaveta = useGaveta();
-  const [gaveta, setGaveta] = useState(false);
-  /* La hoja de «a quién y para cuándo» (asiento y tiempo). Estaba abierta
-     en la pantalla, ocupando 129 px por delante del buscador incluso en
-     una mesa sin abrir (T-08). Ahora se pide, y lo que sí se ve siempre
-     es lo que está PUESTO, en el chip de la banda de apuntar. */
-  const [modoOpen, setModoOpen] = useState(false);
-
-  /* Lo que está PUESTO ahora mismo, dicho en dos palabras. Es lo que
-     lleva el chip de la banda de apuntar: mientras esté apagado no dice
-     nada y no ocupa nada. */
-  const modoTexto = [
-    asiento != null ? `As. ${asiento}` : null,
-    TIEMPOS.find((t) => t.n === tiempo)?.corto ?? null,
-  ].filter(Boolean).join(' · ');
-  const hayModo = modoTexto.length > 0;
 
   /* ── La cuenta: lo enviado y lo que todavía está apuntándose ── */
   const enviadas: CycleLine[] = useMemo(() => buildBillLines(orders)
@@ -398,18 +337,18 @@ export default function TableCycle(p: Props) {
           nota: state.reason === 'sin-pedir'
             ? `Llevan ${sentadaMin} sentados y nadie les ha tomado el pedido.`
             : `Sentados hace ${sentadaMin}. Todavía no han pedido nada.`,
-          accion: '',
+          accion: `Tomar el pedido${aDonde}`,
           icon: 'plus',
-          kind: 'ninguna',
+          kind: 'agregar',
         };
       }
       return {
         nota: mesa
           ? 'La mesa está libre. Apunta el primer plato y queda abierta.'
           : 'Apunta lo que se lleva y mándalo a cocina.',
-        accion: '',
+        accion: 'Agregar platillos',
         icon: 'plus',
-        kind: 'ninguna',
+        kind: 'agregar',
       };
     }
     if (state.reason === 'cuenta') {
@@ -476,28 +415,18 @@ export default function TableCycle(p: Props) {
     const h = now != null ? hora(occ.firedAt ?? occ.since) : null;
     return {
       nota: h ? `En cocina desde las ${h}.` : 'La comanda está en cocina.',
-      accion: '',
+      accion: 'Agregar platillos',
       icon: 'plus',
-      kind: 'ninguna',
+      kind: 'agregar',
     };
   }, [porEnviar, cart, occ, state, now, mesa, titulo, money, total]);
 
-  /* «Agregar platillos» ya no es un boton (T-13).
-     ------------------------------------------------------------------
-     Era la accion principal en las tres situaciones en las que no hay
-     nada que enviar, y lo unico que hacia era llevar a OTRA pantalla con
-     la carta -- mientras el buscador que hace lo mismo estaba fuera del
-     borde inferior. Ahora la carta ES el cuerpo de esta pantalla: el
-     boton sobraba y encima competia con ella.
-
-     En esas situaciones la barra se queda solo con la frase, que es lo
-     que de verdad hacia falta ("llevan 14 min sentados y nadie les ha
-     tomado el pedido"), y baja de 125 px a un renglon. */
   function accionPrincipal() {
     if (paso.kind === 'enviar') { onSend?.(paso.tiempo ?? null); return; }
     if (paso.kind === 'mandar') { onMandarACocina(); return; }
     if (paso.kind === 'cobrar') { onCobrar(); return; }
     if (paso.kind === 'servir') { onServir(); return; }
+    onVerMenu();
   }
 
   /* Los cuatro tramos del ciclo, con la hora de cada paso. */
@@ -516,28 +445,27 @@ export default function TableCycle(p: Props) {
           flechas atrás a diez píxeles una de otra. */}
       <div className="ciclo-head">
         <div className="ciclo-head-id">
-          {/* Título y datos en la MISMA línea y sin envolver (T-03): con
-              `flex-wrap` y un mínimo de 118 px, en un teléfono de 375 la
-              cabecera se partía en dos renglones y medía 82 px. Ahora el
-              título se encoge y los datos se recortan con puntos
-              suspensivos antes de empujar nada. */}
-          <span className="ciclo-head-titulo t-display">{titulo}</span>
-          <span className="ciclo-head-meta">
-            {[
-              personas ? `${personas} ${personas === 1 ? 'persona' : 'personas'}` : null,
-              desde(occ?.since, now),
-              occ?.waiterName ?? null,
-            ].filter(Boolean).join(' · ') || 'Sin abrir'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <span className="t-display" style={{ fontSize: 24, lineHeight: 1.1 }}>{titulo}</span>
+            <span style={{ fontSize: 13.5, color: 'var(--u-text-3)' }}>
+              {[
+                personas ? `${personas} ${personas === 1 ? 'persona' : 'personas'}` : null,
+                desde(occ?.since, now),
+                occ?.waiterName ?? null,
+              ].filter(Boolean).join(' · ') || 'Sin abrir'}
+            </span>
+          </div>
         </div>
 
-        {/* El total, siempre. Antes solo aparecía cuando la columna derecha
-            se plegaba; ahora la cuenta vive en una gaveta cerrada también
-            en tablet, así que este es el único sitio donde el número que
-            más veces se mira en un turno está a la vista sin pedirlo. */}
+        {/* El total sube aquí cuando la columna derecha se pliega (tablet y
+            teléfono). Es el número que más veces se mira en un turno y
+            estaba quedando al final de un scroll de menú entero. */}
         {total > 0 && (
           <span className="ciclo-head-total">
-            <span className="t-mono">{money(total)}</span>
+            <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Total</span>
+            <span className="t-mono" style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+              {money(total)}
+            </span>
           </span>
         )}
 
@@ -613,292 +541,280 @@ export default function TableCycle(p: Props) {
       </div>
       )}
 
-      {/* ══ APUNTAR ══════════════════════════════════════════════
-          La banda fija. Es lo primero bajo la cabecera y no se mueve:
-          el campo para apuntar el siguiente plato tiene que estar a la
-          vista tanto en el primer plato de la mesa como en el
-          decimoquinto. Antes estaba DEBAJO de la comanda, así que cada
-          plato apuntado lo empujaba 118 px hacia abajo; con tres platos
-          ya empezaba en el píxel 821 de un teléfono de 812 (T-01). */}
-      <div className="ciclo-apuntar">
-        <DishFinderInput
-          fin={fin}
-          autoFocus={finderFocus}
-          placeholder={mesa != null ? 'Agregar a la mesa…  («3 lim»)' : 'Agregar al pedido…  («3 lim»)'}
-        />
-        {/* A quién y para cuándo. Solo ocupa sitio cuando dice algo:
-            apagado es un botón cuadrado; encendido, lo que está puesto
-            («As. 2 · 1.º»), que antes no se veía en ninguna parte una vez
-            elegido. */}
-        {mesa != null && (
-          <button
-            type="button"
-            onClick={() => setModoOpen(true)}
-            className="ciclo-modo press"
-            data-on={hayModo ? '1' : '0'}
-            aria-haspopup="dialog"
-            aria-label={hayModo
-              ? `Apuntando a ${modoTexto}. Tocar para cambiarlo`
-              : 'Elegir asiento y tiempo para los platos que se agreguen'}
-            title="Asiento y tiempo"
-          >
-            <Icon name="users" size={16} />
-            {hayModo && <span>{modoTexto}</span>}
-          </button>
-        )}
-      </div>
-
-      {/* ══ EL CUERPO ════════════════════════════════════════════
-          La carta, o los resultados de lo que se esté escribiendo. Este
-          sitio era una tarjeta de seis resultados metida entre la
-          comanda y el pie, y la carta entera vivía en OTRA vista
-          (`view === 'menu'`) donde la cuenta desaparecía. Ahora las dos
-          formas de apuntar comparten superficie: se escribe arriba y
-          esto cambia. */}
+      {/* ── La cuenta y el reparto ───────────────────────────── */}
       <div className="ciclo-body">
         <div className="ciclo-main">
-          {buscando ? (
-            <DishResults
-              fin={fin}
-              categories={categories}
-              qtyOf={qtyOf}
-              onDec={onDec}
-              money={money}
-              onOpenItem={onArticuloLibre}
-            />
-          ) : (
-            <MenuGrid
-              products={products}
-              categories={categories}
-              activeCat={activeCat}
-              onActiveCat={onActiveCat}
-              qtyOf={qtyOf}
-              onPick={onPick}
-              onDec={onDec}
-              money={money}
-            />
-          )}
-        </div>
+          {/* El rótulo solo cuando hay cuenta que rotular: encabezar la nada
+              con «La cuenta de la mesa» empuja el buscador y no dice nada.
 
-        {/* ── La cuenta ────────────────────────────────────────
-            Columna al lado por encima de 1180 px; gaveta que sube por
-            debajo. Es el mismo corte con el que el salón decide si la
-            cuenta de una mesa se abre al lado o como hoja. */}
-        {(!enGaveta || gaveta) && (
-          <div
-            className="ciclo-side"
-            data-gaveta={enGaveta ? '1' : '0'}
-            role={enGaveta ? 'dialog' : undefined}
-            aria-modal={enGaveta ? true : undefined}
-            aria-label={enGaveta ? `Cuenta de ${titulo}` : undefined}
-          >
-            {enGaveta && (
-              <div className="ciclo-side-head">
-                <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>
-                  {mesa != null ? `Cuenta de ${titulo.toLowerCase()}` : 'El pedido'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setGaveta(false)}
-                  className="press glass-quiet"
-                  aria-label="Cerrar la cuenta"
-                  style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0 }}
-                >
-                  <Icon name="x" size={18} />
-                </button>
+              La FILA es otra cosa: desde M-12 puede aparecer sola, en una
+              mesa sentada y todavía sin platos, porque ahí es justo donde
+              hace falta —el primer plato de cada persona caía siempre en
+              «Mesa»—. Por eso el bloque se abre si hay cuenta O si hay
+              asientos que ofrecer, y el rótulo se pinta por su cuenta. */}
+          {(lineas.length > 0 || ordersLoading || puedeRepartir || mesa != null) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '0 4px' }}>
+            {(lineas.length > 0 || ordersLoading) && (
+              <div className="adm-label adm-label-caps" style={{ flex: 1, minWidth: 140, color: 'var(--u-text-3)' }}>
+                {mesa != null ? 'La cuenta de la mesa' : 'El pedido'}
               </div>
             )}
+            {/* A qué asiento van los platos que se agreguen ahora. Se elige
+                UNA vez y lo demás se apunta solo: preguntarlo plato por
+                plato es lo que hace que nadie lo use.
 
-            <div className="ciclo-side-scroll">
-              {/* Las líneas. En una mesa sin nada apuntado la gaveta lo
-                  dice con una frase en vez de con una tarjeta vacía. */}
-              {(lineas.length > 0 || ordersLoading) ? (
-                <div
-                  style={{
-                    borderRadius: 13, border: '1px solid var(--u-hair)', overflow: 'hidden',
-                    background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
-                  }}
-                >
-                  {ordersLoading && lineas.length === 0 ? (
-                    <p style={{ margin: 0, padding: '22px 15px', fontSize: 13.5, color: 'var(--u-text-3)' }}>
-                      Cargando la cuenta…
-                    </p>
-                  ) : lineas.map((l) => (
-                    /* LA MISMA fila que el panel del salón (M-22). Los datos y la
-                       maqueta viven en `salon/bill-line.tsx`; aquí solo entran
-                       los MANDOS, que es lo único que de verdad distingue esta
-                       pantalla: el mesero toca, el encargado mira. */
-                    <BillLine
-                      key={l.key}
-                      l={l}
-                      money={money}
-                      meta={(
-                        <>
-                          <span
-                            style={{
-                              fontSize: 12.5, fontWeight: 600, flexShrink: 0,
-                              color: l.status === 'SERVED' ? 'var(--u-text-4)' : 'var(--brand-accent-ink)',
-                            }}
-                          >
-                            {estadoDePlato(l.status ?? null)}
-                          </span>
-                          {/* Solo en el carrito: un plato que ya salió a cocina no
-                              puede cambiar de tiempo sin mentirle al papel que el
-                              cocinero tiene delante (M-06). */}
-                          {l.lineId && mesa != null && (
-                            <CourseChip
-                              course={l.course}
-                              onChange={(c) => onCourseCart(l.lineId!, c)}
-                            />
-                          )}
-                          <SeatChip
-                            seat={l.seat}
-                            personas={personas}
-                            disabled={mesa == null}
-                            onChange={(s) => {
-                              if (l.lineId) onSeatCart(l.lineId, s);
-                              else if (l.itemId) onSeatItem(l.itemId, s);
-                            }}
-                          />
-                        </>
-                      )}
-                      controles={l.lineId ? (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <button type="button" className="wp-step press" onClick={() => onDecCart(l.lineId!)} aria-label={`Quitar uno de ${l.name}`}>
-                            <Icon name="minus" size={15} />
-                          </button>
-                          <button type="button" className="wp-step press" data-on="1" onClick={() => onIncCart(l.lineId!)} aria-label={`Agregar otro ${l.name}`}>
-                            <Icon name="plus" size={15} />
-                          </button>
-                          <button
-                            type="button"
-                            className="wp-step press"
-                            onClick={() => onEditCart(cart.find((c) => c.lineId === l.lineId)!)}
-                            aria-label={`Editar ${l.name}`}
-                          >
-                            <Icon name="edit" size={14} />
-                          </button>
-                        </span>
-                      ) : l.orderId && l.itemId ? (
-                        /* Corregir lo YA enviado, desde aquí (M-08). No anula:
-                           ABRE la anulación, que sigue pidiendo motivo y —si ya
-                           salió a cocina— aprobación de encargado. Va solo, sin
-                           −/+ al lado, porque no es un vecino de «quitar uno»:
-                           es otra cosa y se paga distinto. */
-                        <button
-                          type="button"
-                          className="wp-step press"
-                          onClick={() => onCorregir({
-                            orderId: l.orderId!,
-                            orderStatus: (l.status ?? 'NEW') as OrderStatus,
-                            item: { id: l.itemId!, name: l.name, remainingQty: l.qty },
-                          })}
-                          aria-label={`Anular ${l.name}`}
-                          title="Anular este plato"
-                        >
-                          <Icon name="trash" size={14} />
-                        </button>
-                      ) : null}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p style={{ margin: 0, padding: '10px 4px', fontSize: 13.5, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
-                  {mesa != null
-                    ? 'Todavía no hay nada apuntado en esta mesa.'
-                    : 'Todavía no hay nada apuntado.'}
-                </p>
-              )}
+                No aparece en una mesa vacía ni en una de una persona: ahí
+                no hay nada que repartir, y en el teléfono eran dos renglones
+                de píldoras de 44 px por delante del buscador. */}
+            {/* Antes esto exigía `lineas.length > 0`, así que el PRIMER plato de
+                cada persona caía siempre en «Mesa» y había que corregirlo
+                después, uno por uno — que es exactamente lo que hacía que
+                nadie usara el reparto por asiento (M-12).
 
-              {mesa != null && (
-              <div style={tarjeta}>
-                <div className="adm-label" style={{ color: 'var(--u-text-3)' }}>Cómo se reparte</div>
-                {reparto.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
-                    Cuando apuntes platos aparece aquí quién pidió qué.
-                  </p>
-                ) : reparto.map((r) => (
-                  <div key={String(r.seat)} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="ciclo-chip" data-seat={r.seat != null ? '1' : '0'} aria-hidden>
-                      {r.seat ?? '·'}
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {r.seat == null ? 'De la mesa' : r.nombres.slice(0, 2).join(' · ')}
-                    </span>
-                    <span className="t-mono" style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)' }}>
-                      {money(r.total)}
-                    </span>
-                  </div>
-                ))}
+                Ahora basta con que la mesa esté ocupada: o tiene platos, o
+                alguien la sentó y contó cuánta gente hay (migración 128).
+                Sigue sin aparecer en una mesa vacía y sin sentar, que era
+                la razón buena de la condición vieja: ahí no hay nadie a
+                quien repartirle nada y en el teléfono son dos renglones de
+                píldoras por delante del buscador. */}
+            {/* A qué TIEMPO van los platos que se agreguen ahora (M-06).
+                Mismo criterio que el asiento —se elige una vez y lo demás
+                se apunta solo— y en el mismo renglón, porque son las dos
+                marcas que lleva un plato al apuntarlo. Solo en mesa: un
+                pedido para llevar no tiene tiempos que repartir. */}
+            {mesa != null && (
+              <div className="ciclo-seats" role="group" aria-label="Tiempo al que se apuntan los platos nuevos">
+                <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Tiempo</span>
                 <button
                   type="button"
-                  onClick={onCobrar}
-                  disabled={!occ}
                   className="press"
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    height: 40, borderRadius: 11, cursor: occ ? 'pointer' : 'default',
-                    border: '1px solid var(--u-hair-2)', background: 'none',
-                    color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, opacity: occ ? 1 : 0.55,
-                  }}
+                  data-on={tiempo == null ? '1' : '0'}
+                  onClick={() => onTiempo(null)}
+                  aria-pressed={tiempo == null}
+                  title="Sale con lo que haya"
                 >
-                  <Icon name="list" size={15} />
-                  Cambiar el reparto
+                  Ya
                 </button>
+                {TIEMPOS.map((t) => (
+                  <button
+                    key={t.n}
+                    type="button"
+                    className="press"
+                    data-on={tiempo === t.n ? '1' : '0'}
+                    onClick={() => onTiempo(t.n)}
+                    aria-pressed={tiempo === t.n}
+                    title={t.label}
+                  >
+                    {t.corto}
+                  </button>
+                ))}
               </div>
-              )}
-
-              <div style={tarjeta}>
-                <Fila label="Consumo" value={money(consumo)} />
-                {propina > 0 && <Fila label={`Propina ${tipPercent}%`} value={money(propina)} />}
-                {cuenta.discount > 0 && <Fila label="Descuento" value={`−${money(cuenta.discount)}`} />}
-                <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Total</span>
-                  <span className="t-mono" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
-                    {money(total)}
-                  </span>
-                </div>
+            )}
+            {puedeRepartir && (
+              <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
+                <span style={{ fontSize: 12.5, color: 'var(--u-text-3)' }}>Asiento</span>
+                {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, MAX_ASIENTOS)) }, (_, i) => i + 1)].map((n) => (
+                  <button
+                    key={n ?? 'mesa'}
+                    type="button"
+                    className="press"
+                    data-on={n === asiento ? '1' : '0'}
+                    onClick={() => onAsiento(n)}
+                    aria-pressed={n === asiento}
+                  >
+                    {n ?? 'Mesa'}
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
+          )}
 
-      {/* El velo de la gaveta. Solo cuando está abierta y solo donde es
-          gaveta: al lado no tapa nada. */}
-      {enGaveta && gaveta && (
-        <div className="ciclo-scrim" onClick={() => setGaveta(false)} aria-hidden />
-      )}
-      {/* ══ EL PIE ═══════════════════════════════════════════════
-          El tirador de la gaveta y la barra del siguiente paso, en un
-          solo bloque pegado abajo. Iban por separado y sumaban 125 px de
-          los 812 del teléfono (T-09), porque la frase envolvía ENCIMA del
-          botón en vez de al lado.
+          {/* La comanda. En una mesa vacía se calla del todo: el buscador
+              de abajo ya invita a escribir, y una tarjeta diciendo «todavía
+              no hay nada apuntado» solo empujaba el campo fuera de la
+              primera pantalla del teléfono. */}
+          {(lineas.length > 0 || ordersLoading) && (
+          <div
+            style={{
+              borderRadius: 13, border: '1px solid var(--u-hair)', overflow: 'hidden',
+              background: 'var(--adm-card)', boxShadow: 'var(--adm-shadow-xs)',
+            }}
+          >
+            {ordersLoading && lineas.length === 0 ? (
+              <p style={{ margin: 0, padding: '22px 15px', fontSize: 13.5, color: 'var(--u-text-3)' }}>
+                Cargando la cuenta…
+              </p>
+            ) : lineas.map((l) => (
+              /* LA MISMA fila que el panel del salón (M-22). Los datos y la
+                 maqueta viven en `salon/bill-line.tsx`; aquí solo entran
+                 los MANDOS, que es lo único que de verdad distingue esta
+                 pantalla: el mesero toca, el encargado mira. */
+              <BillLine
+                key={l.key}
+                l={l}
+                money={money}
+                meta={(
+                  <>
+                    <span
+                      style={{
+                        fontSize: 12.5, fontWeight: 600, flexShrink: 0,
+                        color: l.status === 'SERVED' ? 'var(--u-text-4)' : 'var(--brand-accent-ink)',
+                      }}
+                    >
+                      {estadoDePlato(l.status ?? null)}
+                    </span>
+                    {/* Solo en el carrito: un plato que ya salió a cocina no
+                        puede cambiar de tiempo sin mentirle al papel que el
+                        cocinero tiene delante (M-06). */}
+                    {l.lineId && mesa != null && (
+                      <CourseChip
+                        course={l.course}
+                        onChange={(c) => onCourseCart(l.lineId!, c)}
+                      />
+                    )}
+                    <SeatChip
+                      seat={l.seat}
+                      personas={personas}
+                      disabled={mesa == null}
+                      onChange={(s) => {
+                        if (l.lineId) onSeatCart(l.lineId, s);
+                        else if (l.itemId) onSeatItem(l.itemId, s);
+                      }}
+                    />
+                  </>
+                )}
+                controles={l.lineId ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <button type="button" className="wp-step press" onClick={() => onDecCart(l.lineId!)} aria-label={`Quitar uno de ${l.name}`}>
+                      <Icon name="minus" size={15} />
+                    </button>
+                    <button type="button" className="wp-step press" data-on="1" onClick={() => onIncCart(l.lineId!)} aria-label={`Agregar otro ${l.name}`}>
+                      <Icon name="plus" size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="wp-step press"
+                      onClick={() => onEditCart(cart.find((c) => c.lineId === l.lineId)!)}
+                      aria-label={`Editar ${l.name}`}
+                    >
+                      <Icon name="edit" size={14} />
+                    </button>
+                  </span>
+                ) : l.orderId && l.itemId ? (
+                  /* Corregir lo YA enviado, desde aquí (M-08). No anula:
+                     ABRE la anulación, que sigue pidiendo motivo y —si ya
+                     salió a cocina— aprobación de encargado. Va solo, sin
+                     −/+ al lado, porque no es un vecino de «quitar uno»:
+                     es otra cosa y se paga distinto. */
+                  <button
+                    type="button"
+                    className="wp-step press"
+                    onClick={() => onCorregir({
+                      orderId: l.orderId!,
+                      orderStatus: (l.status ?? 'NEW') as OrderStatus,
+                      item: { id: l.itemId!, name: l.name, remainingQty: l.qty },
+                    })}
+                    aria-label={`Anular ${l.name}`}
+                    title="Anular este plato"
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
+                ) : null}
+              />
+            ))}
+          </div>
+          )}
 
-          La frase sigue estando —es la que dice «llevan 14 min sentados
-          y nadie les ha tomado el pedido»— pero comparte renglón con el
-          tirador, y el botón solo aparece cuando de verdad hay una
-          acción que ofrecer. En la situación más común de la noche (la
-          comida en cocina, nada apuntado) el pie es un renglón. */}
-      <div className="ciclo-pie">
-        <div className="ciclo-pie-fila">
-          <span className="ciclo-next-note">{paso.nota}</span>
-          {enGaveta && (
+          {/* El buscador de siempre, debajo de la comanda. No cambia nada
+              de su comportamiento: «3 lim» + Enter agrega, «/» devuelve el
+              foco, Ctrl+Enter envía, y un Enter suelto NUNCA manda la
+              comanda. */}
+          <DishFinder
+            products={products}
+            categories={categories}
+            onPick={onPick}
+            qtyOf={qtyOf}
+            onDec={onDec}
+            money={money}
+            onSend={onSend}
+            autoFocus={finderFocus}
+            onOpenItem={onArticuloLibre}
+          />
+
+          <button
+            type="button"
+            onClick={onVerMenu}
+            className="press"
+            style={{
+              alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7,
+              height: 38, padding: '0 13px', borderRadius: 10, cursor: 'pointer',
+              border: '1px solid var(--u-hair-2)', background: 'none',
+              color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500,
+            }}
+          >
+            <Icon name="bag" size={15} />
+            Ver el menú completo
+          </button>
+        </div>
+
+        <div className="ciclo-side">
+          {mesa != null && (
+          <div style={tarjeta}>
+            <div className="adm-label" style={{ color: 'var(--u-text-3)' }}>Cómo se reparte</div>
+            {reparto.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--u-text-4)', lineHeight: 1.45 }}>
+                Cuando apuntes platos aparece aquí quién pidió qué.
+              </p>
+            ) : reparto.map((r) => (
+              <div key={String(r.seat)} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="ciclo-chip" data-seat={r.seat != null ? '1' : '0'} aria-hidden>
+                  {r.seat ?? '·'}
+                </span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--u-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {r.seat == null ? 'De la mesa' : r.nombres.slice(0, 2).join(' · ')}
+                </span>
+                <span className="t-mono" style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--u-text)' }}>
+                  {money(r.total)}
+                </span>
+              </div>
+            ))}
             <button
               type="button"
-              onClick={() => setGaveta((v) => !v)}
-              className="ciclo-tirador press"
-              aria-expanded={gaveta}
-              aria-label={gaveta ? 'Cerrar la cuenta' : `Ver la cuenta: ${lineas.length} platos, ${money(total)}`}
+              onClick={onCobrar}
+              disabled={!occ}
+              className="press"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                height: 40, borderRadius: 11, cursor: occ ? 'pointer' : 'default',
+                border: '1px solid var(--u-hair-2)', background: 'none',
+                color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 500, opacity: occ ? 1 : 0.55,
+              }}
             >
-              <Icon name="chevronDown" size={14} style={{ transform: gaveta ? 'none' : 'rotate(180deg)' }} />
-              <span>{lineas.length} {lineas.length === 1 ? 'plato' : 'platos'}</span>
-              <span className="t-mono" style={{ fontWeight: 700, color: 'var(--u-text)' }}>{money(total)}</span>
+              <Icon name="list" size={15} />
+              Cambiar el reparto
             </button>
+          </div>
           )}
+
+          <div style={tarjeta}>
+            <Fila label="Consumo" value={money(consumo)} />
+            {propina > 0 && <Fila label={`Propina ${tipPercent}%`} value={money(propina)} />}
+            {cuenta.discount > 0 && <Fila label="Descuento" value={`−${money(cuenta.discount)}`} />}
+            <div style={{ height: 1, background: 'var(--u-hair)', margin: '2px 0' }} />
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Total</span>
+              <span className="t-mono" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--u-text)' }}>
+                {money(total)}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="ciclo-next" data-vacia={paso.kind === 'ninguna' && !paso.secundaria ? '1' : '0'}>
+      </div>
+
+      {/* ── La barra del siguiente paso ──────────────────────── */}
+      <div className="ciclo-next">
+        <span className="ciclo-next-note">{paso.nota}</span>
         {paso.secundaria === 'enviar-todo' && (
           <button
             type="button"
@@ -933,118 +849,21 @@ export default function TableCycle(p: Props) {
             Imprimir cuenta
           </button>
         )}
-        {/* Sin botón cuando no hay acción que ofrecer: la carta ya está
-            en pantalla y «Agregar platillos» solo llevaba a otra copia
-            de ella (T-13). */}
-        {paso.kind !== 'ninguna' && (
-          <button
-            type="button"
-            onClick={accionPrincipal}
-            disabled={ocupado}
-            className="press btn-accent ciclo-next-act"
-          >
-            <Icon name={paso.icon} size={18} />
-            {ocupado ? 'Un momento…' : paso.accion}
-            {paso.kbd && <kbd className="wp-key" style={{ marginLeft: 2 }}>{paso.kbd}</kbd>}
-          </button>
-        )}
-        </div>
-      </div>
-
-      {/* La hoja de «a quién y para cuándo». Se elige UNA vez y lo demás
-          se apunta solo: preguntarlo plato por plato es lo que hace que
-          nadie lo use, y eso no cambia. Lo que cambia es que deje de
-          ocupar 129 px de la pantalla mientras está apagado. */}
-      {modoOpen && mesa != null && (
-        <ModoSheet
-          asiento={asiento}
-          onAsiento={onAsiento}
-          tiempo={tiempo}
-          onTiempo={onTiempo}
-          personas={personas}
-          puedeRepartir={puedeRepartir}
-          onClose={() => setModoOpen(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ── A quién y para cuándo ─────────────────────────────────────
-   Las dos marcas que lleva un plato al apuntarlo: de qué asiento es y
-   con qué tiempo de la comida sale. Vivían abiertas en la pantalla —dos
-   renglones de píldoras por delante del buscador, presentes incluso en
-   una mesa sin abrir y sin un solo plato (T-08)—. Ahora se piden.
-
-   Lo que NO cambia es la regla: se elige una vez y todo lo que se
-   agregue después hereda la marca. Cambiarlo a un desplegable por plato
-   es lo que hace que nadie lo use. */
-function ModoSheet({ asiento, onAsiento, tiempo, onTiempo, personas, puedeRepartir, onClose }: {
-  asiento: number | null;
-  onAsiento: (s: number | null) => void;
-  tiempo: number | null;
-  onTiempo: (t: number | null) => void;
-  personas: number | null;
-  puedeRepartir: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      onClick={onClose}
-      className="waiter-sheet-scrim"
-      style={{ position: 'fixed', inset: 0, zIndex: 620, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="glass anim-slide-up waiter-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Asiento y tiempo de los platos que se agreguen"
-        style={{ width: '100%', maxWidth: 460, padding: '20px 18px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}
-      >
-        <div>
-          <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
-            Los platos que agregues ahora
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.45 }}>
-            Se marcan solos con lo que elijas aquí, hasta que lo cambies.
-          </div>
-        </div>
-
-        <div>
-          <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)', marginBottom: 8 }}>Tiempo</div>
-          <div className="ciclo-seats" role="group" aria-label="Tiempo al que se apuntan los platos nuevos">
-            <button type="button" className="press" data-on={tiempo == null ? '1' : '0'} onClick={() => onTiempo(null)} aria-pressed={tiempo == null} title="Sale con lo que haya">
-              Ya
-            </button>
-            {TIEMPOS.map((t) => (
-              <button key={t.n} type="button" className="press" data-on={tiempo === t.n ? '1' : '0'} onClick={() => onTiempo(t.n)} aria-pressed={tiempo === t.n} title={t.label}>
-                {t.corto}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {puedeRepartir && (
-          <div>
-            <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)', marginBottom: 8 }}>Asiento</div>
-            <div className="ciclo-seats" role="group" aria-label="Asiento al que se apuntan los platos nuevos">
-              {[null, ...Array.from({ length: Math.max(2, Math.min(personas ?? 4, MAX_ASIENTOS)) }, (_, i) => i + 1)].map((n) => (
-                <button key={n ?? 'mesa'} type="button" className="press" data-on={n === asiento ? '1' : '0'} onClick={() => onAsiento(n)} aria-pressed={n === asiento}>
-                  {n ?? 'Mesa'}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <button
           type="button"
-          onClick={onClose}
+          onClick={accionPrincipal}
+          disabled={ocupado}
           className="press btn-accent"
-          style={{ width: '100%', minHeight: 46, borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+            height: 46, padding: '0 22px', borderRadius: 12, border: 'none',
+            fontSize: 15.5, fontWeight: 600, cursor: ocupado ? 'default' : 'pointer',
+            opacity: ocupado ? 0.6 : 1,
+          }}
         >
-          Listo
+          <Icon name={paso.icon} size={18} />
+          {ocupado ? 'Un momento…' : paso.accion}
+          {paso.kbd && <kbd className="wp-key" style={{ marginLeft: 2 }}>{paso.kbd}</kbd>}
         </button>
       </div>
     </div>

@@ -5,7 +5,6 @@
       "name": "plataforma",
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": [
-        "--max-old-space-size=4096",
         "C:\\Users\\minec\\Documents\\Catalogos-Restaurantes\\plataforma\\node_modules\\next\\dist\\bin\\next",
         "dev",
         "C:\\Users\\minec\\Documents\\Catalogos-Restaurantes\\plataforma"

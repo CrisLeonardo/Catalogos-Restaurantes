@@ -28,7 +28,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
-import { Icon } from '@/components/icons';
+import { Icon, ICON_PATHS } from '@/components/icons';
 import SalonCanvas, {
   SalonViewSwitch, SalonLegend, useSalonView,
 } from '@/components/admin/salon/salon-canvas';
@@ -47,6 +47,7 @@ import VoidOrderDialog from '@/components/admin/void-order-dialog';
 import ProductOptionsModal from '@/components/admin/waiter/product-options-modal';
 import OpenItemDialog, { type OpenItemDraft } from '@/components/admin/waiter/open-item-dialog';
 import TableJump from '@/components/admin/waiter/table-jump';
+import { parseQuery } from '@/components/admin/waiter/dish-finder';
 import TableCycle from '@/components/admin/waiter/table-cycle';
 import { money, newLineId, LIBRE_ID, tiempoTexto, type CartLine } from '@/components/admin/waiter/cart';
 import { useServiceMode } from '@/components/admin/service-mode';
@@ -166,18 +167,11 @@ type VoidTarget = {
    agregar, mover, juntar y cobrar— con una sola barra abajo que
    siempre dice el siguiente paso.
 
-   DE SEIS A CUATRO (2026-09-09). Había además 'menu' —la carta en una
-   rejilla— y 'review' —volver a leer lo apuntado antes de mandarlo—, y
-   las dos existían por la misma razón: la mesa no cabía en una pantalla
-   de teléfono, así que la carta y la comanda tenían que turnarse. Con
-   la carta como CUERPO de la mesa y la cuenta en una gaveta, las dos
-   sobran: apuntar y revisar pasan a ser el mismo sitio.
-
-   Eso quita, en un teléfono, dos viajes de ida y vuelta por ronda —y
-   con ellos el «agregué el plato pero no sé si se guardó» que obligaba
-   a hacerlos. Quedan: 'orders' (los pedidos en marcha) y 'bill' (el
-   cobro y el reparto), que son trabajos distintos y no cambian. */
-type View = 'tables' | 'ciclo' | 'orders' | 'bill';
+   Las demás siguen donde estaban: 'menu' es el menú completo para
+   quien prefiere tocar antes que teclear, 'review' revisa el envío
+   desde ahí, 'orders' son los pedidos en marcha y 'bill' el cobro y
+   el reparto. */
+type View = 'tables' | 'ciclo' | 'menu' | 'review' | 'orders' | 'bill';
 
 export default function WaiterPanel({
   waiterId, waiterName, restaurantId, restaurantName,
@@ -284,6 +278,7 @@ export default function WaiterPanel({
   const [productModal, setProductModal] = useState<Product | null>(null);
   const [editingLine, setEditingLine] = useState<CartLine | null>(null);
   const [pendingQty, setPendingQty] = useState(1);
+  const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [submitting, startSubmit] = useTransition();
   /* `undo` sale como botón dentro del propio acuse cuando lo que se acaba
      de hacer se puede deshacer («servido», «atendida»): las dos son de un
@@ -292,14 +287,13 @@ export default function WaiterPanel({
 
   const key = cartKey(selection);
   const cart = useMemo(() => carts[key] ?? [], [carts, key]);
+  const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
   const totalPendiente = contarCarts(carts);
 
-  /* Qué categoría de la carta está abierta en el cuerpo de la mesa.
-     Vive AQUÍ y no dentro de la pantalla de la mesa para que cambiar de
-     mesa no la reinicie: el mesero que está repartiendo bebidas sigue en
-     «Bebidas» al pasar de la 4 a la 7. El buscador ya no tiene estado en
-     este archivo — se lo lleva entero `useDishFinder`. */
+  /* ── Menú: buscador y categoría activa ─────────────────────── */
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const [orders, setOrders] = useState<OrderWithItems[]>(initialOrders);
   const [, startStatus] = useTransition();
@@ -711,13 +705,14 @@ export default function WaiterPanel({
     setProductModal(product);
   }
 
-  /* La propina y los totales del carrito los calcula ahora la pantalla de
-     la mesa (`table-cycle.tsx`), que es la única que los enseña: aquí
-     vivían para la vista «Revisar», que ya no existe. Lo que sí sigue
-     decidiéndose aquí es SI hay propina, porque depende del tipo de
-     pedido y esa es la elección del panel. */
+  /* `l.price` YA lleva sumado el recargo de las opciones: la hoja del plato
+     lo pliega ahí al construir la línea, y `options[].priceDelta` es solo el
+     desglose. Sumarlo otra vez cobraba los extras dos veces. */
+  const subtotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
   const esLlevar = selection.kind === 'llevar';
   const tipApplies = esLlevar ? tipEnabledPickup : tipEnabled;
+  const tipAmount = tipApplies && subtotal > 0 ? Math.round(subtotal * tipPercent) / 100 : 0;
+  const total = subtotal + tipAmount;
   /** "Mesa 4" / "Para llevar" — a dónde va este pedido. */
   const destLabel = selection.kind === 'mesa' ? `Mesa ${selection.n}` : 'Para llevar';
 
@@ -810,12 +805,7 @@ export default function WaiterPanel({
         ...(mesa && personasMesa ? { partySize: personasMesa } : {}),
         notes: notes.trim() || undefined,
       },
-      /* Sobre lo que SE ENVÍA, no sobre el carrito entero: al marchar un
-         tiempo, el resto sigue apuntado y no forma parte de este pedido.
-         Antes esto miraba el subtotal del carrito completo — daba igual
-         porque los dos eran mayores que cero a la vez, pero decía algo
-         que no era. */
-      tipAccepted: tipApplies && aEnviar.reduce((s, l) => s + l.price * l.quantity, 0) > 0,
+      tipAccepted: tipApplies && subtotal > 0,
     };
 
     /** Quita del carrito lo que se acaba de enviar, y SOLO eso.
@@ -1248,14 +1238,34 @@ export default function WaiterPanel({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  /* Los atajos de la carta («/» al buscador, Ctrl+Enter enviar) ya no
-     viven aquí: se los llevó `useDishFinder`, que es quien tiene el campo
-     y sabe si hay algo que enviar. Estaban duplicados en las dos vistas
-     que el rediseño acaba de fundir en una. */
+  /* Atajos propios de "Menú": "/" vuelve al buscador y Ctrl/⌘+Enter va
+     a "Revisar" si hay algo que revisar. Son listeners de teclado —
+     nunca disparan por toque, así que no hace falta ningún gateo
+     adicional para el móvil. */
+  useEffect(() => {
+    if (view !== 'menu') return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        if (cartCount > 0) { e.preventDefault(); setView('review'); }
+        return;
+      }
+      if (e.key === '/') {
+        const t = e.target as HTMLElement | null;
+        const escribiendo = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+        if (!escribiendo) { e.preventDefault(); searchRef.current?.focus(); }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, cartCount]);
 
   const fmt = useCallback((n: number) => money(n, currency), [currency]);
 
   /* ── UI compartida ───────────────────────────────────────────── */
+  const inputStyle: React.CSSProperties = {
+    background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)',
+    borderRadius: 12, padding: '12px 14px', color: 'var(--u-text)', fontSize: 15, outline: 'none', width: '100%',
+  };
 
   const headerProps = {
     waiterName,
@@ -1318,7 +1328,7 @@ export default function WaiterPanel({
   if (view === 'orders') {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-        <WaiterHeader {...headerProps} title="Mis pedidos" onBack={() => setView(selection.kind !== 'none' ? 'ciclo' : 'tables')} />
+        <WaiterHeader {...headerProps} title="Mis pedidos" onBack={() => setView(selection.kind !== 'none' ? 'menu' : 'tables')} />
         {exitGuard}
         <div className="waiter-scroll">
           <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1499,6 +1509,102 @@ export default function WaiterPanel({
   }
 
   /* ════════════════ VISTA: REVISAR Y ENVIAR ════════════════ */
+  if (view === 'review') {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={`Revisar · ${destLabel}`} onBack={() => setView('menu')} />
+        {exitGuard}
+        <div className="waiter-scroll">
+          <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {avisoBanner}
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Orden ({cartCount})</div>
+              {cart.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
+                  Aún no agregaste platos. <button type="button" onClick={() => setView('menu')} style={{ color: 'var(--brand-accent-ink)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Volver al menú</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {cart.map((line) => (
+                    <div key={line.lineId} className="glass" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, color: 'var(--u-text)', fontWeight: 600 }}>{line.name}</div>
+                        {line.options.length > 0 && (
+                          <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                            {line.options.map((o) => (o.variantName ? `${o.choiceName} (${o.variantName})` : o.choiceName)).join(', ')}
+                          </div>
+                        )}
+                        {line.note && (
+                          <div style={{ fontSize: 11.5, color: 'var(--c-warn)', fontWeight: 600, marginTop: 1 }}>
+                            ⚠ {line.note}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 2 }}>{fmt(line.price)} c/u</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <button type="button" onClick={() => openEditLine(line)} aria-label={`Editar ${line.name}`} title="Editar opciones o nota" className="press glass-quiet" style={{ width: 30, height: 30, borderRadius: 9, border: 'none', cursor: 'pointer', color: 'var(--u-text-3)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                          <Icon name="edit" size={14} />
+                        </button>
+                        <button type="button" onClick={() => decLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <span style={{ minWidth: 22, textAlign: 'center', fontWeight: 700, fontSize: 15 }}>{line.quantity}</span>
+                        <button type="button" onClick={() => incLine(line.lineId)} className="press" style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Nombre / referencia (opcional)</div>
+              <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder={destLabel} style={inputStyle} />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--u-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Notas especiales</div>
+              <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Alergias, sin sal, extra salsa…" style={inputStyle} />
+            </div>
+          </div>
+        </div>
+
+        {/* Barra fija inferior: total + enviar. */}
+        <div style={{ borderTop: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--brand-bg) 82%, transparent)', backdropFilter: 'blur(16px)' }}>
+          <div className="waiter-wrap-narrow waiter-pad" style={{ paddingBlock: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {tipApplies && tipAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Subtotal</span>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{fmt(subtotal)}</span>
+              </div>
+            )}
+            {tipApplies && tipAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Propina ({tipPercent}%)</span>
+                <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>{fmt(tipAmount)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 15, color: 'var(--u-text-2)', fontWeight: 600 }}>Total</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--u-text)' }}>{fmt(total)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSubmit()}
+              disabled={submitting || cart.length === 0}
+              className="press btn-accent"
+              style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', cursor: submitting || cart.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 16, opacity: submitting || cart.length === 0 ? 0.6 : 1 }}
+            >
+              {submitting ? 'Enviando…' : <><Icon name="bell" size={16} style={{ display: 'inline', verticalAlign: '-3px' }} /> Enviar a cocina</>}
+            </button>
+          </div>
+        </div>
+
+        {productModal && (
+          <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} initialQty={pendingQty} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
+        )}
+      </div>
+    );
+  }
+
   /* ════════════════ VISTA: LA MESA (su ciclo entero) ════════════════
      Aquí aterriza el mesero al tocar una mesa. Es la pantalla que
      acompaña la mesa de principio a fin: la cuenta completa, en qué va
@@ -1578,8 +1684,7 @@ export default function WaiterPanel({
               onMandarACocina={handleMandarACocina}
               onCorregir={setVoidTarget}
               onArticuloLibre={setLibreDraft}
-              activeCat={activeCat}
-              onActiveCat={setActiveCat}
+              onVerMenu={() => setView('menu')}
               ocupado={submitting}
             />
           </div>
@@ -1602,12 +1707,6 @@ export default function WaiterPanel({
           <NotaDeMesa
             valor={notes}
             titulo={destLabel}
-            /* Solo en un pedido para llevar: una mesa ya se llama «Mesa 7»
-               y no necesita que nadie la bautice. En el mostrador sí —«Juan»,
-               «el de la moto»—, y ese campo era lo único propio que tenía la
-               pantalla «Revisar» que este rediseño quita. */
-            nombre={selection.kind === 'llevar' ? guestName : null}
-            onNombre={setGuestName}
             onGuardar={(v) => { setNotes(v); setNotaOpen(false); }}
             onClose={() => setNotaOpen(false)}
           />
@@ -1661,131 +1760,352 @@ export default function WaiterPanel({
 
      Ya no hacen falta: el lienzo ordena por urgencia y cada mesa lleva
      su única acción, que es lo que esas dos listas intentaban ser. */
-  /* Es la ÚLTIMA vista del panel: si `view` no es ninguna de las de
-     arriba, el mesero acaba aquí, en su salón. */
-  return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
-      <WaiterHeader {...headerProps} title={restaurantName} />
-      {exitGuard}
-      <div className="waiter-scroll">
-        <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '18px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {avisoBanner}
+  if (view === 'tables') {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+        <WaiterHeader {...headerProps} title={restaurantName} />
+        {exitGuard}
+        <div className="waiter-scroll">
+          <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '18px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {avisoBanner}
 
-          {/* SIN TÍTULO, a propósito (T-02).
-              ------------------------------------------------------------
-              Aquí decía «Mesas» en 24 px — la palabra de la PESTAÑA DE AL
-              LADO, que lleva a otro sitio. Un mesero que llega por la
-              pestaña «Tomar pedidos» leía «Mesas» y tenía que deducir en
-              cuál de las dos estaba. La cabecera del panel (WaiterHeader)
-              ya dice el nombre del restaurante y quién atiende; el salón
-              que viene debajo se explica solo.
+            {/* El título y nada más: el modo servicio se mudó a la cabecera
+                (WaiterHeader), que está en TODAS las vistas del mesero. Aquí
+                solo lo veía quien entraba por «Mesas». */}
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--u-text)' }}>Mesas</div>
 
-              Se recuperan 43 px de la banda más cara del teléfono. */}
-
-          {/* Borrador rescatado: el pedido que se estaba tomando la última
-              vez y nunca salió a cocina. */}
-          {draft && totalPendiente === 0 && (
-            <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-warn) 35%, transparent)' }}>
-              <Icon name="alertCircle" size={17} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 170 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
-                  Pedido sin enviar
+            {/* Borrador rescatado: el pedido que se estaba tomando la última
+                vez y nunca salió a cocina. */}
+            {draft && totalPendiente === 0 && (
+              <div className="glass" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, border: '1px solid color-mix(in srgb, var(--c-warn) 35%, transparent)' }}>
+                <Icon name="alertCircle" size={17} style={{ color: 'var(--c-warn)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 170 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--u-text)' }}>
+                    Pedido sin enviar
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
+                    {contarCarts(draft.carts)} platos sin enviar todavía
+                  </div>
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>
-                  {contarCarts(draft.carts)} platos sin enviar todavía
-                </div>
+                <button type="button" onClick={resumeDraft} className="press btn-accent" style={{ padding: '9px 15px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  Retomar
+                </button>
+                <button type="button" onClick={discardDraft} className="press glass-quiet" style={{ padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--u-text-3)' }}>
+                  Descartar
+                </button>
               </div>
-              <button type="button" onClick={resumeDraft} className="press btn-accent" style={{ padding: '9px 15px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-                Retomar
-              </button>
-              <button type="button" onClick={discardDraft} className="press glass-quiet" style={{ padding: '9px 13px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--u-text-3)' }}>
-                Descartar
-              </button>
-            </div>
-          )}
+            )}
 
-          {abandonedCount > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
-              <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)', flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger)' }}>
-                {abandonedCount} mesa{abandonedCount === 1 ? '' : 's'} con más de 24h ocupada{abandonedCount === 1 ? '' : 's'} — probablemente un pedido olvidado.
-              </span>
-              <button
-                type="button"
-                onClick={handleArchiveAbandoned}
-                disabled={archiving}
-                className="press"
-                style={{ padding: '7px 13px', borderRadius: 99, border: 'none', cursor: archiving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 12.5, background: 'var(--c-danger, #f87171)', color: '#fff', opacity: archiving ? 0.7 : 1, flexShrink: 0 }}
-              >
-                {archiving ? 'Archivando…' : 'Archivar mesas abandonadas'}
-              </button>
-            </div>
-          )}
-          {archiveMsg && (
-            <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}>
-              {archiveMsg}
-            </div>
-          )}
+            {abandonedCount > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-danger, #f87171) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--c-danger, #f87171) 25%, transparent)' }}>
+                <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)', flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 180, fontSize: 12.5, fontWeight: 600, color: 'var(--c-danger)' }}>
+                  {abandonedCount} mesa{abandonedCount === 1 ? '' : 's'} con más de 24h ocupada{abandonedCount === 1 ? '' : 's'} — probablemente un pedido olvidado.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleArchiveAbandoned}
+                  disabled={archiving}
+                  className="press"
+                  style={{ padding: '7px 13px', borderRadius: 99, border: 'none', cursor: archiving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 12.5, background: 'var(--c-danger, #f87171)', color: '#fff', opacity: archiving ? 0.7 : 1, flexShrink: 0 }}
+                >
+                  {archiving ? 'Archivando…' : 'Archivar mesas abandonadas'}
+                </button>
+              </div>
+            )}
+            {archiveMsg && (
+              <div style={{ fontSize: 12.5, color: 'var(--u-text-2)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)' }}>
+                {archiveMsg}
+              </div>
+            )}
 
-          {/* «Para llevar» era una tarjeta de 89 px a todo lo ancho, con
-              icono, título y una frase explicativa, por delante del salón
-              (T-03). En el teléfono eso son 103 px con la separación —el
-              doble de una mesa— para una acción que se usa unas pocas
-              veces por turno y que además ya tiene su sitio natural:
-              aquí, junto a los mandos del salón.
-
-              Ahora es una píldora en el mismo renglón que la leyenda. El
-              subtítulo se va: «sin mesa» ya lo dice, y quien lo toca sabe
-              perfectamente lo que es un pedido para llevar. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <SalonViewSwitch view={salonView} onChange={setSalonView} />
-            <span style={{ flex: 1 }} />
-            {salonView !== 'plano' && <SalonLegend />}
-          </div>
-
-          {pickupEnabled && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ flex: 1 }} />
+            {/* Pedido sin mesa. Va ARRIBA del salón y no escondido al final. */}
+            {pickupEnabled && (
               <button
                 type="button"
                 onClick={startTakeaway}
-                className="press"
+                className="press glass"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0,
-                  minHeight: 40, padding: '0 15px', borderRadius: 99,
-                  border: '1.5px dashed var(--u-hair-2)', background: 'none',
-                  cursor: 'pointer', color: 'var(--u-text-2)', fontSize: 13.5, fontWeight: 600,
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 15px', borderRadius: 14,
+                  border: '1.5px dashed var(--u-hair-2)', cursor: 'pointer', textAlign: 'left',
                 }}
               >
-                <Icon name="bag" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-                Para llevar · sin mesa
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)' }}>
+                  <Icon name="bag" size={19} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--u-text)' }}>Para llevar · sin mesa</span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 1 }}>Mostrador, barra o alguien que pasa a recoger</span>
+                </span>
+                <Icon name="chevronRight" size={18} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
               </button>
-            </div>
-          )}
+            )}
 
-          <SalonCanvas
-            view={salonView}
-            tables={salonTables}
-            floorPlan={floorPlan}
-            selected={selection.kind === 'mesa' ? selection.n : null}
-            onOpen={selectTable}
-            onAction={hacerEnMesa}
-            busyTable={mesaOcupada}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <SalonViewSwitch view={salonView} onChange={setSalonView} />
+              <span style={{ flex: 1 }} />
+              {salonView !== 'plano' && <SalonLegend />}
+            </div>
+
+            <SalonCanvas
+              view={salonView}
+              tables={salonTables}
+              floorPlan={floorPlan}
+              selected={selection.kind === 'mesa' ? selection.n : null}
+              onOpen={selectTable}
+              onAction={hacerEnMesa}
+              busyTable={mesaOcupada}
+            />
+          </div>
+        </div>
+
+        {jumpOpen && (
+          <TableJump
+            tables={tables}
+            money={fmt}
+            onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('ciclo'); }}
+            onClose={() => setJumpOpen(false)}
           />
+        )}
+      </div>
+    );
+  }
+
+  /* ════════════════ VISTA: MENÚ (agregar platos) ════════════════ */
+  const { qty: searchQty, term: searchTerm } = parseQuery(search);
+  const query = searchTerm.trim().toLowerCase();
+  /* Misma regla que el buscador de la mesa (waiter/dish-finder.tsx): al
+     BUSCAR, el agotado aparece apagado en vez de desaparecer —esconderlo
+     deja al mesero sin saber si se acabó o si lo escribió mal—; navegando
+     por categorías no sale, para no llenar la rejilla de platos que no se
+     pueden pedir. `is_active` es otra cosa y sigue mandando: eso es un
+     plato retirado de la carta, no uno que se acabó hoy. */
+  const visibleProducts = products.filter((p) => {
+    if (!p.is_active) return false;
+    if (query) return p.name.toLowerCase().includes(query);
+    if (!p.is_available) return false;
+    if (activeCat !== null) return p.category_id === activeCat;
+    return true;
+  });
+  /** La cantidad tecleada ("3 lim") solo se aplica al primer toque que
+      agrega el plato — buscar, tocar la tarjeta, listo. Los pasos +/-
+      de un plato que ya está en el carrito suben de uno en uno, como
+      siempre: es lo que un dedo espera de un botón "+". */
+  function tapProduct(p: Product) {
+    handlePick(p, search.trim() ? searchQty : 1);
+  }
+
+  return (
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--brand-bg)' }}>
+      <WaiterHeader {...headerProps} title={destLabel} onBack={() => setView('tables')} />
+      {exitGuard}
+      {avisoBanner && <div className="waiter-wrap waiter-pad" style={{ paddingTop: 10 }}>{avisoBanner}</div>}
+
+      {/* Buscador */}
+      <div className="waiter-wrap waiter-pad" style={{ width: '100%', paddingBlock: '12px 6px', flexShrink: 0 }}>
+        <div style={{ position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--u-text-4)', display: 'grid', placeItems: 'center' }}>
+            <Icon name="search" size={17} />
+          </span>
+          {searchQty > 1 && (
+            <span style={{
+              position: 'absolute', left: 38, top: '50%', transform: 'translateY(-50%)',
+              padding: '2px 7px', borderRadius: 6,
+              background: 'color-mix(in srgb, var(--adm-accent-500) 14%, transparent)',
+              color: 'var(--brand-accent-ink)', fontFamily: 'var(--ui-font-mono)',
+              fontSize: 12.5, fontWeight: 700,
+            }}>
+              ×{searchQty}
+            </span>
+          )}
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar plato… (o «3 lim»)"
+            style={{ ...inputStyle, paddingLeft: searchQty > 1 ? 78 : 40, paddingRight: search ? 40 : 14 }}
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 8, border: 'none', background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+              <Icon name="x" size={15} />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Categorías (ocultas al buscar) */}
+      {!query && (
+        <div className="waiter-wrap waiter-pad" style={{ width: '100%', display: 'flex', gap: 8, overflowX: 'auto', paddingBlock: '6px 10px', flexShrink: 0, scrollbarWidth: 'none' }}>
+          <button
+            type="button"
+            onClick={() => setActiveCat(null)}
+            className="press"
+            style={{
+              whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
+              background: activeCat === null ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
+              color: activeCat === null ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+              flexShrink: 0,
+            }}
+          >
+            Todos
+          </button>
+          {categories.filter((c) => c.is_active).map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCat(cat.id)}
+              className="press"
+              style={{
+                whiteSpace: 'nowrap', padding: '9px 16px', borderRadius: 99, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13.5,
+                background: activeCat === cat.id ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 7%, transparent)',
+                color: activeCat === cat.id ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
+                flexShrink: 0,
+              }}
+            >
+              {cat.icon && (
+                ICON_PATHS[cat.icon]
+                  ? <Icon name={cat.icon} size={13} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />
+                  : <span style={{ marginRight: 4 }}>{cat.icon}</span>
+              )}{cat.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Productos */}
+      <div className="waiter-scroll">
+        <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '4px 96px' }}>
+          {visibleProducts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-4)', fontSize: 14 }}>
+              {query ? 'Ningún plato coincide con tu búsqueda.' : 'Sin productos disponibles en esta categoría.'}
+            </div>
+          ) : (
+            <div className="waiter-menu-grid">
+              {visibleProducts.map((p) => {
+                const qty = cartQtyOf(p.id);
+                const hasOptions = ((p.options as ProductOptionGroup[] | null) ?? []).length > 0;
+                const agotado = !p.is_available;
+                return (
+                  <div
+                    key={p.id}
+                    role={agotado ? undefined : 'button'}
+                    tabIndex={agotado ? undefined : 0}
+                    aria-disabled={agotado || undefined}
+                    onClick={agotado ? undefined : () => tapProduct(p)}
+                    onKeyDown={agotado ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapProduct(p); } }}
+                    className={agotado ? 'glass' : 'press glass'}
+                    style={{
+                      borderRadius: 14, padding: '12px 12px 11px', position: 'relative',
+                      cursor: agotado ? 'default' : 'pointer', opacity: agotado ? 0.6 : 1,
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                      border: qty > 0 ? '1.5px solid var(--brand-accent)' : '1.5px solid transparent',
+                    }}
+                  >
+                    {qty > 0 && (
+                      <span style={{ position: 'absolute', top: 8, right: 8, minWidth: 24, height: 24, padding: '0 6px', borderRadius: 99, background: 'var(--brand-accent)', color: 'var(--brand-on-accent, #fff)', fontSize: 13, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
+                        {qty}
+                      </span>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--u-text)' }}>
+                      {p.icon && (
+                        ICON_PATHS[p.icon]
+                          ? <Icon name={p.icon} size={23} />
+                          : <span style={{ fontSize: 23 }}>{p.icon}</span>
+                      )}
+                      <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, paddingRight: qty > 0 ? 24 : 0 }}>{p.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-accent-ink)' }}>{fmt(p.price)}</span>
+                    </div>
+
+                    {agotado ? (
+                      /* En el sitio del botón, la respuesta: se acabó. Antes
+                         la tarjeta no se pintaba y buscar el plato no decía
+                         nada. Ver `visibleProducts` arriba. */
+                      <div style={{ marginTop: 2, padding: '10px', borderRadius: 10, textAlign: 'center', background: 'color-mix(in srgb, var(--c-warn) 14%, transparent)', color: 'var(--c-warn)', fontSize: 13, fontWeight: 700 }}>
+                        Agotado
+                      </div>
+                    ) : hasOptions ? (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); tapProduct(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                        {qty > 0 ? 'Agregar otro' : '+ Elegir opciones'}
+                      </button>
+                    ) : qty > 0 ? (
+                      <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); decProduct(p.id); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>−</button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handlePick(p, 1); }} className="press" style={{ flex: 1, height: 38, borderRadius: 10, border: '1px solid var(--u-hair)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', color: 'var(--u-text)', cursor: 'pointer', fontSize: 19, display: 'grid', placeItems: 'center' }}>+</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); tapProduct(p); }} className="press" style={{ marginTop: 2, padding: '10px', borderRadius: 10, border: 'none', background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)', color: 'var(--brand-accent-ink)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                        + Agregar
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Barra flotante del carrito → Revisar, con mini-carrito desplegable. */}
+      {cartCount > 0 && (
+        <div className="waiter-cart-bar" style={{ position: 'sticky', bottom: 0, background: 'linear-gradient(to top, var(--brand-bg) 60%, transparent)', flexShrink: 0 }}>
+          <div className="waiter-wrap waiter-pad" style={{ paddingBlock: '0 12px' }}>
+            {miniCartOpen && (
+              <div className="glass anim-slide-up" style={{ borderRadius: 16, padding: '8px 10px', marginBottom: 8, maxHeight: '34vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {cart.map((line) => (
+                  <div key={line.lineId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{line.name}</div>
+                      {line.note && (
+                        <div style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 600 }}>⚠ {line.note}</div>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => decLine(line.lineId)} className="press glass-quiet" style={{ width: 28, height: 28, borderRadius: 8, border: 'none', color: 'var(--u-text)', cursor: 'pointer', fontSize: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}>−</button>
+                    <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{line.quantity}</span>
+                    <button type="button" onClick={() => incLine(line.lineId)} className="press glass-quiet" style={{ width: 28, height: 28, borderRadius: 8, border: 'none', color: 'var(--u-text)', cursor: 'pointer', fontSize: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}>+</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setMiniCartOpen((v) => !v)}
+              className="press"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '5px', marginBottom: 6, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--u-text-3)', fontSize: 11.5, fontWeight: 600 }}
+            >
+              <Icon name="chevronDown" size={12} style={{ transform: miniCartOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              {miniCartOpen ? 'Ocultar pedido' : 'Ver pedido actual'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('review')}
+              className="press btn-accent"
+              style={{ width: '100%', padding: '15px 18px', borderRadius: 16, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontWeight: 700, fontSize: 15.5 }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ minWidth: 26, height: 26, borderRadius: 99, background: 'rgba(0,0,0,0.18)', display: 'grid', placeItems: 'center', fontSize: 13.5, fontWeight: 800 }}>{cartCount}</span>
+                Revisar pedido
+              </span>
+              <span>{fmt(total)} →</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {productModal && (
+        <ProductOptionsModal product={productModal} currency={currency} initialLine={editingLine ?? undefined} initialQty={pendingQty} onAdd={addToCart} onSave={saveLine} onClose={closeProductModal} />
+      )}
 
       {jumpOpen && (
         <TableJump
           tables={tables}
           money={fmt}
-          onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('ciclo'); }}
+          onPick={(n) => { setJumpOpen(false); elegir({ kind: 'mesa', n }); setView('menu'); }}
           onClose={() => setJumpOpen(false)}
         />
       )}
     </div>
   );
-
 }
 
 /* ── La nota de la mesa ────────────────────────────────────────
@@ -1796,13 +2116,9 @@ export default function WaiterPanel({
    Es una hoja y no un campo suelto en la pantalla a propósito: se
    escribe una vez por mesa, no en cada ronda, y tenerlo siempre a la
    vista solo restaría sitio a la comanda. */
-function NotaDeMesa({ valor, titulo, nombre, onNombre, onGuardar, onClose }: {
+function NotaDeMesa({ valor, titulo, onGuardar, onClose }: {
   valor: string;
   titulo: string;
-  /** El nombre de referencia del pedido. `null` en una mesa: ya se llama
-      «Mesa 7». Solo aparece en los pedidos para llevar. */
-  nombre: string | null;
-  onNombre: (v: string) => void;
   onGuardar: (v: string) => void;
   onClose: () => void;
 }) {
@@ -1811,27 +2127,11 @@ function NotaDeMesa({ valor, titulo, nombre, onNombre, onGuardar, onClose }: {
     <div onClick={onClose} className="waiter-sheet-scrim" style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
       <div className="glass anim-slide-up waiter-sheet" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 460, padding: '22px 20px 28px' }}>
         <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
-          {/* «Nota de para llevar» era lo que salía al aplicar
-              `toLowerCase()` a un título que no es un nombre de mesa. */}
-          {nombre === null ? `Nota de ${titulo.toLowerCase()}` : 'Nota del pedido'}
+          Nota de {titulo.toLowerCase()}
         </div>
         <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 6, lineHeight: 1.45 }}>
-          Lo que cocina tiene que saber de {nombre === null ? 'esta mesa' : 'este pedido'}. Sale impreso con la siguiente comanda.
+          Lo que cocina tiene que saber de esta mesa. Sale impreso con la siguiente comanda.
         </div>
-        {nombre !== null && (
-          <input
-            value={nombre}
-            onChange={(e) => onNombre(e.target.value)}
-            placeholder="A nombre de… (opcional)"
-            aria-label="Nombre o referencia del pedido"
-            maxLength={80}
-            style={{
-              width: '100%', height: 48, marginTop: 16, padding: '0 14px', borderRadius: 12, outline: 'none',
-              border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
-              color: 'var(--u-text)', fontSize: 16,
-            }}
-          />
-        )}
         <input
           autoFocus
           value={texto}
