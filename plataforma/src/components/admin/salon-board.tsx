@@ -126,6 +126,24 @@ export default function SalonBoard({
     return () => mq.removeEventListener('change', apply);
   }, []);
 
+  /* En el teléfono los DOS interruptores segmentados no caben.
+     ------------------------------------------------------------------
+     La barra de arriba apilaba «Fichas · Plano · Lista» y «Tiempo ·
+     Cuenta · Personas · En qué va»: ocho botones y 100 px de
+     configuración por delante de la primera mesa, en una pantalla donde
+     la primera mesa ya empezaba en el píxel 387. El de vista se queda
+     —cambia lo que se está mirando—; el de métrica pasa a una píldora
+     que dice cuál está puesta y abre una hoja con las cuatro. */
+  const [esTelefono, setEsTelefono] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const apply = () => setEsTelefono(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+  const [metricaOpen, setMetricaOpen] = useState(false);
+
   /* ── El salón, resuelto ───────────────────────────────────── */
   const money = useCallback((n: number) => fmtMoney(n, currency), [currency]);
   /** Monto abreviado del plano: «Q412», «Q1.2k». En 100 px no cabe más. */
@@ -487,12 +505,29 @@ export default function SalonBoard({
           />
         </div>
 
+        {/* Los dos mandos en el MISMO renglón. En el teléfono `.salon-top`
+            es una columna, así que como hermanos sueltos ocupaban dos
+            bandas: 50 px de «Fichas · Plano · Lista» y otros 44 de la
+            métrica, uno encima del otro y por delante de la primera mesa.
+            Juntos, el interruptor se queda con el ancho que sobra. */}
+        <div className="salon-mandos">
         <SalonViewSwitch view={view} onChange={elegirVista} />
 
         {/* Cuál de los cuatro datos va grande en la ficha (M-21). Solo en
             Fichas y Lista: en el plano los pines ya enseñan lo suyo, y no
             hay sitio para otro renglón. */}
-        {view !== 'plano' && (
+        {view !== 'plano' && (esTelefono ? (
+          <button
+            type="button"
+            onClick={() => setMetricaOpen(true)}
+            className="press salon-metrica-chip"
+            aria-haspopup="dialog"
+            aria-label={`Cada mesa enseña: ${METRICA_LABEL[metrica]}. Tocar para cambiarlo`}
+          >
+            <Icon name="grid" size={15} />
+            {METRICA_LABEL[metrica]}
+          </button>
+        ) : (
           <div className="salon-seg" role="group" aria-label="Qué dato enseña cada mesa">
             {(['tiempo', 'total', 'pax', 'etapa'] as SalonMetrica[]).map((m) => (
               <button
@@ -506,7 +541,8 @@ export default function SalonBoard({
               </button>
             ))}
           </div>
-        )}
+        ))}
+        </div>
 
         <button
           type="button"
@@ -588,6 +624,49 @@ export default function SalonBoard({
         </div>
       )}
 
+      {/* Qué número lleva grande cada mesa, en el teléfono: las mismas
+          cuatro opciones del segmentado de escritorio, pedidas en vez de
+          ocupando un renglón entero de la barra de arriba. */}
+      {metricaOpen && (
+        <div
+          onClick={() => setMetricaOpen(false)}
+          className="waiter-sheet-scrim"
+          style={{ position: 'fixed', inset: 0, zIndex: 520, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="glass anim-slide-up waiter-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Qué dato enseña cada mesa"
+            style={{ width: '100%', maxWidth: 420, padding: '18px 14px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}
+          >
+            <div style={{ padding: '0 8px 10px', fontSize: 17, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--u-text)' }}>
+              Cada mesa enseña
+            </div>
+            {(['tiempo', 'total', 'pax', 'etapa'] as SalonMetrica[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => { elegirMetrica(m); setMetricaOpen(false); }}
+                className="press"
+                aria-pressed={metrica === m}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 52,
+                  padding: '10px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', textAlign: 'left',
+                  background: metrica === m ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'none',
+                  color: metrica === m ? 'var(--brand-accent-ink)' : 'var(--u-text)',
+                  fontSize: 15, fontWeight: metrica === m ? 700 : 500,
+                }}
+              >
+                <Icon name={metrica === m ? 'checkCircle' : 'grid'} size={17} style={{ flexShrink: 0, opacity: metrica === m ? 1 : 0.4 }} />
+                {METRICA_LABEL[m]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filtrar esconde mesas, y esconder sin decirlo es la forma más
           rápida de que alguien crea que el salón se vació. La salida está
           en el mismo renglón. */}
@@ -660,7 +739,10 @@ function Celda({ label, value, hint, accent, activo, onClick }: {
         {value}
       </div>
       {hint && (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
+        /* Con clase para poder callarla en el teléfono: allí la celda se
+           vuelve un renglón de «etiqueta · número» y una tercera línea la
+           rompería. */
+        <div className="salon-summary-hint" style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 1, lineHeight: 1.3 }}>
           {hint}
         </div>
       )}

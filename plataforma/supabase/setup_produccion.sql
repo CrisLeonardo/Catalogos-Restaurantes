@@ -281,7 +281,8 @@ values (
   'restaurant-assets',
   'restaurant-assets',
   true,
-  5242880,   -- 5 MB
+  10485760,   -- 10 MB (con margen: las fotos comprimidas quedan en cientos de KB;
+              -- el margen es para GIF animados, que se suben sin comprimir)
   array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 ) on conflict (id) do nothing;
 

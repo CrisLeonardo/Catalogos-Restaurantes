@@ -3132,6 +3132,29 @@ html[data-platform] .asphalt::after { display: none; }
   margin-top: 3px; color: var(--u-text);
 }
 
+/* Los dos mandos del salón, en un renglón. En pantalla ancha son dos
+   hermanos más de `.salon-top` y se comportan igual que antes; en el
+   teléfono, donde `.salon-top` es una columna, este envoltorio evita
+   que se apilen en dos bandas de 50 y 44 px. */
+.salon-mandos { display: contents; }
+@media (max-width: 767px) {
+  .salon-mandos { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .salon-mandos > .salon-seg { flex: 1; min-width: 0; width: auto; }
+  .salon-mandos > .salon-seg > button { padding-inline: 4px; }
+}
+
+/* La métrica, en el teléfono: una píldora en vez de un segmentado de
+   cuatro botones a todo lo ancho. Dice cuál está puesta —que es lo que
+   el segmentado hacía de paso— y abre una hoja con las cuatro. */
+.salon-metrica-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  flex-shrink: 0; align-self: flex-start; min-height: 44px; padding: 0 15px;
+  cursor: pointer; border-radius: 99px;
+  border: 1px solid var(--u-hair-2); background: var(--adm-card);
+  color: var(--u-text-2); font-size: 13.5px; font-weight: 600;
+}
+.salon-metrica-chip:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+
 /* Interruptor Fichas · Plano · Lista. A diferencia de `.wp-seg` este
    NO ocupa todo el ancho en escritorio: vive al lado del resumen. */
 .salon-seg {
@@ -3182,8 +3205,20 @@ html[data-platform] .asphalt::after { display: none; }
      en dos columnas de 46%. */
   .salon-top { flex-direction: column; gap: 10px; }
   .salon-summary { width: 100%; flex-basis: auto; }
-  .salon-summary > div { flex: 0 0 46%; min-width: 0; padding: 11px 14px; }
-  .salon-summary-value { font-size: 20px; }
+  /* La tira de KPI, a UN renglón (T-03).
+     ------------------------------------------------------------------
+     Eran cuatro celdas de dos líneas: 78 px de la barra de arriba, y la
+     primera mesa no empezaba hasta el píxel 387 de una pantalla de 812.
+     Etiqueta y número comparten renglón, la tira sigue desplazándose en
+     horizontal, y la pista de la cuarta celda se calla. */
+  .salon-summary > div,
+  .salon-summary > button {
+    flex: 0 0 auto; min-width: 0; padding: 0 14px; min-height: 46px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .salon-summary-label { font-size: 12px; }
+  .salon-summary-value { font-size: 17px; margin-top: 0; }
+  .salon-summary-hint { display: none; }
   .salon-seg { display: flex; width: 100%; }
   /* 44 y no 38: este bloque va DESPUÉS de la regla de `pointer: coarse`,
      y a igual especificidad gana el último. Con 38 aquí, el teléfono
@@ -3363,6 +3398,46 @@ html[data-platform] .asphalt::after { display: none; }
   border: 1.5px dashed var(--u-hair-2); background: transparent;
 }
 
+/* ── Las mesas libres, en una tira ────────────────────────────
+   Diecinueve libres en un local de veinte eran diecinueve tarjetas de
+   50 px: 950 px de los 1 957 del documento en un teléfono, el 49 % del
+   alto, para enseñar diecinueve números. Caben en tres renglones.
+   Cada número sigue siendo un botón que abre su mesa. */
+.salon-libres {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 14px; padding: 14px;
+  border-radius: 14px; border: 1px dashed var(--u-hair-2);
+}
+.salon-libres-tit {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 600; color: var(--u-text-3);
+}
+.salon-libres-tit > span[data-tone] {
+  width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--u-text) 14%, transparent);
+}
+.salon-libres-tira { display: flex; flex-wrap: wrap; gap: 8px; }
+.salon-libres-tira > button {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  min-width: 44px; height: 44px; padding: 0 10px; cursor: pointer;
+  border-radius: 11px; border: 1px solid var(--u-hair-2); background: none;
+  font-family: var(--ui-font-mono); font-size: 15px; font-weight: 700;
+  letter-spacing: -0.02em; color: var(--u-text-3);
+}
+.salon-libres-tira > button:hover { border-color: var(--u-text-4); color: var(--u-text-2); }
+.salon-libres-tira > button[data-sel="1"] {
+  outline: 2px solid var(--brand-accent); outline-offset: 2px;
+}
+.salon-libres-tira > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 2px; }
+
+/* Salón entero libre: la tira de abajo ya lleva todas las mesas, así que
+   arriba solo hace falta decir por qué no hay nada. */
+.salon-vacio {
+  margin: 0; padding: 22px 16px; border-radius: 14px;
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  font-size: 13.5px; color: var(--u-text-3); text-align: center;
+}
+
 .salon-canvas {
   position: relative; flex: 1; min-height: 340px; overflow: hidden;
   border-radius: 18px; border: 1px solid var(--u-hair-2);
@@ -3448,16 +3523,55 @@ html[data-platform] .asphalt::after { display: none; }
 }
 
 /* ── La pantalla de una mesa (Tomar pedidos) ──────────────────
-   Identidad, línea del ciclo, cuerpo a dos columnas y la barra del
-   siguiente paso. En tablet la columna derecha baja; en el teléfono
-   todo va a una y la barra se pega al pulgar. */
-.ciclo { display: flex; flex-direction: column; gap: 14px; }
-.ciclo-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.ciclo-head-id { flex: 1; min-width: 160px; }
-/* En el teléfono la identidad cede ancho para que las personas y el «···»
-   quepan en su misma línea: con 160 px de mínimo, el «···» se quedaba solo
-   en un renglón de sesenta píxeles por delante del buscador. */
-@media (max-width: 767px) { .ciclo-head-id { min-width: 118px; } }
+   CUATRO BANDAS Y UN CUERPO (rediseño de 2026-09-09).
+
+   Era un documento que se recorría: identidad, tramos, selectores de
+   tiempo y asiento, la comanda entera, y AL FINAL el buscador. Medido
+   en un teléfono de 375×812 con tres platos apuntados, ese buscador
+   —la única forma de apuntar sin cambiar de pantalla— empezaba en el
+   píxel 821, y cada plato nuevo lo alejaba otros 118. La carta vivía
+   además en otra vista, donde la cuenta desaparecía.
+
+   Ahora la pantalla no se recorre: se queda quieta.
+
+     · `.ciclo-head`    quién es esta mesa y cuánto lleva encima;
+     · `.ciclo-apuntar`  el campo, PEGADO ARRIBA, siempre visible;
+     · `.ciclo-body`     la carta (o los resultados) — esto es lo que
+                         se desplaza, y es lo único que se desplaza;
+     · `.ciclo-side`     la cuenta: columna al lado por encima de
+                         1180 px, gaveta que sube por debajo;
+     · `.ciclo-pie`      el tirador de la gaveta y el siguiente paso.
+
+   Es la maqueta de un aparato de mano (Toast Go, Lightspeed en
+   iPhone): la carta manda la pantalla y la cuenta se apila encima. */
+.ciclo { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Quién es esta mesa ───────────────────────────────────────
+   UN renglón. Con `flex-wrap` y un mínimo de 118 px para el título, a
+   375 px se partía en dos y medía 82. El título se encoge y los datos
+   se recortan antes de empujar a nadie. */
+.ciclo-head { display: flex; align-items: center; gap: 10px; }
+.ciclo-head-id { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.ciclo-head-titulo {
+  font-size: 22px; line-height: 1.15;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ciclo-head-meta {
+  font-size: 12.5px; color: var(--u-text-3); line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+@media (max-width: 767px) { .ciclo-head-titulo { font-size: 19px; } }
+
+/* El total. Con la cuenta metida en una gaveta, este es el único sitio
+   donde el número que más se mira en un turno está a la vista sin
+   pedirlo — así que ya no se esconde en pantalla ancha. */
+.ciclo-head-total { display: flex; align-items: baseline; flex-shrink: 0; }
+.ciclo-head-total > .t-mono {
+  font-size: 19px; font-weight: 700; letter-spacing: -0.03em; color: var(--u-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Los cuatro tramos del ciclo ────────────────────────────── */
 .ciclo-line {
   display: flex; align-items: stretch; flex-shrink: 0; overflow: hidden;
   border-radius: 12px; border: 1px solid var(--u-hair);
@@ -3465,64 +3579,207 @@ html[data-platform] .asphalt::after { display: none; }
 }
 .ciclo-line > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-left: 1px solid var(--u-hair); }
 .ciclo-line > div:first-child { border-left: none; }
-.ciclo-body { display: flex; gap: 14px; align-items: flex-start; }
-.ciclo-side { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-.ciclo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-@media (max-width: 1180px) {
-  .ciclo-body { flex-direction: column; }
-  .ciclo-side { width: 100%; }
-}
 /* En el teléfono la línea del ciclo se comprime a cuatro barras con
    etiqueta: cuatro tramos de texto en 358 px no se leen. */
 .ciclo-bars { display: none; gap: 8px; }
-@media (max-width: 767px) {
+@media (max-width: 1180px) {
   .ciclo-line { display: none; }
   .ciclo-bars { display: flex; }
 }
-.ciclo-next {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 12px 14px; border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--brand-accent) 34%, transparent);
-  background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
+
+/* ── APUNTAR ──────────────────────────────────────────────────
+   La banda fija. `sticky` y no `fixed`: se queda pegada al borde de
+   arriba en cuanto la cabecera se va, sin sacarla del flujo ni tener
+   que reservarle sitio. Es lo que garantiza que el campo esté a la
+   vista con el primer plato y con el decimoquinto. */
+.ciclo-apuntar {
+  position: sticky; top: 0; z-index: 6;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0;
+  background: var(--brand-bg);
 }
-.ciclo-next-note { flex: 1; min-width: 180px; font-size: 13.5px; color: var(--u-text-2); line-height: 1.45; }
+.ciclo-apuntar > .wp-find {
+  flex: 1; min-width: 0;
+  border-radius: 12px; border: 1px solid var(--u-hair-2);
+  background: var(--adm-card);
+  transition: box-shadow .15s, border-color .15s;
+}
+.ciclo-apuntar > .wp-find:focus-within {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
 
-/* ── La barra del siguiente paso, pegada abajo ────────────────
-   Estaba fijada SOLO por debajo de 767 px, y ese corte dejaba a la
-   tablet —que es el aparato del mesero— en el peor de los tres casos:
-   por encima de 767 la barra dejaba de estar pegada, y por debajo de
-   1180 la columna derecha (el total y el reparto) se va al final del
-   documento. En un iPad de 1024 px el mesero no veía ni el total ni el
-   botón principal sin recorrer toda la pantalla.
+/* A quién y para cuándo. Apagado es un cuadrado; encendido dice lo que
+   está puesto, que es lo que antes no se veía en ninguna parte. */
+.ciclo-modo {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  flex-shrink: 0; min-width: 48px; height: 48px; padding: 0 12px; cursor: pointer;
+  border-radius: 12px; border: 1px solid var(--u-hair-2); background: var(--adm-card);
+  color: var(--u-text-3);
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 700;
+}
+.ciclo-modo[data-on="1"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+.ciclo-modo:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
 
-   El corte correcto es el MISMO que pliega la columna: mientras el
-   total no esté a la vista al lado, el botón que dice qué hacer tiene
-   que estar bajo el pulgar. */
+/* ── El cuerpo ────────────────────────────────────────────────
+   La carta a la izquierda, la cuenta a la derecha. Por debajo de
+   1180 px la cuenta deja de ser columna y pasa a gaveta. */
+.ciclo-body { display: flex; gap: 14px; align-items: flex-start; }
+.ciclo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.ciclo-side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+.ciclo-side-head { display: none; }
+.ciclo-side-scroll { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── La gaveta ────────────────────────────────────────────────
+   Por debajo de 1180 la cuenta sube desde abajo, por encima de todo y
+   con velo. No se queda montada debajo de la carta —que es lo que
+   pasaba con el panel del salón antes del arreglo del 07-09 y hacía
+   que tocar una mesa pareciera no hacer nada—: si algo se abre, se
+   tiene que ver. */
 @media (max-width: 1180px) {
-  .ciclo-next {
-    position: sticky; bottom: 0; z-index: 5;
-    border-radius: 16px 16px 0 0;
-    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-    background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
-    box-shadow: 0 -6px 20px color-mix(in srgb, var(--u-text) 8%, transparent);
+  .ciclo-side {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 615;
+    width: auto; max-height: 78dvh;
+    padding: 6px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--u-hair);
+    background: var(--adm-card);
+    box-shadow: 0 -10px 30px color-mix(in srgb, var(--u-text) 16%, transparent);
+    animation: ciclo-subir .18s ease-out;
+  }
+  .ciclo-side-head {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    padding: 6px 0 10px;
+  }
+  .ciclo-side-scroll { overflow-y: auto; min-height: 0; padding-bottom: 6px; }
+  /* Centrada y con esquinas en tablet: a 1024 px una hoja de 1024 de
+     ancho pegada abajo es una pared, no una gaveta. */
+  @media (min-width: 720px) {
+    .ciclo-side {
+      left: 50%; right: auto; transform: translateX(-50%);
+      width: 460px; bottom: 12px; border-radius: 20px; border: 1px solid var(--u-hair);
+    }
   }
 }
-@media (max-width: 767px) {
-  .ciclo-next { flex-direction: column; align-items: stretch; }
-  .ciclo-next-note { min-width: 0; }
+/* La animación toca SOLO la opacidad: en tablet la gaveta ya lleva
+   `translateX(-50%)` para centrarse, y un keyframe que escriba
+   `transform` se lo lleva por delante — la hoja aparecería media
+   pantalla a la derecha durante los 180 ms. */
+@keyframes ciclo-subir { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ciclo-side { animation: none; } }
+
+.ciclo-scrim {
+  position: fixed; inset: 0; z-index: 610;
+  background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
 }
 
-/* ── El total, cuando la columna lateral se plegó ─────────────
-   Con la columna al lado el total ya está a la vista y repetirlo sería
-   ruido. Sin ella hay que subirlo a la cabecera de la mesa: es el dato
-   que se mira más veces por turno y no puede quedar al final de un
-   scroll de menú. */
-.ciclo-head-total { display: none; }
-@media (max-width: 1180px) {
-  .ciclo-head-total {
-    display: flex; align-items: baseline; gap: 8px; flex-shrink: 0;
-    margin-left: auto;
-  }
+/* ── El pie ───────────────────────────────────────────────────
+   El tirador de la gaveta y el siguiente paso, en un solo bloque
+   pegado abajo. Eran dos cosas separadas y sumaban 125 px de 812,
+   porque la frase envolvía ENCIMA del botón. Ahora la frase comparte
+   renglón con el tirador y el botón solo existe cuando hay acción. */
+.ciclo-pie {
+  position: sticky; bottom: 0; z-index: 7;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  margin-top: 2px;
+  border-radius: 16px 16px 0 0;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent);
+  border-bottom: none;
+  background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
+  box-shadow: 0 -6px 20px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.ciclo-pie-fila { display: flex; align-items: center; gap: 10px; }
+.ciclo-next-note {
+  flex: 1; min-width: 0; font-size: 12.5px; color: var(--u-text-2); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* El tirador: cuántos platos hay y cuánto suman. Es además el botón que
+   abre la cuenta, así que dice lo que hay dentro antes de abrirla. */
+.ciclo-tirador {
+  display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+  min-height: 40px; padding: 0 13px; cursor: pointer;
+  border-radius: 99px; border: 1px solid var(--u-hair-2);
+  background: var(--adm-card); color: var(--u-text-3);
+  font-size: 12.5px; font-weight: 600;
+}
+.ciclo-tirador:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+
+.ciclo-next { display: flex; align-items: center; gap: 10px; }
+/* Sin acción que ofrecer no hay segunda fila: el pie es un renglón. */
+.ciclo-next[data-vacia="1"] { display: none; }
+.ciclo-next-act {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 48px; padding: 0 20px; border-radius: 12px; border: none;
+  font-size: 15.5px; font-weight: 600; cursor: pointer;
+}
+.ciclo-next-act:disabled { opacity: 0.6; cursor: default; }
+
+/* Con la cuenta al lado no hay gaveta que tirar, y el pie vuelve a ser
+   una fila: frase a la izquierda, botón a la derecha. */
+@media (min-width: 1181px) {
+  .ciclo-pie { flex-direction: row; align-items: center; gap: 14px; border-radius: 14px; border-bottom: 1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent); }
+  .ciclo-pie-fila { flex: 1; min-width: 200px; }
+  .ciclo-next-note { font-size: 13.5px; -webkit-line-clamp: 3; }
+  .ciclo-next-act { flex: 0 0 auto; }
+}
+
+/* ── La carta, en rejilla ─────────────────────────────────────
+   Ahora es el CUERPO de la pantalla de la mesa, no una vista aparte. */
+.wp-menu { display: flex; flex-direction: column; gap: 10px; }
+.wp-cats {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 2px; flex-shrink: 0;
+}
+.wp-cats::-webkit-scrollbar { display: none; }
+.wp-cats > button {
+  white-space: nowrap; flex-shrink: 0; cursor: pointer;
+  padding: 9px 15px; min-height: 38px; border-radius: 99px; border: none;
+  background: color-mix(in srgb, var(--u-text) 7%, transparent);
+  color: var(--u-text-2); font-size: 13.5px; font-weight: 600;
+}
+.wp-cats > button[data-on="1"] {
+  background: var(--brand-accent); color: var(--brand-on-accent, #fff);
+}
+.wp-cats > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+@media (max-width: 767px), (pointer: coarse) { .wp-cats > button { min-height: 44px; } }
+
+.wp-dish {
+  position: relative; cursor: pointer;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 12px 11px; border-radius: 14px;
+  border: 1.5px solid transparent;
+}
+.wp-dish[data-on="1"] { border-color: var(--brand-accent); }
+.wp-dish:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 2px; }
+.wp-dish-qty {
+  position: absolute; top: 8px; right: 8px;
+  min-width: 24px; height: 24px; padding: 0 6px; border-radius: 99px;
+  display: grid; place-items: center;
+  background: var(--brand-accent); color: var(--brand-on-accent, #fff);
+  font-size: 13px; font-weight: 800;
+}
+.wp-dish-act {
+  margin-top: 2px; padding: 10px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--u-hair); background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  color: var(--u-text-2); font-size: 13px; font-weight: 600;
+}
+.wp-dish-act[data-primary="1"] {
+  border: none; background: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+  color: var(--brand-accent-ink); font-weight: 700;
+}
+.wp-dish-step {
+  flex: 1; height: 38px; border-radius: 10px; cursor: pointer; display: grid; place-items: center;
+  border: 1px solid var(--u-hair); background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  color: var(--u-text); font-size: 19px;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .wp-dish-act, .wp-dish-step { min-height: 44px; }
 }
 
 /* Fila de un plato en la cuenta de la mesa. */
