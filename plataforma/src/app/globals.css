@@ -3853,3 +3853,990 @@ html[data-platform] .asphalt::after { display: none; }
 
 
 
+
+/* ============================================================
+   MÓDULO DE SERVICIO — tomar pedidos y mesas (rediseño 2026-09-17)
+   ------------------------------------------------------------
+   Un solo módulo para ver el salón, armar la comanda, mandarla a
+   cocina, marcar lo servido y cobrar. Tres ramas del mismo árbol,
+   decididas por el ancho de la ventana:
+
+     · < 900 px   una cosa a la vez: Salón → Comanda → Pedido.
+     · 900-1100   tres columnas apretadas: riel 232 + carta + 288.
+     · ≥ 1100     tres columnas cómodas:   riel 264 + carta + 344.
+
+   Cuatro reglas duras del handoff, que ya se rompieron en iteraciones
+   anteriores y no se vuelven a romper:
+
+     1. La rejilla de platos NUNCA baja de dos columnas.
+     2. Todo control táctil mide 44 px o más (--m-tap).
+     3. Las filas de «sin enviar» se APILAN: un renglón horizontal con
+        tres controles de 44 px no cabe en una columna de 288.
+     4. Las filas horizontales se desplazan, no se parten
+        (`white-space: nowrap` + `overflow-x: auto`).
+
+   Sobre el color: el prototipo venía en tema claro y pintaba el texto
+   sobre tinta con `--brand-bg-2`, que aquí es una SUPERFICIE (#141416
+   en oscuro). Eso habría dejado texto negro sobre negro en la mitad de
+   los botones. Aquí la tinta va con `--u-text` / `--brand-bg`, el
+   acento con `--brand-on-accent` y los sólidos semánticos con
+   `--c-on-solid`: los tres funcionan en los dos temas.
+   ============================================================ */
+
+/* ── El módulo se come la pantalla ──────────────────────────────
+   No es una pantalla del panel con tarjetas apiladas: es un puesto de
+   trabajo. Se desplaza POR DENTRO (el riel, la carta y la comanda cada
+   uno por su lado) y la página no se mueve nunca — si se moviera, el pie
+   con «Enviar a cocina» se iría de la vista justo cuando hace falta. */
+.admin-shell:has(.sv) { height: 100svh; overflow: hidden; }
+.admin-shell:has(.sv) .admin-main { min-height: 0; }
+.admin-content:has(> .sv) {
+  padding: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+.admin-kiosk-body:has(> .sv) { overflow: hidden; }
+
+.sv {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--adm-bg, var(--brand-bg));
+  color: var(--u-text);
+}
+
+/* EL MÓDULO SE MIDE A SÍ MISMO, NO A LA VENTANA.
+   ------------------------------------------------------------
+   Los cortes del handoff (900 y 1100 px) son del MÓDULO, y dentro del
+   panel el módulo no es la ventana: la barra lateral del administrador
+   se lleva 244 px. Medido en pantalla con el salón real: a 1.150 px de
+   ventana el módulo medía 906, el riel y la comanda se quedaban con los
+   anchos de PC y la carta caía a **298 px con la rejilla en UNA
+   columna** — que es justo la primera regla dura del handoff («la
+   rejilla nunca baja de dos columnas»).
+
+   Por eso el contenedor va en `.sv-frame` y no en `.sv`: `container-type`
+   implica `contain: layout`, y eso convierte al elemento en bloque
+   contenedor de sus descendientes `position: fixed`. Con el contenedor en
+   `.sv`, las hojas y la paleta —que son fijas— se habrían posicionado
+   respecto del módulo en vez de respecto de la pantalla. Las hojas se
+   quedan FUERA del armazón, como hermanas, y siguen midiendo la ventana,
+   que es lo correcto: una hoja se centra en la pantalla. */
+.sv-frame {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  container-type: inline-size;
+  container-name: sv;
+  /* La escala de texto del panel no aplica aquí: `zoom` sobre un layout
+     de altura fija descuadra el cálculo de 100svh y deja la comanda
+     medio dedo por debajo del canto de la pantalla. */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Filas que se desplazan en vez de partirse (regla 4). */
+.sv-hs {
+  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
+  white-space: nowrap; scrollbar-width: none; -ms-overflow-style: none;
+  /* El desplazamiento se para en la píldora, no a medias. */
+  scroll-snap-type: x proximity;
+}
+.sv-hs::-webkit-scrollbar { display: none; }
+.sv-hs > * { flex-shrink: 0; scroll-snap-align: start; }
+
+/* Lo que se desplaza en vertical: sin barra visible, pero con inercia. */
+.sv-vs {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--u-text) 16%, transparent) transparent;
+}
+.sv-vs::-webkit-scrollbar { width: 4px; }
+.sv-vs::-webkit-scrollbar-track { background: transparent; }
+.sv-vs::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--u-text) 16%, transparent); border-radius: 4px;
+}
+
+/* ── Rótulo de sección (versalitas de 11 px) ──────────────────── */
+.sv-kicker {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--u-text-3);
+}
+.sv-kicker > .sv-rule { flex: 1; height: 1px; background: var(--u-hair); }
+.sv-kicker[data-tone="warn"] { color: var(--c-warn); }
+.sv-kicker[data-tone="info"] { color: var(--c-info); }
+.sv-kicker[data-tone="accent"] { color: var(--brand-accent-ink); }
+
+/* ── Píldoras (filtros del salón, categorías de la carta) ─────── */
+.sv-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: var(--m-tap); padding: 0 15px; border-radius: var(--radius-md);
+  border: 1px solid transparent; background: var(--surface-2);
+  color: var(--u-text-2); font: inherit; font-size: 13.5px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-pill:hover { background: var(--surface-3); color: var(--u-text); }
+.sv-pill[data-on="1"] {
+  background: var(--u-text); color: var(--brand-bg); border-color: var(--u-text);
+}
+.sv-pill[data-on="1"]:hover { background: var(--u-text); color: var(--brand-bg); }
+.sv-pill-count {
+  font-family: var(--ui-font-mono); font-size: 11.5px; font-weight: 600;
+  opacity: 0.72;
+}
+
+/* ── Chip de estado de mesa ────────────────────────────────────
+   El COLOR es el dato: de un vistazo se sabe qué le falta a cada mesa
+   sin leer una palabra. Las cuatro parejas fondo/borde/tinta salen de
+   los tokens semánticos del sistema, así que en tema claro y en oscuro
+   son la misma idea con el contraste de cada uno. */
+.sv-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: var(--radius-md);
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+  border: 1px solid var(--u-hair); background: var(--surface-1); color: var(--u-text-3);
+}
+.sv-chip[data-big="1"] { padding: 4px 9px; font-size: 11.5px; }
+
+[data-st="borrador"] { --sv-bg: var(--c-warn-bg); --sv-line: var(--c-warn-line); --sv-ink: var(--c-warn); }
+[data-st="cocina"]   { --sv-bg: var(--c-info-bg); --sv-line: var(--c-info-line); --sv-ink: var(--c-info); }
+[data-st="listo"]    { --sv-bg: var(--c-ok-bg);   --sv-line: var(--c-ok-line);   --sv-ink: var(--c-ok); }
+/* «Sentada» es el quinto estado que el diseño no traía: la mesa está
+   ocupada y todavía no ha pedido. No lleva color de alarma —no hay nada
+   que se enfríe— pero tampoco puede verse libre, que era el bug. */
+[data-st="sentada"]  {
+  --sv-bg: var(--surface-2); --sv-line: var(--u-hair-2); --sv-ink: var(--u-text-2);
+}
+[data-st="libre"]    { --sv-bg: var(--adm-card); --sv-line: var(--u-hair); --sv-ink: var(--u-text-3); }
+
+.sv-chip[data-st] { background: var(--sv-bg); border-color: var(--sv-line); color: var(--sv-ink); }
+
+/* La insignia de «alguien levantó la mano». Va ENCIMA del estado y no
+   en su lugar: el color dice en qué va la comida, esto dice que hay una
+   persona esperando. */
+.sv-mano {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: var(--radius-md);
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  background: var(--c-danger-solid); color: var(--c-on-solid);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BARRA SUPERIOR (tablet y PC)
+   ══════════════════════════════════════════════════════════════ */
+.sv-top {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px; background: var(--adm-card);
+  border-bottom: 1px solid var(--u-hair);
+}
+.sv-top-id { display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-width: 0; }
+.sv-top-mark {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius-md);
+  background: var(--brand-accent); color: var(--brand-on-accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px;
+  overflow: hidden;
+}
+.sv-top-mark > img { width: 100%; height: 100%; object-fit: cover; }
+.sv-top-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; min-width: 0; }
+.sv-top-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+
+/* Las mesas abiertas, como pestañas. Es lo que permite ir y venir entre
+   dos mesas sin volver al salón. */
+.sv-tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: var(--m-tap); padding: 0 15px; border-radius: var(--radius-md);
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  color: var(--u-text); font: inherit; font-size: 13.5px; cursor: pointer;
+  white-space: nowrap;
+}
+.sv-tab:hover { border-color: var(--u-text-4); }
+.sv-tab[data-on="1"] { background: var(--u-text); border-color: var(--u-text); color: var(--brand-bg); }
+.sv-tab-total { font-family: var(--ui-font-mono); font-size: 12px; opacity: 0.75; }
+.sv-tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sv-ink, var(--u-text-3)); }
+.sv-tab-key {
+  font-family: var(--ui-font-mono); font-size: 10.5px; font-weight: 600;
+  padding: 1px 5px; border-radius: 5px; background: var(--surface-3); opacity: 0.8;
+}
+
+/* Botón fantasma de la barra superior (buscar, modo aprendiz, plano). */
+.sv-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: var(--m-tap); min-width: var(--m-tap); padding: 0 14px; flex-shrink: 0;
+  border-radius: var(--radius-md); border: 1px solid var(--u-hair);
+  background: var(--surface-1); color: var(--u-text-3);
+  font: inherit; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-ghost:hover { border-color: var(--u-text-4); color: var(--u-text-2); }
+.sv-ghost[data-on="1"] {
+  border-color: var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.sv-ghost[data-icon="1"] { padding: 0; width: var(--m-tap); }
+.sv-kbd {
+  font-family: var(--ui-font-mono); font-size: 11px; white-space: nowrap;
+  padding: 2px 6px; border-radius: 6px; background: var(--surface-3); color: var(--u-text-2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CUERPO DE TRES COLUMNAS
+   ══════════════════════════════════════════════════════════════ */
+.sv-body { flex: 1; min-height: 0; display: flex; }
+
+/* `min-height: 0` en las tres columnas, y no solo `min-width`.
+   ------------------------------------------------------------
+   En escritorio el cuerpo es una FILA y ahí basta el ancho; en el
+   teléfono es una COLUMNA, y sin esto el hijo se niega a encogerse por
+   debajo de su contenido: la carta medía 1.764 px dentro de una pantalla
+   de 844 y la barra de «Enviar a cocina» se quedaba fuera de la vista,
+   justo en el aparato donde más falta hace. Medido en pantalla. */
+.sv-rail, .sv-carta, .sv-ticket, .sv-pane { min-height: 0; }
+
+/* Una pantalla del teléfono: el salón o el pedido, a pantalla completa.
+   No reusa `.sv` para no anidar el módulo dentro de sí mismo. */
+.sv-pane { flex: 1; display: flex; flex-direction: column; }
+
+.sv-rail {
+  flex: 0 0 264px; min-width: 0; display: flex; flex-direction: column;
+  background: var(--wp-side, var(--adm-bg-2)); border-right: 1px solid var(--u-hair);
+}
+.sv-carta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sv-ticket {
+  flex: 0 0 344px; min-width: 0; display: flex; flex-direction: column;
+  background: var(--adm-card); border-left: 1px solid var(--u-hair);
+}
+/* Tablet apretada: mismo módulo, columnas más estrechas. */
+@container sv (max-width: 1099px) {
+  .sv-rail { flex-basis: 232px; }
+  .sv-ticket { flex-basis: 288px; }
+}
+
+.sv-rail-head { padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; }
+.sv-rail-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-rail-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); line-height: 1.35; }
+.sv-rail-list { padding: 0 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+/* «Para llevar»: una acción, no una mesa. Por eso el borde es de trazos. */
+.sv-llevar {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: var(--m-tap); padding: 11px 12px; border-radius: var(--radius-lg);
+  border: 1px dashed var(--u-hair-2); background: var(--surface-1);
+  color: var(--u-text); font: inherit; text-align: left; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.sv-llevar:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-llevar-ico {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-ink); display: grid; place-items: center;
+}
+
+/* ── La mesa, en el riel (fila horizontal) ─────────────────── */
+.sv-mesa {
+  position: relative;
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: var(--m-tap); padding: 11px 12px; border-radius: var(--radius-lg);
+  text-align: left; cursor: pointer; font: inherit;
+  background: var(--sv-bg); border: 1px solid var(--sv-line); color: var(--u-text);
+  transition: border-color 120ms var(--ease-out);
+}
+.sv-mesa:hover { border-color: var(--u-text-4); }
+.sv-mesa[data-on="1"] { background: var(--u-text); border-color: var(--u-text); color: var(--brand-bg); }
+.sv-mesa[data-on="1"] .sv-mesa-sub { color: color-mix(in srgb, var(--brand-bg) 72%, transparent); }
+.sv-mesa-n {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  font-family: var(--ui-font-mono); font-size: 17px; font-weight: 600;
+  background: var(--surface-2); color: inherit;
+}
+.sv-mesa[data-on="1"] .sv-mesa-n { background: color-mix(in srgb, var(--brand-bg) 14%, transparent); }
+.sv-mesa-id { flex: 1; min-width: 0; }
+.sv-mesa-title {
+  display: block; font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sv-mesa-sub {
+  display: block; font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sv-mesa-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sv-mesa-total { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; }
+
+/* ── La mesa, en rejilla (móvil y vista de fichas) ──────────── */
+.sv-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+}
+@container sv (max-width: 640px) {
+  /* Dos columnas SIEMPRE: con una sola caben tres mesas y media por
+     pantalla y el salón deja de leerse de un vistazo. */
+  .sv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.sv-card {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  gap: 8px; min-height: 118px; padding: 12px; border-radius: var(--radius-xl);
+  text-align: left; cursor: pointer; font: inherit; color: var(--u-text);
+  background: var(--sv-bg); border: 1.5px solid var(--sv-line);
+  box-shadow: var(--adm-shadow-xs, 0 1px 2px rgba(0,0,0,.06));
+  transition: transform 90ms var(--ease-out);
+}
+.sv-card:active { transform: scale(0.985); }
+.sv-card[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+.sv-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sv-card-n {
+  font-family: var(--ui-font-mono); font-size: 30px; font-weight: 600;
+  line-height: 1; letter-spacing: -0.02em;
+}
+.sv-card-name { display: block; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.sv-card-sub { display: block; font-size: 12.5px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
+.sv-card-total { display: block; font-family: var(--ui-font-mono); font-size: 15px; font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════
+   LA CARTA
+   ══════════════════════════════════════════════════════════════ */
+.sv-carta-head { padding: 14px 18px 10px; display: flex; gap: 10px; align-items: center; }
+.sv-find { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; }
+.sv-find > .sv-find-ico {
+  position: absolute; left: 14px; color: var(--u-text-3); display: flex; pointer-events: none;
+}
+.sv-find > input {
+  width: 100%; height: 50px; padding: 0 14px 0 42px;
+  border-radius: var(--radius-lg); border: 1px solid var(--u-hair);
+  background: var(--adm-card); color: var(--u-text);
+  /* 16 px es el piso: por debajo, Safari amplía la página al enfocar y
+     deja la comanda fuera de la pantalla. */
+  font-size: 16px; font-weight: 500; outline: none;
+}
+.sv-find > input:focus { border-color: var(--brand-accent); }
+.sv-find > input::placeholder { color: var(--u-text-4); }
+.sv-find-parsed {
+  position: absolute; right: 12px; font-size: 12px; font-weight: 600;
+  color: var(--brand-accent-ink); background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  padding: 5px 9px; border-radius: var(--radius-md); pointer-events: none;
+  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sv-find-clear {
+  position: absolute; right: 8px; width: 34px; height: 34px; border: none;
+  background: none; color: var(--u-text-3); cursor: pointer; display: grid; place-items: center;
+}
+.sv-mic {
+  flex-shrink: 0; width: 50px; height: 50px; border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  display: grid; place-items: center; color: var(--u-text-2); cursor: pointer;
+  transition: border-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-mic:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+
+.sv-carta-bars { padding: 0 18px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Los más pedidos: un toque y está en la comanda. */
+.sv-fav {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.sv-fav:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-fav-key {
+  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
+  color: var(--u-text-2); background: var(--surface-3); padding: 2px 6px; border-radius: 6px;
+}
+.sv-fav-price { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+
+/* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ── */
+.sv-dishes {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+}
+.sv-dish {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  gap: 10px; min-height: 96px; padding: 12px; border-radius: var(--radius-lg);
+  cursor: pointer; text-align: left; font: inherit; color: var(--u-text);
+  background: var(--adm-card); border: 1px solid var(--u-hair);
+  transition: border-color 120ms var(--ease-out), transform 90ms var(--ease-out);
+}
+.sv-dish:hover { border-color: var(--u-text-4); }
+.sv-dish:active { transform: scale(0.985); }
+/* Ya está en la comanda: la tarjeta se tiñe y lleva la cuenta. */
+.sv-dish[data-has="1"] {
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+  border-color: var(--brand-accent);
+}
+/* Agotado: se VE, pero no se puede pedir. Esconderlo no contesta la
+   pregunta que el mesero tiene delante del cliente. */
+.sv-dish[data-out="1"] { opacity: 0.55; cursor: default; }
+.sv-dish[data-out="1"]:hover { border-color: var(--u-hair); }
+.sv-dish-name {
+  display: block; font-size: 14.5px; font-weight: 600; line-height: 1.25;
+  letter-spacing: -0.01em; padding-right: 30px;
+}
+.sv-dish-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sv-dish-price { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; color: var(--u-text-2); }
+/* «Opciones» vive DENTRO de una tarjeta cuyo toque agrega un plato: si
+   es chico, el dedo agrega platos por error. 44 px, siempre. */
+.sv-dish-opts {
+  min-height: var(--m-tap); min-width: var(--m-tap); padding: 0 13px;
+  display: grid; place-items: center; border: none; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--u-text-2);
+  border-radius: var(--radius-md); background: var(--surface-2);
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-dish-opts:hover {
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-ink);
+}
+.sv-dish-q {
+  position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
+  border-radius: var(--radius-full); background: var(--brand-accent); color: var(--brand-on-accent);
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
+  display: grid; place-items: center;
+}
+.sv-dish-out {
+  position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 7px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  background: var(--c-warn-bg); color: var(--c-warn);
+}
+
+.sv-vacio {
+  padding: 40px 6px; text-align: center; color: var(--u-text-3);
+  font-size: 14px; line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LA COMANDA
+   ══════════════════════════════════════════════════════════════ */
+.sv-ticket-head {
+  flex: 0 0 auto; padding: 14px 16px; border-bottom: 1px solid var(--u-hair);
+  display: flex; align-items: center; gap: 10px;
+}
+.sv-ticket-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-ticket-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
+.sv-ticket-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* El aviso del pedido por QR. Es lo primero de la comanda porque es lo
+   único que puede estar esperando una respuesta. */
+.sv-qr {
+  border: 1px solid var(--c-info-line); background: var(--c-info-bg);
+  border-radius: var(--radius-lg); padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sv-qr-badge {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  background: var(--c-info-solid); color: var(--c-on-solid);
+  padding: 3px 7px; border-radius: 6px;
+}
+.sv-qr-title { font-size: 13.5px; font-weight: 600; color: var(--c-info); }
+.sv-qr-items { font-size: 12.5px; color: var(--c-info); line-height: 1.45; }
+
+/* ── Renglón SIN ENVIAR (regla 3: apilado) ─────────────────── */
+.sv-line-new {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  border: 1px solid var(--c-warn-line); background: var(--c-warn-bg);
+  border-radius: var(--radius-lg);
+}
+.sv-line-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.sv-line-mods { font-size: 12px; font-weight: 500; color: var(--c-warn); margin-top: 2px; line-height: 1.35; }
+.sv-line-unit { font-family: var(--ui-font-mono); font-size: 12px; color: var(--u-text-3); margin-top: 3px; }
+.sv-line-ctl { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.sv-line-ctl > .sv-edit { margin-right: auto; }
+
+.sv-edit {
+  width: var(--m-tap); height: var(--m-tap); border-radius: var(--radius-md);
+  border: none; background: var(--surface-2); color: var(--u-text-2);
+  display: grid; place-items: center; cursor: pointer; font: inherit;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-edit:hover {
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent); color: var(--brand-accent-ink);
+}
+.sv-step {
+  width: var(--m-tap); height: var(--m-tap); border-radius: var(--radius-md);
+  border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  display: grid; place-items: center; cursor: pointer; font: inherit;
+  font-size: 20px; line-height: 1;
+}
+.sv-step:hover { border-color: var(--u-text-4); }
+.sv-qty {
+  min-width: 26px; text-align: center;
+  font-family: var(--ui-font-mono); font-size: 16px; font-weight: 600;
+}
+
+/* ── Renglón FALTA SERVIR ──────────────────────────────────── */
+.sv-line {
+  display: flex; gap: 10px; align-items: center; padding: 10px;
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  border-radius: var(--radius-lg);
+}
+.sv-line-q {
+  font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600;
+  color: var(--c-info); min-width: 24px; flex-shrink: 0;
+}
+.sv-serve {
+  height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-md); border: none;
+  background: var(--c-info-bg); color: var(--c-info);
+  font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-serve:hover { background: var(--c-info-solid); color: var(--c-on-solid); }
+.sv-serve:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Renglón EN LA MESA ────────────────────────────────────── */
+.sv-line-done {
+  display: flex; gap: 10px; align-items: center; padding: 9px 10px;
+  border-radius: var(--radius-lg); background: var(--surface-1);
+}
+.sv-line-done .sv-line-q { color: var(--u-text-3); font-size: 13px; }
+.sv-line-done-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: var(--u-text-2); }
+.sv-line-done-total { font-family: var(--ui-font-mono); font-size: 13px; color: var(--u-text-3); }
+/* Cobrada en un cobro por partes: se queda a la vista, saldada. Borrarla
+   sería anular una venta. */
+.sv-line[data-paid="1"], .sv-line-done[data-paid="1"] { opacity: 0.6; }
+.sv-paid {
+  flex-shrink: 0; padding: 3px 8px; border-radius: 7px; white-space: nowrap;
+  font-size: 11px; font-weight: 700;
+  background: var(--c-ok-bg); color: var(--c-ok);
+}
+
+/* ── El pie: total y la acción que toca ────────────────────── */
+.sv-foot {
+  flex: 0 0 auto; border-top: 1px solid var(--u-hair);
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--adm-card);
+}
+.sv-foot-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sv-foot-label { font-size: 14px; font-weight: 500; color: var(--u-text-2); }
+.sv-foot-total {
+  font-family: var(--ui-font-mono); font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+}
+.sv-foot-note { font-size: 12.5px; color: var(--u-text-3); line-height: 1.45; }
+.sv-foot-keys {
+  font-family: var(--ui-font-mono); font-size: 11.5px; color: var(--u-text-3); line-height: 1.5;
+}
+
+.sv-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; height: 54px; border: none; border-radius: var(--radius-lg);
+  font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
+  background: var(--brand-accent); color: var(--brand-on-accent);
+  transition: background 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.sv-cta:hover { background: var(--brand-accent-ink); }
+.sv-cta:disabled { opacity: 0.55; cursor: default; }
+.sv-cta[data-tone="ok"] { background: var(--c-ok-solid); color: var(--c-on-solid); }
+.sv-cta[data-tone="ok"]:hover { background: var(--c-ok); }
+.sv-cta[data-tone="quiet"] {
+  background: var(--adm-card); color: var(--u-text); border: 1px solid var(--u-hair-2);
+}
+.sv-cta[data-tone="quiet"]:hover { background: var(--adm-card-hover, var(--surface-2)); }
+.sv-cta[data-tone="danger"] { background: var(--c-danger-solid); color: var(--c-on-solid); }
+.sv-cta-key {
+  font-family: var(--ui-font-mono); font-size: 11px; padding: 3px 6px; border-radius: 6px;
+  background: color-mix(in srgb, var(--c-on-solid) 20%, transparent);
+}
+
+/* Sin mesa elegida. */
+.sv-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 30px; text-align: center;
+}
+.sv-empty-ico {
+  width: 54px; height: 54px; border-radius: var(--radius-lg); background: var(--surface-2);
+  display: grid; place-items: center; color: var(--u-text-3);
+}
+.sv-empty-title { font-size: 15px; font-weight: 600; }
+.sv-empty-text { font-size: 13px; color: var(--u-text-3); line-height: 1.5; max-width: 240px; }
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL — una cosa a la vez
+   ══════════════════════════════════════════════════════════════ */
+.sv-m-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 14px 12px 10px; background: var(--adm-card); border-bottom: 1px solid var(--u-hair);
+}
+.sv-m-back {
+  width: var(--m-tap); height: var(--m-tap); flex-shrink: 0; border: none;
+  border-radius: var(--radius-lg); background: var(--surface-2); color: var(--u-text);
+  display: grid; place-items: center; cursor: pointer; font: inherit;
+}
+.sv-m-title { font-size: 16.5px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-m-sala-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
+.sv-m-sub { font-size: 12.5px; font-weight: 500; color: var(--u-text-3); margin-top: 1px; }
+
+/* La barra de abajo del móvil: resumen + acción. Se pega al canto y
+   esquiva la barra de destinos del panel cuando la hay. */
+.sv-m-foot {
+  flex: 0 0 auto; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--adm-card); border-top: 1px solid var(--u-hair);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sv-m-resumen {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 4px 6px; border: none; background: none; color: inherit;
+  font: inherit; cursor: pointer;
+}
+.sv-m-resumen-label { font-size: 14px; font-weight: 600; color: var(--u-text-2); }
+.sv-m-resumen-total { font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600; }
+.sv-m-cta { height: 56px; font-size: 16.5px; }
+
+/* El aviso del modo aprendiz: una frase, donde hace falta. */
+.sv-hint {
+  padding: 12px 14px; border-radius: var(--radius-lg);
+  background: var(--c-warn-bg); color: var(--c-warn);
+  font-size: 13.5px; font-weight: 500; line-height: 1.45;
+}
+.sv-hint-inline {
+  font-size: 12px; color: var(--c-warn); background: var(--c-warn-bg);
+  padding: 3px 8px; border-radius: 6px; font-weight: 500; white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HOJAS
+   ══════════════════════════════════════════════════════════════ */
+.sv-scrim {
+  position: fixed; inset: 0; z-index: 640;
+  background: color-mix(in srgb, #000 52%, transparent);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  display: flex; justify-content: center; align-items: flex-end;
+}
+@media (min-width: 900px) { .sv-scrim { align-items: center; padding: 24px; } }
+
+.sv-sheet {
+  width: 100%; max-height: 92svh; overflow-y: auto;
+  background: var(--adm-overlay, var(--adm-card)); color: var(--u-text);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  box-shadow: var(--adm-shadow-xl, 0 -10px 40px rgba(0,0,0,.4));
+  animation: slide-up 180ms var(--ease-entry) both;
+}
+@media (min-width: 900px) {
+  .sv-sheet {
+    max-width: 560px; max-height: 86svh; border-radius: var(--radius-xl);
+    animation: pop-in 140ms var(--ease-entry) both;
+  }
+}
+.sv-sheet-pad { padding: 18px 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.sv-sheet-head { display: flex; align-items: flex-start; gap: 12px; }
+.sv-sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-sheet-sub { font-size: 13px; color: var(--u-text-3); margin-top: 2px; }
+.sv-sheet-total {
+  font-family: var(--ui-font-mono); font-size: 30px; font-weight: 600;
+  letter-spacing: -0.03em; margin-top: 4px;
+}
+.sv-x {
+  width: 38px; height: 38px; flex-shrink: 0; border: none; border-radius: var(--radius-lg);
+  background: var(--surface-2); color: var(--u-text); display: grid; place-items: center;
+  cursor: pointer; font: inherit;
+}
+.sv-x:hover { background: var(--surface-3); }
+
+.sv-field {
+  height: 50px; width: 100%; padding: 0 14px; border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 16px; outline: none;
+}
+.sv-field:focus { border-color: var(--brand-accent); }
+.sv-field::placeholder { color: var(--u-text-4); }
+
+/* Chip de opción / modificador. */
+.sv-opt {
+  min-height: 46px; padding: 0 15px; border-radius: var(--radius-lg);
+  border: 1.5px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sv-opt[data-on="1"] {
+  border-color: var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.sv-opt-extra { font-family: var(--ui-font-mono); font-size: 12.5px; opacity: 0.8; }
+.sv-opts-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Segmentado (cuenta completa / partes iguales / por platos). */
+.sv-seg { display: flex; gap: 6px; padding: 4px; background: var(--surface-2); border-radius: var(--radius-lg); }
+.sv-seg > button {
+  flex: 1; min-height: 42px; border: none; border-radius: var(--radius-md);
+  background: none; color: var(--u-text-3); font: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer;
+}
+.sv-seg > button[data-on="1"] {
+  background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs, none);
+}
+
+/* Elección grande (efectivo / tarjeta / transferencia, billetes). */
+.sv-choice {
+  flex: 1; min-width: 96px; min-height: 50px; padding: 0 14px;
+  border-radius: var(--radius-lg); border: 1.5px solid var(--u-hair);
+  background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.sv-choice[data-on="1"] {
+  border-color: var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.sv-choice[data-mono="1"] { font-family: var(--ui-font-mono); }
+
+.sv-vuelto {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px; border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-ink);
+}
+.sv-vuelto-n { font-family: var(--ui-font-mono); font-size: 22px; font-weight: 600; }
+
+/* Fila de «por platos»: toca lo que paga esta persona. */
+.sv-pay {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px;
+  border-radius: var(--radius-lg); border: 1.5px solid var(--u-hair);
+  background: var(--adm-card); color: var(--u-text); font: inherit;
+  text-align: left; cursor: pointer;
+}
+.sv-pay[data-on="1"] {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-pay-box {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: var(--radius-md);
+  display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  color: var(--brand-on-accent); background: var(--u-hair-2);
+}
+.sv-pay[data-on="1"] .sv-pay-box { background: var(--brand-accent); }
+
+/* Elegir mesa destino (mover / juntar). */
+.sv-pick {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+.sv-pick > button {
+  min-height: 64px; border-radius: var(--radius-lg); border: 1px solid var(--u-hair-2);
+  background: var(--adm-card); color: var(--u-text); font: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.sv-pick > button:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-pick-n { font-family: var(--ui-font-mono); font-size: 19px; font-weight: 600; }
+.sv-pick-sub { font-size: 11px; color: var(--u-text-3); }
+
+/* El micrófono escuchando. */
+.sv-voz-ring {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  display: grid; place-items: center; color: var(--brand-accent);
+  animation: sv-puls 1.4s ease-in-out infinite;
+}
+@keyframes sv-puls {
+  0%, 100% { opacity: 0.45; transform: scale(0.92); }
+  50%      { opacity: 1;    transform: scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sv-voz-ring { animation: none; opacity: 1; }
+  .sv-sheet { animation: none; }
+}
+
+/* Lista de atajos. */
+.sv-atajo {
+  display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+  border-radius: var(--radius-lg); background: var(--surface-1);
+}
+.sv-atajo-k {
+  font-family: var(--ui-font-mono); font-size: 12.5px; font-weight: 600;
+  background: var(--surface-3); padding: 5px 9px; border-radius: var(--radius-md);
+  min-width: 92px; text-align: center; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PALETA DE COMANDOS (⌘K)
+   ══════════════════════════════════════════════════════════════ */
+.sv-palette-scrim {
+  position: fixed; inset: 0; z-index: 660;
+  background: color-mix(in srgb, #000 50%, transparent);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 12vh 16px 16px;
+}
+.sv-palette {
+  width: 100%; max-width: 560px; overflow: hidden;
+  background: var(--adm-overlay, var(--adm-card));
+  border-radius: var(--radius-xl); box-shadow: var(--adm-shadow-xl, 0 24px 60px rgba(0,0,0,.5));
+  animation: pop-in 140ms var(--ease-entry) both;
+}
+.sv-palette > input {
+  width: 100%; height: 60px; padding: 0 18px; border: none;
+  border-bottom: 1px solid var(--u-hair); background: none; color: var(--u-text);
+  font: inherit; font-size: 17px; font-weight: 500; outline: none;
+}
+.sv-palette-list { max-height: 46vh; overflow-y: auto; padding: 8px; }
+.sv-pres {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px;
+  border: none; border-radius: var(--radius-lg); background: none; color: var(--u-text);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.sv-pres[data-on="1"] { background: var(--surface-2); }
+.sv-pres-kind {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--u-text-2); background: var(--surface-3); padding: 4px 7px;
+  border-radius: 6px; min-width: 66px; text-align: center; flex-shrink: 0;
+}
+.sv-pres-l { display: block; font-size: 14.5px; font-weight: 600; }
+.sv-pres-s { display: block; font-size: 12.5px; color: var(--u-text-3); margin-top: 1px; }
+.sv-palette-foot {
+  padding: 9px 16px; border-top: 1px solid var(--u-hair); background: var(--surface-1);
+  font-family: var(--ui-font-mono); font-size: 11.5px; color: var(--u-text-3);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ACUSE DE RECIBO
+   ══════════════════════════════════════════════════════════════ */
+.sv-toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(26px + var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 700; max-width: 90vw; text-align: center;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--u-text); color: var(--brand-bg);
+  padding: 13px 20px; border-radius: var(--radius-lg);
+  font-size: 14.5px; font-weight: 600;
+  box-shadow: var(--adm-shadow-lg, 0 12px 30px rgba(0,0,0,.4));
+  animation: fade-up 180ms var(--ease-out) both;
+}
+.sv-toast[data-bad="1"] { background: var(--c-danger-solid); color: var(--c-on-solid); }
+.sv-toast-undo {
+  border: none; background: color-mix(in srgb, var(--brand-bg) 18%, transparent);
+  color: inherit; font: inherit; font-size: 13.5px; font-weight: 700;
+  padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EL PLANO, A PANTALLA COMPLETA
+   ------------------------------------------------------------
+   No vive dentro del riel: en 264 px un plano son mesas de dieciocho
+   píxeles y un mapa ilegible, que es justo lo que el plano anterior
+   hacía en el teléfono. Se abre encima de todo, se mira, se toca una
+   mesa y se cierra habiéndola elegido — que es para lo que sirve un
+   plano: orientarse, no trabajar.
+   ══════════════════════════════════════════════════════════════ */
+.sv-plano-scrim {
+  position: fixed; inset: 0; z-index: 650;
+  background: color-mix(in srgb, #000 55%, transparent);
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+@media (min-width: 900px) { .sv-plano-scrim { padding: 24px; } }
+.sv-plano-panel {
+  width: 100%; height: 100%; max-width: 1100px; max-height: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--adm-bg, var(--brand-bg)); color: var(--u-text);
+  box-shadow: var(--adm-shadow-xl, none);
+  animation: pop-in 140ms var(--ease-entry) both;
+}
+@media (min-width: 900px) {
+  .sv-plano-panel { height: auto; max-height: 92%; border-radius: var(--radius-xl); }
+}
+.sv-plano-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px calc(10px); border-bottom: 1px solid var(--u-hair);
+  background: var(--adm-card);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EL LIENZO DEL PLANO
+   ------------------------------------------------------------
+   Lienzo de proporciones fijas (4:3) con las mesas colocadas en
+   coordenadas relativas (0..1), como las guarda el dueño en Ajustes ›
+   Salón. En el teléfono no se encoge hasta ser ilegible: mantiene un
+   ancho mínimo y se desplaza, que es como se lee un mapa.
+   ══════════════════════════════════════════════════════════════ */
+.sv-plano-wrap {
+  flex: 1; min-height: 0; overflow: auto; padding: 14px 16px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.sv-plano {
+  position: relative; flex-shrink: 0; aspect-ratio: 4 / 3;
+  /* En el teléfono manda el ANCHO y el plano se desplaza: un mapa
+     encogido hasta caber son mesas de dieciocho píxeles con un número
+     dentro, que es lo que hacía ilegible al plano anterior. */
+  width: 100%; min-width: 520px;
+  border-radius: var(--radius-xl); border: 1px solid var(--u-hair);
+  background:
+    radial-gradient(circle at 1px 1px, var(--u-hair) 1px, transparent 0) 0 0 / 28px 28px,
+    var(--adm-card);
+}
+@media (min-width: 900px) {
+  /* En pantalla grande el plano entero cabe de un vistazo sin desplazar,
+     que es justo lo que se le pide a un plano.
+
+     El tope se pone por ANCHO y no por alto a propósito: `height: 100%`
+     aquí dentro no resuelve —el panel que lo contiene se dimensiona por su
+     contenido, así que el porcentaje no tiene contra qué medirse— y el
+     lienzo se quedaba en un sliver de dos centímetros. Con
+     `min(100%, 70vh × 4/3)` el ancho siempre es un número, y la proporción
+     4:3 deriva el alto de ahí sin pasar de 70vh. */
+  .sv-plano { width: min(100%, calc(70vh * 4 / 3)); min-width: 0; }
+}
+.sv-plano-fix {
+  position: absolute; display: flex; align-items: center; justify-content: center; gap: 6px;
+  /* Las coordenadas que llegan ya son la esquina superior izquierda del
+     trozo enseñado, así que aquí NO se centra con transform. */
+  border-radius: var(--radius-md); border: 1px dashed var(--u-hair-2);
+  background: var(--surface-1); color: var(--u-text-3);
+  font-size: 11.5px; font-weight: 600; text-align: center; overflow: hidden;
+  padding: 2px 6px; pointer-events: none;
+}
+.sv-plano-mesa {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  width: 74px; height: 74px; padding: 4px; cursor: pointer; font: inherit;
+  background: var(--sv-bg); border: 1.5px solid var(--sv-line); color: var(--u-text);
+  border-radius: var(--radius-md);
+  transition: transform 90ms var(--ease-out);
+}
+.sv-plano-mesa[data-shape="circle"] { border-radius: 50%; }
+.sv-plano-mesa:hover { transform: translate(-50%, -50%) scale(1.04); }
+.sv-plano-mesa[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+.sv-plano-n { font-family: var(--ui-font-mono); font-size: 19px; font-weight: 600; line-height: 1; }
+.sv-plano-sub {
+  font-size: 10.5px; font-weight: 600; color: var(--sv-ink);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sv-plano-total { font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-2); }
+.sv-plano-mano {
+  position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--c-danger-solid); border: 2px solid var(--adm-card);
+}
+/* Las que el dueño no colocó en el plano: van debajo, no desaparecen. */
+.sv-plano-fuera {
+  width: 100%; padding: 12px 14px; border-radius: var(--radius-lg);
+  border: 1px dashed var(--u-hair-2); display: flex; flex-direction: column; gap: 10px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL Y TABLET — ajustes de tamaño
+   ══════════════════════════════════════════════════════════════ */
+@container sv (max-width: 899px) {
+  /* Una cosa a la vez: ni riel ni comanda al lado. */
+  .sv-body { flex-direction: column; }
+  .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
+  .sv-dish-name { font-size: 15px; padding-right: 32px; }
+  .sv-dish-price { font-size: 14px; }
+  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sv-carta-head { padding: 12px 12px 8px; }
+  .sv-carta-bars { padding: 0 12px 10px; }
+  .sv-ticket-body { padding: 14px 12px 16px; }
+  .sv-foot-total { font-size: 28px; }
+}
+
+/* El plano vive en una capa FIJA, fuera del armazón: ahí lo que manda es
+   la pantalla, no el módulo. */
+@media (max-width: 899px) {
+  .sv-plano { min-width: 460px; }
+}
+
+/* Puntero grueso: fuera las pistas de teclado, que no llevan a ningún
+   sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
+   tablet de 1280 px sigue siendo un dedo. */
+@media (pointer: coarse) {
+  .sv-kbd, .sv-fav-key, .sv-cta-key, .sv-foot-keys, .sv-tab-key { display: none; }
+}

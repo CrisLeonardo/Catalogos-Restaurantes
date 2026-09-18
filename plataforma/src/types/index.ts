@@ -334,6 +334,10 @@ export interface OrderItem {
   /** Asiento al que se le apunta el plato (migración 123). null = de la mesa,
       sin dueño: al dividir la cuenta cae en "sin repartir". */
   seat_no: number | null;
+  /** Cuándo se llevó ESTE plato a la mesa (migración 133). `null`/ausente =
+      todavía no, o pedido anterior a la migración — y ahí manda
+      `orders.status`. La regla completa vive en `lib/servicio/comanda.ts`. */
+  served_at?: string | null;
 }
 
 /* ── Carrito ──────────────────────────────────────────────── */

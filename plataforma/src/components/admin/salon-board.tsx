@@ -28,6 +28,8 @@ import { fmtMoney } from '@/components/admin/orders-panel';
 import type { PanelCurrency } from '@/components/admin/order-card';
 import BillPanel, { type BillData } from '@/components/admin/salon/bill-panel';
 import SalonCanvas, { SalonViewSwitch, useSalonView } from '@/components/admin/salon/salon-canvas';
+import { SalonPlano, hayPlano, nivelesConMesas } from '@/components/admin/servicio/salon';
+import { mesasDeServicio } from '@/lib/servicio/estado';
 import { buildSalonTables, type SalonTable } from '@/components/admin/salon/pieces';
 import { useSalonLive } from '@/components/admin/salon/use-salon-live';
 import {
@@ -162,6 +164,21 @@ export default function SalonBoard({
   /* El denominador incluye las mesas fuera de configuración: si hay gente en
      la 25 de un salón de 20, «8 / 20» sería mentira en las dos cifras. */
   const totalMesas = useMemo(() => Math.max(tableCount, salon.length), [tableCount, salon.length]);
+
+  /* ── El plano, con el lenguaje del módulo de servicio ─────
+     `mesasDeServicio` recibe lo mismo que ya tiene esta pantalla; el
+     carrito va vacío porque aquí no se apunta nada: el puesto de mando no
+     toma pedidos. */
+  const mesasServicio = useMemo(() => mesasDeServicio({
+    tableCount, occupancy, calls, seatings,
+    sinEnviar: {}, totalSinEnviar: {},
+    floorPlan, now,
+  }), [tableCount, occupancy, calls, seatings, floorPlan, now]);
+
+  const conPlano = hayPlano(floorPlan);
+  const nivelesPlano = useMemo(() => nivelesConMesas(floorPlan), [floorPlan]);
+  const [nivel, setNivel] = useState<string | null>(null);
+  const nivelActivo = nivel ?? nivelesPlano[0]?.id ?? '';
 
   /* ── El filtro de la tira (M-19) ──────────────────────────
      Tocar «Te necesitan · 5» deja en pantalla esas cinco mesas. Antes la
@@ -557,17 +574,55 @@ export default function SalonBoard({
         </div>
       )}
 
-      <SalonCanvas
-        view={view}
-        tables={salonVisible}
-        floorPlan={floorPlan}
-        selected={sel}
-        onOpen={setSel}
-        onAction={hacer}
-        actionDisabled={accionDeshabilitada}
-        busyTable={pendiente}
-        aside={!comoHoja ? panel : null}
-      />
+      {/* EL PLANO ES EL MISMO QUE EL DE TOMAR PEDIDOS (rediseño 2026-09-17).
+          ------------------------------------------------------------
+          Dos pantallas dibujando dos planos del mismo local es cómo se
+          llega a que uno diga «Comiendo» donde el otro dice «Falta
+          servir». Las FICHAS y la LISTA sí siguen siendo las de mando
+          —una mesa, una acción, con la métrica que el encargado elige—,
+          porque ahí el trabajo es otro: repartir el salón, no cobrarlo. */}
+      {view === 'plano' && conPlano && floorPlan ? (
+        <div className="salon-floor">
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {nivelesPlano.length > 1 && (
+              <div className="sv-hs">
+                {nivelesPlano.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    className="sv-pill"
+                    data-on={nivelActivo === l.id ? '1' : '0'}
+                    onClick={() => setNivel(l.id)}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <SalonPlano
+              mesas={mesasServicio}
+              sel={sel}
+              onPick={setSel}
+              money={moneyCorto}
+              floorPlan={floorPlan}
+              nivel={nivelActivo}
+            />
+          </div>
+          {!comoHoja ? panel : null}
+        </div>
+      ) : (
+        <SalonCanvas
+          view={view}
+          tables={salonVisible}
+          floorPlan={floorPlan}
+          selected={sel}
+          onOpen={setSel}
+          onAction={hacer}
+          actionDisabled={accionDeshabilitada}
+          busyTable={pendiente}
+          aside={!comoHoja ? panel : null}
+        />
+      )}
 
       {/* Sin sitio al lado, la mesa elegida sube como hoja, en cualquier
           vista: 336 px de panel al lado no existen ni a 390 px de ancho ni

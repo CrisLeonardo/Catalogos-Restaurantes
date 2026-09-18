@@ -10,6 +10,11 @@ import type { IconSvgElement } from '@hugeicons/react';
 import {
   Home01Icon,
   Search01Icon,
+  Mic01Icon,
+  KeyboardIcon,
+  Layout01Icon,
+  Undo02Icon,
+  SplitIcon,
   ShoppingBag01Icon,
   PlusSignIcon,
   MinusSignIcon,
@@ -89,6 +94,11 @@ export const ICON_PATHS: Record<string, IconSvgElement> = {
   // nav / ui
   home: Home01Icon,
   search: Search01Icon,
+  mic: Mic01Icon,
+  keyboard: KeyboardIcon,
+  layout: Layout01Icon,
+  undo: Undo02Icon,
+  split: SplitIcon,
   bag: ShoppingBag01Icon,
   plus: PlusSignIcon,
   minus: MinusSignIcon,
