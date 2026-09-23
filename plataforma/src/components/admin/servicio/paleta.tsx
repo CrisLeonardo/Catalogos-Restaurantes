@@ -16,7 +16,7 @@
    ahorra un dedo en la tablet. */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { coincide, leerComanda } from '@/lib/servicio/comanda';
+import { coincide, leerComanda, normalizar } from '@/lib/servicio/comanda';
 import { subtituloDeMesa, ESTADO_LABEL, type MesaServicio } from '@/lib/servicio/estado';
 import type { Product } from '@/types';
 
@@ -64,8 +64,12 @@ export default function Paleta({
     const texto = q.trim();
     const { qty, term } = leerComanda(texto);
     const disponibles = productos.filter((p) => p.is_active && p.is_available);
+    /* La misma regla que el buscador de la carta: lo que EMPIEZA por lo
+       tecleado gana. Si no, «car» agregaba aquí unos tacos de carnitas y
+       allí una carne asada — el mismo texto, dos platos distintos. */
     const interpretado = term
-      ? disponibles.find((p) => coincide(p.name, term)) ?? null
+      ? disponibles.find((p) => coincide(p.name, term) && normalizar(p.name).startsWith(normalizar(term)))
+        ?? disponibles.find((p) => coincide(p.name, term)) ?? null
       : null;
 
     const out: Resultado[] = [];

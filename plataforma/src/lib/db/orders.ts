@@ -252,6 +252,10 @@ export type TableOccupancy = {
   /** Cuándo salió el último plato a cocina (accepted_at más reciente). Es lo
       que la línea del ciclo enseña como "salió 20:12". */
   firedAt: string | null;
+  /** Lo que la mesa ya pagó en cobros por partes (`order_payments`, mig.
+      129). `total - paid` es lo que de verdad falta por cobrar: sin restarlo,
+      «Sin cobrar» en Mesas seguía contando entero el dinero ya cobrado. */
+  paid?: number;
 };
 
 /** Cuál de dos estados "manda" en la mesa: el menos avanzado. */
@@ -272,7 +276,7 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
     .order('created_at', { ascending: true })
     .limit(200);
 
-  const BASE = 'address, created_at, accepted_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)';
+  const BASE = 'id, address, created_at, accepted_at, status, total, served_at, ready_at, items:order_items(quantity), waiter:profiles!orders_waiter_id_fkey(full_name)';
   const MESA = (await hayColumnaMesa()) ? ', table_number' : '';
 
   /* `party_size` es de la migración 123. Donde todavía no corrió, pedirla
@@ -289,6 +293,8 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
   const result: Record<number, TableOccupancy> = {};
   /** Mesas donde algún pedido NO está servido: no pueden reportar servedAt. */
   const sinServir = new Set<number>();
+  /** De qué mesa es cada pedido, para repartir después lo ya cobrado. */
+  const mesaDePedido = new Map<string, number>();
 
   for (const row of (data ?? []) as unknown as (Record<string, unknown>)[]) {
     const { created_at, accepted_at, status, total, served_at, ready_at, party_size, items, waiter } = row as {
@@ -300,6 +306,7 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
     };
     const n = mesaDeFila(row as { table_number?: number | null; address?: string | null });
     if (n == null) continue;
+    if (typeof row.id === 'string') mesaDePedido.set(row.id, n);
     const platos = (items ?? []).reduce((s, it) => s + (it.quantity ?? 0), 0);
 
     const prev = result[n];
@@ -335,6 +342,22 @@ export async function getActiveTableNumbers(restaurantId: string): Promise<Recor
   for (const n of sinServir) {
     const occ = result[Number(n)];
     if (occ) occ.servedAt = null;
+  }
+
+  /* Lo ya cobrado en partes. Consulta APARTE y sin exigir nada: donde la
+     migración 129 todavía no corrió la tabla no existe, y eso no puede
+     tumbar el salón — se queda en 0, que es lo que valía antes. */
+  if (mesaDePedido.size > 0) {
+    const { data: pagos, error: errPagos } = await db
+      .from('order_payments')
+      .select('order_id, amount')
+      .in('order_id', [...mesaDePedido.keys()]);
+    if (!errPagos) {
+      for (const p of (pagos ?? []) as { order_id: string; amount: number | string }[]) {
+        const occ = result[mesaDePedido.get(p.order_id) ?? -1];
+        if (occ) occ.paid = Math.round(((occ.paid ?? 0) + Number(p.amount ?? 0)) * 100) / 100;
+      }
+    }
   }
   return result;
 }

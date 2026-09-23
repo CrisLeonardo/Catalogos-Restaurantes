@@ -99,9 +99,9 @@ function RoleBadge({ role }: { role: RestaurantUser['role'] }) {
         fontWeight: 600,
         padding: '2px 8px',
         borderRadius: 'var(--radius-full)',
-        color: isOwner ? '#fbbf24' : 'var(--u-text-3)',
-        background: isOwner ? 'rgba(251,191,36,0.12)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-        border: `1px solid ${isOwner ? 'rgba(251,191,36,0.25)' : 'var(--u-hair)'}`,
+        color: isOwner ? 'var(--c-warn)' : 'var(--u-text-3)',
+        background: isOwner ? 'var(--c-warn-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+        border: `1px solid ${isOwner ? 'var(--c-warn-line)' : 'var(--u-hair)'}`,
         whiteSpace: 'nowrap',
       }}
     >
@@ -512,7 +512,7 @@ function AddUserForm({
             </button>
           </div>
           <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-            <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1, color: '#f59e0b' }} />
+            <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1, color: 'var(--c-warn)' }} />
             <span>Copia la contraseña ahora: no se vuelve a mostrar. Entrega estas credenciales al restaurante.</span>
           </p>
         </div>
@@ -554,9 +554,9 @@ function ErrorMsg({ msg }: { msg: string }) {
       style={{
         padding: '10px 14px',
         borderRadius: 'var(--radius-md)',
-        background: 'rgba(220,50,50,0.12)',
-        border: '1px solid rgba(220,50,50,0.25)',
-        color: '#f87171',
+        background: 'var(--c-danger-bg)',
+        border: '1px solid var(--c-danger-line)',
+        color: 'var(--c-danger)',
         fontSize: 14,
       }}
     >

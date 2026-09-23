@@ -305,6 +305,14 @@ export default function AdminNotifications({
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
           const order = payload.new as Order;
           if (order.restaurant_id !== restaurantId) return;
+          /* Un pedido con mesero lo tomó una persona del local y ya salió a
+             cocina: no hay nada que avisar. Hay que mirarlo AQUÍ y no por el
+             estado, porque `place_order` lo inserta en NEW y lo pasa a PREP
+             en un UPDATE aparte — el INSERT llega diciendo NEW, y cada
+             comanda que mandaba un mesero hacía sonar «Pedido nuevo», con
+             tarjeta fija que tapaba «Cobrar y cerrar mesa» hasta que alguien
+             pulsara «Visto». */
+          if (order.waiter_id) return;
 
           // Avisa a NewOrdersAlert en el mismo tick (sin esperar su propio
           // canal). NewOrdersAlert es la única fuente de verdad del SONIDO y
@@ -708,7 +716,13 @@ export default function AdminNotifications({
         <div
           className="glass anim-slide-up"
           style={{
-            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            /* Centrado con márgenes, no con `translateX(-50%)`: la clase
+               `anim-slide-up` anima `transform` con `both` y se queda con
+               la última palabra — el aviso acababa con el canto izquierdo
+               en el centro. Y por encima de la barra de destinos del
+               teléfono, que a 24 px del suelo lo tapaba entero. */
+            position: 'fixed', left: 0, right: 0, marginInline: 'auto', width: 'max-content',
+            bottom: 'calc(24px + var(--adm-nav-h) + env(safe-area-inset-bottom, 0px))',
             zIndex: 80, padding: '12px 20px', borderRadius: 'var(--radius-full)',
             fontSize: 13, fontWeight: 600, color: 'var(--u-text)', whiteSpace: 'nowrap',
             pointerEvents: 'none', maxWidth: '92vw', overflow: 'hidden', textOverflow: 'ellipsis',

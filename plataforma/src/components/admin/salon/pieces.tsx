@@ -178,8 +178,11 @@ function metricaDe(
 ): { cual: SalonMetrica; valor: string; etiqueta: string } {
   if (!ocupada) return { cual, valor: '—', etiqueta: 'Libre' };
   switch (cual) {
+    /* «28 min · en esta etapa» y no «28 min · En cocina»: el nombre de la
+       etapa ya lo dice la ficha a la izquierda, y repetido debajo del
+       número la ficha llegaba a decir «En cocina» tres veces. */
     case 'tiempo':
-      return { cual, valor: tiempo ?? '—', etiqueta: stage.label };
+      return { cual, valor: tiempo ?? '—', etiqueta: 'en esta etapa' };
     case 'pax':
       return { cual, valor: pax != null ? String(pax) : '—', etiqueta: pax === 1 ? 'persona' : 'personas' };
     case 'etapa':
@@ -438,15 +441,21 @@ export function TableCard({
 
           <StageBars stage={t.stage} urgente={urgente} />
 
-          {/* La etapa y su reloj, salvo lo que la métrica grande ya esté
-              diciendo (M-21). Si el sitio grande lleva el tiempo, aquí
-              queda solo la etapa; si lleva la etapa, queda solo el reloj. */}
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--u-text-3)' }}>
-            <span>{t.metrica.cual === 'etapa' ? '' : t.stage.label}</span>
-            {t.tiempo && t.metrica.cual !== 'tiempo' && (
-              <span className="t-mono" style={{ fontWeight: 600 }}>{t.tiempo}</span>
-            )}
-          </span>
+          {/* La etapa y su reloj, salvo lo que la ficha ya esté diciendo
+              (M-21): la métrica grande, o el estado de arriba — que en una
+              mesa sin avisos ES la etapa («En cocina» y «En cocina»). Si no
+              queda nada que decir, el renglón no se pinta. */}
+          {(() => {
+            const etapa = t.metrica.cual === 'etapa' || t.stage.label === estadoDeFicha(t) ? '' : t.stage.label;
+            const reloj = t.tiempo && t.metrica.cual !== 'tiempo' ? t.tiempo : null;
+            if (!etapa && !reloj) return null;
+            return (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--u-text-3)' }}>
+                <span>{etapa}</span>
+                {reloj && <span className="t-mono" style={{ fontWeight: 600 }}>{reloj}</span>}
+              </span>
+            );
+          })()}
 
           <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--u-text-3)' }}>
             {t.waiterMark
@@ -603,9 +612,14 @@ export function TableRow({
                 t.nombre,
                 t.metrica.cual !== 'pax' && t.pax,
                 t.waiterName ?? 'Sin asignar',
-                t.tiempo && (t.metrica.cual === 'tiempo'
-                  ? t.stage.label
-                  : `${t.stage.label} · ${t.tiempo}`),
+                /* La etapa solo si el estado de arriba no la dijo ya: en
+                   una mesa sin avisos los dos son «En cocina», y la fila
+                   decía «En cocina / Sin asignar · En cocina». */
+                ...(() => {
+                  const etapa = t.stage.label === estadoDeFicha(t, true) ? null : t.stage.label;
+                  const reloj = t.tiempo && t.metrica.cual !== 'tiempo' ? t.tiempo : null;
+                  return [etapa, reloj];
+                })(),
               ].filter(Boolean).join(' · ')}
             </span>
           )}

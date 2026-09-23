@@ -98,28 +98,28 @@ export default async function RestaurantMetricsPage({ params }: { params: Promis
 function PricingHint({ orders, visits, revenue, fee, growth }: {
   orders: number; visits: number; revenue: number; fee: number; growth: number | null;
 }) {
-  let tone = '#94a3b8', text: string;
+  let tone = 'var(--u-text-4)', text: string;
   const sharePct = revenue > 0 ? (fee / revenue) * 100 : null;
 
   if (visits < 30 && orders < 5) {
-    tone = '#94a3b8';
+    tone = 'var(--u-text-4)';
     text = 'Poca afluencia todavía. Conviene mantener un precio bajo o de arranque hasta que crezca el tráfico; revisa de nuevo en unas semanas.';
   } else if (sharePct != null && sharePct < 1.5 && orders >= 30) {
-    tone = '#4ade80';
+    tone = 'var(--c-ok)';
     text = `Mucha afluencia y tu mensualidad es apenas el ${sharePct.toFixed(1)}% de lo que facturan. Hay margen para subir el precio: les das mucho valor.`;
   } else if (growth != null && growth > 25) {
-    tone = '#4ade80';
+    tone = 'var(--c-ok)';
     text = `Su actividad creció ${growth.toFixed(0)}% vs. el mes anterior. Buen momento para plantear un ajuste de mensualidad acorde al volumen.`;
   } else if (sharePct != null && sharePct > 6) {
-    tone = '#fbbf24';
+    tone = 'var(--c-warn)';
     text = `Tu mensualidad pesa ${sharePct.toFixed(1)}% de su venta: es alto. Si quieres retenerlos, considera un precio más bajo mientras crecen.`;
   } else {
-    tone = '#94a3b8';
+    tone = 'var(--u-text-4)';
     text = 'Afluencia y cobro razonablemente equilibrados. Mantén el precio y vuelve a evaluar el próximo mes.';
   }
 
   return (
-    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: `1px solid ${tone}33` }}>
+    <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)', border: `1px solid color-mix(in srgb, ${tone} 20%, transparent)` }}>
       <span style={{ width: 8, height: 8, borderRadius: 99, background: tone, marginTop: 6, flexShrink: 0 }} />
       <span style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.55 }}>{text}</span>
     </div>
@@ -167,7 +167,7 @@ function Kpi({ label, value, sub, growth }: { label: string; value: string; sub?
       <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
       {growth != null ? (
-        <div style={{ fontSize: 11.5, fontWeight: 600, color: growth >= 0 ? '#4ade80' : '#f87171' }}>
+        <div style={{ fontSize: 11.5, fontWeight: 600, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
           {growth >= 0 ? '▲' : '▼'} {Math.abs(growth).toFixed(0)}% vs. mes previo
         </div>
       ) : sub ? (

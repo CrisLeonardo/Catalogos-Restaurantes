@@ -23,7 +23,7 @@
 import { useMemo, useRef, type KeyboardEvent } from 'react';
 import { Icon } from '@/components/icons';
 import { Kicker, Pill } from '@/components/admin/servicio/pieces';
-import { coincide, leerComanda } from '@/lib/servicio/comanda';
+import { coincide, leerComanda, normalizar } from '@/lib/servicio/comanda';
 import type { Category, Product } from '@/types';
 
 /** Cuántos platos lleva la fila de «los más pedidos». */
@@ -73,7 +73,7 @@ export default function Carta({
     const disponibles = activos.filter((p) => p.is_available);
     // Lo que EMPIEZA por lo tecleado gana: quien escribe «car» quiere
     // Carne asada, no «Tacos de carnitas».
-    const empieza = disponibles.find((p) => coincide(p.name, term) && p.name.toLowerCase().startsWith(term.toLowerCase()));
+    const empieza = disponibles.find((p) => coincide(p.name, term) && normalizar(p.name).startsWith(normalizar(term)));
     return empieza ?? disponibles.find((p) => coincide(p.name, term)) ?? null;
   }, [activos, term]);
 
@@ -193,7 +193,7 @@ export default function Carta({
         </div>
       </div>
 
-      <div className="sv-vs" style={{ padding: '2px 18px 20px' }}>
+      <div className="sv-vs sv-carta-list">
         {dishes.length === 0 ? (
           <div className="sv-vacio">
             {term
@@ -235,13 +235,14 @@ export default function Carta({
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(p, 1); }
                   }}
                 >
-                  {agotado
-                    ? <span className="sv-dish-out">Agotado</span>
-                    : enComanda > 0 && <span className="sv-dish-q">{enComanda}</span>}
+                  {!agotado && enComanda > 0 && <span className="sv-dish-q">{enComanda}</span>}
                   <span className="sv-dish-name">{p.name}</span>
                   <span className="sv-dish-foot">
                     <span className="sv-dish-price">{money(p.price)}</span>
-                    {!agotado && (
+                    {/* «Agotado» va donde iría «Opciones»: un plato que no se
+                        puede pedir no tiene opciones que abrir, y arriba, en
+                        la esquina, se montaba encima del nombre. */}
+                    {agotado ? <span className="sv-dish-out">Agotado</span> : (
                       <button
                         type="button"
                         className="sv-dish-opts"

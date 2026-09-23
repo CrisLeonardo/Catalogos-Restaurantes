@@ -97,7 +97,7 @@ export default function OrderTypesEditor({
           {isPending ? 'Guardando…' : 'Guardar tipos de pedido'}
         </button>
         {msg && (
-          <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>
+          <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>
             {msg}
           </span>
         )}

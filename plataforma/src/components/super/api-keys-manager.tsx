@@ -40,8 +40,8 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
 
       {/* Token recién creado */}
       {justCreated && (
-        <div style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 12, background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)' }}>
-          <div style={{ fontSize: 12.5, color: '#4ade80', fontWeight: 700, marginBottom: 8 }}>
+        <div style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 12, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--c-ok)', fontWeight: 700, marginBottom: 8 }}>
             Llave creada — cópiala ahora, no se volverá a mostrar:
           </div>
           <CopyRow token={justCreated.token} />
@@ -65,7 +65,7 @@ export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow
           Llave de producción (desmarca para una de prueba)
         </label>
         {state && 'error' in state && (
-          <p style={{ fontSize: 13, color: '#f87171' }}>{state.error}</p>
+          <p style={{ fontSize: 13, color: 'var(--c-danger)' }}>{state.error}</p>
         )}
         <button type="submit" disabled={pending} style={{
           padding: '11px 22px', borderRadius: 10, fontWeight: 700, fontSize: 14,
@@ -121,14 +121,14 @@ function KeyRow({ k }: { k: ApiKeyRow }) {
         </div>
       </div>
       {revoked ? (
-        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(148,163,184,0.15)', color: '#94a3b8' }}>REVOCADA</span>
+        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: '#94a3b8' }}>REVOCADA</span>
       ) : (
         <button
           type="button"
           disabled={isPending}
           onClick={() => start(async () => { const r = await revokeApiKeyAction(k.id); if (!r.error) setRevoked(true); })}
           className="press"
-          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--c-danger-line)', background: 'var(--c-danger-bg)', color: 'var(--c-danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
         >
           <Icon name="trash" size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Revocar
         </button>

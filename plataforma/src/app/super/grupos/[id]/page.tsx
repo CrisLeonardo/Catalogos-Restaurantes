@@ -42,7 +42,7 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
                 <form action={unassignRestaurant}>
                   <input type="hidden" name="orgId" value={org.id} />
                   <input type="hidden" name="restaurantId" value={b.id} />
-                  <button type="submit" className="press" style={{ fontSize: 12, color: '#f87171', background: 'none', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>Quitar</button>
+                  <button type="submit" className="press" style={{ fontSize: 12, color: 'var(--c-danger)', background: 'none', border: '1px solid var(--c-danger-line)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>Quitar</button>
                 </form>
               </div>
             ))}
@@ -86,7 +86,7 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
       {/* Eliminar */}
       <form action={deleteOrganization} style={{ marginTop: 8 }}>
         <input type="hidden" name="id" value={org.id} />
-        <button type="submit" className="press" style={{ fontSize: 13, color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)', padding: '10px 16px', cursor: 'pointer' }}>
+        <button type="submit" className="press" style={{ fontSize: 13, color: 'var(--c-danger)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', borderRadius: 'var(--radius-md)', padding: '10px 16px', cursor: 'pointer' }}>
           Eliminar grupo (las sucursales quedan independientes)
         </button>
       </form>

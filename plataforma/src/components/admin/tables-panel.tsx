@@ -195,6 +195,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             </div>
           </div>
           <Switch
+            aria-label="Comer en local"
             checked={dineInEnabled}
             onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); setMsg(null); }}
           />

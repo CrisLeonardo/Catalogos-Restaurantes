@@ -13,6 +13,11 @@ import { getDrivers } from '@/lib/db/drivers';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 import { panelLink } from '@/lib/panel-links-server';
 
+/* Sin título propio la pestaña heredaba el del menú público: «Menú en
+   línea» estando en Pedidos, justo la pantalla que se deja abierta todo
+   el turno en otra pestaña. */
+export const metadata = { title: 'Pedidos en vivo – Panel admin' };
+
 /** Cómo se nombra un pedido en una frase: la mesa si la hay, si no el canal. */
 function orderShortLabel(o: { order_type: string; address: string | null; table_number?: number | null }): string {
   if (o.order_type === 'DINE_IN') {

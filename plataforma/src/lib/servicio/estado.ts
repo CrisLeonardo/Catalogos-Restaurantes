@@ -28,6 +28,7 @@
 import type { TableOccupancy, TableCall } from '@/lib/db/orders';
 import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
+import { fmtMin } from '@/lib/table-state';
 
 /** En qué va la mesa. El orden es el de urgencia para el mesero. */
 export type EstadoServicio = 'borrador' | 'cocina' | 'listo' | 'sentada' | 'libre';
@@ -266,7 +267,7 @@ export function subtituloDeMesa(m: MesaServicio, corto = false): string {
        repitiendo la misma palabra dos veces se lee como un error. Si el
        dueño dibujó el plano sí hay algo que aportar —dónde está y para
        cuántos—, y entonces se dice. */
-    const partes = [m.zona, m.sillas ? `${m.sillas} personas` : null].filter(Boolean);
+    const partes = [m.zona, m.sillas ? `${m.sillas} ${m.sillas === 1 ? 'persona' : 'personas'}` : null].filter(Boolean);
     return partes.join(' · ');
   }
   if (corto) {
@@ -274,9 +275,11 @@ export function subtituloDeMesa(m: MesaServicio, corto = false): string {
     return m.qrPendiente > 0 ? `${base} · QR` : base;
   }
   const partes: string[] = [];
-  if (m.minutos != null) partes.push(`${m.minutos} min`);
+  /* El mismo reloj que Mesas: «3 h 9 min» y no «189 min» para la misma
+     mesa en las dos pantallas. */
+  if (m.minutos != null) partes.push(fmtMin(m.minutos));
   if (m.platos > 0) partes.push(`${m.platos} ${m.platos === 1 ? 'plato' : 'platos'}`);
-  else if (m.estado === 'sentada') partes.push(m.sillas ? `${m.sillas} personas` : 'sin pedir');
+  else if (m.estado === 'sentada') partes.push(m.sillas ? `${m.sillas} ${m.sillas === 1 ? 'persona' : 'personas'}` : 'sin pedir');
   if (m.qrPendiente > 0) partes.push('QR nuevo');
   return partes.join(' · ');
 }

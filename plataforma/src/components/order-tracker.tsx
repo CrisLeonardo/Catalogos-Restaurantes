@@ -175,7 +175,9 @@ export default function OrderTracker({
     <main className="anim-fade-up themed-type" style={{ width: '100%', maxWidth: 440, margin: '0 auto', padding: '24px 16px 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <Link href={backHref} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        {/* Alto de dedo (--m-tap) como los «volver» del checkout; con solo
+            la línea de texto eran 20 px y el pulgar se iba de largo. */}
+        <Link href={backHref} className="press t-mute" style={{ fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 4, minHeight: 'var(--m-tap)' }}>
           <Icon name="chevronLeft" size={16} /> {content.tracking.back}
         </Link>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>

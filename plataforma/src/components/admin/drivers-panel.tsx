@@ -134,7 +134,7 @@ export default function DriversPanel({
         </div>
 
         {state && 'error' in state && (
-          <p className="chip chip-danger" style={{ display: 'block', padding: 10, marginBottom: 12 }}>
+          <p className="chip chip-danger" style={{ display: 'block', whiteSpace: 'normal', borderRadius: 12, padding: 10, marginBottom: 12, lineHeight: 1.5 }}>
             {state.error}
           </p>
         )}

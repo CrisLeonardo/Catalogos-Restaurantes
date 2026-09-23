@@ -26,12 +26,12 @@ export default function SuperError({
           width: 48,
           height: 48,
           borderRadius: '50%',
-          background: 'rgba(239,68,68,0.12)',
-          border: '1px solid rgba(239,68,68,0.25)',
+          background: 'var(--c-danger-bg)',
+          border: '1px solid var(--c-danger-line)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#ef4444',
+          color: 'var(--c-danger)',
         }}
       >
         <Icon name="alertCircle" size={22} />

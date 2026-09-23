@@ -47,6 +47,10 @@ export default function WhatsAppPanel({
     color: 'var(--u-text)', fontSize: 14, outline: 'none',
   };
   const fieldSt: React.CSSProperties = { marginBottom: 14 };
+  const avisoSt: React.CSSProperties = {
+    display: 'block', whiteSpace: 'normal', borderRadius: 12,
+    padding: 12, marginBottom: 18, lineHeight: 1.5, fontWeight: 600,
+  };
 
   return (
     <div style={{ maxWidth: 620 }}>
@@ -57,10 +61,16 @@ export default function WhatsAppPanel({
       </p>
 
       {!tokenKeyReady && (
-        <div className="chip chip-danger" style={{ marginBottom: 18, display: 'block', padding: 12 }}>
-          Falta configurar <code>WHATSAPP_TOKEN_KEY</code> en el servidor. Sin esa
-          clave el token no se puede guardar de forma segura y la conexión no va a
-          funcionar.
+        /* Un aviso de varias líneas no es un chip: `.chip` no parte el
+           texto (`nowrap`) y esta frase empujaba la página entera 448 px
+           hacia la derecha en el teléfono. Mismo color, forma de aviso. */
+        <div className="chip chip-danger" style={avisoSt}>
+          La conexión con WhatsApp todavía no está activa en el servidor de
+          Leogin, así que el token no se puede guardar de forma segura.
+          Escríbenos a soporte y la activamos.
+          <span style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 500, opacity: 0.8 }}>
+            Detalle técnico: falta <code>WHATSAPP_TOKEN_KEY</code>.
+          </span>
         </div>
       )}
 
@@ -133,12 +143,12 @@ export default function WhatsAppPanel({
         </div>
 
         {state && 'error' in state && (
-          <p className="chip chip-danger" style={{ display: 'block', padding: 10, marginBottom: 12 }}>
+          <p className="chip chip-danger" style={{ ...avisoSt, marginBottom: 12 }}>
             {state.error}
           </p>
         )}
         {state && 'ok' in state && (
-          <p className="chip chip-ok" style={{ display: 'block', padding: 10, marginBottom: 12 }}>
+          <p className="chip chip-ok" style={{ ...avisoSt, marginBottom: 12 }}>
             Número conectado.
           </p>
         )}

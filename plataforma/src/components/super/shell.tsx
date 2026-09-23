@@ -13,9 +13,12 @@ import AdminThemeToggle from '@/components/admin/theme-toggle';
 import { LeoginMark } from '@/components/leogin-logo';
 import { ToastProvider, Toaster } from '@/components/ui/toast';
 
-const NAV = [
+/* `corto`: la etiqueta en la barra inferior del teléfono, donde siete
+   destinos se reparten 375 px (≈53 cada uno) y «Restaurantes» o
+   «Configuración» salían cortados a «Restaur…». */
+const NAV: { href: string; label: string; icon: string; corto?: string }[] = [
   { href: '/super',               label: 'Inicio',        icon: 'home' },
-  { href: '/super/restaurantes',  label: 'Restaurantes',  icon: 'utensils' },
+  { href: '/super/restaurantes',  label: 'Restaurantes',  icon: 'utensils', corto: 'Locales' },
   // El panel entra por el restaurante en todas partes menos aquí. Esta es la
   // misma información por el otro lado —la persona— que es como llega un
   // problema de acceso: un nombre y un correo, sin saber de qué local.
@@ -23,13 +26,12 @@ const NAV = [
   { href: '/super/grupos',        label: 'Grupos',        icon: 'users' },
   { href: '/super/metricas',      label: 'Métricas',      icon: 'chart' },
   { href: '/super/finanzas',      label: 'Finanzas',      icon: 'wallet' },
-  { href: '/super/configuracion', label: 'Configuración', icon: 'settings' },
+  { href: '/super/configuracion', label: 'Configuración', icon: 'settings', corto: 'Ajustes' },
 ];
 
 const TITLES: [string, string][] = [
   ['/super/restaurantes/new', 'Nuevo restaurante'],
   ['/super/restaurantes',     'Restaurantes'],
-  ['/super/grupos/new',       'Nuevo grupo'],
   ['/super/grupos',           'Grupos'],
   ['/super/metricas',         'Métricas'],
   ['/super/finanzas',         'Finanzas'],
@@ -55,7 +57,10 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
         <Link
           href="/super"
           className="admin-brand press"
-          style={{ display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none', color: 'inherit' }}
+          /* Sin `display` en línea: `.admin-brand` ya es flex, y el teléfono
+             la apaga desde la hoja de estilos — un `display: flex` aquí le
+             ganaba y la marca salía encima de la barra de título. */
+          style={{ textDecoration: 'none', color: 'inherit' }}
           title="Ir al inicio"
         >
           <div
@@ -79,23 +84,28 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
           </div>
         </Link>
 
+        {/* Los enlaces van DIRECTOS en el nav, como en el panel del
+            restaurante: la barra inferior del teléfono los reparte en una
+            fila, y metidos en un `div` se apilaban en columna — siete
+            destinos, 314 px de barra, un tercio de la pantalla tapado. */}
         <nav className="admin-nav">
-          <div className="admin-navgroup" data-collapsed="0">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="admin-navlink press"
-                data-active={isActive(pathname, n.href) ? '1' : '0'}
-              >
-                <Icon name={n.icon} size={18} />
-                <span className="nav-label">{n.label}</span>
-              </Link>
-            ))}
-          </div>
+          {NAV.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              className="admin-navlink press"
+              data-active={isActive(pathname, n.href) ? '1' : '0'}
+            >
+              <Icon name={n.icon} size={18} />
+              <span className="nav-label">
+                <span className={n.corto ? 'nav-largo' : undefined}>{n.label}</span>
+                {n.corto && <span className="nav-corto">{n.corto}</span>}
+              </span>
+            </Link>
+          ))}
         </nav>
 
-        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="glass-quiet admin-usercard" style={{ borderRadius: 13, padding: 12 }}>
           <div className="admin-usericon" style={{ width: 34, height: 34, borderRadius: 99, background: 'color-mix(in srgb, var(--brand-accent) 16%, transparent)', display: 'grid', placeItems: 'center', color: 'var(--brand-accent-ink)', flexShrink: 0 }}>
             <Icon name="key" size={16} />
           </div>
@@ -115,6 +125,10 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
             {title}
           </h1>
           <AdminThemeToggle />
+          {/* En el teléfono la tarjeta de usuario (con «Salir») se apaga
+              junto con la barra lateral, y aquí no hay menú «⋯» que la
+              recoja: sin esto no había forma de cerrar sesión. */}
+          <span className="super-mobile-only"><LogoutButton /></span>
         </div>
         <div className="admin-content">
           <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%' }}>{children}</div>

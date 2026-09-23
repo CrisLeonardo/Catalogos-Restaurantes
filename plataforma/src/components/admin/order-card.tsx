@@ -565,7 +565,7 @@ export default function OrderCard({
                     disabled={isPending}
                     title="Anular este plato"
                     aria-label={`Anular ${item.name_snapshot}`}
-                    className="press chip-danger"
+                    className="press chip-danger order-void-x"
                     style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                   >
                     <Icon name="x" size={11} />

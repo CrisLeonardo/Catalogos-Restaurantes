@@ -92,7 +92,9 @@ export default function WaiterCallsAlert({
 
   // Carga (o recarga) de llamadas pendientes del servidor.
   const refresh = useCallback(async () => {
-    const list = await getPendingWaiterCalls(restaurantId);
+    // Sin red se reintenta en el siguiente sondeo (ver new-orders-alert.tsx).
+    let list: Awaited<ReturnType<typeof getPendingWaiterCalls>>;
+    try { list = await getPendingWaiterCalls(restaurantId); } catch { return; }
     if (seenIds.current === null) {
       // Snapshot inicial: se marcan como "vistas" sin sonar.
       seenIds.current = new Set(list.map((c) => c.id));

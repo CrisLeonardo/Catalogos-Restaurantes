@@ -62,6 +62,11 @@ interface Props {
   umbrales?: SalonUmbrales;
 }
 
+/** Lo que FALTA por cobrar de una mesa: lo cobrado por partes ya no es deuda. */
+function debe(t: { occ?: { total: number; paid?: number } | null }): number {
+  return Math.max(0, (t.occ?.total ?? 0) - (t.occ?.paid ?? 0));
+}
+
 export default function SalonBoard({
   tableCount, occupancy, calls, seatings, waiters, currency, restaurantId,
   waiterHref, floorPlan, turnsToday, umbrales,
@@ -160,7 +165,7 @@ export default function SalonBoard({
      durante los primeros minutos de cada mesa —justo cuando el encargado
      mira la tira para saber si le queda sitio—. */
   const abiertas = useMemo(() => salon.filter((t) => t.occ || t.seat), [salon]);
-  const sinCobrar = useMemo(() => abiertas.reduce((s, t) => s + (t.occ?.total ?? 0), 0), [abiertas]);
+  const sinCobrar = useMemo(() => abiertas.reduce((s, t) => s + debe(t), 0), [abiertas]);
   /* El denominador incluye las mesas fuera de configuración: si hay gente en
      la 25 de un salón de 20, «8 / 20» sería mentira en las dos cifras. */
   const totalMesas = useMemo(() => Math.max(tableCount, salon.length), [tableCount, salon.length]);
@@ -194,7 +199,7 @@ export default function SalonBoard({
     if (filtro === 'abiertas') return salon.filter((t) => t.occ || t.seat);
     /* «Sin cobrar» es dinero, no ocupación: una mesa sentada sin pedir no
        debe nada, así que no entra aunque tenga gente. */
-    if (filtro === 'sin-cobrar') return salon.filter((t) => (t.occ?.total ?? 0) > 0);
+    if (filtro === 'sin-cobrar') return salon.filter((t) => debe(t) > 0.004);
     return salon;
   }, [salon, filtro]);
 
@@ -306,7 +311,7 @@ export default function SalonBoard({
     conMesa(
       n,
       () => seatTable(restaurantId, n, { partySize: pax, waiterId }),
-      `Mesa ${n}: sentada${pax ? ` · ${pax} personas` : ''}${quien ? ` · atiende ${quien}` : ''}.`,
+      `Mesa ${n}: sentada${pax ? ` · ${pax} ${pax === 1 ? 'persona' : 'personas'}` : ''}${quien ? ` · atiende ${quien}` : ''}.`,
     );
   }, [restaurantId, waiters, conMesa]);
 
@@ -323,7 +328,7 @@ export default function SalonBoard({
     conMesa(
       n,
       () => updateSeating(restaurantId, n, { partySize: pax }),
-      pax ? `Mesa ${n}: ${pax} personas.` : `Mesa ${n}: sin contar personas.`,
+      pax ? `Mesa ${n}: ${pax} ${pax === 1 ? 'persona' : 'personas'}.` : `Mesa ${n}: sin contar personas.`,
     );
   }, [restaurantId, conMesa]);
 

@@ -121,7 +121,9 @@ export function HojaMesa({
                   >
                     <span className="sv-pick-n">{m.n}</span>
                     <span className="sv-pick-sub">
-                      {accion === 'juntar' && m.total > 0 ? money(m.total) : (m.zona ?? `${m.sillas ?? ''}`)}
+                      {accion === 'juntar' && m.total > 0
+                        ? money(m.total)
+                        : (m.zona ?? (m.sillas ? `${m.sillas} p.` : ''))}
                     </span>
                   </button>
                 ))}
@@ -242,7 +244,7 @@ export function HojaVoz({ productos, money, onClose, onAgregar }: {
             <div className="sv-voz-ring"><Icon name="mic" size={30} /></div>
             <div style={{ fontSize: 17, fontWeight: 600 }}>Escuchando…</div>
             <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', maxWidth: 280, lineHeight: 1.5 }}>
-              Dictá como le hablarías a la cocina: «dos pepián y una limonada sin hielo».
+              Dicta como le hablarías a la cocina: «dos pepián y una limonada sin hielo».
             </div>
             {texto && <div style={{ fontSize: 14, color: 'var(--u-text-2)', fontStyle: 'italic' }}>«{texto}»</div>}
             <button type="button" className="sv-cta" data-tone="quiet" style={{ maxWidth: 220 }} onClick={() => rec.current?.stop()}>
@@ -374,7 +376,7 @@ export function HojaLinea({ linea, money, onClose, onServir, onDeshacerServir, o
         )}
 
         {linea.fase === 'cocina' ? (
-          <button type="button" className="sv-cta" style={{ background: 'var(--c-info-solid)', color: 'var(--c-on-solid)' }} onClick={onServir}>
+          <button type="button" className="sv-cta" data-tone="info" onClick={onServir}>
             <Icon name="check" size={18} />
             Marcar como servido
           </button>

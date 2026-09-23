@@ -106,7 +106,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
           aria-hidden
           style={{
             width: 8, height: 8, borderRadius: 99,
-            background: enabled ? '#4ade80' : 'var(--u-text-4)',
+            background: enabled ? 'var(--c-ok)' : 'var(--u-text-4)',
             boxShadow: enabled ? '0 0 8px rgba(74,222,128,0.8)' : 'none', flexShrink: 0,
           }}
         />

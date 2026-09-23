@@ -183,7 +183,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             <button type="button" onClick={applyTemplate} disabled={!selectedTpl || tplPending} className="press btn-white" style={{ padding: '9px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5, border: 'none', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
               Aplicar
             </button>
-            <button type="button" onClick={removeTemplate} disabled={!selectedTpl || tplPending} className="press" style={{ padding: '9px 13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid rgba(239,68,68,0.3)', background: 'transparent', color: '#f87171', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
+            <button type="button" onClick={removeTemplate} disabled={!selectedTpl || tplPending} className="press" style={{ padding: '9px 13px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5, border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', opacity: !selectedTpl || tplPending ? 0.55 : 1 }}>
               Borrar
             </button>
           </div>
@@ -200,7 +200,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             {tplPending ? 'Guardando…' : 'Guardar como plantilla'}
           </button>
         </div>
-        {tplMsg && <span style={{ fontSize: 12.5, color: tplMsg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{tplMsg}</span>}
+        {tplMsg && <span style={{ fontSize: 12.5, color: tplMsg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{tplMsg}</span>}
       </Section>}
 
       {/* ── Marca ── */}
@@ -462,7 +462,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
               type="button"
               className="press"
               onClick={() => { if (window.confirm('¿Limpiar el CSS personalizado?')) setCss(''); }}
-              style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'transparent', color: '#f87171' }}
+              style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)' }}
             >
               Limpiar
             </button>
@@ -493,7 +493,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         >
           Vista previa ↗
         </a>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#f87171' : '#4ade80' }}>{msg}</span>}
+        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
       </div>
     </div>
 
@@ -676,7 +676,7 @@ function StringListCtl({ label, items, onChange }: { label: string; items: strin
               type="button"
               onClick={() => onChange(items.filter((_, j) => j !== i))}
               className="press"
-              style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.25)', background: 'transparent', color: '#f87171', flexShrink: 0 }}
+              style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)', flexShrink: 0 }}
             >
               Quitar
             </button>

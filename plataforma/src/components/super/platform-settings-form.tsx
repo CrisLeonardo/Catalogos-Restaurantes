@@ -77,13 +77,13 @@ export default function PlatformSettingsForm({ settings }: Props) {
         </div>
 
         {errorMsg && (
-          <p style={{ fontSize: 13, color: '#f87171', padding: '10px 14px', borderRadius: 8, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)' }}>
+          <p style={{ fontSize: 13, color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 8, background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
             {errorMsg}
           </p>
         )}
 
         {saved && (
-          <p style={{ fontSize: 13, color: '#4ade80', padding: '10px 14px', borderRadius: 8, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.25)' }}>
+          <p style={{ fontSize: 13, color: 'var(--c-ok)', padding: '10px 14px', borderRadius: 8, background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)' }}>
             Configuración guardada correctamente.
           </p>
         )}

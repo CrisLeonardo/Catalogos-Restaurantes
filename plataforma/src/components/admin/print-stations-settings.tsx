@@ -148,8 +148,8 @@ export default function PrintStationsSettings() {
                   no se nota hasta que la plancha se queda sin papeles. */}
               <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', flex: 1, minWidth: 140 }}>
                 {s.isDefault
-                  ? `${cuenta(s.id) + sinRepartir} de ${cfg.categorias.length} categorías · también recoge lo que nadie repartió`
-                  : `${cuenta(s.id)} de ${cfg.categorias.length} categorías`}
+                  ? `${cuenta(s.id) + sinRepartir} de ${cfg.categorias.length} ${cfg.categorias.length === 1 ? 'categoría' : 'categorías'} · también recoge lo que nadie repartió`
+                  : `${cuenta(s.id)} de ${cfg.categorias.length} ${cfg.categorias.length === 1 ? 'categoría' : 'categorías'}`}
               </span>
               {!s.isDefault && (
                 <Button

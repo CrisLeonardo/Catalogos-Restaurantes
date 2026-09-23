@@ -110,7 +110,10 @@ export function PlanChip({ plan }: { plan: string | null | undefined }) {
   return (
     <Badge
       variant="neutral"
-      style={{ background: `color-mix(in srgb, ${dot} 13%, transparent)`, color: dot, borderColor: `color-mix(in srgb, ${dot} 28%, transparent)` }}
+      /* La TINTA mezcla el color del plan con la del texto: el color puro
+         era legible en oscuro y en el claro por defecto se quedaba en
+         2.3:1 («Estándar» verde, «Básico» gris sobre blanco). */
+      style={{ background: `color-mix(in srgb, ${dot} 13%, transparent)`, color: `color-mix(in srgb, ${dot} 62%, var(--u-text))`, borderColor: `color-mix(in srgb, ${dot} 28%, transparent)` }}
     >
       {planLabel(p)}
     </Badge>

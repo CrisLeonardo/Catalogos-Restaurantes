@@ -169,9 +169,13 @@ export default function HojaCobro({
     onCobrarTodo(pagos);
   }
 
-  const cta = esParcial
-    ? `Cobrar ${money(importeParte)} de esta parte`
-    : `Cobrar ${money(base)} y cerrar`;
+  /* Sin nada marcado en «por platos» el botón no puede prometer
+     «Cobrar Q0.00 y cerrar»: dice lo que falta por hacer. */
+  const cta = modo === 'platos' && parte.length === 0
+    ? 'Marca lo que paga esta persona'
+    : esParcial
+      ? `Cobrar ${money(importeParte)} de esta parte`
+      : `Cobrar ${money(base)} y cerrar`;
 
   return (
     <Hoja onClose={onClose} label={`Cobrar ${titulo}`}>
@@ -307,7 +311,10 @@ export default function HojaCobro({
                   style={{ flex: '0 0 auto', minWidth: 0 }}
                   onClick={() => setRecibido(recibido === v ? null : v)}
                 >
-                  {v === base ? `Justo ${redondear(v)}` : redondear(v)}
+                  {/* «Justo» es el importe EXACTO: redondeado, una cuenta de
+                      Q48.50 decía «Justo Q49» y apuntaba 48.50. Los billetes
+                      sí van sin decimales. */}
+                  {v === base ? `Justo ${money(v)}` : redondear(v)}
                 </button>
               ))}
             </div>

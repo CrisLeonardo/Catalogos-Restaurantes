@@ -184,8 +184,13 @@
   --admin-panel-accent:  #D97757;
   --admin-panel-text:    #F5F3EF;
   --admin-panel-text-2:  rgba(245,243,239,0.74);
-  --admin-panel-text-3:  rgba(245,243,239,0.50);
-  --admin-panel-text-4:  rgba(245,243,239,0.48);
+  /* 0.56 / 0.53 y no 0.50 / 0.48: medido en el tema oscuro, la tinta de
+     pistas sobre una TARJETA (6 % de blanco encima del fondo) quedaba en
+     4.35:1 —«Todavía no autorizado», «Sin control», la nota de la
+     validación por mapa—. Sobre el fondo pelado sí pasaba; sobre tarjeta
+     no. La 3 sube con ella para seguir por encima de la 4. */
+  --admin-panel-text-3:  rgba(245,243,239,0.56);
+  --admin-panel-text-4:  rgba(245,243,239,0.53);
   --admin-panel-hair:    rgba(245,243,239,0.10);
   --admin-panel-hair-2:  rgba(245,243,239,0.18);
   --admin-panel-btn:         var(--admin-panel-accent);
@@ -402,8 +407,8 @@ html[data-admin-area] {
   /* Tinta y fondo del área de contenido (antes calculados por tenant). */
   --admin-content-text:   #F5F3EF;
   --admin-content-text-2: rgba(245, 243, 239, 0.74);
-  --admin-content-text-3: rgba(245, 243, 239, 0.50);
-  --admin-content-text-4: rgba(245, 243, 239, 0.48);
+  --admin-content-text-3: rgba(245, 243, 239, 0.56);
+  --admin-content-text-4: rgba(245, 243, 239, 0.53);
   --admin-content-hair:   rgba(245, 243, 239, 0.10);
   --admin-content-hair-2: rgba(245, 243, 239, 0.18);
   --admin-content-bg-solid: #0b0b0c;
@@ -811,6 +816,22 @@ html[data-scheme="light"] .btn-white {
   background: var(--brand-accent); color: var(--brand-on-accent, #fff); border: none;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-accent) 35%, transparent);
 }
+/* El botón principal de los formularios sueltos: WhatsApp («Conectar»),
+   Repartidores («Agregar») y la pantalla del repartidor («Salí con el
+   pedido», «Entregué el pedido»). Esos componentes usaban `btn-primary`
+   desde que se escribieron, pero la clase NUNCA existió en esta hoja: los
+   botones salían con el aspecto gris del navegador y 24 px de alto. Es el
+   mismo botón que `.btn-accent`, con tamaño de dedo. */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 20px; border: none; border-radius: 12px;
+  background: var(--brand-accent); color: var(--brand-on-accent, #fff);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-accent) 35%, transparent);
+  transition: filter 140ms var(--ease-out), opacity 140ms var(--ease-out);
+}
+.btn-primary:hover { filter: brightness(0.95); }
+.btn-primary:disabled { opacity: 0.6; cursor: default; filter: none; }
 /* Antes era borde 1px + fondo transparente puro: sobre paletas de baja
    saturación (Zen Carbón, Marfil & Oro…) el CTA principal (portada/checkout)
    casi no se distinguía del fondo — apenas un hairline. Ahora lleva un
@@ -1015,8 +1036,8 @@ html[data-scheme="light"] .btn-white {
      Evita texto claro sobre fondo claro cuando el dueño personaliza el panel. */
   --u-text:   var(--admin-content-text,   var(--brand-text));
   --u-text-2: var(--admin-content-text-2, rgba(245,243,239,0.74));
-  --u-text-3: var(--admin-content-text-3, rgba(245,243,239,0.50));
-  --u-text-4: var(--admin-content-text-4, rgba(245,243,239,0.48));
+  --u-text-3: var(--admin-content-text-3, rgba(245,243,239,0.56));
+  --u-text-4: var(--admin-content-text-4, rgba(245,243,239,0.53));
   --u-hair:   var(--admin-content-hair,   rgba(245,243,239,0.10));
   --u-hair-2: var(--admin-content-hair-2, rgba(245,243,239,0.18));
 }
@@ -1034,7 +1055,8 @@ html[data-scheme="light"] .btn-white {
 }
 /* Botones primarios del dashboard: color personalizable (no afecta al mesero,
    que vive fuera de .admin-main y conserva el acento de la marca). */
-.admin-main .btn-accent {
+.admin-main .btn-accent,
+.admin-main .btn-primary {
   background: var(--admin-panel-btn);
   color: var(--admin-panel-btn-text);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--admin-panel-btn) 35%, transparent);
@@ -1052,8 +1074,12 @@ html[data-scheme="light"] .btn-white {
   --u-hair-2: var(--admin-panel-hair-2);
 }
 /* Título de la pantalla. El tamaño vive aquí y no en línea para que el
-   teléfono pueda bajarlo sin pelearse con un `!important`. */
-.admin-topbar h1 { font-size: 22px; }
+   teléfono pueda bajarlo sin pelearse con un `!important`.
+   `line-height: 1.2` porque el título se recorta con `overflow: hidden`
+   (para la elipsis) y el 0.95 de `.t-display` dejaba la caja más baja que
+   las letras: se comía el rabo de la «y» de «Hoy» y la «p» de «Tomar
+   pedidos» (medido: 24 px de letra en 21 de caja). */
+.admin-topbar h1 { font-size: 22px; line-height: 1.2; }
 /* Piezas que solo tienen sitio en escritorio (ayuda, instalar, tema): en
    móvil se apagan y su contenido reaparece dentro del menú "⋯". */
 .adm-desk-only { display: flex; align-items: center; gap: 14px; }
@@ -1159,7 +1185,7 @@ html[data-scheme="light"] .btn-white {
    Ahora la altura se declara UNA vez y los seis la leen sumándole su
    propio colchón:
 
-     · `.admin-content`   la barra + 12  (colchón del final de la lista)
+     · `.admin-content`   la barra + 34  (el voladizo del círculo + aire)
      · `.adm-savebar`     la barra + 10  (pastilla de guardado, flota)
      · `.adm-float-alert` la barra + 16  (pedido nuevo, llamada de mesa)
      · `.waiter-cart-bar` la barra       (carrito del mesero)
@@ -1331,7 +1357,13 @@ html[data-scheme="light"] .btn-white {
    teléfono la barra lateral entera se apaga, y un `display:flex` en línea
    habría obligado a pelearlo con `!important` desde la media query. */
 .admin-brand { display: flex; align-items: center; gap: 11px; }
-.admin-usercard { display: flex; align-items: center; gap: 10px; }
+/* «Salir» en la barra de título de Super Admin: solo en el teléfono (ver
+   components/super/shell.tsx). */
+.super-mobile-only { display: none; }
+.nav-corto { display: none; }
+/* 8 y no 10: con 10, «Administrador» se quedaba a 3 px de caber junto a
+   «Salir» y salía como «Administrad…». */
+.admin-usercard { display: flex; align-items: center; gap: 8px; }
 .admin-switch-restaurant { display: flex; align-items: center; gap: 9px; }
 .admin-navlink .nav-label { flex: 1; }
 .admin-navlink:hover { background: var(--adm-card-hover, color-mix(in srgb, var(--admin-panel-text) 7%, transparent)); color: var(--u-text-2); }
@@ -1453,6 +1485,9 @@ html[data-scheme="light"] .btn-white {
   .admin-section,
   .adm-desk-only { display: none; }
   .admin-more { display: grid; }
+  .super-mobile-only { display: inline-flex; }
+  .admin-nav .nav-largo { display: none; }
+  .admin-nav .nav-corto { display: inline; }
 
   /* Barra de título: la única banda de arriba, y pegada (antes era
      `static`, así que al desplazar una lista larga se perdía de vista en
@@ -1629,8 +1664,13 @@ html[data-scheme="light"] .btn-white {
      explicación sigue estando en escritorio, donde no cuesta nada. */
   .adm-settings-index [data-slot="list-desc"] { display: none; }
 
-  /* Aire para que la barra inferior no tape el final del contenido. */
-  .admin-content { padding: 16px 14px calc(var(--adm-nav-h) + 12px + env(safe-area-inset-bottom, 0px)); }
+  /* Aire para que la barra inferior no tape el final del contenido. Los
+     12 px de colchón no bastaban: el círculo de «tomar pedido» SOBRESALE
+     28 px por encima de la barra, y al llegar al final de una página el
+     último botón centrado («Guardar operación» en Horarios, medido a 768
+     px) quedaba con su canto inferior debajo del círculo. 34 = 28 del
+     voladizo + 6 de aire. */
+  .admin-content { padding: 16px 14px calc(var(--adm-nav-h) + 34px + env(safe-area-inset-bottom, 0px)); }
   /* La barra de guardado se pega ENCIMA de la barra de destinos, no debajo. */
   .adm-savebar { bottom: calc(var(--adm-nav-h) + 10px + env(safe-area-inset-bottom, 0px)); }
 
@@ -3095,8 +3135,13 @@ html[data-platform] .asphalt::after { display: none; }
    una tira de resumen encogida convierte «Q1,904.00» en «Q1,9…» y
    «Mesas con gente» en «Mes…», que es peor que no enseñarla. */
 .salon-top { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; }
+/* `flex-basis: auto` y no 480 px: con 480 la tira CABÍA en la línea
+   encogiéndose —contenido de 592 metido en 518— y el salto de línea que
+   promete el comentario de arriba no llegaba nunca; «Mesas cerradas hoy»
+   quedaba cortado a «Mesas ce» en una PC de 1.440. Con `auto` la base es
+   su contenido: si no cabe entera, los interruptores bajan. */
 .salon-summary {
-  flex: 1 1 480px; min-width: 0; display: flex;
+  flex: 1 1 auto; min-width: 0; display: flex;
   overflow-x: auto; scrollbar-width: none;
   border: 1px solid var(--u-hair); border-radius: 14px;
   background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
@@ -3650,8 +3695,15 @@ html[data-platform] .asphalt::after { display: none; }
   border-color: var(--brand-accent); color: var(--u-text);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
 }
-/* En el teléfono es un campo de verdad: 26 px no se tocan con el pulgar. */
-@media (max-width: 767px) { .caja-turno { height: 40px; padding: 0 10px; font-size: 15px; } }
+/* En el teléfono —y en cualquier pantalla de dedo, una tablet en vertical
+   incluida— es un campo de verdad: 26 px no se tocan con el pulgar. */
+@media (max-width: 767px), (pointer: coarse) { .caja-turno { height: 40px; padding: 0 10px; font-size: 15px; } }
+
+/* La «×» de anular un plato en la tarjeta del pedido dibuja 22 px —más
+   grande descuadraría la fila— pero se toca en 36 × 44: el área invisible
+   de alrededor es la que recibe el dedo. */
+.order-void-x { position: relative; }
+.order-void-x::after { content: ''; position: absolute; inset: -7px -11px; }
 
 .caja-denom { display: grid; grid-template-columns: 58px 1fr 84px; gap: 8px; align-items: center; }
 .caja-denom-label {
@@ -3900,6 +3952,16 @@ html[data-platform] .asphalt::after { display: none; }
   display: flex; flex-direction: column;
   background: var(--adm-bg, var(--brand-bg));
   color: var(--u-text);
+  /* RELLENOS CON TEXTO BLANCO ENCIMA. Los `--c-*-solid` del sistema son
+     tonos vivos pensados para que se vea el COLOR, y con texto blanco se
+     quedan cortos: «Cobrar y cerrar mesa» medía 3.3:1 en claro y 2.3:1
+     en oscuro (#22c55e), y AA pide 4.5 para un botón de 16 px. Aquí se
+     oscurecen lo justo para que el texto se lea en los dos temas (≥ 4.8
+     medido) sin dejar de ser verde, rojo y azul. Las hojas y el aviso
+     viven dentro de `.sv`, así que las heredan. */
+  --sv-ok-fill:     color-mix(in srgb, var(--c-ok-solid) 66%, #000);
+  --sv-danger-fill: color-mix(in srgb, var(--c-danger-solid) 80%, #000);
+  --sv-info-fill:   color-mix(in srgb, var(--c-info-solid) 80%, #000);
 }
 
 /* EL MÓDULO SE MIDE A SÍ MISMO, NO A LA VENTANA.
@@ -3947,6 +4009,13 @@ html[data-platform] .asphalt::after { display: none; }
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--u-text) 16%, transparent) transparent;
 }
+/* Lo que va DENTRO de una zona que se desplaza no encoge: se desplaza.
+   Las filas del riel son hijas de una columna flex con alto fijo y llevan
+   `min-height: 44px` explícito, que sustituye al mínimo automático del
+   contenido; con la lista más larga que la pantalla, `flex-shrink: 1` las
+   aplastaba a 44 px con un contenido de 45 + 22 de relleno, y el chip de
+   estado colgaba por fuera del borde de la fila. */
+.sv-vs > * { flex-shrink: 0; }
 .sv-vs::-webkit-scrollbar { width: 4px; }
 .sv-vs::-webkit-scrollbar-track { background: transparent; }
 .sv-vs::-webkit-scrollbar-thumb {
@@ -4016,7 +4085,7 @@ html[data-platform] .asphalt::after { display: none; }
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 8px; border-radius: var(--radius-md);
   font-size: 11px; font-weight: 700; white-space: nowrap;
-  background: var(--c-danger-solid); color: var(--c-on-solid);
+  background: var(--sv-danger-fill); color: var(--c-on-solid);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4151,6 +4220,13 @@ html[data-platform] .asphalt::after { display: none; }
   background: var(--surface-2); color: inherit;
 }
 .sv-mesa[data-on="1"] .sv-mesa-n { background: color-mix(in srgb, var(--brand-bg) 14%, transparent); }
+/* El chip de estado sobre la fila ELEGIDA (fondo invertido): su relleno es
+   un 16 % de color sobre lo que haya debajo, y debajo ahora hay tinta —
+   «Sin enviar» medía 1.6:1, marrón sobre casi negro—. Se le da la
+   superficie de tarjeta para que vuelva a ser el chip de siempre. */
+.sv-mesa[data-on="1"] .sv-chip[data-st] {
+  background: linear-gradient(var(--sv-bg), var(--sv-bg)), var(--adm-card);
+}
 .sv-mesa-id { flex: 1; min-width: 0; }
 .sv-mesa-title {
   display: block; font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
@@ -4269,7 +4345,11 @@ html[data-platform] .asphalt::after { display: none; }
 }
 /* Agotado: se VE, pero no se puede pedir. Esconderlo no contesta la
    pregunta que el mesero tiene delante del cliente. */
-.sv-dish[data-out="1"] { opacity: 0.55; cursor: default; }
+/* Se apaga el CONTENIDO y no la tarjeta: con la tarjeta entera a 0.55
+   la propia etiqueta «Agotado» se quedaba sin contraste. */
+.sv-dish[data-out="1"] { cursor: default; background: var(--surface-1); }
+.sv-dish[data-out="1"] .sv-dish-name,
+.sv-dish[data-out="1"] .sv-dish-price { opacity: 0.55; }
 .sv-dish[data-out="1"]:hover { border-color: var(--u-hair); }
 .sv-dish-name {
   display: block; font-size: 14.5px; font-weight: 600; line-height: 1.25;
@@ -4296,11 +4376,17 @@ html[data-platform] .asphalt::after { display: none; }
   font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
   display: grid; place-items: center;
 }
+/* Vive en el pie, en el sitio de «Opciones» (ver carta.tsx): arriba, en
+   la esquina, se montaba sobre el nombre del plato. */
 .sv-dish-out {
-  position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 7px;
-  font-size: 11px; font-weight: 700; white-space: nowrap;
+  padding: 4px 9px; border-radius: 7px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
   background: var(--c-warn-bg); color: var(--c-warn);
 }
+/* La rejilla lleva el mismo margen lateral que el buscador y las
+   categorías de encima: con 18 px contra 12 en el teléfono, las tarjetas
+   no caían en la misma línea que la píldora «Todos». */
+.sv-carta-list { padding: 2px 18px 20px; }
 
 .sv-vacio {
   padding: 40px 6px; text-align: center; color: var(--u-text-3);
@@ -4327,7 +4413,7 @@ html[data-platform] .asphalt::after { display: none; }
 }
 .sv-qr-badge {
   font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-  background: var(--c-info-solid); color: var(--c-on-solid);
+  background: var(--sv-info-fill); color: var(--c-on-solid);
   padding: 3px 7px; border-radius: 6px;
 }
 .sv-qr-title { font-size: 13.5px; font-weight: 600; color: var(--c-info); }
@@ -4376,13 +4462,23 @@ html[data-platform] .asphalt::after { display: none; }
   font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600;
   color: var(--c-info); min-width: 24px; flex-shrink: 0;
 }
+/* El cuerpo del renglón abre lo que se puede hacer con ese plato. Ocupa
+   todo el alto de la fila: antes solo tocaba la línea de texto (21 px de
+   una fila de 64) y el dedo caía en el relleno sin que pasara nada. */
+.sv-line-body {
+  flex: 1; min-width: 0; align-self: stretch;
+  display: flex; align-items: center; gap: 10px;
+  margin: -10px 0 -10px -10px; padding: 10px 0 10px 10px;
+  border: none; background: none; color: inherit; font: inherit;
+  text-align: left; cursor: pointer; border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
 .sv-serve {
   height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-md); border: none;
   background: var(--c-info-bg); color: var(--c-info);
   font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
   transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
 }
-.sv-serve:hover { background: var(--c-info-solid); color: var(--c-on-solid); }
+.sv-serve:hover { background: var(--sv-info-fill); color: var(--c-on-solid); }
 .sv-serve:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Renglón EN LA MESA ────────────────────────────────────── */
@@ -4394,8 +4490,10 @@ html[data-platform] .asphalt::after { display: none; }
 .sv-line-done-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: var(--u-text-2); }
 .sv-line-done-total { font-family: var(--ui-font-mono); font-size: 13px; color: var(--u-text-3); }
 /* Cobrada en un cobro por partes: se queda a la vista, saldada. Borrarla
-   sería anular una venta. */
-.sv-line[data-paid="1"], .sv-line-done[data-paid="1"] { opacity: 0.6; }
+   sería anular una venta. Se apaga lo que se LEE, no los botones: en
+   «Falta servir» el plato pagado sigue necesitando su «Servido». */
+.sv-line[data-paid="1"] .sv-line-body,
+.sv-line-done[data-paid="1"] > :not(.sv-paid) { opacity: 0.75; }
 .sv-paid {
   flex-shrink: 0; padding: 3px 8px; border-radius: 7px; white-space: nowrap;
   font-size: 11px; font-weight: 700;
@@ -4428,16 +4526,23 @@ html[data-platform] .asphalt::after { display: none; }
 }
 .sv-cta:hover { background: var(--brand-accent-ink); }
 .sv-cta:disabled { opacity: 0.55; cursor: default; }
-.sv-cta[data-tone="ok"] { background: var(--c-ok-solid); color: var(--c-on-solid); }
-.sv-cta[data-tone="ok"]:hover { background: var(--c-ok); }
+.sv-cta[data-tone="ok"] { background: var(--sv-ok-fill); color: var(--c-on-solid); }
+/* El hover oscurece un paso más. Antes iba a `--c-ok`, que es TINTA: en
+   oscuro es un verde claro (#4ade80) y el texto blanco encima desaparecía. */
+.sv-cta[data-tone="ok"]:hover { background: color-mix(in srgb, var(--sv-ok-fill) 86%, #000); }
 .sv-cta[data-tone="quiet"] {
   background: var(--adm-card); color: var(--u-text); border: 1px solid var(--u-hair-2);
 }
 .sv-cta[data-tone="quiet"]:hover { background: var(--adm-card-hover, var(--surface-2)); }
-.sv-cta[data-tone="danger"] { background: var(--c-danger-solid); color: var(--c-on-solid); }
+.sv-cta[data-tone="danger"] { background: var(--sv-danger-fill); color: var(--c-on-solid); }
+.sv-cta[data-tone="danger"]:hover { background: color-mix(in srgb, var(--sv-danger-fill) 86%, #000); }
+.sv-cta[data-tone="info"] { background: var(--sv-info-fill); color: var(--c-on-solid); }
+.sv-cta[data-tone="info"]:hover { background: color-mix(in srgb, var(--sv-info-fill) 86%, #000); }
+/* La tecla va con un filete del color del texto y sin relleno: con un
+   velo blanco encima del botón, el propio «Ctrl ⏎» bajaba a 3.3:1. */
 .sv-cta-key {
-  font-family: var(--ui-font-mono); font-size: 11px; padding: 3px 6px; border-radius: 6px;
-  background: color-mix(in srgb, var(--c-on-solid) 20%, transparent);
+  font-family: var(--ui-font-mono); font-size: 11px; padding: 2px 6px; border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
 }
 
 /* Sin mesa elegida. */
@@ -4693,9 +4798,13 @@ html[data-platform] .asphalt::after { display: none; }
    ACUSE DE RECIBO
    ══════════════════════════════════════════════════════════════ */
 .sv-toast {
-  position: fixed; left: 50%; transform: translateX(-50%);
+  /* Centrado con márgenes y NO con `translateX(-50%)`: la animación
+     `fade-up` escribe `transform` y, con `both`, se quedaba con la última
+     palabra — el aviso acababa con el canto IZQUIERDO en el centro de la
+     pantalla (medido: 720 de 1.440). */
+  position: fixed; left: 0; right: 0; margin-inline: auto; width: max-content;
   bottom: calc(26px + var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
-  z-index: 700; max-width: 90vw; text-align: center;
+  z-index: 700; max-width: min(90vw, 560px); text-align: center;
   display: flex; align-items: center; gap: 12px;
   background: var(--u-text); color: var(--brand-bg);
   padding: 13px 20px; border-radius: var(--radius-lg);
@@ -4821,11 +4930,46 @@ html[data-platform] .asphalt::after { display: none; }
   .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
   .sv-dish-name { font-size: 15px; padding-right: 32px; }
   .sv-dish-price { font-size: 14px; }
-  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Tantas columnas como quepan, con tarjetas de 150 px o más. Con DOS
+     fijas, una tablet de 780 px de módulo enseñaba cuatro platos enormes
+     mientras el salón, al lado, ya iba a cuatro columnas. */
+  .sv-dishes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .sv-carta-head { padding: 12px 12px 8px; }
   .sv-carta-bars { padding: 0 12px 10px; }
+  .sv-carta-list { padding: 2px 12px 16px; }
   .sv-ticket-body { padding: 14px 12px 16px; }
   .sv-foot-total { font-size: 28px; }
+}
+/* Regla 1 del handoff: en el teléfono, dos columnas y nunca una. */
+@container sv (max-width: 640px) {
+  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── LA BARRA DE DESTINOS DEL TELÉFONO ─────────────────────────
+   El resto del panel esquiva esa barra con el relleno inferior de
+   `.admin-content`, y este módulo lo pone a 0 para comerse la pantalla
+   (arriba, `.admin-content:has(> .sv)`). Nadie lo reponía: la barra del
+   módulo —«Pedido para llevar», «Enviar a cocina», «Cobrar y cerrar
+   mesa»— quedaba DEBAJO de la de destinos (medido a 375 × 812: botón en
+   744–800, barra de destinos en 756–812) y encima le caía el círculo de
+   «tomar pedido», que sobresale 28 px. En el teléfono no había forma de
+   mandar un pedido a cocina.
+
+   Mismo corte que la barra (820 px) y mismo trato que `.caja-foot`: el
+   módulo termina donde empieza la barra, la muesca ya la reserva la
+   barra (así que la barra del módulo no la suma otra vez) y el círculo
+   se retrae a icono en línea — estando en «Tomar pedido», además, es un
+   atajo a la pantalla en la que ya se está. */
+@media (max-width: 820px) {
+  .admin-content:has(> .sv) {
+    padding-bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+  }
+  .admin-content:has(> .sv) .sv-m-foot { padding-bottom: 12px; }
+  .admin-content:has(> .sv) .sv-foot { padding-bottom: 14px; }
+
+  .admin-shell:has(.sv) .admin-fab-dot { display: none; }
+  .admin-shell:has(.sv) .admin-fab-flat { display: block; }
+  .admin-shell:has(.sv) .admin-fab { justify-content: center; gap: 3px; }
 }
 
 /* El plano vive en una capa FIJA, fuera del armazón: ahí lo que manda es
@@ -4838,5 +4982,5 @@ html[data-platform] .asphalt::after { display: none; }
    sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
    tablet de 1280 px sigue siendo un dedo. */
 @media (pointer: coarse) {
-  .sv-kbd, .sv-fav-key, .sv-cta-key, .sv-foot-keys, .sv-tab-key { display: none; }
+  .sv-kbd, .sv-fav-key, .sv-cta-key, .sv-foot-keys, .sv-tab-key, .sv-palette-foot { display: none; }
 }

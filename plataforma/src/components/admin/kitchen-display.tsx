@@ -36,8 +36,15 @@ const C_DARK = {
   hair: 'color-mix(in srgb, var(--u-text) 9%, transparent)',
   green: '#22c55e',
   amber: '#f59e0b',
-  red: '#ef4444',
+  /* -400 y no -500: es TINTA sobre panel casi negro, y con #ef4444 el reloj
+     de un pedido atrasado —lo que más hay que leer de lejos— daba 4.3:1. */
+  red: '#f87171',
   blue: '#3b82f6',
+  /* Rellenos de los botones grandes, que llevan texto BLANCO encima. Con
+     los tonos de tinta de arriba «Marcar listo» medía 2.3:1 (blanco sobre
+     #22c55e) y «Comenzar» 3.7:1; los -700 pasan de 5:1. */
+  fillGreen: '#15803d',
+  fillBlue: '#1d4ed8',
 };
 
 /* Tonos -700 a propósito: estos colores se usan como TINTA sobre panel blanco
@@ -55,6 +62,8 @@ const C_LIGHT = {
   amber: '#b45309',
   red: '#b91c1c',
   blue: '#1d4ed8',
+  fillGreen: '#15803d',
+  fillBlue: '#1d4ed8',
 };
 
 type Palette = typeof C_DARK;
@@ -421,7 +430,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
             fontSize: 16,
             fontWeight: 800,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            background: isNew ? C.blue : C.green,
+            background: isNew ? C.fillBlue : C.fillGreen,
             color: '#fff',
             letterSpacing: '0.01em',
           }}

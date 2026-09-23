@@ -25,6 +25,7 @@ import { Icon } from '@/components/icons';
 import { ChipEstado, ChipMano, Mono } from '@/components/admin/servicio/pieces';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
 import { subtituloDeMesa, type MesaServicio } from '@/lib/servicio/estado';
+import { fmtMinShort } from '@/lib/table-state';
 import type { FloorPlan } from '@/lib/theme/defaults';
 
 export interface SalonProps {
@@ -238,7 +239,7 @@ export function SalonPlano({
                 ? <span className="sv-plano-total">{money(m.total)}</span>
                 : <span className="sv-plano-sub">{m.sillas ? `${m.sillas} p.` : ''}</span>}
               {m.estado !== 'libre' && m.total === 0 && (
-                <span className="sv-plano-sub">{m.minutos != null ? `${m.minutos} min` : ''}</span>
+                <span className="sv-plano-sub">{m.minutos != null ? fmtMinShort(m.minutos) : ''}</span>
               )}
               {m.atencion && <span className="sv-plano-mano" aria-hidden />}
             </button>

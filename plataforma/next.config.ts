@@ -9,7 +9,24 @@ import type { NextConfig } from "next";
    anulaba estas). Se consolidaron en el proxy; aquí queda solo
    la configuración de imágenes.
    ============================================================ */
+/* Pantallas que se fusionaron en «La PC del local» y cuyas rutas se
+   conservan por los enlaces viejos (guía impresa, correos, marcadores).
+   Se redirigen AQUÍ, antes de pintar nada, y no con `redirect()` dentro
+   de la página: allí el armazón del panel ya se había enviado, el router
+   de Next resolvía la redirección con una navegación dura y, al volver a
+   pintarse, lanzaba «Rendered more hooks than during the previous render»
+   (React #310) — visto en consola en cada carga directa de estas rutas,
+   con una recarga de más por el camino. Las páginas se quedan como
+   respaldo por si una petición llega por otro camino. */
+const FUSIONADAS_EN_MI_PC = ['impresion', 'escritorio', 'sin-internet'];
+
 const nextConfig: NextConfig = {
+  async redirects() {
+    return FUSIONADAS_EN_MI_PC.flatMap((ruta) => [
+      { source: `/panel/:slug/${ruta}`, destination: '/panel/:slug/mi-pc', permanent: false },
+      { source: `/admin/${ruta}`, destination: '/admin/mi-pc', permanent: false },
+    ]);
+  },
   images: {
     // Fotos de producto / logos servidos desde Supabase Storage. Permite que
     // next/image las optimice (redimensiona + webp) en vez de servir el original.

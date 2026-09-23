@@ -83,7 +83,8 @@ export default function Comanda({
             <button
               type="button"
               className="sv-cta"
-              style={{ height: 44, fontSize: 13.5, background: 'var(--c-info-solid)', color: 'var(--c-on-solid)' }}
+              data-tone="info"
+              style={{ height: 44, fontSize: 13.5 }}
               onClick={onAceptarQr}
               disabled={ocupado}
             >
@@ -162,13 +163,9 @@ export default function Comanda({
             <div key={l.id} className="sv-line" data-paid={l.pagada ? '1' : '0'}>
               <button
                 type="button"
+                className="sv-line-body"
                 onClick={() => onLinea(l)}
                 title="Ver qué se puede hacer con este plato"
-                style={{
-                  flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
-                  border: 'none', background: 'none', color: 'inherit', font: 'inherit',
-                  textAlign: 'left', cursor: 'pointer', padding: 0,
-                }}
               >
                 <span className="sv-line-q">{l.cantidad}×</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -176,6 +173,11 @@ export default function Comanda({
                   {l.detalle && <span className="sv-line-mods" style={{ display: 'block' }}>{l.detalle}</span>}
                 </span>
               </button>
+              {/* Cobrado en un cobro por partes y todavía en cocina: se dice
+                  con la misma etiqueta que en «En la mesa». Apagar la fila
+                  entera sin decir por qué dejaba «Servido» con cara de
+                  botón deshabilitado, y sigue haciendo falta. */}
+              {l.pagada && <span className="sv-paid">Pagado</span>}
               <button
                 type="button"
                 className="sv-serve"

@@ -43,7 +43,7 @@ export default function GenerateMonthlyButton() {
         </form>
       </div>
       {msg ? (
-        <span style={{ fontSize: 13, fontWeight: 500, color: msg.ok ? '#4ade80' : '#f87171', textAlign: 'right' }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: msg.ok ? 'var(--c-ok)' : 'var(--c-danger)', textAlign: 'right' }}>
           {msg.text}
         </span>
       ) : (

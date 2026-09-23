@@ -268,7 +268,7 @@ export default async function AdminHomePage() {
   if (onTrial && trialLeft > 3) {
     alerts.push({
       key: 'trial', href: panelHref(base, '/admin/suscripcion'), level: 'info',
-      title: `Te quedan ${trialLeft} días de prueba`,
+      title: trialLeft === 1 ? 'Te queda 1 día de prueba' : `Te quedan ${trialLeft} días de prueba`,
       desc: 'Tu menú ya está en vivo. Aprovéchalo al máximo.',
       action: 'Ver planes',
     });

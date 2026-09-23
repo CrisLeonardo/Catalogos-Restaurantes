@@ -370,7 +370,7 @@ function OrdersPanelInner({
     <>
       {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
       <StatGroup className="mb-4.5">
-        <Stat label={`Ventas hoy (${stats.todayOrders} pedidos)`} value={fmtMoney(stats.todaySales, currency)} />
+        <Stat label={`Ventas hoy (${stats.todayOrders} ${stats.todayOrders === 1 ? 'pedido' : 'pedidos'})`} value={fmtMoney(stats.todaySales, currency)} />
         <Stat label={`Pedidos hoy (${activeOrders.length} en curso)`} value={String(stats.todayOrders)} />
         <Stat label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} />
         <Stat label="En cocina (preparándose ahora)" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} />

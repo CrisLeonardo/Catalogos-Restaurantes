@@ -135,8 +135,8 @@ function StatusSelector({ defaultValue }: { defaultValue: 'active' | 'suspended'
   const [selected, setSelected] = useState<'active' | 'suspended'>(defaultValue);
 
   const options = [
-    { value: 'active' as const, label: 'Activo', color: '#4ade80' },
-    { value: 'suspended' as const, label: 'Suspendido', color: '#f87171' },
+    { value: 'active' as const, label: 'Activo', color: 'var(--c-ok)' },
+    { value: 'suspended' as const, label: 'Suspendido', color: 'var(--c-danger)' },
   ];
 
   return (
@@ -157,8 +157,8 @@ function StatusSelector({ defaultValue }: { defaultValue: 'active' | 'suspended'
               fontSize: 14,
               fontWeight: 500,
               border: '1px solid',
-              borderColor: active ? `${opt.color}44` : 'var(--u-hair)',
-              background: active ? `${opt.color}18` : 'transparent',
+              borderColor: active ? `color-mix(in srgb, ${opt.color} 27%, transparent)` : 'var(--u-hair)',
+              background: active ? `color-mix(in srgb, ${opt.color} 10%, transparent)` : 'transparent',
               color: active ? opt.color : 'var(--u-text-3)',
               cursor: 'pointer',
               transition: 'all 150ms',
@@ -179,9 +179,9 @@ function ErrorMsg({ msg }: { msg: string }) {
         marginTop: 16,
         padding: '10px 14px',
         borderRadius: 'var(--radius-md)',
-        background: 'rgba(220,50,50,0.12)',
-        border: '1px solid rgba(220,50,50,0.25)',
-        color: '#f87171',
+        background: 'var(--c-danger-bg)',
+        border: '1px solid var(--c-danger-line)',
+        color: 'var(--c-danger)',
         fontSize: 14,
       }}
     >

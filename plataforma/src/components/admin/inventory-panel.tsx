@@ -163,11 +163,11 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
 
         {tracked ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Stepper onClick={() => quick(-1)} disabled={pending || stock <= 0} icon="minus" />
+            <Stepper onClick={() => quick(-1)} disabled={pending || stock <= 0} icon="minus" label="Restar uno" />
             <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 17, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
               {stock}
             </span>
-            <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" />
+            <Stepper onClick={() => quick(1)} disabled={pending} icon="plus" label="Sumar uno" />
             <Button onClick={toggleHistory} disabled={loadingHistory} variant="secondary" size="icon" className="size-8.5" title="Historial (Kardex)">
               <Icon name="clock" size={15} />
             </Button>
@@ -231,9 +231,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Stepper({ onClick, disabled, icon }: { onClick: () => void; disabled?: boolean; icon: string }) {
+function Stepper({ onClick, disabled, icon, label }: { onClick: () => void; disabled?: boolean; icon: string; label: string }) {
   return (
-    <Button onClick={onClick} disabled={disabled} variant="secondary" size="icon" className="size-8.5">
+    <Button onClick={onClick} disabled={disabled} variant="secondary" size="icon" className="size-8.5" aria-label={label} title={label}>
       <Icon name={icon} size={16} />
     </Button>
   );

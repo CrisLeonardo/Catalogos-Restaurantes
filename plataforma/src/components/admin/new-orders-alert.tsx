@@ -178,7 +178,12 @@ export default function NewOrdersAlert({
      socket de Realtime caído, que es el caso en el que antes no pasaba
      absolutamente nada. */
   const refresh = useCallback(async () => {
-    const list = await getPendingNewOrders(restaurantId);
+    /* Sin red el sondeo falla, y es justo cuando más corre (cada 12 s con
+       el socket caído). Sin capturarlo, cada intento dejaba un «Failed to
+       fetch» sin atender en la consola. Se deja como estaba y se reintenta
+       en el siguiente tic. */
+    let list: PendingNewOrder[];
+    try { list = await getPendingNewOrders(restaurantId); } catch { return; }
     list.forEach((o) => addOrder(o, false));
     // Después de procesar el primer lote: de aquí en adelante lo que aparezca
     // por sondeo SÍ es un pedido nuevo (y suena) — es la vía que cubre el caso
@@ -219,7 +224,7 @@ export default function NewOrdersAlert({
       const o = (e as CustomEvent).detail as Order;
       if (o.restaurant_id !== restaurantId) return;
       // Igual que en el canal propio: solo lo que nadie ha atendido todavía.
-      if (o.status !== 'NEW') return;
+      if (o.status !== 'NEW' || o.waiter_id) return;
       addOrder({
         id: o.id,
         order_number:  o.order_number,
@@ -271,7 +276,12 @@ export default function NewOrdersAlert({
           // nadie ha visto todavía. Es la misma condición que usa el sondeo
           // (getPendingNewOrders filtra status = 'NEW'), que antes no coincidía
           // con lo que aceptaba este canal.
-          if (o.status !== 'NEW') return;
+          //
+          // Y por eso también fuera todo lo que trae mesero: `place_order` lo
+          // inserta en NEW y lo pasa a PREP en un UPDATE aparte, así que el
+          // INSERT llega diciendo NEW aunque ya esté en cocina. Mirando solo
+          // el estado, cada comanda del mesero sonaba como pedido nuevo.
+          if (o.status !== 'NEW' || o.waiter_id) return;
           addOrder({
             id: o.id,
             order_number:  o.order_number,

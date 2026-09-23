@@ -37,7 +37,7 @@ import { useRouter } from 'next/navigation';
 
 import { Icon } from '@/components/icons';
 import {
-  ChipEstado, Ghost, Key, Kicker, Pill, Toast, useReloj, type Aviso,
+  ChipEstado, Ghost, Key, Kicker, Pill, Toast, atajo, useReloj, useTeclaMod, type Aviso,
 } from '@/components/admin/servicio/pieces';
 import { SalonFichas, SalonPlano, SalonRiel, hayPlano, nivelesConMesas } from '@/components/admin/servicio/salon';
 import Carta from '@/components/admin/servicio/carta';
@@ -165,6 +165,7 @@ export default function ServicioPanel({
   const router = useRouter();
   const servicio = useServiceMode();
   const now = useReloj();
+  const mod = useTeclaMod();
 
   /* ── Qué está elegido ─────────────────────────────────────── */
   const [sel, setSel] = useState<Sel>({ kind: 'none' });
@@ -336,7 +337,8 @@ export default function ServicioPanel({
       }
       if (contarCarts(d.carts) === 0) return;
       setCarts(d.carts);
-      setAviso({ text: `Se recuperaron ${contarCarts(d.carts)} platos sin enviar.` });
+      const n = contarCarts(d.carts);
+      setAviso({ text: n === 1 ? 'Se recuperó 1 plato sin enviar.' : `Se recuperaron ${n} platos sin enviar.` });
     } catch { /* modo privado: el borrador es un extra */ }
   }, [restaurantId, waiterId]);
 
@@ -888,13 +890,29 @@ export default function ServicioPanel({
 
   const abiertas = useMemo(() => mesas.filter((m) => m.estado !== 'libre'), [mesas]);
 
+  /* ⌘K / Ctrl K es de la PALETA del módulo, y de nadie más mientras el
+     módulo esté abierto. El buscador global del panel escucha la misma
+     tecla en `window`: sin esto se abrían LOS DOS a la vez, la paleta
+     encima y el buscador debajo, y el foco se lo quedaba el de debajo —lo
+     que se tecleaba iba a una caja que no se veía—. Se atiende en CAPTURA
+     y se corta la propagación, así el otro ni se entera. */
+  useEffect(() => {
+    function onModK(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setPaleta(true);
+    }
+    window.addEventListener('keydown', onModK, true);
+    return () => window.removeEventListener('keydown', onModK, true);
+  }, []);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement | null;
       const escribiendo = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
 
-      if (mod && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); setPaleta(true); return; }
       if (mod && e.key === 'Enter') {
         e.preventDefault();
         if (resumen.nNuevas > 0) enviar();
@@ -917,6 +935,13 @@ export default function ServicioPanel({
         return;
       }
       if (e.key === '?') { e.preventDefault(); setHoja({ k: 'atajos' }); return; }
+      /* «/» vuelve al buscador de la carta. La hoja de atajos lo prometía
+         y nadie lo atendía. */
+      if (e.key === '/' && !mod) {
+        const campo = document.querySelector<HTMLInputElement>('.sv-find > input');
+        if (campo) { e.preventDefault(); campo.focus(); campo.select(); }
+        return;
+      }
       if (/^[1-9]$/.test(e.key)) {
         const i = Number(e.key) - 1;
         if (e.altKey) {
@@ -975,14 +1000,14 @@ export default function ServicioPanel({
   const conPlano = hayPlano(floorPlan);
 
   const accionesPaleta: AccionPaleta[] = useMemo(() => [
-    { label: 'Enviar a cocina', hint: '⌘⏎', run: () => { setPaleta(false); enviar(); }, enabled: resumen.nNuevas > 0 },
+    { label: 'Enviar a cocina', hint: atajo(mod, '⏎'), run: () => { setPaleta(false); enviar(); }, enabled: resumen.nNuevas > 0 },
     { label: 'Cobrar y cerrar mesa', hint: 'Alt C', run: () => { setPaleta(false); setHoja({ k: 'cobrar' }); }, enabled: puedeCobrar },
     { label: 'Pedido para llevar', hint: 'sin mesa', run: () => { setPaleta(false); setHoja({ k: 'llevar' }); }, enabled: pickupEnabled },
     { label: 'Juntar o mover mesa', hint: 'la mesa abierta', run: () => { setPaleta(false); setHoja({ k: 'mesa' }); }, enabled: sel.kind === 'mesa' },
     { label: 'Cobrar algo que no está en la carta', hint: 'artículo libre', run: () => { setPaleta(false); setHoja({ k: 'libre', nombre: '' }); }, enabled: sel.kind !== 'none' },
     { label: 'Modo aprendiz', hint: aprendiz ? 'activo' : 'apagado', run: () => { setPaleta(false); cambiarAprendiz(); } },
     { label: 'Atajos de teclado', hint: '?', run: () => { setPaleta(false); setHoja({ k: 'atajos' }); } },
-  ], [resumen.nNuevas, puedeCobrar, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz]);
+  ], [resumen.nNuevas, puedeCobrar, pickupEnabled, sel.kind, aprendiz, enviar, cambiarAprendiz, mod]);
 
   /* ══════════════════════════════════════════════════════════
      LO QUE SE DIBUJA
@@ -1020,11 +1045,14 @@ export default function ServicioPanel({
     ocupado: trabajando,
   };
 
+  /* La mesa se está leyendo y todavía no hay nada que enseñar. */
+  const leyendo = cargandoMesa && lineas.length === 0;
+
   const pie = (
     <>
       <div className="sv-foot-row">
         <span className="sv-foot-label">Total</span>
-        <span className="sv-foot-total">{money(totalMesa)}</span>
+        <span className="sv-foot-total">{leyendo ? '—' : money(totalMesa)}</span>
       </div>
       {desglose && desglose.tip > 0 && (
         <div className="sv-foot-note">Propina incluida: {money(desglose.tip)}</div>
@@ -1037,7 +1065,7 @@ export default function ServicioPanel({
       {resumen.nNuevas > 0 && (
         <button type="button" className="sv-cta" onClick={enviar} disabled={enviando}>
           {enviando ? 'Enviando…' : `Enviar a cocina · ${resumen.nNuevas}`}
-          {conTeclado && <span className="sv-cta-key">⌘⏎</span>}
+          {conTeclado && <span className="sv-cta-key">{atajo(mod, '⏎')}</span>}
         </button>
       )}
       {puedeCobrar && (
@@ -1050,7 +1078,9 @@ export default function ServicioPanel({
         <div className="sv-foot-note">Toca un plato para empezar el pedido de mostrador.</div>
       )}
       {conTeclado && (
-        <div className="sv-foot-keys">1-9 los más pedidos · ⌘K buscar · ⌘⏎ enviar · Alt+C cobrar · ? atajos</div>
+        <div className="sv-foot-keys">
+          1-9 los más pedidos · {atajo(mod, 'K')} buscar · {atajo(mod, '⏎')} enviar · Alt C cobrar · ? atajos
+        </div>
       )}
     </>
   );
@@ -1088,7 +1118,7 @@ export default function ServicioPanel({
                 data-on={sel.kind === 'mesa' && sel.n === m.n ? '1' : '0'}
                 onClick={() => elegir(m.n)}
               >
-                {conTeclado && i < 9 && <span className="sv-tab-key">⌥{i + 1}</span>}
+                {conTeclado && i < 9 && <span className="sv-tab-key">{mod === '⌘' ? `⌥${i + 1}` : `Alt ${i + 1}`}</span>}
                 <span style={{ fontWeight: 600 }}>Mesa {m.n}</span>
                 {m.total > 0 && <span className="sv-tab-total">{redondear(m.total)}</span>}
                 {m.atencion ? <span className="sv-tab-dot" style={{ background: 'var(--c-danger-solid)' }} /> : <span className="sv-tab-dot" />}
@@ -1103,7 +1133,7 @@ export default function ServicioPanel({
 
           <Ghost onClick={() => setPaleta(true)} icon="search">
             Buscar plato, mesa o acción
-            {conTeclado && <Key>⌘K</Key>}
+            {conTeclado && <Key>{atajo(mod, 'K')}</Key>}
           </Ghost>
           <Ghost onClick={cambiarAprendiz} on={aprendiz} title="Modo aprendiz">Modo aprendiz</Ghost>
           {servicio && (
@@ -1245,11 +1275,16 @@ export default function ServicioPanel({
             {movil && (
               <div className="sv-m-foot">
                 <button type="button" className="sv-m-resumen" onClick={() => setPantalla('ticket')}>
+                  {/* Mientras se lee la mesa no se afirma nada: al abrirla
+                      el pie decía «Pedido vacío · Q0.00» de una mesa con cinco
+                      platos, y en una red lenta eso se lee como cierto. */}
                   <span className="sv-m-resumen-label">
-                    {resumen.platos > 0 ? `Pedido de ${resumen.platos} platos` : 'Pedido vacío'}
+                    {leyendo ? 'Leyendo la mesa…'
+                      : resumen.platos === 0 ? 'Pedido vacío'
+                      : `Pedido de ${resumen.platos} ${resumen.platos === 1 ? 'plato' : 'platos'}`}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="sv-m-resumen-total">{money(totalMesa)}</span>
+                    <span className="sv-m-resumen-total">{leyendo ? '—' : money(totalMesa)}</span>
                     <span style={{ color: 'var(--u-text-3)', fontSize: 13 }}>ver ▲</span>
                   </span>
                 </button>
@@ -1280,7 +1315,7 @@ export default function ServicioPanel({
                 </div>
                 {conTeclado && (
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
-                    ⌘K para buscarla por número
+                    {atajo(mod, 'K')} para buscarla por número
                   </div>
                 )}
               </div>
@@ -1295,6 +1330,14 @@ export default function ServicioPanel({
                       <div className="sv-m-title">Pedido · {tituloSel}</div>
                       <div className="sv-m-sub">{subSel}</div>
                     </div>
+                    {/* Las mismas opciones que en la carta: mover, juntar,
+                        imprimir la cuenta. Es justo aquí, con la cuenta
+                        delante, donde se piden. */}
+                    {sel.kind === 'mesa' && (
+                      <button type="button" className="sv-m-back" onClick={() => setHoja({ k: 'mesa' })} aria-label="Opciones de la mesa">
+                        <Icon name="more" size={20} />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="sv-ticket-head">
@@ -1312,7 +1355,7 @@ export default function ServicioPanel({
                 )}
 
                 <div className="sv-vs">
-                  {cargandoMesa && lineas.length === 0
+                  {leyendo
                     ? <div className="sv-vacio">Leyendo la mesa…</div>
                     : <Comanda {...comandaProps} />}
                 </div>
@@ -1425,7 +1468,8 @@ export default function ServicioPanel({
               }, false);
             }
             setHoja(null);
-            setAviso({ text: `${dictadas.reduce((s, d) => s + d.qty, 0)} platos agregados por voz` });
+            const n = dictadas.reduce((s, d) => s + d.qty, 0);
+            setAviso({ text: n === 1 ? '1 plato agregado por voz' : `${n} platos agregados por voz` });
           }}
         />
       )}

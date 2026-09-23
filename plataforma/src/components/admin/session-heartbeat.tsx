@@ -24,7 +24,8 @@ export default function SessionHeartbeat() {
       lastTouch.current = now;
       // Sin argumento a propósito: la acción deriva el usuario de la sesión
       // del servidor — igual que touchOperatorSession().
-      startTransition(() => { void touchSessionActivity(); });
+      // Sin red no hay nada que marcar: el siguiente toque lo intenta otra vez.
+      startTransition(() => { void touchSessionActivity().catch(() => {}); });
     }
 
     touch();

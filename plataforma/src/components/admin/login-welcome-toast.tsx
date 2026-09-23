@@ -49,7 +49,10 @@ export default function LoginWelcomeToast({
       role="status"
       className="glass-solid"
       style={{
-        position: 'fixed', left: '50%', bottom: 24, zIndex: 200,
+        /* Por encima de la barra de destinos del teléfono: a 24 px del
+           suelo se le montaba encima y tapaba «Hoy», «Pedidos» y «Menú». */
+        position: 'fixed', left: '50%', zIndex: 200,
+        bottom: 'calc(24px + var(--adm-nav-h) + env(safe-area-inset-bottom, 0px))',
         transform: `translate(-50%, ${entered ? '0' : '12px'})`,
         opacity: entered ? 1 : 0,
         transition: 'transform 320ms var(--ease-entry, ease), opacity 320ms var(--ease-entry, ease)',

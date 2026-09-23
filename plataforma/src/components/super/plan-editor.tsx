@@ -154,7 +154,7 @@ export default function PlanEditor({
           Plan
         </p>
         {isLegacy && (
-          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: 12.5 }}>
+          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 12.5 }}>
             Plan heredado «{rawPlan}». Selecciona el nuevo plan para actualizarlo.
           </div>
         )}
@@ -267,7 +267,7 @@ export default function PlanEditor({
       </Glass>
 
       {state?.error && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.25)', color: '#f87171', fontSize: 14 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 14 }}>
           {state.error}
         </div>
       )}

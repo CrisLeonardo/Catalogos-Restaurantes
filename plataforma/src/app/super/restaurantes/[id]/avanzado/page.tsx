@@ -56,7 +56,7 @@ export default async function FichaAvanzadoPage({
         <Glass
           variant="quiet"
           style={{
-            padding: 20, border: '1px solid rgba(239,68,68,0.15)',
+            padding: 20, border: '1px solid var(--c-danger-bg)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
           }}
         >

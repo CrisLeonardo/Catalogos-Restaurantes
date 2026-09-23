@@ -88,7 +88,9 @@ function CloseButton({ onClick }: { onClick: () => void }) {
       aria-label="Cerrar"
       style={{
         flexShrink: 0, display: 'grid', placeItems: 'center',
-        width: 28, height: 28, borderRadius: 99, border: 'none', cursor: 'pointer',
+        /* 36 y no 28: es la única salida de una hoja que tapa la pantalla
+           entera, y con 28 px el pulgar fallaba y tocaba el velo. */
+        width: 36, height: 36, borderRadius: 99, border: 'none', cursor: 'pointer',
         background: 'var(--surface-3)', color: 'var(--u-text-2)',
       }}
     >
@@ -206,6 +208,11 @@ export default function AdminInstallPrompt() {
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [open, setOpen] = useState(false);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  /* Si el navegador ofreció el prompt nativo. Estado y no el ref leído al
+     pintar: el evento suele llegar DESPUÉS de montar y, leyendo el ref, la
+     hoja seguía enseñando las instrucciones a mano teniendo el botón
+     «Instalar» disponible. */
+  const [hayNativo, setHayNativo] = useState(false);
 
   useEffect(() => {
     if (isStandaloneMode()) return;
@@ -217,6 +224,7 @@ export default function AdminInstallPrompt() {
       const handler = (e: Event) => {
         e.preventDefault();
         deferredPrompt.current = e as BeforeInstallPromptEvent;
+        setHayNativo(true);
       };
       window.addEventListener('beforeinstallprompt', handler);
       return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -252,6 +260,7 @@ export default function AdminInstallPrompt() {
     await prompt.prompt();
     await prompt.userChoice;
     deferredPrompt.current = null;
+    setHayNativo(false);
     setOpen(false);
   }
 
@@ -290,7 +299,7 @@ export default function AdminInstallPrompt() {
               {platform === 'ios' ? (
                 <IOSSteps onDismiss={close} />
               ) : (
-                <AndroidSteps onInstall={install} onDismiss={close} hasNativePrompt={!!deferredPrompt.current} />
+                <AndroidSteps onInstall={install} onDismiss={close} hasNativePrompt={hayNativo} />
               )}
             </Glass>
           </div>

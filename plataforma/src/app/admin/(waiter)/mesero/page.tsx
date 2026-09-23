@@ -24,7 +24,7 @@ import ServicioPanel from '@/components/admin/servicio/servicio-panel';
 import { tipAppliesToType } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 
-export const metadata = { title: 'Tomar pedidos' };
+export const metadata = { title: 'Tomar pedidos – Panel admin' };
 
 export default async function MeseroPage() {
   const supabase = await createClient();

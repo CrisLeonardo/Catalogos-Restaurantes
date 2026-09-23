@@ -408,6 +408,9 @@ export default function FloorPlanEditor({
         </div>
         <button
           type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-label="Usar el plano del salón"
           onClick={() => patch({ enabled: !enabled })}
           className="press"
           style={{

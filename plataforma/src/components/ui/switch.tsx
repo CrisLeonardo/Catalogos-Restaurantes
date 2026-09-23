@@ -20,6 +20,10 @@ function Switch({ className, ...props }: React.ComponentProps<typeof BaseSwitch.
         'data-[checked]:bg-adm-accent-500 data-[checked]:border-adm-accent-500',
         'focus-visible:ring-2 focus-visible:ring-adm-accent-500/35',
         'disabled:pointer-events-none disabled:opacity-50',
+        /* Dibuja 40 × 24 pero se toca en 60 × 44: el área invisible de
+           alrededor recibe el dedo. Con solo el dibujo, los interruptores
+           de Ajustes, Menú o Categorías se fallaban en el teléfono. */
+        "after:absolute after:-inset-x-2.5 after:-inset-y-2.5 after:content-['']",
         className
       )}
       {...props}

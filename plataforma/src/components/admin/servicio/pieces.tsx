@@ -12,7 +12,7 @@
    sistema en tema claro y en oscuro. El prototipo del handoff traía los
    colores incrustados y en oscuro dejaba texto negro sobre negro. */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from '@/components/icons';
 import { ESTADO_LABEL, ATENCION_LABEL, type EstadoServicio, type AtencionServicio } from '@/lib/servicio/estado';
 
@@ -114,6 +114,32 @@ export function Ghost({ onClick, children, icon, on, title, soloIcono = false, d
 /** La tecla de un atajo, dicha en el propio botón. */
 export function Key({ children }: { children: ReactNode }) {
   return <span className="sv-kbd">{children}</span>;
+}
+
+/**
+ * Cómo se llama la tecla modificadora en ESTE teclado: «⌘» en un Mac y
+ * «Ctrl» en todo lo demás.
+ *
+ * Las pistas decían «⌘K» y «⌘⏎» en todas partes, y los locales trabajan
+ * con PCs Windows: una tecla que no existe en el teclado que se tiene
+ * delante no es una pista. El propio buscador del panel ya decía «Ctrl K»
+ * en la misma pantalla. Arranca en «Ctrl» y se corrige al montar: las
+ * pistas solo se pintan con teclado de verdad, que también se sabe al
+ * montar, así que el HTML del servidor nunca las lleva.
+ */
+export function useTeclaMod(): string {
+  const [mod, setMod] = useState('Ctrl');
+  useEffect(() => {
+    const plataforma = (navigator as Navigator & { userAgentData?: { platform?: string } })
+      .userAgentData?.platform ?? navigator.platform ?? '';
+    if (/mac|iphone|ipad|ipod/i.test(plataforma)) setMod('⌘');
+  }, []);
+  return mod;
+}
+
+/** «Ctrl K» / «⌘K»: con Ctrl va separado, con el símbolo va pegado. */
+export function atajo(mod: string, tecla: string): string {
+  return mod === '⌘' ? `⌘${tecla}` : `${mod} ${tecla}`;
 }
 
 /* ── Hojas ────────────────────────────────────────────────────── */
@@ -228,8 +254,26 @@ export function Toast({ aviso, onClose }: { aviso: Aviso; onClose: () => void })
     return () => clearTimeout(t);
   }, [aviso, onClose]);
 
+  /* En el teléfono el módulo tiene una barra propia a pie de pantalla
+     (resumen + «Enviar a cocina»), y el aviso anclado a una altura fija
+     caía encima del resumen. Se mide esa barra y el aviso se posa justo
+     por encima. Vive 2 s: con medirla al aparecer basta. En pantalla
+     grande la barra está en la columna de la derecha y no estorba. */
+  const [bottom, setBottom] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const pie = document.querySelector<HTMLElement>('.sv-m-foot, .sv-pane > .sv-foot');
+    const r = pie?.getBoundingClientRect();
+    setBottom(r && r.height > 0 ? Math.max(0, window.innerHeight - r.top) + 12 : null);
+  }, [aviso]);
+
   return (
-    <div className="sv-toast" data-bad={aviso.bad ? '1' : '0'} role="status" aria-live="polite">
+    <div
+      className="sv-toast"
+      data-bad={aviso.bad ? '1' : '0'}
+      role="status"
+      aria-live="polite"
+      style={bottom != null ? { bottom } : undefined}
+    >
       <span>{aviso.text}</span>
       {aviso.undo && (
         <button

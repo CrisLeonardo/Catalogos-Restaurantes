@@ -146,9 +146,9 @@ export default function PricingSettingsForm({ pricing }: { pricing: PricingSetti
       {toast && (
         <p style={{
           fontSize: 13, padding: '10px 14px', borderRadius: 8, margin: 0,
-          color: toast.ok ? '#4ade80' : '#f87171',
-          background: toast.ok ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)',
-          border: `1px solid ${toast.ok ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+          color: toast.ok ? 'var(--c-ok)' : 'var(--c-danger)',
+          background: toast.ok ? 'var(--c-ok-bg)' : 'var(--c-danger-bg)',
+          border: `1px solid ${toast.ok ? 'var(--c-ok-line)' : 'var(--c-danger-line)'}`,
         }}>{toast.msg}</p>
       )}
 

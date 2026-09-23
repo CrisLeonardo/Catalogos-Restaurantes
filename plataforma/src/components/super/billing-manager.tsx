@@ -29,9 +29,9 @@ const CONCEPT_LABEL: Record<string, string> = {
   MONTHLY: 'Mensualidad', SETUP: 'Implementación', PRORATE: 'Prorrateo', OTHER: 'Otro',
 };
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING: { label: 'Pendiente', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
-  PAID: { label: 'Pagado', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
-  CANCELLED: { label: 'Cancelado', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  PENDING: { label: 'Pendiente', color: 'var(--c-warn)', bg: 'var(--c-warn-bg)' },
+  PAID: { label: 'Pagado', color: 'var(--c-ok)', bg: 'var(--c-ok-bg)' },
+  CANCELLED: { label: 'Cancelado', color: '#94a3b8', bg: 'color-mix(in srgb, var(--u-text) 8%, transparent)' },
 };
 
 const inputStyle: React.CSSProperties = {
@@ -81,9 +81,9 @@ export default function BillingManager({
       {toast && (
         <div style={{
           padding: '10px 14px', borderRadius: 12, fontSize: 13.5, fontWeight: 500,
-          background: toast.ok ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-          border: `1px solid ${toast.ok ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
-          color: toast.ok ? '#4ade80' : '#f87171',
+          background: toast.ok ? 'var(--c-ok-bg)' : 'var(--c-danger-bg)',
+          border: `1px solid ${toast.ok ? 'var(--c-ok-line)' : 'var(--c-danger-line)'}`,
+          color: toast.ok ? 'var(--c-ok)' : 'var(--c-danger)',
         }}>{toast.msg}</div>
       )}
 
@@ -117,7 +117,7 @@ export default function BillingManager({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <div className="t-kicker" style={{ fontSize: 9.5 }}>Historial de cobros</div>
           {pendingTotal > 0 && (
-            <div style={{ fontSize: 13, color: '#fbbf24', fontWeight: 600 }}>
+            <div style={{ fontSize: 13, color: 'var(--c-warn)', fontWeight: 600 }}>
               Pendiente: {fmtMoney(pendingTotal, currency)}
             </div>
           )}
@@ -170,7 +170,7 @@ function ConfigCard({
         {config?.auto_price === false && Math.abs((config?.monthly_fee ?? 0) - suggestedFee) >= 1 && (
           <div style={{
             padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
-            background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171',
+            background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)',
           }}>
             ⚠ Precio manual desincronizado: cobra {fmtMoney(config?.monthly_fee ?? 0, currency)}/mes pero el precio
             vigente del plan {planName} sería {fmtMoney(suggestedFee, currency)}/mes. Si no es un descuento
@@ -181,7 +181,7 @@ function ConfigCard({
         {!config?.suspended_for_nonpayment && config?.admin_override_suspend && (
           <div style={{
             padding: '9px 12px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
-            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24',
+            background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)',
           }}>
             ⚡ Override activo: la suspensión automática por impago está pausada para este restaurante.
             Desactiva el override (abajo) cuando regularice su pago.
@@ -191,8 +191,8 @@ function ConfigCard({
         {/* Toggle de precio automático */}
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 11,
-          background: auto ? 'rgba(74,222,128,0.08)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-          border: `1px solid ${auto ? 'rgba(74,222,128,0.25)' : 'var(--u-hair)'}`, cursor: 'pointer',
+          background: auto ? 'var(--c-ok-bg)' : 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+          border: `1px solid ${auto ? 'var(--c-ok-line)' : 'var(--u-hair)'}`, cursor: 'pointer',
         }}>
           <input
             type="checkbox" name="auto_price" checked={auto}
@@ -216,7 +216,7 @@ function ConfigCard({
             <input name="setup_fee" type="number" min="0" step="0.01" defaultValue={config?.setup_fee ?? 0} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Mensualidad {auto && <span style={{ color: '#4ade80' }}>· auto</span>}</label>
+            <label style={labelStyle}>Mensualidad {auto && <span style={{ color: 'var(--c-ok)' }}>· auto</span>}</label>
             {auto ? (
               <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--u-text)', opacity: 0.85 }}>
                 <span style={{ fontWeight: 700, fontFamily: 'var(--ui-font-mono)' }}>{fmtMoney(suggestedFee, currency)}</span>
@@ -258,10 +258,10 @@ function ConfigCard({
           Cobro activo (se le sigue facturando la mensualidad)
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: config?.admin_override_suspend ? '#fbbf24' : 'var(--u-text-2)', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: config?.admin_override_suspend ? 'var(--c-warn)' : 'var(--u-text-2)', cursor: 'pointer' }}>
           <input type="checkbox" name="admin_override_suspend" defaultChecked={config?.admin_override_suspend ?? false} style={{ width: 16, height: 16 }} />
           Pausar suspensión automática (override manual)
-          {config?.admin_override_suspend && <span style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700 }}>ACTIVO</span>}
+          {config?.admin_override_suspend && <span style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 700 }}>ACTIVO</span>}
         </label>
 
         <button type="submit" disabled={pending} className="press btn-accent" style={{
@@ -296,8 +296,8 @@ function ActionButton({
       <button type="submit" disabled={pending} className="press" style={{
         padding: '8px 14px', borderRadius: 'var(--radius-full)', fontWeight: 600, fontSize: 12.5,
         border: '1px solid var(--u-hair-2)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.55 : 1,
-        background: danger ? 'rgba(248,113,113,0.1)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
-        color: danger ? '#f87171' : 'var(--u-text)', whiteSpace: 'nowrap',
+        background: danger ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+        color: danger ? 'var(--c-danger)' : 'var(--u-text)', whiteSpace: 'nowrap',
       }}>
         {pending ? '…' : label}
       </button>
@@ -374,7 +374,7 @@ function InvoiceRow({
   return (
     <div style={{
       padding: '10px 12px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-      border: `1px solid ${overdue ? 'rgba(248,113,113,0.3)' : 'var(--u-hair)'}`,
+      border: `1px solid ${overdue ? 'var(--c-danger-line)' : 'var(--u-hair)'}`,
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -387,8 +387,8 @@ function InvoiceRow({
         }}>{CONCEPT_LABEL[inv.concept]}</span>
         <span style={{
           fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-          background: overdue ? 'rgba(248,113,113,0.15)' : meta.bg,
-          color: overdue ? '#f87171' : meta.color, letterSpacing: '0.05em',
+          background: overdue ? 'var(--c-danger-bg)' : meta.bg,
+          color: overdue ? 'var(--c-danger)' : meta.color, letterSpacing: '0.05em',
         }}>{overdue ? 'VENCIDO' : meta.label.toUpperCase()}</span>
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)' }}>
           {fmtMoney(inv.amount, inv.currency)}
@@ -400,7 +400,7 @@ function InvoiceRow({
         {inv.status === 'PAID' && inv.paid_at && <span>Pagado {inv.paid_at.slice(0, 10)}{inv.payment_method ? ` · ${inv.payment_method}` : ''}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {inv.status === 'PENDING' ? (
-            <button onClick={() => setPayOpen((v) => !v)} className="press" style={miniBtn('#4ade80')}>Registrar pago</button>
+            <button onClick={() => setPayOpen((v) => !v)} className="press" style={miniBtn('var(--c-ok)')}>Registrar pago</button>
           ) : (
             <>
               {inv.status === 'PAID' && (
@@ -468,10 +468,10 @@ function SuspensionBanner({
   return (
     <div style={{
       padding: '12px 14px', borderRadius: 10, fontSize: 12.5,
-      background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)',
+      background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
     }}>
-      <div style={{ fontWeight: 600, color: '#f87171' }}>
+      <div style={{ fontWeight: 600, color: 'var(--c-danger)' }}>
         ⚠ Suspendido automáticamente por impago.
         <span style={{ fontWeight: 400, color: 'var(--u-text-3)', marginLeft: 6 }}>
           Se reactiva solo al registrar el pago, o puedes habilitarlo manualmente.
@@ -481,8 +481,8 @@ function SuspensionBanner({
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <button type="submit" disabled={pending} className="press" style={{
           padding: '8px 16px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 12.5,
-          border: '1px solid rgba(74,222,128,0.4)', background: 'rgba(74,222,128,0.1)',
-          color: '#4ade80', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
+          border: '1px solid var(--c-ok-line)', background: 'var(--c-ok-bg)',
+          color: 'var(--c-ok)', cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1,
           whiteSpace: 'nowrap',
         }}>
           {pending ? 'Habilitando…' : 'Habilitar manualmente'}

@@ -13,7 +13,7 @@ import ProductForm from '@/components/admin/product-form';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
 
-export const metadata = { title: 'Editar producto — Panel admin' };
+export const metadata = { title: 'Editar producto – Panel admin' };
 
 export default async function EditProductPage({
   params,

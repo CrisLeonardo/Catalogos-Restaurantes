@@ -5,7 +5,7 @@ import { isModuleActive } from '@/lib/modules';
 import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 import TutorialHub from '@/components/admin/tutorial-hub';
 
-export const metadata: Metadata = { title: 'Ayuda — Panel Admin' };
+export const metadata: Metadata = { title: 'Ayuda – Panel admin' };
 
 export default async function AyudaPage() {
   const ctx = await getAdminContext();

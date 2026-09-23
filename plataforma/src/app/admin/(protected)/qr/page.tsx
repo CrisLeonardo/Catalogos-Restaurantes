@@ -3,7 +3,7 @@ import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import QRDisplay from '@/components/admin/qr-display';
 
-export const metadata = { title: 'Código QR — Panel Admin' };
+export const metadata = { title: 'Código QR – Panel admin' };
 
 export default async function QRPage() {
   const ctx = await getAdminContext();

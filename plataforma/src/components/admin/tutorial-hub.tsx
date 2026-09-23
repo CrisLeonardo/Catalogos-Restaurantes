@@ -46,7 +46,9 @@ interface Props {
 const PLAN_COLORS: Record<string, string> = {
   'Plan Popular': 'var(--c-warn)',
   'Plan Premium': 'var(--c-alt)',
-  'Módulo': '#14b8a6',
+  /* Tinta del sistema y no un hex: #14b8a6 era legible en oscuro y se
+     quedaba en 2.2:1 sobre el blanco del tema claro. */
+  'Módulo': 'var(--c-info)',
 };
 
 export default function TutorialHub({ plan, modules, contact }: Props) {
@@ -232,7 +234,12 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, textAlign: 'left' }}>
               <span>Escribir por WhatsApp</span>
               {contact.support_whatsapp && (
-                <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(74,222,128,0.7)', wordBreak: 'break-all' }}>
+                /* El dato de contacto va en la MISMA tinta que su botón, un
+                   punto más suave. Los rgba() de antes eran los tonos del
+                   tema oscuro: en claro, verde y azul pálidos sobre blanco
+                   (1.3:1 y 1.7:1) — el teléfono y el correo de soporte no
+                   se leían. */
+                <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--c-ok)', opacity: 0.85, wordBreak: 'break-all' }}>
                   {contact.support_whatsapp}
                 </span>
               )}
@@ -269,7 +276,7 @@ function ContactSupportCard({ contact }: { contact: PlatformContactSettings }) {
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, textAlign: 'left' }}>
               <span>Enviar correo electrónico</span>
               {contact.support_email && (
-                <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(96,165,250,0.7)', wordBreak: 'break-all' }}>
+                <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--c-info)', opacity: 0.85, wordBreak: 'break-all' }}>
                   {contact.support_email}
                 </span>
               )}
@@ -432,7 +439,7 @@ function LockedContent({ planLabel, moduleKey }: { planLabel: string | null; mod
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-              background: 'rgba(20,184,166,0.12)', color: '#14b8a6', textDecoration: 'none',
+              background: 'var(--c-info-bg)', color: 'var(--c-info)', textDecoration: 'none',
             }}
           >
             Ir a Módulos →

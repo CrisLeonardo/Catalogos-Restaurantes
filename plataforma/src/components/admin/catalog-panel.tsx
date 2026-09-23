@@ -200,6 +200,11 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             const { total, hasCombo, hasSizes, hasExtras } = calcProductPrice(p);
             const tags = p.tags ?? [];
             const hasBadges = hasCombo || hasSizes || hasExtras || tags.length > 0;
+            /* Se apaga lo que DESCRIBE el plato, no la fila entera: con la
+               fila a 0.58 el propio «Agotado», el interruptor para volver a
+               activarlo y «Editar» se quedaban a 2.4:1 — justo lo que hay
+               que tocar para arreglar un plato agotado. */
+            const apagado = p.is_active ? (p.is_available ? 1 : 0.58) : 0.42;
             return (
               <div
                 key={p.id}
@@ -207,12 +212,10 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                 style={{
                   padding: '12px 18px',
                   borderBottom: i < list.length - 1 ? '1px solid var(--u-hair)' : 'none',
-                  opacity: p.is_active ? (p.is_available ? 1 : 0.58) : 0.42,
-                  transition: 'opacity 160ms',
                 }}
               >
                 {/* Platillo */}
-                <div className="catalog-cell-dish" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <div className="catalog-cell-dish" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, opacity: apagado, transition: 'opacity 160ms' }}>
                   <div
                     style={{
                       width: 44, height: 44, borderRadius: 11, overflow: 'hidden',
@@ -250,7 +253,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     </div>
                     {hasBadges && (
                       <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
-                        {hasCombo  && <RowBadge label="Combo"   color="#16a34a" bg="var(--c-ok-bg)" />}
+                        {hasCombo  && <RowBadge label="Combo"   color="var(--c-ok)" bg="var(--c-ok-bg)" />}
                         {hasSizes  && <RowBadge label="Tamaños" color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />}
                         {hasExtras && <RowBadge label="Extras"  color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />}
                         {tags.map((t) => <RowBadge key={t} label={t} color="var(--u-text-3)" bg="color-mix(in srgb, var(--u-text) 6%, transparent)" />)}
@@ -262,7 +265,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                 {/* Precio */}
                 <div
                   className="catalog-cell-price"
-                  style={{ textAlign: 'right' }}
+                  style={{ textAlign: 'right', opacity: apagado, transition: 'opacity 160ms' }}
                 >
                   {hasSizes && (
                     <div style={{ fontSize: 9.5, color: 'var(--u-text-4)', fontWeight: 600, letterSpacing: '0.04em', marginBottom: 1 }}>
@@ -292,7 +295,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                         onCheckedChange={(next) => setAvailability(p.id, p.name, next)}
                         aria-label={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
                       />
-                      <span style={{ fontSize: 12, color: p.is_available ? 'var(--u-text-2)' : 'var(--u-text-4)' }}>
+                      <span style={{ fontSize: 12, fontWeight: p.is_available ? 400 : 600, color: p.is_available ? 'var(--u-text-2)' : 'var(--c-warn)' }}>
                         {p.is_available ? 'Activo' : 'Agotado'}
                       </span>
                     </>

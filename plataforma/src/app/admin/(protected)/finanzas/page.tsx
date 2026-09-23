@@ -108,7 +108,7 @@ export default async function AdminFinanzasPage({
 
       <Section title="Resumen del rango">
         <StatGroup>
-          <Stat label={`Ingreso (${report.orders} pedidos)`} value={money(report.revenue)} />
+          <Stat label={`Ingreso (${report.orders} ${report.orders === 1 ? 'pedido' : 'pedidos'})`} value={money(report.revenue)} />
           <Stat label={report.marginPct != null ? `Utilidad (margen ${report.marginPct.toFixed(0)}%)` : 'Utilidad (captura costos)'} value={money(report.profit)} />
           <Stat label="Costo de productos vendidos" value={money(report.cost)} />
           <Stat label="Ticket promedio" value={money(report.avgTicket)} />
@@ -133,7 +133,7 @@ export default async function AdminFinanzasPage({
             return (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
                 <div
-                  title={`${d.label}: ${money(d.revenue)} · ${d.orders} pedidos`}
+                  title={`${d.label}: ${money(d.revenue)} · ${d.orders} ${d.orders === 1 ? 'pedido' : 'pedidos'}`}
                   style={{
                     width: '100%', height: `${Math.max(h, d.revenue > 0 ? 5 : 1.5)}%`, minHeight: 2,
                     borderRadius: '3px 3px 0 0',

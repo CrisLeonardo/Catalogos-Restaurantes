@@ -28,7 +28,7 @@ import { getActiveTableNumbers, getPendingTableCalls, getTableTurnsToday } from 
 import { getOpenTableSessions, getWaiterRoster } from '@/lib/db/table-sessions';
 import { getSalonData } from './salon-data';
 
-export const metadata = { title: 'Mesas — Panel Admin' };
+export const metadata = { title: 'Mesas – Panel admin' };
 
 export default async function MesasPage() {
   const { restaurantId, config, hasWaiterPanel, hasDineIn, isSuperAdmin, timezone } = await getSalonData();

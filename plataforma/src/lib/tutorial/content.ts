@@ -101,8 +101,8 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'login',
         title: 'Ingresa al panel admin',
         description:
-          'Abre tu navegador y ve a la URL que te dio Leogin (ej. turestaurante.leogin.app). Escribe tu correo y contraseña y da clic en "Iniciar sesión". Si olvidaste tu contraseña, toca "Olvidé mi contraseña" en esa misma pantalla y te llega un enlace a tu correo.',
-        route: 'turestaurante.leogin.app → /admin/login',
+          'Abre tu navegador y entra a distleogin.com. Toca "Entrar", escribe tu correo y contraseña (o entra con Google) y llegas directo a tu panel. Si olvidaste tu contraseña, toca "Olvidé mi contraseña" en esa misma pantalla y te llega un enlace a tu correo.',
+        route: 'distleogin.com → Entrar',
         screenshotDesc: 'Pantalla de login con campo de email y contraseña',
       },
       {
@@ -761,8 +761,8 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'tablet-cocina',
         title: 'Configura una tablet en la cocina',
         description:
-          'Recomendamos instalar una tablet fija en la cocina, apuntando a tu.dominio.com/admin/cocina en pantalla completa. La pantalla está optimizada para pantalla táctil y no tiene elementos que distraigan.',
-        route: 'En la tablet: Abre el navegador → Ingresa a turestaurante.leogin.app/admin/cocina → Login → Cocina',
+          'Recomendamos instalar una tablet fija en la cocina, abierta en la pantalla de Cocina y en pantalla completa. La pantalla está optimizada para pantalla táctil y no tiene elementos que distraigan.',
+        route: 'En la tablet: distleogin.com → Entrar → Pedidos → Cocina',
         tip: 'Activa la opción "No bloquear pantalla" en la tablet y ponla a cargar para que siempre esté disponible durante el servicio.',
         screenshotDesc: 'Tablet en modo pantalla completa con el KDS activo',
       },
@@ -806,7 +806,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         title: '¿Qué puede hacer un mesero?',
         description:
           'El rol de mesero tiene su propio panel táctil, separado del admin del dueño. Desde él puede seleccionar productos, elegir la mesa, agregar notas y enviar el pedido directamente a cocina y al panel de pedidos, sin que el cliente tenga que escanear el QR.',
-        route: 'Panel del mesero: turestaurante.leogin.app/admin/mesero',
+        route: 'Panel → Pedidos → Tomar pedidos',
         screenshotDesc: 'Panel del mesero con categorías y productos en vista táctil',
       },
       {
@@ -822,7 +822,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         title: 'Cómo ingresa el mesero',
         description:
           'El mesero va a la misma URL de login de tu restaurante y entra con sus credenciales. El sistema lo detecta automáticamente como mesero y lo lleva a su panel táctil, no al admin del dueño.',
-        route: 'turestaurante.leogin.app/admin → Login con las credenciales del mesero',
+        route: 'distleogin.com → Entrar con el usuario del mesero',
         screenshotDesc: 'Login del restaurante y redirección automática al panel de mesero',
       },
       {
@@ -863,8 +863,8 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'activar-kiosko',
         title: 'Activa el kiosko en la tablet',
         description:
-          'En la tablet del mostrador, abre el navegador y entra a turestaurante.leogin.online/kiosko — el menú se abre en modo autoservicio (verás el distintivo "Autoservicio" arriba). Pon el navegador en pantalla completa o instala el menú como app para que no se salgan del modo.',
-        route: 'Navegador de la tablet → turestaurante.leogin.online/kiosko',
+          'En la tablet del mostrador, abre el navegador y entra a turestaurante.distleogin.com/kiosko — el menú se abre en modo autoservicio (verás el distintivo "Autoservicio" arriba). Pon el navegador en pantalla completa o instala el menú como app para que no se salgan del modo.',
+        route: 'Navegador de la tablet → turestaurante.distleogin.com/kiosko',
         tip: 'Activa "No bloquear pantalla" en la tablet y déjala conectada a la corriente durante el servicio.',
       },
       {
@@ -885,8 +885,8 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'salir-kiosko',
         title: 'Salir del modo kiosko',
         description:
-          'Para desactivarlo (por ejemplo, para usar esa tablet en otra cosa), entra a turestaurante.leogin.online/kiosko?salir=1 en la misma tablet. El modo solo afecta al dispositivo donde se activó.',
-        route: 'Navegador de la tablet → turestaurante.leogin.online/kiosko?salir=1',
+          'Para desactivarlo (por ejemplo, para usar esa tablet en otra cosa), entra a turestaurante.distleogin.com/kiosko?salir=1 en la misma tablet. El modo solo afecta al dispositivo donde se activó.',
+        route: 'Navegador de la tablet → turestaurante.distleogin.com/kiosko?salir=1',
       },
     ],
   },
@@ -896,7 +896,7 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
   {
     id: 'grupo',
     title: 'Panel de grupo multi-sucursal',
-    description: 'Gestiona todas tus sucursales desde un único panel central con métricas consolidadas.',
+    description: 'Gestiona todas tus sucursales desde "Mi cuenta", con métricas consolidadas.',
     icon: 'grid',
     planLevel: 'premium',
     steps: [
@@ -904,24 +904,24 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         id: 'que-es-grupo',
         title: '¿Qué es el panel de grupo?',
         description:
-          'Si tienes varias sucursales (mismo concepto de restaurante en distintas ubicaciones), el panel central te da una vista consolidada de todas ellas: ventas totales, pedidos, comparativas y acceso rápido a cada sucursal.',
-        route: 'Subdominio especial: turestaurante-central.leogin.app',
-        screenshotDesc: 'Dashboard del panel central con resumen de todas las sucursales',
+          'Si tienes varias sucursales (mismo concepto de restaurante en distintas ubicaciones), "Mi cuenta" te da una vista consolidada de todas ellas: ventas totales, pedidos, comparativas y acceso rápido a cada sucursal.',
+        route: 'distleogin.com → Mi cuenta',
+        screenshotDesc: 'Mi cuenta con el resumen de todas las sucursales',
       },
       {
         id: 'acceder-central',
-        title: 'Accede al panel central',
+        title: 'Entra a Mi cuenta',
         description:
-          'El panel de grupo tiene su propio subdominio con el sufijo "-central". Ingresa con tus credenciales de dueño de grupo. Leogin configura este acceso cuando activas el plan Premium con más de una sucursal.',
-        route: 'Navegador → turestaurante-central.leogin.app → Login con tus credenciales',
-        screenshotDesc: 'Login del panel central con nombre del grupo',
+          'Ya no hay un subdominio aparte: en cuanto tu cuenta tiene dos o más restaurantes, "Mi cuenta" junta todos. Entra con tu cuenta de dueño y abre "Mi cuenta", o toca "Cambiar de restaurante" en la barra lateral del panel.',
+        route: 'distleogin.com → Entrar → Mi cuenta',
+        screenshotDesc: 'Mi cuenta con la lista de restaurantes',
       },
       {
         id: 'resumen-consolidado',
         title: 'Resumen consolidado del grupo',
         description:
-          'La página de inicio del panel central muestra las ventas totales sumadas de todas las sucursales, los pedidos del día, el ticket promedio global y el rendimiento frente al período anterior.',
-        route: 'Panel central → Inicio',
+          'La pestaña Resumen de Mi cuenta muestra las ventas totales sumadas de todas las sucursales, los pedidos del día, el ticket promedio global y el rendimiento frente al período anterior.',
+        route: 'Mi cuenta → Resumen',
         screenshotDesc: 'KPIs consolidados del grupo: ventas, pedidos, ticket promedio',
       },
       {
@@ -929,15 +929,15 @@ export const TUTORIAL_SECTIONS: TutorialSectionDef[] = [
         title: 'Compara el rendimiento de sucursales',
         description:
           'La pantalla de comparativa muestra cada sucursal lado a lado: ventas, pedidos completados, tasa de cancelación y ticket promedio. Identifica cuál sucursal lidera y cuál necesita atención.',
-        route: 'Panel central → Comparativa',
+        route: 'Mi cuenta → Comparativa',
         screenshotDesc: 'Tabla comparativa de sucursales con métricas lado a lado',
       },
       {
         id: 'acceso-sucursal',
         title: 'Accede al admin de cada sucursal',
         description:
-          'Desde el panel central puedes saltar directamente al admin de cualquier sucursal con un clic, sin necesidad de cerrar sesión y volver a entrar.',
-        route: 'Panel central → Sucursales → Clic en el nombre de la sucursal → "Abrir admin"',
+          'Desde "Mi cuenta" entras al panel de cualquier sucursal con un clic, sin cerrar sesión y volver a entrar.',
+        route: 'Mi cuenta → Restaurantes → clic en la sucursal',
         screenshotDesc: 'Lista de sucursales con botón para acceder al admin de cada una',
       },
     ],

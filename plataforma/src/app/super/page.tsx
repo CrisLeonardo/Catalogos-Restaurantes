@@ -91,14 +91,12 @@ export default async function SuperHomePage() {
         title="Resumen de la plataforma"
         subtitle="Cómo va Leogin hoy: ingresos, actividad de los restaurantes y lo que requiere tu atención."
         actions={
-          <>
-            <Button variant="secondary" size="sm" render={<Link href="/super/grupos/new" />}>
-              <Icon name="users" size={15} /> Nuevo grupo
-            </Button>
-            <Button size="sm" render={<Link href="/super/restaurantes/new" />}>
-              <Icon name="plus" size={15} /> Nuevo restaurante
-            </Button>
-          </>
+          /* Sin «Nuevo grupo»: crear grupos a mano se retiró (el grupo nace
+             solo cuando un dueño abre su segundo restaurante, ver
+             /super/grupos) y el botón llevaba a una página 404. */
+          <Button size="sm" render={<Link href="/super/restaurantes/new" />}>
+            <Icon name="plus" size={15} /> Nuevo restaurante
+          </Button>
         }
       />
 

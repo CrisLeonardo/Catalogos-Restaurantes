@@ -15,7 +15,7 @@ import PlanLockedScreen from '@/components/admin/plan-locked-screen';
 import { getSalonData } from '../../mesas/salon-data';
 import { panelLink } from '@/lib/panel-links-server';
 
-export const metadata = { title: 'Salón — Panel Admin' };
+export const metadata = { title: 'Salón – Panel admin' };
 
 export default async function AjustesSalonPage() {
   const { restaurantId, config, hasWaiterPanel, hasDineIn, isSuperAdmin, menuUrl } = await getSalonData();
