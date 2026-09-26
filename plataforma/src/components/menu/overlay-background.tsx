@@ -1,6 +1,7 @@
 'use client';
 
 import { useThemeConfig } from '@/lib/theme/context';
+import { assetSrc } from '@/lib/asset-image';
 
 /**
  * Replica el fondo del restaurante dentro de overlays fullscreen.
@@ -31,7 +32,7 @@ export default function OverlayBackground() {
           aria-hidden
           style={
             config.backgroundImage
-              ? { backgroundImage: `url("${config.backgroundImage}")` }
+              ? { backgroundImage: `url("${assetSrc(config.backgroundImage, 1920)}")` }
               : { background: 'var(--brand-bg)' }
           }
         />
@@ -45,7 +46,7 @@ export default function OverlayBackground() {
         <div
           className="asphalt-mark"
           aria-hidden
-          style={{ backgroundImage: `url("${config.markUrl ?? config.logoUrl}")` }}
+          style={{ backgroundImage: `url("${assetSrc(config.markUrl ?? config.logoUrl, 828)}")` }}
         />
       )}
     </>

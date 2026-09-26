@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { DINER_COOKIE_NAME, cookieDomainForHost, defaultStorageKey, isCodeVerifierCookie, sessionCookieNames } from "@/lib/supabase/cookies";
@@ -97,6 +98,22 @@ async function createWithCookieName(cookieName?: string, ocultarSesionPrevia = f
 export async function createClient() {
   return createWithCookieName();
 }
+
+/**
+ * `auth.getUser()` del PERSONAL, UNA vez por petición.
+ *
+ * Cada `getUser()` es una ida y vuelta a Supabase Auth (valida el token en
+ * el servidor, no lo lee de la cookie). Y un solo render del panel lo
+ * preguntaba hasta cuatro veces, en cadena: el layout, getAdminContext,
+ * getMyMemberships y myOrganizationId — cada uno con su propio cliente.
+ * Con Render en Oregón y la base en Virginia son ~70 ms cada una antes de
+ * poder pedir nada más. Mismo resultado, mismo nivel de verificación: solo
+ * se deja de repetir la pregunta dentro de la misma petición.
+ */
+export const getStaffUser = cache(async () => {
+  const supabase = await createClient();
+  return supabase.auth.getUser();
+});
 
 /** Sesión del COMENSAL (menú público: cuenta Google, lealtad, mis pedidos). */
 export async function createDinerClient() {

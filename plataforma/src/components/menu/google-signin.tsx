@@ -1,9 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { createDinerClient } from '@/lib/supabase/client';
 import { getStableLinkPrefix } from '@/lib/tenant-client';
 import GoogleG from '@/components/auth/google-g';
+
+/* El cliente de Supabase se carga AL TOCAR, no con la página: son ~230 KB
+   de JavaScript (58 KB comprimidos) que el menú bajaba y compilaba en cada
+   visita —en el teléfono del comensal, con datos móviles— para usarlos
+   solo quien entra o sale con Google. */
+const loadDinerClient = () => import('@/lib/supabase/client').then((m) => m.createDinerClient());
 
 /**
  * "Continuar con Google" para comensales. Inicia el flujo OAuth y vuelve a la
@@ -24,7 +29,7 @@ export default function GoogleSignInButton({ label = 'Continuar con Google', ful
     try {
       // Cliente del COMENSAL: el flujo OAuth guarda el code-verifier y la
       // sesión bajo la cookie del comensal, sin tocar la del personal.
-      const supabase = createDinerClient();
+      const supabase = await loadDinerClient();
       const url = new URL(window.location.pathname + window.location.search, window.location.origin);
       if (returnTab) url.searchParams.set('openTab', returnTab);
       const next = url.pathname + url.search;

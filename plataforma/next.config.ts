@@ -28,6 +28,21 @@ const nextConfig: NextConfig = {
     ]);
   },
   images: {
+    // Las fotos del bucket `restaurant-assets` ya NO pasan por aquí: van por
+    // /img (ver src/lib/asset-image.ts). Este optimizador queda para el
+    // resto de fuentes. Los anchos son los mismos que acepta /img, para que
+    // un srcset valga igual por los dos caminos.
+    //
+    // Escritos a mano y NO importados de src/lib/asset-image.ts: `next
+    // start` compila este archivo suelto y no resuelve imports de .ts
+    // ("Cannot find module './src/lib/asset-image'" — el build sí pasaba y
+    // el servidor no arrancaba). La prueba asset-image.test.ts comprueba
+    // que las dos listas sigan iguales.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [32, 48, 64, 96, 128, 256, 384],
+    // 31 días en vez de 4 h: las URL de Supabase llevan nombre único por
+    // subida, su contenido no cambia.
+    minimumCacheTTL: 2678400,
     // Fotos de producto / logos servidos desde Supabase Storage. Permite que
     // next/image las optimice (redimensiona + webp) en vez de servir el original.
     remotePatterns: [

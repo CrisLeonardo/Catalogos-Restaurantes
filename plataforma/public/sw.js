@@ -13,7 +13,13 @@
 const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `leogin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `leogin-pages-${CACHE_VERSION}`;
-const CACHE_NAMES = [STATIC_CACHE, PAGES_CACHE];
+/* Fotos del restaurante servidas por /img/<ancho>/... (ver
+   src/lib/asset-image.ts). Caché aparte y con tope: cada URL es inmutable
+   (nombre único por subida), así que se sirve directo sin volver a
+   preguntar, y el tope evita que un comensal asiduo acumule megas. */
+const IMAGES_CACHE = 'leogin-img-v1';
+const IMAGES_MAX = 300;
+const CACHE_NAMES = [STATIC_CACHE, PAGES_CACHE, IMAGES_CACHE];
 const OFFLINE_URL = '/offline.html';
 
 /* El proxy (proxy.ts §3) reescribe SLUG-admin.dominio/algo → /admin/algo y
@@ -93,6 +99,23 @@ async function networkFirstPage(request) {
   }
 }
 
+/* Primero la caché, sin revalidar: /img/... nunca cambia de contenido. */
+async function cacheFirstImage(request) {
+  const cache = await caches.open(IMAGES_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const res = await fetch(request);
+  if (res && res.ok) {
+    await cache.put(request, res.clone());
+    // Recorte perezoso: keys() viene en orden de inserción, se van las más viejas.
+    cache.keys().then((keys) => {
+      const sobran = keys.length - IMAGES_MAX;
+      for (let i = 0; i < sobran; i++) cache.delete(keys[i]);
+    }).catch(() => {});
+  }
+  return res;
+}
+
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_CACHE);
   const cached = await cache.match(request);
@@ -118,6 +141,11 @@ self.addEventListener('fetch', (event) => {
 
   if (req.mode === 'navigate') {
     event.respondWith(networkFirstPage(req));
+    return;
+  }
+
+  if (url.pathname.startsWith('/img/')) {
+    event.respondWith(cacheFirstImage(req));
     return;
   }
 

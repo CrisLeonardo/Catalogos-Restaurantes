@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { warmAsset } from '@/lib/asset-image';
 
 interface ImageUploadProps {
   restaurantId: string;
@@ -145,9 +146,13 @@ export default function ImageUpload({
     const ext = upload.name.split('.').pop();
     const path = `${restaurantId}/${folder}/${Date.now()}.${ext}`;
 
+    /* `cacheControl` de un año: cada subida lleva un nombre nuevo (marca de
+       tiempo), así que el contenido de una URL no cambia jamás. Sin esto
+       Supabase la marcaba con `max-age=3600` y su CDN y el navegador la
+       volvían a pedir cada hora. */
     const { data, error: uploadError } = await supabase.storage
       .from('restaurant-assets')
-      .upload(path, upload, { upsert: true });
+      .upload(path, upload, { upsert: true, cacheControl: '31536000' });
 
     if (uploadError) {
       setError(uploadError.message);
@@ -162,6 +167,8 @@ export default function ImageUpload({
 
     onUpload(publicUrl);
     setUploading(false);
+    // Deja listas las medidas que pedirán el menú y el panel (ver warmAsset).
+    warmAsset(publicUrl);
   }
 
   return (

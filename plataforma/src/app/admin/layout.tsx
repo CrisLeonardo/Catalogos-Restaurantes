@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+/* Estilos del área de personal: fuera de globals.css para que el menú del
+   comensal no los descargue (ver el encabezado de admin.css). */
+import '../admin.css';
 
 /**
  * Layout raíz del área /admin/.

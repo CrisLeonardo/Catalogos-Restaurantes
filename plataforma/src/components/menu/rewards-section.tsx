@@ -10,7 +10,8 @@
    puntos se descuentan al confirmar el pedido. Estilo McDonald's.
    ============================================================ */
 
-import Image from 'next/image';
+import AssetImage from '@/components/asset-image';
+import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { MenuSurface, Tag } from '@/components/menu/ui';
@@ -19,10 +20,15 @@ import { useCart } from '@/lib/cart-context';
 import { useThemeConfig } from '@/lib/theme/context';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
 import { getLocalProfile } from '@/lib/customer-local';
-import { createDinerClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { DinerLoyalty } from '@/lib/db/loyalty';
+
+/* El cliente de Supabase se carga AL TOCAR, no con la página: son ~230 KB
+   de JavaScript (58 KB comprimidos) que el menú bajaba y compilaba en cada
+   visita —en el teléfono del comensal, con datos móviles— para usarlos
+   solo quien entra o sale con Google. */
+const loadDinerClient = () => import('@/lib/supabase/client').then((m) => m.createDinerClient());
 
 export interface MenuReward {
   id: string;
@@ -115,7 +121,7 @@ function RewardArt({ r, icon, scale = 1 }: { r: MenuReward; icon: string; scale?
   const config = useThemeConfig();
   const usePhoto = r.image_url && config.productArt !== 'pattern';
   if (usePhoto) {
-    return <Image src={r.image_url!} alt={r.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 440px) 50vw, 220px" />;
+    return <AssetImage src={r.image_url!} alt={r.title} fill style={{ objectFit: 'cover' }} sizes={PRODUCT_ART_SIZES} />;
   }
   return (
     <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
@@ -257,7 +263,7 @@ function RewardsMenu({
   }
   async function signOut() {
     setBusy(true);
-    try { await createDinerClient().auth.signOut({ scope: 'local' }); } catch {}
+    try { await (await loadDinerClient()).auth.signOut({ scope: 'local' }); } catch {}
     await onRefresh();
     setBusy(false);
   }

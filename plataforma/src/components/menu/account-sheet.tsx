@@ -5,10 +5,15 @@ import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
 import { getLocalProfile, saveLocalProfile, type LocalCustomerProfile } from '@/lib/customer-local';
 import { getMyAccount, linkMyAccountByPhone } from '@/lib/actions/loyalty';
-import { createDinerClient } from '@/lib/supabase/client';
 import GoogleSignInButton from '@/components/menu/google-signin';
 import OverlayBackground from '@/components/menu/overlay-background';
 import type { MyAccount } from '@/lib/actions/loyalty';
+
+/* El cliente de Supabase se carga AL TOCAR, no con la página: son ~230 KB
+   de JavaScript (58 KB comprimidos) que el menú bajaba y compilaba en cada
+   visita —en el teléfono del comensal, con datos móviles— para usarlos
+   solo quien entra o sale con Google. */
+const loadDinerClient = () => import('@/lib/supabase/client').then((m) => m.createDinerClient());
 
 const DeliveryMap = dynamic(() => import('@/components/delivery-map'), {
   ssr: false,
@@ -170,7 +175,7 @@ export default function AccountSheet({
     setSigningOut(true);
     // scope 'local' no hace petición de red (solo borra la sesión de este
     // navegador) — no depende de que el navegador alcance el servidor de Auth.
-    try { await createDinerClient().auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
+    try { await (await loadDinerClient()).auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
     await loadAccount();
     setSigningOut(false);
   }

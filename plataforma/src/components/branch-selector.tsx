@@ -11,6 +11,7 @@ import {
   clearPreferredBranch,
 } from '@/lib/customer-local';
 import type { PublicGroup, PublicBranch } from '@/lib/db/org-public';
+import { assetSrc } from '@/lib/asset-image';
 
 /* ============================================================
    SELECTOR PÚBLICO DE SUCURSAL (link único del grupo)
@@ -98,7 +99,7 @@ export default function BranchSelector({ group }: { group: PublicGroup }) {
         <header style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           {group.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={group.logo_url} alt={group.name} width={56} height={56} style={{ borderRadius: 14, objectFit: 'cover' }} />
+            <img src={assetSrc(group.logo_url, 128)} alt={group.name} width={56} height={56} style={{ borderRadius: 14, objectFit: 'cover' }} />
           ) : (
             <div style={{ width: 56, height: 56, borderRadius: 14, background: accent, display: 'grid', placeItems: 'center', color: onAccent, fontWeight: 800, fontSize: 24, fontFamily: 'var(--font-display)' }}>
               {group.name.charAt(0)}

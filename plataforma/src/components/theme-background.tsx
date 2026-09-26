@@ -1,4 +1,5 @@
 import type { ThemeConfig } from '@/lib/theme/defaults';
+import { assetSrc } from '@/lib/asset-image';
 
 /* Capas de fondo del tenant según config.backgroundType (asphalt / solid /
    gradient / image) + grano + watermark. Compartido entre el layout raíz y
@@ -25,7 +26,7 @@ export default function ThemeBackground({ config }: { config?: ThemeConfig }) {
         <div
           className={config.backgroundImage ? 'bg-layer bg-image' : 'bg-layer'}
           aria-hidden
-          style={config.backgroundImage ? { backgroundImage: `url("${config.backgroundImage}")` } : { background: 'var(--brand-bg)' }}
+          style={config.backgroundImage ? { backgroundImage: `url("${assetSrc(config.backgroundImage, 1920)}")` } : { background: 'var(--brand-bg)' }}
         />
       )}
 
@@ -38,7 +39,7 @@ export default function ThemeBackground({ config }: { config?: ThemeConfig }) {
         <div
           className="asphalt-mark"
           aria-hidden
-          style={{ backgroundImage: `url("${config.markUrl ?? config.logoUrl}")` }}
+          style={{ backgroundImage: `url("${assetSrc(config.markUrl ?? config.logoUrl, 828)}")` }}
         />
       )}
     </>

@@ -1,5 +1,5 @@
 import 'server-only';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
 import { resolveEffectiveRole } from '@/lib/db/membership';
@@ -15,7 +15,7 @@ export async function authorizeModuleAction(
   key: ActivatableModuleKey,
 ): Promise<{ error: string } | { ok: true }> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autenticado.' };
 
   const { data: profile } = await supabase

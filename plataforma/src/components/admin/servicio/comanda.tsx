@@ -160,12 +160,13 @@ export default function Comanda({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Kicker tone="info" rule>Falta servir · {nCocina}</Kicker>
           {cocina.map((l) => (
-            <div key={l.id} className="sv-line" data-paid={l.pagada ? '1' : '0'}>
+            <div key={l.id} className="sv-line" data-paid={l.pagada ? '1' : '0'} data-sending={l.enviando ? '1' : undefined}>
               <button
                 type="button"
                 className="sv-line-body"
                 onClick={() => onLinea(l)}
-                title="Ver qué se puede hacer con este plato"
+                disabled={l.enviando}
+                title={l.enviando ? 'Enviándose a cocina' : 'Ver qué se puede hacer con este plato'}
               >
                 <span className="sv-line-q">{l.cantidad}×</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -178,14 +179,20 @@ export default function Comanda({
                   entera sin decir por qué dejaba «Servido» con cara de
                   botón deshabilitado, y sigue haciendo falta. */}
               {l.pagada && <span className="sv-paid">Pagado</span>}
-              <button
-                type="button"
-                className="sv-serve"
-                onClick={() => onServir(l)}
-                disabled={ocupado}
-              >
-                Servido
-              </button>
+              {/* Todavía sin confirmar por la nube: no hay pedido al que
+                  marcarle «Servido». Dura lo que tarda la respuesta. */}
+              {l.enviando ? (
+                <span className="sv-sending" role="status">Enviando…</span>
+              ) : (
+                <button
+                  type="button"
+                  className="sv-serve"
+                  onClick={() => onServir(l)}
+                  disabled={ocupado}
+                >
+                  Servido
+                </button>
+              )}
             </div>
           ))}
         </div>

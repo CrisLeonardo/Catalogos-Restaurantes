@@ -36,6 +36,22 @@ Basado en verificación directa contra el código actual (2026-08-03). No incluy
 
 - [ ] **Instalador del agente sin certificado de firma de código.** Existe `agente-impresion/installer/sign.ps1` (firma manual con `.pfx`) pero no está conectado a ningún workflow de release. La clave automatizada en `release-desktop.yml` (`TAURI_SIGNING_PRIVATE_KEY`) es del updater de Tauri, no tiene nada que ver con SmartScreen. Comprar certificado Authenticode (idealmente EV) y automatizar la firma con `signtool` como paso posterior al build en `release-desktop.yml`.
 
+## Auditoría de velocidad e imágenes 2026-09-25 — abiertos
+
+Detalle y mediciones en [`AUDITORIA_2026-09-25.md`](AUDITORIA_2026-09-25.md). Lo corregido en código está allí; aquí solo lo que queda.
+
+- [ ] **Render en Oregón, Supabase en Virginia (I-1).** ~70 ms por consulta. Crear el servicio en Virginia (Render no cambia región de uno existente), mover DNS/dominios, borrar el viejo, actualizar `render.yaml`. Es lo que más velocidad da.
+- [ ] **Confirmar el plan de Render (I-2).** `render.yaml` dice `free` (0,1 CPU, se duerme).
+- [ ] **Tras desplegar: `cf-cache-status: HIT` en `/img/…` (I-3).**
+- [x] **CSS del panel dentro del menú (M-4).** Hecho 2026-09-26: reglas del personal en `src/app/admin.css` (importado por `app/admin/layout.tsx` y `app/super/layout.tsx`); el menú baja 96,6 KB en vez de ~178. Verificado sin cambios de cascada en 224 capturas (copia de `.press` en su sitio).
+- [x] **`createOrder` en fila (M-5).** Hecho 2026-09-26: lecturas en `Promise.all` (~10 → 4 viajes). Antes y después comparados en 9 escenarios contra la base local: mismos importes, ítems y errores.
+- [ ] **Re-precarga de ~10 enlaces tras cada acción (P-5).** Solo si no se hace I-1.
+- [ ] **`getClaims()` en `proxy.ts` (I-4).** Una ida y vuelta a Auth menos por petición; revisar antes las JWT Signing Keys del proyecto.
+- [ ] **Borrar `components/admin/waiter-panel.tsx` (F-1)** — 1.750 líneas sin importar desde el módulo de Servicio.
+- [ ] **Primer ingreso en el teléfono: tutorial + banner de instalación + notificaciones a la vez (F-2).**
+- [x] **«Enviar a cocina» sin espera (F-4).** Hecho 2026-09-26: carrito vacío al tocar, líneas «Enviando…», vuelven al carrito si la nube rechaza; cobrar/liberar/mover bloqueados mientras hay envío en vuelo.
+- [ ] **`router.refresh()` redundantes tras acciones que ya revalidan (P-3)** — quitados en Tomar pedidos, Mesas y Caja; quedan ~60 en pantallas de poco tráfico.
+
 ## Ya corregidos — verificados en código, sin acción pendiente
 
 - [x] Comanda de cocina se imprimía hasta 3 veces (tabla `print_jobs` evita reencolar).

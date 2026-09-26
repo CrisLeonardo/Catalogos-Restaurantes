@@ -101,7 +101,7 @@ export default function HojaCobro({
      algo sin enviar, pero la regla vive también aquí porque de aquí sale
      el dinero. */
   const cobrables = useMemo(
-    () => [...resumen.cocina, ...resumen.servidas].filter((l) => !l.pagada),
+    () => [...resumen.cocina, ...resumen.servidas].filter((l) => !l.pagada && !l.enviando),
     [resumen],
   );
 

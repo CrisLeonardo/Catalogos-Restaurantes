@@ -276,9 +276,8 @@ export default function SalonBoard({
       const res = await undoServeTable(restaurantId, ids);
       setPendiente(null);
       setAviso({ text: res.error ?? `Mesa ${n}: deshecho. La comida vuelve a estar lista.` });
-      router.refresh();
     });
-  }, [restaurantId, router]);
+  }, [restaurantId]);
 
   /** Devuelve a pendientes las llamadas que se acaban de dar por atendidas. */
   const deshacerAtender = useCallback((n: number, ids: string[]) => {
@@ -287,9 +286,8 @@ export default function SalonBoard({
       const res = await undoResolveTableCalls(restaurantId, ids);
       setPendiente(null);
       setAviso({ text: res.error ?? `Mesa ${n}: deshecho. Vuelve a estar llamando.` });
-      router.refresh();
     });
-  }, [restaurantId, router]);
+  }, [restaurantId]);
 
   /* ── El puesto de mando: sentar y repartir ────────────────
      Estas cuatro no tocan pedidos, y por eso viven aquí y no en el panel
@@ -350,7 +348,6 @@ export default function SalonBoard({
             text: `Mesa ${t.n}: comida marcada como servida.`,
             undo: ids.length > 0 ? () => deshacerServir(t.n, ids) : undefined,
           });
-          router.refresh();
         });
         return;
       case 'atender':
@@ -364,7 +361,6 @@ export default function SalonBoard({
             text: `Mesa ${t.n}: llamada atendida.`,
             undo: ids.length > 0 ? () => deshacerAtender(t.n, ids) : undefined,
           });
-          router.refresh();
         });
         return;
       case 'cobrar':
@@ -402,7 +398,7 @@ export default function SalonBoard({
            la misma mesa, que es justo lo que bill-panel.tsx se prohíbe. */
         irAlMesero(t.n, 'agregar');
     }
-  }, [restaurantId, router, irAlMesero, deshacerServir, deshacerAtender]);
+  }, [restaurantId, irAlMesero, deshacerServir, deshacerAtender]);
 
   /* El acuse dura lo que tarda en leerse y se va solo. Con «deshacer»
      dura más: cuatro segundos son los que tarda alguien en LEER que se

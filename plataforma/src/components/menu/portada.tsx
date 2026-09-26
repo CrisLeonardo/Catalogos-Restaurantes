@@ -4,7 +4,7 @@
    Todo sale del motor: logo, marca, tagline, zona, textos y CTA. Portado de
    ClientApp.jsx, adaptado a un hero web que hace scroll al menú. */
 
-import Image from 'next/image';
+import AssetImage from '@/components/asset-image';
 import type { CSSProperties } from 'react';
 import { Icon } from '@/components/icons';
 import { PrimaryButton } from '@/components/menu/ui';
@@ -31,11 +31,17 @@ function BrandMark({ size = 96, cssSize }: { size?: number; cssSize?: string }) 
   const box = cssSize ?? `${size}px`;
   if (config.logoUrl) {
     return (
-      <Image
+      /* Es lo PRIMERO que ve el comensal (el elemento más grande de la
+         portada): sin prioridad salía con `loading="lazy"` como cualquier
+         foto de la carta, y el navegador lo ponía a la cola detrás del CSS
+         y las fuentes. */
+      <AssetImage
         src={config.logoUrl}
         alt={config.brandName}
         width={size}
         height={size}
+        loading="eager"
+        fetchPriority="high"
         style={{ width: box, maxWidth: '100%', height: 'auto', objectFit: 'contain', display: 'block' }}
       />
     );
@@ -208,7 +214,7 @@ export default function Portada({ isOpen = true }: { isOpen?: boolean }) {
       >
         <div aria-hidden style={{ position: 'absolute', inset: 0 }}>
           {config.backgroundImage ? (
-            <Image src={config.backgroundImage} alt="" fill priority sizes="100vw" style={{ objectFit: 'cover' }} />
+            <AssetImage src={config.backgroundImage} alt="" fill loading="eager" fetchPriority="high" sizes="100vw" style={{ objectFit: 'cover' }} />
           ) : (
             <div
               style={{

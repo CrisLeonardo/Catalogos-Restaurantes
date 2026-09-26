@@ -43,10 +43,14 @@ export async function resolveZoneFee(
   zoneName: string | null | undefined,
 ): Promise<number | null> {
   if (!zoneName) return null;
+  return zoneFeeFrom(await getDeliveryZones(restaurantId), zoneName);
+}
 
-  const zones = await getDeliveryZones(restaurantId);
-  if (zones.length === 0) return null;
-
+/** La misma regla que resolveZoneFee, sobre una lista YA leída: createOrder
+    trae las zonas para validar la cobertura y no tiene por qué pedirlas dos
+    veces a la base para cobrar el envío. */
+export function zoneFeeFrom(zones: DeliveryZone[], zoneName: string | null | undefined): number | null {
+  if (!zoneName || zones.length === 0) return null;
   const match = zones.find((z) => z.nombre.toLowerCase() === zoneName.trim().toLowerCase());
   return match ? match.tarifa : null;
 }

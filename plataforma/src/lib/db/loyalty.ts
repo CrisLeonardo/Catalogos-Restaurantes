@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import type { LoyaltyReward } from '@/types';
@@ -215,6 +216,36 @@ export async function getPublicRewards(restaurantId: string): Promise<PublicRewa
       } as PublicReward;
     })
     .filter((r) => r.stock === null || r.stock > 0);
+}
+
+/** Etiqueta de caché de lo que el MENÚ muestra de la lealtad (ajustes y
+    catálogo de canje). Se expira con updateTag() en las acciones que los
+    editan (actions/loyalty.ts). */
+export const loyaltyTag = (restaurantId: string) => `loyalty:${restaurantId}`;
+
+/**
+ * Ajustes + catálogo de canje para el menú público, cacheados entre
+ * peticiones (60 s, como la carta). Antes eran dos consultas EN VIVO en cada
+ * visita al menú de un restaurante con lealtad, a Virginia y de vuelta.
+ *
+ * También cuelga de `menu:<id>`: las tarjetas de canje copian nombre, foto y
+ * etiquetas del platillo enlazado, así que editar la carta las refresca.
+ * El `stock` puede ir hasta un minuto por detrás tras un canje; no importa
+ * para cobrar de más o de menos: el canje lo valida la base
+ * (leogin_loyalty_redeem_reward), no esta lista.
+ */
+export function getPublicLoyaltyCached(restaurantId: string) {
+  return unstable_cache(
+    async () => {
+      const [settings, rewards] = await Promise.all([
+        getLoyaltySettings(restaurantId),
+        getPublicRewards(restaurantId),
+      ]);
+      return { settings, rewards };
+    },
+    ['public-loyalty', restaurantId],
+    { revalidate: 60, tags: [loyaltyTag(restaurantId), `menu:${restaurantId}`] },
+  )();
 }
 
 export interface DinerLoyalty {

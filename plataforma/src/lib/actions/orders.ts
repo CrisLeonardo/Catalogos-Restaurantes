@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient, createDinerClient } from '@/lib/supabase/server';
+import { createClient, createDinerClient, getStaffUser } from '@/lib/supabase/server';
 import { canActOnRestaurant, resolveEffectiveRole } from '@/lib/db/membership';
 import { createServiceClient } from '@/lib/supabase/service';
 import { canActOnGroupBranch } from '@/lib/db/admin';
@@ -14,7 +14,7 @@ import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import type { ThemeConfig } from '@/lib/theme/defaults';
 import { isOpenNow, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import { resolveCoupon } from '@/lib/db/cupones';
-import { getDeliveryZones, resolveZoneFee } from '@/lib/db/zones';
+import { getDeliveryZones, zoneFeeFrom, type DeliveryZone } from '@/lib/db/zones';
 import { logActivity } from '@/lib/activity';
 import { can } from '@/lib/permissions';
 import { necesitaAprobacion, puedeAprobar, type Aprobador } from '@/lib/void-approval';
@@ -189,6 +189,7 @@ async function computeOrderPricing(
   couponCode: string | undefined,
   verifiedItems: VerifiedOrderItem[],
   zoneName: string | null | undefined,
+  zones: DeliveryZone[],
 ): Promise<{
   subtotal: number;
   fee: number;
@@ -206,7 +207,9 @@ async function computeOrderPricing(
   // Un nombre de zona que no existe cae a la tarifa plana en vez de a 0: el
   // pedido ya viene validado contra la lista de zonas más arriba, así que
   // llegar aquí sin coincidencia significa desconcierto, no envío gratis.
-  const zoneFee = orderType === 'DELIVERY' ? await resolveZoneFee(restaurantId, zoneName) : null;
+  // `zones` es la lista que createOrder ya leyó de la BD para validar la
+  // cobertura (antes resolveZoneFee la volvía a pedir).
+  const zoneFee = orderType === 'DELIVERY' ? zoneFeeFrom(zones, zoneName) : null;
   const fee = orderType === 'DELIVERY'
     ? (zoneFee ?? Math.max(0, Number(themeConfig.deliveryFee) || 0))
     : 0;
@@ -226,6 +229,25 @@ async function computeOrderPricing(
   return { subtotal, fee, discount, tip, total, applied };
 }
 
+/** Sesión de Google del comensal (si la hay) y su cliente de lealtad. */
+async function resolveDinerForOrder(
+  restaurantId: string,
+): Promise<{ authUserId: string | null; loyaltyCustomerId: string | null }> {
+  // Sesión del comensal (Google), si la hay: enlaza la cuenta al cliente
+  // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
+  // Cookie propia del comensal — la sesión del personal no interviene aquí.
+  const authClient = await createDinerClient();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  const authUserId = await resolveDinerAuthUserId(authUser?.id ?? null);
+
+  // Cliente de lealtad autenticado: canjear recompensas o puntos exige sesión
+  // de Google (nunca se resuelve por el teléfono escrito en el checkout, que
+  // cualquiera puede teclear). null si no hay sesión o la cuenta no tiene
+  // historial enlazado todavía.
+  const loyaltyCustomerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
+  return { authUserId, loyaltyCustomerId };
+}
+
 export async function createOrder(
   rawInput: unknown,
 ): Promise<CreateOrderResult> {
@@ -239,26 +261,86 @@ export async function createOrder(
 
   const db = createServiceClient();
 
+  /* «Pedir» es el botón del comensal, y cada consulta es una ida y vuelta
+     de Render a la base. Iban EN FILA —reintento, límite, sesión, lealtad,
+     restaurante, agente, zonas, cobertura, precios, tema—: diez viajes antes
+     de crear nada. Todas las LECTURAS salen juntas y los resultados se
+     comprueban después en el mismo orden de siempre, así que cada error es
+     el mismo que antes y sale en el mismo caso.
+
+     Lo que NO entra en la tanda es lo que escribe: el límite de pedidos
+     por IP cuenta un intento y un reintento de la cola offline no debe
+     gastarlo (va después del chequeo de reintento, como siempre), y cliente,
+     pedido, cupón y canje dependen de los precios ya validados. Comparado
+     contra la versión anterior con pedidos reales de la base local — mismos
+     importes, mismos errores (2026-09-25). */
+  const conGeo =
+    customer.type === 'DELIVERY' &&
+    customer.deliveryLat !== undefined &&
+    customer.deliveryLng !== undefined;
+  const [
+    { data: existing },
+    { data: restaurant },
+    { data: agentRow },
+    zones,
+    { data: coverage },
+    priced,
+    { data: themeRow },
+    diner,
+  ] = await Promise.all([
+    clientId
+      ? db
+          .from('orders')
+          .select('id, order_number, public_token')
+          .eq('restaurant_id', restaurantId)
+          .eq('client_id', clientId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    db
+      .from('restaurants')
+      .select('id, modules, status, whatsapp_number, timezone, hours, hour_exceptions, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
+      .eq('id', restaurantId)
+      .single(),
+    db
+      .from('print_agents')
+      .select('auto_pause_enabled, last_seen_at')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle(),
+    customer.type === 'DELIVERY' ? getDeliveryZones(restaurantId) : Promise.resolve([] as DeliveryZone[]),
+    // Solo lee (plpgsql con un SELECT). Se pide siempre que haya coordenadas;
+    // su respuesta solo cuenta si el restaurante tiene radio configurado.
+    conGeo
+      ? db.rpc('check_delivery_coverage', {
+          p_restaurant_id: restaurantId,
+          p_lat: customer.deliveryLat,
+          p_lng: customer.deliveryLng,
+        })
+      : Promise.resolve({ data: null }),
+    // SEGURIDAD: los precios NUNCA se toman del cliente (serían falsificables).
+    // Se leen de la BD (base + deltas de opciones), validando que cada producto
+    // pertenezca a ESTE restaurante y siga disponible. Los snapshots se congelan.
+    verifyAndPriceItems(db, restaurantId, items, ' Actualiza tu carrito.'),
+    // El costo de envío también se resuelve en el servidor (tema del restaurante).
+    db
+      .from('restaurant_themes')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single(),
+    resolveDinerForOrder(restaurantId),
+  ]);
+
   // Reintento idempotente (cola offline del catálogo, ver migración 061):
   // si este client_id ya generó un pedido, devuélvelo tal cual SIN
   // repetir rate-limit, upsert_customer, cupón, lealtad ni push — esos
   // efectos secundarios no son idempotentes y duplicarlos sería peor que
   // el problema que la cola intenta resolver.
-  if (clientId) {
-    const { data: existing } = await db
-      .from('orders')
-      .select('id, order_number, public_token')
-      .eq('restaurant_id', restaurantId)
-      .eq('client_id', clientId)
-      .maybeSingle();
-    if (existing) {
-      return {
-        success: true,
-        orderId: existing.id as string,
-        orderNumber: existing.order_number as string,
-        publicToken: existing.public_token as string,
-      };
-    }
+  if (existing) {
+    return {
+      success: true,
+      orderId: existing.id as string,
+      orderNumber: existing.order_number as string,
+      publicToken: existing.public_token as string,
+    };
   }
 
   // Rate-limit: endpoint público sin login. Frena inundación de pedidos
@@ -268,24 +350,7 @@ export async function createOrder(
     return { error: 'Has enviado varios pedidos muy seguido. Espera un momento e intenta de nuevo.' };
   }
 
-  // Sesión del comensal (Google), si la hay: enlaza la cuenta al cliente
-  // (por teléfono) al pedir, para ver/canjear puntos desde cualquier dispositivo.
-  // Cookie propia del comensal — la sesión del personal no interviene aquí.
-  const authClient = await createDinerClient();
-  const { data: { user: authUser } } = await authClient.auth.getUser();
-  const authUserId = await resolveDinerAuthUserId(authUser?.id ?? null);
-
-  // Cliente de lealtad autenticado: canjear recompensas o puntos exige sesión
-  // de Google (nunca se resuelve por el teléfono escrito en el checkout, que
-  // cualquiera puede teclear). null si no hay sesión o la cuenta no tiene
-  // historial enlazado todavía.
-  const loyaltyCustomerId = await getCustomerIdByAuthUser(restaurantId, authUserId);
-
-  const { data: restaurant } = await db
-    .from('restaurants')
-    .select('id, modules, status, whatsapp_number, timezone, hours, hour_exceptions, orders_paused, pause_message, delivery_zones, location_lat, location_lng, delivery_radius_km')
-    .eq('id', restaurantId)
-    .single();
+  const { authUserId, loyaltyCustomerId } = diner;
 
   if (!restaurant) return { error: 'Restaurante no encontrado.' };
   if (restaurant.status !== 'active')
@@ -312,11 +377,6 @@ export async function createOrder(
   // (heartbeat de /api/agent/poll) los pedidos se reanudan solos.
   {
     const AUTO_PAUSE_STALE_MS = 5 * 60_000;
-    const { data: agentRow } = await db
-      .from('print_agents')
-      .select('auto_pause_enabled, last_seen_at')
-      .eq('restaurant_id', restaurantId)
-      .maybeSingle();
     if (
       agentRow?.auto_pause_enabled === true &&
       agentRow.last_seen_at &&
@@ -344,7 +404,6 @@ export async function createOrder(
   // la migración 104 (antes eran nombres sueltos en restaurants.delivery_zones,
   // ahora histórica) — la comparación es sin distinguir mayúsculas porque el
   // nombre viaja como texto en el pedido y no como id.
-  const zones = customer.type === 'DELIVERY' ? await getDeliveryZones(restaurantId) : [];
   if (customer.type === 'DELIVERY' && zones.length > 0) {
     const zoneOk = customer.zone
       && zones.some((z) => z.nombre.toLowerCase() === customer.zone!.trim().toLowerCase());
@@ -367,13 +426,8 @@ export async function createOrder(
       return { error: 'Este restaurante requiere que indiques tu ubicación en el mapa.' };
     }
 
-    // RPC Haversine en el servidor (la UI ya hizo la validación; esto es el candado).
-    const { data: coverage } = await db.rpc('check_delivery_coverage', {
-      p_restaurant_id: restaurantId,
-      p_lat: customer.deliveryLat,
-      p_lng: customer.deliveryLng,
-    });
-
+    // RPC Haversine en el servidor (la UI ya hizo la validación; esto es el
+    // candado). Ya se pidió arriba, junto con el resto de lecturas.
     const cov = coverage as { covered: boolean; distance_km: number | null; radius_km: number | null } | null;
     if (!cov?.covered) {
       const dist = cov?.distance_km ? ` (estás a ${cov.distance_km} km)` : '';
@@ -384,10 +438,6 @@ export async function createOrder(
     }
   }
 
-  // SEGURIDAD: los precios NUNCA se toman del cliente (serían falsificables).
-  // Se leen de la BD (base + deltas de opciones), validando que cada producto
-  // pertenezca a ESTE restaurante y siga disponible. Los snapshots se congelan.
-  const priced = await verifyAndPriceItems(db, restaurantId, items, ' Actualiza tu carrito.');
   if ('error' in priced) return { error: priced.error };
   const verifiedItems: VerifiedOrderItem[] = priced.items;
 
@@ -403,20 +453,21 @@ export async function createOrder(
       return { error: 'Inicia sesión con Google para canjear recompensas.' };
     }
 
-    const { data: acctR } = await db
-      .from('loyalty_accounts')
-      .select('points_balance')
-      .eq('restaurant_id', restaurantId)
-      .eq('customer_id', loyaltyCustomerId)
-      .maybeSingle();
-    const balanceR = Number(acctR?.points_balance) || 0;
-
     const ids = [...new Set(rewardLines.map((r) => r.rewardId))];
-    const { data: rewards } = await db
-      .from('loyalty_rewards')
-      .select('id, product_id, title, points_cost, active, stock')
-      .eq('restaurant_id', restaurantId)
-      .in('id', ids);
+    const [{ data: acctR }, { data: rewards }] = await Promise.all([
+      db
+        .from('loyalty_accounts')
+        .select('points_balance')
+        .eq('restaurant_id', restaurantId)
+        .eq('customer_id', loyaltyCustomerId)
+        .maybeSingle(),
+      db
+        .from('loyalty_rewards')
+        .select('id, product_id, title, points_cost, active, stock')
+        .eq('restaurant_id', restaurantId)
+        .in('id', ids),
+    ]);
+    const balanceR = Number(acctR?.points_balance) || 0;
     const rewardById = new Map((rewards ?? []).map((r) => [r.id as string, r]));
 
     const rProductIds = [...new Set((rewards ?? []).map((r) => r.product_id).filter(Boolean) as string[])];
@@ -453,17 +504,12 @@ export async function createOrder(
     }
   }
 
-  // El costo de envío también se resuelve en el servidor (tema del restaurante).
-  const { data: themeRow } = await db
-    .from('restaurant_themes')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .single();
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
   const { subtotal, fee, discount, tip, total, applied } = await computeOrderPricing(
     restaurantId, themeConfig, customer.type, tipAccepted, parsed.data.couponCode, verifiedItems,
     customer.type === 'DELIVERY' ? customer.zone : null,
+    zones,
   );
 
   // Registro automático del cliente (clave: teléfono normalizado por
@@ -541,18 +587,22 @@ export async function createOrder(
     return { error: orderError?.message ?? 'Error al crear el pedido.' };
   }
 
-  // Persistir el cupón aplicado (metadata para recibos/reportes) y contar su uso.
+  // Persistir el cupón aplicado (metadata para recibos/reportes) y contar su
+  // uso. Las dos escrituras son independientes: van a la vez.
   if (applied && discount > 0) {
-    await db.from('orders').update({
-      discount,
-      coupon_id: applied.coupon.id,
-      coupon_code: applied.coupon.code,
-    }).eq('id', order.id);
-    await db.rpc('increment_coupon_usage', { p_id: applied.coupon.id });
+    await Promise.all([
+      db.from('orders').update({
+        discount,
+        coupon_id: applied.coupon.id,
+        coupon_code: applied.coupon.code,
+      }).eq('id', order.id),
+      db.rpc('increment_coupon_usage', { p_id: applied.coupon.id }),
+    ]);
   }
 
   // Canje de recompensas (productos): descuenta los puntos de cada una de forma
   // atómica. Ya validamos saldo arriba; el RPC re-valida y nunca deja negativo.
+  // En fila A PROPÓSITO: cada canje re-lee el saldo que dejó el anterior.
   if (rewardRedeemIds.length > 0 && loyaltyCustomerId) {
     for (const rid of rewardRedeemIds) {
       await db.rpc('leogin_loyalty_redeem_reward', {
@@ -606,17 +656,55 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   const { restaurantId, items, customer, tipAccepted, clientId, openItems } = parsed.data;
 
   // Autenticación obligatoria (es mesero, no cliente anónimo).
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
 
-  const { data: waiterProfile } = await db
-    .from('profiles')
-    .select('role, restaurant_id, permissions')
-    .eq('id', user.id)
-    .single();
+  /* «Enviar a cocina» es LA acción del turno, y cada consulta de aquí es una
+     ida y vuelta de Render (Oregón) a la base (Virginia). Iban en fila —
+     perfil, reintento, restaurante, precios, tema: cinco viajes antes de
+     poder crear el pedido—. Ninguna depende de otra, así que salen juntas y
+     se COMPRUEBAN en el mismo orden de siempre: nada se devuelve (ni el
+     pedido de un reintento) antes de haber validado al mesero. */
+  const [
+    { data: waiterProfile },
+    { data: existing },
+    { data: restaurant },
+    priced,
+    { data: themeRow },
+  ] = await Promise.all([
+    db
+      .from('profiles')
+      .select('role, restaurant_id, permissions')
+      .eq('id', user.id)
+      .single(),
+    // Reintento idempotente (fallback offline del mesero — hub local o cola
+    // del dispositivo, ver waiter-panel.tsx): si este client_id ya generó un
+    // pedido, se devuelve tal cual sin repetir push ni impresión (mismo
+    // patrón que createOrder, migración 061).
+    clientId
+      ? db
+          .from('orders')
+          .select('id, order_number')
+          .eq('restaurant_id', restaurantId)
+          .eq('client_id', clientId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    db
+      .from('restaurants')
+      .select('id, modules, status, timezone')
+      .eq('id', restaurantId)
+      .single(),
+    // Validar productos desde BD (precio autoritativo).
+    verifyAndPriceItems(db, restaurantId, items),
+    // Propina (si el restaurante la habilita para este tipo de pedido).
+    db
+      .from('restaurant_themes')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .single(),
+  ]);
 
   if (
     !waiterProfile ||
@@ -626,27 +714,9 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
     return { error: 'No autorizado.' };
   }
 
-  // Reintento idempotente (fallback offline del mesero — hub local o cola del
-  // dispositivo, ver waiter-panel.tsx): si este client_id ya generó un
-  // pedido, devuélvelo tal cual sin repetir push ni impresión (mismo patrón
-  // que createOrder, migración 061).
-  if (clientId) {
-    const { data: existing } = await db
-      .from('orders')
-      .select('id, order_number')
-      .eq('restaurant_id', restaurantId)
-      .eq('client_id', clientId)
-      .maybeSingle();
-    if (existing) {
-      return { success: true, orderId: existing.id as string, orderNumber: existing.order_number as string };
-    }
+  if (existing) {
+    return { success: true, orderId: existing.id as string, orderNumber: existing.order_number as string };
   }
-
-  const { data: restaurant } = await db
-    .from('restaurants')
-    .select('id, modules, status, timezone')
-    .eq('id', restaurantId)
-    .single();
 
   if (!restaurant) return { error: 'Restaurante no encontrado.' };
   if (restaurant.status !== 'active') return { error: 'El restaurante no está disponible.' };
@@ -654,8 +724,6 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   const modules = restaurant.modules as { orders?: boolean } | null;
   if (!modules?.orders) return { error: 'Este restaurante no acepta pedidos.' };
 
-  // Validar productos desde BD (precio autoritativo).
-  const priced = await verifyAndPriceItems(db, restaurantId, items);
   if ('error' in priced) return { error: priced.error };
 
   /* Y los que no están en la carta. Van DESPUÉS de los verificados para
@@ -677,12 +745,6 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   ];
   if (verifiedItems.length === 0) return { error: 'El pedido no tiene nada que enviar.' };
 
-  // Propina (si el restaurante la habilita para este tipo de pedido).
-  const { data: themeRow } = await db
-    .from('restaurant_themes')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .single();
   const themeConfig = resolveTheme((themeRow as ThemeRow) ?? null).config;
 
   /* Tipo de pedido del mesero: en mesa (DINE_IN) o para llevar (PICKUP).
@@ -749,9 +811,10 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
      aviso de la migración 031). Y si la columna todavía no existe en este
      entorno, el pedido ya está creado: perder el dato de personas no puede
      costar la comanda. */
-  if (waiterOrderType === 'DINE_IN' && customer.partySize) {
-    await db.from('orders').update({ party_size: customer.partySize }).eq('id', order.id);
-  }
+  const personas =
+    waiterOrderType === 'DINE_IN' && customer.partySize
+      ? db.from('orders').update({ party_size: customer.partySize }).eq('id', order.id)
+      : null;
 
   // El pedido del mesero NACE ya enviado a cocina.
   //
@@ -761,18 +824,24 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   // (el bug de la doble impresión). Y no tenía sentido pedirle a nadie que
   // "confirmara" un pedido que un mesero del local ya tomó y ya mandó.
   // Ahora el estado dice la verdad desde el primer segundo: en preparación.
+  //
+  // Las dos escrituras (personas y estado) van a la vez: son filas iguales
+  // pero columnas distintas, y siguen separadas por lo dicho arriba.
   const firedAt = new Date().toISOString();
-  await db
-    .from('orders')
-    .update({ status: 'PREP', accepted_at: firedAt })
-    .eq('id', order.id);
+  await Promise.all([
+    personas,
+    db
+      .from('orders')
+      .update({ status: 'PREP', accepted_at: firedAt })
+      .eq('id', order.id),
+  ]);
 
   /* Los artículos libres quedan por escrito (M-09). Es la contrapartida de
      dejar que el precio lo ponga una persona: no hay catálogo contra el que
      comprobarlo, así que lo que hay es un rastro con nombre, importe y quién
      lo apuntó. Sin bloquear el pedido si la bitácora falla. */
   if (openItems.length > 0) {
-    await logActivity({
+    const bitacora = logActivity({
       restaurantId,
       actorId: user.id,
       action: 'articulo_libre',
@@ -781,7 +850,8 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
         lineas: openItems.map((o) => ({ nombre: o.name, precio: o.price, cantidad: o.quantity })),
         total: openItems.reduce((sum, o) => sum + o.price * o.quantity, 0),
       },
-    });
+    }).catch(() => {});
+    after(() => bitacora);
   }
 
   notifyNewOrder(
@@ -794,11 +864,15 @@ export async function createWaiterOrder(rawInput: unknown): Promise<WaiterOrderR
   // Comanda a cocina vía el Agente de impresión del local. Best-effort: no-op
   // si el restaurante no tiene agente/destino de cocina configurado, y con
   // candado anti-duplicado (ver enqueueKitchenForOrder).
-  try {
-    await enqueueKitchenForOrder(restaurantId, order.id);
-  } catch {
+  //
+  // Arranca YA (la comanda no se retrasa) pero el mesero no la espera: son
+  // 5-6 consultas en fila (agente, estaciones, pedido, cabecera, candado,
+  // cola) que antes se sumaban a su «Enviando…». `after` mantiene viva la
+  // promesa hasta que termine aunque la respuesta ya se haya ido.
+  const comanda = enqueueKitchenForOrder(restaurantId, order.id).catch(() => {
     // No bloquea el pedido del mesero si la impresión falla.
-  }
+  });
+  after(() => comanda);
 
   revalidarSalon();
   return { success: true, orderId: order.id, orderNumber: order.order_number };
@@ -1166,7 +1240,7 @@ export async function updateOrderStatus(
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const { data: profile } = await supabase
@@ -1335,8 +1409,7 @@ const BLOQUEADO: VoidApproval = { required: true, selfApproves: false, approvers
  */
 export async function getVoidApproval(orderId: string): Promise<VoidApproval> {
   if (!orderId) return BLOQUEADO;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return BLOQUEADO;
 
   const db = createServiceClient();
@@ -1468,8 +1541,7 @@ export async function voidOrder(input: VoidOrderInput): Promise<{ error?: string
   if (!reason) return { error: 'El motivo es obligatorio.' };
   if (!input.orderId) return { error: 'Pedido inválido.' };
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const db = createServiceClient();
@@ -2196,7 +2268,7 @@ async function authorizeOrderAccess(
   if (!orderId) return { error: 'ID de pedido requerido.' };
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const { data: profile } = await supabase
@@ -2338,7 +2410,7 @@ async function buildOrdersExportData(
   const safeDays = Math.min(Math.max(Math.trunc(days) || 30, 1), 366);
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const { data: profile } = await supabase
@@ -2451,8 +2523,7 @@ export interface PendingNewOrder {
 export async function getPendingNewOrders(restaurantId: string): Promise<PendingNewOrder[]> {
   if (!restaurantId) return [];
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return [];
 
   const db = createServiceClient();

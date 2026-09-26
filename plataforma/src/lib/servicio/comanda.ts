@@ -51,6 +51,23 @@ export interface LineaServicio {
   pagada: boolean;
   /** Artículo libre (M-09): no está en la carta y su precio lo escribió alguien. */
   libre: boolean;
+  /** Ya se mandó a cocina y la nube todavía no lo confirma (ver EnvioEnVuelo):
+      se pinta en «Falta servir», pero no se puede servir, anular ni cobrar. */
+  enviando?: boolean;
+}
+
+/**
+ * Una comanda que el mesero YA mandó y la nube todavía no confirma.
+ *
+ * «Enviar a cocina» no espera a la red: el carrito se vacía al tocar y sus
+ * líneas pasan a «Falta servir» marcadas como enviándose, con el `clientId`
+ * idempotente del pedido. En cuanto la mesa se vuelve a leer y trae un
+ * pedido con ese `client_id`, las del vuelo sobran y no se pintan —así no
+ * hay un fotograma con el plato repetido ni un hueco sin él—.
+ */
+export interface EnvioEnVuelo {
+  clientId: string;
+  lineas: CartLine[];
 }
 
 /** Lo que cuesta una línea entera. */
@@ -96,6 +113,7 @@ export function comandaDeMesa(
   orders: OrderWithItems[],
   carrito: CartLine[],
   pagadas: ReadonlySet<string> = new Set(),
+  enVuelo: readonly EnvioEnVuelo[] = [],
 ): LineaServicio[] {
   const out: LineaServicio[] = [];
 
@@ -137,6 +155,30 @@ export function comandaDeMesa(
         estadoPedido: estado,
         pagada: pagadas.has(item.id),
         libre: item.product_id == null,
+      });
+    }
+  }
+
+  /* Lo que va camino de la nube, al final de «Falta servir»: es lo último
+     que se pidió. Si la mesa ya trae el pedido real, no se repite. */
+  const confirmados = new Set(
+    orders.map((o) => (o as { client_id?: string | null }).client_id).filter(Boolean),
+  );
+  for (const envio of enVuelo) {
+    if (confirmados.has(envio.clientId)) continue;
+    for (const l of envio.lineas) {
+      out.push({
+        id: `envio-${envio.clientId}-${l.lineId}`,
+        fase: 'cocina',
+        productId: l.open ? null : l.productId,
+        nombre: l.name,
+        unidad: unidadDeCarrito(l),
+        cantidad: l.quantity,
+        detalle: lineDetail(l),
+        nota: l.note ?? '',
+        pagada: false,
+        libre: !!l.open,
+        enviando: true,
       });
     }
   }

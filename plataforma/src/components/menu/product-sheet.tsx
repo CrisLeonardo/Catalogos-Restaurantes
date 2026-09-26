@@ -4,7 +4,8 @@
    tiempo de preparación, grupos de opciones (variantes/extras), stepper y
    botón agregar. El precio del botón refleja base + opciones en vivo. */
 
-import Image from 'next/image';
+import AssetImage from '@/components/asset-image';
+import { PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
@@ -59,6 +60,7 @@ export default function ProductSheet({
   const titleT = useText('heading', 'productTitle');
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
+  const [heroReady, setHeroReady] = useState(false);
   const { locale } = useLocale();
   const name = useLocalized(product.name, product.name_en);
   const description = useLocalized(product.description ?? '', product.description_en);
@@ -187,7 +189,24 @@ export default function ProductSheet({
         {/* Hero */}
         <div style={{ borderRadius: 'var(--m-r-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '1.5', background: 'var(--surface-1)', border: '1px solid var(--u-hair)' }}>
           {usePhoto ? (
-            <Image src={product.image_url!} alt={name} fill style={{ objectFit: 'cover' }} sizes="460px" />
+            <>
+              {/* Capa de fondo: la MISMA foto que la tarjeta que se acaba de
+                  tocar (mismo `sizes` → mismo archivo) — ya está en la caché
+                  del navegador y se pinta al instante. Antes la ficha pedía
+                  otra más grande y el hueco se quedaba vacío mientras
+                  llegaba. La nítida entra encima con un fundido. */}
+              <AssetImage src={product.image_url!} alt="" aria-hidden fill loading="eager" style={{ objectFit: 'cover' }} sizes={PRODUCT_ART_SIZES} />
+              <AssetImage
+                src={product.image_url!}
+                alt={name}
+                fill
+                loading="eager"
+                fetchPriority="high"
+                sizes="(max-width: 500px) 92vw, 460px"
+                onLoad={() => setHeroReady(true)}
+                style={{ objectFit: 'cover', opacity: heroReady ? 1 : 0, transition: 'opacity 180ms ease-out' }}
+              />
+            </>
           ) : (
             <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
               <BrandPattern icon={icon} seed={seedFromString(product.id)} iconScale={1.5} faint={0.2} />

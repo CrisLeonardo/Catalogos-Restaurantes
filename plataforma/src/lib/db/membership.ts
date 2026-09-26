@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { LEGACY_ROLE, type MemberRole, type Membership, type MembershipCard } from '@/lib/membership-roles';
 
@@ -32,8 +32,7 @@ export { roleLabel, canBill, canManageStaff } from '@/lib/membership-roles';
 export const getMyMemberships = cache(async (): Promise<Membership[]> => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return [];
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return [];
 
   return listMembershipsOf(user.id);

@@ -1,6 +1,6 @@
 import { headers, cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext, myOrganizationId } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
@@ -42,8 +42,7 @@ export default async function AdminProtectedLayout({
   const headersList = await headers();
   const tenantSlug  = headersList.get('x-tenant-slug');
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) redirect(authPathFor('/admin/login', tenantSlug));
 
   // ctx (perfil/permite) y tenantData (datos del restaurante del subdominio)
@@ -159,20 +158,20 @@ export default async function AdminProtectedLayout({
   // solo dentro de Leogin Desktop, como antes: quien abría el panel desde el
   // navegador jamás se enteraba de que le faltaba). Dueños solamente: el
   // personal no decide la infraestructura del restaurante.
+  //
+  // Se pide junto con los precios (más abajo se esperan los dos a la vez):
+  // son independientes y antes iban en fila, una ida y vuelta más.
   let localServerState: 'missing' | 'off' | null = null;
-  if (
+  const agentPromise =
     currentRestaurant?.id &&
     (profile.role === 'RESTAURANT_OWNER' || profile.role === 'SUPER_ADMIN')
-  ) {
-    const svc = createServiceClient();
-    const { data: agentRow } = await svc
-      .from('print_agents')
-      .select('id, is_active')
-      .eq('restaurant_id', currentRestaurant.id)
-      .maybeSingle();
-    if (!agentRow) localServerState = 'missing';
-    else if ((agentRow.is_active as boolean | null) === false) localServerState = 'off';
-  }
+      ? createServiceClient()
+          .from('print_agents')
+          .select('id, is_active')
+          .eq('restaurant_id', currentRestaurant.id)
+          .maybeSingle()
+          .then(({ data }) => data)
+      : null;
 
   // El PLAN manda sobre restaurants.modules: si el plan lo incluye, se entrega,
   // aunque la bandera del jsonb se haya quedado atrás. La migración 095 ya
@@ -201,7 +200,15 @@ export default async function AdminProtectedLayout({
 
   // Precios vigentes para los upsells del panel (candados de plan, módulos,
   // suscripción): reflejan lo que el super admin configuró, no el default.
-  const pricing = await getEffectivePlanPricing();
+  const [pricing, agentRow, memberships] = await Promise.all([
+    getEffectivePlanPricing(),
+    agentPromise,
+    getMyMemberships(),
+  ]);
+  if (agentPromise) {
+    if (!agentRow) localServerState = 'missing';
+    else if ((agentRow.is_active as boolean | null) === false) localServerState = 'off';
+  }
 
   return (
     <PlanPricingProvider pricing={pricing}>
@@ -235,7 +242,7 @@ export default async function AdminProtectedLayout({
         || profile.role === 'RESTAURANT_OWNER'
         || profile.role === 'SUPER_ADMIN'
       }
-      hasMultipleRestaurants={(await getMyMemberships()).length > 1}
+      hasMultipleRestaurants={memberships.length > 1}
       isOperatorSession={isOperatorSession}
     >
       {needsEmailVerification && <VerifyEmailBanner email={user.email ?? null} />}

@@ -17,8 +17,9 @@
    plantillas compartían un único esqueleto y se sentían primas entre sí:
    cambiaban de ropa, no de cuerpo. */
 
-import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import AssetImage from '@/components/asset-image';
+import { FEATURED_ART_SIZES, PRODUCT_ART_SIZES } from '@/lib/asset-image';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { MenuSurface, Price, Tag, ctaClass } from '@/components/menu/ui';
@@ -84,6 +85,59 @@ function supportsFeatured(card: CardStyle): boolean {
   return card === 'tarjeta' || card === 'fila' || card === 'mosaico';
 }
 
+/**
+ * Adelanta la descarga de las fotos de la carta.
+ *
+ * Las tarjetas llevan `content-visibility: auto` (.menu-card-lazy): el
+ * navegador no maqueta lo que está lejos de la pantalla. Y una foto con
+ * `loading="lazy"` solo empieza a bajar cuando su caja se acerca al borde
+ * visible — pero dentro de una tarjeta sin maquetar NO HAY caja, así que
+ * la foto esperaba hasta que la tarjeta entraba en el margen corto de
+ * `content-visibility` (~media pantalla). Al deslizar con el dedo, las
+ * tarjetas llegaban grises y la foto aparecía después: el «las imágenes
+ * tardan en cargar» del menú (visto en rincon502 a 390 px).
+ *
+ * El envoltorio sí tiene caja (su alto reservado), así que se observa ÉL
+ * con un margen amplio y, al acercarse, su foto pasa a `eager`: empieza a
+ * bajar ~2 pantallas antes de hacer falta. No cambia nada visible ni el
+ * ahorro de pintado de `content-visibility`, solo cuándo se pide la foto.
+ *
+ * Toca el atributo directamente en el DOM: React no lo vuelve a escribir
+ * mientras su prop (`lazy`) no cambie, y así no hace falta repintar cada
+ * tarjeta para adelantar una descarga.
+ */
+function useFotosAnticipadas(root: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const vistos = new WeakSet<Element>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          e.target.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((img) => {
+            img.loading = 'eager';
+          });
+          io.unobserve(e.target);
+        }
+      },
+      { rootMargin: '1600px 0px' },
+    );
+    const observar = () => {
+      el.querySelectorAll('.menu-card-lazy').forEach((c) => {
+        if (vistos.has(c)) return;
+        vistos.add(c);
+        io.observe(c);
+      });
+    };
+    observar();
+    // Búsqueda, cambio de sección o de idioma montan tarjetas nuevas.
+    const mo = new MutationObserver(observar);
+    mo.observe(el, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo.disconnect(); };
+  }, [root]);
+}
+
 /** Reloj que avanza cada `ms` para reevaluar los menús por franja sin recargar. */
 function useNowTick(ms: number): Date {
   const [now, setNow] = useState(() => new Date());
@@ -142,6 +196,8 @@ export default function Catalog({
   const [openCat, setOpenCat] = useState<string | null | undefined>(undefined);
   const [query, setQuery] = useState('');
   const [spySection, setSpySection] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useFotosAnticipadas(rootRef);
 
   const nav = config.catalogNav ?? 'chips';
   const card = config.cardStyle ?? 'tarjeta';
@@ -342,7 +398,7 @@ export default function Catalog({
   };
 
   return (
-    <div>
+    <div ref={rootRef}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
@@ -988,11 +1044,11 @@ function CategoryCovers({
 /* ── Piezas de platillo ───────────────────────────────────── */
 
 /** Arte del producto: foto o BrandPattern según config.productArt. */
-function ProductArt({ p, icon, scale = 1 }: { p: ProdItem; icon: string; scale?: number }) {
+function ProductArt({ p, icon, scale = 1, sizes = PRODUCT_ART_SIZES }: { p: ProdItem; icon: string; scale?: number; sizes?: string }) {
   const config = useThemeConfig();
   const usePhoto = p.image_url && config.productArt !== 'pattern';
   if (usePhoto) {
-    return <Image src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes="(max-width: 440px) 50vw, 220px" />;
+    return <AssetImage src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes={sizes} />;
   }
   return (
     <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
@@ -1190,7 +1246,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
       ariaLabel={`Ver ${name}`}
     >
       <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
-        <ProductArt p={p} icon={icon} scale={1.35} />
+        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} />
         <div
           aria-hidden
           style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}
@@ -1239,7 +1295,7 @@ function ProductRow({ p, icon, qty, ordersEnabled, forceUnavailable = false, onA
   return (
     <MenuSurface className="m-row" unavailable={unavail} onClick={() => onOpen(p)} ariaLabel={`Ver ${name}`}>
       <div className="m-row-art">
-        <ProductArt p={p} icon={icon} scale={0.9} />
+        <ProductArt p={p} icon={icon} scale={0.9} sizes="96px" />
       </div>
       <div className="m-row-body">
         <div style={{ display: 'flex', gap: 'var(--m-sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>

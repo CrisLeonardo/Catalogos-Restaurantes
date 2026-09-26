@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { headers, cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { can } from '@/lib/permissions';
@@ -32,8 +32,7 @@ export default async function WaiterLayout({ children }: { children: React.React
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug');
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) redirect(authPathFor('/admin/login', tenantSlug));
 
   const db = createServiceClient();

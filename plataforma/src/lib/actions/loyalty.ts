@@ -1,7 +1,7 @@
 'use server';
 
 import { headers } from 'next/headers';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service';
 // Cliente del COMENSAL: todas las resoluciones de sesión de este módulo son
 // del comensal (Google). La cookie es independiente de la del personal.
@@ -10,7 +10,7 @@ import { authorizeModuleAction } from '@/lib/module-auth';
 import { isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import {
-  getDinerLoyalty, resolveDinerAuthUserId,
+  getDinerLoyalty, resolveDinerAuthUserId, loyaltyTag,
   type DinerLoyalty,
 } from '@/lib/db/loyalty';
 
@@ -46,6 +46,7 @@ export async function saveLoyaltySettings(restaurantId: string, patch: LoyaltySe
   if (error) return { error: error.message };
 
   revalidatePath('/admin/lealtad');
+  updateTag(loyaltyTag(restaurantId)); // el menú público (getPublicLoyaltyCached)
   return { ok: true };
 }
 
@@ -93,6 +94,7 @@ export async function saveReward(restaurantId: string, patch: RewardPatch): Prom
   if (error) return { error: error.message };
 
   revalidatePath('/admin/lealtad');
+  updateTag(loyaltyTag(restaurantId)); // el menú público (getPublicLoyaltyCached)
   return { ok: true };
 }
 
@@ -103,6 +105,7 @@ export async function deleteReward(restaurantId: string, rewardId: string): Prom
   const { error } = await db.from('loyalty_rewards').delete().eq('id', rewardId).eq('restaurant_id', restaurantId);
   if (error) return { error: error.message };
   revalidatePath('/admin/lealtad');
+  updateTag(loyaltyTag(restaurantId)); // el menú público (getPublicLoyaltyCached)
   return { ok: true };
 }
 
@@ -113,6 +116,7 @@ export async function toggleReward(restaurantId: string, rewardId: string, activ
   const { error } = await db.from('loyalty_rewards').update({ active }).eq('id', rewardId).eq('restaurant_id', restaurantId);
   if (error) return { error: error.message };
   revalidatePath('/admin/lealtad');
+  updateTag(loyaltyTag(restaurantId)); // el menú público (getPublicLoyaltyCached)
   return { ok: true };
 }
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { getMyRestaurantCards } from '@/lib/db/membership';
 import { getMyGroupScope } from '@/lib/db/group';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
@@ -31,7 +31,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MiCuentaPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) redirect('/admin/login');
 
   const [cards, pricing, scope, { data: profile }] = await Promise.all([

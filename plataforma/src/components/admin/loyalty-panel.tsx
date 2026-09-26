@@ -11,6 +11,7 @@ import {
   type LoyaltySettingsPatch, type RewardPatch,
 } from '@/lib/actions/loyalty';
 import type { LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
+import { assetSrc } from '@/lib/asset-image';
 
 interface RewardProduct { id: string; name: string; price: number; image_url: string | null; cost: number | null }
 
@@ -231,7 +232,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
               <div style={{ width: 46, height: 46, borderRadius: 11, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', fontSize: 18 }}>
                 {r.image_url
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  ? <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img src={assetSrc(r.image_url, 96)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : '🎁'}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>

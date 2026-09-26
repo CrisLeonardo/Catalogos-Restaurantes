@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+/* Estilos del área de personal (ver el encabezado de admin.css). */
+import '../admin.css';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { isSessionStale, SESSION_SEEN_COOKIE } from '@/lib/auth/session-activity';
 import SessionHeartbeat from '@/components/admin/session-heartbeat';
 import SuperShell from '@/components/super/shell';
@@ -20,7 +22,7 @@ export default async function SuperLayout({
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getStaffUser();
   if (!user) redirect('/login');
 
   // Checklist 2026-08-25 §2 — ver /admin/(protected)/layout.tsx. El super

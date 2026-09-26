@@ -111,13 +111,19 @@ export default function NewOrdersAlert({
   const muteRef = useRef(muteChime);
   useEffect(() => { muteRef.current = muteChime; }, [muteChime]);
 
-  // En /admin/pedidos el propio panel ya refresca los datos del server
-  // component; refrescar también desde aquí duplicaría el re-render.
+  // Pantallas que YA se refrescan solas con su propio canal en vivo:
+  // Pedidos (orders-panel), Mesas y Tomar pedidos (useSalonLive, que escucha
+  // los mismos INSERT/UPDATE de `orders`). Refrescar también desde aquí
+  // duplicaba el re-render completo —layout con sus consultas incluido— y,
+  // de rebote, la re-precarga de todos los enlaces visibles del menú (medido
+  // el 2026-09-25: ~10 peticiones más al servidor por cada pedido, en cada
+  // aparato con el panel abierto).
   // `internalPanelPath` traduce `/panel/<slug>/pedidos` a `/admin/pedidos`,
   // asi que esta comparacion vale en los dos origenes.
-  const isOrdersPage = internalPanelPath(pathname).startsWith('/admin/pedidos');
-  const isOrdersPageRef = useRef(isOrdersPage);
-  useEffect(() => { isOrdersPageRef.current = isOrdersPage; }, [isOrdersPage]);
+  const rutaInterna = internalPanelPath(pathname);
+  const refrescaSola = ['/admin/pedidos', '/admin/mesas', '/admin/mesero'].some((r) => rutaInterna.startsWith(r));
+  const refrescaSolaRef = useRef(refrescaSola);
+  useEffect(() => { refrescaSolaRef.current = refrescaSola; }, [refrescaSola]);
 
   const dismissedRef = useRef<Set<string>>(new Set());
   useEffect(() => { dismissedRef.current = loadDismissed(); }, []);
@@ -134,7 +140,7 @@ export default function NewOrdersAlert({
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRefresh  = useRef(0);
   const refreshSoon = useCallback(() => {
-    if (isOrdersPageRef.current) return;
+    if (refrescaSolaRef.current) return;
     if (refreshTimer.current) return;
     const wait = Math.max(0, 2500 - (Date.now() - lastRefresh.current));
     refreshTimer.current = setTimeout(() => {

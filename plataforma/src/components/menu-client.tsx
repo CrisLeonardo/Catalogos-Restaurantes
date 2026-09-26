@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import Catalog from '@/components/menu/catalog';
@@ -10,9 +11,6 @@ import ActiveOrderChip from '@/components/active-order-chip';
 import WaiterCallButton from '@/components/menu/waiter-call-button';
 import RewardsSection from '@/components/menu/rewards-section';
 import BottomNav, { type NavTab } from '@/components/menu/bottom-nav';
-import AccountSheet from '@/components/menu/account-sheet';
-import GoogleLoyaltyIntro from '@/components/menu/google-loyalty-intro';
-import MyOrders from '@/components/my-orders';
 import OverlayBackground from '@/components/menu/overlay-background';
 import { useCart } from '@/lib/cart-context';
 import { getScannedTable, watchScannedTable, isStandaloneLaunch } from '@/lib/table-session';
@@ -21,6 +19,14 @@ import { getMyAccount } from '@/lib/actions/loyalty';
 import type { WeeklyHours } from '@/lib/hours';
 import type { Category, Product } from '@/types';
 import type { MenuReward } from '@/components/menu/rewards-section';
+
+/* Pantallas que solo existen cuando el comensal las abre (Mi cuenta, Mis
+   pedidos, la invitación a la lealtad): se bajan al abrirlas, no con la
+   carta. Lo primero que tiene que llegar a un teléfono que acaba de
+   escanear un QR es el menú, no el formulario de su cuenta. */
+const AccountSheet = dynamic(() => import('@/components/menu/account-sheet'));
+const MyOrders = dynamic(() => import('@/components/my-orders'));
+const GoogleLoyaltyIntro = dynamic(() => import('@/components/menu/google-loyalty-intro'));
 
 type CatItem = Pick<Category, 'id' | 'name' | 'icon' | 'name_en'> & { availability?: WeeklyHours | null };
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'> & {
@@ -184,6 +190,7 @@ export default function MenuClient({
 
       {selected && (
         <ProductSheet
+          key={selected.id}
           product={selected}
           icon={selected.icon || catIcon.get(selected.category_id ?? '') || 'utensils'}
           ordersEnabled={ordersEnabled}

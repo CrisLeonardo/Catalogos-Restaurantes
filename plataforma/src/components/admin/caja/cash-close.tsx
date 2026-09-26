@@ -28,7 +28,6 @@
    ============================================================ */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { Icon } from '@/components/icons';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
@@ -62,7 +61,6 @@ interface Props {
 }
 
 export default function CashClose({ restaurantId, state, dateLabel, cashierName, restaurantName }: Props) {
-  const router = useRouter();
 
   const [paso, setPaso] = useState<Paso>(1);
   useEffect(() => {
@@ -133,7 +131,6 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       const res = await saveCajaDraft(payload());
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
       setAviso({ text: 'Cierre guardado. Puedes retomarlo cuando quieras.', bad: false });
-      router.refresh();
     });
   }
 
@@ -143,7 +140,6 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
       if (res.error || !res.result) { setAviso({ text: res.error ?? 'No se pudo cerrar la caja.', bad: true }); return; }
       setCerrado(res.result);
       try { localStorage.removeItem(PASO_KEY); } catch { /* no-op */ }
-      router.refresh();
     });
   }
 
@@ -240,7 +236,6 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               if (res.error) { setAviso({ text: res.error, bad: true }); return; }
               setCounts({}); setOpening('0'); setShift(''); setNotes('');
               irA(1);
-              router.refresh();
             })}
             className="press"
             style={{
@@ -527,7 +522,6 @@ function PasoGastos({ restaurantId, state, onAviso }: {
   state: CajaState;
   onAviso: (a: { text: string; bad: boolean }) => void;
 }) {
-  const router = useRouter();
   const [concept, setConcept] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
@@ -543,7 +537,6 @@ function PasoGastos({ restaurantId, state, onAviso }: {
       if (res.error) { onAviso({ text: res.error, bad: true }); return; }
       setConcept(''); setAmount(''); setPaidBy('');
       conceptRef.current?.focus();
-      router.refresh();
     });
   }
 
@@ -583,7 +576,6 @@ function PasoGastos({ restaurantId, state, onAviso }: {
               onClick={() => start(async () => {
                 const res = await deleteCashExpense(restaurantId, g.id);
                 if (res.error) { onAviso({ text: res.error, bad: true }); return; }
-                router.refresh();
               })}
               disabled={pending}
               aria-label={`Quitar el gasto ${g.concept}`}

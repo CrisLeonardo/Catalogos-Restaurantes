@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getMyMemberships } from '@/lib/db/membership';
 import { withPlanFloor, PLAN_ORDER, type PlanCode } from '@/lib/plans';
@@ -73,8 +73,7 @@ function effectiveModules(b: Restaurant): Record<string, boolean> {
 export const getMyGroupScope = cache(async (): Promise<GroupScope | null> => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const db = createServiceClient();

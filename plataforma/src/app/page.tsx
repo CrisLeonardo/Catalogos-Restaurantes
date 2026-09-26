@@ -12,7 +12,7 @@ import { isOpenNow, nextOpenLabel } from '@/lib/hours';
 import { isModuleActive } from '@/lib/modules';
 import { DEMO_SLUG, rootDomainForUrls, isAdminSubdomain, isGroupSubdomain } from '@/lib/tenant';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/demo-menu';
-import { getLoyaltySettings, getPublicRewards } from '@/lib/db/loyalty';
+import { getPublicLoyaltyCached, type PublicReward } from '@/lib/db/loyalty';
 import { isGoogleAuthEnabled } from '@/lib/auth-config';
 
 /* ── Metadata dinámica por restaurante ─────────────────────── */
@@ -167,12 +167,9 @@ export default async function Home({
 
   // Lealtad v2: pestaña "Fidelidad" en la barra de navegación + panel de canje.
   const loyaltyOn = isModuleActive(mod, modSettings, 'loyalty');
-  let rewardsCatalog: Awaited<ReturnType<typeof getPublicRewards>> | null = null;
+  let rewardsCatalog: PublicReward[] | null = null;
   if (loyaltyOn) {
-    const [settings, rewards] = await Promise.all([
-      getLoyaltySettings(data.restaurant.id),
-      getPublicRewards(data.restaurant.id),
-    ]);
+    const { settings, rewards } = await getPublicLoyaltyCached(data.restaurant.id);
     if (settings.rewards_enabled) rewardsCatalog = rewards;
   }
 

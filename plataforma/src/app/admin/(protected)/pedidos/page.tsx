@@ -1,6 +1,6 @@
 ﻿import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getAdminContext } from '@/lib/db/admin';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
@@ -28,8 +28,7 @@ function orderShortLabel(o: { order_type: string; address: string | null; table_
 }
 
 export default async function PedidosPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) redirect('/admin/login');
 
   const ctx = await getAdminContext();

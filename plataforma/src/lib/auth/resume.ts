@@ -2,7 +2,7 @@ import 'server-only';
 import { myOrganizationId } from '@/lib/db/admin';
 
 import { cookies, headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { resolveStaffDestination } from '@/lib/auth/destination';
 import { isLowPrivilegeRole, shouldHideResume } from '@/lib/auth/resume-policy';
 import { SESSION_SEEN_COOKIE, isSessionStale } from '@/lib/auth/session-activity';
@@ -45,7 +45,7 @@ export async function getResumeSession(
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   /* Vencida por inactividad: NO se ofrece continuar.

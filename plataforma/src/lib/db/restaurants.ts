@@ -28,25 +28,24 @@ export const getRestaurantBySlug = cache(
 
     const supabase = await createClient();
 
-    const { data: restaurant, error } = await supabase
+    /* Restaurante y tema en UNA consulta (el tema cuelga del restaurante por
+       su clave primaria, así que PostgREST lo incrusta). Antes eran dos en
+       fila, y esto corre en cada pantalla del panel. */
+    const { data: row, error } = await supabase
       .from('restaurants')
-      .select('*')
+      .select('*, restaurant_themes(*)')
       .eq('slug', slug)
       .eq('status', 'active')
       .single();
 
-    if (error || !restaurant) return null;
+    if (error || !row) return null;
 
-    const { data: theme } = await supabase
-      .from('restaurant_themes')
-      .select('*')
-      .eq('restaurant_id', restaurant.id)
-      .single();
-
-    const themeRow = (theme as RestaurantTheme) ?? defaultTheme(restaurant.id as string);
+    const { restaurant_themes: embedded, ...restaurant } = row as Record<string, unknown> & { id: string };
+    const theme = (Array.isArray(embedded) ? embedded[0] : embedded) as RestaurantTheme | null | undefined;
+    const themeRow = theme ?? defaultTheme(restaurant.id);
 
     return {
-      restaurant: restaurant as Restaurant,
+      restaurant: restaurant as unknown as Restaurant,
       theme: themeRow,
       resolved: resolveTheme(themeRow, slug, {
         brandName: restaurant.name as string,

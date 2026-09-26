@@ -13,7 +13,7 @@ import { useState, useTransition } from 'react';
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
 import Link from '@/components/admin/panel-link';
-import Image from 'next/image';
+import AssetImage from '@/components/asset-image';
 import { Icon } from '@/components/icons';
 import { BrandPattern, seedFromString } from '@/components/brand-pattern';
 import { toggleProductAvailability } from '@/lib/actions/products';
@@ -223,7 +223,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     }}
                   >
                     {p.image_url ? (
-                      <Image
+                      <AssetImage
                         src={p.image_url}
                         alt={p.name}
                         width={44}

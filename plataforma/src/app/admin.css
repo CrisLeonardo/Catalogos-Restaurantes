@@ -1,0 +1,2783 @@
+/* ============================================================
+   ÁREA DE PERSONAL — estilos que solo usan el panel (admin), el Super
+   Admin y el panel de grupo (central).
+   ------------------------------------------------------------
+   Vivían en globals.css, y globals.css lo descarga TAMBIÉN el comensal
+   que escanea el QR de la mesa: 169 KB de CSS bloqueante, dos tercios de
+   ellos del panel (medido el 2026-09-25). Se importa desde
+   app/admin/layout.tsx, app/super/layout.tsx y la página de /central.
+
+   Qué entra aquí lo decidió un script, no el ojo: una regla se mudó solo
+   si TODOS sus selectores exigen una clase que ningún archivo alcanzable
+   desde una ruta pública usa. Si una pantalla pública empieza a usar una
+   de estas clases, hay que devolver su regla a globals.css (o importar
+   este archivo también ahí).
+
+   ORDEN: este archivo se carga DESPUÉS de globals.css, y eso puede cambiar
+   quién gana entre dos reglas de igual especificidad. Se comprobó elemento
+   por elemento y propiedad por propiedad en 224 capturas (públicas, panel y
+   Super Admin; 390 y 1280 px; claro y oscuro): el único choque era `.press`,
+   y se resolvió con una copia en su posición de siempre (ver más abajo y
+   AUDITORIA_2026-09-25.md, M-4). Al añadir aquí una regla que comparta
+   elementos con una de globals.css, tenerlo presente.
+   ============================================================ */
+
+.anim-fade-in  { animation: fade-in  500ms ease both; }
+
+/* ============================================================
+   PANEL ADMIN — layout con sidebar (como el prototipo)
+   ============================================================ */
+.admin-shell {
+  display: flex; min-height: 100svh;
+  /* Redondez del panel: escala TODAS las tarjetas del admin (config
+     adminPanelRadius). El menú del cliente no se ve afectado (la vista
+     previa vive en un iframe con su propio documento). */
+  --radius-md:  calc(10px * var(--admin-panel-radius, 1));
+  --radius-lg:  calc(14px * var(--admin-panel-radius, 1));
+  --radius-xl:  calc(20px * var(--admin-panel-radius, 1));
+  --radius-2xl: calc(28px * var(--admin-panel-radius, 1));
+}
+
+.admin-sidebar {
+  width: 244px; flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 4px; padding: 18px 12px;
+  position: sticky; top: 0; height: 100svh;
+  background: var(--admin-panel-bg);
+  border-right: 1px solid var(--admin-panel-hair);
+  box-shadow: 1px 0 0 var(--adm-border, transparent);
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  /* Redirigir la escala de texto al tema del panel (dinámico: cliente o personalizado) */
+  --u-text:   var(--admin-panel-text);
+  --u-text-2: var(--admin-panel-text-2);
+  --u-text-3: var(--admin-panel-text-3);
+  --u-text-4: var(--admin-panel-text-4);
+  --u-hair:   var(--admin-panel-hair);
+  --u-hair-2: var(--admin-panel-hair-2);
+}
+.admin-main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  /* Fondo del área de contenido (puede diferir del de los laterales). */
+  background: var(--admin-panel-content-bg, transparent);
+  /* La tipografía del panel también aplica al contenido (antes solo
+     sidebar/topbar la recibían y la opción parecía no funcionar). */
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  /* Tinta del contenido: auto por luminancia del fondo de contenido, o la
+     del tema del cliente si el fondo es transparente (buildAdminPanelVars).
+     Evita texto claro sobre fondo claro cuando el dueño personaliza el panel. */
+  --u-text:   var(--admin-content-text,   var(--brand-text));
+  --u-text-2: var(--admin-content-text-2, rgba(245,243,239,0.74));
+  --u-text-3: var(--admin-content-text-3, rgba(245,243,239,0.56));
+  --u-text-4: var(--admin-content-text-4, rgba(245,243,239,0.53));
+  --u-hair:   var(--admin-content-hair,   rgba(245,243,239,0.10));
+  --u-hair-2: var(--admin-content-hair-2, rgba(245,243,239,0.18));
+}
+/* El <select> en sí puede llevar fondo translúcido (se ve bien: hereda el
+   fondo del panel detrás). Pero el listado de <option> que abre el navegador
+   es un popup aparte que en Windows/Chrome IGNORA `color-scheme` y solo
+   respeta el color explícito de cada <option> — sin esto sale con colores
+   inconsistentes según el navegador. Se fija blanco/negro explícito (no las
+   variables del tema) para que la lista sea siempre legible. */
+.admin-main select option,
+.admin-sidebar select option,
+.admin-topbar select option {
+  background-color: #ffffff;
+  color: #15130f;
+}
+/* Botones primarios del dashboard: color personalizable (no afecta al mesero,
+   que vive fuera de .admin-main y conserva el acento de la marca). */
+.admin-main .btn-accent,
+.admin-main .btn-primary {
+  background: var(--admin-panel-btn);
+  color: var(--admin-panel-btn-text);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--admin-panel-btn) 35%, transparent);
+}
+.admin-topbar {
+  min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 24px;
+  border-bottom: 1px solid var(--admin-panel-hair); position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--admin-panel-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  --u-text:   var(--admin-panel-text);
+  --u-text-2: var(--admin-panel-text-2);
+  --u-text-3: var(--admin-panel-text-3);
+  --u-hair:   var(--admin-panel-hair);
+  --u-hair-2: var(--admin-panel-hair-2);
+}
+/* Título de la pantalla. El tamaño vive aquí y no en línea para que el
+   teléfono pueda bajarlo sin pelearse con un `!important`.
+   `line-height: 1.2` porque el título se recorta con `overflow: hidden`
+   (para la elipsis) y el 0.95 de `.t-display` dejaba la caja más baja que
+   las letras: se comía el rabo de la «y» de «Hoy» y la «p» de «Tomar
+   pedidos» (medido: 24 px de letra en 21 de caja). */
+.admin-topbar h1 { font-size: 22px; line-height: 1.2; }
+/* Piezas que solo tienen sitio en escritorio (ayuda, instalar, tema): en
+   móvil se apagan y su contenido reaparece dentro del menú "⋯". */
+.adm-desk-only { display: flex; align-items: center; gap: 14px; }
+/* Y su contraparte: el "⋯" solo existe en el teléfono. */
+.admin-more {
+  display: none;
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: calc(12px * var(--admin-panel-radius, 1));
+  border: none; cursor: pointer; background: none;
+  place-items: center; color: var(--u-text);
+  box-shadow: var(--adm-shadow-xs, none);
+}
+.admin-content {
+  padding: 24px; flex: 1; min-width: 0;
+  /* Tamaño de texto del panel: escala todo el contenido (config
+     adminPanelTextScale). Antes solo escalaba los navlinks. */
+  zoom: var(--admin-panel-scale, 1);
+}
+/* Etiqueta de sección del panel (rediseño 2026-08-21).
+   ------------------------------------------------------------------
+   Es el rótulo que va encima de una lista, una tarjeta o un grupo de
+   campos: "Necesita tu atención", "Datos del emisor", "Cortes recientes".
+
+   Sustituye a `.t-kicker` DENTRO del panel. Aquella era Anton en
+   mayúsculas con 0.14em de espaciado, pensada para una portada; repetida
+   como rótulo en pantallas llenas de listas era el mayor generador de
+   ruido, y a los 9,5-10px con que se usaba se leía peor que el texto al
+   que etiquetaba. `.t-kicker` sigue viva y sin tocar para el menú del
+   restaurante, la marca de la barra lateral y el súper admin.
+
+   El tamaño va AQUÍ, no en cada llamada: durante la migración hubo que
+   sostener esto con un `!important` porque las 51 llamadas traían su
+   propio `fontSize` en línea. Ya no: se les quitó a todas, y por eso
+   esta regla es una regla normal.
+
+   `<Section>` (components/ui/section.tsx) usa esta misma clase, así que
+   un rótulo suelto y uno de sección no pueden desalinearse. */
+.adm-label {
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  font-weight: 600;
+  font-size: calc(12.5px * var(--admin-panel-scale, 1));
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.35;
+  color: var(--u-text-3);
+}
+
+/* Variante EN MAYÚSCULAS de la etiqueta de sección. `.adm-label` se
+   quedó en caja baja a propósito para el resto del panel; las pantallas
+   del rediseño de 2026-09-01 usan esta donde el título encabeza una
+   tarjeta grande («LA CUENTA DE LA MESA», «GASTOS DE HOY») y hace falta
+   que se lea como rótulo y no como una línea más de texto. */
+.adm-label-caps { text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Barra de guardado de las pantallas de Ajustes.
+   ------------------------------------------------------------------
+   Un botón "Guardar" al final de una lista de ajustes obliga a recorrer
+   toda la pantalla para confirmar un interruptor que se tocó arriba —en
+   un teléfono, dos pantallazos de scroll. Esta barra se queda pegada al
+   borde inferior mientras haya algo sin guardar, y desaparece cuando no
+   lo hay (no es un botón permanente: es un aviso con acción). */
+.adm-savebar {
+  position: sticky; bottom: 12px; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: calc(14px * var(--admin-panel-radius, 1));
+  border: 1px solid var(--adm-border-2, var(--u-hair-2));
+  background: var(--adm-overlay, var(--adm-card));
+  box-shadow: var(--adm-shadow-lg, 0 16px 40px rgba(0, 0, 0, 0.18));
+}
+
+/* Barra de guardar del formulario de platillo.
+   ------------------------------------------------------------------
+   No es `.adm-savebar` y no debe serlo: aquella es una pastilla que
+   flota ("Cambios sin publicar" + Guardar, en una fila); esta es el pie
+   del formulario, a todo el ancho, en columna, porque encima del botón
+   aparece el aviso de error. Lo que sí comparte es el deber de esquivar
+   la barra de destinos — ver el bloque de `--adm-nav-h` justo abajo. */
+.pform-savebar {
+  position: sticky; bottom: 0; z-index: 20;
+  display: flex; flex-direction: column; gap: 10px;
+  margin: 4px -4px 0;
+  padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--admin-content-bg-solid, var(--brand-bg)) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--u-hair);
+}
+.admin-kiosk { --adm-nav-h: 0px; }
+
+/* El botón de tomar pedido es cosa del teléfono. En escritorio el nav es
+   la barra lateral y "Tomar pedidos" ya es una pestaña con su nombre
+   entero dentro de Pedidos: un botón redondo sería una tercera forma de
+   llegar al mismo sitio. */
+.admin-fab { display: none; }
+
+.admin-nav {
+  display: flex; flex-direction: column; gap: 4px;
+  flex: 1; min-height: 0; overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--admin-panel-text) 15%, transparent) transparent;
+}
+.admin-nav::-webkit-scrollbar { width: 3px; }
+.admin-nav::-webkit-scrollbar-track { background: transparent; }
+.admin-nav::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--admin-panel-text) 15%, transparent); border-radius: 3px; }
+/* Buscar (rediseño 2026-08-21, Fase 4). Arriba de todo en la barra lateral:
+   es lo que hace que reducir el menú a seis no le cueste nada a quien ya sabe
+   a dónde va. En móvil el atajo de teclado no aplica, así que la tecla se
+   oculta y queda solo la lupa. */
+.admin-search {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  min-height: 34px; padding: 0 10px; margin-bottom: 12px;
+  border-radius: calc(9px * var(--admin-panel-radius, 1));
+  border: 1px solid var(--admin-panel-hair);
+  background: var(--admin-panel-card, color-mix(in srgb, var(--admin-panel-text) 5%, transparent));
+  color: var(--u-text-3); cursor: pointer; text-align: left;
+  font-family: inherit; font-size: calc(13px * var(--admin-panel-scale, 1));
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.admin-search:hover { color: var(--u-text); background: color-mix(in srgb, var(--admin-panel-text) 9%, transparent); }
+.admin-search-label { flex: 1; min-width: 0; }
+.admin-search-kbd {
+  flex-shrink: 0; font-family: var(--ui-font-mono); font-size: 10.5px;
+  letter-spacing: 0.02em; color: var(--u-text-4);
+  border: 1px solid var(--admin-panel-hair); border-radius: 5px;
+  padding: 1px 5px; background: transparent;
+}
+
+/* ── Barra de sección (rediseño 2026-08-21, Fase 3) ─────────────────────
+   Debajo de la barra de título: las pestañas del grupo activo, o el "volver"
+   de las pantallas hijas de Ajustes. Se pega justo bajo la barra de título
+   (top: 64px) para que al desplazar una lista larga no se pierda de vista
+   en qué pestaña se está. */
+.admin-subbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 24px;
+  border-bottom: 1px solid var(--admin-panel-hair);
+  background: color-mix(in srgb, var(--admin-panel-bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+  position: sticky; top: 64px; z-index: 19;
+  font-family: var(--admin-panel-font, var(--ui-font-sans));
+  --u-text:   var(--admin-panel-text);
+  --u-text-2: var(--admin-panel-text-2);
+  --u-text-3: var(--admin-panel-text-3);
+  --u-hair:   var(--admin-panel-hair);
+}
+.admin-tabs {
+  display: inline-flex; gap: 2px; padding: 2px;
+  border-radius: calc(9px * var(--admin-panel-radius, 1));
+  background: color-mix(in srgb, var(--admin-panel-text) 8%, transparent);
+  max-width: 100%; overflow-x: auto;
+  scrollbar-width: none;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 13px;
+  border-radius: calc(7px * var(--admin-panel-radius, 1));
+  font-size: calc(13.5px * var(--admin-panel-scale, 1)); font-weight: 500;
+  color: var(--u-text-2); text-decoration: none; white-space: nowrap;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.admin-tab:hover { color: var(--u-text); }
+.admin-tab[data-active="1"] {
+  background: var(--admin-panel-bg);
+  color: var(--u-text); font-weight: 600;
+  box-shadow: var(--adm-shadow-xs, none);
+}
+/* Bloqueada por plan: se ve, se lee y se puede tocar (lleva a la suscripción).
+   Atenuada, no escondida — el candado aquí informa; en la barra lateral solo
+   estorbaba. */
+.admin-tab[data-locked="1"] { opacity: 0.62; }
+
+/* Variante para una fila de pestañas DENTRO del contenido (el editor de
+   Personalizar). Mismo control segmentado, tres diferencias: ocupa el ancho,
+   sus pestañas son <button> —así que hay que apagarles el estilo nativo— y el
+   fondo de la activa sale de la tarjeta del contenido y no del de la barra
+   lateral, que en un panel personalizado pueden ser colores distintos. */
+/* En escritorio ENVUELVE y en el teléfono se desplaza. No es capricho: con
+   el panel de vista previa al lado, la columna del editor no da para siete
+   pestañas, y una fila que se desplaza sin barra visible esconde destinos a
+   quien usa ratón (en el teléfono el dedo sí descubre que se arrastra, y
+   además la pestaña activa se centra sola — ver admin-theme-editor.tsx). */
+.adm-tabs-wide { display: flex; width: 100%; flex-wrap: wrap; overflow: visible; }
+@media (max-width: 820px) {
+  .adm-tabs-wide { flex-wrap: nowrap; overflow-x: auto; }}
+.adm-tabs-wide .admin-tab {
+  border: none; cursor: pointer; background: transparent;
+  font-family: inherit; min-height: 40px;
+}
+.adm-tabs-wide .admin-tab[data-active="1"] {
+  background: var(--adm-card, var(--admin-panel-bg));
+}
+
+/* Enlace de acción al pie de una tarjeta ("Ver la comparativa completa",
+   "Gestionar mis modos de pedido"). En escritorio es un enlace de texto de
+   toda la vida; en el teléfono se le da alto de fila para poder tocarlo sin
+   apuntar — medían 19 px. */
+.adm-action-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 600; text-decoration: none;
+  color: var(--brand-accent-ink);
+}
+@media (max-width: 820px) {
+  .adm-action-link { min-height: 44px; }}
+.admin-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px 6px 8px;
+  border-radius: calc(8px * var(--admin-panel-radius, 1));
+  font-size: calc(13.5px * var(--admin-panel-scale, 1)); font-weight: 600;
+  color: var(--u-text-2); text-decoration: none;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.admin-back:hover { background: color-mix(in srgb, var(--admin-panel-text) 7%, transparent); color: var(--u-text); }
+
+.admin-navlink {
+  position: relative;
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+  border-radius: calc(11px * var(--admin-panel-radius, 1));
+  border: none; cursor: pointer; text-align: left; text-decoration: none;
+  color: var(--u-text-3); font-weight: 500;
+  font-size: calc(13.5px * var(--admin-panel-scale, 1)); transition: all 140ms var(--ease-out);
+  background: transparent;
+}
+/* Tarjeta de usuario del panel: fondo personalizable. */
+.admin-usercard { background: var(--admin-panel-card, rgba(255,255,255,0.04)) !important; box-shadow: var(--adm-shadow-xs, none); }
+/* «Salir» en la barra de título de Super Admin: solo en el teléfono (ver
+   components/super/shell.tsx). */
+.super-mobile-only { display: none; }
+.nav-corto { display: none; }
+/* 8 y no 10: con 10, «Administrador» se quedaba a 3 px de caber junto a
+   «Salir» y salía como «Administrad…». */
+.admin-usercard { display: flex; align-items: center; gap: 8px; }
+.admin-switch-restaurant { display: flex; align-items: center; gap: 9px; }
+.admin-navlink .nav-label { flex: 1; }
+.admin-navlink:hover { background: var(--adm-card-hover, color-mix(in srgb, var(--admin-panel-text) 7%, transparent)); color: var(--u-text-2); }
+.admin-navlink[data-active="1"] {
+  background: color-mix(in srgb, var(--admin-panel-accent) 13%, transparent);
+  /* Tinta, no el acento pelado: en el panel claro el coral sobre la píldora
+     clara se quedaba en 3.8:1 — justo el enlace que dice DÓNDE estás. */
+  color: var(--brand-accent-ink, var(--admin-panel-accent));
+  font-weight: 600;
+  box-shadow: inset 2.5px 0 0 var(--admin-panel-accent);
+}
+
+/* Indicador de "ya te oí, está cargando" en el propio ítem del menú.
+   Reserva su espacio siempre (no desplaza el texto al aparecer) y solo
+   cambia de opacidad. Ver NavPending en components/admin/shell.tsx. */
+.admin-navlink-pending {
+  width: 14px; height: 14px; flex: 0 0 14px;
+  border-radius: 99px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+.admin-navlink-pending[data-pending="1"] {
+  opacity: 0.85;
+  animation: adm-nav-spin 620ms linear infinite;
+}
+
+/* Sin animación: el aro se queda fijo pero visible, que sigue comunicando
+   "esto está en marcha" sin movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .admin-navlink-pending[data-pending="1"] { animation: none; border-top-color: currentColor; opacity: 0.6; }}
+
+/* Tabla de catálogo: grid en escritorio, tarjeta de 2 filas en móvil */
+.catalog-head, .catalog-row {
+  display: grid; grid-template-columns: 1fr 110px 150px 90px;
+  column-gap: 14px; align-items: center;
+}
+
+/* Tabla de clientes (admin) */
+.customers-head, .customers-row {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 70px 110px 130px 90px;
+  column-gap: 14px; align-items: center;
+}
+@media (max-width: 820px) {
+  .customers-head { display: none; }
+  .customers-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .customers-row > div:nth-child(4),
+  .customers-row > div:nth-child(5) { display: none; }}
+
+/* Tabla de insumos (admin/ingredientes): grid en escritorio, tarjeta en móvil.
+   En móvil las columnas Unidad/Costo/Platillos se ocultan y esa info se
+   muestra como línea "meta" bajo el nombre (.ing-meta-mobile). */
+.ing-head, .ing-row {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 90px 130px 110px 88px;
+  column-gap: 14px; align-items: center;
+}
+.ing-meta-mobile { display: none; }
+/* Formularios de 3 campos (nombre ancho + 2 cortos): 3 columnas en
+   escritorio, apilados en móvil. .admin-form-3 es la versión genérica
+   (el hijo .fg-full ocupa la fila completa). */
+.ing-form-grid, .admin-form-3 { display: grid; grid-template-columns: 1fr 140px 150px; gap: 10px; }
+
+/* ── Utilidades responsivas del admin ── */
+/* Envoltura de tablas anchas: scroll horizontal en vez de romper el layout. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Renglón de orden de compra (proveedores): desc + cant + unidad + costo + ✕ */
+.po-line { display: grid; grid-template-columns: 1fr 80px 90px 100px 32px; gap: 8px; align-items: center; }
+/* Línea de receta (editor de producto): insumo + cantidad + costo + ✕ */
+.recipe-line { display: grid; grid-template-columns: 1fr 128px 76px 36px; gap: 8px; align-items: center; }
+/* Encuestas: distribución + reseñas lado a lado; apilado en móvil */
+.enc-cols { display: grid; grid-template-columns: 1fr 2fr; gap: 14px; align-items: start; }
+
+@media (max-width: 820px) {
+  .ing-head { display: none; }
+  .ing-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .ing-col-desk { display: none; }
+  .ing-meta-mobile {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 4px 12px; margin-top: 5px;
+  }
+  .ing-form-grid, .admin-form-3 { grid-template-columns: 1fr 1fr; }
+  .ing-form-grid > .ing-form-name, .admin-form-3 > .fg-full { grid-column: 1 / -1; }
+
+  .hide-mobile { display: none !important; }
+  .enc-cols { grid-template-columns: 1fr; }
+  /* Orden de compra: descripción a fila completa; cant/unidad/costo/✕ debajo */
+  .po-line { grid-template-columns: 1fr 1fr 1.2fr 36px; }
+  .po-line > *:first-child { grid-column: 1 / -1; }
+  /* Receta: columnas más angostas para que el nombre respire */
+  .recipe-line { grid-template-columns: 1fr 86px 68px 32px; }}@media (max-width: 820px) {
+  /* ── EL PANEL EN EL TELÉFONO ──────────────────────────────────────────
+     Dos bandas, no cuatro. Antes había cuatro: la barra lateral convertida
+     en cabecera (marca + buscar + plan + tarjeta de usuario), la barra de
+     título, la barra de sección —a veces VACÍA, con su línea y todo— y la
+     barra inferior. En un iPhone eso son 258 px, casi un tercio de la
+     pantalla, gastados antes de la primera línea de trabajo.
+
+     Ahora es lo que hace cualquier app: arriba el nombre de la pantalla y
+     un "⋯"; abajo los destinos. Lo que vivía en la barra lateral (buscar,
+     plan, cambiar de restaurante, sesión) y en la de título (ayuda, tema)
+     está entero dentro del "⋯" — ver admin-more-menu.tsx.
+
+     La barra lateral se apaga con `display: contents` y NO con `none`: la
+     barra inferior es hija suya, y `none` se la llevaría por delante. */
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar { display: contents; }
+  .admin-sidebar > .admin-brand,
+  .admin-sidebar > .admin-search,
+  .admin-sidebar > .admin-navlink,
+  .admin-sidebar > .admin-usercard,
+  .admin-sidebar > .admin-switch-restaurant,
+  .admin-section,
+  .adm-desk-only { display: none; }
+  .admin-more { display: grid; }
+  .super-mobile-only { display: inline-flex; }
+  .admin-nav .nav-largo { display: none; }
+  .admin-nav .nav-corto { display: inline; }
+
+  /* Barra de título: la única banda de arriba, y pegada (antes era
+     `static`, así que al desplazar una lista larga se perdía de vista en
+     qué pantalla se estaba). */
+  .admin-topbar {
+    position: sticky; top: 0; z-index: 40;
+    min-height: 54px; padding: 0 12px 0 16px; gap: 6px;
+  }
+  .admin-topbar h1 { font-size: 19px; }
+
+  /* Barra de sección, pegada justo debajo. Solo se pinta si tiene pestañas
+     o el "volver" (ver showSubbar en shell.tsx). */
+  .admin-subbar { position: sticky; top: 54px; z-index: 39; padding: 6px 12px; }
+  .admin-tabs { width: 100%; }
+
+  /* Barra de destinos inferior. Los seis se REPARTEN el ancho: antes era un
+     carrusel horizontal de ítems de 62 px que se desbordaba por 9 px, así
+     que "Ajustes" quedaba medio cortado y había que arrastrar la barra para
+     verlo. Una barra de pestañas que se desplaza esconde destinos. */
+  .admin-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+    flex-direction: row; gap: 0; align-items: stretch;
+    /* La altura declarada, no la que salga del contenido. Sin esto la
+       barra medía 55 px (6 + 5 + 18 del icono + 3 + 12 de etiqueta + 5
+       + 6) y los cuatro seguidores reservaban 56: un pelo de fondo se
+       colaba por debajo de la barra del carrito. */
+    min-height: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--admin-panel-hair);
+    background: color-mix(in srgb, var(--admin-panel-bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(130%); backdrop-filter: blur(18px) saturate(130%);
+    overflow: visible;
+    --u-text:   var(--admin-panel-text);
+    --u-text-2: var(--admin-panel-text-2);
+    --u-text-3: var(--admin-panel-text-3);
+    --u-hair:   var(--admin-panel-hair);
+  }
+  .admin-navlink {
+    flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 3px;
+    padding: 5px 2px; border-radius: 12px; text-align: center;
+  }
+  .admin-navlink .nav-label {
+    flex: none; font-size: calc(10px * var(--admin-panel-scale, 1)); font-weight: 500;
+    letter-spacing: 0; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  /* Activo = tinta, no píldora. Es como se marca el destino en una barra
+     inferior; el relleno de color hacía que seis destinos parecieran cinco
+     apagados y un botón encendido. */
+  .admin-navlink[data-active="1"] {
+    background: transparent;
+    box-shadow: none;
+    color: var(--brand-accent-ink, var(--admin-panel-accent));
+    font-weight: 600;
+  }
+  .admin-navlink[data-active="1"] .nav-label { font-weight: 600; }
+  /* El aro de "ya te oí" sale por encima del icono en vez de empujar el
+     texto: en columna reservaba 17 px de alto en CADA destino. */
+  .admin-navlink-pending { position: absolute; top: 3px; right: 8px; }
+
+  /* ── EL BOTÓN DE TOMAR PEDIDO ─────────────────────────────────────
+     Seis destinos y ninguna acción: la barra decía a dónde ir y nunca
+     qué hacer. Ahora el centro lo ocupa lo único que todo el mundo hace
+     todos los días, y Clientes y Negocio —las dos que nadie toca con el
+     local lleno— bajan al "⋯" de la barra de título.
+
+     LA GEOMETRÍA, que es lo que hay que respetar si se toca:
+
+       · La ranura mide 76 px y los otros cuatro destinos se reparten el
+         resto. Es una casilla más de la barra, no algo flotante: así,
+         cuando el botón se aparta, nada se mueve de sitio.
+       · El círculo mide 56 px y va centrado en el BORDE SUPERIOR de la
+         barra, de modo que sobresale 28 px por encima. Ese voladizo es
+         lo que lo hace legible como acción y no como quinto destino.
+       · `bottom: 22px` sale de esa cuenta: la ranura acaba 6 px por
+         encima del canto de la barra (su padding), así que 22 + 28 de
+         radio deja el centro justo en el borde, a 56 px del suelo —
+         `--adm-nav-h`. Con muesca (`env`) o sin ella, porque los 6 px
+         de la ranura y los de la barra son los mismos.
+
+     Los 28 px de voladizo son también los que se comen la franja donde
+     viven la barra del carrito (56), la de guardado (66) y los avisos
+     (72). Por eso el CÍRCULO se aparta en cuanto alguna aparece — abajo.
+
+     LOS SEIS DESTINOS SE QUEDAN (2026-09-07). El botón nació echando a
+     Clientes y Negocio al menú "⋯" y eso costaba más de lo que ahorraba:
+     desaparecían sin rastro, y estando EN una de esas dos pantallas la
+     barra no marcaba nada. Medido a 375 px: seis destinos a 47 px con las
+     seis etiquetas enteras (`scrollWidth === clientWidth`). */
+
+  .admin-fab {
+    display: flex; flex: 0 0 86px; min-width: 0;
+    position: relative;
+    flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 5px 2px; border-radius: 12px;
+    text-decoration: none;
+    /* Tinta normal, NO el acento. En esta barra el acento significa "aquí
+       estás", y una etiqueta de acento al lado de "Pedidos" —el destino—
+       se leía como si fueran el mismo sitio, o como si ya estuvieras en
+       él. El círculo ya lleva todo el color que hace falta. */
+    color: var(--u-text-2);
+  }
+  .admin-fab .nav-label {
+    flex: none; font-size: calc(10px * var(--admin-panel-scale, 1)); font-weight: 600;
+    line-height: 1.2; letter-spacing: 0; white-space: nowrap;
+  }
+  /* En la pantalla a la que lleva. Mismo acento que marca destino en esta
+     barra: el botón es un sitio más y tiene que poder decir "aquí estás". */
+  .admin-fab[data-active="1"] { color: var(--brand-accent-ink, var(--admin-panel-accent)); }
+  .admin-fab[data-active="1"] .admin-fab-dot {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--admin-panel-accent) 26%, transparent),
+      0 6px 18px -5px color-mix(in srgb, var(--admin-panel-accent) 60%, transparent);
+  }
+  /* El icono en línea: solo se enseña cuando el círculo se aparta. Así la
+     ranura no queda con la etiqueta suelta y media casilla vacía. */
+  .admin-fab-flat { display: none; }
+  .admin-fab-dot {
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    width: 56px; height: 56px; border-radius: 999px;
+    display: grid; place-items: center;
+    background: var(--admin-panel-btn, var(--admin-panel-accent));
+    color: var(--admin-panel-btn-text, #ffffff);
+    /* Sin aro de fondo: el círculo es hijo de la barra y se pinta encima
+       de su borde superior, que queda tapado sin tener que repintarlo. */
+    box-shadow: 0 6px 18px -5px color-mix(in srgb, var(--admin-panel-accent) 60%, transparent);
+  }
+
+  /* Donde la pantalla ya tiene su propia barra pegada abajo, el CÍRCULO se
+     aparta: sus 28 px de voladizo caen encima de "Revisar pedido" o de
+     "Guardar", y ahí no es un atajo sino un estorbo.
+
+     Se aparta el círculo y NO la ranura entera (que es lo que se hacía
+     antes, con `data-hidden` en `/admin/mesero` y `/admin/caja`): un hueco
+     de 86 px en mitad de la barra no dice nada, y menos aún dice que la
+     pantalla abierta es justo la del botón. El destino se queda con su
+     icono en línea y su etiqueta, como los otros seis.
+
+     Se condiciona a que la barra ESTÉ, no a la ruta: la del carrito solo
+     existe con algo en el carrito, así que en el salón del mesero —que es
+     donde arranca esa pantalla— no hay nada que esquivar. */
+  .admin-shell:has(.waiter-cart-bar) .admin-fab-dot,
+  .admin-shell:has(.ciclo-next) .admin-fab-dot,
+  .admin-shell:has(.adm-savebar) .admin-fab-dot,
+  .admin-shell:has(.pform-savebar) .admin-fab-dot { display: none; }
+
+  .admin-shell:has(.waiter-cart-bar) .admin-fab-flat,
+  .admin-shell:has(.ciclo-next) .admin-fab-flat,
+  .admin-shell:has(.adm-savebar) .admin-fab-flat,
+  .admin-shell:has(.pform-savebar) .admin-fab-flat { display: block; }
+
+  .admin-shell:has(.waiter-cart-bar) .admin-fab,
+  .admin-shell:has(.ciclo-next) .admin-fab,
+  .admin-shell:has(.adm-savebar) .admin-fab,
+  .admin-shell:has(.pform-savebar) .admin-fab {
+    justify-content: center; gap: 3px;
+  }
+
+  /* La caja cierra con su propia barra a pie de pantalla, pero SOLO por
+     debajo de 768 px: de ahí para arriba `.caja-foot` vuelve a
+     `position: static` y no hay nada que esquivar. Su regla vive en el
+     bloque de 767 px del final del archivo, junto a la de la propia barra
+     —un `@media` dentro de otro `@media` NO llegó a la hoja de estilos
+     (comprobado en pantalla: la regla no existía en `document.styleSheets`),
+     así que ese atajo no está disponible aquí. */
+
+  /* Teléfonos muy estrechos: la ranura del botón cede sitio. La regla está
+     al final del archivo, en su propio corte de 359 px — ver la nota de
+     arriba sobre por qué un `@media` dentro de otro no vale aquí. */
+
+  /* Portada de Ajustes: en el teléfono la lista se queda con los nombres.
+     Diez filas con su renglón de explicación son 1.166 px de scroll para un
+     índice que cabe en una pantalla, y el nombre ya dice a dónde lleva. La
+     explicación sigue estando en escritorio, donde no cuesta nada. */
+  .adm-settings-index [data-slot="list-desc"] { display: none; }
+
+  /* Aire para que la barra inferior no tape el final del contenido. Los
+     12 px de colchón no bastaban: el círculo de «tomar pedido» SOBRESALE
+     28 px por encima de la barra, y al llegar al final de una página el
+     último botón centrado («Guardar operación» en Horarios, medido a 768
+     px) quedaba con su canto inferior debajo del círculo. 34 = 28 del
+     voladizo + 6 de aire. */
+  .admin-content { padding: 16px 14px calc(var(--adm-nav-h) + 34px + env(safe-area-inset-bottom, 0px)); }
+  /* La barra de guardado se pega ENCIMA de la barra de destinos, no debajo. */
+  .adm-savebar { bottom: calc(var(--adm-nav-h) + 10px + env(safe-area-inset-bottom, 0px)); }
+
+  /* La del formulario de platillo, PEGADA a la de destinos y sin los 10 px
+     de aire. Los 10 son para la pastilla de `.adm-savebar`, que flota y
+     tiene sombra; esta va a todo el ancho y con su propia línea arriba, y
+     con hueco se veía una tira del formulario desfilando entre las dos
+     barras. Pegada, la línea de una hace de canto de la otra.
+
+     Y el `env()` se MUDA del padding al `bottom`: no se suma. Estando la
+     barra en el canto, ese padding era lo que apartaba el botón del
+     indicador de inicio; ahora quien reserva la muesca es la barra de
+     destinos (su propio padding), y dejarlo en los dos sitios la contaría
+     dos veces — unos 34 px de nada en un iPhone. */
+  .pform-savebar {
+    bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 10px;
+  }
+  /* En modo servicio no hay barra de destinos: la muesca vuelve al padding
+     y la barra al canto, o quedaría flotando sobre una franja transparente
+     (mismo trato que `.waiter-cart-bar`, unas líneas más abajo). */
+  .admin-kiosk .pform-savebar {
+    bottom: 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Botones del panel en el teléfono. El tamaño `sm` mide 32 px, que en
+     escritorio con un ratón está bien y con el pulgar no: son los "Editar",
+     "Nuevo" y "Autorizar" de Personal. 40 px es el punto donde el dedo deja
+     de fallar sin que las filas densas se hinchen (44 dejaría filas de 72 px
+     en listas que ya son largas). */
+  .admin-content [data-slot="button"] { min-height: 40px; }
+  .admin-live { display: none !important; }
+  .admin-kiosk .waiter-cart-bar { bottom: 0 !important; }
+
+  /* Catálogo: cada fila se vuelve tarjeta de 2 líneas */
+  .catalog-head { display: none; }
+  .catalog-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'dish  price'
+      'avail actions';
+    row-gap: 12px;
+  }
+  .catalog-cell-dish    { grid-area: dish; }
+  .catalog-cell-price   { grid-area: price; }
+  .catalog-cell-avail   { grid-area: avail; }
+  .catalog-cell-actions { grid-area: actions; }}
+.chip-danger,  .note-danger  { color: var(--c-danger); background: var(--c-danger-bg); border-color: var(--c-danger-line); }
+.chip-info,    .note-info    { color: var(--c-info);   background: var(--c-info-bg);   border-color: var(--c-info-line); }
+.chip-neutral, .note-neutral {
+  color: var(--u-text-2);
+  background: color-mix(in srgb, var(--u-text) 7%, transparent);
+  border-color: var(--u-hair);
+}
+.chip-solid { color: var(--c-on-solid); border-color: transparent; }
+.chip-solid.chip-ok     { background: var(--c-ok-solid); }
+.chip-solid.chip-warn   { background: var(--c-warn-solid); }
+.chip-solid.chip-danger { background: var(--c-danger-solid); }
+.chip-solid.chip-info   { background: var(--c-info-solid); }
+.chip-solid.chip-alt    { background: var(--c-alt-solid); }
+
+/* Botón de acción secundaria en tinta de estado (p. ej. "Anular"). */
+.btn-tinted {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border-radius: var(--radius-lg); cursor: pointer;
+  font-weight: 600; font-family: inherit;
+  border: 1px solid transparent; background: transparent;
+}
+.btn-tinted:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-tinted.chip-solid:disabled { opacity: 0.55; }
+
+/* Pedidos: board (flex: 1) + sidebar de gráfica (300 px fijo) */
+.orders-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+/* ── Ergonomía móvil/tablet (lanzamiento 2026-06) ─────────────── */
+.super-nav-scroll::-webkit-scrollbar { display: none; }
+
+/* Landing: oculta los enlaces de sección en móvil (deja logo + acceso + CTA). */
+@media (max-width: 600px) { .lp-nav-section { display: none !important; }}
+
+/* Pin del visor de mesas (mesero): tamaño fijo cómodo al tacto. */
+.floor-map-vp { --floor-pin: 68px; }
+@media (max-width: 820px) {
+  /* Tokens del editor de mesas: cómodos para el dedo aun en pantallas chicas */
+  .floor-edit-canvas { --floor-token: 64px; }}
+@media (max-width: 380px) {
+  .floor-edit-canvas { --floor-token: 56px; }
+  .floor-map-vp { --floor-pin: 58px; }}
+
+@media (max-width: 1100px) { .orders-grid { grid-template-columns: 1fr; }}
+
+/* Sección que rompe el max-width del layout (centrado de 800px) */
+.bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
+.bleed-inner { max-width: 1240px; margin: 0 auto; }
+/* Dentro del shell con sidebar (super admin renovado) el contenido ya es
+   ancho: el full-bleed de 100vw se saldría por debajo de la sidebar. */
+.admin-shell .bleed { width: 100%; margin-left: 0; padding: 0; }
+
+/* Grid del editor: controles + columna de vista previa.
+   En pantallas chicas la columna de preview se apila DEBAJO de los controles
+   (antes era display:none → en móvil/tablet no había forma de previsualizar). */
+.theme-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }@media (min-width: 1180px) {
+  .theme-editor-layout { grid-template-columns: minmax(0, 1fr) 430px; align-items: start; }}
+.preview-frame.is-wide {
+  max-width: none; aspect-ratio: auto; height: calc(100vh - 150px);
+  border-radius: 18px; padding: 8px;
+}
+.preview-frame.is-wide iframe { border-radius: 12px; }
+
+/* ============================================================
+   AVISOS FLOTANTES — llamada al mesero y pedido nuevo
+   ------------------------------------------------------------
+   Los dos viven pegados al borde de abajo, uno a cada lado, y
+   siguen visibles en TODO el panel: son las dos cosas que no se
+   pueden perder aunque nadie esté mirando la pantalla correcta.
+
+   El sitio vive aquí y no en línea porque en el teléfono hay una
+   barra de navegación fija abajo: con `bottom: 16` los avisos se
+   montaban encima y tapaban los seis destinos del panel — y ahí
+   no hay otra forma de navegar. Se levantan los mismos 56 px que
+   ya usa `.waiter-cart-bar`, que resolvió este mismo problema.
+
+   En modo servicio no hay barra que esquivar: vuelven al borde.
+   ============================================================ */
+/* UN solo canal de avisos flotantes (ver shell.tsx · avisosFlotantes).
+   Los dos que hay —pedido nuevo y llamada de mesa— se apilan en esta
+   columna; antes cada uno se plantaba en una esquina distinta y en el
+   teléfono los dos juntos tapaban unos 300 px de comanda. */
+.adm-float-alert {
+  position: fixed; z-index: 71;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  /* El contenedor no intercepta nada; cada aviso sí. Sin esto, la columna
+     vacía se quedaría cazando toques en la esquina de la pantalla. */
+  pointer-events: none;
+}
+.adm-float-alert > * { pointer-events: auto; }
+.adm-float-alert[data-side="left"]  { left: 16px; align-items: flex-start; }
+.adm-float-alert[data-side="right"] { right: 16px; }
+
+@media (max-width: 1024px) {
+  .adm-float-alert { bottom: calc(var(--adm-nav-h) + 16px + env(safe-area-inset-bottom, 0px)); }
+  /* En modo servicio los avisos se montan DENTRO de .admin-kiosk, que no
+     tiene barra inferior: ahí vuelven al borde. */
+  .admin-kiosk .adm-float-alert { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }}@media (max-width: 640px) {
+  /* En kiosco no hay .admin-content que acolche: el aire lo pone él. */
+  .admin-kiosk .waiter-pad { padding-inline: 12px; }}
+
+/* Tecla dibujada, para enseñar el atajo JUNTO a la acción y no
+   escondido en una ayuda que nadie abre. La usan TableJump (Esc) y el
+   buscador de "Menú" (Ctrl+Enter, / — ver waiter-panel.tsx). */
+.wp-key {
+  display: inline-grid; place-items: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  border: 1px solid var(--adm-border-2); border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
+  color: var(--u-text-3); background: var(--adm-card);
+}
+/* El teclado solo se anuncia donde hay teclado. */
+@media (pointer: coarse) { .wp-key { display: none; }}
+
+/* ── Control segmentado ────────────────────────────────────────
+   El reparto de la cuenta (cómo van a pagar) y el resto de controles
+   segmentados del panel de mesero. La pista es una tinta del propio
+   texto (no un gris fijo), así que funciona igual sobre una tarjeta y
+   en oscuro sin una sola variante. */
+.wp-seg {
+  display: flex; width: 100%; gap: 2px; padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.wp-seg > button {
+  flex: 1; min-width: 0;
+  padding: 7px 10px;
+  border: none; border-radius: 7px; background: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 500; color: var(--u-text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wp-seg > button[data-on="1"] {
+  background: var(--adm-card); color: var(--u-text); font-weight: 600;
+  box-shadow: var(--adm-shadow-xs);
+}
+.wp-seg > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+/* En el teléfono el segmentado es un control de dedo, no de ratón: 34 px de
+   alto es la mitad de lo que pide un pulgar, y por aquí pasa desde el modo
+   de reparto hasta la forma de pago con la que se cierra la mesa. */
+@media (max-width: 767px) {
+  .wp-seg > button { min-height: 44px; font-size: 14px; }}
+
+/* ── Acciones del cobro ────────────────────────────────────────
+   La advertencia y las dos acciones en una fila. En el teléfono se
+   apilan, porque tres cosas en fila a 375 px no caben sin recortar
+   el importe. */
+.wp-billact { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.wp-billact-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--u-text-3); }
+@media (min-width: 720px) {
+  .wp-billact { flex-direction: row; align-items: center; gap: 14px; }
+  .wp-billact-note { flex: 1; min-width: 0; }}
+
+/* ── Modo servicio ─────────────────────────────────────────────
+   A pantalla completa el contenido ya no es una tarjeta dentro del
+   panel: es la pantalla. Sin borde, sin radio y sin techo. */
+.admin-kiosk { display: flex; flex-direction: column; }
+/* Cocina también vive aquí dentro y su tablero SÍ se desplaza entero: el
+   contenedor sigue siendo el que hace scroll, no la barra. */
+.admin-kiosk-body { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* La barra del modo servicio. Antes aquí no había NADA: la pantalla
+   arrancaba pegada al canto y la única forma de salir era una «X»
+   flotante que se montaba encima de los botones de la barra del panel
+   (de ahí el `padding-right: 64px` que había que compensar). El
+   lienzo pide una barra de verdad: de quién es la pantalla, qué modo
+   es, qué hora y cómo se sale. */
+.wp-servicebar {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  height: 46px; padding: 0 14px 0 16px;
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--wp-side);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+}
+.wp-servicebar-name { font-size: 14px; font-weight: 600; color: var(--u-text); }
+.wp-servicebar-mode { font-size: 13.5px; color: var(--u-text-3); }
+@media (max-width: 599px) { .wp-servicebar-mode { display: none; }}
+.wp-servicebar-clock {
+  font-family: var(--ui-font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em; font-size: 13.5px; color: var(--u-text-3);
+}
+
+/* Visor del plano del salón (zoom/paneo). El MUNDO sigue siendo 16/10 (las
+   posiciones son fieles en todo dispositivo); el visor puede ser más alto y
+   el mundo se centra (letterbox). En móvil lo hacemos casi cuadrado: con
+   16/10 quedaba ~210px de alto y no cabían dos dedos para pellizcar. */
+.floor-map-vp { aspect-ratio: 16 / 10; }
+@media (max-width: 640px) {
+  .floor-map-vp { aspect-ratio: 5 / 6; }}
+
+/* Formulario de platillo (crear/editar): una columna en móvil; en PC la
+   columna lateral (foto + disponibilidad) acompaña al contenido principal. */
+.pform-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+@media (min-width: 900px) { .pform-grid { grid-template-columns: minmax(0, 1fr) 340px; }}
+.pform-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* En móvil la foto va primero (es lo primero que se quiere ver); en PC vive
+   en la columna lateral derecha. */
+@media (max-width: 899.98px) { .pform-side { order: -1; }}
+
+/* COPIA de `.press` (la original sigue en globals.css). En el archivo único
+   iba justo AQUÍ, después de todo lo de arriba: los enlaces del menú del
+   panel llevan las dos clases (`admin-navlink press`, `admin-tab press`,
+   `admin-search press`, `admin-back press`) y con la misma especificidad
+   ganaba la `transition` de `.press` por venir después. Con este archivo
+   cargándose detrás de globals.css, sin esta copia ganaría la del panel y
+   cambiaría cómo se animan al tocarlos. Repetirla aquí, en su sitio de
+   siempre, deja la cascada exactamente como estaba (comprobado elemento por
+   elemento con el barrido de la auditoría del 2026-09-25). */
+.press { transition: transform 90ms var(--ease-out); }
+.press:active { transform: scale(0.97); }
+
+/* ── Esqueleto de carga ─────────────────────────────────────────
+   Bloque gris con un brillo que recorre de izquierda a derecha. El
+   movimiento importa: un rectángulo quieto se lee como "algo se
+   rompió", uno que se mueve se lee como "está viniendo". Con
+   prefers-reduced-motion queda estático (la regla de arriba ya
+   neutraliza la animación) y aun así se ve como hueco de contenido. */
+.adm-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--u-text, #fff) 9%, transparent);
+}
+.adm-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--u-text, #fff) 11%, transparent),
+    transparent
+  );
+  animation: adm-shimmer 1.35s ease-in-out infinite;
+}
+.lp-btn-ink {
+  background: var(--u-text); color: var(--brand-bg);
+  box-shadow: 0 8px 22px rgba(23, 22, 26, 0.22);
+}
+@media (hover: hover) {
+  .lp-btn-ink:hover { background: color-mix(in srgb, var(--u-text) 88%, #fff); }}
+
+/* ============================================================
+   SALÓN · COMANDA · CAJA  (rediseño 2026-09-01)
+   ------------------------------------------------------------
+   Las tres pantallas del rediseño «Mesas · Tomar pedidos · Caja»
+   comparten armazón: una barra superior que NO se mueve al cambiar
+   de vista, un lienzo que sí, y una barra de acción abajo que
+   siempre dice el siguiente paso.
+
+   Todo lo que hay aquí es estructura y puntos de quiebre. El color
+   y la tipografía salen de los tokens del panel (--u-*, --adm-*),
+   para que las tres funcionen igual en claro y en oscuro sin una
+   sola variante escrita a mano.
+
+   Puntos de quiebre:
+     · > 1180 px  PC     — fichas a 5 columnas, panel de cuenta al lado
+     · 768–1180   tablet — fichas a 3, el panel baja debajo del plano
+     · < 768      móvil  — una columna, controles de 46 px, hoja inferior
+   ============================================================ */
+
+/* ── Barra superior del salón ─────────────────────────────────
+   Resumen + interruptor de vista + «Tomar pedido». Nunca se
+   encoge: en cuanto no cabe, se apila. Aplastar el resumen a la
+   mitad convierte «Q1,904.00» en «Q1,9…», que es peor que nada. */
+/* `wrap` + una base ancha: cuando el resumen y el interruptor no caben
+   juntos, el interruptor baja a su propia línea. Nunca se aplastan —
+   una tira de resumen encogida convierte «Q1,904.00» en «Q1,9…» y
+   «Mesas con gente» en «Mes…», que es peor que no enseñarla. */
+.salon-top { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; }
+/* `flex-basis: auto` y no 480 px: con 480 la tira CABÍA en la línea
+   encogiéndose —contenido de 592 metido en 518— y el salto de línea que
+   promete el comentario de arriba no llegaba nunca; «Mesas cerradas hoy»
+   quedaba cortado a «Mesas ce» en una PC de 1.440. Con `auto` la base es
+   su contenido: si no cabe entera, los interruptores bajan. */
+.salon-summary {
+  flex: 1 1 auto; min-width: 0; display: flex;
+  overflow-x: auto; scrollbar-width: none;
+  border: 1px solid var(--u-hair); border-radius: 14px;
+  background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.salon-summary::-webkit-scrollbar { display: none; }
+/* `1 0 auto` con suelo: las celdas crecen a partes iguales cuando sobra
+   sitio y, cuando falta, la tira se desplaza en vez de encogerlas.
+
+   `> button` desde M-19: las celdas que FILTRAN el salón son botones de
+   verdad, no divs con un `onclick` encima. Sin esto perdían el relleno y
+   la línea que las separa, y la tira se descuadraba en cuanto una de las
+   cuatro se volvía tocable. */
+.salon-summary > div,
+.salon-summary > button {
+  flex: 1 0 auto; min-width: 148px; padding: 12px 16px;
+  border: none; border-left: 1px solid var(--u-hair);
+  background: none; font: inherit; color: inherit; text-align: left;
+}
+.salon-summary > div:first-child,
+.salon-summary > button:first-child { border-left: none; }
+/* La celda filtrando: se marca por dentro, sin mover el borde que separa
+   —moverlo desplazaría la tira entera un píxel al tocarla—. */
+.salon-summary > button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+  box-shadow: inset 0 -2px 0 var(--brand-accent);
+}
+.salon-summary > button { cursor: pointer; }
+.salon-summary-label { font-size: 12.5px; color: var(--u-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.salon-summary-value {
+  font-family: var(--ui-font-mono); font-weight: 700; font-size: 22px;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-top: 3px; color: var(--u-text);
+}
+
+/* Interruptor Fichas · Plano · Lista. A diferencia de `.wp-seg` este
+   NO ocupa todo el ancho en escritorio: vive al lado del resumen. */
+.salon-seg {
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px; flex-shrink: 0;
+  border-radius: 11px; background: color-mix(in srgb, var(--u-text) 7%, transparent);
+}
+.salon-seg > button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 13px; border: none; border-radius: 8px; background: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 500; color: var(--u-text-2); white-space: nowrap;
+}
+.salon-seg > button[data-on="1"] {
+  background: var(--adm-card); color: var(--u-text); font-weight: 600;
+  box-shadow: var(--adm-shadow-xs);
+}
+.salon-seg > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+/* Fichas · Plano · Lista con el dedo. Medía 36,3 px en la tablet: el
+   acolchado de 8 px basta con ratón y se queda corto con el pulgar. En el
+   teléfono el bloque de abajo ya lo estira a todo el ancho; esto solo le
+   pone el alto. */
+@media (pointer: coarse) { .salon-seg > button { min-height: 44px; }}
+
+/* Rejilla de fichas. Cinco en PC — el ancho dibujado; menos según cabe. */
+.salon-grid {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px; align-content: start;
+}
+@media (max-width: 1420px) { .salon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }}
+@media (max-width: 1180px) { .salon-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+@media (max-width: 900px)  { .salon-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+
+/* Plano + panel de cuenta. En tablet el panel deja de ir al lado y
+   pasa debajo: 336 px robados a un plano de 700 lo vuelven ilegible. */
+.salon-floor { display: flex; gap: 14px; align-items: stretch; min-height: 0; }
+.salon-bill { width: 336px; flex-shrink: 0; }
+@media (max-width: 1180px) {
+  .salon-floor { flex-direction: column; }
+  .salon-bill { width: 100%; }}
+
+@media (max-width: 767px) {
+  /* Móvil: el interruptor pasa a fila completa y el resumen se desplaza
+     en horizontal en vez de aplastarse. */
+  /* `width:100%` + `flex-basis:auto` a propósito: en columna, el `flex: 1 1
+     480px` de escritorio pasa a fijar el ALTO (eje principal ahora es
+     vertical), y el ANCHO se decidía por el contenido de las celdas en vez
+     de por el contenedor — la tira se salía del viewport en vez de quedarse
+     en dos columnas de 46%. */
+  .salon-top { flex-direction: column; gap: 10px; }
+  .salon-summary { width: 100%; flex-basis: auto; }
+  .salon-summary > div { flex: 0 0 46%; min-width: 0; padding: 11px 14px; }
+  .salon-summary-value { font-size: 20px; }
+  .salon-seg { display: flex; width: 100%; }
+  /* 44 y no 38: este bloque va DESPUÉS de la regla de `pointer: coarse`,
+     y a igual especificidad gana el último. Con 38 aquí, el teléfono
+     —que también es puntero grueso— perdía los 44 px que esa regla le
+     acababa de dar. Los dos sitios dicen lo mismo a propósito. */
+  .salon-seg > button { flex: 1; min-height: 44px; }
+  .salon-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }}
+
+/* ── Ficha de mesa ────────────────────────────────────────────
+   Tres estados y nada más: te necesita (lo único con color), en
+   marcha, y libre —que se dibuja callada, con borde punteado y sin
+   relleno—. El color no describe: avisa. */
+.salon-card {
+  display: flex; flex-direction: column; gap: 9px;
+  min-height: 168px; padding: 13px 14px 12px;
+  border-radius: 16px; text-align: left; width: 100%;
+  transition: border-color .25s, background .25s, box-shadow .25s;
+}
+/* El color lo decide el TONO, no el estado (ver lib/table-state.ts).
+   Con un solo nivel de atención, seis de ocho mesas abiertas salían en
+   acento en un salón normal y el acento dejaba de avisar de nada. */
+.salon-card[data-tone="alarma"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
+  box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+/* Pendiente: la misma tarjeta de siempre con el canto izquierdo marcado
+   en tinta. Se distingue al recorrer la rejilla sin robarle el color a
+   la mesa que sí tiene a alguien esperando. */
+.salon-card[data-tone="aviso"] {
+  border: 1px solid var(--u-hair-2);
+  border-left: 3px solid color-mix(in srgb, var(--u-text) 42%, transparent);
+  background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-card[data-tone="abierta"] {
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-card[data-tone="libre"] {
+  border: 1.5px dashed var(--u-hair-2); background: transparent; box-shadow: none;
+}
+
+/* La mesa libre: un hueco, no una tarjeta. Número, sillas y nada más;
+   la caja entera es el botón que la abre. Y la mitad muerta del tablero
+   deja de ocupar lo mismo que la mitad viva. */
+.salon-hueco {
+  min-height: 96px; align-items: baseline; justify-content: center;
+  flex-direction: row; gap: 8px; cursor: pointer; color: inherit;
+}
+@media (max-width: 767px) {
+  .salon-hueco { min-height: 0; padding: 14px; justify-content: flex-start; }}
+
+/* El bloque de datos de la ficha: es un botón, pero se dibuja como
+   texto. Dos maquetas dentro, una para cada tamaño. */
+.salon-card-open {
+  display: flex; flex-direction: column; gap: 9px; width: 100%;
+  border: none; background: none; padding: 0; cursor: pointer;
+  text-align: left; color: inherit;
+}
+.salon-card-full { display: flex; flex-direction: column; gap: 9px; width: 100%; }
+.salon-card-compact { display: none; }
+
+@media (max-width: 767px) {
+  /* En el teléfono la ficha se comprime a un renglón: catorce fichas
+     de 250 px son cuatro pantallas de scroll para mirar un salón. */
+  .salon-card { min-height: 0; padding: 12px 14px; gap: 10px; }
+  .salon-card-full { display: none; }
+  .salon-card-compact { display: flex; align-items: center; gap: 12px; width: 100%; }}
+
+/* Botón de la ficha: uno solo, con lo que toca hacer ahora. */
+.salon-act {
+  margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 7px;
+  height: 38px; border-radius: 10px; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; width: 100%;
+  border: 1px solid var(--u-hair-2); background: none; color: var(--u-text-2);
+}
+.salon-act[data-primary="1"] {
+  border-color: var(--brand-accent); background: var(--brand-accent);
+  color: var(--brand-on-accent, #fff);
+}
+.salon-act:disabled { cursor: default; opacity: 0.55; }
+/* «Cobrar», «Llevar a la mesa», «Atender»: el botón más pulsado del turno.
+   38 px con ratón, 46 con el dedo — y el dedo lo decide el puntero, no el
+   ancho de la ventana (ver `.wp-step`). */
+@media (max-width: 767px), (pointer: coarse) { .salon-act { height: 46px; font-size: 14.5px; }}
+
+/* ── La fila de la vista Lista ────────────────────────────────
+   En escritorio es un renglón: número, qué pasa, monto y la acción al
+   canto derecho. En el teléfono NO cabe —a 375 px el botón se comía
+   260 px y «Pidió la cuenta · 0 min» se partía en tres renglones—, así
+   que la acción baja y ocupa el ancho, que además es como se toca. */
+.salon-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; min-height: 58px;
+}
+/* El mismo canto de la ficha pendiente, pero por dentro: la fila no
+   tiene borde propio (las separa una línea compartida). */
+.salon-row[data-tone="aviso"] {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--u-text) 42%, transparent);
+}
+.salon-row-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  border: none; background: none; padding: 0; cursor: pointer;
+  text-align: left; color: inherit;
+}
+.salon-row > .salon-act {
+  margin-top: 0; width: auto; min-width: 132px; padding: 0 14px; flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .salon-row { flex-wrap: wrap; row-gap: 10px; padding: 12px 14px; }
+  .salon-row-open { flex: 1 0 100%; }
+  .salon-row > .salon-act { width: 100%; min-width: 0; }}
+
+/* Barras de la etapa de la comida. */
+.salon-steps { display: flex; align-items: center; gap: 4px; }
+.salon-steps > span { flex: 1; height: 4px; border-radius: 99px; }
+
+/* ── Mesa en el plano ─────────────────────────────────────────
+   100 px dibujados, 88 en el teléfono. */
+.salon-pin {
+  position: absolute; width: 100px; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 10px; border-radius: 14px; cursor: pointer; text-align: left;
+}
+@media (max-width: 767px) { .salon-pin { width: 88px; padding: 8px 9px; border-radius: 13px; }}
+.salon-pin[data-tone="alarma"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 12%, var(--adm-card));
+  box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 14px color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.salon-pin[data-tone="aviso"] {
+  border: 1px solid var(--u-hair-2);
+  border-left: 3px solid color-mix(in srgb, var(--u-text) 42%, transparent);
+  background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-pin[data-tone="abierta"] {
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--u-text) 8%, transparent);
+}
+.salon-pin[data-tone="libre"] {
+  border: 1.5px dashed var(--u-hair-2); background: transparent; box-shadow: none;
+}
+.salon-pin[data-sel="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+
+/* El lienzo del plano: rejilla de referencia, nada más. */
+/* ── La leyenda del salón ─────────────────────────────────────
+   Los tres estados, con los nombres que dicta lib/table-state.ts. La
+   comparten el plano del dueño y el salón del mesero: antes cada una
+   tenía la suya, con distintas palabras y en distinto orden. */
+.salon-legend {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--u-text-3);
+}
+.salon-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.salon-legend > span > span[data-tone] {
+  width: 10px; height: 10px; border-radius: 4px; flex-shrink: 0;
+}
+.salon-legend > span > span[data-tone="alarma"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+}
+.salon-legend > span > span[data-tone="aviso"] {
+  border: 1.5px solid var(--u-hair-2);
+  border-left: 3px solid color-mix(in srgb, var(--u-text) 42%, transparent);
+  background: var(--adm-card);
+}
+.salon-legend > span > span[data-tone="abierta"] {
+  border: 1.5px solid var(--u-hair-2); background: var(--adm-card);
+}
+.salon-legend > span > span[data-tone="libre"] {
+  border: 1.5px dashed var(--u-hair-2); background: transparent;
+}
+
+.salon-canvas {
+  position: relative; flex: 1; min-height: 340px; overflow: hidden;
+  border-radius: 18px; border: 1px solid var(--u-hair-2);
+  background-color: color-mix(in srgb, var(--u-text) 2%, transparent);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--u-text) 3.5%, transparent) 1px, transparent 1px);
+  background-size: 100% 9%, 6.25% 100%;
+}
+@media (max-width: 767px) {
+  .salon-canvas { background-size: 100% 9%, 12.5% 100%; }
+  /* Catorce mesas de 88 px en 340 px de ancho se pisan unas a otras. El
+     plano conserva su tamaño y es el lienzo el que se desplaza: mejor
+     arrastrar el salón que no poder leer ninguna mesa. */
+  .salon-floor-scroll { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .salon-floor-scroll::-webkit-scrollbar { display: none; }
+  .salon-floor-scroll > .salon-canvas { min-width: 620px; }}
+
+/* ── El plano y lo que no cabe en él ──────────────────────────
+   «Fuera del plano» estaba DEBAJO del lienzo, y el lienzo era 16:10
+   fijo: con cinco mesas colocadas de veinte, las otras quince vivían
+   bajo 708 px de vacío y fuera de la primera pantalla. Ahora va al
+   lado, en su propia columna, y baja solo cuando ya no cabe. */
+.salon-plan-row { display: flex; gap: 14px; align-items: flex-start; flex: 1; min-height: 0; }
+.salon-plan-out {
+  width: 226px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
+  /* Con veinte mesas sin colocar la columna crecería más que el plano y
+     volvería a alargar la pantalla, que es lo que se venía a arreglar. */
+  max-height: 460px; overflow-y: auto;
+}
+.salon-plan-out-pins { display: flex; flex-wrap: wrap; gap: 10px; }
+.salon-plan-out-link {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
+  font-size: 12.5px; font-weight: 600; color: var(--brand-accent-ink); text-decoration: none;
+}
+.salon-plan-out-link:hover { text-decoration: underline; }
+@media (max-width: 1180px) {
+  .salon-plan-row { flex-direction: column; }
+  .salon-plan-out { width: 100%; max-height: none; }}
+
+/* ── «El salón cambió · reordenar» ────────────────────────────
+   Mientras el dedo está sobre las mesas el orden no se mueve (ver
+   useOrdenEstable). Si el reloj cambió las prioridades mientras
+   tanto, se dice aquí en vez de recolocarlo todo por sorpresa. */
+.salon-reordenar {
+  position: sticky; top: 0; z-index: 4;
+  display: flex; justify-content: center; pointer-events: none; height: 0;
+}
+.salon-reordenar > button {
+  pointer-events: auto; transform: translateY(-6px);
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 14px; border-radius: 99px; cursor: pointer;
+  font-size: 12.5px; font-weight: 600;
+  border: 1px solid var(--u-hair-2); color: var(--u-text-2);
+  background: var(--adm-card);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--u-text) 16%, transparent);
+}
+
+/* Zona fija del salón (barra, caja, cocina). Se dibuja como parte del
+   local, no como algo que se pueda tocar. */
+.salon-zone {
+  position: absolute; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  border-radius: 10px; pointer-events: none; overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--u-text) 16%, transparent);
+  background: color-mix(in srgb, var(--u-text) 6%, transparent);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--u-text) 45%, transparent);
+}
+
+/* ── Hoja inferior del teléfono ───────────────────────────────
+   La mesa elegida sube desde abajo con su resumen y su acción. */
+.salon-sheet {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  margin-top: 12px;
+  border-top: 1px solid var(--u-hair); border-radius: 16px 16px 0 0;
+  background: var(--adm-card);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--u-text) 10%, transparent);
+}
+.ciclo-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ciclo-head-id { flex: 1; min-width: 160px; }
+/* En el teléfono la identidad cede ancho para que las personas y el «···»
+   quepan en su misma línea: con 160 px de mínimo, el «···» se quedaba solo
+   en un renglón de sesenta píxeles por delante del buscador. */
+@media (max-width: 767px) { .ciclo-head-id { min-width: 118px; }}
+.ciclo-line {
+  display: flex; align-items: stretch; flex-shrink: 0; overflow: hidden;
+  border-radius: 12px; border: 1px solid var(--u-hair);
+  background: var(--adm-card); box-shadow: var(--adm-shadow-xs);
+}
+.ciclo-line > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-left: 1px solid var(--u-hair); }
+.ciclo-line > div:first-child { border-left: none; }
+.ciclo-body { display: flex; gap: 14px; align-items: flex-start; }
+.ciclo-side { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+.ciclo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 1180px) {
+  .ciclo-body { flex-direction: column; }
+  .ciclo-side { width: 100%; }}
+/* En el teléfono la línea del ciclo se comprime a cuatro barras con
+   etiqueta: cuatro tramos de texto en 358 px no se leen. */
+.ciclo-bars { display: none; gap: 8px; }
+@media (max-width: 767px) {
+  .ciclo-line { display: none; }
+  .ciclo-bars { display: flex; }}
+.ciclo-next {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
+}
+.ciclo-next-note { flex: 1; min-width: 180px; font-size: 13.5px; color: var(--u-text-2); line-height: 1.45; }
+
+/* ── La barra del siguiente paso, pegada abajo ────────────────
+   Estaba fijada SOLO por debajo de 767 px, y ese corte dejaba a la
+   tablet —que es el aparato del mesero— en el peor de los tres casos:
+   por encima de 767 la barra dejaba de estar pegada, y por debajo de
+   1180 la columna derecha (el total y el reparto) se va al final del
+   documento. En un iPad de 1024 px el mesero no veía ni el total ni el
+   botón principal sin recorrer toda la pantalla.
+
+   El corte correcto es el MISMO que pliega la columna: mientras el
+   total no esté a la vista al lado, el botón que dice qué hacer tiene
+   que estar bajo el pulgar. */
+@media (max-width: 1180px) {
+  .ciclo-next {
+    position: sticky; bottom: 0; z-index: 5;
+    border-radius: 16px 16px 0 0;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--brand-accent) 6%, var(--adm-card));
+    box-shadow: 0 -6px 20px color-mix(in srgb, var(--u-text) 8%, transparent);
+  }}
+@media (max-width: 767px) {
+  .ciclo-next { flex-direction: column; align-items: stretch; }
+  .ciclo-next-note { min-width: 0; }}
+
+/* ── El total, cuando la columna lateral se plegó ─────────────
+   Con la columna al lado el total ya está a la vista y repetirlo sería
+   ruido. Sin ella hay que subirlo a la cabecera de la mesa: es el dato
+   que se mira más veces por turno y no puede quedar al final de un
+   scroll de menú. */
+.ciclo-head-total { display: none; }
+@media (max-width: 1180px) {
+  .ciclo-head-total {
+    display: flex; align-items: baseline; gap: 8px; flex-shrink: 0;
+    margin-left: auto;
+  }}
+
+/* Fila de un plato en la cuenta de la mesa. */
+.ciclo-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 15px; min-height: 46px; border-top: 1px solid var(--u-hair);
+}
+.ciclo-item:first-child { border-top: none; }
+/* En escritorio los tres bloques de la derecha son hermanos de la fila:
+   `contents` los deja planos y todo cabe en una línea. */
+.ciclo-meta { display: contents; }
+
+@media (max-width: 767px) {
+  /* A 375 px no caben nombre, estado, asiento, pasos y precio en un
+     renglón: el precio se salía del cuadro. El nombre y el importe se
+     quedan arriba —que es lo que se lee— y lo demás baja. */
+  .ciclo-item {
+    display: grid; min-height: 52px; padding: 12px 13px;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-areas: "qty name price" "meta meta meta";
+    column-gap: 11px; row-gap: 8px; align-items: center;
+  }
+  .ciclo-qty { grid-area: qty; width: 34px; height: 28px; border-radius: 8px; font-size: 13.5px; }
+  .ciclo-name { grid-area: name; }
+  .ciclo-price { grid-area: price; width: auto !important; font-size: 14.5px; }
+  .ciclo-meta {
+    grid-area: meta; display: flex; align-items: center; gap: 10px;
+    justify-content: flex-end; flex-wrap: wrap;
+  }}
+
+/* Chip de asiento / de cantidad. */
+.ciclo-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; padding: 0 5px; height: 26px; flex-shrink: 0; border-radius: 7px;
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 700;
+  background: color-mix(in srgb, var(--u-text) 7%, transparent); color: var(--u-text);
+}
+.ciclo-chip[data-seat="1"] {
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+/* ── El asiento ────────────────────────────────────────────────
+   Dos piezas, las dos dibujadas en el lienzo:
+
+   · el SELECTOR de arriba decide a qué asiento van los platos que se
+     agreguen ahora («Asiento  Mesa 1 2 3 4»);
+   · la PÍLDORA de cada fila dice de quién es ese plato, y tocarla lo
+     corrige sin salir del renglón.
+
+   Distinguirlos por la FORMA no funcionó: a tamaño real, la píldora
+   ancha y el chip de cantidad se leían igual y «Servido 3» parecía una
+   cantidad. Ahora lo dicen con palabras —«×2» y «As. 3»— y la anchura
+   es solo lo que pide el texto. */
+.ciclo-seats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ciclo-seats > button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; height: 32px; padding: 0 11px; cursor: pointer;
+  border-radius: 9px; border: 1px solid var(--u-hair-2); background: none;
+  font-family: var(--ui-font-mono); font-size: 13.5px; font-weight: 600;
+  color: var(--u-text-2);
+}
+.ciclo-seats > button[data-on="1"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+.ciclo-seats > button:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+
+.ciclo-seat {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  min-width: 30px; height: 24px; padding: 0 9px; cursor: pointer; white-space: nowrap;
+  border: none; border-radius: 7px;
+  background: color-mix(in srgb, var(--u-text) 7%, transparent); color: var(--u-text-3);
+  font-family: var(--ui-font-mono); font-size: 12px; font-weight: 700;
+}
+.ciclo-seat[data-on="1"] {
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  color: var(--brand-accent-ink);
+}
+/* Con el dedo, el asiento es un botón de 44 px, como pide el lienzo.
+   Medido en tablet antes de esto: la píldora del asiento —el control que
+   corrige de quién es cada plato, uno por plato— tenía 24 px de alto. Es
+   el destino más pequeño de todo el panel y estaba en el aparato en el
+   que se reparte la cuenta. */
+@media (max-width: 767px), (pointer: coarse) {
+  .ciclo-seats > button { min-width: 44px; height: 44px; border-radius: 12px; font-size: 15px; }
+  .ciclo-seat { min-width: 44px; height: 44px; border-radius: 12px; font-size: 14px; }}
+
+/* ── Cierre de caja ───────────────────────────────────────────
+   Tres pasos, el cuadre a la vista mientras se cuenta, y casillas
+   de 56 px en el teléfono: esto se hace de noche, con prisa y con
+   dinero en la mano. */
+.caja-steps { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+.caja-steps > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; padding-right: 14px; }
+@media (max-width: 900px) {
+  /* La fila de pasos se desplaza en vez de partir «contando ahora» en dos
+     renglones: un rótulo cortado a la mitad no dice en qué paso vas. */
+  .caja-steps { overflow-x: auto; scrollbar-width: none; }
+  .caja-steps::-webkit-scrollbar { display: none; }
+  .caja-steps > div { flex: 0 0 auto; }
+  .caja-steps > div span { white-space: nowrap; }
+  .caja-steps > div > span:last-child { min-width: 34px; }}
+.caja-body { display: flex; gap: 16px; align-items: flex-start; }
+.caja-main { flex: 1.25; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.caja-side { width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+.caja-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+@media (max-width: 1180px) { .caja-body { flex-direction: column; } .caja-side { width: 100%; }}
+@media (max-width: 767px) { .caja-cards { grid-template-columns: minmax(0, 1fr); }}
+
+/* El turno, escrito dentro de la propia línea de contexto. Se dibuja
+   como texto y solo se declara campo al tocarlo: en el lienzo ahí pone
+   «turno noche», no un formulario. */
+.caja-turno {
+  min-width: 60px; max-width: 180px; height: 26px; padding: 0 6px;
+  border: 1px solid transparent; border-radius: 7px; outline: none;
+  background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  color: var(--u-text-2); font-size: 13px; font-family: inherit;
+}
+.caja-turno::placeholder { color: var(--u-text-4); }
+.caja-turno:hover { border-color: var(--u-hair-2); }
+.caja-turno:focus-visible {
+  border-color: var(--brand-accent); color: var(--u-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+/* En el teléfono —y en cualquier pantalla de dedo, una tablet en vertical
+   incluida— es un campo de verdad: 26 px no se tocan con el pulgar. */
+@media (max-width: 767px), (pointer: coarse) { .caja-turno { height: 40px; padding: 0 10px; font-size: 15px; }}
+
+/* La «×» de anular un plato en la tarjeta del pedido dibuja 22 px —más
+   grande descuadraría la fila— pero se toca en 36 × 44: el área invisible
+   de alrededor es la que recibe el dedo. */
+.order-void-x { position: relative; }
+.order-void-x::after { content: ''; position: absolute; inset: -7px -11px; }
+
+.caja-denom { display: grid; grid-template-columns: 58px 1fr 84px; gap: 8px; align-items: center; }
+.caja-denom-label {
+  font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600; color: var(--u-text-2);
+  cursor: pointer;
+}
+.caja-denom input {
+  width: 100%; height: 44px; padding: 0 12px; text-align: right;
+  border-radius: 10px; outline: none;
+  border: 1px solid var(--u-hair-2);
+  background: color-mix(in srgb, var(--u-text) 4%, transparent);
+  color: var(--u-text-4);
+  font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600;
+}
+.caja-denom input[data-filled="1"] {
+  border: 1.5px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
+  color: var(--u-text);
+}
+.caja-denom input:focus-visible { outline: 2px solid var(--adm-accent-500); outline-offset: 1px; }
+.caja-denom-sub { font-family: var(--ui-font-mono); font-size: 13px; text-align: right; color: var(--u-text-4); }
+.caja-denom-sub[data-filled="1"] { color: var(--u-text); }
+/* Las flechitas del input numérico roban 20 px justo donde va la cifra. */
+.caja-denom input::-webkit-outer-spin-button,
+.caja-denom input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.caja-denom input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+@media (max-width: 767px) {
+  .caja-denom { grid-template-columns: 62px 1fr 86px; gap: 10px; }
+  .caja-denom-label { font-size: 15px; }
+  .caja-denom input { height: 56px; padding: 0 14px; border-radius: 12px; font-size: 21px; }
+  .caja-denom-sub { font-size: 14px; }}
+
+/* Pie fijo del cierre en el teléfono: el total contado y el paso
+   siguiente, siempre bajo el pulgar. */
+.caja-foot {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 9px;
+  margin-top: 12px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--u-hair); border-radius: 16px 16px 0 0;
+  background: var(--adm-card);
+}
+@media (min-width: 768px) {
+  .caja-foot { position: static; margin: 0; padding: 0; border-top: none; border-radius: 0; background: none; }}
+
+/* ── El buscador de platillos ──────────────────────────────────
+   Vive debajo de la comanda, en la pantalla de la mesa. Es la pieza
+   que borra el «paso 2 de 3»: se escribe, sale la lista en línea, se
+   pulsa Enter y la comanda de arriba se actualiza sola. Cero
+   pantallas intermedias.
+
+   Campo y lista comparten caja mientras hay algo que enseñar: así la
+   lista se lee como parte de lo que se está escribiendo y no como una
+   tarjeta suelta debajo. */
+.wp-finder {
+  border-radius: 12px;
+  border: 1px solid var(--u-hair-2);
+  background: var(--adm-card);
+  transition: box-shadow .15s, border-color .15s;
+}
+.wp-finder[data-open="1"] { box-shadow: var(--adm-shadow-xs); }
+.wp-finder:focus-within {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+
+.wp-find { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; }
+.wp-find > input {
+  flex: 1; min-width: 0; height: 100%;
+  border: none; outline: none; background: none; color: var(--u-text);
+  /* Piso absoluto de 16 px: por debajo de eso Safari amplía la página
+     entera al enfocar el campo, y el mesero pierde de vista la comanda. */
+  font-size: 16px;
+}
+.wp-find > input::placeholder { color: var(--u-text-4); }
+
+.wp-finder-res { border-top: 1px solid var(--u-hair); }
+.wp-finder[data-open="0"] .wp-finder-res { border-top: none; }
+
+/* Una fila de resultado. La resaltada es la que agrega Enter, y lo
+   dice con la tecla dibujada al lado: el tinte solo no basta para
+   quien no lo distingue. */
+.wp-res {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 14px; min-height: 52px;
+}
+.wp-res[data-on="1"] { background: color-mix(in srgb, var(--brand-accent) 6%, transparent); }
+
+/* Paso de cantidad: el mismo botón redondo en el buscador y en la
+   comanda, para que «+» signifique siempre lo mismo. */
+.wp-step {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--u-hair-2); background: none; color: var(--u-text-2);
+}
+.wp-step[data-on="1"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+  color: var(--brand-accent-ink);
+}
+.wp-step:disabled { opacity: 0.45; cursor: default; }
+/* El tamaño de dedo NO depende del ancho, depende del DEDO.
+   ------------------------------------------------------------------
+   Estaba solo bajo 767 px, así que entre 768 y 1180 —justo la tablet del
+   mostrador, el aparato en el que se toma la comanda— estos pasos medían
+   30 px medidos, no 38. El corte correcto es el puntero, igual que ya
+   hace `.wp-key` unas líneas más abajo. Se deja también el de ancho: una
+   ventana estrecha con ratón no estorba a nadie teniéndolos grandes. */
+@media (max-width: 767px), (pointer: coarse) { .wp-step { width: 38px; height: 38px; border-radius: 11px; }}
+
+/* La caja con filas que usan el buscador y la comanda. */
+.wp-group {
+  border-radius: 12px; overflow: hidden;
+  background: var(--adm-card); border: 1px solid var(--adm-border);
+  box-shadow: var(--adm-shadow-xs);
+}
+/* Dentro del buscador la caja ya la pone `.wp-finder`: doble borde
+   dibujaría una tarjeta dentro de otra. */
+.wp-finder-res .wp-group { border: none; border-radius: 0; box-shadow: none; background: none; }
+
+/* Ayudas que solo tienen sentido con sitio de sobra. */
+.wp-wide-only { display: none; }
+@media (min-width: 900px) { .wp-wide-only { display: inline; }}
+
+/* ── Las barras pegadas, por encima de la barra de destinos ────
+   La del siguiente paso de la mesa y la del cierre de caja son
+   `sticky bottom: 0`, y en el teléfono ese borde lo ocupa la barra
+   inferior de destinos del panel (fija, z-index 60). Sin este colchón
+   tapaba justo el botón que dice qué hacer.
+
+   Va al FINAL del archivo a propósito: las reglas de cada pantalla se
+   declaran más abajo y ganarían por orden si esto viviera arriba.
+
+   Y son DOS cortes, no uno, porque cada barra se pega en un tramo
+   distinto y el colchón solo se debe donde la de destinos existe — hasta
+   820 px, que es donde `.admin-nav` se vuelve fija:
+
+     · `.ciclo-next` se pega desde 1180 px hacia abajo (el mismo corte que
+       pliega la columna del total). En la franja 768–820 estaba pegada y
+       NO reservaba hueco: en una tablet de 800 px el botón que dice qué
+       hacer quedaba debajo de la barra de destinos. Va a 820.
+     · `.caja-foot` hace lo contrario: a partir de 768 px vuelve a
+       `position: static` (regla propia, más arriba). En esa franja no se
+       pega a nada, así que no hay nada que esquivar; y de paso, metida en
+       un corte de 820 px, su `padding-bottom` volvería a pisar el
+       `padding: 0` que la deja plana. Se queda en 767.
+   ------------------------------------------------------------------ */
+@media (max-width: 820px) {
+  .ciclo-next {
+    bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 14px;
+  }
+  /* En modo servicio no hay barra de destinos que evitar: al borde. */
+  .admin-kiosk .ciclo-next {
+    bottom: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }}
+@media (max-width: 767px) {
+  .caja-foot {
+    bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 14px;
+  }
+  .admin-kiosk .caja-foot {
+    bottom: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Y aquí, en el MISMO corte, el círculo de "tomar pedido" se retrae: sus
+     28 px de voladizo caerían justo sobre los botones del cierre. La ranura
+     se queda con su icono en línea y su etiqueta, como los otros destinos
+     —ver `.admin-fab` en el bloque de 820 px—, así que no se abre un hueco.
+     Va aquí y no allí porque el corte es 767: en la franja 768–820 la barra
+     de la caja ya no se pega y no hay nada que esquivar. */
+  .admin-shell:has(.caja-foot) .admin-fab-dot { display: none; }
+  .admin-shell:has(.caja-foot) .admin-fab-flat { display: block; }
+  .admin-shell:has(.caja-foot) .admin-fab { justify-content: center; gap: 3px; }}
+
+/* Teléfonos muy estrechos (un SE de primera hornada, la tapa de un plegable).
+   A 375 px los seis destinos y el botón caben con las seis etiquetas enteras;
+   a 320 px los destinos caen a 38 px y cuatro se recortan a "Pedid…". La
+   ranura del botón cede 18 px —el círculo mide 56 y le sobra sitio de todos
+   modos— y con eso vuelven a caber: medido, 41,7 px por destino contra los
+   40 que pide la etiqueta más larga.
+
+   Va en su propio corte de primer nivel y NO dentro del bloque de 820 px:
+   un `@media` anidado en otro `@media` no llega a la hoja de estilos que
+   sirve esta app (comprobado en pantalla — la regla no existía en
+   `document.styleSheets` y el botón seguía midiendo 86 px a 320). */
+@media (max-width: 359px) {
+  .admin-fab { flex-basis: 68px; }
+  /* Y los 2 px de aire lateral de cada destino, que a este ancho son lo que
+     separa "Clientes" entero de "Cliente…". El área tocable no cambia: el
+     ancho lo reparte `flex`, el padding solo recortaba el texto. */
+  .admin-navlink { padding-left: 0; padding-right: 0; }}
+
+
+/* ============================================================
+   MÓDULO DE SERVICIO — tomar pedidos y mesas (rediseño 2026-09-17)
+   ------------------------------------------------------------
+   Un solo módulo para ver el salón, armar la comanda, mandarla a
+   cocina, marcar lo servido y cobrar. Tres ramas del mismo árbol,
+   decididas por el ancho de la ventana:
+
+     · < 900 px   una cosa a la vez: Salón → Comanda → Pedido.
+     · 900-1100   tres columnas apretadas: riel 232 + carta + 288.
+     · ≥ 1100     tres columnas cómodas:   riel 264 + carta + 344.
+
+   Cuatro reglas duras del handoff, que ya se rompieron en iteraciones
+   anteriores y no se vuelven a romper:
+
+     1. La rejilla de platos NUNCA baja de dos columnas.
+     2. Todo control táctil mide 44 px o más (--m-tap).
+     3. Las filas de «sin enviar» se APILAN: un renglón horizontal con
+        tres controles de 44 px no cabe en una columna de 288.
+     4. Las filas horizontales se desplazan, no se parten
+        (`white-space: nowrap` + `overflow-x: auto`).
+
+   Sobre el color: el prototipo venía en tema claro y pintaba el texto
+   sobre tinta con `--brand-bg-2`, que aquí es una SUPERFICIE (#141416
+   en oscuro). Eso habría dejado texto negro sobre negro en la mitad de
+   los botones. Aquí la tinta va con `--u-text` / `--brand-bg`, el
+   acento con `--brand-on-accent` y los sólidos semánticos con
+   `--c-on-solid`: los tres funcionan en los dos temas.
+   ============================================================ */
+
+/* ── El módulo se come la pantalla ──────────────────────────────
+   No es una pantalla del panel con tarjetas apiladas: es un puesto de
+   trabajo. Se desplaza POR DENTRO (el riel, la carta y la comanda cada
+   uno por su lado) y la página no se mueve nunca — si se moviera, el pie
+   con «Enviar a cocina» se iría de la vista justo cuando hace falta. */
+.admin-shell:has(.sv) { height: 100svh; overflow: hidden; }
+.admin-shell:has(.sv) .admin-main { min-height: 0; }
+.admin-content:has(> .sv) {
+  padding: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+.admin-kiosk-body:has(> .sv) { overflow: hidden; }
+
+.sv {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--adm-bg, var(--brand-bg));
+  color: var(--u-text);
+  /* RELLENOS CON TEXTO BLANCO ENCIMA. Los `--c-*-solid` del sistema son
+     tonos vivos pensados para que se vea el COLOR, y con texto blanco se
+     quedan cortos: «Cobrar y cerrar mesa» medía 3.3:1 en claro y 2.3:1
+     en oscuro (#22c55e), y AA pide 4.5 para un botón de 16 px. Aquí se
+     oscurecen lo justo para que el texto se lea en los dos temas (≥ 4.8
+     medido) sin dejar de ser verde, rojo y azul. Las hojas y el aviso
+     viven dentro de `.sv`, así que las heredan. */
+  --sv-ok-fill:     color-mix(in srgb, var(--c-ok-solid) 66%, #000);
+  --sv-danger-fill: color-mix(in srgb, var(--c-danger-solid) 80%, #000);
+  --sv-info-fill:   color-mix(in srgb, var(--c-info-solid) 80%, #000);
+}
+
+/* EL MÓDULO SE MIDE A SÍ MISMO, NO A LA VENTANA.
+   ------------------------------------------------------------
+   Los cortes del handoff (900 y 1100 px) son del MÓDULO, y dentro del
+   panel el módulo no es la ventana: la barra lateral del administrador
+   se lleva 244 px. Medido en pantalla con el salón real: a 1.150 px de
+   ventana el módulo medía 906, el riel y la comanda se quedaban con los
+   anchos de PC y la carta caía a **298 px con la rejilla en UNA
+   columna** — que es justo la primera regla dura del handoff («la
+   rejilla nunca baja de dos columnas»).
+
+   Por eso el contenedor va en `.sv-frame` y no en `.sv`: `container-type`
+   implica `contain: layout`, y eso convierte al elemento en bloque
+   contenedor de sus descendientes `position: fixed`. Con el contenedor en
+   `.sv`, las hojas y la paleta —que son fijas— se habrían posicionado
+   respecto del módulo en vez de respecto de la pantalla. Las hojas se
+   quedan FUERA del armazón, como hermanas, y siguen midiendo la ventana,
+   que es lo correcto: una hoja se centra en la pantalla. */
+.sv-frame {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  container-type: inline-size;
+  container-name: sv;
+  /* La escala de texto del panel no aplica aquí: `zoom` sobre un layout
+     de altura fija descuadra el cálculo de 100svh y deja la comanda
+     medio dedo por debajo del canto de la pantalla. */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Filas que se desplazan en vez de partirse (regla 4). */
+.sv-hs {
+  display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
+  white-space: nowrap; scrollbar-width: none; -ms-overflow-style: none;
+  /* El desplazamiento se para en la píldora, no a medias. */
+  scroll-snap-type: x proximity;
+}
+.sv-hs::-webkit-scrollbar { display: none; }
+.sv-hs > * { flex-shrink: 0; scroll-snap-align: start; }
+
+/* Lo que se desplaza en vertical: sin barra visible, pero con inercia. */
+.sv-vs {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--u-text) 16%, transparent) transparent;
+}
+/* Lo que va DENTRO de una zona que se desplaza no encoge: se desplaza.
+   Las filas del riel son hijas de una columna flex con alto fijo y llevan
+   `min-height: 44px` explícito, que sustituye al mínimo automático del
+   contenido; con la lista más larga que la pantalla, `flex-shrink: 1` las
+   aplastaba a 44 px con un contenido de 45 + 22 de relleno, y el chip de
+   estado colgaba por fuera del borde de la fila. */
+.sv-vs > * { flex-shrink: 0; }
+.sv-vs::-webkit-scrollbar { width: 4px; }
+.sv-vs::-webkit-scrollbar-track { background: transparent; }
+.sv-vs::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--u-text) 16%, transparent); border-radius: 4px;
+}
+
+/* ── Rótulo de sección (versalitas de 11 px) ──────────────────── */
+.sv-kicker {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--u-text-3);
+}
+.sv-kicker > .sv-rule { flex: 1; height: 1px; background: var(--u-hair); }
+.sv-kicker[data-tone="warn"] { color: var(--c-warn); }
+.sv-kicker[data-tone="info"] { color: var(--c-info); }
+.sv-kicker[data-tone="accent"] { color: var(--brand-accent-ink); }
+
+/* ── Píldoras (filtros del salón, categorías de la carta) ─────── */
+.sv-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: var(--m-tap); padding: 0 15px; border-radius: var(--radius-md);
+  border: 1px solid transparent; background: var(--surface-2);
+  color: var(--u-text-2); font: inherit; font-size: 13.5px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-pill:hover { background: var(--surface-3); color: var(--u-text); }
+.sv-pill[data-on="1"] {
+  background: var(--u-text); color: var(--brand-bg); border-color: var(--u-text);
+}
+.sv-pill[data-on="1"]:hover { background: var(--u-text); color: var(--brand-bg); }
+.sv-pill-count {
+  font-family: var(--ui-font-mono); font-size: 11.5px; font-weight: 600;
+  opacity: 0.72;
+}
+
+/* ── Chip de estado de mesa ────────────────────────────────────
+   El COLOR es el dato: de un vistazo se sabe qué le falta a cada mesa
+   sin leer una palabra. Las cuatro parejas fondo/borde/tinta salen de
+   los tokens semánticos del sistema, así que en tema claro y en oscuro
+   son la misma idea con el contraste de cada uno. */
+.sv-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: var(--radius-md);
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+  border: 1px solid var(--u-hair); background: var(--surface-1); color: var(--u-text-3);
+}
+.sv-chip[data-big="1"] { padding: 4px 9px; font-size: 11.5px; }
+
+.sv-chip[data-st] { background: var(--sv-bg); border-color: var(--sv-line); color: var(--sv-ink); }
+
+/* La insignia de «alguien levantó la mano». Va ENCIMA del estado y no
+   en su lugar: el color dice en qué va la comida, esto dice que hay una
+   persona esperando. */
+.sv-mano {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: var(--radius-md);
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  background: var(--sv-danger-fill); color: var(--c-on-solid);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BARRA SUPERIOR (tablet y PC)
+   ══════════════════════════════════════════════════════════════ */
+.sv-top {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px; background: var(--adm-card);
+  border-bottom: 1px solid var(--u-hair);
+}
+.sv-top-id { display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-width: 0; }
+.sv-top-mark {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius-md);
+  background: var(--brand-accent); color: var(--brand-on-accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px;
+  overflow: hidden;
+}
+.sv-top-mark > img { width: 100%; height: 100%; object-fit: cover; }
+.sv-top-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; min-width: 0; }
+.sv-top-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+
+/* Las mesas abiertas, como pestañas. Es lo que permite ir y venir entre
+   dos mesas sin volver al salón. */
+.sv-tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: var(--m-tap); padding: 0 15px; border-radius: var(--radius-md);
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  color: var(--u-text); font: inherit; font-size: 13.5px; cursor: pointer;
+  white-space: nowrap;
+}
+.sv-tab:hover { border-color: var(--u-text-4); }
+.sv-tab[data-on="1"] { background: var(--u-text); border-color: var(--u-text); color: var(--brand-bg); }
+.sv-tab-total { font-family: var(--ui-font-mono); font-size: 12px; opacity: 0.75; }
+.sv-tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sv-ink, var(--u-text-3)); }
+.sv-tab-key {
+  font-family: var(--ui-font-mono); font-size: 10.5px; font-weight: 600;
+  padding: 1px 5px; border-radius: 5px; background: var(--surface-3); opacity: 0.8;
+}
+
+/* Botón fantasma de la barra superior (buscar, modo aprendiz, plano). */
+.sv-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: var(--m-tap); min-width: var(--m-tap); padding: 0 14px; flex-shrink: 0;
+  border-radius: var(--radius-md); border: 1px solid var(--u-hair);
+  background: var(--surface-1); color: var(--u-text-3);
+  font: inherit; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-ghost:hover { border-color: var(--u-text-4); color: var(--u-text-2); }
+.sv-ghost[data-on="1"] {
+  border-color: var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.sv-ghost[data-icon="1"] { padding: 0; width: var(--m-tap); }
+.sv-kbd {
+  font-family: var(--ui-font-mono); font-size: 11px; white-space: nowrap;
+  padding: 2px 6px; border-radius: 6px; background: var(--surface-3); color: var(--u-text-2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CUERPO DE TRES COLUMNAS
+   ══════════════════════════════════════════════════════════════ */
+.sv-body { flex: 1; min-height: 0; display: flex; }
+
+/* `min-height: 0` en las tres columnas, y no solo `min-width`.
+   ------------------------------------------------------------
+   En escritorio el cuerpo es una FILA y ahí basta el ancho; en el
+   teléfono es una COLUMNA, y sin esto el hijo se niega a encogerse por
+   debajo de su contenido: la carta medía 1.764 px dentro de una pantalla
+   de 844 y la barra de «Enviar a cocina» se quedaba fuera de la vista,
+   justo en el aparato donde más falta hace. Medido en pantalla. */
+.sv-rail, .sv-carta, .sv-ticket, .sv-pane { min-height: 0; }
+
+/* Una pantalla del teléfono: el salón o el pedido, a pantalla completa.
+   No reusa `.sv` para no anidar el módulo dentro de sí mismo. */
+.sv-pane { flex: 1; display: flex; flex-direction: column; }
+
+.sv-rail {
+  flex: 0 0 264px; min-width: 0; display: flex; flex-direction: column;
+  background: var(--wp-side, var(--adm-bg-2)); border-right: 1px solid var(--u-hair);
+}
+.sv-carta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sv-ticket {
+  flex: 0 0 344px; min-width: 0; display: flex; flex-direction: column;
+  background: var(--adm-card); border-left: 1px solid var(--u-hair);
+}
+/* Tablet apretada: mismo módulo, columnas más estrechas. */
+@container sv (max-width: 1099px) {
+  .sv-rail { flex-basis: 232px; }
+  .sv-ticket { flex-basis: 288px; }}
+
+.sv-rail-head { padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; }
+.sv-rail-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-rail-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); line-height: 1.35; }
+.sv-rail-list { padding: 0 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+/* «Para llevar»: una acción, no una mesa. Por eso el borde es de trazos. */
+.sv-llevar {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: var(--m-tap); padding: 11px 12px; border-radius: var(--radius-lg);
+  border: 1px dashed var(--u-hair-2); background: var(--surface-1);
+  color: var(--u-text); font: inherit; text-align: left; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.sv-llevar:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-llevar-ico {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-ink); display: grid; place-items: center;
+}
+
+/* ── La mesa, en el riel (fila horizontal) ─────────────────── */
+.sv-mesa {
+  position: relative;
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: var(--m-tap); padding: 11px 12px; border-radius: var(--radius-lg);
+  text-align: left; cursor: pointer; font: inherit;
+  background: var(--sv-bg); border: 1px solid var(--sv-line); color: var(--u-text);
+  transition: border-color 120ms var(--ease-out);
+}
+.sv-mesa:hover { border-color: var(--u-text-4); }
+.sv-mesa[data-on="1"] { background: var(--u-text); border-color: var(--u-text); color: var(--brand-bg); }
+.sv-mesa[data-on="1"] .sv-mesa-sub { color: color-mix(in srgb, var(--brand-bg) 72%, transparent); }
+.sv-mesa-n {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  font-family: var(--ui-font-mono); font-size: 17px; font-weight: 600;
+  background: var(--surface-2); color: inherit;
+}
+.sv-mesa[data-on="1"] .sv-mesa-n { background: color-mix(in srgb, var(--brand-bg) 14%, transparent); }
+/* El chip de estado sobre la fila ELEGIDA (fondo invertido): su relleno es
+   un 16 % de color sobre lo que haya debajo, y debajo ahora hay tinta —
+   «Sin enviar» medía 1.6:1, marrón sobre casi negro—. Se le da la
+   superficie de tarjeta para que vuelva a ser el chip de siempre. */
+.sv-mesa[data-on="1"] .sv-chip[data-st] {
+  background: linear-gradient(var(--sv-bg), var(--sv-bg)), var(--adm-card);
+}
+.sv-mesa-id { flex: 1; min-width: 0; }
+.sv-mesa-title {
+  display: block; font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sv-mesa-sub {
+  display: block; font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sv-mesa-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sv-mesa-total { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; }
+
+/* ── La mesa, en rejilla (móvil y vista de fichas) ──────────── */
+.sv-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+}
+@container sv (max-width: 640px) {
+  /* Dos columnas SIEMPRE: con una sola caben tres mesas y media por
+     pantalla y el salón deja de leerse de un vistazo. */
+  .sv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+.sv-card {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  gap: 8px; min-height: 118px; padding: 12px; border-radius: var(--radius-xl);
+  text-align: left; cursor: pointer; font: inherit; color: var(--u-text);
+  background: var(--sv-bg); border: 1.5px solid var(--sv-line);
+  box-shadow: var(--adm-shadow-xs, 0 1px 2px rgba(0,0,0,.06));
+  transition: transform 90ms var(--ease-out);
+}
+.sv-card:active { transform: scale(0.985); }
+.sv-card[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+.sv-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sv-card-n {
+  font-family: var(--ui-font-mono); font-size: 30px; font-weight: 600;
+  line-height: 1; letter-spacing: -0.02em;
+}
+.sv-card-name { display: block; font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.sv-card-sub { display: block; font-size: 12.5px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
+.sv-card-total { display: block; font-family: var(--ui-font-mono); font-size: 15px; font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════
+   LA CARTA
+   ══════════════════════════════════════════════════════════════ */
+.sv-carta-head { padding: 14px 18px 10px; display: flex; gap: 10px; align-items: center; }
+.sv-find { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; }
+.sv-find > .sv-find-ico {
+  position: absolute; left: 14px; color: var(--u-text-3); display: flex; pointer-events: none;
+}
+.sv-find > input {
+  width: 100%; height: 50px; padding: 0 14px 0 42px;
+  border-radius: var(--radius-lg); border: 1px solid var(--u-hair);
+  background: var(--adm-card); color: var(--u-text);
+  /* 16 px es el piso: por debajo, Safari amplía la página al enfocar y
+     deja la comanda fuera de la pantalla. */
+  font-size: 16px; font-weight: 500; outline: none;
+}
+.sv-find > input:focus { border-color: var(--brand-accent); }
+.sv-find > input::placeholder { color: var(--u-text-4); }
+.sv-find-parsed {
+  position: absolute; right: 12px; font-size: 12px; font-weight: 600;
+  color: var(--brand-accent-ink); background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  padding: 5px 9px; border-radius: var(--radius-md); pointer-events: none;
+  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sv-find-clear {
+  position: absolute; right: 8px; width: 34px; height: 34px; border: none;
+  background: none; color: var(--u-text-3); cursor: pointer; display: grid; place-items: center;
+}
+.sv-mic {
+  flex-shrink: 0; width: 50px; height: 50px; border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  display: grid; place-items: center; color: var(--u-text-2); cursor: pointer;
+  transition: border-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-mic:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+
+.sv-carta-bars { padding: 0 18px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Los más pedidos: un toque y está en la comanda. */
+.sv-fav {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.sv-fav:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-fav-key {
+  font-family: var(--ui-font-mono); font-size: 11px; font-weight: 600;
+  color: var(--u-text-2); background: var(--surface-3); padding: 2px 6px; border-radius: 6px;
+}
+.sv-fav-price { font-family: var(--ui-font-mono); font-size: 12px; font-weight: 500; color: var(--u-text-3); }
+
+/* ── Rejilla de platos (regla 1: nunca menos de dos columnas) ── */
+.sv-dishes {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+}
+.sv-dish {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  gap: 10px; min-height: 96px; padding: 12px; border-radius: var(--radius-lg);
+  cursor: pointer; text-align: left; font: inherit; color: var(--u-text);
+  background: var(--adm-card); border: 1px solid var(--u-hair);
+  transition: border-color 120ms var(--ease-out), transform 90ms var(--ease-out);
+}
+.sv-dish:hover { border-color: var(--u-text-4); }
+.sv-dish:active { transform: scale(0.985); }
+/* Ya está en la comanda: la tarjeta se tiñe y lleva la cuenta. */
+.sv-dish[data-has="1"] {
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+  border-color: var(--brand-accent);
+}
+/* Agotado: se VE, pero no se puede pedir. Esconderlo no contesta la
+   pregunta que el mesero tiene delante del cliente. */
+/* Se apaga el CONTENIDO y no la tarjeta: con la tarjeta entera a 0.55
+   la propia etiqueta «Agotado» se quedaba sin contraste. */
+.sv-dish[data-out="1"] { cursor: default; background: var(--surface-1); }
+.sv-dish[data-out="1"] .sv-dish-name,
+.sv-dish[data-out="1"] .sv-dish-price { opacity: 0.55; }
+.sv-dish[data-out="1"]:hover { border-color: var(--u-hair); }
+.sv-dish-name {
+  display: block; font-size: 14.5px; font-weight: 600; line-height: 1.25;
+  letter-spacing: -0.01em; padding-right: 30px;
+}
+.sv-dish-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sv-dish-price { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; color: var(--u-text-2); }
+/* «Opciones» vive DENTRO de una tarjeta cuyo toque agrega un plato: si
+   es chico, el dedo agrega platos por error. 44 px, siempre. */
+.sv-dish-opts {
+  min-height: var(--m-tap); min-width: var(--m-tap); padding: 0 13px;
+  display: grid; place-items: center; border: none; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--u-text-2);
+  border-radius: var(--radius-md); background: var(--surface-2);
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-dish-opts:hover {
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-ink);
+}
+.sv-dish-q {
+  position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
+  border-radius: var(--radius-full); background: var(--brand-accent); color: var(--brand-on-accent);
+  font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
+  display: grid; place-items: center;
+}
+/* Vive en el pie, en el sitio de «Opciones» (ver carta.tsx): arriba, en
+   la esquina, se montaba sobre el nombre del plato. */
+.sv-dish-out {
+  padding: 4px 9px; border-radius: 7px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  background: var(--c-warn-bg); color: var(--c-warn);
+}
+/* La rejilla lleva el mismo margen lateral que el buscador y las
+   categorías de encima: con 18 px contra 12 en el teléfono, las tarjetas
+   no caían en la misma línea que la píldora «Todos». */
+.sv-carta-list { padding: 2px 18px 20px; }
+
+.sv-vacio {
+  padding: 40px 6px; text-align: center; color: var(--u-text-3);
+  font-size: 14px; line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LA COMANDA
+   ══════════════════════════════════════════════════════════════ */
+.sv-ticket-head {
+  flex: 0 0 auto; padding: 14px 16px; border-bottom: 1px solid var(--u-hair);
+  display: flex; align-items: center; gap: 10px;
+}
+.sv-ticket-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-ticket-sub { font-size: 12px; font-weight: 500; color: var(--u-text-3); margin-top: 2px; }
+.sv-ticket-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* El aviso del pedido por QR. Es lo primero de la comanda porque es lo
+   único que puede estar esperando una respuesta. */
+.sv-qr {
+  border: 1px solid var(--c-info-line); background: var(--c-info-bg);
+  border-radius: var(--radius-lg); padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sv-qr-badge {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  background: var(--sv-info-fill); color: var(--c-on-solid);
+  padding: 3px 7px; border-radius: 6px;
+}
+.sv-qr-title { font-size: 13.5px; font-weight: 600; color: var(--c-info); }
+.sv-qr-items { font-size: 12.5px; color: var(--c-info); line-height: 1.45; }
+
+/* ── Renglón SIN ENVIAR (regla 3: apilado) ─────────────────── */
+.sv-line-new {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  border: 1px solid var(--c-warn-line); background: var(--c-warn-bg);
+  border-radius: var(--radius-lg);
+}
+.sv-line-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.sv-line-mods { font-size: 12px; font-weight: 500; color: var(--c-warn); margin-top: 2px; line-height: 1.35; }
+.sv-line-unit { font-family: var(--ui-font-mono); font-size: 12px; color: var(--u-text-3); margin-top: 3px; }
+.sv-line-ctl { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.sv-line-ctl > .sv-edit { margin-right: auto; }
+
+.sv-edit {
+  width: var(--m-tap); height: var(--m-tap); border-radius: var(--radius-md);
+  border: none; background: var(--surface-2); color: var(--u-text-2);
+  display: grid; place-items: center; cursor: pointer; font: inherit;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-edit:hover {
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent); color: var(--brand-accent-ink);
+}
+.sv-step {
+  width: var(--m-tap); height: var(--m-tap); border-radius: var(--radius-md);
+  border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  display: grid; place-items: center; cursor: pointer; font: inherit;
+  font-size: 20px; line-height: 1;
+}
+.sv-step:hover { border-color: var(--u-text-4); }
+.sv-qty {
+  min-width: 26px; text-align: center;
+  font-family: var(--ui-font-mono); font-size: 16px; font-weight: 600;
+}
+
+/* ── Renglón FALTA SERVIR ──────────────────────────────────── */
+.sv-line {
+  display: flex; gap: 10px; align-items: center; padding: 10px;
+  border: 1px solid var(--u-hair); background: var(--adm-card);
+  border-radius: var(--radius-lg);
+}
+.sv-line-q {
+  font-family: var(--ui-font-mono); font-size: 14px; font-weight: 600;
+  color: var(--c-info); min-width: 24px; flex-shrink: 0;
+}
+/* El cuerpo del renglón abre lo que se puede hacer con ese plato. Ocupa
+   todo el alto de la fila: antes solo tocaba la línea de texto (21 px de
+   una fila de 64) y el dedo caía en el relleno sin que pasara nada. */
+.sv-line-body {
+  flex: 1; min-width: 0; align-self: stretch;
+  display: flex; align-items: center; gap: 10px;
+  margin: -10px 0 -10px -10px; padding: 10px 0 10px 10px;
+  border: none; background: none; color: inherit; font: inherit;
+  text-align: left; cursor: pointer; border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+.sv-serve {
+  height: var(--m-tap); padding: 0 14px; border-radius: var(--radius-md); border: none;
+  background: var(--c-info-bg); color: var(--c-info);
+  font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.sv-serve:hover { background: var(--sv-info-fill); color: var(--c-on-solid); }
+.sv-serve:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Renglón EN LA MESA ────────────────────────────────────── */
+.sv-line-done {
+  display: flex; gap: 10px; align-items: center; padding: 9px 10px;
+  border-radius: var(--radius-lg); background: var(--surface-1);
+}
+.sv-line-done .sv-line-q { color: var(--u-text-3); font-size: 13px; }
+.sv-line-done-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: var(--u-text-2); }
+.sv-line-done-total { font-family: var(--ui-font-mono); font-size: 13px; color: var(--u-text-3); }
+/* Cobrada en un cobro por partes: se queda a la vista, saldada. Borrarla
+   sería anular una venta. Se apaga lo que se LEE, no los botones: en
+   «Falta servir» el plato pagado sigue necesitando su «Servido». */
+.sv-line[data-paid="1"] .sv-line-body,
+.sv-line-done[data-paid="1"] > :not(.sv-paid) { opacity: 0.75; }
+.sv-paid {
+  flex-shrink: 0; padding: 3px 8px; border-radius: 7px; white-space: nowrap;
+  font-size: 11px; font-weight: 700;
+  background: var(--c-ok-bg); color: var(--c-ok);
+}
+/* Mandado a cocina y aún sin confirmar (envío optimista de Tomar pedidos).
+   Mismo hueco que el botón «Servido» al que sustituye, sin parecer botón. */
+.sv-line[data-sending="1"] .sv-line-body { opacity: 0.7; cursor: default; }
+.sv-sending {
+  flex-shrink: 0; padding: 6px 10px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; color: var(--u-text-3);
+  animation: sv-sending-pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .sv-sending { animation: none; }}
+
+/* ── El pie: total y la acción que toca ────────────────────── */
+.sv-foot {
+  flex: 0 0 auto; border-top: 1px solid var(--u-hair);
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--adm-card);
+}
+.sv-foot-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sv-foot-label { font-size: 14px; font-weight: 500; color: var(--u-text-2); }
+.sv-foot-total {
+  font-family: var(--ui-font-mono); font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+}
+.sv-foot-note { font-size: 12.5px; color: var(--u-text-3); line-height: 1.45; }
+.sv-foot-keys {
+  font-family: var(--ui-font-mono); font-size: 11.5px; color: var(--u-text-3); line-height: 1.5;
+}
+
+.sv-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; height: 54px; border: none; border-radius: var(--radius-lg);
+  font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
+  background: var(--brand-accent); color: var(--brand-on-accent);
+  transition: background 120ms var(--ease-out), opacity 120ms var(--ease-out);
+}
+.sv-cta:hover { background: var(--brand-accent-ink); }
+.sv-cta:disabled { opacity: 0.55; cursor: default; }
+.sv-cta[data-tone="ok"] { background: var(--sv-ok-fill); color: var(--c-on-solid); }
+/* El hover oscurece un paso más. Antes iba a `--c-ok`, que es TINTA: en
+   oscuro es un verde claro (#4ade80) y el texto blanco encima desaparecía. */
+.sv-cta[data-tone="ok"]:hover { background: color-mix(in srgb, var(--sv-ok-fill) 86%, #000); }
+.sv-cta[data-tone="quiet"] {
+  background: var(--adm-card); color: var(--u-text); border: 1px solid var(--u-hair-2);
+}
+.sv-cta[data-tone="quiet"]:hover { background: var(--adm-card-hover, var(--surface-2)); }
+.sv-cta[data-tone="danger"] { background: var(--sv-danger-fill); color: var(--c-on-solid); }
+.sv-cta[data-tone="danger"]:hover { background: color-mix(in srgb, var(--sv-danger-fill) 86%, #000); }
+.sv-cta[data-tone="info"] { background: var(--sv-info-fill); color: var(--c-on-solid); }
+.sv-cta[data-tone="info"]:hover { background: color-mix(in srgb, var(--sv-info-fill) 86%, #000); }
+/* La tecla va con un filete del color del texto y sin relleno: con un
+   velo blanco encima del botón, el propio «Ctrl ⏎» bajaba a 3.3:1. */
+.sv-cta-key {
+  font-family: var(--ui-font-mono); font-size: 11px; padding: 2px 6px; border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* Sin mesa elegida. */
+.sv-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 30px; text-align: center;
+}
+.sv-empty-ico {
+  width: 54px; height: 54px; border-radius: var(--radius-lg); background: var(--surface-2);
+  display: grid; place-items: center; color: var(--u-text-3);
+}
+.sv-empty-title { font-size: 15px; font-weight: 600; }
+.sv-empty-text { font-size: 13px; color: var(--u-text-3); line-height: 1.5; max-width: 240px; }
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL — una cosa a la vez
+   ══════════════════════════════════════════════════════════════ */
+.sv-m-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 14px 12px 10px; background: var(--adm-card); border-bottom: 1px solid var(--u-hair);
+}
+.sv-m-back {
+  width: var(--m-tap); height: var(--m-tap); flex-shrink: 0; border: none;
+  border-radius: var(--radius-lg); background: var(--surface-2); color: var(--u-text);
+  display: grid; place-items: center; cursor: pointer; font: inherit;
+}
+.sv-m-title { font-size: 16.5px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-m-sala-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
+.sv-m-sub { font-size: 12.5px; font-weight: 500; color: var(--u-text-3); margin-top: 1px; }
+
+/* La barra de abajo del móvil: resumen + acción. Se pega al canto y
+   esquiva la barra de destinos del panel cuando la hay. */
+.sv-m-foot {
+  flex: 0 0 auto; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--adm-card); border-top: 1px solid var(--u-hair);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sv-m-resumen {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 4px 6px; border: none; background: none; color: inherit;
+  font: inherit; cursor: pointer;
+}
+.sv-m-resumen-label { font-size: 14px; font-weight: 600; color: var(--u-text-2); }
+.sv-m-resumen-total { font-family: var(--ui-font-mono); font-size: 18px; font-weight: 600; }
+.sv-m-cta { height: 56px; font-size: 16.5px; }
+
+/* El aviso del modo aprendiz: una frase, donde hace falta. */
+.sv-hint {
+  padding: 12px 14px; border-radius: var(--radius-lg);
+  background: var(--c-warn-bg); color: var(--c-warn);
+  font-size: 13.5px; font-weight: 500; line-height: 1.45;
+}
+.sv-hint-inline {
+  font-size: 12px; color: var(--c-warn); background: var(--c-warn-bg);
+  padding: 3px 8px; border-radius: 6px; font-weight: 500; white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HOJAS
+   ══════════════════════════════════════════════════════════════ */
+.sv-scrim {
+  position: fixed; inset: 0; z-index: 640;
+  background: color-mix(in srgb, #000 52%, transparent);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  display: flex; justify-content: center; align-items: flex-end;
+}
+@media (min-width: 900px) { .sv-scrim { align-items: center; padding: 24px; }}
+
+.sv-sheet {
+  width: 100%; max-height: 92svh; overflow-y: auto;
+  background: var(--adm-overlay, var(--adm-card)); color: var(--u-text);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  box-shadow: var(--adm-shadow-xl, 0 -10px 40px rgba(0,0,0,.4));
+  animation: slide-up 180ms var(--ease-entry) both;
+}
+@media (min-width: 900px) {
+  .sv-sheet {
+    max-width: 560px; max-height: 86svh; border-radius: var(--radius-xl);
+    animation: pop-in 140ms var(--ease-entry) both;
+  }}
+.sv-sheet-pad { padding: 18px 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.sv-sheet-head { display: flex; align-items: flex-start; gap: 12px; }
+.sv-sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
+.sv-sheet-sub { font-size: 13px; color: var(--u-text-3); margin-top: 2px; }
+.sv-sheet-total {
+  font-family: var(--ui-font-mono); font-size: 30px; font-weight: 600;
+  letter-spacing: -0.03em; margin-top: 4px;
+}
+.sv-x {
+  width: 38px; height: 38px; flex-shrink: 0; border: none; border-radius: var(--radius-lg);
+  background: var(--surface-2); color: var(--u-text); display: grid; place-items: center;
+  cursor: pointer; font: inherit;
+}
+.sv-x:hover { background: var(--surface-3); }
+
+.sv-field {
+  height: 50px; width: 100%; padding: 0 14px; border-radius: var(--radius-lg);
+  border: 1px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 16px; outline: none;
+}
+.sv-field:focus { border-color: var(--brand-accent); }
+.sv-field::placeholder { color: var(--u-text-4); }
+
+/* Chip de opción / modificador. */
+.sv-opt {
+  min-height: 46px; padding: 0 15px; border-radius: var(--radius-lg);
+  border: 1.5px solid var(--u-hair); background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sv-opt[data-on="1"] {
+  border-color: var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.sv-opt-extra { font-family: var(--ui-font-mono); font-size: 12.5px; opacity: 0.8; }
+.sv-opts-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Segmentado (cuenta completa / partes iguales / por platos). */
+.sv-seg { display: flex; gap: 6px; padding: 4px; background: var(--surface-2); border-radius: var(--radius-lg); }
+.sv-seg > button {
+  flex: 1; min-height: 42px; border: none; border-radius: var(--radius-md);
+  background: none; color: var(--u-text-3); font: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer;
+}
+.sv-seg > button[data-on="1"] {
+  background: var(--adm-card); color: var(--u-text); box-shadow: var(--adm-shadow-xs, none);
+}
+
+/* Elección grande (efectivo / tarjeta / transferencia, billetes). */
+.sv-choice {
+  flex: 1; min-width: 96px; min-height: 50px; padding: 0 14px;
+  border-radius: var(--radius-lg); border: 1.5px solid var(--u-hair);
+  background: var(--adm-card); color: var(--u-text);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.sv-choice[data-on="1"] {
+  border-color: var(--brand-accent); color: var(--brand-accent-ink);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+.sv-choice[data-mono="1"] { font-family: var(--ui-font-mono); }
+
+.sv-vuelto {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px; border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-ink);
+}
+.sv-vuelto-n { font-family: var(--ui-font-mono); font-size: 22px; font-weight: 600; }
+
+/* Fila de «por platos»: toca lo que paga esta persona. */
+.sv-pay {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px;
+  border-radius: var(--radius-lg); border: 1.5px solid var(--u-hair);
+  background: var(--adm-card); color: var(--u-text); font: inherit;
+  text-align: left; cursor: pointer;
+}
+.sv-pay[data-on="1"] {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-pay-box {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: var(--radius-md);
+  display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  color: var(--brand-on-accent); background: var(--u-hair-2);
+}
+.sv-pay[data-on="1"] .sv-pay-box { background: var(--brand-accent); }
+
+/* Elegir mesa destino (mover / juntar). */
+.sv-pick {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+.sv-pick > button {
+  min-height: 64px; border-radius: var(--radius-lg); border: 1px solid var(--u-hair-2);
+  background: var(--adm-card); color: var(--u-text); font: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.sv-pick > button:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+}
+.sv-pick-n { font-family: var(--ui-font-mono); font-size: 19px; font-weight: 600; }
+.sv-pick-sub { font-size: 11px; color: var(--u-text-3); }
+
+/* El micrófono escuchando. */
+.sv-voz-ring {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  display: grid; place-items: center; color: var(--brand-accent);
+  animation: sv-puls 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sv-voz-ring { animation: none; opacity: 1; }
+  .sv-sheet { animation: none; }}
+
+/* Lista de atajos. */
+.sv-atajo {
+  display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+  border-radius: var(--radius-lg); background: var(--surface-1);
+}
+.sv-atajo-k {
+  font-family: var(--ui-font-mono); font-size: 12.5px; font-weight: 600;
+  background: var(--surface-3); padding: 5px 9px; border-radius: var(--radius-md);
+  min-width: 92px; text-align: center; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PALETA DE COMANDOS (⌘K)
+   ══════════════════════════════════════════════════════════════ */
+.sv-palette-scrim {
+  position: fixed; inset: 0; z-index: 660;
+  background: color-mix(in srgb, #000 50%, transparent);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 12vh 16px 16px;
+}
+.sv-palette {
+  width: 100%; max-width: 560px; overflow: hidden;
+  background: var(--adm-overlay, var(--adm-card));
+  border-radius: var(--radius-xl); box-shadow: var(--adm-shadow-xl, 0 24px 60px rgba(0,0,0,.5));
+  animation: pop-in 140ms var(--ease-entry) both;
+}
+.sv-palette > input {
+  width: 100%; height: 60px; padding: 0 18px; border: none;
+  border-bottom: 1px solid var(--u-hair); background: none; color: var(--u-text);
+  font: inherit; font-size: 17px; font-weight: 500; outline: none;
+}
+.sv-palette-list { max-height: 46vh; overflow-y: auto; padding: 8px; }
+.sv-pres {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px;
+  border: none; border-radius: var(--radius-lg); background: none; color: var(--u-text);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.sv-pres[data-on="1"] { background: var(--surface-2); }
+.sv-pres-kind {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--u-text-2); background: var(--surface-3); padding: 4px 7px;
+  border-radius: 6px; min-width: 66px; text-align: center; flex-shrink: 0;
+}
+.sv-pres-l { display: block; font-size: 14.5px; font-weight: 600; }
+.sv-pres-s { display: block; font-size: 12.5px; color: var(--u-text-3); margin-top: 1px; }
+.sv-palette-foot {
+  padding: 9px 16px; border-top: 1px solid var(--u-hair); background: var(--surface-1);
+  font-family: var(--ui-font-mono); font-size: 11.5px; color: var(--u-text-3);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ACUSE DE RECIBO
+   ══════════════════════════════════════════════════════════════ */
+.sv-toast {
+  /* Centrado con márgenes y NO con `translateX(-50%)`: la animación
+     `fade-up` escribe `transform` y, con `both`, se quedaba con la última
+     palabra — el aviso acababa con el canto IZQUIERDO en el centro de la
+     pantalla (medido: 720 de 1.440). */
+  position: fixed; left: 0; right: 0; margin-inline: auto; width: max-content;
+  bottom: calc(26px + var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 700; max-width: min(90vw, 560px); text-align: center;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--u-text); color: var(--brand-bg);
+  padding: 13px 20px; border-radius: var(--radius-lg);
+  font-size: 14.5px; font-weight: 600;
+  box-shadow: var(--adm-shadow-lg, 0 12px 30px rgba(0,0,0,.4));
+  animation: fade-up 180ms var(--ease-out) both;
+}
+.sv-toast[data-bad="1"] { background: var(--c-danger-solid); color: var(--c-on-solid); }
+.sv-toast-undo {
+  border: none; background: color-mix(in srgb, var(--brand-bg) 18%, transparent);
+  color: inherit; font: inherit; font-size: 13.5px; font-weight: 700;
+  padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EL PLANO, A PANTALLA COMPLETA
+   ------------------------------------------------------------
+   No vive dentro del riel: en 264 px un plano son mesas de dieciocho
+   píxeles y un mapa ilegible, que es justo lo que el plano anterior
+   hacía en el teléfono. Se abre encima de todo, se mira, se toca una
+   mesa y se cierra habiéndola elegido — que es para lo que sirve un
+   plano: orientarse, no trabajar.
+   ══════════════════════════════════════════════════════════════ */
+.sv-plano-scrim {
+  position: fixed; inset: 0; z-index: 650;
+  background: color-mix(in srgb, #000 55%, transparent);
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+@media (min-width: 900px) { .sv-plano-scrim { padding: 24px; }}
+.sv-plano-panel {
+  width: 100%; height: 100%; max-width: 1100px; max-height: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--adm-bg, var(--brand-bg)); color: var(--u-text);
+  box-shadow: var(--adm-shadow-xl, none);
+  animation: pop-in 140ms var(--ease-entry) both;
+}
+@media (min-width: 900px) {
+  .sv-plano-panel { height: auto; max-height: 92%; border-radius: var(--radius-xl); }}
+.sv-plano-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px calc(10px); border-bottom: 1px solid var(--u-hair);
+  background: var(--adm-card);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EL LIENZO DEL PLANO
+   ------------------------------------------------------------
+   Lienzo de proporciones fijas (4:3) con las mesas colocadas en
+   coordenadas relativas (0..1), como las guarda el dueño en Ajustes ›
+   Salón. En el teléfono no se encoge hasta ser ilegible: mantiene un
+   ancho mínimo y se desplaza, que es como se lee un mapa.
+   ══════════════════════════════════════════════════════════════ */
+.sv-plano-wrap {
+  flex: 1; min-height: 0; overflow: auto; padding: 14px 16px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.sv-plano {
+  position: relative; flex-shrink: 0; aspect-ratio: 4 / 3;
+  /* En el teléfono manda el ANCHO y el plano se desplaza: un mapa
+     encogido hasta caber son mesas de dieciocho píxeles con un número
+     dentro, que es lo que hacía ilegible al plano anterior. */
+  width: 100%; min-width: 520px;
+  border-radius: var(--radius-xl); border: 1px solid var(--u-hair);
+  background:
+    radial-gradient(circle at 1px 1px, var(--u-hair) 1px, transparent 0) 0 0 / 28px 28px,
+    var(--adm-card);
+}
+@media (min-width: 900px) {
+  /* En pantalla grande el plano entero cabe de un vistazo sin desplazar,
+     que es justo lo que se le pide a un plano.
+
+     El tope se pone por ANCHO y no por alto a propósito: `height: 100%`
+     aquí dentro no resuelve —el panel que lo contiene se dimensiona por su
+     contenido, así que el porcentaje no tiene contra qué medirse— y el
+     lienzo se quedaba en un sliver de dos centímetros. Con
+     `min(100%, 70vh × 4/3)` el ancho siempre es un número, y la proporción
+     4:3 deriva el alto de ahí sin pasar de 70vh. */
+  .sv-plano { width: min(100%, calc(70vh * 4 / 3)); min-width: 0; }}
+.sv-plano-fix {
+  position: absolute; display: flex; align-items: center; justify-content: center; gap: 6px;
+  /* Las coordenadas que llegan ya son la esquina superior izquierda del
+     trozo enseñado, así que aquí NO se centra con transform. */
+  border-radius: var(--radius-md); border: 1px dashed var(--u-hair-2);
+  background: var(--surface-1); color: var(--u-text-3);
+  font-size: 11.5px; font-weight: 600; text-align: center; overflow: hidden;
+  padding: 2px 6px; pointer-events: none;
+}
+.sv-plano-mesa {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  width: 74px; height: 74px; padding: 4px; cursor: pointer; font: inherit;
+  background: var(--sv-bg); border: 1.5px solid var(--sv-line); color: var(--u-text);
+  border-radius: var(--radius-md);
+  transition: transform 90ms var(--ease-out);
+}
+.sv-plano-mesa[data-shape="circle"] { border-radius: 50%; }
+.sv-plano-mesa:hover { transform: translate(-50%, -50%) scale(1.04); }
+.sv-plano-mesa[data-on="1"] { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+.sv-plano-n { font-family: var(--ui-font-mono); font-size: 19px; font-weight: 600; line-height: 1; }
+.sv-plano-sub {
+  font-size: 10.5px; font-weight: 600; color: var(--sv-ink);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sv-plano-total { font-family: var(--ui-font-mono); font-size: 11px; color: var(--u-text-2); }
+.sv-plano-mano {
+  position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--c-danger-solid); border: 2px solid var(--adm-card);
+}
+/* Las que el dueño no colocó en el plano: van debajo, no desaparecen. */
+.sv-plano-fuera {
+  width: 100%; padding: 12px 14px; border-radius: var(--radius-lg);
+  border: 1px dashed var(--u-hair-2); display: flex; flex-direction: column; gap: 10px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL Y TABLET — ajustes de tamaño
+   ══════════════════════════════════════════════════════════════ */
+@container sv (max-width: 899px) {
+  /* Una cosa a la vez: ni riel ni comanda al lado. */
+  .sv-body { flex-direction: column; }
+  .sv-dish { min-height: 118px; padding: 14px; border-radius: var(--radius-xl); border-width: 1.5px; }
+  .sv-dish-name { font-size: 15px; padding-right: 32px; }
+  .sv-dish-price { font-size: 14px; }
+  /* Tantas columnas como quepan, con tarjetas de 150 px o más. Con DOS
+     fijas, una tablet de 780 px de módulo enseñaba cuatro platos enormes
+     mientras el salón, al lado, ya iba a cuatro columnas. */
+  .sv-dishes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .sv-carta-head { padding: 12px 12px 8px; }
+  .sv-carta-bars { padding: 0 12px 10px; }
+  .sv-carta-list { padding: 2px 12px 16px; }
+  .sv-ticket-body { padding: 14px 12px 16px; }
+  .sv-foot-total { font-size: 28px; }}
+/* Regla 1 del handoff: en el teléfono, dos columnas y nunca una. */
+@container sv (max-width: 640px) {
+  .sv-dishes { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+
+/* ── LA BARRA DE DESTINOS DEL TELÉFONO ─────────────────────────
+   El resto del panel esquiva esa barra con el relleno inferior de
+   `.admin-content`, y este módulo lo pone a 0 para comerse la pantalla
+   (arriba, `.admin-content:has(> .sv)`). Nadie lo reponía: la barra del
+   módulo —«Pedido para llevar», «Enviar a cocina», «Cobrar y cerrar
+   mesa»— quedaba DEBAJO de la de destinos (medido a 375 × 812: botón en
+   744–800, barra de destinos en 756–812) y encima le caía el círculo de
+   «tomar pedido», que sobresale 28 px. En el teléfono no había forma de
+   mandar un pedido a cocina.
+
+   Mismo corte que la barra (820 px) y mismo trato que `.caja-foot`: el
+   módulo termina donde empieza la barra, la muesca ya la reserva la
+   barra (así que la barra del módulo no la suma otra vez) y el círculo
+   se retrae a icono en línea — estando en «Tomar pedido», además, es un
+   atajo a la pantalla en la que ya se está. */
+@media (max-width: 820px) {
+  .admin-content:has(> .sv) {
+    padding-bottom: calc(var(--adm-nav-h) + env(safe-area-inset-bottom, 0px));
+  }
+  .admin-content:has(> .sv) .sv-m-foot { padding-bottom: 12px; }
+  .admin-content:has(> .sv) .sv-foot { padding-bottom: 14px; }
+
+  .admin-shell:has(.sv) .admin-fab-dot { display: none; }
+  .admin-shell:has(.sv) .admin-fab-flat { display: block; }
+  .admin-shell:has(.sv) .admin-fab { justify-content: center; gap: 3px; }}
+
+/* El plano vive en una capa FIJA, fuera del armazón: ahí lo que manda es
+   la pantalla, no el módulo. */
+@media (max-width: 899px) {
+  .sv-plano { min-width: 460px; }}
+
+/* Puntero grueso: fuera las pistas de teclado, que no llevan a ningún
+   sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
+   tablet de 1280 px sigue siendo un dedo. */
+@media (pointer: coarse) {
+  .sv-kbd, .sv-fav-key, .sv-cta-key, .sv-foot-keys, .sv-tab-key, .sv-palette-foot { display: none; }}
+@keyframes fade-in  { from { transform: translateY(7px); }  to { transform: translateY(0); } }
+
+@keyframes adm-nav-spin { to { transform: rotate(360deg); } }
+
+@keyframes adm-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Tablet apretada: mismo módulo, columnas más estrechas. */
+
+@keyframes sv-sending-pulse { 50% { opacity: 0.45; } }
+
+@keyframes sv-puls {
+  0%, 100% { opacity: 0.45; transform: scale(0.92); }
+  50%      { opacity: 1;    transform: scale(1.05); }
+}

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
 /* ============================================================
@@ -41,7 +41,7 @@ export async function currentSuperAdmin(): Promise<SuperAdminSession | null> {
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getStaffUser();
   if (!user) return null;
 
   const { data: profile } = await supabase

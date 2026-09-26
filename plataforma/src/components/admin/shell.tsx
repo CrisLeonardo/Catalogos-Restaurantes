@@ -6,7 +6,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link, { useLinkStatus } from 'next/link';
-import Image from 'next/image';
+import AssetImage from '@/components/asset-image';
 import { usePathname } from 'next/navigation';
 import { panelBaseFrom, internalPanelPath, panelHref } from '@/lib/panel-links';
 import { Icon } from '@/components/icons';
@@ -576,7 +576,7 @@ export default function AdminShell({
             <>
               <div style={{ width: 42, height: 42, borderRadius: 'calc(12px * var(--admin-panel-radius, 1))', background: logoUrl && logoBg ? logoBg : 'var(--adm-card, color-mix(in srgb, var(--u-text) 6%, transparent))', display: 'grid', placeItems: 'center', border: '1px solid var(--u-hair)', boxShadow: 'var(--adm-shadow-xs, none)', overflow: 'hidden', flexShrink: 0 }}>
                 {logoUrl ? (
-                  <Image src={logoUrl} alt={restaurantName} width={42} height={42} style={{ objectFit: 'contain' }} />
+                  <AssetImage src={logoUrl} alt={restaurantName} width={42} height={42} loading="eager" style={{ objectFit: 'contain' }} />
                 ) : (
                   <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--u-text)' }}>{initial}</span>
                 )}

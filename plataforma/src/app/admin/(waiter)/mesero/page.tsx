@@ -12,7 +12,7 @@
    sigue en el árbol, sin usar, mientras el rediseño está a prueba. */
 
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getActiveTableNumbers, getPendingTableCalls, getWaiterActiveOrders } from '@/lib/db/orders';
@@ -27,8 +27,7 @@ import type { ThemeConfig } from '@/lib/theme/defaults';
 export const metadata = { title: 'Tomar pedidos – Panel admin' };
 
 export default async function MeseroPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const db = createServiceClient();

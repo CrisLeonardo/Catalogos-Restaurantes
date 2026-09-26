@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { getMyGroupScope } from '@/lib/db/group';
 import LeoginLogo from '@/components/leogin-logo';
 import { logout } from '@/lib/actions/auth';
@@ -33,8 +33,7 @@ export default async function MiCuentaPanelLayout({ children }: { children: Reac
     redirect('/');
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) redirect('/admin/login');
 
   // Checklist 2026-08-25 §2 — ver /admin/(protected)/layout.tsx. Mi cuenta

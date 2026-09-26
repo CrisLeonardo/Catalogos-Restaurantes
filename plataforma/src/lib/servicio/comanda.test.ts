@@ -168,3 +168,30 @@ describe('coincide — sin tildes y por palabras', () => {
     expect(coincide('Pepián', '   ')).toBe(false);
   });
 });
+
+describe('comandaDeMesa — envío sin espera (EnvioEnVuelo)', () => {
+  it('lo que va camino de la nube sale en «Falta servir», marcado y al final', () => {
+    const enviado = pedido('PREP', [item({ id: 'i-real', name_snapshot: 'Pepián de pollo', quantity: 1 })]);
+    const vuelo = [{ clientId: 'cli-1', lineas: [linea({ lineId: 'c7', name: 'Limonada', quantity: 2 })] }];
+    const lineas = comandaDeMesa([enviado], [], new Set(), vuelo);
+    const r = resumirComanda(lineas);
+    expect(r.cocina.map((l) => l.nombre)).toEqual(['Pepián de pollo', 'Limonada']);
+    const enVuelo = r.cocina[1];
+    expect(enVuelo.enviando).toBe(true);
+    expect(enVuelo.orderId).toBeUndefined();
+    expect(r.nCocina).toBe(3);
+    expect(r.nNuevas).toBe(0);
+  });
+
+  it('en cuanto la mesa trae el pedido con ese client_id, lo del vuelo no se repite', () => {
+    const confirmado = {
+      ...pedido('PREP', [item({ id: 'i-lim', name_snapshot: 'Limonada', quantity: 2 })]),
+      client_id: 'cli-1',
+    } as unknown as OrderWithItems;
+    const vuelo = [{ clientId: 'cli-1', lineas: [linea({ lineId: 'c7', name: 'Limonada', quantity: 2 })] }];
+    const r = resumirComanda(comandaDeMesa([confirmado], [], new Set(), vuelo));
+    expect(r.cocina).toHaveLength(1);
+    expect(r.cocina[0].enviando).toBeUndefined();
+    expect(r.cocina[0].orderId).toBe('o1');
+  });
+});

@@ -11,7 +11,7 @@
  *    exportarlo desde ahí lo publicaría como tal.
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { resolveEffectiveRole } from '@/lib/db/membership';
 import { canActOnGroupBranch } from '@/lib/db/admin';
@@ -60,8 +60,7 @@ export async function assertTableAccess(
   restaurantId: string,
   secciones: string[] = ['mesero'],
 ): Promise<{ error: string } | { actor: TableActor }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return { error: 'No autorizado.' };
 
   const db = createServiceClient();

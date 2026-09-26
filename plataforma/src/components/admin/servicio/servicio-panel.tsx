@@ -56,7 +56,7 @@ import type { PanelCurrency } from '@/components/admin/order-card';
 
 import {
   comandaDeMesa, resumirComanda, unidadDeCarrito, importeLinea,
-  type LineaServicio,
+  type EnvioEnVuelo, type LineaServicio,
 } from '@/lib/servicio/comanda';
 import {
   mesasDeServicio, pasaFiltro, porUrgencia, resumenDelSalon, subtituloDeMesa,
@@ -78,6 +78,7 @@ import type { OrderWithItems, TableOccupancy, TableCall } from '@/lib/db/orders'
 import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
+import { assetSrc } from '@/lib/asset-image';
 
 /* ── Borrador del pedido en curso ──────────────────────────────
    El carrito vive en memoria: sin esto, salir de la pantalla a media
@@ -189,8 +190,10 @@ export default function ServicioPanel({
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [aprendiz, setAprendiz] = useState(false);
   const [paleta, setPaleta] = useState(false);
-  const [enviando, startSend] = useTransition();
   const [trabajando, startWork] = useTransition();
+  /* Comandas mandadas a cocina que la nube todavía no confirma, por mesa
+     (misma clave que el carrito). Ver «Enviar a cocina», más abajo. */
+  const [enVuelo, setEnVuelo] = useState<Record<string, EnvioEnVuelo[]>>({});
 
   /* ── La mesa abierta, desde la base ───────────────────────── */
   const [mesaOrders, setMesaOrders] = useState<OrderWithItems[]>([]);
@@ -351,13 +354,25 @@ export default function ServicioPanel({
   }, [carts, restaurantId, waiterId]);
 
   /* ── La mesa elegida se lee de la base ────────────────────── */
+  /* La selección y la última lectura pedida, para las respuestas que
+     llegan tarde. Sin esto, abrir la Mesa 1 y saltar enseguida a la 2
+     podía pintar los platos de la 1 bajo el rótulo de la 2 si su lectura
+     llegaba después — y con el envío sin espera, «recargar la mesa al
+     confirmar» llega casi siempre después de que el mesero ya siguió. */
+  const selRef = useRef(sel);
+  useEffect(() => { selRef.current = sel; }, [sel]);
+  const lecturaRef = useRef(0);
+
   const cargarMesa = useCallback(async (n: number) => {
+    const yo = ++lecturaRef.current;
     setCargandoMesa(true);
     try {
       const [bill, cobrado] = await Promise.all([
         getTableBill(restaurantId, n),
         cobradoDeMesa(restaurantId, n),
       ]);
+      // Una lectura más nueva ya salió (o la mesa cambió): esta sobra.
+      if (yo !== lecturaRef.current) return;
       setMesaOrders('orders' in bill ? bill.orders : []);
       setPagadas(cobrado.lineasPagadas ?? []);
       setCobrado(cobrado.total ?? 0);
@@ -366,9 +381,11 @@ export default function ServicioPanel({
       /* Sin conexión la mesa se queda con lo que hubiera: lo apuntado en
          este aparato se sigue viendo y se puede seguir tomando el pedido,
          que es de lo que trata la cola sin conexión. */
-      setAviso({ text: 'No se pudo leer la mesa. Lo que apuntes se guarda igual.', bad: true });
+      if (yo === lecturaRef.current) {
+        setAviso({ text: 'No se pudo leer la mesa. Lo que apuntes se guarda igual.', bad: true });
+      }
     } finally {
-      setCargandoMesa(false);
+      if (yo === lecturaRef.current) setCargandoMesa(false);
     }
   }, [restaurantId]);
 
@@ -464,9 +481,14 @@ export default function ServicioPanel({
     return [qr, vivos];
   }, [mesaOrders, pedidoSel]);
 
+  const vueloAqui = useMemo(() => enVuelo[key] ?? [], [enVuelo, key]);
+  /* Con un envío en vuelo la mesa no se cobra ni se cierra hasta que la
+     nube lo confirme (medio segundo, normalmente): si no, el pedido podía
+     llegar a una mesa ya liberada. */
+  const envioPendiente = vueloAqui.length > 0;
   const lineas = useMemo(
-    () => comandaDeMesa(sel.kind === 'llevar' ? [] : ordersVivos, carrito, pagadasSet),
-    [sel.kind, ordersVivos, carrito, pagadasSet],
+    () => comandaDeMesa(sel.kind === 'llevar' ? [] : ordersVivos, carrito, pagadasSet, sel.kind === 'mesa' ? vueloAqui : []),
+    [sel.kind, ordersVivos, carrito, pagadasSet, vueloAqui],
   );
   const resumen = useMemo(() => resumirComanda(lineas), [lineas]);
 
@@ -610,29 +632,67 @@ export default function ServicioPanel({
       tipAccepted: aplicaPropina && subtotal > 0,
     };
 
-    const limpiar = () => {
-      setCarts((prev) => { const out = { ...prev }; delete out[k]; return out; });
+    /* ENVÍO SIN ESPERA. El mesero no se queda mirando «Enviando…»: el
+       carrito se vacía al tocar, sus líneas pasan a «Falta servir» marcadas
+       como enviándose (ver EnvioEnVuelo) y puede seguir con la siguiente
+       mesa mientras la nube contesta. Es seguro por lo mismo que ya lo era
+       el modo sin conexión:
+         · WRITE-AHEAD: el pedido se guarda en la cola del aparato ANTES de
+           tocar la red y solo sale de ella con un resultado definitivo;
+         · el `clientId` idempotente (migración 061) impide duplicarlo.
+       Si la nube lo RECHAZA (un plato que se agotó, un permiso), las líneas
+       vuelven al carrito de su mesa con el motivo: nada se pierde en
+       silencio. Y mientras una mesa tiene un envío en vuelo no se puede
+       cobrar ni cerrar (puedeCobrar / busy): cerrarla antes de que llegue el
+       pedido lo dejaría colgando de una mesa ya libre. */
+    const unidades = aEnviar.reduce((s, l) => s + l.quantity, 0);
+    const lugar = mesa ? `Mesa ${mesa}` : 'Para llevar';
+    const nombreEnviado = nombreLlevar;
+
+    const quitarDelVuelo = () => setEnVuelo((prev) => {
+      const quedan = (prev[k] ?? []).filter((e) => e.clientId !== clientId);
+      const out = { ...prev };
+      if (quedan.length) out[k] = quedan; else delete out[k];
+      return out;
+    });
+    /* Las líneas rechazadas vuelven DELANTE de lo que se haya apuntado
+       mientras tanto en esa mesa: son lo que se pidió primero. */
+    const devolverAlCarrito = () => {
+      setCarts((prev) => ({ ...prev, [k]: [...aEnviar, ...(prev[k] ?? [])] }));
+      if (!mesa) setNombreLlevar((prev) => prev || nombreEnviado);
     };
 
-    startSend(async () => {
-      /* WRITE-AHEAD: el pedido se guarda en la cola del aparato ANTES de
-         tocar la red, y solo sale de ella con un resultado definitivo. El
-         peor caso es un pedido que se reenvía solo más tarde; el clientId
-         idempotente (migración 061) garantiza que nunca se duplica. */
-      saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
+    saveQueuedOrder(restaurantId, { clientId, payload: input, queuedAt: new Date().toISOString() }, 'waiter');
+    setCarts((prev) => { const out = { ...prev }; delete out[k]; return out; });
+    setEnVuelo((prev) => ({ ...prev, [k]: [...(prev[k] ?? []), { clientId, lineas: aEnviar }] }));
+    setAviso({ text: `Enviando ${unidades} a cocina · ${lugar}…` });
+    setQ('');
+    if (!mesa) { setSel({ kind: 'none' }); setNombreLlevar(''); }
+    /* En el teléfono vuelve al salón: el mesero sigue con la siguiente
+       mesa. En pantalla grande se queda donde está, que es lo que hace
+       que no haya que moverse en todo el turno. */
+    if (movil) setPantalla('sala');
+
+    void (async () => {
       try {
         const res = await createWaiterOrder(input);
         removeQueuedOrder(restaurantId, clientId, 'waiter');
-        if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-        limpiar();
-        setAviso({ text: `${aEnviar.reduce((s, l) => s + l.quantity, 0)} a cocina · ${mesa ? `Mesa ${mesa}` : 'Para llevar'}` });
-        setQ('');
-        if (mesa) void cargarMesa(mesa); else { setSel({ kind: 'none' }); setNombreLlevar(''); }
-        router.refresh();
-        /* En el teléfono vuelve al salón: el mesero sigue con la siguiente
-           mesa. En pantalla grande se queda donde está, que es lo que hace
-           que no haya que moverse en todo el turno. */
-        if (movil) setPantalla('sala');
+        if (res.error) {
+          devolverAlCarrito();
+          setAviso({ text: `${res.error} La comanda volvió al carrito · ${lugar}.`, bad: true });
+          return;
+        }
+        setAviso({ text: `${unidades} a cocina · ${lugar}` });
+        /* Sin `router.refresh()` aquí ni tras las demás acciones del
+           servicio: todas llaman a revalidarSalon(), y una acción que
+           revalida YA trae la pantalla nueva en su propia respuesta (Next
+           la pinta dentro de la acción — action-handler.js,
+           skipPageRendering). El refresh pedía una SEGUNDA pintura completa
+           del panel —layout con sus consultas incluido— por cada toque.
+           La mesa se relee solo si sigue abierta: si el mesero ya pasó a
+           otra, la leerá al volver. */
+        const ahora = selRef.current;
+        if (mesa && ahora.kind === 'mesa' && ahora.n === mesa) await cargarMesa(mesa);
       } catch {
         /* La nube no respondió. Se intenta el hub local del restaurante,
            SALVO si el pedido lleva artículos libres: el hub arma el pedido
@@ -643,25 +703,22 @@ export default function ServicioPanel({
           const hub = await tryHubOrder(hubUrl, hubToken, input);
           if (hub?.success) {
             removeQueuedOrder(restaurantId, clientId, 'waiter');
-            limpiar();
             setAviso({ text: `Pedido ${hub.orderNumber} impreso — se sincroniza solo al volver la señal.` });
-            if (movil) setPantalla('sala');
             return;
           }
         }
-        limpiar();
         setAviso({
           text: conLibres
             ? 'Sin conexión: el pedido quedó guardado aquí con su artículo libre y se enviará entero al volver la señal. Avisa a cocina a mano.'
             : 'Sin conexión: el pedido quedó guardado en este aparato y se enviará solo al volver la señal.',
           bad: true,
         });
-        if (movil) setPantalla('sala');
       } finally {
+        quitarDelVuelo();
         contarCola();
       }
-    });
-  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, router, cargarMesa, contarCola]);
+    })();
+  }, [sel, carrito, nombreLlevar, waiterId, restaurantId, tipEnabled, tipEnabledPickup, hubUrl, hubToken, movil, cargarMesa, contarCola]);
 
   /* ── Servir ───────────────────────────────────────────────── */
   const servir = useCallback((l: LineaServicio) => {
@@ -677,7 +734,6 @@ export default function ServicioPanel({
           if (!alt?.error) {
             setAviso({ text: 'Se marcó la ronda entera como servida (falta la migración 133).' });
             if (sel.kind === 'mesa') void cargarMesa(sel.n);
-            router.refresh();
             return;
           }
         }
@@ -688,13 +744,12 @@ export default function ServicioPanel({
         text: `${l.nombre} en la mesa`,
         undo: () => {
           void deshacerServirLineas(restaurantId, res.ids ?? [], res.pedidosServidos ?? [])
-            .then(() => { if (sel.kind === 'mesa') void cargarMesa(sel.n); router.refresh(); });
+            .then(() => { if (sel.kind === 'mesa') void cargarMesa(sel.n); });
         },
       });
       if (sel.kind === 'mesa') void cargarMesa(sel.n);
-      router.refresh();
     });
-  }, [restaurantId, sel, cargarMesa, router]);
+  }, [restaurantId, sel, cargarMesa]);
 
   const deshacerServir = useCallback((l: LineaServicio) => {
     startWork(async () => {
@@ -703,9 +758,8 @@ export default function ServicioPanel({
       setHoja(null);
       setAviso({ text: `${l.nombre} vuelve a «falta servir»` });
       if (sel.kind === 'mesa') void cargarMesa(sel.n);
-      router.refresh();
     });
-  }, [restaurantId, sel, cargarMesa, router]);
+  }, [restaurantId, sel, cargarMesa]);
 
   /* ── El pedido del QR ─────────────────────────────────────── */
   const aceptarQr = useCallback(() => {
@@ -717,9 +771,8 @@ export default function ServicioPanel({
       }
       setAviso({ text: 'Pedido del QR aceptado y mandado a cocina' });
       if (sel.kind === 'mesa') void cargarMesa(sel.n);
-      router.refresh();
     });
-  }, [pendientesQr, ordersQr, sel, cargarMesa, router]);
+  }, [pendientesQr, ordersQr, sel, cargarMesa]);
 
   /* Rechazar un pedido del comensal es CANCELARLO, y este sistema exige
      motivo para eso (migración 079). El prototipo lo borraba y ya. */
@@ -741,9 +794,8 @@ export default function ServicioPanel({
       setSel({ kind: 'none' });
       setPantalla('sala');
       setAviso({ text: `${money(importe)} cobrado · Mesa ${n} libre` });
-      router.refresh();
     });
-  }, [sel, restaurantId, porCobrarReal, money, router]);
+  }, [sel, restaurantId, porCobrarReal, money]);
 
   const cobrarParte = useCallback((parte: LineaServicio[], pagos: PagoElegido[]) => {
     if (sel.kind !== 'mesa') return;
@@ -758,9 +810,8 @@ export default function ServicioPanel({
       setHoja(null);
       setAviso({ text: `${money(res.cobrado ?? importe)} cobrado · la mesa sigue abierta` });
       void cargarMesa(n);
-      router.refresh();
     });
-  }, [sel, restaurantId, money, cargarMesa, router]);
+  }, [sel, restaurantId, money, cargarMesa]);
 
   const cobrarLlevar = useCallback((pagos: PagoElegido[]) => {
     if (!pedidoSel) return;
@@ -777,9 +828,8 @@ export default function ServicioPanel({
       setSel({ kind: 'none' });
       setPantalla('sala');
       setAviso({ text: `Pedido ${numero} cobrado y entregado` });
-      router.refresh();
     });
-  }, [pedidoSel, restaurantId, router]);
+  }, [pedidoSel, restaurantId]);
 
   /* ── La mesa ──────────────────────────────────────────────── */
   const liberar = useCallback(() => {
@@ -792,9 +842,8 @@ export default function ServicioPanel({
       setSel({ kind: 'none' });
       setPantalla('sala');
       setAviso({ text: `Mesa ${n} liberada sin cobrar`, bad: true });
-      router.refresh();
     });
-  }, [sel, restaurantId, router]);
+  }, [sel, restaurantId]);
 
   const mover = useCallback((destino: number, juntar: boolean) => {
     if (sel.kind !== 'mesa') return;
@@ -817,9 +866,8 @@ export default function ServicioPanel({
       setHoja(null);
       setSel({ kind: 'mesa', n: destino });
       setAviso({ text: juntar ? `Mesas ${origen} y ${destino} juntadas` : `Movido a la mesa ${destino}` });
-      router.refresh();
     });
-  }, [sel, restaurantId, router]);
+  }, [sel, restaurantId]);
 
   const nombrarMesa = useCallback((nombre: string) => {
     if (sel.kind !== 'mesa') return;
@@ -827,9 +875,8 @@ export default function ServicioPanel({
     startWork(async () => {
       const res = await ponerNombreDeMesa(restaurantId, n, nombre);
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
-      router.refresh();
     });
-  }, [sel, restaurantId, router]);
+  }, [sel, restaurantId]);
 
   const atender = useCallback(() => {
     if (sel.kind !== 'mesa') return;
@@ -838,9 +885,8 @@ export default function ServicioPanel({
       const res = await resolveTableCalls(restaurantId, n);
       if (res.error) { setAviso({ text: res.error, bad: true }); return; }
       setAviso({ text: 'Aviso atendido' });
-      router.refresh();
     });
-  }, [sel, restaurantId, router]);
+  }, [sel, restaurantId]);
 
   const imprimirCuenta = useCallback(() => {
     if (sel.kind !== 'mesa' || ordersVivos.length === 0) return;
@@ -931,7 +977,7 @@ export default function ServicioPanel({
 
       if (e.altKey && (e.key === 'c' || e.key === 'C')) {
         e.preventDefault();
-        if (resumen.nNuevas === 0 && resumen.porCobrar > 0) setHoja({ k: 'cobrar' });
+        if (resumen.nNuevas === 0 && resumen.porCobrar > 0 && !envioPendiente) setHoja({ k: 'cobrar' });
         return;
       }
       if (e.key === '?') { e.preventDefault(); setHoja({ k: 'atajos' }); return; }
@@ -958,7 +1004,7 @@ export default function ServicioPanel({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paleta, hoja, movil, pantalla, resumen.nNuevas, resumen.porCobrar, enviar, abiertas, favs, elegir, agregarProducto]);
+  }, [paleta, hoja, movil, pantalla, resumen.nNuevas, resumen.porCobrar, envioPendiente, enviar, abiertas, favs, elegir, agregarProducto]);
 
   /* ── Sugerir postre o bebida al cobrar ────────────────────── */
   const sugerencias = useMemo(() => {
@@ -985,7 +1031,7 @@ export default function ServicioPanel({
 
   /* ── Lo que el pie puede hacer ────────────────────────────── */
   const puedeCobrar = (sel.kind === 'mesa' || sel.kind === 'pedido')
-    && resumen.nNuevas === 0 && porCobrarReal > 0.004;
+    && resumen.nNuevas === 0 && porCobrarReal > 0.004 && !envioPendiente;
   const tituloSel = sel.kind === 'mesa'
     ? (mesaSel?.etiqueta ?? `Mesa ${sel.n}`)
     : sel.kind === 'llevar' ? 'Para llevar'
@@ -1063,8 +1109,8 @@ export default function ServicioPanel({
         </div>
       )}
       {resumen.nNuevas > 0 && (
-        <button type="button" className="sv-cta" onClick={enviar} disabled={enviando}>
-          {enviando ? 'Enviando…' : `Enviar a cocina · ${resumen.nNuevas}`}
+        <button type="button" className="sv-cta" onClick={enviar}>
+          {`Enviar a cocina · ${resumen.nNuevas}`}
           {conTeclado && <span className="sv-cta-key">{atajo(mod, '⏎')}</span>}
         </button>
       )}
@@ -1099,7 +1145,7 @@ export default function ServicioPanel({
             <span className="sv-top-mark">
               {logoUrl
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={logoUrl} alt="" />
+                ? <img src={assetSrc(logoUrl, 96)} alt="" />
                 : restaurantName.slice(0, 1).toUpperCase()}
             </span>
             <span className="sv-top-name">
@@ -1289,8 +1335,8 @@ export default function ServicioPanel({
                   </span>
                 </button>
                 {resumen.nNuevas > 0 && (
-                  <button type="button" className="sv-cta sv-m-cta" onClick={enviar} disabled={enviando}>
-                    {enviando ? 'Enviando…' : `Enviar a cocina · ${resumen.nNuevas}`}
+                  <button type="button" className="sv-cta sv-m-cta" onClick={enviar}>
+                    {`Enviar a cocina · ${resumen.nNuevas}`}
                   </button>
                 )}
                 {puedeCobrar && (
@@ -1422,7 +1468,7 @@ export default function ServicioPanel({
           redondear={redondear}
           sugerencias={sugerencias}
           onSugerir={(p) => { agregarProducto(p, 1); setHoja(null); }}
-          busy={trabajando}
+          busy={trabajando || envioPendiente}
           onClose={() => setHoja(null)}
           onCobrarTodo={sel.kind === 'pedido' ? cobrarLlevar : cobrarTodo}
           onCobrarParte={cobrarParte}
@@ -1435,7 +1481,7 @@ export default function ServicioPanel({
           libres={mesas.filter((m) => m.estado === 'libre' && m.n !== mesaSel.n)}
           ocupadas={mesas.filter((m) => m.estado !== 'libre' && m.n !== mesaSel.n)}
           money={money}
-          busy={trabajando}
+          busy={trabajando || envioPendiente}
           onClose={() => setHoja(null)}
           onNombre={nombrarMesa}
           onMover={(n) => mover(n, false)}

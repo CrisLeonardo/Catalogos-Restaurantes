@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getStaffUser } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { getMyMemberships } from '@/lib/db/membership';
@@ -39,8 +39,7 @@ import type { Category, Product, Profile, Restaurant, RestaurantTheme } from '@/
  * que nadie entendiera por qué.
  */
 export const myOrganizationId = cache(async (): Promise<string | null> => {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
   const { data } = await createServiceClient()
@@ -121,14 +120,24 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getStaffUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  /* Perfil, restaurante del subdominio y membresías se piden A LA VEZ:
+     solo dependen del usuario y de la cabecera, no unas de otras. Antes
+     iban en cadena (perfil → restaurante → getUser otra vez → membresías),
+     cuatro idas y vueltas a Virginia antes de poder pintar nada. Si el
+     perfil resulta ser de SUPER_ADMIN, lo pedido de más se descarta. */
+  const tenantSlug = (await headers()).get('x-tenant-slug');
+  const [{ data: profile }, tenantPrefetch] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single(),
+    tenantSlug ? getRestaurantBySlug(tenantSlug) : Promise.resolve(null),
+    tenantSlug ? getMyMemberships() : Promise.resolve([]),
+  ]);
 
   if (!profile) return null;
 
@@ -145,9 +154,8 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
      El SUPER_ADMIN se queda fuera a propósito: su acceso a un restaurante
      ajeno pasa por el pase de soporte (support-session.ts), que deja rastro
      en la bitácora; una membresía se lo daría en silencio. */
-  const tenantSlug = (await headers()).get('x-tenant-slug');
   if (tenantSlug && profile.role !== 'SUPER_ADMIN') {
-    const tenant = await getRestaurantBySlug(tenantSlug);
+    const tenant = tenantPrefetch;
     if (tenant) {
       const membership = (await getMyMemberships()).find(
         (m) => m.restaurantId === tenant.restaurant.id,
