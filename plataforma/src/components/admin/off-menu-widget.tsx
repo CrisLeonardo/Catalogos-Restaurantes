@@ -36,7 +36,12 @@ export async function OffMenuWidget({ items, total }: { items: OffMenuItem[]; to
     <Section title="No se puede pedir ahora">
       <List>
         {items.map((p) => (
-          <ListLink key={p.id} href={panelHref(base, `/admin/menu/productos/${p.id}`)}>
+          /* Sin existencias no se arregla en la ficha del platillo (encenderlo
+             ahí no repone nada): lleva a Inventario y dice «Reponer». */
+          <ListLink
+            key={p.id}
+            href={panelHref(base, p.reason === 'inventario' ? '/admin/inventario' : `/admin/menu/productos/${p.id}`)}
+          >
             <StatusDot tone={p.reason === 'inventario' ? 'danger' : 'neutral'} size={9} />
             <ListText
               title={p.name}
@@ -51,7 +56,7 @@ export async function OffMenuWidget({ items, total }: { items: OffMenuItem[]; to
               className="shrink-0 text-[13.5px] font-semibold"
               style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
             >
-              Reactivar
+              {p.reason === 'inventario' ? 'Reponer' : 'Reactivar'}
             </span>
           </ListLink>
         ))}

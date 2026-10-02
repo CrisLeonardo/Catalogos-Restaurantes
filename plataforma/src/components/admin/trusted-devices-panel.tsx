@@ -13,14 +13,9 @@ import { Button } from '@/components/ui/button';
 import { getDeviceId, describeThisDevice } from '@/lib/device-id';
 import { trustCurrentDevice, forgetDevice, setTrustedDevicePolicy, type DeviceState } from '@/lib/actions/devices';
 import type { TrustedDevice } from '@/lib/auth/trusted-device';
+import { haceTiempo } from '@/lib/dates';
 
-function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'hace un momento';
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
-  return `hace ${Math.floor(s / 86400)} d`;
-}
+const timeAgo = (iso: string): string => haceTiempo(iso);
 
 export default function TrustedDevicesPanel({ restaurantId, devices, requiresTrusted }: {
   restaurantId: string;

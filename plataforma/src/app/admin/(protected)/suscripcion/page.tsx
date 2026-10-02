@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 import { panelLink, panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
+import { conMesesLegibles, fechaCorta } from '@/lib/dates';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,6 @@ export const dynamic = 'force-dynamic';
 const CONCEPT_LABEL: Record<string, string> = {
   MONTHLY: 'Mensualidad', SETUP: 'Implementación', PRORATE: 'Prorrateo', OTHER: 'Cobro',
 };
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 const CONTACT_WA = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP;
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'crisleonardo100@gmail.com';
@@ -41,7 +41,9 @@ function nextChargeLabel(billingDay: number): string {
   let m = now.getUTCMonth();
   const day = Math.min(28, Math.max(1, billingDay || 1));
   if (now.getUTCDate() > day) { m += 1; if (m > 11) { m = 0; y += 1; } }
-  return `${day} de ${MONTHS[m]} ${y}`;
+  // «1 nov 2026»: «1 de noviembre 2026» no cabía en su cifra y se cortaba
+  // con «…» hasta en escritorio (auditoría 2026-10-02, AJU-13).
+  return fechaCorta(`${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
 }
 
 function upgradeHref(restaurantName: string, targetPlan: string): string {
@@ -177,7 +179,7 @@ export default async function SuscripcionPage() {
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 2 }}>
               {planInfo?.hasOrders ? 'Sin límite de ventas' : 'Menú digital · sin pedidos'}
-              {includedCount > 0 ? ` · ${includedCount} módulos incluidos` : ''}
+              {includedCount > 0 ? ` · ${includedCount} ${includedCount === 1 ? 'función incluida' : 'funciones incluidas'}` : ''}
             </div>
           </div>
         </div>
@@ -368,7 +370,7 @@ export default async function SuscripcionPage() {
                   {fmtMoney(pendingTotal, currency)}
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>
-                  {hasOverdue ? 'Tienes pagos vencidos.' : 'Pendiente por pagar.'} {pending.length} cobro(s).
+                  {hasOverdue ? 'Tienes pagos vencidos' : 'Pendiente por pagar'} · {pending.length} {pending.length === 1 ? 'cobro' : 'cobros'}.
                 </div>
               </>
             ) : (
@@ -386,7 +388,7 @@ export default async function SuscripcionPage() {
             <Stat label="Mensualidad" value={fmtMoney(displayedMonthlyFee, currency)} />
             {config.setup_fee > 0 && <Stat label="Implementación" value={fmtMoney(config.setup_fee, currency)} />}
             <Stat label="Próximo cobro" value={nextChargeLabel(config.billing_day)} />
-            {config.started_at && <Stat label="Cliente desde" value={config.started_at.slice(0, 10)} />}
+            {config.started_at && <Stat label="Cliente desde" value={fechaCorta(config.started_at)} />}
           </StatGroup>
 
           <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
@@ -431,12 +433,14 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
   return (
     <ListRow>
       <ListText
-        title={inv.description ?? CONCEPT_LABEL[inv.concept]}
+        /* Las fechas venían crudas de la base («Mensualidad 2026-09», «Vence
+           el 2026-09-01»): auditoría 2026-10-02, T-02. */
+        title={conMesesLegibles(inv.description ?? CONCEPT_LABEL[inv.concept])}
         desc={
           inv.status === 'PAID' && inv.paid_at
-            ? `Pagado el ${inv.paid_at.slice(0, 10)}${inv.payment_method ? ` · ${inv.payment_method}` : ''}`
+            ? `Pagado el ${fechaCorta(inv.paid_at)}${inv.payment_method ? ` · ${inv.payment_method}` : ''}`
             : inv.due_date
-            ? `Vence el ${inv.due_date}`
+            ? `Vence el ${fechaCorta(inv.due_date)}`
             : CONCEPT_LABEL[inv.concept]
         }
       />

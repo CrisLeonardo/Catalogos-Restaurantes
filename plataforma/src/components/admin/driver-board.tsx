@@ -3,6 +3,7 @@
 import { Icon } from '@/components/icons';
 import { markPickedUp, markDelivered } from '@/lib/actions/drivers';
 import type { DriverOrder, ShiftSummary } from '@/lib/db/drivers';
+import { fmtMoney } from '@/lib/money';
 
 /* ============================================================
    Pantalla del repartidor (Fase 2)
@@ -17,7 +18,7 @@ import type { DriverOrder, ShiftSummary } from '@/lib/db/drivers';
    ============================================================ */
 
 function money(n: number): string {
-  return `Q${(n ?? 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return fmtMoney(n ?? 0);
 }
 
 export default function DriverBoard({
@@ -59,7 +60,7 @@ export default function DriverBoard({
         </div>
         {summary.sinRegistro > 0 && (
           <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 8 }}>
-            {summary.sinRegistro} entrega(s) sin efectivo anotado (pago con tarjeta al recibir, o quedó pendiente).
+            {summary.sinRegistro} {summary.sinRegistro === 1 ? 'entrega' : 'entregas'} sin efectivo anotado (pago con tarjeta al recibir, o quedó pendiente).
           </p>
         )}
       </div>

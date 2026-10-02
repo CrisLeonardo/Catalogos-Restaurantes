@@ -3,11 +3,13 @@ import { getMyGroupScope, getGroupDashboard } from '@/lib/db/group';
 import { adminUrl, subdomainUrl } from '@/lib/tenant';
 import { Icon } from '@/components/icons';
 import GroupLinkSection from '@/components/mi-cuenta/group-link-section';
+import { fmtMoney } from '@/lib/money';
+import Kpi from '@/components/mi-cuenta/kpi';
 
 export const metadata = { title: 'Resumen — Leogin' };
 export const dynamic = 'force-dynamic';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 /**
  * RESUMEN — cómo va hoy, de un vistazo.
@@ -67,7 +69,7 @@ export default async function ResumenPage() {
                 <strong>{b.name}</strong>:{' '}
                 {[
                   b.paused ? 'pedidos pausados' : null,
-                  b.outStock > 0 ? `${b.outStock} agotado(s)` : null,
+                  b.outStock > 0 ? `${b.outStock} ${b.outStock === 1 ? 'agotado' : 'agotados'}` : null,
                   b.todaySales === 0 ? 'sin ventas hoy' : null,
                 ].filter(Boolean).join(' · ')}
               </span>
@@ -87,7 +89,7 @@ export default async function ResumenPage() {
               <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>
                 {b.todayOrders} pedidos · ticket {money(b.todayTicket)}
                 {b.lowStock > 0 ? ` · ${b.lowStock} stock bajo` : ''}
-                {b.outStock > 0 ? ` · ${b.outStock} agotados` : ''}
+                {b.outStock > 0 ? ` · ${b.outStock} ${b.outStock === 1 ? 'agotado' : 'agotados'}` : ''}
                 {b.paused ? ' · pausado' : ''}
               </div>
             </div>
@@ -111,12 +113,3 @@ export default async function ResumenPage() {
   );
 }
 
-function Kpi({ label, value, sub, hero, small }: { label: string; value: string; sub?: string; hero?: boolean; small?: boolean }) {
-  return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: small ? 16 : hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1, whiteSpace: small ? 'nowrap' : undefined, overflow: small ? 'hidden' : undefined, textOverflow: small ? 'ellipsis' : undefined }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
-  );
-}

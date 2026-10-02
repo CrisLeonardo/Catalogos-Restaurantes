@@ -7,13 +7,11 @@
    ============================================================ */
 
 import type { ReceivableRow } from '@/lib/db/billing';
+import { fmtMoney } from '@/lib/money';
 
-const SYMBOLS: Record<string, string> = { GTQ: 'Q', MXN: '$', USD: '$', EUR: '€' };
-
-function money(n: number, currency: string): string {
-  const sym = SYMBOLS[currency] ?? `${currency} `;
-  return `${sym}${(n ?? 0).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+/** El mismo formato que el resto del sistema (`Q1,146.00`): con el locale
+ *  'es' de antes, el mensaje que le llega al restaurante decía «Q1146,00». */
+const money = (n: number, currency: string): string => fmtMoney(n, currency);
 
 /** Normaliza un teléfono a dígitos para wa.me; agrega 502 (GT) si vienen 8 dígitos pelones. */
 export function waDigits(phone: string | null | undefined): string | null {

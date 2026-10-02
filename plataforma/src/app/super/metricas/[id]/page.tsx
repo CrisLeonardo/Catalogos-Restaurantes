@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/super/ui';
 import { getRestaurantFullById, getRestaurantDeepMetrics } from '@/lib/db/super-admin';
 import { getBillingConfig } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
+import { diaMes } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export default async function RestaurantMetricsPage({ params }: { params: Promis
           <Kpi label="Visitantes únicos" value={String(m.unique30)} />
           <Kpi label="Pedidos" value={String(m.orders30)} growth={m.ordersGrowth} />
           <Kpi label="Su venta" value={fmtMoney(m.revenue30, cur)} growth={m.revenueGrowth} />
-          <Kpi label="Conversión" value={`${m.conversion.toFixed(1)}%`} sub="pedidos / visitas" />
+          <Kpi label="Conversión" value={`${m.conversion.toFixed(1)}%`} sub="pedidos en línea / visitas" />
           <Kpi label="Ticket promedio" value={fmtMoney(m.avgTicket, cur)} />
         </div>
       </section>
@@ -145,8 +146,8 @@ function TrendChart({ series, currency }: { series: { date: string; visits: numb
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
-        <span>{series[0]?.date.slice(5)}</span>
-        <span>{series[series.length - 1]?.date.slice(5)}</span>
+        <span>{series[0] ? diaMes(series[0].date) : null}</span>
+        <span>{series.length ? diaMes(series[series.length - 1].date) : null}</span>
       </div>
     </Glass>
   );

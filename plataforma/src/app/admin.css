@@ -883,12 +883,26 @@
 
 /* Formulario de platillo (crear/editar): una columna en móvil; en PC la
    columna lateral (foto + disponibilidad) acompaña al contenido principal. */
-.pform-grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+.pform-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 900px) { .pform-grid { grid-template-columns: minmax(0, 1fr) 340px; }}
 .pform-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-/* En móvil la foto va primero (es lo primero que se quiere ver); en PC vive
-   en la columna lateral derecha. */
-@media (max-width: 899.98px) { .pform-side { order: -1; }}
+/* Teléfono: una sola columna. Antes se subía la columna lateral ENTERA
+   (`.pform-side { order: -1 }`) para que la foto fuera primero, y con ella
+   subían el icono del patrón y los dos interruptores: el nombre y el precio
+   —lo que más se edita— quedaban cuartos (auditoría 2026-10-02, MEN-02).
+   Ahora las dos columnas se «disuelven» (`display: contents`) y cada tarjeta
+   se ordena sola: foto, lo básico, los interruptores, el resto, y el icono del
+   patrón al final (solo importa si no hay foto). En PC no cambia nada. */
+@media (max-width: 899.98px) {
+  /* `minmax(0, 1fr)` arriba es lo que permite esto: sin columnas que los
+     contengan (`min-width: 0` de `.pform-col`), las tarjetas son hijas
+     directas de la rejilla, y con `1fr` la fila con scroll del icono del
+     patrón estiraba la ficha a 809 px en un teléfono de 390. */
+  .pform-col { display: contents; }
+  .pform-o-foto { order: -3; }
+  .pform-o-basico { order: -2; }
+  .pform-o-estado { order: -1; }
+}
 
 /* COPIA de `.press` (la original sigue en globals.css). En el archivo único
    iba justo AQUÍ, después de todo lo de arriba: los enlaces del menú del

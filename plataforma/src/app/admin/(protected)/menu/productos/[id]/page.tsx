@@ -12,6 +12,7 @@ import { can } from '@/lib/permissions';
 import ProductForm from '@/components/admin/product-form';
 import DeleteButton from '@/components/admin/delete-button';
 import { deleteProduct } from '@/lib/actions/products';
+import { withEffectiveAvailability } from '@/lib/product-availability';
 
 export const metadata = { title: 'Editar producto – Panel admin' };
 
@@ -104,7 +105,9 @@ export default async function EditProductPage({
       <ProductForm
         restaurantId={restaurantId}
         categories={categories}
-        product={product}
+        /* «Disponible» arranca con lo que de verdad ve el comensal: lo agotado
+           hace más de 12 h ya volvió al menú (auditoría 2026-10-02, CAT-01). */
+        product={withEffectiveAvailability([product])[0]}
         ingredients={ingredients}
         initialRecipe={recipe}
       />

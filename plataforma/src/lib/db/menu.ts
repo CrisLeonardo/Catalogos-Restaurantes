@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import type { Category, Product } from '@/types';
+import { isOutOfStock } from '@/lib/product-availability';
 
 export type MenuData = {
   categories: Category[];
@@ -16,6 +17,30 @@ export type MenuData = {
 // la política RLS `products_select_available`, no hace falta pedirlo.
 export const PUBLIC_PRODUCT_COLUMNS =
   'id, category_id, name, name_en, description, description_en, price, image_url, icon, tags, dietary_tags, options, is_available, unavailable_at, sort_order';
+
+/**
+ * Lo que se le PIDE a la base para el menú público: lo de arriba más el
+ * inventario, que se usa aquí dentro y NO sale hacia el navegador.
+ *
+ * Hace falta porque `place_order` marca un platillo agotado CON hora al
+ * llegar a cero de existencias, y el menú lo devuelve solo a las 12 h
+ * (lib/product-availability.ts). Sin saber del stock, el comensal volvía a
+ * ver con su «+» algo que el servidor iba a rechazar por falta de
+ * existencias (auditoría 2026-10-02, CAT-01).
+ */
+const MENU_QUERY_COLUMNS = `${PUBLIC_PRODUCT_COLUMNS}, track_stock, stock`;
+
+/** Quita el inventario de cada fila y, si no hay existencias, la deja
+ *  «agotada sin reloj» (sin `unavailable_at` no vuelve sola). */
+function toPublicProducts(rows: Record<string, unknown>[] | null): Product[] {
+  return (rows ?? []).map((row) => {
+    const { track_stock, stock, ...p } = row;
+    if (isOutOfStock({ track_stock: track_stock as boolean | null, stock: stock as number | null })) {
+      return { ...p, is_available: false, unavailable_at: null } as unknown as Product;
+    }
+    return p as unknown as Product;
+  });
+}
 
 /**
  * Carga categorías y productos activos de un restaurante en una sola request.
@@ -34,14 +59,14 @@ export const getMenuData = cache(
         .order('sort_order'),
       supabase
         .from('products')
-        .select(PUBLIC_PRODUCT_COLUMNS)
+        .select(MENU_QUERY_COLUMNS)
         .eq('restaurant_id', restaurantId)
         .order('sort_order'),
     ]);
 
     return {
       categories: (categories as Category[]) ?? [],
-      products: (products as Product[]) ?? [],
+      products: toPublicProducts(products as Record<string, unknown>[] | null),
     };
   }
 );
@@ -68,7 +93,7 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
           .order('sort_order'),
         db
           .from('products')
-          .select(PUBLIC_PRODUCT_COLUMNS)
+          .select(MENU_QUERY_COLUMNS)
           .eq('restaurant_id', restaurantId)
           .eq('is_active', true)
           .order('sort_order'),
@@ -76,7 +101,7 @@ export function getMenuDataCached(restaurantId: string): Promise<MenuData> {
 
       return {
         categories: (categories as Category[]) ?? [],
-        products: (products as Product[]) ?? [],
+        products: toPublicProducts(products as Record<string, unknown>[] | null),
       };
     },
     ['public-menu-data', restaurantId],

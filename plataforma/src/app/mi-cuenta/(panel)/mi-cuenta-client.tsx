@@ -45,8 +45,13 @@ export default function MiCuentaClient({
         <div className="t-kicker" style={{ fontSize: 11, marginBottom: 12 }}>
           {groupName ?? 'Mi cuenta'}
         </div>
-        <h1 className="t-display" style={{ fontSize: 'clamp(26px, 5vw, 36px)', lineHeight: 1.1, margin: 0 }}>
-          Hola, {accountName.split(' ')[0]}
+        {/* Sin nombre en el perfil, `accountName` es el correo, y «Hola,
+            dueno@azucarnegra.test» en letra de portada no se cortaba: la página
+            entera medía 430 px en un teléfono de 390 (auditoría 2026-10-02,
+            MIC-02). Se saluda con lo de antes de la arroba y, por si acaso, la
+            palabra puede partirse. */}
+        <h1 className="t-display" style={{ fontSize: 'clamp(26px, 5vw, 36px)', lineHeight: 1.1, margin: 0, overflowWrap: 'anywhere' }}>
+          Hola, {accountName.split('@')[0].split(' ')[0]}
         </h1>
         <p className="t-mute" style={{ fontSize: 14.5, marginTop: 8, marginBottom: 26 }}>
           {cards.length === 0

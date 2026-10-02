@@ -24,6 +24,7 @@ import {
   type BillingState,
 } from '@/lib/actions/billing';
 import type { BillingConfig, Invoice } from '@/lib/db/billing';
+import { fechaCorta } from '@/lib/dates';
 
 const CONCEPT_LABEL: Record<string, string> = {
   MONTHLY: 'Mensualidad', SETUP: 'Implementación', PRORATE: 'Prorrateo', OTHER: 'Otro',
@@ -397,7 +398,7 @@ function InvoiceRow({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--u-text-4)' }}>
         {inv.due_date && <span>Vence {inv.due_date}</span>}
-        {inv.status === 'PAID' && inv.paid_at && <span>Pagado {inv.paid_at.slice(0, 10)}{inv.payment_method ? ` · ${inv.payment_method}` : ''}</span>}
+        {inv.status === 'PAID' && inv.paid_at && <span>Pagado el {fechaCorta(inv.paid_at)}{inv.payment_method ? ` · ${inv.payment_method}` : ''}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {inv.status === 'PENDING' ? (
             <button onClick={() => setPayOpen((v) => !v)} className="press" style={miniBtn('var(--c-ok)')}>Registrar pago</button>

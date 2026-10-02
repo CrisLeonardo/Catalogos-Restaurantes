@@ -23,7 +23,12 @@ import { cn } from '@/lib/utils';
 
 /** La acción puede navegar (`href`) o abrir un editor en la misma pantalla
  *  (`onClick`); lo que NO puede es faltar. */
-type Action = { label: string } & ({ href: string; onClick?: never } | { onClick: () => void; href?: never });
+type Action = {
+  label: string;
+  /** Icono del botón. Por defecto «+» (casi siempre la acción es crear algo);
+   *  `null` para una acción que solo lleva a otro sitio. */
+  icon?: string | null;
+} & ({ href: string; onClick?: never } | { onClick: () => void; href?: never });
 
 interface Props {
   /** Nombre del icono (ver components/icons). Uno solo, sin color. */
@@ -54,12 +59,12 @@ function EmptyState({ icon, title, desc, action, className }: Props) {
       <p className="max-w-[46ch] text-[13.5px] leading-snug text-adm-text-3">{desc}</p>
       {action.href ? (
         <Link href={action.href} className={actionClass}>
-          <Icon name="plus" size={15} />
+          {action.icon !== null && <Icon name={action.icon ?? 'plus'} size={15} />}
           {action.label}
         </Link>
       ) : (
         <button type="button" onClick={action.onClick} className={actionClass}>
-          <Icon name="plus" size={15} />
+          {action.icon !== null && <Icon name={action.icon ?? 'plus'} size={15} />}
           {action.label}
         </button>
       )}

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Icon } from '@/components/icons';
 import { PlanChip, StatusChip, EmptyState, PLAN_DOT } from '@/components/super/ui';
+import { fmtMoney } from '@/lib/money';
 
 export type DirectoryRow = {
   id: string;
@@ -199,6 +200,5 @@ const PLAN_LABELS: Record<string, string> = { BASICO: 'B√°sico', ESTANDAR: 'Est√
 function labelOf(plan: string): string { return PLAN_LABELS[plan] ?? plan; }
 
 function fmt(n: number, cur: string): string {
-  const sym = cur === 'GTQ' ? 'Q' : cur === 'USD' ? '$' : `${cur} `;
-  return `${sym}${n.toLocaleString('es-GT', { maximumFractionDigits: 0 })}`;
+  return fmtMoney(n, cur, 0);
 }

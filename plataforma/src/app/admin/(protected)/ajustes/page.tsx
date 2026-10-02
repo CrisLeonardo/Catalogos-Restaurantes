@@ -10,6 +10,7 @@ import { List, ListLink, ListRow, ListText } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
+import { ACTIVATABLE_MODULES, isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
 
@@ -99,7 +100,13 @@ export default async function AdminAjustesPage() {
   const plan = (restaurant?.plan_actual ?? 'BASICO') as PlanCode;
   const mesasAccesible = (plan !== 'BASICO' && plan !== 'ESTANDAR') || dineInEnabled;
 
-  const activeModules = modules ? Object.values(modules).filter(Boolean).length : 0;
+  /* La MISMA cuenta que la pantalla Funciones (modules-panel.tsx). Antes se
+     contaban todas las banderas encendidas del jsonb —pedidos, catálogo,
+     analítica…— y esta fila decía «15 activas» mientras Funciones, un toque
+     más allá, decía «8 funciones activas» (auditoría 2026-10-02, N-05). */
+  const activeModules = ACTIVATABLE_MODULES.filter((m) =>
+    isModuleActive((modules ?? {}) as ModulesMap, (restaurant?.module_settings ?? null) as ModuleSettings | null, m.key),
+  ).length;
   const planLabel = restaurant?.plan_actual ? (PLANS[restaurant.plan_actual as PlanCode]?.name ?? restaurant.plan_actual) : undefined;
 
   const negocio: Row[] = [

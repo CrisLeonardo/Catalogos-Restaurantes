@@ -4,11 +4,13 @@ import { getMyGroupScope, getGroupReport } from '@/lib/db/group';
 import { Icon } from '@/components/icons';
 import DateRangeForm from '@/components/admin/date-range-form';
 import GroupFinanceExport from '@/components/mi-cuenta/group-finance-export';
+import { fmtMoney } from '@/lib/money';
+import Kpi from '@/components/mi-cuenta/kpi';
 
 export const metadata = { title: 'Finanzas — Leogin' };
 export const dynamic = 'force-dynamic';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 function todayYmd(): string { return new Date().toLocaleDateString('en-CA'); }
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
@@ -35,9 +37,10 @@ export default async function FinanzasGrupoPage({
 
   const report = await getGroupReport(scope.branches, from, to);
   const maxRev = Math.max(...report.combinedSeries.map((d) => d.revenue), 1);
-  const margin = report.totalRevenue > 0 ? (report.totalProfit / report.totalRevenue) * 100 : null;
-  // Costo (COGS) y ticket promedio se derivan del reporte (sin más consultas).
-  const cost = report.totalRevenue - report.totalProfit;
+  // Costo y margen con las MISMAS cuentas que el panel: solo lo que tiene
+  // costo cargado (lib/db/group.ts, auditoría 2026-10-02, MIC-01).
+  const margin = report.totalMarginPct;
+  const cost = report.totalCost;
   const avgTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
 
   return (
@@ -56,7 +59,7 @@ export default async function FinanzasGrupoPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <Kpi label={varios ? 'Ingreso del grupo' : 'Ingreso'} value={money(report.totalRevenue)} hero />
-        <Kpi label="Costo (COGS)" value={money(cost)} />
+        <Kpi label="Costo de lo vendido" value={money(cost)} />
         <Kpi label="Utilidad" value={money(report.totalProfit)} sub={margin != null ? `margen ${margin.toFixed(0)}%` : undefined} />
         <Kpi label="Ticket promedio" value={money(avgTicket)} />
         <Kpi label="Pedidos" value={String(report.totalOrders)} />
@@ -90,7 +93,7 @@ export default async function FinanzasGrupoPage({
               <span>Restaurante</span><span style={{ textAlign: 'right' }}>Ingreso</span><span style={{ textAlign: 'right' }}>Pedidos</span><span style={{ textAlign: 'right' }}>Utilidad</span>
             </div>
             {report.perBranch.map((b) => {
-              const m = b.revenue > 0 ? (b.profit / b.revenue) * 100 : null;
+              const m = b.marginPct;
               const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
               return (
                 <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 90px 100px', gap: 8, padding: '11px 18px', borderTop: '1px solid var(--u-hair)', fontSize: 13, alignItems: 'center' }}>
@@ -115,15 +118,6 @@ export default async function FinanzasGrupoPage({
   );
 }
 
-function Kpi({ label, value, sub, hero }: { label: string; value: string; sub?: string; hero?: boolean }) {
-  return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: 'var(--u-text-3)' }}>{sub}</div>}
-    </div>
-  );
-}
 
 /* ── Sin el plan que las incluye ─────────────────────────────── */
 

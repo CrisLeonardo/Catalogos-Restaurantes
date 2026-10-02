@@ -5,6 +5,7 @@ import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLA
 import type { PlanPricing } from '@/lib/plans';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { getEffectivePlanPricing } from '@/lib/db/billing';
+import { fmtMoney } from '@/lib/money';
 
 export const metadata = {
   title: 'Planes y precios — Leogin',
@@ -65,7 +66,7 @@ function buildFaqs(pricing: PlanPricing) {
 }
 
 function fmtQ(n: number) {
-  return 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+  return fmtMoney(n, 'GTQ', 0);
 }
 
 /**

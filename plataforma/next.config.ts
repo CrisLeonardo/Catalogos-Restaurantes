@@ -22,10 +22,18 @@ const FUSIONADAS_EN_MI_PC = ['impresion', 'escritorio', 'sin-internet'];
 
 const nextConfig: NextConfig = {
   async redirects() {
-    return FUSIONADAS_EN_MI_PC.flatMap((ruta) => [
-      { source: `/panel/:slug/${ruta}`, destination: '/panel/:slug/mi-pc', permanent: false },
-      { source: `/admin/${ruta}`, destination: '/admin/mi-pc', permanent: false },
-    ]);
+    return [
+      ...FUSIONADAS_EN_MI_PC.flatMap((ruta) => [
+        { source: `/panel/:slug/${ruta}`, destination: '/panel/:slug/mi-pc', permanent: false },
+        { source: `/admin/${ruta}`, destination: '/admin/mi-pc', permanent: false },
+      ]),
+      /* «Canales externos» (Fase 5A) sigue apagado: misma razón que arriba,
+         la página hacía `redirect()` y la consola lanzaba React #310 en cada
+         carga directa (auditoría 2026-10-02, N-08). Al encenderlo, quitar
+         estas dos líneas junto con CANALES_HABILITADO de la página. */
+      { source: '/panel/:slug/canales', destination: '/panel/:slug', permanent: false },
+      { source: '/admin/canales', destination: '/admin', permanent: false },
+    ];
   },
   images: {
     // Las fotos del bucket `restaurant-assets` ya NO pasan por aquí: van por

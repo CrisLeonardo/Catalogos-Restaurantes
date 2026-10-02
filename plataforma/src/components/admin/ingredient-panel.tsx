@@ -150,7 +150,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
   function handleDelete(ing: Ingredient) {
     const usage = usageCounts[ing.id] ?? 0;
     const confirm_msg = usage > 0
-      ? `"${ing.name}" se usa en ${usage} receta(s). ¿Eliminar de todas formas?`
+      ? `"${ing.name}" se usa en ${usage} ${usage === 1 ? 'receta' : 'recetas'}. ¿Eliminar de todas formas?`
       : `¿Eliminar "${ing.name}"?`;
     if (!window.confirm(confirm_msg)) return;
     setError(null);

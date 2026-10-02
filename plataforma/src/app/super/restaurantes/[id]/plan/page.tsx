@@ -6,6 +6,7 @@ import OrderTypesEditor from '@/components/super/order-types-editor';
 import { getRestaurantFullById } from '@/lib/db/super-admin';
 import { getEffectivePlanPricing, getFeeBreakdown } from '@/lib/db/billing';
 import { resolveTheme, type ThemeRow } from '@/lib/theme/resolve';
+import { fmtMoney } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Plan y módulos — Super Admin' };
@@ -32,7 +33,7 @@ export default async function FichaPlanPage({
     tagline: row.tagline,
   });
 
-  const fmtQ = (n: number) => 'Q' + n.toLocaleString('es-GT', { maximumFractionDigits: 0 });
+  const fmtQ = (n: number) => fmtMoney(n, 'GTQ', 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

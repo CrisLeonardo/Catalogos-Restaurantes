@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
 import { getMyGroupScope, getGroupReport } from '@/lib/db/group';
 import DateRangeForm from '@/components/admin/date-range-form';
+import { fmtMoney } from '@/lib/money';
+import Kpi from '@/components/mi-cuenta/kpi';
 
 export const metadata = { title: 'Comparativa — Leogin' };
 export const dynamic = 'force-dynamic';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 function todayYmd(): string { return new Date().toLocaleDateString('en-CA'); }
 function shiftYmd(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
@@ -53,7 +55,7 @@ export default async function ComparativaPage({
         ) : report.perBranch.map((b) => {
           const pct = (b.revenue / maxRevenue) * 100;
           const share = report.totalRevenue > 0 ? (b.revenue / report.totalRevenue) * 100 : 0;
-          const m = b.revenue > 0 ? (b.profit / b.revenue) * 100 : null;
+          const m = b.marginPct;
           return (
             <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, gap: 10 }}>
@@ -72,11 +74,3 @@ export default async function ComparativaPage({
   );
 }
 
-function Kpi({ label, value, hero }: { label: string; value: string; hero?: boolean }) {
-  return (
-    <div className="glass" style={{ borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="t-kicker" style={{ fontSize: 9.5 }}>{label}</div>
-      <div style={{ fontFamily: hero ? 'var(--font-display)' : 'var(--ui-font-mono)', fontWeight: hero ? 800 : 600, fontSize: hero ? 26 : 22, color: 'var(--u-text)', lineHeight: 1.1 }}>{value}</div>
-    </div>
-  );
-}

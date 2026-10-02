@@ -56,16 +56,16 @@ export default function GroupFinanceExport({ from, to }: { from: string; to: str
         startY: y,
         head: [['Sucursal', 'Ingreso', 'Costo', 'Utilidad', 'Margen %', 'Pedidos', 'Ticket promedio']],
         body: report.perBranch.map((b) => {
-          const cost = b.revenue - b.profit;
-          const margin = b.revenue > 0 ? (b.profit / b.revenue) * 100 : 0;
+          const cost = b.cost;
+          const margin = b.marginPct ?? 0;
           const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
           return [b.name, money(b.revenue), money(cost), money(b.profit), `${margin.toFixed(1)}%`, String(b.orders), money(ticket)];
         }),
         columnStyles: rightAlign,
       });
 
-      const totalCost = report.totalRevenue - report.totalProfit;
-      const totalMargin = report.totalRevenue > 0 ? (report.totalProfit / report.totalRevenue) * 100 : 0;
+      const totalCost = report.totalCost;
+      const totalMargin = report.totalMarginPct ?? 0;
       const totalTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
 
       await brandedAutoTable(doc, branding, {

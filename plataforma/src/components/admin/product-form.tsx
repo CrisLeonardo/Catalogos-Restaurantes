@@ -201,7 +201,7 @@ export default function ProductForm({ restaurantId, categories, product, default
         {/* ══ Columna principal ══ */}
         <div className="pform-col">
           {/* ── Lo básico ── */}
-          <Glass variant="quiet" style={{ padding: 18 }}>
+          <Glass variant="quiet" className="pform-o-basico" style={{ padding: 18 }}>
             <SectionHead title="Lo básico" hint="Nombre, precio y dónde aparece en tu menú." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(110px, 1fr)', gap: 12 }}>
@@ -513,7 +513,7 @@ export default function ProductForm({ restaurantId, categories, product, default
 
         {/* ══ Columna lateral: foto + disponibilidad ══ */}
         <div className="pform-col pform-side">
-          <Glass variant="quiet" style={{ padding: 18 }}>
+          <Glass variant="quiet" className="pform-o-foto" style={{ padding: 18 }}>
             <SectionHead title="Foto del platillo" hint="Una buena foto vende más — se muestra en el menú y al abrir el platillo." />
             <ImageUpload
               restaurantId={restaurantId}
@@ -569,7 +569,11 @@ export default function ProductForm({ restaurantId, categories, product, default
             </div>
           </Glass>
 
-          <Glass variant="quiet" style={{ padding: '14px 18px' }}>
+          {/* «Disponible» decía «Oculto en el menú» al apagarlo, y lo agotado NO
+              se oculta: se ve tachado y vuelve solo a las 12 h. Lo que de verdad
+              oculta es el interruptor de abajo. Dos interruptores que decían lo
+              mismo con palabras distintas (auditoría 2026-10-02, MEN-03). */}
+          <Glass variant="quiet" className="pform-o-estado" style={{ padding: '14px 18px' }}>
             <div
               style={{
                 display: 'flex',
@@ -579,30 +583,35 @@ export default function ProductForm({ restaurantId, categories, product, default
               }}
             >
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>Disponible</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{isAvailable ? 'Hay existencias' : 'Agotado'}</div>
                 <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  {isAvailable ? 'Visible en el menú' : 'Oculto en el menú'}
+                  {isAvailable
+                    ? 'Se puede pedir. Apágalo si se acabó por hoy.'
+                    : 'Se ve en el menú pero no se puede pedir. Vuelve solo en 12 h.'}
                 </div>
               </div>
-              <ToggleSwitch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} ariaLabel="Disponibilidad" />
+              <ToggleSwitch checked={isAvailable} onChange={() => setIsAvailable(!isAvailable)} ariaLabel="Hay existencias" />
             </div>
           </Glass>
 
           {/* ── Activar / desactivar (oculto permanente, distinto de "Disponible") ── */}
           <Glass
             variant="quiet"
+            className="pform-o-estado"
             style={{ padding: '14px 18px', borderColor: !isActive ? 'var(--c-danger-line)' : undefined }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'var(--u-text)' : 'var(--c-danger)' }}>
-                  {isActive ? 'Platillo activo' : 'Platillo desactivado'}
+                  {isActive ? 'Mostrar en el menú' : 'Oculto del menú'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
-                  Desactivado → no aparece en el menú hasta que lo reactives
+                  {isActive
+                    ? 'Tus clientes lo ven en tu menú.'
+                    : 'No aparece en el menú hasta que lo vuelvas a encender.'}
                 </div>
               </div>
-              <ToggleSwitch checked={isActive} onChange={() => setIsActive(!isActive)} ariaLabel="Platillo activo" />
+              <ToggleSwitch checked={isActive} onChange={() => setIsActive(!isActive)} ariaLabel="Mostrar en el menú" />
             </div>
           </Glass>
         </div>

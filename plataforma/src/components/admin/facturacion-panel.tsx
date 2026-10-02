@@ -25,6 +25,7 @@ import {
 } from '@/lib/fel/frases';
 import { interpretarReceptorId, explicarIdInvalido } from '@/lib/fel/nit';
 import type { FelSummary, InvoiceableOrder, FelEstadoConfig } from '@/lib/db/fel';
+import { fmtMoney } from '@/lib/money';
 
 interface Props {
   restaurantId: string;
@@ -46,7 +47,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 function money(n: number) {
-  return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fmtMoney(Number(n));
 }
 
 const PROVIDERS: FelProvider[] = ['MANUAL', 'INFILE', 'G4S', 'DIGIFACT', 'OTRO'];

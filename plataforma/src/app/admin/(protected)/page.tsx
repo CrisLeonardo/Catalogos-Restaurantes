@@ -30,6 +30,7 @@ import type { OrderStatus, Restaurant } from '@/types';
 import { mesaDeFila, direccionDeMesa } from '@/lib/mesa';
 import { panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
+import { fmtMoney } from '@/lib/money';
 
 export const metadata = { title: 'Hoy – Panel admin' };
 
@@ -218,7 +219,7 @@ export default async function AdminHomePage() {
     if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
   }
 
-  const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
+  const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : fmtMoney(n));
   const brandName = restaurant?.name ?? 'tu restaurante';
 
   // El menú público vive en el subdominio SIN "-admin": un href="/" relativo
@@ -365,17 +366,21 @@ export default async function AdminHomePage() {
         <Section title="En curso">
           <List>
             {live.orders.map((o) => (
-              <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")}>
-                <span className="w-26 shrink-0 text-[14.5px] font-semibold text-adm-text">
+              /* En el teléfono, dos renglones: las columnas de ancho fijo
+                 (104 + 116 + 96 px + huecos) no cabían en 358 px y el total
+                 se cortaba en «Q132.(» (auditoría 2026-10-02, HOY-01). Desde
+                 `sm` vuelve a ser la fila de cuatro columnas de siempre. */
+              <ListLink key={o.id} href={panelHref(base, "/admin/pedidos")} className="flex-wrap gap-y-1 sm:flex-nowrap">
+                <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-adm-text sm:w-26 sm:flex-none">
                   {orderLabel(o)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[13.5px] text-adm-text-3">
+                <span className="order-last min-w-0 basis-full truncate text-[13.5px] text-adm-text-3 sm:order-none sm:basis-auto sm:flex-1">
                   {o.customer_name ? `${o.customer_name} · ` : ''}{agoLabel(o.created_at, now)}
                 </span>
-                <StatusPill tone={STATUS_TONE[o.status]} className="w-29 shrink-0">
+                <StatusPill tone={STATUS_TONE[o.status]} className="shrink-0 sm:w-29">
                   {STATUS_LABEL_SHORT[o.status]}
                 </StatusPill>
-                <span className="t-mono w-24 shrink-0 text-right text-[14.5px] text-adm-text">
+                <span className="t-mono shrink-0 text-right text-[14.5px] text-adm-text sm:w-24">
                   {fmt(Number(o.total))}
                 </span>
               </ListLink>

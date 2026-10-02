@@ -16,6 +16,7 @@ import {
   type PrintAgentConfig,
   type ReportedPrinter,
 } from '@/lib/actions/print-agent';
+import { haceTiempo } from '@/lib/dates';
 
 // ── Estilos ────────────────────────────────────────────────────────────────────
 
@@ -420,9 +421,8 @@ export default function PrintAgentSettings() {
     // eslint-disable-next-line react-hooks/purity
     const ageMs = Date.now() - new Date(config.lastSeenAt).getTime();
     if (ageMs < 90_000) return { text: '● Conectado', color: 'var(--c-ok)' };
-    const mins = Math.round(ageMs / 60_000);
-    const ago = mins < 60 ? `hace ${mins} min` : `hace ${Math.round(mins / 60)} h`;
-    return { text: `Última conexión ${ago}`, color: 'var(--c-warn)' };
+    // Antes solo contaba en horas: «Última conexión hace 2004 h» (T-02).
+    return { text: `Última conexión ${haceTiempo(config.lastSeenAt)}`, color: 'var(--c-warn)' };
   }
 
   const conn = connectionLabel();

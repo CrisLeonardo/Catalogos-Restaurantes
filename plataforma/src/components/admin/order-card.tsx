@@ -15,6 +15,7 @@ import {
 } from '@/lib/order-status';
 import { sourceBadge } from '@/lib/order-source';
 import { assignDriver } from '@/lib/actions/drivers';
+import { esHoy } from '@/lib/dates';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -668,9 +669,13 @@ export default function OrderCard({
         </div>
       )}
 
-      {/* Hora de entrada — SIEMPRE en la hora del restaurante, no la del navegador */}
+      {/* Hora de entrada — SIEMPRE en la hora del restaurante, no la del navegador.
+          Lo de hoy, solo con la hora: «02 oct 2026, 11:06 a. m.» en cada
+          tarjeta del día era ruido (auditoría 2026-10-02, T-02). */}
       <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-        Entró: {ticketDateTime(order.created_at, ticketFormat)}
+        {esHoy(order.created_at, ticketFormat.timezone)
+          ? `Entró a las ${ticketTime(order.created_at, ticketFormat)}`
+          : `Entró: ${ticketDateTime(order.created_at, ticketFormat)}`}
       </p>
 
       {actionError && (

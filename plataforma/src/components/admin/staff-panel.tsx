@@ -21,6 +21,7 @@ import {
 } from '@/lib/actions/staff';
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
 import { staffLoginHandle } from '@/lib/staff-email';
+import { haceTiempo } from '@/lib/dates';
 
 /** Secciones que un gerente NO recibe con su plantilla.
     'suscripcion' es el cobro del restaurante: quién paga, cuánto y con qué
@@ -58,13 +59,7 @@ function describeActivity(r: ActivityRow): string {
   if (r.action === 'soporte') return `Soporte de Leogin entró al panel${r.entity ? ` (${r.entity})` : ''}`;
   return `${who}${r.action}`;
 }
-function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'hace un momento';
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
-  return `hace ${Math.floor(s / 86400)} d`;
-}
+const timeAgo = (iso: string): string => haceTiempo(iso);
 
 const SECTION_LABEL: Record<string, string> = Object.fromEntries(ADMIN_SECTIONS.map((s) => [s.key, s.label]));
 

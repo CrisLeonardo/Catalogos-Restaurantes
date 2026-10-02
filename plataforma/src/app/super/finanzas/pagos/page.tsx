@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/super/ui';
 import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 import { getFinanceOverview, type PaymentRecord } from '@/lib/db/billing';
 import { fmtMoney } from '@/lib/money';
+import { conMesesLegibles, fechaCorta } from '@/lib/dates';
 
 export const metadata = { title: 'Pagos — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -56,7 +57,7 @@ export default async function PagosPage() {
               <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13.5, color: 'var(--c-ok)' }}>
                 {fmtMoney(total, fin.currency)}
               </span>
-              <span className="t-mute" style={{ fontSize: 12 }}>{payments.length} pago(s)</span>
+              <span className="t-mute" style={{ fontSize: 12 }}>{payments.length} {payments.length === 1 ? 'pago' : 'pagos'}</span>
             </div>
             <Card style={{ overflow: 'hidden' }}>
               {payments.map((p, i) => (
@@ -72,7 +73,7 @@ export default async function PagosPage() {
                       {p.restaurantName}
                     </Link>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.description ?? CONCEPT_LABEL[p.concept]} · {p.paidAt.slice(0, 10)}{p.method ? ` · ${p.method}` : ''}
+                      {conMesesLegibles(p.description ?? CONCEPT_LABEL[p.concept])} · {fechaCorta(p.paidAt)}{p.method ? ` · ${p.method}` : ''}
                     </div>
                   </div>
                   <Badge variant="neutral" style={{ fontSize: 10 }}>{CONCEPT_LABEL[p.concept]}</Badge>

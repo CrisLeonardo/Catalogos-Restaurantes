@@ -35,6 +35,7 @@ import {
   addCashExpense, deleteCashExpense, saveCajaDraft, discardCajaDraft, closeCaja,
   type CajaState, type TipShare, type CajaCloseResult,
 } from '@/lib/actions/finanzas';
+import { fmtMoney } from '@/lib/money';
 
 const BILLETES = DENOM_FIELDS.filter((d) => d.kind === 'B');
 const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
@@ -42,7 +43,7 @@ const MONEDAS = DENOM_FIELDS.filter((d) => d.kind === 'M');
 /* Con separador de miles. «Q4292.00» obliga a contar los dígitos con el
    dedo para saber si son cuatro mil o cuarenta y dos mil, y este número
    se lee de noche, con prisa. */
-const money = (n: number) => `Q${n.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n: number) => fmtMoney(n);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** En qué paso va el cierre. El dato vive en la nube (el borrador); el

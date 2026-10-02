@@ -6,6 +6,7 @@ import { getSalesReport, type Split } from '@/lib/db/reports';
 import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
+import { fmtMoney } from '@/lib/money';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -34,7 +35,7 @@ export const metadata = { title: 'Finanzas – Panel admin' };
    estuvo lo encuentre.
    ============================================================ */
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 function todayInTz(tz: string): string {
   try { return new Date().toLocaleDateString('en-CA', { timeZone: tz }); }
@@ -121,6 +122,19 @@ export default async function AdminFinanzasPage({
         <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
           Aún no hay costos capturados en tus productos: la utilidad y el margen aparecerán
           cuando pongas el <strong>Costo</strong> en el editor de cada platillo.
+        </Card>
+      )}
+
+      {/* Con costos a medias, «Utilidad Q34.50 (margen 48 %)» junto a un
+          ingreso de Q2,794 se lee como que el negocio gana Q34. Es la utilidad
+          de los platillos que SÍ tienen costo, y hay que decirlo con la cifra
+          (auditoría 2026-10-02, NEG-01). */}
+      {report.marginPct != null && report.productRevenue > 0 && report.costedRevenue < report.productRevenue * 0.95 && (
+        <Card className="p-3.5" style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          La utilidad y el margen solo cuentan los platillos que tienen costo cargado:{' '}
+          <strong>{money(report.costedRevenue)}</strong> de <strong>{money(report.productRevenue)}</strong> vendidos
+          ({Math.round((report.costedRevenue / report.productRevenue) * 100)}%). Pon el <strong>Costo</strong> en
+          el resto de tus platillos para ver la utilidad completa.
         </Card>
       )}
 

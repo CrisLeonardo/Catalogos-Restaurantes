@@ -85,8 +85,8 @@ export async function exportGroupFinanceXlsx(
   addBrandedHeader(ws, { branding, title, subtitle, columnsSpan: headers.length });
 
   const rows = report.perBranch.map((b) => {
-    const cost = b.revenue - b.profit;
-    const margin = b.revenue > 0 ? (b.profit / b.revenue) * 100 : 0;
+    const cost = b.cost;
+    const margin = b.marginPct ?? 0;
     const ticket = b.orders > 0 ? b.revenue / b.orders : 0;
     return [b.name, b.revenue, cost, b.profit, margin, b.orders, ticket];
   });
@@ -94,8 +94,8 @@ export async function exportGroupFinanceXlsx(
   const { headerRow } = writeStyledTable(ws, branding, headers, rows, { currencyCols: [2, 3, 4, 7] });
   ws.getColumn(5).numFmt = PERCENT_NUM_FMT;
 
-  const totalCost = report.totalRevenue - report.totalProfit;
-  const totalMargin = report.totalRevenue > 0 ? (report.totalProfit / report.totalRevenue) * 100 : 0;
+  const totalCost = report.totalCost;
+  const totalMargin = report.totalMarginPct ?? 0;
   const totalTicket = report.totalOrders > 0 ? report.totalRevenue / report.totalOrders : 0;
   const totalsRow = ws.addRow([
     report.perBranch.length > 1 ? 'TOTAL GRUPO' : 'TOTAL',

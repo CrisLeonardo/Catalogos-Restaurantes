@@ -26,6 +26,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { authenticateAgent, type AgentIdentity } from '@/lib/print-agent';
 import { createOrderSchema } from '@/lib/schemas';
 import { resolveItemOptions } from '@/lib/order-options';
+import { isUnavailable } from '@/lib/product-availability';
 import { resolveTheme, computeTip, type ThemeRow } from '@/lib/theme/resolve';
 import { sendPushToRestaurant } from '@/lib/push';
 import type { ProductOptionGroup, OrderItemOption } from '@/types';
@@ -90,10 +91,12 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
   const productIds = [...new Set(items.map((i) => i.productId))];
   const { data: dbProducts, error: productsError } = await db
     .from('products')
-    .select('id, name, price, cost, is_available, options')
+    .select('id, name, price, cost, is_available, unavailable_at, track_stock, stock, options')
     .eq('restaurant_id', restaurantId)
     .in('id', productIds);
   if (productsError) return { clientId, ok: false, error: productsError.message };
+  // Misma regla que el menú y que createOrder (lib/product-availability.ts).
+  const ahora = Date.now();
 
   const productById = new Map((dbProducts ?? []).map((p) => [p.id as string, p]));
   const verifiedItems: {
@@ -103,7 +106,7 @@ async function syncOne(db: Db, agent: AgentIdentity, rawOrder: unknown): Promise
 
   for (const item of items) {
     const product = productById.get(item.productId);
-    if (!product || !product.is_available) {
+    if (!product || isUnavailable(product, ahora)) {
       return { clientId, ok: false, error: `"${item.name}" ya no está disponible.` };
     }
     const resolvedOpts = resolveItemOptions(

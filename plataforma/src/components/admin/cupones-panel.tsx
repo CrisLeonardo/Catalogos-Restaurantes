@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/ui/empty-state';
 import { createCoupon, updateCoupon, toggleCoupon, deleteCoupon } from '@/lib/actions/cupones';
 import type { Coupon } from '@/lib/db/cupones';
+import { fmtMoney } from '@/lib/money';
 
 interface Props {
   restaurantId: string;
@@ -220,7 +221,7 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
                     <span style={{ fontSize: 11, fontWeight: 600, color: statusColor }}>● {statusLabel}</span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
-                    <span>{c.discount_type === 'PERCENT' ? `${c.discount_value}% desc.` : `Q${Number(c.discount_value).toFixed(2)} desc.`}</span>
+                    <span>{c.discount_type === 'PERCENT' ? `${c.discount_value}% desc.` : `${fmtMoney(Number(c.discount_value))} desc.`}</span>
                     {c.min_order && <span>Min: Q{Number(c.min_order).toFixed(2)}</span>}
                     {c.max_uses && <span>Usos: {c.uses}/{c.max_uses}</span>}
                     {!c.max_uses && c.uses > 0 && <span>Usos: {c.uses}</span>}

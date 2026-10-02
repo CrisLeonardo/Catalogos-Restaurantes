@@ -12,6 +12,7 @@ import {
 } from '@/lib/actions/loyalty';
 import type { LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
 import { assetSrc } from '@/lib/asset-image';
+import { fmtMoney } from '@/lib/money';
 
 interface RewardProduct { id: string; name: string; price: number; image_url: string | null; cost: number | null }
 
@@ -197,7 +198,7 @@ function RewardsTab({ restaurantId, rewards, products }: { restaurantId: string;
           <div>
             <label style={labelStyle}>Producto del menú</label>
             <Select
-              options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · Q${Number(p.price).toFixed(2)}` }))]}
+              options={[{ value: '', label: '— Recompensa sin producto —' }, ...products.map((p) => ({ value: p.id, label: `${p.name} · ${fmtMoney(Number(p.price))}` }))]}
               value={form.product_id ?? ''}
               onValueChange={pickProduct}
             />

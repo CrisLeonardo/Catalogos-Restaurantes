@@ -10,6 +10,7 @@ import { List, ListRow, ListText } from '@/components/ui/list';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
+import { fmtMoney } from '@/lib/money';
 
 export const metadata = { title: 'Negocio – Panel admin' };
 
@@ -66,7 +67,7 @@ export default async function AdminNegocioPage() {
     ordersEnabled ? getOrderStats(restaurantId, timezone) : Promise.resolve(null),
   ]);
 
-  const money = (n: number) => (resolved ? formatPrice(n, resolved.config) : `Q${n.toFixed(2)}`);
+  const money = (n: number) => (resolved ? formatPrice(n, resolved.config) : fmtMoney(n));
   const maxVisits = Math.max(...visits.series14.map((d) => d.visits), 1);
   const maxSales = Math.max(...(orderStats?.series.map((d) => d.total) ?? [0]), 1);
   const soldTop = orderStats?.topToday ?? [];

@@ -9,6 +9,7 @@ import { useActionState, useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { createApiKeyAction, revokeApiKeyAction, type ApiKeyCreateResult } from '@/lib/actions/api-keys';
 import type { ApiKeyRow } from '@/lib/api-keys';
+import { haceTiempo } from '@/lib/dates';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
@@ -117,7 +118,7 @@ function KeyRow({ k }: { k: ApiKeyRow }) {
         <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text-2)' }}>{k.name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', fontFamily: 'var(--ui-font-mono)' }}>
           {k.key_prefix}…{k.scopes.length > 0 ? ` · ${k.scopes.join(', ')}` : ''}
-          {k.last_used_at ? ` · usada ${k.last_used_at.slice(0, 10)}` : ' · sin uso'}
+          {k.last_used_at ? ` · usada ${haceTiempo(k.last_used_at)}` : ' · sin uso'}
         </div>
       </div>
       {revoked ? (

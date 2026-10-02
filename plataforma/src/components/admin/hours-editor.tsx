@@ -98,6 +98,8 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
   const [state, formAction, isPending] = useActionState(updateRestaurantOps, empty);
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
   const [paused, setPaused] = useState(restaurant.orders_paused === true);
+  /** Ningún día encendido → se guarda `hours = null` → abierto siempre. */
+  const sinHorario = DAY_ORDER.every((d) => !days[d].on);
   const [timezone, setTimezone] = useState(restaurant.timezone || 'America/Guatemala');
   const [exceptions, setExceptions] = useState<ExceptionRow[]>(() => initExceptions(restaurant.hour_exceptions));
 
@@ -188,15 +190,17 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
             </div>
             <div style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2 }}>
               {paused
-                ? 'El checkout está bloqueado hasta que reanudes.'
-                : '¿Cocina saturada? Pausa sin tocar tus horarios.'}
+                ? 'Tus clientes no pueden pedir hasta que lo vuelvas a encender.'
+                : '¿Cocina saturada? Apágalo para pausar sin tocar tus horarios.'}
             </div>
           </div>
+          {/* Encendido = recibiendo pedidos. Estaba al revés (`checked={paused}`):
+              el rótulo decía «Recibiendo pedidos» con el interruptor APAGADO, y
+              encenderlo pausaba (auditoría 2026-10-02, AJU-01). */}
           <Switch
-            checked={paused}
-            onCheckedChange={setPaused}
-            aria-label="Pausar pedidos"
-            className="data-[checked]:bg-[var(--c-warn-solid)] data-[checked]:border-[var(--c-warn-solid)]"
+            checked={!paused}
+            onCheckedChange={(on) => setPaused(!on)}
+            aria-label="Recibir pedidos"
           />
         </div>
         {paused && (
@@ -221,11 +225,27 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       <Card className="p-4">
         <label style={labelStyle}>Horario de apertura</label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12 }}>
-          El badge “Abierto/Cerrado” y el checkout se rigen por este horario.
-          Sin días activos = siempre abierto. Puedes agregar varios turnos por día
+          El aviso «Abierto/Cerrado» de tu menú y los pedidos en línea siguen este
+          horario. Puedes agregar varios turnos por día
           (p. ej. 7:00–10:00 y 13:00–21:00). Un cierre de madrugada (p. ej.
           20:00 a 02:00) cruza la medianoche sin problema.
         </p>
+        {/* Sin ningún día encendido el restaurante cuenta como ABIERTO SIEMPRE
+            (lib/hours.ts). Cada fila decía «Cerrado» y el dueño entendía lo
+            contrario de lo que pasa (auditoría 2026-10-02, AJU-02). */}
+        {sinHorario && (
+          <div
+            role="note"
+            style={{
+              marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--radius-md)',
+              background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)',
+              color: 'var(--u-text-2)', fontSize: 13, lineHeight: 1.45,
+            }}
+          >
+            <strong style={{ color: 'var(--u-text)' }}>Sin horario: tu menú sale abierto a toda hora.</strong>{' '}
+            Toca los días que abres para poner tu horario.
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {DAY_ORDER.map((day) => {
             const d = days[day];
@@ -312,7 +332,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
                     )}
                   </div>
                 ) : (
-                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 8 }}>Cerrado</span>
+                  <span style={{ fontSize: 13, color: 'var(--u-text-4)', marginTop: 12 }}>{sinHorario ? 'Sin horario' : 'Cerrado'}</span>
                 )}
               </div>
             );
@@ -444,7 +464,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       )}
 
       <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
-        {isPending ? 'Guardando…' : 'Guardar operación'}
+        {isPending ? 'Guardando…' : 'Guardar horario'}
       </Button>
     </form>
   );

@@ -21,7 +21,10 @@ export default async function MetricasPage() {
   const totalVisits30 = [...traffic.values()].reduce((s, t) => s + t.visits30, 0);
   const totalUnique30 = [...traffic.values()].reduce((s, t) => s + t.unique30, 0);
   const totalOrders30 = [...traffic.values()].reduce((s, t) => s + t.orders30, 0);
-  const conversion = totalVisits30 > 0 ? (totalOrders30 / totalVisits30) * 100 : 0;
+  // Solo pedidos del comensal desde el menú: los del mesero o la caja no
+  // salen de una visita y empujaban esto por encima del 100 % (SUP-04).
+  const totalOnline30 = [...traffic.values()].reduce((s, t) => s + t.online30, 0);
+  const conversion = totalVisits30 > 0 ? Math.min(100, (totalOnline30 / totalVisits30) * 100) : 0;
 
   // Tabla ordenada por actividad (los que más visitas generan primero).
   const sorted = [...restaurants].sort(
@@ -41,7 +44,7 @@ export default async function MetricasPage() {
         <StatCard label="Visitas 30 días" value={totalVisits30.toLocaleString('es-GT')} icon="eye" />
         <StatCard label="Visitantes únicos" value={totalUnique30.toLocaleString('es-GT')} icon="users" />
         <StatCard label="Pedidos 30 días" value={totalOrders30.toLocaleString('es-GT')} icon="bag" tone="ok" />
-        <StatCard label="Conversión" value={`${conversion.toFixed(1)}%`} icon="chart" sub="pedidos / visitas" />
+        <StatCard label="Conversión" value={`${conversion.toFixed(1)}%`} icon="chart" sub="pedidos en línea / visitas" />
       </div>
 
       {/* Gráfica global */}

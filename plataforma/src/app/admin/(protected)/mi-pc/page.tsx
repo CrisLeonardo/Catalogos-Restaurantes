@@ -12,6 +12,7 @@ import PrintStationsSettings from '@/components/admin/print-stations-settings';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
+import { haceTiempo } from '@/lib/dates';
 
 export const metadata = { title: 'Mi PC del local – Panel admin' };
 
@@ -34,13 +35,7 @@ export const metadata = { title: 'Mi PC del local – Panel admin' };
    redirigen aquí (ver sus page.tsx) para no romper enlaces viejos.
    ============================================================ */
 
-function timeAgo(iso: string): string {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (mins < 60) return `hace ${mins} min`;
-  const hours = Math.round(mins / 60);
-  if (hours < 48) return `hace ${hours} h`;
-  return `hace ${Math.round(hours / 24)} días`;
-}
+const timeAgo = (iso: string): string => haceTiempo(iso);
 
 const QUE_HACE = [
   {

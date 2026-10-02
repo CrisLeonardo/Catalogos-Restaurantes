@@ -7,6 +7,7 @@ import { StatCard, IncomeChart, EmptyState } from '@/components/super/ui';
 import { getFinanceOverview } from '@/lib/db/billing';
 import { reminderHref } from '@/lib/reminder';
 import { fmtMoney, currencySymbol } from '@/lib/money';
+import { fechaCorta } from '@/lib/dates';
 
 export const metadata = { title: 'Finanzas — Super Admin' };
 export const dynamic = 'force-dynamic';
@@ -31,13 +32,13 @@ export default async function FinanzasResumenPage() {
           growth={growth}
           sub={growth == null ? `mes pasado: ${fmtMoney(fin.collectedLastMonth, fin.currency)}` : undefined}
         />
-        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(fin.mrr, fin.currency)} icon="wallet" tone="accent" sub={`${fin.activeBilling} restaurante(s) facturando`} />
+        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(fin.mrr, fin.currency)} icon="wallet" tone="accent" sub={`${fin.activeBilling} ${fin.activeBilling === 1 ? 'restaurante facturando' : 'restaurantes facturando'}`} />
         <StatCard
           label="Pendiente de cobro"
           value={fmtMoney(fin.pendingTotal, fin.currency)}
           icon="clock"
           tone={fin.pendingTotal > 0 ? 'warn' : undefined}
-          sub={fin.receivables.length > 0 ? `${fin.receivables.length} restaurante(s)` : 'nada pendiente'}
+          sub={fin.receivables.length > 0 ? `${fin.receivables.length} ${fin.receivables.length === 1 ? 'restaurante' : 'restaurantes'}` : 'nada pendiente'}
         />
         <StatCard
           label="Vencido"
@@ -107,8 +108,8 @@ export default async function FinanzasResumenPage() {
                       {r.status === 'suspended' && <Badge variant="neutral" style={{ fontSize: 10 }}>Suspendido</Badge>}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3 }}>
-                      {r.invoices.length} cobro(s) pendiente(s)
-                      {r.lastPaidAt ? ` · último pago ${r.lastPaidAt.slice(0, 10)}` : ' · nunca ha pagado'}
+                      {r.invoices.length} {r.invoices.length === 1 ? 'cobro pendiente' : 'cobros pendientes'}
+                      {r.lastPaidAt ? ` · último pago ${fechaCorta(r.lastPaidAt)}` : ' · nunca ha pagado'}
                     </div>
                   </div>
                   <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 800, fontSize: 15, color: r.overdueTotal > 0 ? 'var(--c-danger)' : 'var(--c-warn)', whiteSpace: 'nowrap' }}>

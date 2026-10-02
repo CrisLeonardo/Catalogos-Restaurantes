@@ -1044,15 +1044,29 @@ function CategoryCovers({
 /* ── Piezas de platillo ───────────────────────────────────── */
 
 /** Arte del producto: foto o BrandPattern según config.productArt. */
-function ProductArt({ p, icon, scale = 1, sizes = PRODUCT_ART_SIZES }: { p: ProdItem; icon: string; scale?: number; sizes?: string }) {
+function ProductArt({ p, icon, scale = 1, sizes = PRODUCT_ART_SIZES, behindText = false }: {
+  p: ProdItem; icon: string; scale?: number; sizes?: string;
+  /** El nombre y la descripción van ENCIMA del arte (tarjeta destacada). */
+  behindText?: boolean;
+}) {
   const config = useThemeConfig();
   const usePhoto = p.image_url && config.productArt !== 'pattern';
   if (usePhoto) {
     return <AssetImage src={p.image_url!} alt={p.name} fill style={{ objectFit: 'cover' }} sizes={sizes} />;
   }
+  /* Sin foto, la destacada pintaba el icono enorme y casi opaco al centro,
+     justo debajo del nombre y la descripción: trazo blanco bajo letra blanca,
+     ilegible («Mocha Negra», «Mole poblano»…). Ahí el icono se aparta arriba
+     a la derecha y se atenúa: sigue diciendo «aquí va un plato» sin tapar el
+     texto (auditoría 2026-10-02, CAT-02). */
   return (
     <div style={{ position: 'absolute', inset: 0, color: 'var(--u-text)' }}>
-      <BrandPattern icon={icon} seed={seedFromString(p.id)} iconScale={scale} />
+      <BrandPattern
+        icon={icon}
+        seed={seedFromString(p.id)}
+        iconScale={behindText ? 0.95 : scale}
+        {...(behindText ? { iconAt: { x: 74, y: 38 }, iconOpacity: 0.32 } : {})}
+      />
     </div>
   );
 }
@@ -1246,7 +1260,7 @@ function FeaturedTile({ p, icon, qty, ordersEnabled, forceUnavailable = false, w
       ariaLabel={`Ver ${name}`}
     >
       <div className="m-tile-art" style={{ aspectRatio: String(FEATURED_RATIO[width] ?? 1.85) }}>
-        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} />
+        <ProductArt p={p} icon={icon} scale={1.35} sizes={FEATURED_ART_SIZES} behindText />
         <div
           aria-hidden
           style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.24) 46%, rgba(0,0,0,0) 72%)' }}

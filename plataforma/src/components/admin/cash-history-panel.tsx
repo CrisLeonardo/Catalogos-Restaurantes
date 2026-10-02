@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { deleteCashCount, type CashCount } from '@/lib/actions/finanzas';
 import { DENOM_FIELDS } from '@/lib/finanzas-constants';
 import CashHistoryExportButton from '@/components/admin/cash-history-export-button';
+import { fmtMoney } from '@/lib/money';
 
-const money = (n: number) => `Q${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 function formatDate(iso: string) {
   const d = new Date(iso);

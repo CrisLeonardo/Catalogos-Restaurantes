@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/icons';
 import { planLabel } from '@/lib/db/billing';
+import { diaMes } from '@/lib/dates';
 
 /* Colores por plan — mismos que usa la sidebar del panel admin. */
 export const PLAN_DOT: Record<string, string> = {
@@ -86,7 +87,10 @@ export function StatCard({
         {icon && <Icon name={icon} size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
         <span className="t-kicker" style={{ fontSize: 9.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, lineHeight: 1, color, letterSpacing: '-0.02em' }}>
+      {/* Crece con la pantalla y nunca se sale: con el separador de miles
+          («Q1,495.00») el importe a 26 px fijos rebasaba su tarjeta en un
+          teléfono de 390 px (auditoría 2026-10-02, T-01). */}
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(19px, 5.4vw, 26px)', lineHeight: 1, color, letterSpacing: '-0.02em', minWidth: 0, overflowWrap: 'anywhere' }}>
         {value}
       </div>
       {growth != null ? (
@@ -200,7 +204,7 @@ export function IncomeChart({
         return (
           <div
             key={p.month}
-            title={`${label} ${p.month.slice(0, 4)}: ${currencySymbol}${p.total.toLocaleString('es-GT', { maximumFractionDigits: 0 })} · ${p.count} pago(s)`}
+            title={`${label} ${p.month.slice(0, 4)}: ${currencySymbol}${p.total.toLocaleString('es-GT', { maximumFractionDigits: 0 })} · ${p.count} ${p.count === 1 ? 'pago' : 'pagos'}`}
             style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%' }}
           >
             {p.total > 0 && (
@@ -263,7 +267,7 @@ export function ActivityChart({
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
-        <span>{series[0]?.date.slice(5)}</span>
+        <span>{series[0] ? diaMes(series[0].date) : null}</span>
         <span>hoy</span>
       </div>
     </div>

@@ -28,6 +28,7 @@ import { awardLoyaltyForOrder, maybeAwardSignupBonus } from '@/lib/actions/loyal
 import { notifyOrderStatus } from '@/lib/whatsapp/notify';
 import { getCustomerIdByAuthUser, resolveDinerAuthUserId } from '@/lib/db/loyalty';
 import { resolveItemOptions } from '@/lib/order-options';
+import { isUnavailable } from '@/lib/product-availability';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payment-method';
 import { repartirPagos, metodoDominante, type PagoEntrada } from '@/lib/table-payments';
 import { hayColumnaMesa, direccionDeMesa } from '@/lib/db/mesa-columna';
@@ -109,11 +110,18 @@ async function verifyAndPriceItems(
   const productIds = [...new Set(items.map((i) => i.productId))];
   const { data: dbProducts, error: productsError } = await db
     .from('products')
-    .select('id, name, price, cost, is_available, options')
+    .select('id, name, price, cost, is_available, unavailable_at, track_stock, stock, options')
     .eq('restaurant_id', restaurantId)
     .in('id', productIds);
 
   if (productsError) return { error: productsError.message };
+
+  // La MISMA regla con la que el menú decide qué enseña como pedible
+  // (lib/product-availability.ts): lo marcado agotado vuelve solo a las
+  // 12 h. Antes aquí se leía `is_available` crudo y el comensal se
+  // encontraba con «ya no está disponible» al confirmar un platillo que el
+  // menú le ofrecía (auditoría 2026-10-02, CAT-01).
+  const ahora = Date.now();
 
   const productById = new Map(
     (dbProducts ?? []).map((p) => [p.id as string, p]),
@@ -123,7 +131,7 @@ async function verifyAndPriceItems(
 
   for (const item of items) {
     const product = productById.get(item.productId);
-    if (!product || !product.is_available) {
+    if (!product || isUnavailable(product, ahora)) {
       return { error: `"${item.name}" ya no está disponible.${notAvailableSuffix}` };
     }
 

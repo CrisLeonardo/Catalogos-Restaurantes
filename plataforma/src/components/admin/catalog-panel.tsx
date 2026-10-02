@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToastManager } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
+import { isOutOfStock } from '@/lib/product-availability';
 import type { Category, Product } from '@/types';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
@@ -82,7 +83,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
       if (silent) return;
       toast({
         title: next ? `${name} vuelve a estar disponible` : `${name} quedó marcado como agotado`,
-        description: next ? undefined : 'Tus clientes dejan de verlo en el menú.',
+        description: next ? undefined : 'Tus clientes lo ven agotado y no lo pueden pedir. Vuelve solo en 12 h.',
         type: 'success',
         actionProps: {
           children: 'Deshacer',
@@ -288,15 +289,27 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-danger)', padding: '3px 8px', borderRadius: 99, background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
                       Desactivado
                     </span>
+                  ) : isOutOfStock(p) ? (
+                    /* Sin existencias no se arregla con el interruptor: encenderlo
+                       no repone nada y `place_order` lo seguiría rechazando. Se
+                       dice qué pasa y dónde se arregla. */
+                    <Link
+                      href={panelHref(base, '/admin/inventario')}
+                      title="Repón existencias en Inventario"
+                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--c-warn)', padding: '3px 8px', borderRadius: 99, background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', textDecoration: 'none' }}
+                    >
+                      Sin existencias
+                    </Link>
                   ) : (
                     <>
                       <Switch
                         checked={p.is_available}
                         onCheckedChange={(next) => setAvailability(p.id, p.name, next)}
-                        aria-label={p.is_available ? 'Marcar agotado' : 'Marcar activo'}
+                        aria-label={p.is_available ? 'Marcar agotado' : 'Marcar disponible'}
                       />
                       <span style={{ fontSize: 12, fontWeight: p.is_available ? 400 : 600, color: p.is_available ? 'var(--u-text-2)' : 'var(--c-warn)' }}>
-                        {p.is_available ? 'Activo' : 'Agotado'}
+                        {/* «Activo» se confundía con «Mostrar en el menú» (MEN-03). */}
+                        {p.is_available ? 'Disponible' : 'Agotado'}
                       </span>
                     </>
                   )}

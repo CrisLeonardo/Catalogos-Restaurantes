@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { fmtMoney } from '@/lib/money';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -27,7 +28,7 @@ export const metadata = { title: 'Clientes – Panel admin' };
    ============================================================ */
 
 function fmtQ(n: number): string {
-  return `Q${Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return fmtMoney(Number(n));
 }
 
 function fmtDate(iso: string | null, tz: string): string {

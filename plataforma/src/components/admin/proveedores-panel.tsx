@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import type { Supplier, PurchaseOrder, SupplierSummary, PurchaseableProduct, PurchaseableIngredient } from '@/lib/db/suppliers';
+import { fmtMoney } from '@/lib/money';
 
 interface Props {
   restaurantId: string;
@@ -29,7 +30,7 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', marginBottom: 4, display: 'block',
 };
 function money(n: number) {
-  return 'Q ' + Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fmtMoney(Number(n));
 }
 const ESTADO_COLOR: Record<string, string> = {
   BORRADOR: '#9aa3ad', ENVIADA: 'var(--c-warn)', RECIBIDA: 'var(--c-ok)', CANCELADA: 'var(--c-danger)',
