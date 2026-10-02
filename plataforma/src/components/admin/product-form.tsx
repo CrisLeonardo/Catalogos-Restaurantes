@@ -285,7 +285,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                 </div>
               </div>
               <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: -6, display: 'block' }}>
-                Se muestran solo si activas el selector de idioma en Ajustes → Idiomas del menú. Sin traducción, el comensal ve el español.
+                Se muestran solo si activas «Menú también en inglés» en Ajustes. Sin traducción, el comensal ve el español.
               </span>
               <div>
                 <label style={labelStyle}>Etiquetas</label>
@@ -497,7 +497,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                 <a href={panelHref(base, '/admin/modulos')} style={{ color: 'var(--brand-accent-ink)', textDecoration: 'none', fontWeight: 600 }}>
                   panel de Módulos
                 </a>{' '}
-                para gestionar el food cost de tus platillos.
+                para llevar el costo de tus platillos.
               </p>
             </Glass>
           )}
@@ -505,7 +505,7 @@ export default function ProductForm({ restaurantId, categories, product, default
             <Glass variant="quiet" style={{ padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
               <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-                Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular el food cost automáticamente.
+                Después de guardar el platillo podrás asignarle su <strong style={{ color: 'var(--u-text-2)' }}>receta</strong> e ingredientes para calcular su costo automáticamente.
               </p>
             </Glass>
           )}

@@ -67,7 +67,7 @@ export default function DriverBoard({
 
       {orders.length === 0 && (
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', textAlign: 'center', padding: '32px 0' }}>
-          No tenés pedidos asignados ahora mismo.
+          No tienes pedidos asignados ahora mismo.
         </p>
       )}
 
@@ -117,7 +117,7 @@ export default function DriverBoard({
               </p>
               {cambio != null && cambio > 0 && (
                 <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 3 }}>
-                  Paga con {money(o.cash_amount!)} — llevá {money(cambio)} de cambio.
+                  Paga con {money(o.cash_amount!)} — lleva {money(cambio)} de cambio.
                 </p>
               )}
             </div>

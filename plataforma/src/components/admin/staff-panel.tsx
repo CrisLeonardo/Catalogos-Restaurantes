@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Section } from '@/components/ui/section';
-import { List, ListRow, ListText } from '@/components/ui/list';
+import { List, ListButton, ListRow, ListText } from '@/components/ui/list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ADMIN_SECTIONS } from '@/lib/permissions';
 import {
@@ -22,6 +22,7 @@ import {
 import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
 import { staffLoginHandle } from '@/lib/staff-email';
 import { haceTiempo } from '@/lib/dates';
+import { describirActividad, humanizarClave } from '@/lib/activity-labels';
 
 /** Secciones que un gerente NO recibe con su plantilla.
     'suscripcion' es el cobro del restaurante: quién paga, cuánto y con qué
@@ -45,20 +46,13 @@ const ROLE_PRESETS: { key: string; label: string; icon: string; perms: string[] 
   { key: 'cocina', label: 'Cocina', icon: 'flame', perms: ['cocina'] },
 ];
 
-const STATUS_ES: Record<string, string> = {
-  NEW: 'Nuevo', PREP: 'Preparando', READY: 'Listo', TRANSIT: 'En camino', DELIVERED: 'Entregado', CANCEL: 'Cancelado',
-};
-function describeActivity(r: ActivityRow): string {
-  const who = r.actor_name ? `${r.actor_name}: ` : '';
-  if (r.action === 'order_status') return `${who}pedido → ${STATUS_ES[r.entity ?? ''] ?? r.entity ?? ''}`;
-  if (r.action === 'stock') return `${who}ajustó inventario`;
-  if (r.action === 'promo') return `${who}promoción "${r.entity ?? ''}"`;
-  if (r.action === 'staff') return `${who}gestión de personal`;
-  // Soporte de Leogin dentro del panel: el actor no es del restaurante, así
-  // que el nombre va en `entity` y no en `actor_name` (no está en su staff).
-  if (r.action === 'soporte') return `Soporte de Leogin entró al panel${r.entity ? ` (${r.entity})` : ''}`;
-  return `${who}${r.action}`;
-}
+/* La bitácora se dice con frases (lib/activity-labels.ts): antes caía al
+   nombre crudo de la acción y el dueño leía «order_void», «auto_archive» o
+   «pedido → SERVED» (auditoría 2026-10-02, T-15). */
+const describeActivity = (r: ActivityRow): string => describirActividad(r);
+
+/** Cuántas filas de la bitácora se ven antes de «Ver toda la actividad». */
+const ACTIVIDAD_VISIBLE = 10;
 const timeAgo = (iso: string): string => haceTiempo(iso);
 
 const SECTION_LABEL: Record<string, string> = Object.fromEntries(ADMIN_SECTIONS.map((s) => [s.key, s.label]));
@@ -81,10 +75,16 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
 }) {
   const router = useRouter();
   const [editor, setEditor] = useState<{ open: boolean; member: StaffMember | null }>({ open: false, member: null });
+  /* La bitácora entera eran ~40 filas: 4.600 px de pantalla en el teléfono
+     antes de llegar a los accesos (auditoría 2026-10-02, AJU-12). */
+  const [verTodaActividad, setVerTodaActividad] = useState(false);
+  const actividadVisible = verTodaActividad ? activity : activity.slice(0, ACTIVIDAD_VISIBLE);
 
   function describePerms(m: StaffMember): string {
     if (m.permissions == null) return 'Acceso total';
-    const labels = m.permissions.map((p) => SECTION_LABEL[p] ?? p);
+    // Una llave que ya no está en ADMIN_SECTIONS (permisos viejos guardados
+    // en el perfil) se dice con palabras, no con la clave («aprobar_anulaciones»).
+    const labels = m.permissions.map((p) => SECTION_LABEL[p] ?? humanizarClave(p));
     if (labels.length === 0) return 'Sin acceso';
     if (labels.length <= 3) return labels.join(' · ');
     return `${labels.slice(0, 3).join(' · ')} +${labels.length - 3}`;
@@ -143,7 +143,7 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
           <EmptyState
             icon="users"
             title="Sin personal todavía"
-            desc="Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca Mesero para que pueda tomar pedidos en mesa desde /admin/mesero."
+            desc="Agrega cajeros, ayudantes o meseros y elige a qué secciones acceden. Marca Mesero para que pueda tomar pedidos en mesa desde Pedidos › Tomar pedidos."
             action={{ label: 'Agregar el primero', onClick: () => setEditor({ open: true, member: null }) }}
           />
         ) : (
@@ -157,12 +157,21 @@ export default function StaffPanel({ restaurantId, slug, staff, activity, enable
           <Card className="p-4.5" style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin actividad registrada todavía.</Card>
         ) : (
           <List>
-            {activity.map((r) => (
+            {actividadVisible.map((r) => (
               <ListRow key={r.id}>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-adm-text-2">{describeActivity(r)}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-adm-text-2" title={describeActivity(r)}>{describeActivity(r)}</span>
                 <span className="shrink-0 text-[11px] text-adm-text-4">{timeAgo(r.created_at)}</span>
               </ListRow>
             ))}
+            {activity.length > ACTIVIDAD_VISIBLE && (
+              <ListButton
+                onClick={() => setVerTodaActividad((v) => !v)}
+                className="gap-2 text-[13.5px] font-semibold"
+                style={{ color: 'var(--brand-accent-ink, var(--adm-accent-500))' }}
+              >
+                {verTodaActividad ? 'Ver menos' : `Ver toda la actividad (${activity.length})`}
+              </ListButton>
+            )}
           </List>
         )}
       </Section>

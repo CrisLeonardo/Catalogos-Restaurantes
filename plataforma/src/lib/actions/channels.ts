@@ -67,8 +67,8 @@ export async function saveChannelMapping(
   if (!CHANNELS.includes(channel)) return { error: 'Canal inválido.' };
 
   const sku = input.externalSku.trim();
-  if (!sku) return { error: 'Escribí el identificador que usa la app externa.' };
-  if (!input.productId) return { error: 'Elegí a qué producto tuyo corresponde.' };
+  if (!sku) return { error: 'Escribe el identificador que usa la app externa.' };
+  if (!input.productId) return { error: 'Elige a qué producto tuyo corresponde.' };
 
   // El producto tiene que ser de ESTE restaurante. Sin esta comprobación,
   // un id copiado de otro tenant dejaría entrar pedidos apuntando a un

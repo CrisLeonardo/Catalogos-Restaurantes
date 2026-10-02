@@ -97,6 +97,20 @@ function resolveCardStyle(layers: Array<Partial<ThemeConfig>>): CardStyle {
   return DEFAULT_CONFIG.cardStyle;
 }
 
+/* TEXTOS POR DEFECTO VIEJOS (auditoría 2026-10-02, T-13: la interfaz habla
+   de «tú»). El editor del tema guarda una COPIA de todos los textos al
+   guardar, así que un restaurante que nunca tocó «¿Cómo te llamás?» lo tiene
+   escrito en su fila y seguiría viéndolo aunque el texto por defecto ya diga
+   «¿Cómo te llamas?». Solo se cambia lo que es IGUAL al texto por defecto de
+   antes: si el dueño escribió el suyo, se respeta tal cual. */
+const LEGACY_DEFAULTS: Record<string, string> = {
+  '¿Cómo te llamás?': '¿Cómo te llamas?',
+  'Decinos tu nombre': 'Dinos tu nombre',
+  'Pagás cuando llega tu pedido': 'Pagas cuando llega tu pedido',
+  'Nada por aquí. Probá otra cosa.': 'Nada por aquí. Prueba otra cosa.',
+  'Volvé en nuestro horario de atención. ¡Te esperamos!': 'Vuelve en nuestro horario de atención. ¡Te esperamos!',
+};
+
 /** Merge de 2 niveles para content (sección → claves). */
 function mergeContent(...layers: Array<DeepPartial<ThemeContent> | null | undefined>): ThemeContent {
   const base = structuredClone(DEFAULT_CONTENT) as ThemeContent;
@@ -105,7 +119,11 @@ function mergeContent(...layers: Array<DeepPartial<ThemeContent> | null | undefi
     for (const section of Object.keys(layer) as Array<keyof ThemeContent>) {
       const vals = layer[section];
       if (vals && typeof vals === 'object') {
-        Object.assign(base[section], vals);
+        const limpio: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(vals)) {
+          limpio[k] = typeof v === 'string' && v in LEGACY_DEFAULTS ? LEGACY_DEFAULTS[v] : v;
+        }
+        Object.assign(base[section], limpio);
       }
     }
   }

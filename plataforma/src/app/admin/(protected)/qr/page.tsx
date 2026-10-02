@@ -32,7 +32,7 @@ export default async function QRPage() {
       {/* El título ya lo pone la barra de arriba ("Código QR"). */}
       <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginBottom: 20 }}>
         Compártelo en redes o en tu bio: es el link con el que la gente pide
-        en línea. Para las mesas, usa los QR de la sección Mesas.
+        en línea. Para las mesas, usa los QR de Ajustes › Salón.
       </p>
 
       {restaurantId && slug ? (

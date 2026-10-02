@@ -111,7 +111,7 @@ export default async function AdminAjustesPage() {
 
   const negocio: Row[] = [
     { href: '/admin/perfil', icon: 'user', label: 'Perfil del negocio', desc: 'Nombre, contacto y datos de tu cuenta', key: 'perfil' },
-    { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abrís cada día y la pausa de pedidos', key: 'ajustes' },
+    { href: '/admin/ajustes/restaurante', icon: 'clock', label: 'Horarios', desc: 'A qué hora abres cada día y la pausa de pedidos', key: 'ajustes' },
     /* Salón. ESTABA EN EL MENÚ Y NO EN ESTA LISTA (corregido el 2026-09-07):
        `admin-nav.ts` lo cuenta como pestaña del grupo Ajustes, pero el grupo
        tiene `index: true` —no dibuja fila de pestañas, dibuja esta portada—
@@ -123,10 +123,10 @@ export default async function AdminAjustesPage() {
       ? [{ href: '/admin/ajustes/salon', icon: 'grid', label: 'Salón', desc: 'Cuántas mesas hay, el plano del local y el QR de cada mesa', key: 'mesas' } as Row]
       : []),
     ...(ordersEnabled
-      ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartís a domicilio', key: 'ajustes' } as Row]
+      ? [{ href: '/admin/ajustes/entrega', icon: 'mapPin', label: 'Zona de entrega', desc: 'Dónde estás y hasta dónde repartes a domicilio', key: 'ajustes' } as Row]
       : []),
     { href: '/admin/personalizacion', icon: 'sparkle', label: 'Personalizar el sitio', desc: 'Colores, tipografía y plantilla de tu menú', key: 'personalizar' },
-    { href: '/admin/qr', icon: 'image', label: 'Código QR', desc: 'El código que ponés en las mesas y en el mostrador', key: 'qr' },
+    { href: '/admin/qr', icon: 'image', label: 'Código QR', desc: 'El código que pones en las mesas y en el mostrador', key: 'qr' },
   ];
 
   const servicio: Row[] = [
@@ -145,9 +145,9 @@ export default async function AdminAjustesPage() {
   const cuenta: Row[] = [
     { href: '/admin/suscripcion', icon: 'wallet', label: 'Mi suscripción', desc: 'Tu plan, lo que incluye y cómo cambiarlo', key: 'suscripcion', value: planLabel },
     ...(showStaff
-      ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Encendé y apagá lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} activas` : undefined } as Row]
+      ? [{ href: '/admin/modulos', icon: 'grid', label: 'Funciones', desc: 'Enciende y apaga lo que usa tu restaurante', key: 'modulos', value: activeModules ? `${activeModules} activas` : undefined } as Row]
       : []),
-    { href: '/admin/respaldo', icon: 'download', label: 'Copia de tus datos', desc: 'Descargá todo lo tuyo cuando quieras', key: 'respaldo' },
+    { href: '/admin/respaldo', icon: 'download', label: 'Copia de tus datos', desc: 'Descarga todo lo tuyo cuando quieras', key: 'respaldo' },
     { href: '/admin/ayuda', icon: 'helpCircle', label: 'Ayuda y tutoriales', desc: 'Guías paso a paso de cada pantalla', key: 'ayuda' },
   ];
 
@@ -177,10 +177,10 @@ export default async function AdminAjustesPage() {
         <span className="mb-1 grid size-11 place-items-center rounded-adm-lg bg-adm-bg-2 text-adm-text-3">
           <Icon name="settings" size={20} />
         </span>
-        <div className="text-[15px] font-semibold text-adm-text">Aquí no hay nada para vos</div>
+        <div className="text-[15px] font-semibold text-adm-text">Aquí no hay nada para ti</div>
         <p className="max-w-[46ch] text-[13.5px] leading-snug text-adm-text-3">
-          Los ajustes del restaurante los lleva quien tenga el permiso. Si necesitás
-          cambiar algo de esta pantalla, pedíselo a la persona dueña de la cuenta.
+          Los ajustes del restaurante los lleva quien tenga el permiso. Si necesitas
+          cambiar algo de esta pantalla, pídeselo a la persona dueña de la cuenta.
         </p>
       </div>
     );

@@ -89,7 +89,7 @@ export default function CanalesPanel({
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Canales externos</h1>
         <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: '6px 0 0' }}>
-          Hacé que los pedidos de PedidosYa, Rappi o UberEats entren a tu cocina junto con los demás,
+          Haz que los pedidos de PedidosYa, Rappi o UberEats entren a tu cocina junto con los demás,
           en vez de vivir en una pantalla aparte.
         </p>
       </div>
@@ -133,7 +133,7 @@ export default function CanalesPanel({
             <label style={labelStyle}>Tu producto</label>
             <Select
               options={[
-                { value: '', label: 'Elegí un producto…' },
+                { value: '', label: 'Elige un producto…' },
                 ...products.map((p) => ({
                   value: p.id,
                   label: p.is_available ? p.name : `${p.name} (agotado)`,
@@ -211,7 +211,7 @@ export default function CanalesPanel({
           nombre de la app de donde vino.
         </p>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: 0 }}>
-          ¿Ya tenés el conector y no llega nada? Escribinos: casi siempre es que a la llave le falta permiso.
+          ¿Ya tienes el conector y no llega nada? Escríbenos: casi siempre es que a la llave le falta permiso.
         </p>
       </Card>
     </div>

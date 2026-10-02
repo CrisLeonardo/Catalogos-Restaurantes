@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select } from '@/components/ui/select';
-import { updateRestaurantOps, type RestaurantState } from '@/lib/actions/restaurant';
+import { updateRestaurantOps, type SaveState } from '@/lib/actions/restaurant';
 import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import type { Restaurant } from '@/types';
 
@@ -92,7 +92,7 @@ function buildExceptionsJson(rows: ExceptionRow[]): string {
   return Object.keys(out).length > 0 ? JSON.stringify(out) : '';
 }
 
-const empty: RestaurantState = null;
+const empty: SaveState = null;
 
 export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantOps, empty);
@@ -448,7 +448,20 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
         />
       </Card>
 
-      {state?.error && (
+
+      {state && 'saved' in state && !isPending && (
+        <div
+          role="status"
+          style={{
+            padding: '10px 14px', borderRadius: 'var(--radius-md)',
+            background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)',
+            color: 'var(--c-ok)', fontSize: 14,
+          }}
+        >
+          Cambios guardados.
+        </div>
+      )}
+      {state && 'error' in state && (
         <div
           style={{
             padding: '10px 14px',

@@ -56,7 +56,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
         Pedidos.
       </p>
 
-      <Section title="Qué te llevás">
+      <Section title="Qué te llevas">
         <List>
           {HOJAS.map((h) => (
             <ListRow key={h.label}>
@@ -81,7 +81,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
       </Button>
 
       <p className="text-[12.5px] leading-snug" style={{ color: 'var(--u-text-4)' }}>
-        El archivo lleva datos personales de tus clientes: guardalo con el mismo
+        El archivo lleva datos personales de tus clientes: guárdalo con el mismo
         cuidado que cualquier otro documento sensible de tu negocio.
       </p>
     </div>

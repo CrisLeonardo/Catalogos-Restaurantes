@@ -16,28 +16,28 @@
 
 /** Lo que se dice cuando no sabemos más: nunca deja al usuario sin salida. */
 export const GENERIC_ERROR =
-  'Algo falló de nuestro lado. Intentá otra vez en un momento; si sigue igual, escribinos.';
+  'Algo falló de nuestro lado. Intenta otra vez en un momento; si sigue igual, escríbenos.';
 
 /** Pares [huella técnica, qué le decimos a la persona]. Orden = prioridad. */
 const RULES: [RegExp, string][] = [
   [/failed to fetch|networkerror|network request failed|err_internet|err_network|load failed/i,
-    'No se pudo conectar. Revisá tu internet e intentá otra vez.'],
+    'No se pudo conectar. Revisa tu internet e intenta otra vez.'],
   [/timeout|timed out|abort/i,
-    'La conexión tardó demasiado. Puede ser la señal — intentá otra vez.'],
+    'La conexión tardó demasiado. Puede ser la señal — intenta otra vez.'],
   [/jwt|token .*(expired|invalid)|not authenticated|unauthorized|\b401\b/i,
-    'Tu sesión caducó. Volvé a entrar y seguimos donde estabas.'],
+    'Tu sesión caducó. Vuelve a entrar y seguimos donde estabas.'],
   [/forbidden|not allowed|permission denied|row-level security|\b403\b/i,
-    'Tu usuario no tiene permiso para hacer esto. Pedíselo al dueño del restaurante.'],
+    'Tu usuario no tiene permiso para hacer esto. Pídeselo al dueño del restaurante.'],
   [/duplicate key|already exists|unique constraint|\b409\b/i,
-    'Ya existe algo con ese nombre. Probá con otro.'],
+    'Ya existe algo con ese nombre. Prueba con otro.'],
   [/not found|no rows|\b404\b/i,
     'Eso ya no está. Puede que alguien lo haya borrado desde otra pantalla.'],
   [/violates foreign key|still referenced/i,
-    'No se puede borrar porque algo más lo está usando. Quitá primero lo que depende de esto.'],
+    'No se puede borrar porque algo más lo está usando. Quita primero lo que depende de esto.'],
   [/payload too large|file too large|\b413\b/i,
-    'El archivo pesa demasiado. Probá con una imagen más liviana.'],
+    'El archivo pesa demasiado. Prueba con una imagen más liviana.'],
   [/too many requests|rate limit|\b429\b/i,
-    'Demasiados intentos seguidos. Esperá unos segundos y volvé a probar.'],
+    'Demasiados intentos seguidos. Espera unos segundos y vuelve a probar.'],
   [/\b5\d\d\b|internal server|service unavailable|bad gateway/i, GENERIC_ERROR],
 ];
 
@@ -55,7 +55,7 @@ const TECHNICAL =
 export function friendlyError(e: unknown): string {
   // Sin conexión se sabe sin mirar el error, y es la causa más común de todas.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    return 'Estás sin internet. Cuando vuelva la señal, intentá otra vez.';
+    return 'Estás sin internet. Cuando vuelva la señal, intenta otra vez.';
   }
 
   const raw = (e instanceof Error ? e.message : typeof e === 'string' ? e : '').trim();

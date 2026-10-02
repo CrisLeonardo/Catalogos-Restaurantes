@@ -48,7 +48,7 @@ export default function DriversPanel({
     <div style={{ maxWidth: 720 }}>
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Repartidores</h1>
       <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginBottom: 22 }}>
-        Quién lleva los pedidos a domicilio. Desde Pedidos les asignás cada
+        Quién lleva los pedidos a domicilio. Desde Pedidos les asignas cada
         entrega, y ellos la marcan como entregada desde su teléfono.
       </p>
 

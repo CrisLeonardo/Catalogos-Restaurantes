@@ -183,7 +183,7 @@ export default function CommandSearch({ groups }: Props) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onInputKey}
-            placeholder="Buscá una pantalla: impresora, QR, inventario…"
+            placeholder="Busca una pantalla: impresora, QR, inventario…"
             className="min-w-0 flex-1 bg-transparent text-[15px] text-adm-text outline-none placeholder:text-adm-text-4"
             autoComplete="off"
             spellCheck={false}
@@ -193,7 +193,7 @@ export default function CommandSearch({ groups }: Props) {
         <div className="max-h-[52vh] overflow-y-auto p-2">
           {hits.length === 0 ? (
             <p className="px-3 py-6 text-center text-[13.5px] leading-snug text-adm-text-3">
-              Nada con ese nombre. Probá con lo que querés hacer —«cobrar», «horarios», «puntos»— o mirá el Centro de ayuda.
+              Nada con ese nombre. Prueba con lo que quieres hacer —«cobrar», «horarios», «puntos»— o mira el Centro de ayuda.
             </p>
           ) : (
             hits.map((h, i) => (

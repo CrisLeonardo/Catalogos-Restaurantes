@@ -167,7 +167,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 4 }}>
-            Define los insumos y su costo por unidad. Asígnalos a platillos para calcular el food cost automáticamente.
+            Define los insumos y su costo por unidad. Asígnalos a tus platillos para calcular su costo automáticamente.
           </p>
         </div>
         <Button
@@ -224,8 +224,8 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
       {initialIngredients.length === 0 && !showAdd ? (
         <EmptyState
           icon="flask"
-          title="Aún no tenés insumos registrados"
-          desc="Creá el primero para poder asignarlo a las recetas de tus platillos y calcular el food cost automáticamente."
+          title="Aún no tienes insumos registrados"
+          desc="Crea el primero para poder asignarlo a las recetas de tus platillos y calcular su costo automáticamente."
           action={{ label: 'Agregar el primero', onClick: () => setShowAdd(true) }}
         />
       ) : (

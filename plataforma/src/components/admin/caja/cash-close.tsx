@@ -430,9 +430,9 @@ function PasoEfectivo({ counts, setCount, opening, setOpening }: {
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <span className="t-display" style={{ flex: 1, minWidth: 160, fontSize: 19, lineHeight: 1.15 }}>
-          Contá el efectivo
+          Cuenta el efectivo
         </span>
-        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Escribí cuántos hay de cada uno</span>
+        <span style={{ fontSize: 13, color: 'var(--u-text-3)' }}>Escribe cuántos hay de cada uno</span>
       </div>
 
       <div className="caja-cards">

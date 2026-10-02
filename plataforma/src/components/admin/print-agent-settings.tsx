@@ -456,7 +456,7 @@ export default function PrintAgentSettings() {
               Si el agente lleva más de 5 minutos sin conexión, los pedidos del menú en línea se
               pausan con un aviso amable (nadie pide a un local que no puede ver su pedido) y se
               reanudan solos al reconectar. Los pedidos del mesero y del modo emergencia no se
-              afectan. <strong style={{ color: 'var(--u-text-2)' }}>Requiere que la PC del agente esté
+              afectan. <strong style={{ color: 'var(--u-text-2)' }}>Requiere que la PC principal esté
               encendida durante todo tu horario de atención</strong> — si la apagan, los pedidos en
               línea se pausarían aunque sí haya internet.
             </p>

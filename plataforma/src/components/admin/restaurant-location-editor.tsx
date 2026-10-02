@@ -15,7 +15,7 @@ import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { updateRestaurantLocation } from '@/lib/actions/restaurant';
+import { updateRestaurantLocation, type SaveState } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
 
 const LocationMap = dynamic(
@@ -40,7 +40,7 @@ const DEFAULT_LAT = 14.64072;
 const DEFAULT_LNG = -90.51327;
 const DEFAULT_RADIUS = 3;
 
-const empty = null;
+const empty: SaveState = null;
 
 export default function RestaurantLocationEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantLocation, empty);
@@ -74,7 +74,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
               Validación por mapa (radio)
             </p>
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
-              El cliente verá un mapa en el checkout y solo podrá pedir si su pin
+              Al pedir, el cliente verá un mapa y solo podrá pedir si su pin
               cae dentro del radio que definas.
             </p>
           </div>
@@ -173,13 +173,26 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
             fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5,
           }}>
             <Icon name="mapPin" size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            La validación por mapa está desactivada. El checkout usará las zonas
-            de texto (si las configuraste) o aceptará cualquier dirección.
+            La validación por mapa está desactivada. Al pedir se usarán las zonas
+            de abajo (si agregas alguna) o se aceptará cualquier dirección.
           </div>
         )}
       </Card>
 
-      {state?.error && (
+
+      {state && 'saved' in state && !isPending && (
+        <div
+          role="status"
+          style={{
+            padding: '10px 14px', borderRadius: 'var(--radius-md)',
+            background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)',
+            color: 'var(--c-ok)', fontSize: 14,
+          }}
+        >
+          Cambios guardados.
+        </div>
+      )}
+      {state && 'error' in state && (
         <div style={{
           padding: '10px 14px', borderRadius: 'var(--radius-md)',
           background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',

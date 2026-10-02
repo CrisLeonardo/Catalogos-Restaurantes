@@ -133,7 +133,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
         <div>
           <h1 className="t-poster" style={{ fontSize: 20 }}>Categorías del menú</h1>
           <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, margin: '3px 0 0' }}>
-            Ordená cómo aparecen en la app del cliente.
+            Ordena cómo aparecen en tu menú.
           </p>
         </div>
         <Button onClick={() => setShowNew(true)} className="rounded-adm-full">
@@ -146,7 +146,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
         <EmptyState
           icon="tag"
           title="Sin categorías aún"
-          desc="Creá una para organizar tu menú — entradas, bebidas, postres…"
+          desc="Crea una para organizar tu menú — entradas, bebidas, postres…"
           action={{ label: 'Crear la primera', onClick: () => setShowNew(true) }}
         />
       )}

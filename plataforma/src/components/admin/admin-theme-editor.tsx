@@ -259,7 +259,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
 
             <Section title="Información de marca">
               <TextCtl label="Nombre de marca" value={config.brandName} onChange={(v) => setC('brandName', v)} />
-              <TextCtl label="Tagline / lema" value={config.tagline} onChange={(v) => setC('tagline', v)} placeholder="Sabor que enamora…" />
+              <TextCtl label="Lema" value={config.tagline} onChange={(v) => setC('tagline', v)} placeholder="Sabor que enamora…" />
               <TextCtl label="Zona / ubicación" value={config.zone} onChange={(v) => setC('zone', v)} placeholder="Zona 1, Centro…" />
             </Section>
 
@@ -533,7 +533,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
               </div>
             </Section>
 
-            <Section title="Checkout y pago">
+            <Section title="Pago del pedido">
               <Segmented
                 label="Color del estado activo (tabs / opciones)"
                 value={config.checkoutActiveColor}
@@ -582,10 +582,10 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             {([
               ['portada', 'Portada', [
                 ['title', 'Título (vacío = nombre del restaurante)'],
-                ['subtitle', 'Subtítulo (vacío = tagline)'],
+                ['subtitle', 'Subtítulo (vacío = el lema)'],
                 ['cta', 'Texto del botón'],
-                ['badgeOpen', 'Badge "Abierto"'],
-                ['badgeClosed', 'Badge "Cerrado"'],
+                ['badgeOpen', 'Etiqueta «Abierto»'],
+                ['badgeClosed', 'Etiqueta «Cerrado»'],
               ]],
               ['product', 'Producto', [
                 ['add', 'Botón "Agregar"'],
@@ -605,7 +605,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 ['checkout', 'Botón "Ir a pagar"'],
                 ['barCta', 'Barra flotante'],
               ]],
-              ['checkout', 'Checkout', [
+              ['checkout', 'Al pagar', [
                 ['title', 'Título'],
                 ['typeLabel', 'Tipo de pedido'],
                 ['delivery', 'A domicilio'],

@@ -54,7 +54,7 @@ export default async function AdminHorariosPage() {
   return (
     <div className="anim-fade-up max-w-[720px]">
       <p className="mb-5 text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Cuándo abrís cada día, y el interruptor para dejar de recibir pedidos
+        Cuándo abres cada día, y el interruptor para dejar de recibir pedidos
         sin cerrar tu menú.
       </p>
       <HoursEditor restaurant={restaurant as Restaurant} />

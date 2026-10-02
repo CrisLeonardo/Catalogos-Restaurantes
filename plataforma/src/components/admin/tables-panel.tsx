@@ -266,7 +266,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
               Códigos QR por mesa
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5 }}>
-              Cada QR lleva al cliente al menú con su mesa pre-seleccionada en el checkout.
+              Cada QR lleva al cliente al menú con su mesa ya elegida para el pedido.
               Imprime cada código y colócalo en la mesa correspondiente.
             </div>
           </div>

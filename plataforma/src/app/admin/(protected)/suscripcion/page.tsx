@@ -24,6 +24,7 @@ import ReceiptDownloadButton from '@/components/super/receipt-download-button';
 import { panelLink, panelBase } from '@/lib/panel-links-server';
 import { panelHref } from '@/lib/panel-links';
 import { conMesesLegibles, fechaCorta } from '@/lib/dates';
+import { getPlatformContactSettings } from '@/lib/actions/super-admin';
 
 export const metadata = { title: 'Mi suscripción – Panel admin' };
 export const dynamic = 'force-dynamic';
@@ -73,10 +74,11 @@ export default async function SuscripcionPage() {
   }
   if (!restaurantId) redirect('/admin/login');
 
-  const [billingResult, feeBreakdown, pricing] = await Promise.all([
+  const [billingResult, feeBreakdown, pricing, contacto] = await Promise.all([
     getMyBilling(restaurantId),
     getFeeBreakdown(restaurantId),
     getEffectivePlanPricing(),
+    getPlatformContactSettings(),
   ]);
   const { config, invoices, pendingTotal, currency } = billingResult;
 
@@ -102,6 +104,13 @@ export default async function SuscripcionPage() {
   const hasOverdue = pending.some((i) => isOverdue(i));
   const onTrial = isOnTrial(config);
   const trialLeft = trialDaysLeft(config);
+
+  /* «Enviar comprobante»: WhatsApp de soporte (Super › Configuración) o, si
+     no está, el del entorno. Con el monto y el restaurante ya escritos. */
+  const waPago = (contacto.support_whatsapp || CONTACT_WA || '').replace(/[^\d]/g, '');
+  const comprobanteHref = pendingTotal > 0 && waPago
+    ? `https://wa.me/${waPago}?text=${encodeURIComponent(`Hola, soy de ${restaurantName}. Te envío el comprobante de pago de ${fmtMoney(pendingTotal, currency)}.`)}`
+    : null;
 
   const nextPlanCode = nextPlan(currentPlan);
   const nextPlanInfo = nextPlanCode ? PLANS[nextPlanCode] : null;
@@ -237,7 +246,7 @@ export default async function SuscripcionPage() {
               { icon: 'calendar', label: 'Reservaciones en línea',   desc: 'Mesas llenas incluso entre semana' },
               { icon: 'chart',    label: 'Estadísticas avanzadas',   desc: 'Ventas, horas pico y ticket promedio' },
               { icon: 'users',    label: 'Usuarios ilimitados',      desc: 'Tu equipo opera sin depender de ti' },
-              { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Canal de delivery con mapa integrado' },
+              { icon: 'truck',    label: 'Pedidos a domicilio',      desc: 'Entregas a domicilio con mapa integrado' },
               { icon: 'grid',     label: 'Comer en local (QR)',      desc: 'Pedidos desde la mesa del cliente' },
               { icon: 'userPlus', label: 'Panel de mesero',          desc: 'Tablet para tomar pedidos en sala' },
               { icon: 'bellRing', label: 'Alertas en tiempo real',   desc: 'Panel de cocina y pedidos en vivo' },
@@ -372,6 +381,29 @@ export default async function SuscripcionPage() {
                 <div style={{ fontSize: 13.5, color: 'var(--u-text-3)', marginTop: 4 }}>
                   {hasOverdue ? 'Tienes pagos vencidos' : 'Pendiente por pagar'} · {pending.length} {pending.length === 1 ? 'cobro' : 'cobros'}.
                 </div>
+                {/* Con pagos pendientes, la pantalla decía cuánto se debía pero
+                    no CÓMO pagarlo: ni cuenta ni a quién mandar el comprobante
+                    (auditoría 2026-10-02, AJU-13). Las instrucciones las escribe
+                    Leogin en Super › Configuración › Soporte. */}
+                {contacto.payment_instructions && (
+                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)' }}>
+                    <div className="adm-label" style={{ marginBottom: 4 }}>Cómo pagar</div>
+                    <div style={{ fontSize: 13.5, color: 'var(--u-text-2)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                      {contacto.payment_instructions}
+                    </div>
+                  </div>
+                )}
+                {comprobanteHref && (
+                  <a
+                    href={comprobanteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-accent press"
+                    style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 18px', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    <Icon name="whatsapp" size={16} /> Enviar comprobante de pago
+                  </a>
+                )}
               </>
             ) : (
               <>
@@ -431,8 +463,12 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
     : { label: 'Pendiente', color: 'var(--c-warn)', bg: 'var(--c-warn-bg)' };
 
   return (
-    <ListRow>
+    /* En el teléfono, el concepto va solo en su renglón y debajo el estado, el
+       monto y el recibo: los cuatro en una fila partían «Mensualidad 2026-07»
+       en cuatro líneas (auditoría 2026-10-02, AJU-13). */
+    <ListRow className="flex-wrap gap-y-2 sm:flex-nowrap">
       <ListText
+        className="basis-full sm:basis-auto"
         /* Las fechas venían crudas de la base («Mensualidad 2026-09», «Vence
            el 2026-09-01»): auditoría 2026-10-02, T-02. */
         title={conMesesLegibles(inv.description ?? CONCEPT_LABEL[inv.concept])}

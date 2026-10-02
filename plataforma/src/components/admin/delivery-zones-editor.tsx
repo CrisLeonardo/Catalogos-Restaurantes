@@ -17,9 +17,9 @@
 import { useActionState, useState } from 'react';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icons';
-import { updateDeliveryZones, type RestaurantState } from '@/lib/actions/restaurant';
+import { updateDeliveryZones, type ZonesState } from '@/lib/actions/restaurant';
 
-const empty: RestaurantState = null;
+const empty: ZonesState = null;
 
 export interface ZoneDraft {
   nombre: string;
@@ -64,7 +64,7 @@ export default function DeliveryZonesEditor({
             letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
           }}
         >
-          Zonas a las que llega tu delivery
+          Zonas a las que llevas a domicilio
         </label>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginBottom: 12, lineHeight: 1.5 }}>
           Si agregas zonas, el cliente debe elegir la suya al pedir a domicilio y
@@ -157,7 +157,7 @@ export default function DeliveryZonesEditor({
         </div>
       </Glass>
 
-      {state?.error && (
+      {state && 'error' in state && (
         <div
           style={{
             padding: '10px 14px', borderRadius: 'var(--radius-md)',
@@ -166,6 +166,18 @@ export default function DeliveryZonesEditor({
           }}
         >
           {state.error}
+        </div>
+      )}
+      {state && 'saved' in state && !isPending && (
+        <div
+          role="status"
+          style={{
+            padding: '10px 14px', borderRadius: 'var(--radius-md)',
+            background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)',
+            color: 'var(--c-ok)', fontSize: 14,
+          }}
+        >
+          Zonas guardadas.
         </div>
       )}
 

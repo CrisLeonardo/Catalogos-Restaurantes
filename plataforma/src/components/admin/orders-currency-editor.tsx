@@ -36,7 +36,7 @@ type Patch = Pick<ThemeConfig,
   'currencySymbol' | 'currencyPosition' | 'locale' | 'animations' |
   'kdsYellowMin' | 'kdsRedMin' | 'kdsConfirmFirst' |
   'salonReadyMin' | 'salonUnpaidMin' | 'salonUnacceptedMin' |
-  'autoConfirmEnabled' | 'autoConfirmMinutes'
+  'autoConfirmEnabled' | 'autoConfirmMinutes' | 'deliveryFee'
 >;
 
 const ORDER_TYPE_LABEL: Record<ThemeConfig['orderTypes'][number], string> = {
@@ -48,6 +48,23 @@ const ORDER_TYPE_LABEL: Record<ThemeConfig['orderTypes'][number], string> = {
 interface Props {
   restaurantId: string;
   config: Patch;
+}
+
+/** Formatos de número que se ofrecen: el nombre del país y no el código. */
+const LOCALES: { value: string; label: string }[] = [
+  { value: 'es-GT', label: 'Guatemala' },
+  { value: 'es-MX', label: 'México' },
+  { value: 'es-SV', label: 'El Salvador' },
+  { value: 'es-HN', label: 'Honduras' },
+  { value: 'es-CR', label: 'Costa Rica' },
+  { value: 'en-US', label: 'Estados Unidos' },
+  { value: 'es-ES', label: 'España' },
+];
+
+/** «1,234.50» con el formato elegido (o el de Guatemala si el código no vale). */
+function ejemploLocale(locale: string): string {
+  try { return (1234.5).toLocaleString(locale || 'es-GT', { minimumFractionDigits: 2 }); }
+  catch { return (1234.5).toLocaleString('es-GT', { minimumFractionDigits: 2 }); }
 }
 
 /** Campo de una fila: corto y a la derecha, donde va el valor. */
@@ -167,10 +184,32 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
               ))}
             </div>
           </ListRow>
+          {/* La tarifa de envío normal NO se podía configurar en ninguna
+              pantalla: existía en la base (`deliveryFee`, 0 por defecto) y un
+              restaurante sin zonas entregaba gratis sin saberlo (auditoría
+              2026-10-02, AJU-19). Las zonas con su propia tarifa siguen
+              mandando sobre esta. */}
+          {patch.orderTypes.includes('delivery') && (
+            <ListRow>
+              <ListText title="Envío a domicilio" desc="Lo que se cobra por llevar un pedido. Si tienes zonas, cada una cobra su tarifa." />
+              <div className="flex shrink-0 items-center gap-1.5">
+                {patch.currencyPosition !== 'suffix' && <span className="text-[13px] text-adm-text-3">{sym}</span>}
+                <input
+                  type="number" inputMode="decimal" min={0} max={10000} step="0.5"
+                  value={patch.deliveryFee}
+                  onChange={(e) => set('deliveryFee', Math.max(0, Math.min(10000, parseFloat(e.target.value) || 0)))}
+                  aria-label="Envío a domicilio"
+                  className="t-mono"
+                  style={{ ...fieldStyle, width: 84, textAlign: 'center', padding: '8px 6px' }}
+                />
+                {patch.currencyPosition === 'suffix' && <span className="text-[13px] text-adm-text-3">{sym}</span>}
+              </div>
+            </ListRow>
+          )}
         </List>
         <SectionNote>
           A domicilio el repartidor lleva el POS y cobra al entregar; para
-          recoger se cobra con la terminal del local.
+          recoger se cobra con la terminal del local. Envío en 0 = gratis.
         </SectionNote>
       </Section>
 
@@ -300,14 +339,22 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
 
       <Section title="Formato y movimiento">
         <List>
+          {/* Antes era un campo para escribir «es-GT» a mano: un código
+              técnico que el dueño no tiene por qué conocer (auditoría
+              2026-10-02, T-15 / AJU-09). Ahora se elige por cómo se ve un
+              precio; un código raro que ya estuviera guardado se conserva. */}
           <ListRow>
-            <ListText title="Formato de números" desc="Código de país: es-GT, en-US…" />
-            <input
-              type="text" value={patch.locale} placeholder="es-GT" aria-label="Formato de números"
+            <ListText title="Formato de números" desc={`Así se ven tus precios: ${ejemploLocale(patch.locale)}`} />
+            <select
+              value={patch.locale} aria-label="Formato de números"
               onChange={(e) => set('locale', e.target.value)}
-              className="t-mono"
-              style={{ ...fieldStyle, width: 92, textAlign: 'center' }}
-            />
+              style={{ ...fieldStyle, width: 'auto', maxWidth: 190 }}
+            >
+              {LOCALES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+              {!LOCALES.some((l) => l.value === patch.locale) && patch.locale && (
+                <option value={patch.locale}>{patch.locale}</option>
+              )}
+            </select>
           </ListRow>
           <ToggleRow
             label="Animaciones"
@@ -320,7 +367,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
 
       <p className="px-4 text-[12.5px] leading-snug text-adm-text-3">
         Los modos de pedido (domicilio, para llevar, comer en local) se
-        encienden en Funciones. La cantidad de mesas, en Mesas.
+        encienden en Funciones. La cantidad de mesas y sus QR, en Ajustes › Salón.
       </p>
 
       {/* Barra de guardado: aparece SOLO si hay algo sin guardar. Pegada al
@@ -332,7 +379,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
             className="flex-1 text-[13px]"
             style={{ color: msg?.startsWith('Error') ? 'var(--c-danger)' : msg ? 'var(--c-ok)' : 'var(--u-text-3)' }}
           >
-            {msg ?? (isPending ? 'Guardando…' : 'Tenés cambios sin guardar')}
+            {msg ?? (isPending ? 'Guardando…' : 'Tienes cambios sin guardar')}
           </span>
           <Button onClick={save} disabled={isPending || !dirty} className="rounded-adm-full">
             {isPending ? 'Guardando…' : 'Guardar'}

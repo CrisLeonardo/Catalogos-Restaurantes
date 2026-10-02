@@ -82,3 +82,16 @@ describe('resolveTheme · compatibilidad catalogView → cardStyle', () => {
     expect(resolveTheme({}).config.cardStyle).toBe('tarjeta');
   });
 });
+
+describe('textos por defecto viejos guardados en el tema (T-13: «tú»)', () => {
+  it('el texto por defecto de antes se cambia por el de ahora', () => {
+    const t = resolveTheme({ content: { checkout: { namePh: '¿Cómo te llamás?', errName: 'Decinos tu nombre' } } });
+    expect(t.content.checkout.namePh).toBe('¿Cómo te llamas?');
+    expect(t.content.checkout.errName).toBe('Dinos tu nombre');
+  });
+
+  it('lo que escribió el dueño se respeta tal cual', () => {
+    const t = resolveTheme({ content: { checkout: { namePh: '¿Cómo te llamás, mae?' } } });
+    expect(t.content.checkout.namePh).toBe('¿Cómo te llamás, mae?');
+  });
+});

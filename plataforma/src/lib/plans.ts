@@ -106,7 +106,7 @@ export const PLANS: Record<PlanCode, PlanFeatures & { code: PlanCode; name: stri
   PREMIUM: {
     code: 'PREMIUM',
     name: 'Premium',
-    tagline: 'Para llevar, comer en local y delivery — panel de mesero, analítica e inventario',
+    tagline: 'Para llevar, comer en local y a domicilio — panel de mesero, analítica e inventario',
     badge: 'MÁS POPULAR',
     highlight: true,
     priceMonthly: 349,

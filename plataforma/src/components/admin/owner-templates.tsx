@@ -133,7 +133,7 @@ export default function OwnerTemplates({
 
       {templates.length === 0 && !naming ? (
         <p style={{ fontSize: 12.5, color: 'var(--u-text-4)', margin: 0, lineHeight: 1.5 }}>
-          Aún no tienes plantillas propias. Ajusta el diseño en las demás pestañas (o parte de una builtin) y guárdalo aquí para reutilizarlo.
+          Aún no tienes plantillas propias. Ajusta el diseño en las demás pestañas (o parte de una de las plantillas incluidas) y guárdalo aquí para reutilizarlo.
         </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>

@@ -2261,7 +2261,7 @@ export async function archiveAbandonedTables(restaurantId: string): Promise<{ er
   if (archived > 0) {
     // El super admin no tiene restaurante propio: se apunta el que se archivó,
     // que es el dato que le sirve a quien lea la bitácora.
-    logActivity({ restaurantId, actorId: actor.userId, action: 'auto_archive', entity: `${archived} mesa(s)` });
+    logActivity({ restaurantId, actorId: actor.userId, action: 'auto_archive', entity: `${archived} ${archived === 1 ? 'mesa' : 'mesas'}` });
   }
 
   revalidarSalon();

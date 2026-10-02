@@ -76,6 +76,34 @@ export default function PlatformSettingsForm({ settings }: Props) {
           </p>
         </div>
 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label htmlFor="payment_instructions" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Cómo te pagan los restaurantes
+          </label>
+          <textarea
+            id="payment_instructions"
+            name="payment_instructions"
+            rows={4}
+            maxLength={600}
+            defaultValue={settings.payment_instructions}
+            placeholder={'Depósito o transferencia a Banco Industrial\nCuenta monetaria 000-000000-0\nA nombre de …'}
+            style={{
+              padding: '11px 14px', borderRadius: 10, fontSize: 14, lineHeight: 1.5,
+              background: 'color-mix(in srgb, var(--u-text) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
+              color: 'var(--u-text)',
+              outline: 'none',
+              width: '100%',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
+          <p style={{ fontSize: 12, color: 'var(--u-text-4)' }}>
+            Se le enseña al restaurante en «Mi suscripción» cuando tiene un cobro pendiente,
+            junto con un botón para mandarte el comprobante por WhatsApp.
+          </p>
+        </div>
+
         {errorMsg && (
           <p style={{ fontSize: 13, color: 'var(--c-danger)', padding: '10px 14px', borderRadius: 8, background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)' }}>
             {errorMsg}

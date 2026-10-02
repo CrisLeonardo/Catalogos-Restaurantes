@@ -110,7 +110,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
     : `${features.length} herramientas que tu competencia ya usa`;
 
   const headerDesc = isEstandar
-    ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas delivery, comer en local y todo lo siguiente.'
+    ? 'Tu plan Estándar incluye pedidos para llevar. Con Premium desbloqueas entregas a domicilio, comer en local y todo lo siguiente.'
     : `Están incluidas en Premium (${planPriceLabel(pricing, 'PREMIUM')}). Toca cualquiera para ver cómo impacta tu negocio.`;
 
   return (

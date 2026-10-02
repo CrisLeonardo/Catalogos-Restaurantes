@@ -326,8 +326,8 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   return (
     <div className="flex max-w-[760px] flex-col gap-6">
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        Encendé solo lo que usa tu restaurante. Lo que apagues desaparece de tu
-        panel y podés volver a prenderlo cuando quieras.
+        Enciende solo lo que usa tu restaurante. Lo que apagues desaparece de tu
+        panel y puedes volver a encenderlo cuando quieras.
       </p>
 
       {error && <div className="note note-danger">{error}</div>}
@@ -393,7 +393,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
         <SectionNote>
           Al menos uno tiene que estar activo.
           {isBasico && <> El plan Básico es solo menú digital: los pedidos en línea empiezan en Estándar ({planPriceLabel(pricing, 'ESTANDAR')}).</>}
-          {isEstandar && <> Tu plan Estándar incluye {ESTANDAR_MAX_ORDER_TYPES} de los 3 modos y vos elegís cuáles; para tener los tres a la vez, Premium ({premiumLabel}).</>}
+          {isEstandar && <> Tu plan Estándar incluye {ESTANDAR_MAX_ORDER_TYPES} de los 3 modos y tú eliges cuáles; para tener los tres a la vez, Premium ({premiumLabel}).</>}
         </SectionNote>
       </Section>
 
@@ -474,7 +474,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       )}
 
       <p className="px-4 text-[12.5px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
-        ¿Tenés varias sucursales? Se unen en un panel de grupo con métricas
+        ¿Tienes varias sucursales? Se unen en un panel de grupo con métricas
         consolidadas.{' '}
         <Link href={panelHref(base, "/admin/ayuda")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
           Hablar con Leogin →

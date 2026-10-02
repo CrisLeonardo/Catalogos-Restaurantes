@@ -65,12 +65,11 @@ export default function WhatsAppPanel({
            texto (`nowrap`) y esta frase empujaba la página entera 448 px
            hacia la derecha en el teléfono. Mismo color, forma de aviso. */
         <div className="chip chip-danger" style={avisoSt}>
-          La conexión con WhatsApp todavía no está activa en el servidor de
-          Leogin, así que el token no se puede guardar de forma segura.
-          Escríbenos a soporte y la activamos.
-          <span style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 500, opacity: 0.8 }}>
-            Detalle técnico: falta <code>WHATSAPP_TOKEN_KEY</code>.
-          </span>
+          La conexión con WhatsApp todavía no está activa en Leogin.
+          Escríbenos a soporte y la activamos para tu restaurante.
+          {/* Aquí iba «Detalle técnico: falta WHATSAPP_TOKEN_KEY»: el nombre de
+              una variable del servidor, a la vista del dueño (auditoría
+              2026-10-02, T-15). Eso es para soporte, no para él. */}
         </div>
       )}
 
@@ -105,6 +104,10 @@ export default function WhatsAppPanel({
         </p>
       )}
 
+      {/* Sin la clave del servidor el token no se puede guardar: enseñar el
+          formulario era invitar a llenar cinco campos para terminar en un
+          error (auditoría 2026-10-02, AJU-15). */}
+      {tokenKeyReady && (
       <form action={formAction}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
 
@@ -157,6 +160,7 @@ export default function WhatsAppPanel({
           {isPending ? 'Guardando…' : account ? 'Reemplazar' : 'Conectar'}
         </button>
       </form>
+      )}
     </div>
   );
 }

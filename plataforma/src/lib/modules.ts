@@ -126,7 +126,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
   {
     key: 'cupones',
     label: 'Cupones y descuentos',
-    description: 'Crea códigos de descuento (% o monto fijo) con límite de usos y expiración. Tus clientes los aplican en el checkout.',
+    description: 'Crea códigos de descuento (% o monto fijo) con límite de usos y expiración. Tus clientes los aplican al pagar.',
     icon: 'ticket',
     href: '/admin/cupones',
     navLabel: 'Cupones',
@@ -137,7 +137,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
   {
     key: 'loyalty',
     label: 'Lealtad / Puntos',
-    description: 'Programa de puntos: tus clientes acumulan por cada compra y canjean por descuentos en el checkout.',
+    description: 'Programa de puntos: tus clientes acumulan por cada compra y canjean por descuentos al pagar.',
     icon: 'star',
     href: '/admin/lealtad',
     navLabel: 'Lealtad',

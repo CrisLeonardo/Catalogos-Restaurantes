@@ -122,7 +122,7 @@ export async function resolveLines(
   if (desconocidos.length > 0) {
     return {
       ok: false,
-      error: `Hay productos sin mapear para ${channel}. Configuralos en Canales y reintentá.`,
+      error: `Hay productos sin mapear para ${channel}. Configúralos en Canales y vuelve a intentarlo.`,
       skusDesconocidos: desconocidos,
     };
   }
@@ -145,7 +145,7 @@ export async function resolveLines(
     if (!prod || prod.restaurant_id !== restaurantId) {
       return {
         ok: false,
-        error: `El sku "${item.sku}" apunta a un producto que ya no existe. Revisá el mapa en Canales.`,
+        error: `El sku "${item.sku}" apunta a un producto que ya no existe. Revisa el mapa en Canales.`,
         skusDesconocidos: [item.sku],
       };
     }

@@ -791,6 +791,9 @@ export async function deleteOrganization(formData: FormData) {
 export interface PlatformContactSettings {
   support_whatsapp: string;
   support_email: string;
+  /** Cómo pagan los restaurantes su mensualidad (banco, cuenta, a nombre de
+   *  quién). Se les enseña en Mi suscripción cuando tienen algo pendiente. */
+  payment_instructions: string;
 }
 
 /** Lee los datos de contacto del soporte desde platform_settings. */
@@ -803,6 +806,7 @@ export async function getPlatformContactSettings(): Promise<PlatformContactSetti
   return {
     support_whatsapp: (map.support_whatsapp as string) ?? '',
     support_email: (map.support_email as string) ?? '',
+    payment_instructions: (map.payment_instructions as string) ?? '',
   };
 }
 
@@ -818,6 +822,8 @@ export async function savePlatformSettings(
 
   const whatsapp = String(formData.get('support_whatsapp') ?? '').trim();
   const email = String(formData.get('support_email') ?? '').trim();
+  const pago = String(formData.get('payment_instructions') ?? '').trim();
+  if (pago.length > 600) return { error: 'Las instrucciones de pago son muy largas (máximo 600 caracteres).' };
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: 'El correo electrónico no es válido.' };
@@ -829,6 +835,7 @@ export async function savePlatformSettings(
     [
       { key: 'support_whatsapp', value: whatsapp },
       { key: 'support_email', value: email },
+      { key: 'payment_instructions', value: pago },
     ],
     { onConflict: 'key' },
   );
@@ -841,5 +848,6 @@ export async function savePlatformSettings(
   updateTag(PRICING_SETTINGS_TAG);
   revalidatePath('/super/configuracion');
   revalidatePath('/admin/ayuda');
+  revalidatePath('/admin/suscripcion');
   return { saved: true };
 }

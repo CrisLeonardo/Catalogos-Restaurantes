@@ -162,8 +162,8 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
           // decía "No hay platillos aún. ¡Crea el primero!" y ahí terminaba.
           <EmptyState
             icon="bag"
-            title="Todavía no tenés platillos"
-            desc="Agregá el primero y tu menú queda publicado al instante: la gente ya puede verlo escaneando tu código QR."
+            title="Todavía no tienes platillos"
+            desc="Agrega el primero y tu menú queda publicado al instante: la gente ya puede verlo escaneando tu código QR."
             action={
               atProductLimit
                 ? { href: '/admin/suscripcion', label: 'Sube de plan para agregar' }

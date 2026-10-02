@@ -128,8 +128,8 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       {suppliers.length === 0 && !edit ? (
         <EmptyState
           icon="truck"
-          title="Aún no tenés proveedores registrados"
-          desc="Registrá a quién le comprás para llevar el control de tus órdenes de compra."
+          title="Aún no tienes proveedores registrados"
+          desc="Registra a quién le compras para llevar el control de tus órdenes de compra."
           action={{ label: 'Agregar el primero', onClick: () => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' }) }}
         />
       ) : (
@@ -307,7 +307,7 @@ function OrdersTab({
         <EmptyState
           icon="receipt"
           title="Aún no has creado órdenes de compra"
-          desc="Una orden registra qué le pedís a un proveedor y suma el stock automáticamente al recibirla."
+          desc="Una orden registra qué le pides a un proveedor y suma el stock automáticamente al recibirla."
           action={{ label: 'Crear la primera', onClick: () => setCreating(true) }}
         />
       ) : (

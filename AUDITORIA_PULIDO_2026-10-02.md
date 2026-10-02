@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** Fase 1 hecha el 2026-10-02 (21 hallazgos, incluidos los 6 P0). Lo demás sigue pendiente; ver la Bitácora al final.
+> **Estado:** Fases 1 y 2 hechas el 2026-10-02 (32 hallazgos, incluidos los 6 P0). Lo demás sigue pendiente; ver la Bitácora al final.
 
 ---
 
@@ -39,22 +39,22 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 4 | 0 |
-| 2 | Panel · Armazón y navegación | 10 | 3 | 1 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 7 | 0 |
+| 2 | Panel · Armazón y navegación | 10 | 6 | 1 |
 | 3 | Panel · Hoy | 5 | 1 | 1 |
 | 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 0 | 4 |
 | 5 | Panel · Menú | 12 | 2 | 0 |
 | 6 | Panel · Clientes | 6 | 0 | 0 |
 | 7 | Panel · Negocio | 6 | 1 | 1 |
-| 8 | Panel · Ajustes | 18 | 3 | 2 |
+| 8 | Panel · Ajustes | 20 | 8 | 2 |
 | 9 | Catálogo digital (lo que ve el comensal) | 13 | 2 | 1 |
 | 10 | Super Admin | 10 | 2 | 1 |
 | 11 | Mi cuenta (grupo) | 5 | 3 | 0 |
 | 12 | Web pública y marketing | 9 | 0 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 0 | 1 |
-| | **Total** | **143** | **21** | **12** |
+| | **Total** | **145** | **32** | **12** |
 
-Por prioridad: **P0** 6 · **P1** 32 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 12 P1, 1 P2 y 2 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 19 P1, 4 P2 y 3 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -173,7 +173,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Dónde: `suscripcion/page.tsx:371`, `app/super/finanzas/page.tsx`.
   ✅ **Hecho 2026-10-02 (Fase 1).** Quitados todos los «(s)»: cobros, restaurantes, pagos, agotados, días, entregas, recetas.
 
-- [ ] **T-13** · P2 · S · ⏸️ D-1 — **«Tú» y «vos» mezclados.** ~300 textos con tú
+- [x] **T-13** · P2 · S · ⏸️ D-1 — **«Tú» y «vos» mezclados.** ~300 textos con tú
   (toca, elige, tienes, puedes) y ~25 con voseo: Ajustes («abrís», «repartís»,
   «ponés», «necesitás», «Encendé»), Horarios, Zona de entrega («Marcá»), Caja
   («Contá el efectivo», «Escribí cuántos…»), Categorías («Ordená»), estados vacíos
@@ -181,13 +181,15 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Funciones («podés», «elegís»), Repartidores («cobrás»), Copia de datos
   («Descargá»).
   🔎 **Añadido 2026-10-02:** el checkout público también vosea: «¿Cómo te llamás?».
+  ✅ **Hecho 2026-10-02 (Fase 2).** ~45 textos pasados a «tú» en panel, menú público, errores amables y mensajes de las acciones (incluido «¿Cómo te llamás?» del checkout). Como el editor del tema guarda una COPIA de los textos, `resolve.ts` cambia al vuelo los textos por defecto viejos que un restaurante tenga guardados (si el dueño escribió el suyo, se respeta); con prueba. Solo quedan formas de «vos» en comentarios del código.
 
-- [ ] **T-14** · P3 · S — **Anglicismos y jerga técnica** en pantallas del dueño:
+- [x] **T-14** · P3 · S — **Anglicismos y jerga técnica** en pantallas del dueño:
   «badge», «checkout», «food cost», «delivery», «tagline», «builtin», «preview:»,
   «agente», «slug», «token», «MRR». Pasar a español llano (el Super Admin puede
   conservar los suyos).
+  ✅ **Hecho 2026-10-02 (Fase 2).** «checkout», «delivery», «tagline», «badge», «builtin», «food cost» y «la PC del agente» fuera de las pantallas del dueño (cupones, funciones, plan Premium, editor del tema, perfil «Lema», zonas, insumos, salón, PC del local). Se dejó «Apps de delivery» (así se les dice en GT) y los textos del Super.
 
-- [ ] **T-15** · P1 · M — **Claves internas a la vista.** Bitácora de Personal con
+- [x] **T-15** · P1 · M — **Claves internas a la vista.** Bitácora de Personal con
   `order_void`, `descuento_mesa`, `channel_toggle`, `auto_archive`,
   `staff_pin_login`, `vale`, `mesa`, `articulo_libre` y «pedido → SERVED»
   (`describeActivity` cae al nombre crudo y a `STATUS_ES` le falta SERVED);
@@ -197,6 +199,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Propuesta: diccionario de acciones legible («Carlos anuló un plato de la Mesa
   4»), etiquetas de permisos, y nunca IP/variables de entorno en el panel.
   Dónde: `staff-panel.tsx:50-60,151`, `access-log-panel.tsx`, `whatsapp-panel.tsx`.
+  ✅ **Hecho 2026-10-02 (Fase 2).** Bitácora con frases (`lib/activity-labels.ts`, con pruebas: «Carlos anuló un plato — «se acabó»», «Aplicó un descuento del 10 % en la mesa 4 («Cumpleaños»)»); permisos viejos con palabras; accesos con «Dueño del restaurante» en vez de «Cuenta sin nombre» y sin IP local (`::1`, `::ffff:`, redes privadas); WhatsApp sin «WHATSAPP_TOKEN_KEY»; formato de números como selector de país con ejemplo; «Pedidos › Tomar pedidos» en vez de `/admin/mesero`.
 
 ### Componentes y patrones
 
@@ -325,29 +328,33 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ## 2 · Panel · Armazón y navegación
 
-- [ ] **N-01** · **P1** · M — **El Centro de ayuda describe un menú que ya no
+- [x] **N-01** · **P1** · M — **El Centro de ayuda describe un menú que ya no
   existe.** «El menú lateral tiene tres grupos: Operación, Negocio y Cuenta. La
   sección Cuenta empieza oculta… haz clic en "Cuenta" para expandirla… Módulos,
   Soporte». El menú es de 6 destinos desde el 08-21. Revisar
   `lib/tutorial/content.ts` (1.276 líneas) y los tours guiados contra la
   navegación actual (`lib/admin-nav.ts`); idealmente una prueba que falle si un
   tutorial nombra una pantalla que no está en el menú.
+  ✅ **Hecho 2026-10-02 (Fase 2).** `lib/tutorial/content.ts` reescrito sección por sección contra `admin-nav.ts` y las pantallas: los seis destinos, rutas reales (Ajustes → Horarios, Menú → Platillos…), flechas ↑↓ en vez de arrastrar, agotado por 12 h, lealtad con premios (sin «canjear puntos al pagar», que ya no existe), caja, salón, tomar pedidos, lista de espera; «Plan Popular» → «Plan Estándar». Tours: el paso de la pausa buscaba el interruptor en Perfil (ahora va a Horarios) y los de catálogo/categorías hablaban de arrastrar.
 
 - [ ] **N-02** · P1 · S — **Pantallas huérfanas.** Repartidores y WhatsApp no están
   en ningún menú, su barra dice «Panel» y no tienen «volver». Repartidores además
   guarda las **zonas y tarifas de envío**. Darles sitio: Repartidores en Pedidos
   (o Ajustes › Zona de entrega) y WhatsApp en Ajustes.
+  🔄 **Parcial 2026-10-02:** las zonas salieron de Repartidores (N-03). Repartidores y WhatsApp siguen sin sitio en el menú.
 
-- [ ] **N-03** · P1 · M — **La entrega a domicilio se configura en dos sitios.**
+- [x] **N-03** · P1 · M — **La entrega a domicilio se configura en dos sitios.**
   El radio en el mapa vive en Ajustes › Zona de entrega; las zonas por nombre y su
   tarifa, en Repartidores (pantalla huérfana). La propia Zona de entrega dice «usará
   las zonas de texto (si las configuraste)» sin decir dónde. Juntarlo en Zona de
   entrega.
+  ✅ **Hecho 2026-10-02 (Fase 2).** Las zonas con su tarifa pasaron a Ajustes › Zona de entrega, junto al mapa; Repartidores deja un enlace. Y la tarifa normal de envío ya se puede poner (AJU-19).
 
-- [ ] **N-04** · P2 · S — **Textos que mandan a sitios viejos:** «La cantidad de
+- [x] **N-04** · P2 · S — **Textos que mandan a sitios viejos:** «La cantidad de
   mesas, en Mesas» (Pedidos y cobro), «Para las mesas, usa los QR de la sección
   Mesas» (Código QR) — los dos viven ahora en Ajustes › Salón.
   Dónde: `orders-currency-editor.tsx`, `app/admin/(protected)/qr/page.tsx`.
+  ✅ **Hecho 2026-10-02 (Fase 2).** «La cantidad de mesas y sus QR, en Ajustes › Salón»; el QR general manda a Salón; la ficha del platillo apunta a «Menú también en inglés» en Ajustes.
 
 - [x] **N-05** · P1 · S — **Tres cifras distintas para «funciones activas».**
   Ajustes dice «15 activas» (cuenta todo el jsonb `modules`), Funciones dice «8
@@ -627,9 +634,11 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **AJU-08** · P2 · S — **Zona de entrega** con el mapa apagado es un
   interruptor y un botón enorme «Guardar ubicación y radio»; el icono del aviso
   queda en su propia línea. Ver N-03.
+  🔄 **Parcial 2026-10-02:** ahora tiene las zonas debajo del mapa. Quedan los dos botones grandes de guardar (va con T-08) y el icono del aviso en su propia línea.
 
-- [ ] **AJU-09** · P2 · S — **Pedidos y cobro: «Formato de números» pide escribir
+- [x] **AJU-09** · P2 · S — **Pedidos y cobro: «Formato de números» pide escribir
   «es-GT».** Selector con ejemplo («Guatemala — Q1,234.50»).
+  ✅ **Hecho 2026-10-02 (Fase 2).** Selector por país (Guatemala, México, El Salvador…) con el ejemplo «Así se ven tus precios: 1,234.50»; un código raro ya guardado se conserva.
 
 - [ ] **AJU-10** · **P1** · M — **Personalizar el sitio mide 12.800 px en el
   teléfono.** 22 plantillas a alto completo (cada vista previa ~60 % vacía), y la
@@ -642,18 +651,20 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   enlaces del final llevan títulos de 22 px en Unbounded, más grandes que los
   títulos de la pantalla; jerga («agente», «preview:», ««documento»»).
 
-- [ ] **AJU-12** · **P1** · M — **Personal:** la bitácora enseña claves crudas
+- [x] **AJU-12** · **P1** · M — **Personal:** la bitácora enseña claves crudas
   (T-15) y ~50 filas sin «ver más»; «Últimos accesos» repite «Cuenta sin nombre»
   ~40 veces con la IP; los permisos de cada persona salen como claves. Página de
   4.600 px en el teléfono. Propuesta: nombres legibles, agrupar accesos por persona
   y aparato, 10 filas + «Ver todo».
+  ✅ **Hecho 2026-10-02 (Fase 2).** Ver T-15. Además: 10 filas de actividad + «Ver toda la actividad (30)», accesos repetidos del mismo ingreso agrupados y 8 a la vista con «Ver más» (`<details>`, sin JS). La página bajó de 4.600 a 2.700 px en el teléfono.
 
-- [ ] **AJU-13** · **P1** · S — **Mi suscripción:** dinero con coma (`Q1146,00`),
+- [x] **AJU-13** · **P1** · S — **Mi suscripción:** dinero con coma (`Q1146,00`),
   fechas ISO, «cobro(s)», filas del historial partidas en 4 líneas en el teléfono,
   «1 de novi…» cortado. Y lo más importante: **con pagos vencidos no hay cómo
   pagar** — ni datos de la cuenta bancaria ni botón «Enviar comprobante por
   WhatsApp».
   🔄 **Parcial 2026-10-02:** dinero, fechas («1 nov 2026», «Vence el 1 sept 2026»), «Mensualidad septiembre de 2026» y plurales, hechos. Falta lo de pagar con cobros vencidos y las filas del historial en el teléfono.
+  ✅ **Hecho 2026-10-02 (Fase 2).** Con cobros pendientes: bloque «Cómo pagar» con las instrucciones que Leogin escribe en Super › Configuración › Soporte (nueva clave `payment_instructions` en `platform_settings`, sin migración) y botón «Enviar comprobante de pago» por WhatsApp con el monto y el restaurante ya escritos. Historial en dos renglones en el teléfono; «1 nov 2026». Visto con instrucciones de prueba (luego borradas).
 
 - [ ] **AJU-14** · P2 · S — **Funciones:** conteos que no cuadran (N-05),
   insignias caducas (N-07), enlaces de 17 px, «Activado para tu restaurante» en
@@ -662,6 +673,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **AJU-15** · P1 · S · ⏸️ D-6 — **WhatsApp:** le enseña al dueño «Detalle
   técnico: falta WHATSAPP_TOKEN_KEY» y un formulario de la API de Meta que no
   puede funcionar sin esa configuración del servidor.
+  🔄 **Parcial 2026-10-02:** sin la clave del servidor ya no se enseña el formulario de Meta ni el «Detalle técnico»; el aviso dice que se escriba a soporte. Esconder la pantalla entera sigue pendiente de D-6.
 
 - [ ] **AJU-16** · P2 · S — **Repartidores:** barra «Panel», selector nativo del
   sistema, formulario siempre abierto. Ver N-02/N-03.
@@ -672,6 +684,17 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **AJU-18** · P2 · S — **Interruptor «Menú también en inglés» suelto en la
   portada de Ajustes** (bien que sea un interruptor, pero sin decir cuántos
   platillos están traducidos: «3 de 10 platillos traducidos»).
+
+- [x] **AJU-19** · **P1** · S — **La tarifa normal de envío no se podía configurar.**
+  (Encontrado al reescribir la ayuda.) `deliveryFee` existía en el tema con 0 por
+  defecto, pero ninguna pantalla lo editaba: un restaurante sin zonas entregaba
+  gratis sin saberlo.
+  ✅ **Hecho 2026-10-02 (Fase 2).** Fila «Envío a domicilio» en Ajustes › Pedidos y cobro (solo si entrega a domicilio), acotada en el servidor a 0–10,000; las zonas siguen mandando sobre ella.
+
+- [x] **AJU-20** · P1 · S — **Guardar te sacaba de la pantalla.** Guardar el
+  horario, la ubicación o las zonas terminaba en `redirect('/admin/perfil?saved=1')`:
+  aparecías en Perfil, otra pantalla, sin saber si se había guardado lo tuyo.
+  ✅ **Hecho 2026-10-02 (Fase 2).** Las tres acciones responden «guardado» y el editor lo dice en su sitio («Cambios guardados», «Zonas guardadas»). Probado en vivo en Horarios.
 
 ---
 
@@ -916,7 +939,7 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 1. ✅ **Fase 1 — Lo que está mal (P0 y P1 rápidos). HECHA 2026-10-02.** CAT-01, MIC-01,
    AJU-01, AJU-02, T-01 (con SUP-01), HOY-01, MIC-02, MIC-03, CAT-02, N-05,
    SUP-04, NEG-01, MEN-02, MEN-03, N-08, T-06, T-02.
-2. **Fase 2 — Textos y claves, ~1 día.** T-13 (según D-1), T-15, AJU-12, AJU-13,
+2. ✅ **Fase 2 — Textos y claves. HECHA 2026-10-02.** T-13 (según D-1), T-15, AJU-12, AJU-13,
    T-03, T-14, N-01 (ayuda), N-04.
 3. **Fase 3 — Piezas comunes, 2–3 días.** T-08 (guardar), T-12 (fichas
    blancas), T-05 (cifras), T-07 (pestañas), T-10/T-11 (títulos y rótulos), T-16
@@ -936,4 +959,5 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | Fecha | Qué se hizo | Commit |
 |-------|-------------|--------|
 | 2026-10-02 | Auditoría inicial: barrido de ~330 capturas, lectura de código, este archivo. | — |
-| 2026-10-02 | **Fase 1** (decisión D-1: «tú»). 21 hallazgos: CAT-01, MIC-01, AJU-01/02/03, T-01, T-02, T-03, T-06, HOY-01, MIC-02/03, CAT-02, N-05, N-08, N-09, SUP-01, SUP-04, NEG-01, MEN-02, MEN-03. Verificado: `tsc` y `eslint` limpios, 768 pruebas (19 nuevas: `money`, `dates`, `product-availability`), dos builds de producción y barrido de capturas de cada pantalla tocada a 390 y 1440 px con pedidos activos y un platillo sin existencias; pedido real de prueba de CAT-01 (luego borrado). Al verificar salieron y se arreglaron dos cosas que el propio cambio había causado (ficha del platillo a 809 px en el teléfono; «Q2,794.…» cortado en la fila de 6 cifras). Base local devuelta a su estado. | sin commit |
+| 2026-10-02 | **Fase 1** (decisión D-1: «tú»). 21 hallazgos: CAT-01, MIC-01, AJU-01/02/03, T-01, T-02, T-03, T-06, HOY-01, MIC-02/03, CAT-02, N-05, N-08, N-09, SUP-01, SUP-04, NEG-01, MEN-02, MEN-03. Verificado: `tsc` y `eslint` limpios, 768 pruebas (19 nuevas: `money`, `dates`, `product-availability`), dos builds de producción y barrido de capturas de cada pantalla tocada a 390 y 1440 px con pedidos activos y un platillo sin existencias; pedido real de prueba de CAT-01 (luego borrado). Al verificar salieron y se arreglaron dos cosas que el propio cambio había causado (ficha del platillo a 809 px en el teléfono; «Q2,794.…» cortado en la fila de 6 cifras). Base local devuelta a su estado. | `8c0bf81` (rama `auditoria-pulido-2026-10-02`) |
+| 2026-10-02 | **Fase 2.** T-13, T-14, T-15, AJU-12, AJU-13, N-01 (ayuda y tours reescritos), N-03, N-04, AJU-09, y dos hallazgos nuevos arreglados: AJU-19 (tarifa de envío sin pantalla) y AJU-20 (guardar te mandaba a Perfil). Parciales: AJU-15, N-02, AJU-08. Verificado: `tsc` y `eslint` limpios, 774 pruebas (nuevas: bitácora en palabras, textos viejos del tema), build de producción, capturas de las 13 pantallas tocadas y guardado real en Horarios. | ver commit de la fase 2 |

@@ -5,9 +5,8 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
 import { getDrivers, getDriversCashToday } from '@/lib/db/drivers';
-import { getDeliveryZones } from '@/lib/db/zones';
 import DriversPanel from '@/components/admin/drivers-panel';
-import DeliveryZonesEditor from '@/components/admin/delivery-zones-editor';
+import Link from '@/components/admin/panel-link';
 import { panelLink } from '@/lib/panel-links-server';
 
 export const metadata = { title: 'Repartidores – Panel admin' };
@@ -39,9 +38,8 @@ export default async function AdminRepartidoresPage() {
   if (!restaurantId) redirect('/admin/login');
 
   const db = createServiceClient();
-  const [drivers, zones, cash, { data: staffRows }] = await Promise.all([
+  const [drivers, cash, { data: staffRows }] = await Promise.all([
     getDrivers(restaurantId),
-    getDeliveryZones(restaurantId),
     getDriversCashToday(restaurantId),
     db
       .from('profiles')
@@ -105,17 +103,16 @@ export default async function AdminRepartidoresPage() {
         </section>
       )}
 
-      {/* Las zonas viven aquí y no en Perfil: es la misma decisión operativa
-          que "quién reparte" — a dónde llego y cuánto cobro por llegar. */}
+      {/* Las zonas con su tarifa se mudaron a Ajustes › Zona de entrega, junto
+          al mapa y al radio: la entrega se configuraba en dos pantallas y esta
+          no está en ningún menú (auditoría 2026-10-02, N-03). */}
       <section style={{ marginTop: 36, maxWidth: 720 }}>
         <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Zonas de entrega</h2>
-        <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginBottom: 16 }}>
-          A dónde llega tu reparto y cuánto cobrás por cada zona.
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>
+          Las zonas y lo que cobras por cada una están ahora en{' '}
+          <Link href="/admin/ajustes/entrega" className="adm-action-link">Ajustes › Zona de entrega</Link>,
+          junto al mapa y al radio de entrega.
         </p>
-        <DeliveryZonesEditor
-          restaurantId={restaurantId}
-          initialZones={zones.map((z) => ({ nombre: z.nombre, tarifa: z.tarifa }))}
-        />
       </section>
     </div>
   );

@@ -201,8 +201,8 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
       {coupons.length === 0 && !showForm ? (
         <EmptyState
           icon="ticket"
-          title="Aún no tenés cupones"
-          desc="Creá tu primer código de descuento para convertir visitas en pedidos."
+          title="Aún no tienes cupones"
+          desc="Crea tu primer código de descuento para convertir visitas en pedidos."
           action={{ label: 'Crear el primero', onClick: () => setShowForm(true) }}
         />
       ) : coupons.length > 0 && (

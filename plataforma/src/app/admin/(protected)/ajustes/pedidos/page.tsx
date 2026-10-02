@@ -64,6 +64,7 @@ export default async function AdminPedidosAjustesPage() {
           salonUnacceptedMin: resolved.config.salonUnacceptedMin,
           autoConfirmEnabled: resolved.config.autoConfirmEnabled,
           autoConfirmMinutes: resolved.config.autoConfirmMinutes,
+          deliveryFee: resolved.config.deliveryFee,
         }}
       />
     </div>

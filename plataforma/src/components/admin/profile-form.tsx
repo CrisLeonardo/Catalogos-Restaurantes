@@ -88,7 +88,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
           </Card>
 
           <Card className="p-4">
-            <label htmlFor="tagline" style={labelStyle}>Tagline</label>
+            <label htmlFor="tagline" style={labelStyle}>Lema</label>
             <input
               id="tagline"
               name="tagline"

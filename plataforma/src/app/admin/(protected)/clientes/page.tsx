@@ -136,7 +136,7 @@ export default async function AdminClientesPage({
       {customers.length === 0 ? (
         <EmptyState
           icon="users"
-          title="Aún no tenés clientes"
+          title="Aún no tienes clientes"
           desc="Se registran solos cuando alguien hace su primer pedido — no hace falta darlos de alta a mano."
           action={{ href: '/admin/qr', label: 'Comparte tu código QR' }}
         />
