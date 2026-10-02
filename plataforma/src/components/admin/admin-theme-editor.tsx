@@ -18,6 +18,7 @@ import { saveAdminRestaurantTheme, type RestaurantThemeTemplate } from '@/lib/ac
 import { fontsForRole, SHADOW_OPTIONS, type ThemeConfig, type ThemeContent } from '@/lib/theme/defaults';
 import { isLight } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, structureOfConfig, type BuiltinTemplate } from '@/lib/theme/templates';
+import { useLeaveGuard } from '@/components/admin/save-bar';
 
 /* ── Contraste WCAG (asistente de legibilidad) ─────────────
    El dueño no sabe de ratios: si elige colores que no se leen,
@@ -131,6 +132,8 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
       customCss !== initialCss,
     [config, content, customCss, initialConfig, initialContent, initialCss],
   );
+
+  const leaveDialog = useLeaveGuard(dirty && !isPending);
 
   function save() {
     setMsg(null);
@@ -674,6 +677,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             hay algo sin publicar: un "Guardar cambios" permanente no dice
             nada, y en esta pantalla —donde todo se ve en vivo en la vista
             previa— la pregunta real es justamente "¿esto ya está publicado?". */}
+        {leaveDialog}
         {(dirty || isPending || msg) && (
           <div className="adm-savebar" style={{ marginTop: 14 }}>
             <span

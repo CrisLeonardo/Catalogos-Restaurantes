@@ -11,7 +11,6 @@ export default function ConfiguracionLayout({ children }: { children: React.Reac
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <PageHeader
-        title="Configuración de la plataforma"
         subtitle="Precios de los planes, reglas de cobro, contacto de soporte, llaves API y la bitácora de lo que se hace desde aquí."
       />
       <SectionTabs

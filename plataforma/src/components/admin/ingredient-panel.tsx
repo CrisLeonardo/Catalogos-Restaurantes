@@ -10,6 +10,8 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Ingredient } from '@/lib/db/recipes';
 import type { StockMovement } from '@/lib/db/kardex';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const REASON_LABEL: Record<string, string> = { purchase: 'Compra a proveedor', adjust: 'Ajuste manual' };
 
@@ -60,15 +62,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: 'var(--u-text-3)',
-  fontWeight: 500,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 4,
-  display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 interface Props {
   restaurantId: string;
@@ -85,6 +79,7 @@ type EditState = {
 
 export default function IngredientPanel({ restaurantId, initialIngredients, usageCounts }: Props) {
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>(null);
@@ -147,12 +142,14 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
     });
   }
 
-  function handleDelete(ing: Ingredient) {
+  async function handleDelete(ing: Ingredient) {
     const usage = usageCounts[ing.id] ?? 0;
-    const confirm_msg = usage > 0
-      ? `"${ing.name}" se usa en ${usage} ${usage === 1 ? 'receta' : 'recetas'}. ¿Eliminar de todas formas?`
-      : `¿Eliminar "${ing.name}"?`;
-    if (!window.confirm(confirm_msg)) return;
+    if (!(await confirm({
+      title: `¿Eliminar «${ing.name}»?`,
+      description: usage > 0
+        ? `Se usa en ${usage} ${usage === 1 ? 'receta' : 'recetas'}: saldrá de ${usage === 1 ? 'ella' : 'todas'}.`
+        : undefined,
+    }))) return;
     setError(null);
     startTransition(async () => {
       const res = await deleteIngredient(ing.id, restaurantId);
@@ -163,6 +160,7 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {dialog}
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
@@ -170,13 +168,17 @@ export default function IngredientPanel({ restaurantId, initialIngredients, usag
             Define los insumos y su costo por unidad. Asígnalos a tus platillos para calcular su costo automáticamente.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => { setShowAdd(true); setEditState(null); }}
-          className="shrink-0 whitespace-nowrap rounded-adm-full"
-        >
-          + Nuevo insumo
-        </Button>
+        {/* Un solo botón para crear: con la lista vacía lo pone el estado
+            vacío, y con el formulario abierto sobra (auditoría 2026-10-02, T-09). */}
+        {initialIngredients.length > 0 && !showAdd && (
+          <Button
+            type="button"
+            onClick={() => { setShowAdd(true); setEditState(null); }}
+            className="shrink-0 whitespace-nowrap rounded-adm-full"
+          >
+            <Icon name="plus" size={15} /> Nuevo insumo
+          </Button>
+        )}
       </div>
 
 

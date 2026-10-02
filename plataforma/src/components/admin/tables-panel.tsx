@@ -10,6 +10,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import type { ThemeConfig, FloorPlan } from '@/lib/theme/defaults';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
 
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
@@ -157,7 +159,8 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
 export default function TablesPanel({ restaurantId, menuUrl, config: initial }: Props) {
   const [patch, setPatch] = useState<Patch>(initial);
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
+  const { dirty, markSaved } = useValueDirty(patch);
 
   const dineInEnabled = patch.orderTypes.includes('dine_in');
 
@@ -166,7 +169,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
   }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     // Limpia mesas del plano que ya no existen (si se redujo el número de mesas).
     const fp = patch.floorPlan;
     const cleaned: Patch = {
@@ -175,8 +178,9 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
     };
     start(async () => {
       const res = await saveOrdersAndCurrency({ restaurantId, patch: cleaned });
-      if (res.error) setMsg(`Error: ${res.error}`);
-      else setMsg('Guardado ✓');
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
     });
   }
 
@@ -197,7 +201,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
           <Switch
             aria-label="Comer en local"
             checked={dineInEnabled}
-            onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); setMsg(null); }}
+            onCheckedChange={(on) => { set('orderTypes', toggleIn(patch.orderTypes, 'dine_in', on)); }}
           />
         </div>
 
@@ -241,22 +245,13 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial }: 
             <FloorPlanEditor
               tableCount={patch.dineInTableCount}
               value={patch.floorPlan ?? { enabled: false, levels: [{ id: 'l1', name: 'Planta baja' }], tables: [] }}
-              onChange={(fp: FloorPlan) => { set('floorPlan', fp); setMsg(null); }}
+              onChange={(fp: FloorPlan) => { set('floorPlan', fp); }}
             />
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--u-hair)' }}>
-          <Button onClick={save} disabled={isPending} className="rounded-adm-full">
-            {isPending ? 'Guardando…' : 'Guardar cambios'}
-          </Button>
-          {msg && (
-            <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>
-              {msg}
-            </span>
-          )}
-        </div>
       </Card>
+      <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
 
       {/* ── QR por mesa ── */}
       {dineInEnabled && menuUrl ? (

@@ -32,6 +32,7 @@ const NAV: { href: string; label: string; icon: string; corto?: string }[] = [
 const TITLES: [string, string][] = [
   ['/super/restaurantes/new', 'Nuevo restaurante'],
   ['/super/restaurantes',     'Restaurantes'],
+  ['/super/cuentas',          'Cuentas'],
   ['/super/grupos',           'Grupos'],
   ['/super/metricas',         'Métricas'],
   ['/super/finanzas',         'Finanzas'],

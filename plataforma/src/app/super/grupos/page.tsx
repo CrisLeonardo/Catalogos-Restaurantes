@@ -23,7 +23,6 @@ export default async function SuperGruposPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PageHeader
-        title="Grupos"
         subtitle={
           <>
             Se arman solos: cuando un dueño abre su segundo restaurante desde Mi cuenta,

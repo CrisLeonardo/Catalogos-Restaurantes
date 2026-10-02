@@ -98,7 +98,8 @@ export default async function EditProductPage({
           action={deleteProduct}
           hiddenFields={{ restaurantId, id: product.id }}
           label="Eliminar"
-          confirm={`¿Eliminar "${product.name}" permanentemente?`}
+          confirm={`¿Eliminar «${product.name}»?`}
+          description="Sale del menú para siempre. Si solo se acabó, mejor márcalo como agotado."
         />
       </div>
 

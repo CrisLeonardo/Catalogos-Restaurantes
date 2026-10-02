@@ -97,8 +97,8 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
         </Card>
       </div>
 
-      <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--c-alt-bg)', border: '1px solid var(--c-alt-line)', fontSize: 13, color: 'var(--u-text-3)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Icon name="helpCircle" size={16} style={{ color: 'var(--c-alt)', flexShrink: 0 }} />
+      <div className="note note-info" style={{ fontSize: 13, fontWeight: 500 }}>
+        <Icon name="helpCircle" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
         Los clientes reciben un enlace de calificación al finalizar su pedido. La encuesta es anónima y toma menos de 30 segundos.
       </div>
     </div>

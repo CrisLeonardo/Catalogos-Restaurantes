@@ -13,6 +13,9 @@ import {
   deleteReservation,
 } from '@/lib/actions/reservaciones';
 import type { Reservation, ReservationSummary } from '@/lib/db/reservaciones';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface Props {
   restaurantId: string;
@@ -52,10 +55,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase' as const, marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function formatDate(date: string) {
   const d = new Date(date + 'T00:00:00');
@@ -88,6 +88,7 @@ function groupByDate(reservations: Reservation[]): [string, Reservation[]][] {
 export default function ReservacionesPanel({ restaurantId, reservations, summary, freeTables }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<'activas' | 'nueva'>('activas');
+  const { confirm, dialog } = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -133,8 +134,8 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
     });
   }
 
-  function handleDelete(id: string) {
-    if (!confirm('¿Eliminar esta reservación?')) return;
+  async function handleDelete(id: string) {
+    if (!(await confirm({ title: '¿Eliminar esta reservación?' }))) return;
     setBusyId(id);
     startTransition(async () => {
       const res = await deleteReservation(restaurantId, id);
@@ -148,6 +149,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {dialog}
       <StatGroup>
         <Stat label="Hoy" value={String(summary.today)} />
         <Stat label="Pendientes" value={String(summary.pending)} />
@@ -161,15 +163,7 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['activas', 'Reservaciones'], ['nueva', 'Nueva reservación']] as const).map(([k, lbl]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {lbl}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['activas', 'Reservaciones'], ['nueva', 'Nueva reservación']] as const} value={tab} onChange={setTab} />
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 520 }}>

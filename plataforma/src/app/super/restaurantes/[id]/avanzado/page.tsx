@@ -72,7 +72,8 @@ export default async function FichaAvanzadoPage({
             action={deleteRestaurant}
             hiddenFields={{ id: row.id }}
             label="Eliminar"
-            confirm={`¿Eliminar "${row.name}" y todos sus datos? Esta acción no se puede deshacer.`}
+            confirm={`¿Eliminar «${row.name}»?`}
+            description="Se borran el restaurante y todos sus datos. No se puede deshacer."
           />
         </Glass>
       </section>

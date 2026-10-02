@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { Icon } from '@/components/icons';
 import { saveProductRecipe, type RecipeLineInput } from '@/lib/actions/recipes';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 /* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
    `<Link>`). Fuera del panel devuelve la ruta tal cual. */
 import { usePathname as useRutaNavegador } from 'next/navigation';
@@ -29,20 +31,13 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 10.5,
-  color: 'var(--u-text-4)',
-  fontWeight: 600,
-  letterSpacing: '0.05em',
-  textTransform: 'uppercase' as const,
-  marginBottom: 5,
-  display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 export default function RecipeEditor({ productId, restaurantId, ingredients, initialRecipe, onCostChange }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const [lines, setLines] = useState<RecipeItem[]>(initialRecipe);
+  const { confirm, dialog } = useConfirm();
   const [selIngredient, setSelIngredient] = useState('');
   const [selQty, setSelQty] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -138,6 +133,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {dialog}
 
       {/* Lista de líneas */}
       {lines.length > 0 && (
@@ -341,8 +337,12 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
         {lines.length > 0 && (
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('¿Eliminar toda la receta? El costo volverá a ser manual.')) {
+            onClick={async () => {
+              if (await confirm({
+                title: '¿Borrar toda la receta?',
+                description: 'El costo del platillo vuelve a escribirse a mano.',
+                confirmLabel: 'Borrar receta',
+              })) {
                 setLines([]);
                 setSaved(false);
                 notifyParent([]);

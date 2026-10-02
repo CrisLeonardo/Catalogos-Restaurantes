@@ -2,12 +2,12 @@
 
 import { useActionState, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { updateRestaurantInfo, type RestaurantState } from '@/lib/actions/restaurant';
 import { useFormDirty } from '@/lib/use-form-dirty';
 import { friendlyError } from '@/lib/friendly-error';
 import type { Restaurant } from '@/types';
+import SaveBar from '@/components/admin/save-bar';
 
 interface ProfileFormProps {
   restaurantId: string;
@@ -18,11 +18,11 @@ const empty: RestaurantState = null;
 
 export default function ProfileForm({ restaurantId, restaurant }: ProfileFormProps) {
   const [infoState, infoAction, infoIsPending] = useActionState(updateRestaurantInfo, empty);
-  /* El botón solo se enciende si de verdad cambiaste algo. La confirmación de
-     guardado no se maneja aquí: esta acción termina en redirect a
-     `?saved=1` y la propia pantalla pinta el aviso "Cambios guardados
-     correctamente" (ver perfil/page.tsx). Tras el redirect el formulario se
-     monta de nuevo, limpio, y el botón vuelve solo a "Sin cambios". */
+  /* La barra de guardar sale solo si de verdad cambiaste algo. La
+     confirmación de guardado no se maneja aquí: esta acción termina en
+     redirect a `?saved=1` y la propia pantalla pinta el aviso "Cambios
+     guardados correctamente" (ver perfil/page.tsx). Tras el redirect el
+     formulario se monta de nuevo, limpio, y la barra se va sola. */
   const { ref: infoRef, dirty: infoDirty } = useFormDirty();
 
   const [whatsappVal, setWhatsappVal] = useState(restaurant.whatsapp_number ?? '');
@@ -48,34 +48,31 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
     outline: 'none',
   };
 
+  /* Rótulo en minúscula como el resto del panel (`.adm-label`), no en
+     MAYÚSCULAS espaciadas (auditoría 2026-10-02, T-11). */
   const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    color: 'var(--u-text-3)',
-    fontWeight: 500,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
+    fontSize: 13,
+    color: 'var(--u-text-2)',
+    fontWeight: 600,
     marginBottom: 6,
     display: 'block',
-  };
-
-  const sectionTitle: React.CSSProperties = {
-    fontFamily: 'var(--font-display)',
-    fontWeight: 700,
-    fontSize: 18,
-    marginBottom: 16,
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-      {/* ── Información del restaurante ─────────────────────── */}
+      {/* ── Información del restaurante ─────────────────────────
+          Antes: un encabezado «Información» (la barra dice «Perfil») y una
+          tarjeta por campo, seis tarjetas para cinco datos. Ahora los datos
+          van juntos en una ficha y WhatsApp en la suya, porque trae su
+          interruptor (auditoría 2026-10-02, AJU-04). */}
       <section>
-        <h2 style={sectionTitle}>Información</h2>
         <form ref={infoRef} action={infoAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <input type="hidden" name="restaurantId" value={restaurantId} />
           <input type="hidden" name="orders_whatsapp" value="" />
 
-          <Card className="p-4">
+          <Card className="flex flex-col gap-4 p-4">
+            <div>
             <label htmlFor="name" style={labelStyle}>Nombre del restaurante *</label>
             <input
               id="name"
@@ -85,9 +82,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               defaultValue={restaurant.name}
               style={inputStyle}
             />
-          </Card>
+            </div>
 
-          <Card className="p-4">
+            <div>
             <label htmlFor="tagline" style={labelStyle}>Lema</label>
             <input
               id="tagline"
@@ -97,9 +94,9 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               placeholder="Una frase que describe tu lugar"
               style={inputStyle}
             />
-          </Card>
+            </div>
 
-          <Card className="p-4">
+            <div>
             <label htmlFor="address" style={labelStyle}>Dirección</label>
             <input
               id="address"
@@ -110,8 +107,21 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               style={inputStyle}
             />
             <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-              Se muestra cuando los clientes eligen sucursal en el link del grupo.
+              Se muestra cuando los clientes eligen sucursal en el enlace del grupo.
             </p>
+            </div>
+
+            <div>
+            <label htmlFor="contact_email" style={labelStyle}>Correo de contacto</label>
+            <input
+              id="contact_email"
+              name="contact_email"
+              type="email"
+              defaultValue={restaurant.contact_email ?? ''}
+              placeholder="hola@mirestaurante.com"
+              style={inputStyle}
+            />
+            </div>
           </Card>
 
           <Card data-tour-step="perfil-whatsapp" className="p-4">
@@ -122,7 +132,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               type="tel"
               value={whatsappVal}
               onChange={(e) => setWhatsappVal(e.target.value)}
-              placeholder="12345678 · 1234-5678 · 1234 5678 · +502 12345678"
+              placeholder="5555 1234"
               style={{
                 ...inputStyle,
                 borderColor: whatsappErr ? 'var(--c-danger-line)' : undefined,
@@ -134,7 +144,7 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
               <p style={{ fontSize: 12, color: 'var(--c-ok)', marginTop: 6 }}>Número válido ✓</p>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--u-text-4)', marginTop: 6 }}>
-                Acepta: 12345678 · 1234-5678 · 1234 5678 · +502 1234 5678
+                Escríbelo como quieras: 8 dígitos o con el +502 delante.
               </p>
             )}
 
@@ -154,51 +164,15 @@ export default function ProfileForm({ restaurantId, restaurant }: ProfileFormPro
             </div>
           </Card>
 
-          <Card className="p-4">
-            <label htmlFor="contact_email" style={labelStyle}>Email de contacto</label>
-            <input
-              id="contact_email"
-              name="contact_email"
-              type="email"
-              defaultValue={restaurant.contact_email ?? ''}
-              placeholder="hola@mirestaurante.com"
-              style={inputStyle}
-            />
-          </Card>
-
-          {infoState?.error && <ErrorMsg msg={friendlyError(infoState.error)} />}
-
-          {/* El botón dice la verdad sobre el estado de la pantalla: apagado
-              si no hay nada que guardar, y "Guardado" cuando acaba. */}
-          <Button
-            type="submit"
-            disabled={infoIsPending || !!whatsappErr || !infoDirty}
-            size="lg"
-            className="w-full rounded-adm-full"
-          >
-            {infoIsPending ? 'Guardando…' : infoDirty ? 'Guardar información' : 'Sin cambios que guardar'}
-          </Button>
+          <SaveBar
+            dirty={infoDirty}
+            pending={infoIsPending}
+            status={infoState?.error ? { error: friendlyError(infoState.error) } : null}
+            disabled={!!whatsappErr}
+            hint={whatsappErr ? 'Revisa el número de WhatsApp' : undefined}
+          />
         </form>
       </section>
-    </div>
-  );
-}
-
-/* ── Helpers UI ──────────────────────────────────────────── */
-
-function ErrorMsg({ msg }: { msg: string }) {
-  return (
-    <div
-      style={{
-        padding: '10px 14px',
-        borderRadius: 'var(--radius-md)',
-        background: 'var(--c-danger-bg)',
-        border: '1px solid var(--c-danger-line)',
-        color: 'var(--c-danger)',
-        fontSize: 14,
-      }}
-    >
-      {msg}
     </div>
   );
 }

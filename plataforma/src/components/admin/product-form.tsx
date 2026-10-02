@@ -23,6 +23,9 @@ import { createProduct, updateProduct, type ProductState } from '@/lib/actions/p
 import { DIETARY_TAG_OPTIONS } from '@/lib/dietary-tags';
 import type { Category, Product, ProductOptionGroup } from '@/types';
 import type { Ingredient, RecipeItem } from '@/lib/db/recipes';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 /* El prefijo del origen unico para un `<a>` suelto (PanelLink solo cubre
    `<Link>`). Fuera del panel devuelve la ruta tal cual. */
 import { usePathname as useRutaNavegador } from 'next/navigation';
@@ -127,6 +130,10 @@ export default function ProductForm({ restaurantId, categories, product, default
   const action = isEdit ? updateProduct : createProduct;
 
   const [state, formAction, isPending] = useActionState(action, emptyState);
+  /* Al editar, la barra de guardar es la del resto del panel: sale con
+     cambios y avisa si te vas sin guardar. Al crear se queda el botón ancho
+     «Crear platillo», que es el final natural del formulario. */
+  const { ref: formRef, dirty } = useFormDirty();
   const [imageUrl, setImageUrl] = useState<string>(product?.image_url ?? '');
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
@@ -174,18 +181,10 @@ export default function ProductForm({ restaurantId, categories, product, default
     outline: 'none',
   };
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    color: 'var(--u-text-3)',
-    fontWeight: 500,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    display: 'block',
-  };
+  const labelStyle: React.CSSProperties = FIELD_LABEL;
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Campos ocultos */}
       <input type="hidden" name="restaurantId" value={restaurantId} />
       {isEdit && <input type="hidden" name="id" value={product!.id} />}
@@ -622,6 +621,14 @@ export default function ProductForm({ restaurantId, categories, product, default
           en el teléfono tiene que esquivar la barra de destinos y el hueco
           de la muesca cambia de sitio al hacerlo: eso es una media query, y
           una media query no cabe en un atributo `style`. */}
+      {isEdit ? (
+        <SaveBar
+          dirty={dirty}
+          pending={isPending}
+          status={state?.error ? { error: state.error } : null}
+          label="Guardar cambios"
+        />
+      ) : (
       <div className="pform-savebar">
         {state?.error && (
           <div
@@ -656,9 +663,10 @@ export default function ProductForm({ restaurantId, categories, product, default
             gap: 8,
           }}
         >
-          {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> {isEdit ? 'Guardar cambios' : 'Crear platillo'}</>)}
+          {isPending ? 'Guardando…' : (<><Icon name="check" size={16} /> Crear platillo</>)}
         </button>
       </div>
+      )}
     </form>
   );
 }

@@ -30,6 +30,7 @@ import {
 } from '@/lib/theme/defaults';
 import { buildThemeVars } from '@/lib/theme/resolve';
 import { applyTemplateToConfig, type BuiltinTemplate } from '@/lib/theme/templates';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface Props {
   restaurantId: string;
@@ -48,6 +49,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
   const [config, setConfig] = useState<ThemeConfig>(initialConfig);
   const [content, setContent] = useState<ThemeContent>(initialContent);
   const [css, setCss] = useState(initialCss);
+  const { confirm, dialog } = useConfirm();
   const [isPending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -102,10 +104,10 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
     });
   }
 
-  function removeTemplate() {
+  async function removeTemplate() {
     const tpl = templates.find((t) => t.id === selectedTpl);
     if (!tpl) return;
-    if (!window.confirm(`¿Borrar la plantilla "${tpl.name}"?`)) return;
+    if (!(await confirm({ title: `¿Borrar la plantilla «${tpl.name}»?`, confirmLabel: 'Borrar' }))) return;
     startTpl(async () => {
       const res = await deleteThemeTemplate(tpl.id);
       if (res.error) { setTplMsg(`Error: ${res.error}`); return; }
@@ -153,6 +155,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
 
   return (
     <div className="theme-editor-layout">
+    {dialog}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
       {/* ── Plantillas ── */}
       {showTemplates && <Section title="Plantillas de tema">
@@ -461,7 +464,9 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
             <button
               type="button"
               className="press"
-              onClick={() => { if (window.confirm('¿Limpiar el CSS personalizado?')) setCss(''); }}
+              onClick={async () => {
+                if (await confirm({ title: '¿Limpiar el CSS personalizado?', confirmLabel: 'Limpiar' })) setCss('');
+              }}
               style={{ padding: '7px 13px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--c-danger-line)', background: 'transparent', color: 'var(--c-danger)' }}
             >
               Limpiar

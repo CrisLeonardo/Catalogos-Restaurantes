@@ -23,7 +23,10 @@ export function PageHeader({
   backHref,
   backLabel,
 }: {
-  title: string;
+  /** Sin título cuando sería el mismo de la barra de arriba («Restaurantes»
+   *  sobre «Restaurantes»): la barra ya nombra la pantalla (auditoría
+   *  2026-10-02, T-10). Lo llevan las fichas, cuyo nombre no está en la barra. */
+  title?: string;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
   backHref?: string;
@@ -41,7 +44,7 @@ export function PageHeader({
       )}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
-          <h1 className="t-display" style={{ fontSize: 24, marginBottom: subtitle ? 5 : 0 }}>{title}</h1>
+          {title && <h1 className="t-display" style={{ fontSize: 24, marginBottom: subtitle ? 5 : 0 }}>{title}</h1>}
           {subtitle && <p className="t-mute" style={{ fontSize: 13.5, lineHeight: 1.5, maxWidth: 640 }}>{subtitle}</p>}
         </div>
         {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>{actions}</div>}
@@ -81,16 +84,18 @@ export function StatCard({
   const inner = (
     <Card
       variant={href ? 'interactive' : 'default'}
-      style={{ padding: '16px 16px 14px', display: 'flex', flexDirection: 'column', gap: 7, height: '100%' }}
+      style={{ padding: '16px 16px 14px', display: 'flex', flexDirection: 'column', gap: 7, height: '100%', containerType: 'inline-size' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
         {icon && <Icon name={icon} size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
         <span className="t-kicker" style={{ fontSize: 9.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
-      {/* Crece con la pantalla y nunca se sale: con el separador de miles
-          («Q1,495.00») el importe a 26 px fijos rebasaba su tarjeta en un
-          teléfono de 390 px (auditoría 2026-10-02, T-01). */}
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(19px, 5.4vw, 26px)', lineHeight: 1, color, letterSpacing: '-0.02em', minWidth: 0, overflowWrap: 'anywhere' }}>
+      {/* La cifra se mide contra el ancho de SU tarjeta (`cqi`), no contra
+          la pantalla: con el separador de miles «Q1,495.00» a 26 px se salía
+          en el teléfono, y con seis tarjetas en fila a 1440 px se partía en
+          «Q1,495.0 / 0» (auditoría 2026-10-02, T-01). Sin `overflowWrap`:
+          un importe nunca se corta a la mitad. */}
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(16px, 11.5cqi, 26px)', lineHeight: 1, color, letterSpacing: '-0.02em', minWidth: 0, whiteSpace: 'nowrap' }}>
         {value}
       </div>
       {growth != null ? (

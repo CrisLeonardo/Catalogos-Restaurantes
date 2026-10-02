@@ -8,14 +8,16 @@
    · Zona horaria del restaurante.
    ============================================================ */
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select } from '@/components/ui/select';
 import { updateRestaurantOps, type SaveState } from '@/lib/actions/restaurant';
 import { DAY_LABELS, DAY_ORDER, type DayKey, type HourInterval, type WeeklyHours, type HourExceptions } from '@/lib/hours';
 import type { Restaurant } from '@/types';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 
 const TIMEZONES = [
   'America/Guatemala',
@@ -96,6 +98,8 @@ const empty: SaveState = null;
 
 export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantOps, empty);
+  const { ref: formRef, dirty, markSaved } = useFormDirty();
+  useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
   const [days, setDays] = useState<Record<DayKey, DayState>>(() => initDays(restaurant.hours));
   const [paused, setPaused] = useState(restaurant.orders_paused === true);
   /** Ningún día encendido → se guarda `hours = null` → abierto siempre. */
@@ -160,18 +164,10 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
     fontFamily: 'var(--ui-font-mono)',
   };
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    color: 'var(--u-text-3)',
-    fontWeight: 500,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    display: 'block',
-  };
+  const labelStyle: React.CSSProperties = FIELD_LABEL;
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
       <input type="hidden" name="hours" value={buildHoursJson(days)} />
       <input type="hidden" name="hour_exceptions" value={buildExceptionsJson(exceptions)} />
@@ -449,36 +445,7 @@ export default function HoursEditor({ restaurant }: { restaurant: Restaurant }) 
       </Card>
 
 
-      {state && 'saved' in state && !isPending && (
-        <div
-          role="status"
-          style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)',
-            color: 'var(--c-ok)', fontSize: 14,
-          }}
-        >
-          Cambios guardados.
-        </div>
-      )}
-      {state && 'error' in state && (
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--c-danger-bg)',
-            border: '1px solid var(--c-danger-line)',
-            color: 'var(--c-danger)',
-            fontSize: 14,
-          }}
-        >
-          {state.error}
-        </div>
-      )}
-
-      <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
-        {isPending ? 'Guardando…' : 'Guardar horario'}
-      </Button>
+      <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar horario" />
     </form>
   );
 }

@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { updateEntryPin, type EntryPinState } from '@/lib/actions/mi-cuenta';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -31,6 +32,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const { confirmSubmit, dialog } = useConfirm();
   const [state, formAction, isPending] = useActionState<EntryPinState, FormData>(updateEntryPin, null);
 
   useEffect(() => {
@@ -88,7 +90,11 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
           {hasPin && (
             <form
               action={formAction}
-              onSubmit={(e) => { if (!confirm('¿Quitar el PIN? Se entrará directo desde Mi cuenta.')) e.preventDefault(); }}
+              onSubmit={confirmSubmit({
+                title: '¿Quitar el PIN?',
+                description: 'Se entrará directo desde Mi cuenta, sin pedir clave.',
+                confirmLabel: 'Quitar PIN',
+              })}
             >
               <input type="hidden" name="restaurantId" value={restaurantId} />
               <input type="hidden" name="remove" value="true" />
@@ -102,6 +108,7 @@ export default function EntryPinCard({ restaurantId, hasPin }: {
         <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{state.error}</div>
       )}
       </Card>
+      {dialog}
     </Section>
   );
 }

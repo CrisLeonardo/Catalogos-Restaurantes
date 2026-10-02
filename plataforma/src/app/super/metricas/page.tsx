@@ -34,7 +34,6 @@ export default async function MetricasPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <PageHeader
-        title="Métricas de la plataforma"
         subtitle="Actividad global de los últimos 30 días. Entra a un restaurante para ver su detalle, crecimiento y evaluación de cobro."
       />
 

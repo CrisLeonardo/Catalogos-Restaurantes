@@ -88,7 +88,6 @@ export default async function SuperHomePage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
       <PageHeader
-        title="Resumen de la plataforma"
         subtitle="Cómo va Leogin hoy: ingresos, actividad de los restaurantes y lo que requiere tu atención."
         actions={
           /* Sin «Nuevo grupo»: crear grupos a mano se retiró (el grupo nace

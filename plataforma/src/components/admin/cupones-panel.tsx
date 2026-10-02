@@ -11,6 +11,9 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { createCoupon, updateCoupon, toggleCoupon, deleteCoupon } from '@/lib/actions/cupones';
 import type { Coupon } from '@/lib/db/cupones';
 import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { Stat, StatGroup } from '@/components/ui/stat';
 
 interface Props {
   restaurantId: string;
@@ -21,10 +24,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase' as const, marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const emptyForm = {
   code: '', description: '', discount_type: 'PERCENT' as 'PERCENT' | 'FIXED',
@@ -41,7 +41,8 @@ function couponStatus(c: Coupon): { label: string; color: string } {
 
 export default function CuponesPanel({ restaurantId, coupons }: Props) {
   const router = useRouter();
-  const [showForm, setShowForm] = useState(coupons.length === 0);
+  const { confirm, dialog } = useConfirm();
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
@@ -105,8 +106,11 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
     });
   }
 
-  function handleDelete(id: string) {
-    if (!confirm('¿Eliminar este cupón? Esta acción no se puede deshacer.')) return;
+  async function handleDelete(id: string) {
+    if (!(await confirm({
+      title: '¿Eliminar este cupón?',
+      description: 'Quien lo tenga ya no podrá usarlo. No se puede deshacer.',
+    }))) return;
     setBusyId(id);
     startTransition(async () => {
       const res = await deleteCoupon(restaurantId, id);
@@ -123,22 +127,26 @@ export default function CuponesPanel({ restaurantId, coupons }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* Header con stats */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Card className="flex items-center gap-2 px-4.5 py-2.5">
-            <span className="t-mono" style={{ fontWeight: 600, fontSize: 20, color: 'var(--brand-accent-ink)' }}>{active}</span>
-            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>activos</span>
-          </Card>
-          <Card className="flex items-center gap-2 px-4.5 py-2.5">
-            <span className="t-mono" style={{ fontWeight: 600, fontSize: 20, color: 'var(--u-text)' }}>{coupons.length}</span>
-            <span style={{ fontSize: 12, color: 'var(--u-text-3)' }}>total</span>
-          </Card>
+      {dialog}
+      {/* Cifras con la fila del panel (no píldoras propias) y solo si ya hay
+          cupones: «0 activos · 0 total» no le dice nada a quien empieza
+          (auditoría 2026-10-02, T-05). */}
+      {coupons.length > 0 && (
+        <StatGroup>
+          <Stat label="Activos" value={String(active)} />
+          <Stat label="En total" value={String(coupons.length)} />
+        </StatGroup>
+      )}
+      {/* «+ Nuevo cupón» arriba a la derecha solo cuando hay lista y el
+          formulario está cerrado: vacía, la acción la lleva el estado vacío;
+          abierto, el formulario ya tiene su «Cancelar» (auditoría 2026-10-02, T-09). */}
+      {coupons.length > 0 && !showForm && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" onClick={() => { setEditingId(null); setForm(emptyForm); setShowForm(true); }} className="rounded-adm-full">
+            <Icon name="plus" size={15} /> Nuevo cupón
+          </Button>
         </div>
-        <Button type="button" onClick={() => { if (showForm) { closeForm(); } else { setEditingId(null); setForm(emptyForm); setShowForm(true); } }} className="rounded-adm-full">
-          <Icon name="plus" size={15} /> Nuevo cupón
-        </Button>
-      </div>
+      )}
 
       {error && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>

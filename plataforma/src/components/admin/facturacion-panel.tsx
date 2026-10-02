@@ -26,6 +26,10 @@ import {
 import { interpretarReceptorId, explicarIdInvalido } from '@/lib/fel/nit';
 import type { FelSummary, InvoiceableOrder, FelEstadoConfig } from '@/lib/db/fel';
 import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface Props {
   restaurantId: string;
@@ -41,10 +45,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function money(n: number) {
   return fmtMoney(Number(n));
@@ -121,15 +122,7 @@ export default function FacturacionPanel({ restaurantId, settings, estado, docum
         </Aviso>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['emitir', 'Emitir'], ['config', 'Configuración'], ['historial', 'Historial']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['emitir', 'Emitir'], ['config', 'Configuración'], ['historial', 'Historial']] as const} value={tab} onChange={setTab} />
 
       {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} estado={estado} onSaved={() => router.refresh()} />}
       {tab === 'emitir' && <EmitForm restaurantId={restaurantId} settings={settings} invoiceable={invoiceable} listo={listo} onEmitted={() => router.refresh()} onGoConfig={() => setTab('config')} />}
@@ -190,15 +183,17 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
     api_llave_firma: '',
   });
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
+  const { dirty, markSaved } = useValueDirty(p);
   function set<K extends keyof FelSettingsPatch>(k: K, v: FelSettingsPatch[K]) { setP((s) => ({ ...s, [k]: v })); }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     start(async () => {
       const res = await saveFelSettings(restaurantId, p);
-      if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      setMsg('Guardado ✓');
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
       onSaved();
     });
   }
@@ -212,6 +207,7 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
   const seccion: React.CSSProperties = { paddingTop: 4, borderTop: '1px solid var(--u-hair)' };
 
   return (
+    <>
     <Card className="flex flex-col gap-3.5 p-4">
       <div className="adm-label">Datos del emisor</div>
       <div style={grid}>
@@ -361,13 +357,9 @@ function SettingsForm({ restaurantId, settings, estado, onSaved }: { restaurantI
         </>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
-          {isPending ? 'Guardando…' : 'Guardar configuración'}
-        </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
-      </div>
     </Card>
+    <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
+    </>
   );
 }
 

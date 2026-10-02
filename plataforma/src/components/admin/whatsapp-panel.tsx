@@ -4,6 +4,7 @@ import { useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { connectWhatsApp, disconnectWhatsApp, type WhatsAppState } from '@/lib/actions/whatsapp';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 export interface WhatsAppAccountView {
   phoneNumberId: string;
@@ -37,10 +38,7 @@ export default function WhatsAppPanel({
     if (state && 'ok' in state) router.refresh();
   }, [state, router]);
 
-  const labelSt: React.CSSProperties = {
-    fontSize: 10, color: 'var(--u-text-3)', fontWeight: 600,
-    letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
-  };
+  const labelSt: React.CSSProperties = FIELD_LABEL;
   const inputSt: React.CSSProperties = {
     width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)',
     border: '1px solid var(--u-hair)', borderRadius: 11, padding: '11px 13px',
@@ -54,7 +52,7 @@ export default function WhatsAppPanel({
 
   return (
     <div style={{ maxWidth: 620 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>WhatsApp</h1>
+      {/* El título lo pone la barra («WhatsApp»); aquí se repetía (T-10). */}
       <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginBottom: 20 }}>
         Conecta el número de tu negocio para avisarle a cada cliente cómo va su
         pedido: cuando entra a cocina, cuando está listo y cuando va en camino.
@@ -63,10 +61,12 @@ export default function WhatsAppPanel({
       {!tokenKeyReady && (
         /* Un aviso de varias líneas no es un chip: `.chip` no parte el
            texto (`nowrap`) y esta frase empujaba la página entera 448 px
-           hacia la derecha en el teléfono. Mismo color, forma de aviso. */
-        <div className="chip chip-danger" style={avisoSt}>
-          La conexión con WhatsApp todavía no está activa en Leogin.
-          Escríbenos a soporte y la activamos para tu restaurante.
+           hacia la derecha en el teléfono. Va en azul de información y no
+           en rojo: no es un error del dueño, es algo que falta de nuestro
+           lado (auditoría 2026-10-02, T-18). */
+        <div className="note note-info" style={{ marginBottom: 18, fontSize: 13, fontWeight: 500 }}>
+          <span>La conexión con WhatsApp todavía no está activa en Leogin.
+          Escríbenos a soporte y la activamos para tu restaurante.</span>
           {/* Aquí iba «Detalle técnico: falta WHATSAPP_TOKEN_KEY»: el nombre de
               una variable del servidor, a la vista del dueño (auditoría
               2026-10-02, T-15). Eso es para soporte, no para él. */}

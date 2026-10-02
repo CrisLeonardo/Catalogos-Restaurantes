@@ -414,11 +414,13 @@ export default function OrderCard({
     <div
       style={{
         borderRadius: 'var(--radius-lg)',
-        background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
-        border: '1px solid var(--u-hair)',
+        /* La misma ficha que el resto del panel (T-12): el gris al 4 % del
+           texto se veía apagado sobre el fondo gris en modo claro. */
+        background: 'var(--adm-card, color-mix(in srgb, var(--u-text) 4%, transparent))',
+        border: '1px solid var(--adm-border, var(--u-hair))',
         // Un pedido que se pasó del tiempo se ve distinto DESDE LEJOS: el borde
         // completo se tiñe. En una barra llena, nadie lee un chip pequeño.
-        boxShadow: isLate ? '0 0 0 1.5px var(--c-danger-line)' : 'none',
+        boxShadow: isLate ? '0 0 0 1.5px var(--c-danger-line)' : 'var(--adm-shadow-xs, none)',
         padding: '16px 18px',
         display: 'flex', flexDirection: 'column', gap: 12,
         opacity: isTerminal ? 0.72 : 1,

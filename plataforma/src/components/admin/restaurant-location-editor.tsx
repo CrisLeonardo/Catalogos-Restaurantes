@@ -9,14 +9,15 @@
    valida que su pin caiga dentro del radio.
    ============================================================ */
 
-import { useActionState, useState, useCallback } from 'react';
+import { useActionState, useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { updateRestaurantLocation, type SaveState } from '@/lib/actions/restaurant';
 import type { Restaurant } from '@/types';
+import SaveBar from '@/components/admin/save-bar';
+import { useFormDirty } from '@/lib/use-form-dirty';
 
 const LocationMap = dynamic(
   () => import('./restaurant-location-map'),
@@ -44,6 +45,8 @@ const empty: SaveState = null;
 
 export default function RestaurantLocationEditor({ restaurant }: { restaurant: Restaurant }) {
   const [state, formAction, isPending] = useActionState(updateRestaurantLocation, empty);
+  const { ref: formRef, dirty, markSaved } = useFormDirty();
+  useEffect(() => { if (state && 'saved' in state) markSaved(); }, [state, markSaved]);
 
   const [lat,    setLat]    = useState(restaurant.location_lat    ?? DEFAULT_LAT);
   const [lng,    setLng]    = useState(restaurant.location_lng    ?? DEFAULT_LNG);
@@ -58,7 +61,7 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
   }, []);
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <input type="hidden" name="restaurantId" value={restaurant.id} />
 
       {/* Datos enviados al servidor; se actualizan cuando el usuario mueve el pin */}
@@ -167,44 +170,18 @@ export default function RestaurantLocationEditor({ restaurant }: { restaurant: R
         )}
 
         {!geoEnabled && (
-          <div style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'color-mix(in srgb, var(--u-text) 3%, transparent)',
-            fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5,
-          }}>
-            <Icon name="mapPin" size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            La validación por mapa está desactivada. Al pedir se usarán las zonas
-            de abajo (si agregas alguna) o se aceptará cualquier dirección.
+          <div className="note note-info" style={{ fontWeight: 500 }}>
+            <Icon name="mapPin" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>
+              La validación por mapa está apagada. Al pedir se usan las zonas
+              de abajo (si agregas alguna) o se acepta cualquier dirección.
+            </span>
           </div>
         )}
       </Card>
 
 
-      {state && 'saved' in state && !isPending && (
-        <div
-          role="status"
-          style={{
-            padding: '10px 14px', borderRadius: 'var(--radius-md)',
-            background: 'var(--c-ok-bg)', border: '1px solid var(--c-ok-line)',
-            color: 'var(--c-ok)', fontSize: 14,
-          }}
-        >
-          Cambios guardados.
-        </div>
-      )}
-      {state && 'error' in state && (
-        <div style={{
-          padding: '10px 14px', borderRadius: 'var(--radius-md)',
-          background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)',
-          color: 'var(--c-danger)', fontSize: 14,
-        }}>
-          {state.error}
-        </div>
-      )}
-
-      <Button type="submit" disabled={isPending} size="lg" className="w-full rounded-adm-full">
-        {isPending ? 'Guardando…' : 'Guardar ubicación y radio'}
-      </Button>
+      <SaveBar dirty={dirty} pending={isPending} status={state} label="Guardar ubicación" />
     </form>
   );
 }

@@ -42,7 +42,6 @@ export default async function RestaurantesPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PageHeader
-        title="Restaurantes"
         subtitle={`${rows.length} ${rows.length === 1 ? 'restaurante' : 'restaurantes'} en la plataforma. Busca, filtra y entra a la ficha para gestionar plan, cobro y usuarios.`}
         actions={
           <Button render={<Link href="/super/restaurantes/new" />}>

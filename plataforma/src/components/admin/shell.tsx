@@ -332,14 +332,25 @@ export default function AdminShell({
     '/admin/analitica': 'Analítica',
     '/admin/finanzas': 'Finanzas',
     '/admin/personalizacion': 'Personalizar sitio',
-    '/admin/personal': 'Personal y permisos',
+    // «Personal y permisos» no cabía en el teléfono («Personal y permi…»).
+    '/admin/personal': 'Personal',
     '/admin/suscripcion': 'Mi suscripción',
-    '/admin/menu/productos': 'Producto',
+    // «Platillo», como dicen la pestaña («Platillos») y el resto del panel.
+    '/admin/menu/productos/new': 'Nuevo platillo',
+    '/admin/menu/productos': 'Platillo',
     '/admin/menu': 'Platillos',
     '/admin/perfil': 'Perfil',
     '/admin/ajustes/restaurante': 'Horarios',
     '/admin/ajustes/entrega': 'Zona de entrega',
     '/admin/ajustes/pedidos': 'Pedidos y cobro',
+    /* Estas cuatro caían en el «Panel» de reserva o en el «Ajustes» del
+       grupo: la barra no decía en qué pantalla se estaba (auditoría
+       2026-10-02, T-10). Van antes de '/admin/ajustes' porque gana el
+       primer prefijo que coincide. */
+    '/admin/ajustes/salon': 'Salón',
+    '/admin/repartidores': 'Repartidores',
+    '/admin/whatsapp': 'WhatsApp',
+    '/admin/facturacion': 'Facturación',
     '/admin/ajustes': 'Ajustes',
     '/admin/mi-pc': 'La PC del local',
     '/admin/qr': 'Código QR',
@@ -350,7 +361,7 @@ export default function AdminShell({
     '/admin/cupones': 'Cupones',
     '/admin/lealtad': 'Lealtad',
     '/admin/modulos': 'Funciones',
-    '/admin/respaldo': 'Copia de tus datos',
+    '/admin/respaldo': 'Copia de datos',
   };
   /* Estando en una pestaña, el título de arriba dice el GRUPO ("Menú") y la
      pestaña activa dice la pantalla ("Platillos"): antes ambos decían lo

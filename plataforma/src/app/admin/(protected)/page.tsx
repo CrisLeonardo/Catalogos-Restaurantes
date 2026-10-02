@@ -289,10 +289,15 @@ export default async function AdminHomePage() {
           (flex-wrap) por si acaso en una pantalla muy angosta (~320px)
           tampoco entran juntos. */}
       <div className="flex flex-wrap items-end gap-4">
+        {/* «Hoy» ya lo dice la barra de arriba; aquí se repetía en letra de
+            portada a diez píxeles (auditoría 2026-10-02, T-10/HOY-02). La
+            cabecera dice ahora lo que la barra no: qué día es y de qué local. */}
         <div className="min-w-[190px] flex-1">
-          <h2 className="t-display" style={{ fontSize: 26, lineHeight: 1.15 }}>Hoy</h2>
-          <p style={{ fontSize: 14.5, color: 'var(--u-text-3)', marginTop: 6 }}>
-            {today} · {brandName}
+          <h2 style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.25, color: 'var(--u-text)', margin: 0 }}>
+            {today}
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--u-text-3)', marginTop: 3 }}>
+            {brandName}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">

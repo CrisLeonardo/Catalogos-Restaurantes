@@ -23,6 +23,9 @@ import { setStaffPin, type StaffPinState } from '@/lib/actions/staff-pin';
 import { staffLoginHandle } from '@/lib/staff-email';
 import { haceTiempo } from '@/lib/dates';
 import { describirActividad, humanizarClave } from '@/lib/activity-labels';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToastManager } from '@/components/ui/toast';
 
 /** Secciones que un gerente NO recibe con su plantilla.
     'suscripcion' es el cobro del restaurante: quién paga, cuánto y con qué
@@ -237,14 +240,27 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   const [state, formAction, isPending] = isNew ? createAction : updateAction;
 
   useEffect(() => { if (state && 'ok' in state) onSaved(); }, [state, onSaved]);
-  useEffect(() => { if (pinAction[0] && 'ok' in pinAction[0]) alert('PIN actualizado.'); }, [pinAction]);
-  useEffect(() => { if (passAction[0] && 'ok' in passAction[0]) alert('Contraseña actualizada. Pásasela a esta persona.'); }, [passAction]);
+  /* Aviso del panel en vez de `alert()` (caja del sistema operativo).
+     Dependen del RESULTADO, no de la tupla de useActionState, que es nueva
+     en cada render y repetía el aviso (auditoría 2026-10-02, T-16). */
+  const toast = useToastManager();
+  const { confirmSubmit, dialog } = useConfirm();
+  const pinResult = pinAction[0];
+  const passResult = passAction[0];
+  useEffect(() => {
+    if (pinResult && 'ok' in pinResult) toast.add({ title: 'PIN actualizado', type: 'success' });
+  }, [pinResult, toast]);
+  useEffect(() => {
+    if (passResult && 'ok' in passResult) {
+      toast.add({ title: 'Contraseña actualizada', description: 'Pásasela a esta persona.', type: 'success' });
+    }
+  }, [passResult, toast]);
 
   function toggle(key: string) {
     setPerms((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
   }
 
-  const label: React.CSSProperties = { fontSize: 10.5, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block' };
+  const label: React.CSSProperties = FIELD_LABEL;
   const input: React.CSSProperties = { width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid var(--u-hair)', borderRadius: 11, padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none' };
 
   const isMesero = perms.includes('mesero');
@@ -252,6 +268,7 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent showClose={false} className="flex w-[480px] max-w-[94vw] max-h-[90vh] flex-col p-0">
+        {dialog}
         <DialogHeader className="flex-row items-center justify-between px-5.5 py-4.5 border-b border-[var(--u-hair)] space-y-0">
           <DialogTitle className="t-display" style={{ fontSize: 20 }}>{isNew ? 'Nuevo miembro' : (member!.full_name || 'Miembro del equipo')}</DialogTitle>
           <Button type="button" onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar"><Icon name="x" size={18} /></Button>
@@ -494,7 +511,14 @@ function StaffModal({ restaurantId, slug, member, enabledSections, isOwner, onCl
                   </>
                 )}
 
-                <form action={removeStaff} onSubmit={(e) => { if (!confirm('¿Quitar a este miembro? Perderá el acceso.')) e.preventDefault(); }}>
+                <form
+                  action={removeStaff}
+                  onSubmit={confirmSubmit({
+                    title: '¿Quitar a esta persona del equipo?',
+                    description: 'Pierde el acceso al panel desde ya.',
+                    confirmLabel: 'Quitar',
+                  })}
+                >
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="userId" value={member!.id} />
                   <Button type="submit" variant="destructive" className="w-full">

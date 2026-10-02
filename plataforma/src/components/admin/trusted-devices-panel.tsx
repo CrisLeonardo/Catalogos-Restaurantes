@@ -14,6 +14,7 @@ import { getDeviceId, describeThisDevice } from '@/lib/device-id';
 import { trustCurrentDevice, forgetDevice, setTrustedDevicePolicy, type DeviceState } from '@/lib/actions/devices';
 import type { TrustedDevice } from '@/lib/auth/trusted-device';
 import { haceTiempo } from '@/lib/dates';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const timeAgo = (iso: string): string => haceTiempo(iso);
 
@@ -25,6 +26,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
   const router = useRouter();
   const [thisDeviceId, setThisDeviceId] = useState<string | null>(null);
   const [thisDeviceLabel, setThisDeviceLabel] = useState('Este dispositivo');
+  const { confirmSubmit, dialog } = useConfirm();
 
   const [trustState, trustAction, trusting] = useActionState<DeviceState, FormData>(trustCurrentDevice, null);
   const [policyState, policyAction, savingPolicy] = useActionState<DeviceState, FormData>(setTrustedDevicePolicy, null);
@@ -124,7 +126,11 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
               </div>
               <form
                 action={forgetDevice}
-                onSubmit={(e) => { if (!confirm('¿Quitar este aparato? Si el PIN está protegido, dejará de poder entrar desde ahí.')) e.preventDefault(); }}
+                onSubmit={confirmSubmit({
+                  title: '¿Quitar este aparato?',
+                  description: 'Si el PIN está protegido, ya no se podrá entrar desde ahí.',
+                  confirmLabel: 'Quitar',
+                })}
                 style={{ flexShrink: 0 }}
               >
                 <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -168,6 +174,7 @@ export default function TrustedDevicesPanel({ restaurantId, devices, requiresTru
 
       {error && <div style={{ fontSize: 12.5, color: 'var(--c-danger)' }}>{error}</div>}
       </Card>
+      {dialog}
     </Section>
   );
 }

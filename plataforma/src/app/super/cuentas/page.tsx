@@ -14,7 +14,6 @@ export default async function CuentasPage() {
     return (
       <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <PageHeader
-          title="Cuentas"
           subtitle="Las personas que entran a Leogin, con restaurante o sin él."
         />
         <Card style={{ padding: 20, display: 'flex', gap: 13, alignItems: 'flex-start' }}>
@@ -61,7 +60,6 @@ export default async function CuentasPage() {
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PageHeader
-        title="Cuentas"
         subtitle={
           <>
             {personas} {personas === 1 ? 'persona' : 'personas'} con cuenta de Leogin.

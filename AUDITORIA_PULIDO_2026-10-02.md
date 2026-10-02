@@ -209,6 +209,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   (Cupones); (d) Super Admin: rótulo Anton en mayúsculas + número Unbounded de
   color; (e) franja con scroll horizontal (Mesas). Todo a `<Stat>/<StatGroup>`
   (`components/ui/stat.tsx`).
+  🔄 **Parcial 2026-10-02 (Fase 3):** Lealtad, Proveedores y Cupones ya usan `<StatGroup>/<Stat>` (Cupones solo si hay cupones). Quedan el Super (D-8) y la franja de Mesas (D-2).
 
 - [x] **T-06** · P1 · S — **Tres cifras en rejilla de dos = hueco.** En Hoy
   («Resumen del día»), Pedidos («Tiempos de hoy»), Inventario, Lista de espera,
@@ -217,13 +218,14 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Arreglo en `StatGroup`: con 3 elementos, 3 columnas (compactas en el teléfono).
   ✅ **Hecho 2026-10-02 (Fase 1).** La causa no era el teléfono: en escritorio la regla «cifra impar = dos columnas» ganaba por especificidad CSS a la de escritorio, y la tercera cifra saltaba de renglón. Reglas del teléfono con `max-md:` y conteo con `Children.toArray` (los `false` abrían columnas vacías). Visto: Hoy a 1440 con las tres cifras en una fila.
 
-- [ ] **T-07** · P2 · M — **Cinco estilos de pestañas.** Segmentado gris (secciones
+- [x] **T-07** · P2 · M — **Cinco estilos de pestañas.** Segmentado gris (secciones
   de la barra), subrayado (Lealtad, Reservaciones, Lista de espera, ficha del
   Super), segmentado blanco (Fichas/Plano/Lista de Mesas), segmentado con iconos
   (Personalizar) y píldoras (filtros de Tomar pedidos). Existe
   `components/ui/tabs.tsx` **sin un solo uso**. Dejar dos: «secciones» y «filtros».
+  ✅ **Hecho 2026-10-02 (Fase 3).** `components/admin/page-tabs.tsx` + `.adm-tabs-page`: Lealtad, Proveedores, Reservaciones, Lista de espera y Facturación usan el control segmentado de la barra de sección (a lo ancho en el teléfono). Los filtros de Tomar pedidos siguen en píldoras. Pendiente: la ficha del Super (D-8).
 
-- [ ] **T-08** · P1 · M — **Cuatro maneras de guardar.** (1) barra flotante que
+- [x] **T-08** · P1 · M — **Cuatro maneras de guardar.** (1) barra flotante que
   aparece al haber cambios (Pedidos y cobro — la buena); (2) botón ancho
   deshabilitado «Sin cambios que guardar» (Perfil); (3) botón ancho siempre
   activo (Horarios «Guardar operación», Zona de entrega, Repartidores); (4)
@@ -231,6 +233,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   local); y (5) barra fija enorme a todo el ancho (ficha del platillo). Unificar en
   `.adm-savebar` + `use-form-dirty.ts`, con el aviso de «cambios sin guardar» al
   salir.
+  ✅ **Hecho 2026-10-02 (Fase 3).** `components/admin/save-bar.tsx`: una sola barra `.adm-savebar` que sale con cambios, dice «Guardado» un momento y pregunta «¿Salir sin guardar?» al tocar un enlace (y el aviso del navegador al cerrar). Usada en Perfil, Horarios, Ubicación, Zonas, Pedidos y cobro, Salón, Lealtad › Configuración, Facturación › Configuración, La PC del local y la ficha del platillo al editar; Personalizar conserva su barra con «Ver sitio» pero gana el aviso al salir. `useValueDirty()` nuevo para pantallas sin <form>. Probado en vivo en el platillo.
 
 - [ ] **T-09** · P2 · M — **Cinco maneras de «crear nuevo».** Formulario siempre
   abierto encima de la lista (Cupones, Repartidores, WhatsApp), una pestaña
@@ -239,8 +242,9 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   para lo mismo (Ingredientes: «+ Nuevo insumo» y «Agregar el primero»). Propuesta:
   botón «+ Nuevo…» arriba a la derecha → hoja/ventana; el estado vacío repite la
   acción solo cuando no hay nada.
+  🔄 **Parcial 2026-10-02 (Fase 3):** Insumos con un solo «+ Nuevo insumo»; Cupones ya no abre el formulario de entrada (estado vacío + «+ Nuevo cupón» arriba a la derecha); Repartidores rehecho: «+ Nuevo repartidor», formulario solo al pedirlo, lista en tarjeta, estado vacío; Proveedores con el mismo botón. Quedan las pestañas «Nueva reservación»/«Agregar grupo».
 
-- [ ] **T-10** · P1 · M — **Títulos de pantalla sin regla.** Título repetido (barra
+- [x] **T-10** · P1 · M — **Títulos de pantalla sin regla.** Título repetido (barra
   «Hoy» + encabezado «Hoy»; Super: «Restaurantes/Restaurantes»,
   «Finanzas/Finanzas», «Inicio/Resumen de la plataforma»); encabezados internos en
   Anton MAYÚSCULAS («CATEGORÍAS DEL MENÚ», «POR ENVIAR A COCINA», «VISTA PREVIA»)
@@ -250,21 +254,24 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Super dice «Super Admin»); títulos cortados en el teléfono («Personal y
   permi…», «Copia de tus dat…»). Regla: la barra lleva el nombre de la pantalla,
   sin repetirlo abajo; rótulos de bloque con `.adm-label`.
+  ✅ **Hecho 2026-10-02 (Fase 3).** Barra con el nombre correcto (Salón, Repartidores, WhatsApp, Facturación, Copia de datos, Platillo/Nuevo platillo, Cuentas en el Super) y sin repetirlo abajo: Hoy, Categorías, Repartidores, WhatsApp, Canales y siete pantallas del Super (`PageHeader` con título opcional). Encabezados de grupo de Pedidos sin Anton.
 
-- [ ] **T-11** · P2 · S — **Rótulos de formulario en MAYÚSCULAS** («NOMBRE *»,
+- [x] **T-11** · P2 · S — **Rótulos de formulario en MAYÚSCULAS** («NOMBRE *»,
   «CATEGORÍA», «CÓDIGO *», «PUNTOS OTORGADOS», «BILLETES», «GASTOS DE HOY») cuando
   el rediseño del 08-21 dejó los rótulos en minúscula (`.adm-label`). En Caja
   conviven «GASTOS DE HOY» y «Cortes recientes» en la misma pantalla.
+  ✅ **Hecho 2026-10-02 (Fase 3).** `components/admin/field-label.ts` (`FIELD_LABEL`) en 14 formularios + Perfil: rótulos en minúscula, 13 px, como `.adm-label`. «ZONAS A LAS QUE LLEVAS…» pasó a título de ficha.
 
-- [ ] **T-12** · P1 · M — **Fichas grises en modo claro.** El formulario del
+- [x] **T-12** · P1 · M — **Fichas grises en modo claro.** El formulario del
   platillo, las tarjetas de pedido, la ficha del restaurante y los formularios del
   Super se ven grises (gris sobre gris, con campos grises) mientras el resto del
   panel usa tarjetas blancas. Causa: usan `<Glass variant="quiet">`, pensado para
   el menú en oscuro, en vez de `<Card>` del panel.
   Dónde: `product-form.tsx` (11 usos), `components/super/*` (≈20),
   `staff-pin-login.tsx`, `order-card.tsx`.
+  ✅ **Hecho 2026-10-02 (Fase 3).** En `admin.css`, dentro del área de personal `.glass-quiet`/`.glass-solid` se pintan como tarjeta del panel (blanca en claro, sin desenfoque): arregla de una vez el platillo, las fichas del Super y el resto. Tarjeta de pedido con `--adm-card` y contorno rojo si va tarde. Visto en claro y oscuro.
 
-- [ ] **T-16** · P2 · M — **Diálogos del sistema operativo.** 15 `confirm()` y 2
+- [x] **T-16** · P2 · M — **Diálogos del sistema operativo.** 15 `confirm()` y 2
   `alert()` («PIN actualizado.», «Contraseña actualizada…»): caja gris del
   navegador, fuera del tema, en inglés en algunos navegadores. Existe
   `components/ui/dialog.tsx` (2 usos). Propuesta: `useConfirm()` sobre ese diálogo
@@ -274,14 +281,17 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   `reservaciones-panel.tsx:137`, `ingredient-panel.tsx:155`, `recipe-editor.tsx:345`,
   `invitations-panel.tsx:67`, `trusted-devices-panel.tsx:132`,
   `entry-pin-card.tsx:91`, `canales-panel.tsx:75`, `super/theme-editor.tsx:108,464`.
+  ✅ **Hecho 2026-10-02 (Fase 3).** `useConfirm()` en `components/ui/confirm-dialog.tsx` (diálogo del panel, foco en «Cancelar», rojo solo si borra) y `confirmSubmit()` para formularios con server action (pregunta y reenvía el mismo formulario). Cambiados los 15 `confirm()`, incluido `DeleteButton`; los dos `alert()` de Personal pasaron a aviso (toast) y ya no se repiten en cada render. Probado en vivo: Cancelar no borra, Eliminar sí (categoría de prueba creada y borrada).
 
-- [ ] **T-17** · P3 · S — **Estados vacíos dispares:** tarjeta centrada con icono y
+- [x] **T-17** · P3 · S — **Estados vacíos dispares:** tarjeta centrada con icono y
   botón (Reservaciones, Ingredientes), sin tarjeta (Lista de espera), texto suelto
   (Caja «Aún no hay arqueos»). Todo a `<EmptyState>`.
+  ✅ **Hecho 2026-10-02 (Fase 3).** Lista de espera con `<EmptyState>`. «Aún no hay arqueos» en Caja se deja como nota dentro de su tarjeta a propósito (la acción está en la misma pantalla).
 
-- [ ] **T-18** · P2 · S — **Avisos de cinco colores:** ámbar (Lealtad), morado
+- [x] **T-18** · P2 · S — **Avisos de cinco colores:** ámbar (Lealtad), morado
   (Encuestas), azul (La PC del local), rojo rosado (WhatsApp), gris (Zona de
   entrega). Quedarse con cuatro semánticos: info · aviso · peligro · éxito.
+  ✅ **Hecho 2026-10-02 (Fase 3).** Avisos con las clases `.note-info/-warn/-danger/-ok`: Encuestas (morado → info), WhatsApp sin conexión (rojo → info: no es un error del dueño), Zona de entrega (gris → info), Lealtad (warn).
 
 - [ ] **T-19** · P3 · S — **Gráficas de colores distintos:** barras naranja (Hoy),
   café oscuro (Encuestas), negras (Visitas), gris+naranja y naranja pálido (Super).
@@ -960,4 +970,5 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 |-------|-------------|--------|
 | 2026-10-02 | Auditoría inicial: barrido de ~330 capturas, lectura de código, este archivo. | — |
 | 2026-10-02 | **Fase 1** (decisión D-1: «tú»). 21 hallazgos: CAT-01, MIC-01, AJU-01/02/03, T-01, T-02, T-03, T-06, HOY-01, MIC-02/03, CAT-02, N-05, N-08, N-09, SUP-01, SUP-04, NEG-01, MEN-02, MEN-03. Verificado: `tsc` y `eslint` limpios, 768 pruebas (19 nuevas: `money`, `dates`, `product-availability`), dos builds de producción y barrido de capturas de cada pantalla tocada a 390 y 1440 px con pedidos activos y un platillo sin existencias; pedido real de prueba de CAT-01 (luego borrado). Al verificar salieron y se arreglaron dos cosas que el propio cambio había causado (ficha del platillo a 809 px en el teléfono; «Q2,794.…» cortado en la fila de 6 cifras). Base local devuelta a su estado. | `8c0bf81` (rama `auditoria-pulido-2026-10-02`) |
-| 2026-10-02 | **Fase 2.** T-13, T-14, T-15, AJU-12, AJU-13, N-01 (ayuda y tours reescritos), N-03, N-04, AJU-09, y dos hallazgos nuevos arreglados: AJU-19 (tarifa de envío sin pantalla) y AJU-20 (guardar te mandaba a Perfil). Parciales: AJU-15, N-02, AJU-08. Verificado: `tsc` y `eslint` limpios, 774 pruebas (nuevas: bitácora en palabras, textos viejos del tema), build de producción, capturas de las 13 pantallas tocadas y guardado real en Horarios. | ver commit de la fase 2 |
+| 2026-10-02 | **Fase 2.** T-13, T-14, T-15, AJU-12, AJU-13, N-01 (ayuda y tours reescritos), N-03, N-04, AJU-09, y dos hallazgos nuevos arreglados: AJU-19 (tarifa de envío sin pantalla) y AJU-20 (guardar te mandaba a Perfil). Parciales: AJU-15, N-02, AJU-08. Verificado: `tsc` y `eslint` limpios, 774 pruebas (nuevas: bitácora en palabras, textos viejos del tema), build de producción, capturas de las 13 pantallas tocadas y guardado real en Horarios. | `352e973` |
+| 2026-10-02 | **Fase 3 — piezas comunes.** T-07, T-08, T-10, T-11, T-12, T-16, T-17, T-18 hechos; T-05 y T-09 parciales. Piezas nuevas: `ui/confirm-dialog.tsx`, `admin/save-bar.tsx`, `admin/page-tabs.tsx`, `admin/field-label.ts`, `useValueDirty`. De paso: interruptor de Lealtad con la frase partida, enlace de Repartidores que abría huecos, «Q1,495.0 / 0» partido en el Inicio del Super. Verificado: `tsc`, `eslint`, 774 pruebas, build de producción, capturas claro/oscuro de 23 pantallas del panel y 8 del Super, guardar/salir y borrar probados en vivo; base local devuelta a su estado. | ver commit de la fase 3 |

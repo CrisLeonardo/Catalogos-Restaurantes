@@ -23,15 +23,14 @@ import { Stat, StatGroup } from '@/components/ui/stat';
 import { saveChannelMapping, deleteChannelMapping } from '@/lib/actions/channels';
 import { CHANNELS } from '@/lib/channels';
 import type { ChannelMapRow, ChannelProductOption, ChannelSummary } from '@/lib/db/channels';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const CANAL_LABEL: Record<string, string> = {
   PEDIDOSYA: 'PedidosYa',
@@ -60,6 +59,8 @@ export default function CanalesPanel({
   const [sku, setSku] = useState('');
   const [productId, setProductId] = useState('');
 
+  const { confirm, dialog } = useConfirm();
+
   function guardar() {
     setMsg(null);
     start(async () => {
@@ -71,8 +72,12 @@ export default function CanalesPanel({
     });
   }
 
-  function borrar(id: string) {
-    if (!window.confirm('¿Quitar este mapeo? Los pedidos que ya entraron no se tocan.')) return;
+  async function borrar(id: string) {
+    if (!(await confirm({
+      title: '¿Quitar este mapeo?',
+      description: 'Los pedidos que ya entraron no se tocan.',
+      confirmLabel: 'Quitar',
+    }))) return;
     setBusy(id); setMsg(null);
     start(async () => {
       const res = await deleteChannelMapping(restaurantId, id);
@@ -86,9 +91,11 @@ export default function CanalesPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {dialog}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Canales externos</h1>
-        <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: '6px 0 0' }}>
+        {/* Sin «Canales externos» aquí: la barra ya dice «Apps de delivery» y
+            eran dos nombres para la misma pantalla (auditoría 2026-10-02, T-10). */}
+        <p style={{ fontSize: 14, color: 'var(--u-text-3)', margin: 0 }}>
           Haz que los pedidos de PedidosYa, Rappi o UberEats entren a tu cocina junto con los demás,
           en vez de vivir en una pantalla aparte.
         </p>

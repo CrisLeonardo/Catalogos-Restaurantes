@@ -106,11 +106,13 @@ export default async function AdminRepartidoresPage() {
       {/* Las zonas con su tarifa se mudaron a Ajustes › Zona de entrega, junto
           al mapa y al radio: la entrega se configuraba en dos pantallas y esta
           no está en ningún menú (auditoría 2026-10-02, N-03). */}
-      <section style={{ marginTop: 36, maxWidth: 720 }}>
-        <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Zonas de entrega</h2>
-        <p style={{ fontSize: 13, color: 'var(--u-text-3)' }}>
-          Las zonas y lo que cobras por cada una están ahora en{' '}
-          <Link href="/admin/ajustes/entrega" className="adm-action-link">Ajustes › Zona de entrega</Link>,
+      <section style={{ marginTop: 28, maxWidth: 720 }}>
+        <h2 style={{ fontSize: 15.5, fontWeight: 650, marginBottom: 4 }}>Zonas de entrega</h2>
+        <p style={{ fontSize: 13, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+          Las zonas y lo que cobras por cada una están en{' '}
+          {/* Enlace en línea: `.adm-action-link` le da alto de fila en el
+              teléfono y abría huecos entre renglones del párrafo. */}
+          <Link href="/admin/ajustes/entrega" style={{ color: 'var(--brand-accent-ink)', fontWeight: 600 }}>Ajustes › Zona de entrega</Link>,
           junto al mapa y al radio de entrega.
         </p>
       </section>

@@ -11,6 +11,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import type { Supplier, PurchaseOrder, SupplierSummary, PurchaseableProduct, PurchaseableIngredient } from '@/lib/db/suppliers';
 import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface Props {
   restaurantId: string;
@@ -25,10 +29,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 function money(n: number) {
   return fmtMoney(Number(n));
 }
@@ -41,20 +42,13 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Proveedores" value={String(summary.suppliers)} />
-        <Kpi label="Órdenes abiertas" value={String(summary.ordenesAbiertas)} accent />
-        <Kpi label="Comprado este mes" value={money(summary.gastoMes)} />
-      </div>
+      <StatGroup>
+        <Stat label="Proveedores" value={String(summary.suppliers)} />
+        <Stat label="Órdenes abiertas" value={String(summary.ordenesAbiertas)} />
+        <Stat label="Comprado este mes" value={money(summary.gastoMes)} />
+      </StatGroup>
 
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['ordenes', 'Órdenes de compra'], ['proveedores', 'Proveedores']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['ordenes', 'Órdenes de compra'], ['proveedores', 'Proveedores']] as const} value={tab} onChange={setTab} />
 
       {tab === 'proveedores'
         ? <SuppliersTab restaurantId={restaurantId} suppliers={suppliers} />
@@ -63,14 +57,6 @@ export default function ProveedoresPanel({ restaurantId, suppliers, orders, summ
   );
 }
 
-function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-1 p-3.5">
-      <span className="adm-label">{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-    </Card>
-  );
-}
 
 /* ── Proveedores ────────────────────────────────────────────── */
 
@@ -78,6 +64,7 @@ type EditState = { id?: string; name: string; contact_name: string; phone: strin
 
 function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppliers: Supplier[] }) {
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [edit, setEdit] = useState<EditState>(null);
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +79,8 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
       router.refresh();
     });
   }
-  function remove(s: Supplier) {
-    if (!window.confirm(`¿Eliminar al proveedor "${s.name}"?`)) return;
+  async function remove(s: Supplier) {
+    if (!(await confirm({ title: `¿Eliminar al proveedor «${s.name}»?` }))) return;
     start(async () => {
       const res = await deleteSupplier(restaurantId, s.id);
       if (res.error) { setError(res.error); return; }
@@ -103,8 +90,9 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {dialog}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full">+ Nuevo proveedor</Button>
+        {!edit && <Button onClick={() => setEdit({ name: '', contact_name: '', phone: '', email: '', notes: '' })} className="rounded-adm-full"><Icon name="plus" size={15} /> Nuevo proveedor</Button>}
       </div>
       {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>{error}</div>}
 
@@ -178,6 +166,7 @@ function OrdersTab({
   const [supplierId, setSupplierId] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
+  const { confirm, dialog } = useConfirm();
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -229,13 +218,19 @@ function OrdersTab({
       router.refresh();
     });
   }
-  function changeStatus(po: PurchaseOrder, estado: 'ENVIADA' | 'RECIBIDA' | 'CANCELADA') {
+  async function changeStatus(po: PurchaseOrder, estado: 'ENVIADA' | 'RECIBIDA' | 'CANCELADA') {
     if (estado === 'RECIBIDA') {
       const linked = (po.items ?? []).filter((it) => it.product_id || it.ingredient_id).length;
-      const msg = linked > 0
-        ? `Esta orden tiene ${linked} renglón(es) vinculado(s) a producto/insumo: al recibirla se sumará su stock y se recalculará el costo promedio ponderado. ¿Continuar?`
-        : '¿Marcar esta orden como recibida?';
-      if (!window.confirm(msg)) return;
+      if (!(await confirm({
+        title: '¿Marcar la orden como recibida?',
+        description: linked === 0
+          ? undefined
+          : linked === 1
+            ? 'Un renglón está ligado a un platillo o insumo: se suma a su existencia y se recalcula su costo.'
+            : `${linked} renglones están ligados a platillos o insumos: se suman a sus existencias y se recalcula su costo.`,
+        confirmLabel: 'Marcar recibida',
+        destructive: false,
+      }))) return;
     }
     start(async () => {
       const res = await setPurchaseOrderStatus(restaurantId, po.id, estado);
@@ -246,8 +241,9 @@ function OrdersTab({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {dialog}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full">+ Nueva orden</Button>}
+        {!creating && <Button onClick={() => setCreating(true)} className="rounded-adm-full"><Icon name="plus" size={15} /> Nueva orden</Button>}
       </div>
       {error && <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--c-danger-bg)', border: '1px solid var(--c-danger-line)', color: 'var(--c-danger)', fontSize: 13 }}>{error}</div>}
 

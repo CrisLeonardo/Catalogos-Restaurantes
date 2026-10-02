@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -130,12 +131,12 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 720 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 className="t-poster" style={{ fontSize: 20 }}>Categorías del menú</h1>
-          <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginTop: 3, margin: '3px 0 0' }}>
-            Ordena cómo aparecen en tu menú.
-          </p>
-        </div>
+        {/* Sin el «CATEGORÍAS DEL MENÚ» en letra de cartel: la pestaña ya dice
+            dónde se está, y ningún otro listado del panel lleva encabezado
+            propio (auditoría 2026-10-02, T-10). */}
+        <p style={{ fontSize: 13.5, color: 'var(--u-text-3)', margin: 0 }}>
+          Ordena cómo aparecen en tu menú con las flechas.
+        </p>
         <Button onClick={() => setShowNew(true)} className="rounded-adm-full">
           <Icon name="plus" size={15} /> Nueva
         </Button>
@@ -417,16 +418,18 @@ function DeleteCatButton({
   categoryId: string;
   name: string;
 }) {
-  const ref = useRef<HTMLFormElement>(null);
-
-  function handleClick(e: React.MouseEvent) {
-    if (!window.confirm(`¿Eliminar la categoría "${name}"?`)) {
-      e.preventDefault();
-    }
-  }
+  const { confirmSubmit, dialog } = useConfirm();
 
   return (
-    <form ref={ref} action={deleteCategoryModal} style={{ flexShrink: 0 }}>
+    <>
+    {dialog}
+    <form
+      action={deleteCategoryModal}
+      // Este botón solo sale en categorías sin platillos, así que no hay
+      // nada más que advertir que el borrado mismo.
+      onSubmit={confirmSubmit({ title: `¿Eliminar la categoría «${name}»?` })}
+      style={{ flexShrink: 0 }}
+    >
       <input type="hidden" name="restaurantId" value={restaurantId} />
       <input type="hidden" name="id"           value={categoryId} />
       <Button
@@ -434,12 +437,13 @@ function DeleteCatButton({
         variant="outline"
         size="icon"
         className="size-8.5 text-[var(--u-text-4)]"
-        onClick={handleClick}
         title="Eliminar categoría"
+        aria-label={`Eliminar la categoría ${name}`}
       >
         <Icon name="trash" size={14} />
       </Button>
     </form>
+    </>
   );
 }
 

@@ -13,6 +13,11 @@ import {
 import type { LoyaltySettings, LoyaltyAccount, LoyaltySummary, RewardRow } from '@/lib/db/loyalty';
 import { assetSrc } from '@/lib/asset-image';
 import { fmtMoney } from '@/lib/money';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
+import { Stat, StatGroup } from '@/components/ui/stat';
+import PageTabs from '@/components/admin/page-tabs';
 
 interface RewardProduct { id: string; name: string; price: number; image_url: string | null; cost: number | null }
 
@@ -31,10 +36,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase', marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 type Tab = 'miembros' | 'recompensas' | 'config';
 
@@ -43,41 +45,27 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="Miembros" value={String(summary.members)} />
-        <Kpi label="Puntos vigentes" value={summary.puntosVigentes.toLocaleString('es-GT')} accent />
-        <Kpi label="Canjeados este mes" value={summary.canjeadosMes.toLocaleString('es-GT')} />
-        <Kpi label="Recompensas activas" value={String(rewards.filter((r) => r.active).length)} />
-      </div>
+      {/* La fila de cifras del panel (`StatGroup`), no cuatro tarjetas sueltas
+          con su propia letra (auditoría 2026-10-02, T-05). */}
+      <StatGroup>
+        <Stat label="Miembros" value={summary.members.toLocaleString('es-GT')} />
+        <Stat label="Puntos vigentes" value={summary.puntosVigentes.toLocaleString('es-GT')} />
+        <Stat label="Canjeados este mes" value={summary.canjeadosMes.toLocaleString('es-GT')} />
+        <Stat label="Recompensas activas" value={String(rewards.filter((r) => r.active).length)} />
+      </StatGroup>
 
       {!hasSettings && (
-        <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--c-warn-bg)', border: '1px solid var(--c-warn-line)', color: 'var(--c-warn)', fontSize: 13 }}>
+        <div className="note note-warn" style={{ fontSize: 13 }}>
           Configura las tasas del programa para empezar a acumular puntos.
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const} value={tab} onChange={setTab} />
 
       {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} />}
       {tab === 'miembros' && <MembersTab restaurantId={restaurantId} accounts={accounts} customers={customers} settings={settings} />}
       {tab === 'recompensas' && <RewardsTab restaurantId={restaurantId} rewards={rewards} products={products} />}
     </div>
-  );
-}
-
-function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <Card className="flex flex-col gap-1 p-3.5">
-      <span className="adm-label">{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: accent ? 'var(--brand-accent)' : 'var(--u-text)', lineHeight: 1 }}>{value}</span>
-    </Card>
   );
 }
 
@@ -91,20 +79,23 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
     rewards_enabled: settings.rewards_enabled,
   });
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
+  const { dirty, markSaved } = useValueDirty(p);
   function set<K extends keyof LoyaltySettingsPatch>(k: K, v: LoyaltySettingsPatch[K]) { setP((s) => ({ ...s, [k]: v })); }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     start(async () => {
       const res = await saveLoyaltySettings(restaurantId, p);
-      if (res.error) { setMsg(`Error: ${res.error}`); return; }
-      setMsg('Guardado ✓');
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
       router.refresh();
     });
   }
 
   return (
+    <>
     <Card className="flex flex-col gap-3.5 p-4">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         <div><label style={labelStyle}>Puntos otorgados</label><input style={inputStyle} type="number" inputMode="decimal" min="0" step="0.1" value={p.earn_rate} onChange={(e) => set('earn_rate', parseFloat(e.target.value) || 0)} /></div>
@@ -115,7 +106,9 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13.5, color: 'var(--u-text-2)' }}>
         <Switch checked={p.rewards_enabled} onCheckedChange={(v) => set('rewards_enabled', v)} />
-        Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por productos)
+        {/* En un <span>: sueltos, el texto y el <strong> eran tres hijos del
+            flex y la frase se partía en columnas en el teléfono. */}
+        <span>Mostrar el catálogo de <strong>Recompensas</strong> en el menú (canje de puntos por productos)</span>
       </label>
 
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
@@ -126,13 +119,9 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
       <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
         La identidad de lealtad es siempre la <strong>cuenta de Google</strong> del comensal: los pedidos hechos <strong>sin sesión iniciada</strong> (invitados) no acumulan puntos automáticamente ni reciben los puntos de bienvenida, aunque sí quedan registrados como pedido normal. Si un invitado inicia sesión más tarde, sus pedidos anteriores no ganan puntos retroactivamente.
       </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Button onClick={save} disabled={isPending} className="rounded-adm-full">
-          {isPending ? 'Guardando…' : 'Guardar configuración'}
-        </Button>
-        {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--c-danger)' : 'var(--c-ok)' }}>{msg}</span>}
-      </div>
     </Card>
+    <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
+    </>
   );
 }
 

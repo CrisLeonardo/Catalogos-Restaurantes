@@ -16,6 +16,9 @@ import {
   cancelWaitlistEntry,
 } from '@/lib/actions/waitlist';
 import type { WaitlistEntry, WaitlistSummary } from '@/lib/db/waitlist';
+import { FIELD_LABEL } from '@/components/admin/field-label';
+import PageTabs from '@/components/admin/page-tabs';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Props {
   restaurantId: string;
@@ -32,10 +35,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', border: '1px solid var(--u-hair-2)',
   borderRadius: 'var(--radius-md)', padding: '9px 11px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em',
-  textTransform: 'uppercase' as const, marginBottom: 4, display: 'block',
-};
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 /** "hace 12 min" / "hace 1h 5min" — se recalcula solo con el reloj vivo. */
 function elapsedLabel(from: string, now: number): string {
@@ -128,15 +128,7 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--u-hair)' }}>
-        {([['cola', 'En espera'], ['nueva', 'Agregar grupo']] as const).map(([k, lbl]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="press"
-            style={{ padding: '9px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? 'var(--brand-accent)' : 'transparent'}`, color: tab === k ? 'var(--u-text)' : 'var(--u-text-3)', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', marginBottom: -1 }}>
-            {lbl}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={[['cola', 'En espera'], ['nueva', 'Agregar grupo']] as const} value={tab} onChange={setTab} />
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 480 }}>
@@ -165,13 +157,12 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
           </form>
         </Card>
       ) : entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--u-text-3)' }}>
-          <Icon name="users" size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
-          <div style={{ fontSize: 14 }}>Nadie está esperando mesa ahora</div>
-          <Button type="button" onClick={() => setTab('nueva')} className="mt-3 rounded-adm-full" size="sm">
-            Agregar un grupo
-          </Button>
-        </div>
+        <EmptyState
+          icon="users"
+          title="Nadie está esperando mesa"
+          desc="Cuando el local se llene, anota aquí a cada grupo y avísales en cuanto su mesa esté lista."
+          action={{ label: 'Agregar un grupo', onClick: () => setTab('nueva') }}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {entries.map((w) => {

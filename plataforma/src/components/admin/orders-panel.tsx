@@ -430,7 +430,9 @@ function OrdersPanelInner({
               return (
                 <section key={stage.id} style={{ marginBottom: 26 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                    <h2 className="t-poster" style={{ fontSize: 18 }}>
+                    {/* Encabezado de grupo como el resto del panel, no en letra de
+                        cartel en mayúsculas (auditoría 2026-10-02, PED-04/T-10). */}
+                    <h2 style={{ fontSize: 15.5, fontWeight: 650, color: 'var(--u-text)', margin: 0 }}>
                       {stage.title}
                       <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
                         {orders.length}
@@ -449,7 +451,7 @@ function OrdersPanelInner({
           {servedOpen.length > 0 && (
             <section style={{ marginBottom: 26 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                <h2 className="t-poster" style={{ fontSize: 18 }}>
+                <h2 style={{ fontSize: 15.5, fontWeight: 650, color: 'var(--u-text)', margin: 0 }}>
                   Servidos, mesa abierta
                   <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
                     {servedOpen.length}

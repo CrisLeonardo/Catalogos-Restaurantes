@@ -56,7 +56,10 @@ export default function CollapsibleCard({ title, subtitle, icon, defaultOpen = t
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--u-text)' }}>{title}</div>
+          {/* Título de fila, no de portada: en letra de cartel a 18 px (22 en el
+              teléfono) quedaba más grande que el título de la pantalla
+              (auditoría 2026-10-02, AJU-11). */}
+          <div style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.3, color: 'var(--u-text)' }}>{title}</div>
           {subtitle && <div style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 3, lineHeight: 1.45 }}>{subtitle}</div>}
         </div>
         <Icon name="chevronDown" size={18} style={{ color: 'var(--u-text-3)', flexShrink: 0, transition: 'transform 180ms var(--ease-out)', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }} />

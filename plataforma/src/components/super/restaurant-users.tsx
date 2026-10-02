@@ -180,14 +180,16 @@ function UserRow({
             action={revokeMembership}
             hiddenFields={{ userId: user.id, restaurantId }}
             label="Quitar de aquí"
-            confirm={`¿Quitarle a ${user.email ?? 'esta persona'} el acceso a este restaurante? Su cuenta de Leogin y sus otros locales no se tocan.`}
+            confirm={`¿Quitarle a ${user.email ?? 'esta persona'} el acceso a este restaurante?`}
+            description="Su cuenta de Leogin y sus otros locales no se tocan."
           />
         ) : (
           <DeleteButton
             action={deleteRestaurantUser}
             hiddenFields={{ userId: user.id, restaurantId }}
             label="Quitar"
-            confirm={`¿Quitar el acceso de ${user.email ?? 'este usuario'}? Ya no podrá iniciar sesión.`}
+            confirm={`¿Quitar el acceso de ${user.email ?? 'este usuario'}?`}
+            description="Ya no podrá iniciar sesión."
           />
         )}
       </div>

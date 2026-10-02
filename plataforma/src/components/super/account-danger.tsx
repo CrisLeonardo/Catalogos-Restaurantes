@@ -141,7 +141,7 @@ export default function AccountDanger({
             action={deleteAccount}
             hiddenFields={{ userId }}
             label="Borrar la cuenta"
-            confirm={`¿Borrar la cuenta de ${email ?? 'esta persona'}? No se puede deshacer.`}
+            confirm={`¿Borrar la cuenta de ${email ?? 'esta persona'}?`}
           />
         )}
       </div>

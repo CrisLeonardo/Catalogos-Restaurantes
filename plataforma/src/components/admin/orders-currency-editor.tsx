@@ -21,7 +21,7 @@
    bajar hasta el final para confirmar un interruptor.
    ============================================================ */
 
-import { useMemo, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, ListText } from '@/components/ui/list';
 import { Section, SectionNote } from '@/components/ui/section';
@@ -29,6 +29,8 @@ import { Switch } from '@/components/ui/switch';
 import { saveOrdersAndCurrency } from '@/lib/actions/restaurant';
 import { ServicePreferencesCtl } from '@/components/admin/service-preferences-ctl';
 import type { ThemeConfig } from '@/lib/theme/defaults';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
+import { useValueDirty } from '@/lib/use-form-dirty';
 
 type Patch = Pick<ThemeConfig,
   'orderTypes' | 'dineInTableCount' | 'dineInCourseOptions' |
@@ -124,28 +126,25 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
 export default function OrdersCurrencyEditor({ restaurantId, config: initial }: Props) {
   const [patch, setPatch] = useState<Patch>(initial);
   const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>(null);
 
-  /* "Hay algo sin guardar" se decide comparando contra la foto inicial y no
-     con una bandera que se enciende al primer toque: quien cambia un
-     interruptor y lo devuelve a como estaba no dejó nada pendiente, y la
-     barra tiene que irse sola. */
-  const dirty = useMemo(
-    () => JSON.stringify(patch) !== JSON.stringify(initial),
-    [patch, initial],
-  );
+  /* "Hay algo sin guardar" se decide comparando contra la foto del último
+     guardado y no con una bandera que se enciende al primer toque: quien
+     cambia un interruptor y lo devuelve a como estaba no dejó nada
+     pendiente, y la barra tiene que irse sola. */
+  const { dirty, markSaved } = useValueDirty(patch);
 
   function set<K extends keyof Patch>(k: K, v: Patch[K]) {
-    setMsg(null);
     setPatch((p) => ({ ...p, [k]: v }));
   }
 
   function save() {
-    setMsg(null);
+    setStatus(null);
     start(async () => {
       const res = await saveOrdersAndCurrency({ restaurantId, patch });
-      if (res.error) setMsg(`Error: ${res.error}`);
-      else setMsg('Guardado');
+      if (res.error) { setStatus({ error: res.error }); return; }
+      markSaved();
+      setStatus({ saved: true });
     });
   }
 
@@ -370,22 +369,7 @@ export default function OrdersCurrencyEditor({ restaurantId, config: initial }: 
         encienden en Funciones. La cantidad de mesas y sus QR, en Ajustes › Salón.
       </p>
 
-      {/* Barra de guardado: aparece SOLO si hay algo sin guardar. Pegada al
-          borde inferior para que en el teléfono no haya que recorrer la
-          pantalla entera después de tocar un interruptor. */}
-      {(dirty || isPending || msg) && (
-        <div className="adm-savebar">
-          <span
-            className="flex-1 text-[13px]"
-            style={{ color: msg?.startsWith('Error') ? 'var(--c-danger)' : msg ? 'var(--c-ok)' : 'var(--u-text-3)' }}
-          >
-            {msg ?? (isPending ? 'Guardando…' : 'Tienes cambios sin guardar')}
-          </span>
-          <Button onClick={save} disabled={isPending || !dirty} className="rounded-adm-full">
-            {isPending ? 'Guardando…' : 'Guardar'}
-          </Button>
-        </div>
-      )}
+      <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
     </div>
   );
 }

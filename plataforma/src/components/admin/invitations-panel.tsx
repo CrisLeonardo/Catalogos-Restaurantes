@@ -14,6 +14,7 @@ import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { revokeInvitation } from '@/lib/actions/invitations';
 import type { PendingInvitation } from '@/lib/auth/invitations';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const ROLE_LABEL: Record<string, string> = {
   MANAGER: 'Gerente',
@@ -31,7 +32,7 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
   restaurantId: string;
   invitations: PendingInvitation[];
 }) {
-
+  const { confirmSubmit, dialog } = useConfirm();
   return (
     <Section title="Invitaciones pendientes">
       <Card className="p-4.5 flex flex-col gap-3.5">
@@ -64,7 +65,12 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
               </div>
               <form
                 action={revokeInvitation}
-                onSubmit={(e) => { if (!confirm('¿Cancelar esta invitación? El enlace dejará de funcionar.')) e.preventDefault(); }}
+                onSubmit={confirmSubmit({
+                  title: '¿Cancelar esta invitación?',
+                  description: 'El enlace que mandaste dejará de funcionar.',
+                  confirmLabel: 'Cancelar invitación',
+                  cancelLabel: 'No',
+                })}
                 style={{ flexShrink: 0 }}
               >
                 <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -79,6 +85,7 @@ export default function InvitationsPanel({ restaurantId, invitations }: {
       )}
 
       </Card>
+      {dialog}
     </Section>
   );
 }

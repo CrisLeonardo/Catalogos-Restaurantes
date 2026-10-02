@@ -303,6 +303,24 @@
   background: var(--adm-card, var(--admin-panel-bg));
 }
 
+/* Pestañas dentro de una pantalla (Lealtad, Proveedores, Reservaciones,
+   Lista de espera, Facturación): el mismo control segmentado de la barra
+   de sección, no una fila subrayada propia (auditoría 2026-10-02, T-07).
+   A su medida en escritorio; en el teléfono se reparten el ancho, con alto
+   de dedo. Ver components/admin/page-tabs.tsx. */
+.adm-tabs-page { align-self: flex-start; }
+.adm-tabs-page .admin-tab {
+  border: none; cursor: pointer; background: transparent;
+  font-family: inherit; min-height: 36px;
+}
+.adm-tabs-page .admin-tab[data-active="1"] {
+  background: var(--adm-card, var(--admin-panel-bg));
+}
+@media (max-width: 767px) {
+  .adm-tabs-page { display: flex; width: 100%; align-self: stretch; }
+  .adm-tabs-page .admin-tab { flex: 1 0 auto; justify-content: center; min-height: 40px; }
+}
+
 /* Enlace de acción al pie de una tarjeta ("Ver la comparativa completa",
    "Gestionar mis modos de pedido"). En escritorio es un enlace de texto de
    toda la vida; en el teléfono se le da alto de fila para poder tocarlo sin
@@ -2794,4 +2812,26 @@
 @keyframes sv-puls {
   0%, 100% { opacity: 0.45; transform: scale(0.92); }
   50%      { opacity: 1;    transform: scale(1.05); }
+}
+
+/* ============================================================
+   FICHAS DEL PANEL — una sola superficie (auditoría 2026-10-02, T-12)
+   ------------------------------------------------------------
+   `.glass-quiet` y `.glass-solid` son superficies del MENÚ del
+   comensal: vidrio translúcido pensado para fondos oscuros con
+   imagen. Dentro del panel, en claro, salían gris sobre gris
+   (`rgba(0,0,0,.035)` encima del gris del fondo) junto a las
+   tarjetas blancas de `<Card>`: el formulario del platillo, la
+   ficha del restaurante del Super, las zonas de entrega… Aquí
+   se pintan como `<Card>`, con los tokens del panel, en claro
+   y en oscuro. El menú (y su vista previa, que es otro
+   documento) no lleva `data-admin-area` y no cambia.
+   ============================================================ */
+html[data-admin-area] .glass-quiet,
+html[data-admin-area] .glass-solid {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  box-shadow: var(--adm-shadow-sm);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }

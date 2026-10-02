@@ -17,6 +17,7 @@ import {
   type ReportedPrinter,
 } from '@/lib/actions/print-agent';
 import { haceTiempo } from '@/lib/dates';
+import SaveBar, { type SaveStatus } from '@/components/admin/save-bar';
 
 // ── Estilos ────────────────────────────────────────────────────────────────────
 
@@ -329,6 +330,7 @@ export default function PrintAgentSettings() {
   const [token, setToken] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>(null);
   const [origin, setOrigin] = useState('');
   const [generating, setGenerating] = useState(false);
   const [pauseToggling, setPauseToggling] = useState(false);
@@ -384,15 +386,22 @@ export default function PrintAgentSettings() {
     }
   }
 
+  /* Hay algo sin guardar si lo elegido no es lo que la PC tiene guardado. Tras
+     guardar se actualiza la foto local en vez de recargar todo (recargar
+     pintaba «Cargando…» y se llevaba la barra con su «Guardado»). */
+  const targetsDirty = !!config
+    && (kitchen !== (config.kitchenTarget ?? '') || receipt !== (config.receiptTarget ?? ''));
+
   async function handleSave() {
     setSaving(true);
-    setMsg('Guardando…');
+    setSaveStatus(null);
     try {
       const res = await setPrintTargets({ kitchen: kitchen || null, receipt: receipt || null });
-      setMsg(res.error ? `Error: ${res.error}` : '✓ Destinos guardados');
-      if (!res.error) await load();
+      if (res.error) { setSaveStatus({ error: res.error }); return; }
+      setConfig((c) => (c ? { ...c, kitchenTarget: kitchen || null, receiptTarget: receipt || null } : c));
+      setSaveStatus({ saved: true });
     } catch (e) {
-      setMsg(friendlyError(e));
+      setSaveStatus({ error: friendlyError(e) });
     } finally {
       setSaving(false);
     }
@@ -527,9 +536,13 @@ export default function PrintAgentSettings() {
             onTest={() => handleTest('receipt')}
           />
 
-          <Button type="button" onClick={handleSave} disabled={saving} variant="secondary" size="sm" className="self-start">
-            {saving ? 'Guardando…' : 'Guardar destinos'}
-          </Button>
+          <SaveBar
+            dirty={targetsDirty}
+            pending={saving}
+            status={saveStatus}
+            onSave={handleSave}
+            label="Guardar impresoras"
+          />
         </div>
       )}
 
