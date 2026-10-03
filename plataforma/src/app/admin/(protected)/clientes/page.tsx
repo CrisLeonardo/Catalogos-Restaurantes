@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import ClientesExportButton from '@/components/admin/clientes-export-button';
 import ClientesFiltros from '@/components/admin/clientes-filtros';
 import { parseCustomerSort } from '@/lib/customer-sort';
+import { waDigits } from '@/lib/reminder';
 import type { Customer, Order } from '@/types';
 
 export const metadata = { title: 'Clientes – Panel admin' };
@@ -63,13 +64,14 @@ const STATUS_ES: Record<string, string> = {
 export default async function AdminClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; page?: string; q?: string; orden?: string }>;
+  searchParams: Promise<{ c?: string; page?: string; q?: string; orden?: string; inactivos?: string }>;
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
 
   let restaurantId: string | null = null;
   let timezone = 'America/Guatemala';
+  let restaurantName = '';
 
   if (ctx.profile.role === 'SUPER_ADMIN') {
     const headersList = await headers();
@@ -78,10 +80,12 @@ export default async function AdminClientesPage({
       const tenantData = await getRestaurantBySlug(slug);
       restaurantId = tenantData?.restaurant.id ?? null;
       timezone = tenantData?.restaurant.timezone ?? timezone;
+      restaurantName = tenantData?.restaurant.name ?? '';
     }
   } else {
     restaurantId = ctx.profile.restaurant_id;
     timezone = ctx.restaurant?.timezone ?? timezone;
+    restaurantName = ctx.restaurant?.name ?? '';
   }
 
   if (!restaurantId) redirect('/admin/login');
@@ -90,8 +94,9 @@ export default async function AdminClientesPage({
   const pageNum = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
   const q = (sp.q ?? '').slice(0, 60);
   const sort = parseCustomerSort(sp.orden);
+  const inactivos = sp.inactivos === '30';
   const [{ customers, page, totalPages, total }, summary] = await Promise.all([
-    getCustomers(restaurantId, pageNum, undefined, { q, sort }),
+    getCustomers(restaurantId, pageNum, undefined, { q, sort, inactiveDays: inactivos ? 30 : undefined }),
     getCustomersSummary(restaurantId),
   ]);
   const selected = sp.c ? customers.find((c) => c.id === sp.c) ?? null : null;
@@ -118,12 +123,13 @@ export default async function AdminClientesPage({
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (sort !== 'recientes') p.set('orden', sort);
+    if (inactivos) p.set('inactivos', '30');
     for (const [k, v] of Object.entries(extra)) if (v !== undefined && v !== '') p.set(k, String(v));
     const s = p.toString();
     return s ? `/admin/clientes?${s}` : '/admin/clientes';
   };
   const pageHref = (p: number) => href({ page: p });
-  const buscando = q.trim() !== '';
+  const buscando = q.trim() !== '' || inactivos;
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -148,12 +154,12 @@ export default async function AdminClientesPage({
         )}
       </Section>
 
-      {summary.totalCustomers > 0 && <ClientesFiltros q={q} sort={sort} />}
+      {summary.totalCustomers > 0 && <ClientesFiltros q={q} sort={sort} inactive={inactivos} />}
 
       {customers.length === 0 && buscando ? (
         <Card className="flex flex-col items-center gap-3 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
-          Ningún cliente coincide con «{q.trim()}».
-          <Button render={<Link href={href({ q: undefined })} />} variant="secondary" size="sm" className="rounded-adm-full">
+          {q.trim() ? `Ningún cliente coincide con «${q.trim()}».` : 'Nadie lleva más de 30 días sin pedir. Buena señal.'}
+          <Button render={<Link href="/admin/clientes" />} variant="secondary" size="sm" className="rounded-adm-full">
             Ver todos
           </Button>
         </Card>
@@ -208,6 +214,28 @@ export default async function AdminClientesPage({
                 {/* Detalle: historial del cliente seleccionado */}
                 {isSel && (
                   <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Volver a traer al cliente: un toque abre WhatsApp con un
+                        saludo ya escrito (auditoría 2026-10-02, CLI-06). */}
+                    {waDigits(c.phone) && (
+                      <div>
+                        <Button
+                          render={
+                            <a
+                              href={`https://wa.me/${waDigits(c.phone)}?text=${encodeURIComponent(
+                                `¡Hola ${c.name.split(' ')[0]}! Te escribimos de ${restaurantName || 'tu restaurante de confianza'}.`,
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            />
+                          }
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-adm-full"
+                        >
+                          <Icon name="whatsapp" size={14} /> Escribir por WhatsApp
+                        </Button>
+                      </div>
+                    )}
                     {c.default_address && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--u-text-3)' }}>
                         <Icon name="mapPin" size={13} />

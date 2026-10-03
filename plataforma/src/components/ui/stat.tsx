@@ -75,11 +75,13 @@ const TONE_COLOR: Record<StatTone, string> = {
 };
 
 function Stat({
-  label, value, tone, className, ...props
+  label, value, tone, sub, className, ...props
 }: Omit<React.ComponentProps<'div'>, 'children'> & {
   label: React.ReactNode;
   value: React.ReactNode;
   tone?: StatTone;
+  /** Una línea corta debajo de la cifra: con qué compararla («↑ 12 % vs. un viernes normal»). */
+  sub?: React.ReactNode;
 }) {
   return (
     <div data-slot="stat" className={cn('min-w-0 px-4 py-3.5 md:px-5.5 md:py-4.5', className)} {...props}>
@@ -92,6 +94,7 @@ function Stat({
       >
         {value}
       </div>
+      {sub && <div className="mt-1 truncate text-[12px] leading-snug text-adm-text-3">{sub}</div>}
     </div>
   );
 }

@@ -14,12 +14,16 @@ export default async function QRPage() {
   let restaurantId: string | null = null;
   let restaurantName = 'Mi restaurante';
   let slug: string | null = tenantSlug;
+  let accent = '#D97757';
+  let hasLogo = false;
 
   if (tenantSlug) {
     const data = await getRestaurantBySlug(tenantSlug);
     if (data) {
       restaurantName = data.restaurant.name;
       restaurantId = data.restaurant.id;
+      accent = data.resolved.config.colorAccent || accent;
+      hasLogo = !!data.resolved.config.logoUrl;
     }
   } else if (ctx?.restaurant) {
     restaurantName = ctx.restaurant.name;
@@ -36,7 +40,7 @@ export default async function QRPage() {
       </p>
 
       {restaurantId && slug ? (
-        <QRDisplay restaurantName={restaurantName} slug={slug} />
+        <QRDisplay restaurantName={restaurantName} slug={slug} restaurantId={restaurantId} accent={accent} hasLogo={hasLogo} />
       ) : (
         <p style={{ fontSize: 14, color: 'var(--u-text-3)' }}>
           No se pudo determinar la URL del menú. Verifica que el restaurante

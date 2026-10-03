@@ -13,33 +13,8 @@
    ============================================================ */
 
 import { createDoc, INK_RGB, MUTED_RGB } from '@/lib/documents/pdf';
+import { qrPng } from '@/lib/documents/qr-art';
 import { stableTableUrl } from '@/lib/tenant';
-
-/** El QR llega como SVG desde /api/qr; jsPDF necesita PNG. */
-async function qrPng(url: string, px = 600): Promise<string> {
-  const res = await fetch(`/api/qr?url=${encodeURIComponent(url)}`);
-  if (!res.ok) throw new Error('qr');
-  const svgUrl = URL.createObjectURL(await res.blob());
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new window.Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('qr-img'));
-      i.src = svgUrl;
-    });
-    const canvas = document.createElement('canvas');
-    canvas.width = px;
-    canvas.height = px;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('canvas');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, px, px);
-    ctx.drawImage(img, 0, 0, px, px);
-    return canvas.toDataURL('image/png');
-  } finally {
-    URL.revokeObjectURL(svgUrl);
-  }
-}
 
 export async function downloadTableQrSheet(opts: {
   restaurantId: string;

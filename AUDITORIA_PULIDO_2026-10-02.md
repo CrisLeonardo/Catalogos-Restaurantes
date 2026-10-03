@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** Fases 1 a 4 hechas el 2026-10-02 (46 de 145 hallazgos, incluidos los 6 P0). Lo que queda: la Fase 5 (necesita D-2), la 6 (marketing) y lo continuo; ver la Bitácora al final.
+> **Estado:** Fases 1 a 4 hechas y la 6 casi entera el 2026-10-02 (53 de 145 hallazgos, incluidos los 6 P0). Lo que queda: la Fase 5 (necesita D-2), WEB-01/02/03 y CAT-13 (necesitan contenido o una cuenta tuya) y lo continuo; ver la Bitácora al final.
 
 ---
 
@@ -39,22 +39,22 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 15 | 0 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 16 | 0 |
 | 2 | Panel · Armazón y navegación | 10 | 7 | 1 |
-| 3 | Panel · Hoy | 5 | 1 | 1 |
+| 3 | Panel · Hoy | 5 | 2 | 1 |
 | 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 1 | 4 |
-| 5 | Panel · Menú | 12 | 3 | 0 |
-| 6 | Panel · Clientes | 6 | 1 | 0 |
+| 5 | Panel · Menú | 12 | 4 | 0 |
+| 6 | Panel · Clientes | 6 | 2 | 0 |
 | 7 | Panel · Negocio | 6 | 1 | 1 |
-| 8 | Panel · Ajustes | 20 | 10 | 2 |
-| 9 | Catálogo digital (lo que ve el comensal) | 13 | 2 | 1 |
+| 8 | Panel · Ajustes | 20 | 11 | 2 |
+| 9 | Catálogo digital (lo que ve el comensal) | 13 | 4 | 1 |
 | 10 | Super Admin | 10 | 2 | 1 |
 | 11 | Mi cuenta (grupo) | 5 | 3 | 0 |
 | 12 | Web pública y marketing | 9 | 0 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 0 | 1 |
-| | **Total** | **145** | **46** | **12** |
+| | **Total** | **145** | **53** | **12** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 8 P2 y 4 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 14 P2 y 5 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -235,7 +235,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   salir.
   ✅ **Hecho 2026-10-02 (Fase 3).** `components/admin/save-bar.tsx`: una sola barra `.adm-savebar` que sale con cambios, dice «Guardado» un momento y pregunta «¿Salir sin guardar?» al tocar un enlace (y el aviso del navegador al cerrar). Usada en Perfil, Horarios, Ubicación, Zonas, Pedidos y cobro, Salón, Lealtad › Configuración, Facturación › Configuración, La PC del local y la ficha del platillo al editar; Personalizar conserva su barra con «Ver sitio» pero gana el aviso al salir. `useValueDirty()` nuevo para pantallas sin <form>. Probado en vivo en el platillo.
 
-- [ ] **T-09** · P2 · M — **Cinco maneras de «crear nuevo».** Formulario siempre
+- [x] **T-09** · P2 · M — **Cinco maneras de «crear nuevo».** Formulario siempre
   abierto encima de la lista (Cupones, Repartidores, WhatsApp), una pestaña
   «Nueva reservación»/«Agregar grupo» (Reservaciones, Lista de espera), botón que
   abre ventana (Personal), botón que lleva a otra página (Platillos), y dos botones
@@ -243,6 +243,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   botón «+ Nuevo…» arriba a la derecha → hoja/ventana; el estado vacío repite la
   acción solo cuando no hay nada.
   🔄 **Parcial 2026-10-02 (Fase 3):** Insumos con un solo «+ Nuevo insumo»; Cupones ya no abre el formulario de entrada (estado vacío + «+ Nuevo cupón» arriba a la derecha); Repartidores rehecho: «+ Nuevo repartidor», formulario solo al pedirlo, lista en tarjeta, estado vacío; Proveedores con el mismo botón. Quedan las pestañas «Nueva reservación»/«Agregar grupo».
+  ✅ **Hecho 2026-10-02 (Fase 6).** Completo: Reservaciones y Lista de espera ya no crean desde una pestaña; «+ Nueva reservación» / «+ Agregar grupo» arriba a la derecha (solo con lista), formulario con título y «Cancelar», y la acción en el estado vacío cuando no hay nada.
 
 - [x] **T-10** · P1 · M — **Títulos de pantalla sin regla.** Título repetido (barra
   «Hoy» + encabezado «Hoy»; Super: «Restaurantes/Restaurantes»,
@@ -415,9 +416,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 - [ ] **HOY-02** · P2 · S — **«Hoy» dos veces** (barra + encabezado). Ver T-10.
 
-- [ ] **HOY-03** · P2 · S — **«Resumen del día» con hueco** (T-06) **y sin
+- [x] **HOY-03** · P2 · S — **«Resumen del día» con hueco** (T-06) **y sin
   comparación.** Un «+12 % vs. el viernes pasado» bajo cada cifra es lo que hace
   útil la portada (y lo que el dueño mira cada día).
+  ✅ **Hecho 2026-10-02 (Fase 6).** El hueco se fue con T-06. La comparación sube a donde se mira: bajo «Ventas», «↑ 12 % vs. un viernes normal» (lo que un día igual llevaba a esta hora, promedio de las cuatro semanas anteriores; con menos de dos días de referencia no se dice nada). `Stat` admite ahora una línea `sub`.
 
 - [ ] **HOY-04** · P2 · S — **«Cómo va el día» en escritorio:** el total abajo a la
   izquierda y las barras apretadas en el tercio derecho; mucho blanco.
@@ -542,9 +544,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **MEN-11** · P3 · S — **Excel/PDF en una fila propia** sobre la lista
   (Platillos, Clientes). Un botón «Exportar» junto a la acción principal.
 
-- [ ] **MEN-12** · P2 · S — **Marketing — platillos sin foto.** Sin foto la carta
+- [x] **MEN-12** · P2 · S — **Marketing — platillos sin foto.** Sin foto la carta
   pierde pedidos. Contador «4 platillos sin foto» con acceso directo (en Hoy ›
   «Necesita tu atención» y como filtro en Platillos).
+  ✅ **Hecho 2026-10-02 (Fase 6).** Aviso «N platillos sin foto» en Hoy › Necesita tu atención (solo para quien edita el catálogo), que abre Platillos con el filtro «Sin foto» ya puesto (`?filtro=sin-foto`). El filtro en Platillos llegó con MEN-01.
 
 ---
 
@@ -571,9 +574,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   reservación» y «Agregar grupo» son pestañas, no botones (T-09); estados vacíos
   distintos entre las dos.
 
-- [ ] **CLI-06** · P3 · M — **Marketing — volver a traer clientes.** Hoy solo se
+- [x] **CLI-06** · P3 · M — **Marketing — volver a traer clientes.** Hoy solo se
   exportan. Ideas: «Escribir por WhatsApp» desde la fila (wa.me), y un filtro «no
   vuelven hace 30 días».
+  ✅ **Hecho 2026-10-02 (Fase 6).** En la ficha del cliente, «Escribir por WhatsApp» (wa.me con «¡Hola Ana! Te escribimos de Azúcar Negra.» ya escrito) y en la lista el filtro «Sin pedir hace +30 días» (en el servidor: último pedido hace más de 30 días; quien nunca pidió no cuenta).
 
 ---
 
@@ -642,9 +646,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **AJU-06** · P2 · M · ⏸️ D-5 — **QR de mesa con UUID** (`/m/aaaaaaaa-aaaa-…/7`):
   código más denso (peor lectura impreso pequeño) y dirección ilegible.
 
-- [ ] **AJU-07** · P2 · M — **Marketing — Código QR sin marca.** Solo el cuadro
+- [x] **AJU-07** · P2 · M — **Marketing — Código QR sin marca.** Solo el cuadro
   negro. Logo al centro, nombre del restaurante, «Escanea para ver el menú y
   pedir», y cartel/tarjeta de mesa para imprimir (A6, pegatina, PNG para redes).
+  ✅ **Hecho 2026-10-02 (Fase 6).** El QR general lleva tu logo al centro (QR con corrección alta `ecc=H`) y la pantalla ofrece «Tarjeta para redes (PNG)» 1080×1350 —nombre, QR, «Escanea para ver el menú y pedir» y el enlace— y «Cartel para imprimir (PDF, A6)» en hoja A5 con línea de corte (`lib/documents/qr-art.ts`, que también usan los QR de mesa). Fondo claro y acento solo como detalle, por D-4. Verificado sin logo (en local ningún restaurante tiene y el proxy de logos solo acepta HTTPS); si el logo no carga, el recuadro se oculta.
 
 - [ ] **AJU-08** · P2 · S — **Zona de entrega** con el mapa apagado es un
   interruptor y un botón enorme «Guardar ubicación y radio»; el icono del aviso
@@ -774,16 +779,18 @@ aquí es lo que todavía le cuesta pedidos.
 - [ ] **CAT-10** · P3 · S — **Escritorio:** el fondo de la portada termina en una
   línea horizontal dura a ~790 px a los lados de la columna.
 
-- [ ] **CAT-11** · P2 · M — **SEO / Google:** el menú no publica datos
+- [x] **CAT-11** · P2 · M — **SEO / Google:** el menú no publica datos
   estructurados (schema.org `Restaurant` + `Menu`: dirección, horario, tipo de
   cocina, precios), que es lo que Google usa para la ficha del local; y
   `openGraph.locale` es `es_MX` (la landing usa `es_GT`). Dónde: `app/page.tsx:85`.
+  ✅ **Hecho 2026-10-02 (Fase 6).** Datos estructurados schema.org en el menú público (`lib/seo/restaurant-jsonld.ts`, con pruebas): `Restaurant` con dirección, teléfono, logo, rango de precios, horario (`OpeningHoursSpecification`; sin horario no se afirma nada) y la carta (`Menu` → `MenuSection` → `MenuItem` con precio y moneda ISO). El JSON va con `<` escapado (un nombre «</script>» no cierra la etiqueta, hay prueba). `og:locale` pasó a `es_GT`.
 
-- [ ] **CAT-12** · P2 · S — **404 sin salida y con el mensaje equivocado.**
+- [x] **CAT-12** · P2 · S — **404 sin salida y con el mensaje equivocado.**
   Restaurante inexistente: «Este subdominio no corresponde…» y nada más — falta
   «Ir a Leogin» y, para captar, «¿Es tu restaurante? Crea tu menú gratis». En el
   dominio principal (`/ruta-que-no-existe`) sale el MISMO texto de «subdominio»,
   que ahí no tiene sentido.
+  ✅ **Hecho 2026-10-02 (Fase 6).** 404 en dos versiones: en la dirección de un restaurante que no existe, «Este menú no existe», con «Ir a Leogin» y «¿Es tu restaurante? Crea tu menú gratis»; en el dominio principal, «Esta página no existe» con «Ir al inicio» (sin la palabra «subdominio»).
 
 - [ ] **CAT-13** · P3 · M — **Marketing — subir el ticket:** sugerir «Acompáñalo
   con…» (bebida/postre de la carta) en la ficha del platillo y en el carrito. Es la
@@ -963,7 +970,7 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 4. ✅ **Fase 4 — Pantallas largas y buscadores. HECHA 2026-10-02.** MEN-01, CLI-01, AJU-10,
    AJU-05, AJU-12, N-02/N-03, PED-01.
 5. **Fase 5 — Servicio (con tu visto bueno, D-2).** PED-02, PED-06, PED-09, PED-13.
-6. **Fase 6 — Marketing y extras.** WEB-01 (medir primero), WEB-02, WEB-03,
+6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-02** (faltan WEB-01/02/03 y CAT-13). WEB-01 (medir primero), WEB-02, WEB-03,
    CAT-11, CAT-12, CAT-13, AJU-07, MEN-12, HOY-03, CLI-06.
 7. **Continuo.** T-22/T-23/T-26 (escala tipográfica y componentes) pantalla a
    pantalla, a medida que se toca cada una.
@@ -978,4 +985,5 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-02 | **Fase 1** (decisión D-1: «tú»). 21 hallazgos: CAT-01, MIC-01, AJU-01/02/03, T-01, T-02, T-03, T-06, HOY-01, MIC-02/03, CAT-02, N-05, N-08, N-09, SUP-01, SUP-04, NEG-01, MEN-02, MEN-03. Verificado: `tsc` y `eslint` limpios, 768 pruebas (19 nuevas: `money`, `dates`, `product-availability`), dos builds de producción y barrido de capturas de cada pantalla tocada a 390 y 1440 px con pedidos activos y un platillo sin existencias; pedido real de prueba de CAT-01 (luego borrado). Al verificar salieron y se arreglaron dos cosas que el propio cambio había causado (ficha del platillo a 809 px en el teléfono; «Q2,794.…» cortado en la fila de 6 cifras). Base local devuelta a su estado. | `8c0bf81` (rama `auditoria-pulido-2026-10-02`) |
 | 2026-10-02 | **Fase 2.** T-13, T-14, T-15, AJU-12, AJU-13, N-01 (ayuda y tours reescritos), N-03, N-04, AJU-09, y dos hallazgos nuevos arreglados: AJU-19 (tarifa de envío sin pantalla) y AJU-20 (guardar te mandaba a Perfil). Parciales: AJU-15, N-02, AJU-08. Verificado: `tsc` y `eslint` limpios, 774 pruebas (nuevas: bitácora en palabras, textos viejos del tema), build de producción, capturas de las 13 pantallas tocadas y guardado real en Horarios. | `352e973` |
 | 2026-10-02 | **Fase 3 — piezas comunes.** T-07, T-08, T-10, T-11, T-12, T-16, T-17, T-18 hechos; T-05 y T-09 parciales. Piezas nuevas: `ui/confirm-dialog.tsx`, `admin/save-bar.tsx`, `admin/page-tabs.tsx`, `admin/field-label.ts`, `useValueDirty`. De paso: interruptor de Lealtad con la frase partida, enlace de Repartidores que abría huecos, «Q1,495.0 / 0» partido en el Inicio del Super. Verificado: `tsc`, `eslint`, 774 pruebas, build de producción, capturas claro/oscuro de 23 pantallas del panel y 8 del Super, guardar/salir y borrar probados en vivo; base local devuelta a su estado. | `70fa42c` |
-| 2026-10-02 | **Fase 4 — pantallas largas y buscadores.** MEN-01 (buscador y filtros en Platillos), CLI-01 (buscar y ordenar Clientes en el servidor), AJU-10 (Personalizar de ~12.800 a 3.712 px en el teléfono, miniaturas con tu nombre, «Ver cómo queda»), AJU-05 (mesas del plano sin encimarse, PDF con todos los QR), N-02 (Repartidores y WhatsApp con sitio en Ajustes), PED-01 (cifras en una franja en el teléfono). Piezas nuevas: `.adm-search`, `StatStrip`, `lib/customer-sort.ts`, `lib/documents/table-qr-sheet.ts`, `aria-label` en `Select`. Tablero recontado desde las casillas (la Fase 3 no había sumado). Verificado: `tsc`, `eslint`, 774 pruebas, build, capturas claro/oscuro, buscadores probados en vivo y el PDF generado y revisado (4 hojas, 405 KB). | ver commit de la fase 4 |
+| 2026-10-02 | **Fase 4 — pantallas largas y buscadores.** MEN-01 (buscador y filtros en Platillos), CLI-01 (buscar y ordenar Clientes en el servidor), AJU-10 (Personalizar de ~12.800 a 3.712 px en el teléfono, miniaturas con tu nombre, «Ver cómo queda»), AJU-05 (mesas del plano sin encimarse, PDF con todos los QR), N-02 (Repartidores y WhatsApp con sitio en Ajustes), PED-01 (cifras en una franja en el teléfono). Piezas nuevas: `.adm-search`, `StatStrip`, `lib/customer-sort.ts`, `lib/documents/table-qr-sheet.ts`, `aria-label` en `Select`. Tablero recontado desde las casillas (la Fase 3 no había sumado). Verificado: `tsc`, `eslint`, 774 pruebas, build, capturas claro/oscuro, buscadores probados en vivo y el PDF generado y revisado (4 hojas, 405 KB). | `434c942` |
+| 2026-10-02 | **Fase 6 (lo que no depende de ti) + cierre de T-09.** CAT-12 (404 con salida), CAT-11 (schema.org en el menú + `es_GT`), MEN-12 (aviso de platillos sin foto en Hoy), CLI-06 (WhatsApp desde la ficha y «Sin pedir hace +30 días»), AJU-07 (QR con logo, tarjeta para redes y cartel A6), HOY-03 (comparación bajo «Ventas»), T-09 (Reservaciones y Lista de espera sin pestaña de crear). Pendientes por necesitar algo tuyo: WEB-01 (elegir analítica y crear la cuenta), WEB-02/03 (testimonios y capturas con permiso), CAT-13 (qué sugerir). Verificado: `tsc`, `eslint`, pruebas (nuevas: datos estructurados e inyección), build, recorrido con Playwright (404, JSON-LD, filtros, WhatsApp, descargas del QR revisadas a ojo). | ver commit |

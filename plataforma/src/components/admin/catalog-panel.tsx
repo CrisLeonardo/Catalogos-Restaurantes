@@ -69,14 +69,18 @@ interface Props {
   products: Product[];
   /** Tope de productos del plan (solo el plan gratuito lo trae, ver PLANS.BASICO.maxProducts). */
   maxProducts?: number;
+  /** Filtro de estado con el que abre (`?filtro=sin-foto` desde el aviso de Hoy). */
+  initialStatus?: string;
 }
 
-export default function CatalogPanel({ restaurantId, categories, products, maxProducts }: Props) {
+export default function CatalogPanel({ restaurantId, categories, products, maxProducts, initialStatus }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const [activeCat, setActiveCat] = useState<string>('todos');
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<StatusFilter>('todos');
+  const [status, setStatus] = useState<StatusFilter>(
+    STATUS_FILTERS.some((f) => f.key === initialStatus) ? (initialStatus as StatusFilter) : 'todos',
+  );
   const { add: toast } = useToastManager();
   const [, startAvail] = useTransition();
 

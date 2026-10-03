@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Select } from '@/components/ui/select';
 import { CUSTOMER_SORTS, type CustomerSort } from '@/lib/customer-sort';
+import { Button } from '@/components/ui/button';
 
 /* ============================================================
    BUSCAR Y ORDENAR CLIENTES (auditoría 2026-10-02, CLI-01)
@@ -17,7 +18,7 @@ import { CUSTOMER_SORTS, type CustomerSort } from '@/lib/customer-sort';
    historial con una entrada por letra. Cambiar la búsqueda o el
    orden vuelve a la página 1 y cierra el cliente abierto.
    ============================================================ */
-export default function ClientesFiltros({ q, sort }: { q: string; sort: CustomerSort }) {
+export default function ClientesFiltros({ q, sort, inactive = false }: { q: string; sort: CustomerSort; inactive?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -25,14 +26,16 @@ export default function ClientesFiltros({ q, sort }: { q: string; sort: Customer
   const [pending, startTransition] = useTransition();
   const first = useRef(true);
 
-  function go(next: { q?: string; orden?: CustomerSort }) {
+  function go(next: { q?: string; orden?: CustomerSort; inactivos?: boolean }) {
     const sp = new URLSearchParams(params.toString());
     sp.delete('page');
     sp.delete('c');
     const nq = next.q ?? text;
     const no = next.orden ?? sort;
+    const ni = next.inactivos ?? inactive;
     if (nq.trim()) sp.set('q', nq.trim()); else sp.delete('q');
     if (no !== 'recientes') sp.set('orden', no); else sp.delete('orden');
+    if (ni) sp.set('inactivos', '30'); else sp.delete('inactivos');
     const s = sp.toString();
     startTransition(() => router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false }));
   }
@@ -62,6 +65,16 @@ export default function ClientesFiltros({ q, sort }: { q: string; sort: Customer
           enterKeyHint="search"
         />
       </label>
+      {/* Los que dejaron de venir: a quién escribirle (CLI-06). */}
+      <Button
+        type="button"
+        aria-pressed={inactive}
+        onClick={() => go({ inactivos: !inactive })}
+        variant={inactive ? 'primary' : 'outline'}
+        className="shrink-0 rounded-adm-full"
+      >
+        Sin pedir hace +30 días
+      </Button>
       <div style={{ flex: '0 0 auto', minWidth: 170 }}>
         <Select
           aria-label="Ordenar clientes"

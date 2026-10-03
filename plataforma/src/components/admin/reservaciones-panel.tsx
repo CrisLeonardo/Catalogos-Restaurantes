@@ -15,7 +15,6 @@ import {
 import type { Reservation, ReservationSummary } from '@/lib/db/reservaciones';
 import { FIELD_LABEL } from '@/components/admin/field-label';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import PageTabs from '@/components/admin/page-tabs';
 
 interface Props {
   restaurantId: string;
@@ -163,10 +162,20 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
         </div>
       )}
 
-      <PageTabs tabs={[['activas', 'Reservaciones'], ['nueva', 'Nueva reservación']] as const} value={tab} onChange={setTab} />
+      {/* «+ Nueva reservación» arriba a la derecha, como en el resto del panel,
+          en vez de una pestaña que escondía la lista (auditoría 2026-10-02,
+          T-09). Con la lista vacía la acción la trae el estado vacío. */}
+      {tab === 'activas' && grouped.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" onClick={() => setTab('nueva')} className="rounded-adm-full">
+            <Icon name="plus" size={15} /> Nueva reservación
+          </Button>
+        </div>
+      )}
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 520 }}>
+          <p style={{ fontSize: 15, fontWeight: 650, marginBottom: 14 }}>Nueva reservación</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -194,9 +203,14 @@ export default function ReservacionesPanel({ restaurantId, reservations, summary
                 <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencias, alergia, ocasión especial…" />
               </div>
             </div>
-            <Button type="submit" disabled={isPending} className="self-start">
-              {isPending ? 'Guardando…' : 'Guardar reservación'}
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Guardando…' : 'Guardar reservación'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setTab('activas')}>
+                Cancelar
+              </Button>
+            </div>
           </form>
         </Card>
       ) : grouped.length === 0 ? (

@@ -12,7 +12,11 @@ import { haceTiempo } from '@/lib/dates';
 
 export const metadata = { title: 'Catálogo – Panel admin' };
 
-export default async function AdminMenuPage() {
+export default async function AdminMenuPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filtro?: string }>;
+}) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
 
@@ -88,6 +92,7 @@ export default async function AdminMenuPage() {
           antes pintaba la columna cruda y enseñaba «Agotado» en platillos que
           el comensal estaba pidiendo (auditoría 2026-10-02, CAT-01). */}
       <CatalogPanel
+        initialStatus={(await searchParams).filtro}
         restaurantId={restaurantId}
         categories={categories}
         products={withEffectiveAvailability(products, ahora)}

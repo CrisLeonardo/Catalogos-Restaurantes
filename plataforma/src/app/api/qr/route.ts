@@ -15,8 +15,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // `ecc=H` (corrección alta, ~30 %): para el QR con el logo encima
+    // (auditoría 2026-10-02, AJU-07). Por defecto, la de siempre.
+    const ecc = request.nextUrl.searchParams.get('ecc') === 'H' ? 'H' : 'M';
     const svg = await QRCode.toString(url, {
       type: 'svg',
+      errorCorrectionLevel: ecc,
       margin: 2,
       width: 300,
       color: { dark: '#000000', light: '#ffffff' },

@@ -34,7 +34,7 @@ export async function getCustomers(
   restaurantId: string,
   page = 1,
   pageSize = CUSTOMERS_PAGE_SIZE,
-  opts: { q?: string; sort?: CustomerSort } = {},
+  opts: { q?: string; sort?: CustomerSort; inactiveDays?: number } = {},
 ): Promise<CustomersPage> {
   const db = createServiceClient();
   const size = Math.min(Math.max(pageSize, 1), 100);
@@ -46,12 +46,19 @@ export async function getCustomers(
     ? [`name.ilike.*${terms.text}*`, ...(terms.digits.length >= 3 ? [`phone.ilike.*${terms.digits}*`] : [])].join(',')
     : null;
 
+  /* «No vuelven»: su último pedido fue hace más de N días (CLI-06). Quien
+     nunca pidió no entra: no es alguien que dejó de venir. */
+  const inactiveBefore = opts.inactiveDays
+    ? new Date(Date.now() - opts.inactiveDays * 86_400_000).toISOString()
+    : null;
+
   // Total para la paginación.
   let countQuery = db
     .from('customers')
     .select('id', { count: 'exact', head: true })
     .eq('restaurant_id', restaurantId);
   if (orFilter) countQuery = countQuery.or(orFilter);
+  if (inactiveBefore) countQuery = countQuery.lt('last_order_at', inactiveBefore);
   const { count } = await countQuery;
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / size));
@@ -66,6 +73,7 @@ export async function getCustomers(
     .select('*')
     .eq('restaurant_id', restaurantId);
   if (orFilter) dataQuery = dataQuery.or(orFilter);
+  if (inactiveBefore) dataQuery = dataQuery.lt('last_order_at', inactiveBefore);
   const sort = opts.sort ?? 'recientes';
   dataQuery = sort === 'gasto'
     ? dataQuery.order('total_spent', { ascending: false }).order('last_order_at', { ascending: false, nullsFirst: false })

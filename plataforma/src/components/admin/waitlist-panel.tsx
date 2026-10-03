@@ -17,7 +17,6 @@ import {
 } from '@/lib/actions/waitlist';
 import type { WaitlistEntry, WaitlistSummary } from '@/lib/db/waitlist';
 import { FIELD_LABEL } from '@/components/admin/field-label';
-import PageTabs from '@/components/admin/page-tabs';
 import { EmptyState } from '@/components/ui/empty-state';
 
 interface Props {
@@ -128,10 +127,18 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
         </div>
       )}
 
-      <PageTabs tabs={[['cola', 'En espera'], ['nueva', 'Agregar grupo']] as const} value={tab} onChange={setTab} />
+      {/* «+ Agregar grupo» arriba a la derecha en vez de una pestaña (T-09). */}
+      {tab === 'cola' && entries.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" onClick={() => setTab('nueva')} className="rounded-adm-full">
+            <Icon name="plus" size={15} /> Agregar grupo
+          </Button>
+        </div>
+      )}
 
       {tab === 'nueva' ? (
         <Card className="p-5" style={{ maxWidth: 480 }}>
+          <p style={{ fontSize: 15, fontWeight: 650, marginBottom: 14 }}>Agregar a la lista de espera</p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={labelStyle}>Nombre del grupo *</label>
@@ -151,9 +158,14 @@ export default function WaitlistPanel({ restaurantId, entries, recent, summary, 
               <label style={labelStyle}>Notas</label>
               <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Preferencia de mesa, ocasión especial…" />
             </div>
-            <Button type="submit" disabled={isPending} className="self-start">
-              {isPending ? 'Agregando…' : 'Agregar a la lista'}
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? 'Agregando…' : 'Agregar a la lista'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setTab('cola')}>
+                Cancelar
+              </Button>
+            </div>
           </form>
         </Card>
       ) : entries.length === 0 ? (

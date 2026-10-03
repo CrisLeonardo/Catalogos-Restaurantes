@@ -219,6 +219,21 @@ export default async function AdminHomePage() {
     if (stale && (agent?.is_active as boolean | null) !== false) agentOffline = true;
   }
 
+  /* Platillos a la vista sin foto (auditoría 2026-10-02, MEN-12). Sin foto
+     la carta vende menos y el dueño no lo ve hasta que alguien se lo dice.
+     Una consulta de conteo, y solo para quien puede editar el catálogo. */
+  let sinFoto = 0;
+  if (restaurantId && allow('catalogo') && !needsOnboarding) {
+    const db = createServiceClient();
+    const { count } = await db
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .or('image_url.is.null,image_url.eq.');
+    sinFoto = count ?? 0;
+  }
+
   const fmt = (n: number) => (resolved ? formatPrice(n, resolved.config) : fmtMoney(n));
   const brandName = restaurant?.name ?? 'tu restaurante';
 
@@ -274,7 +289,39 @@ export default async function AdminHomePage() {
       action: 'Ver planes',
     });
   }
+  if (sinFoto > 0) {
+    alerts.push({
+      key: 'sin-foto', href: panelHref(base, '/admin/menu?filtro=sin-foto'), level: 'info',
+      title: sinFoto === 1 ? '1 platillo sin foto' : `${sinFoto} platillos sin foto`,
+      desc: 'Con foto se piden más: en un menú digital la gente elige con los ojos.',
+      action: 'Agregar fotos',
+    });
+  }
   alerts.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
+
+  /* Con qué comparar las ventas de hoy, bajo la cifra (auditoría
+     2026-10-02, HOY-03): lo que un día igual —mismo día de la semana, las
+     cuatro semanas anteriores— llevaba A ESTA HORA (getDayPace). Con menos
+     de dos días de referencia no se dice nada: uno solo es casualidad. */
+  const pace = widgets?.pace ?? null;
+  let ventasVs: React.ReactNode = null;
+  if (stats && pace && pace.samples >= 2 && pace.typicalSoFar > 0) {
+    const delta = Math.round(((stats.todaySales - pace.typicalSoFar) / pace.typicalSoFar) * 100);
+    let dia = 'un día igual';
+    try {
+      dia = `un ${new Intl.DateTimeFormat('es-GT', { weekday: 'long', timeZone: timezone }).format(new Date(now))} normal`;
+    } catch { /* zona rara: se queda «un día igual» */ }
+    ventasVs = delta === 0
+      ? <>Igual que {dia}</>
+      : (
+        <>
+          <span style={{ color: delta > 0 ? 'var(--c-ok)' : 'var(--c-warn)', fontWeight: 600 }}>
+            {delta > 0 ? '↑' : '↓'} {Math.abs(delta)} %
+          </span>{' '}
+          vs. {dia}
+        </>
+      );
+  }
 
   return (
     <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
@@ -359,7 +406,7 @@ export default async function AdminHomePage() {
           action={allow('metricas') ? { href: panelHref(base, '/admin/metricas'), label: 'Ver el mes' } : undefined}
         >
           <StatGroup>
-            <Stat label="Ventas" value={fmt(stats.todaySales)} />
+            <Stat label="Ventas" value={fmt(stats.todaySales)} sub={ventasVs} />
             <Stat label="Pedidos" value={String(stats.todayOrders)} />
             <Stat label="Ticket promedio" value={fmt(stats.todayTicket)} />
           </StatGroup>
