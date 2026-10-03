@@ -21,6 +21,7 @@ import {
   isStaffSessionCookie,
   sessionCookieNames,
 } from "@/lib/supabase/cookies";
+import { analiticaConfig } from "@/lib/analytics";
 
 /**
  * Proxy (Next.js 16 — antes llamado "middleware"):
@@ -831,6 +832,10 @@ function buildCsp(nonce: string): string {
     /* sin URL configurada: quedan los comodines de arriba */
   }
 
+  // Analítica de la web comercial (WEB-01): su script lleva el nonce, pero
+  // los eventos salen hacia su servidor. Sin configurar, nada cambia.
+  const analytics = analiticaConfig();
+
   return [
     "default-src 'self'",
 
@@ -858,7 +863,7 @@ function buildCsp(nonce: string): string {
 
     // localhost: el Agente de impresión Leogin, que corre en la máquina
     // del restaurante y se habla por http/ws local.
-    `connect-src 'self' ${supabaseHttp} ${supabaseWs} http://localhost:* ws://localhost:* https://localhost:* wss://localhost:*`,
+    `connect-src 'self' ${supabaseHttp} ${supabaseWs} http://localhost:* ws://localhost:* https://localhost:* wss://localhost:*${analytics ? ` ${analytics.origen}` : ''}`,
 
     "worker-src 'self' blob:",
     "frame-src 'self'",

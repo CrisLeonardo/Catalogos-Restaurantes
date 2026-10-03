@@ -422,12 +422,27 @@ function buildSurfaceVars(config: ThemeConfig): Record<string, string> {
  * nombre generado internamente por next/font no coincide con el de Google),
  * y `buildFontsHref` la excluye del <link> dinámico para no pedirla dos veces.
  */
-const SELF_HOSTED_FONT_VARS: Record<string, string> = {
+export const SELF_HOSTED_FONT_VARS: Record<string, string> = {
   Geist: 'var(--font-geist-sans)',
   Unbounded: 'var(--font-unbounded)',
   Anton: 'var(--font-anton)',
   'Instrument Serif': 'var(--font-instrument-serif)',
   'JetBrains Mono': 'var(--font-jetbrains-mono)',
+  // El resto del catálogo (REN-08): declaradas en app/catalog-fonts.ts.
+  'Archivo Black': 'var(--font-archivo-black)',
+  'Bebas Neue': 'var(--font-bebas-neue)',
+  'Space Grotesk': 'var(--font-space-grotesk)',
+  Syne: 'var(--font-syne)',
+  'Playfair Display': 'var(--font-playfair)',
+  Fraunces: 'var(--font-fraunces)',
+  'Cormorant Garamond': 'var(--font-cormorant)',
+  Inter: 'var(--font-inter)',
+  Manrope: 'var(--font-manrope)',
+  'Plus Jakarta Sans': 'var(--font-jakarta)',
+  'DM Sans': 'var(--font-dm-sans)',
+  Poppins: 'var(--font-poppins)',
+  'Space Mono': 'var(--font-space-mono)',
+  'IBM Plex Mono': 'var(--font-plex-mono)',
 };
 
 export function buildFontsHref(config: ThemeConfig): string | null {

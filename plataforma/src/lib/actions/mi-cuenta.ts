@@ -26,6 +26,8 @@ import { newRestaurantBilling } from '@/lib/billing-signup';
 import { getPricingSettings } from '@/lib/db/billing';
 import { findTemplate } from '@/lib/theme/templates';
 import type { OrderType } from '@/lib/theme/defaults';
+import { registrarEvento } from '@/lib/analytics-server';
+import { EVENTOS } from '@/lib/analytics';
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -351,6 +353,9 @@ export async function createAnotherRestaurant(
   // trampa de abajo. El resto entra al panel del local nuevo, y ese destino
   // sí es la raíz de otro host — se devuelve para que navegue el cliente, por
   // el mismo motivo que `enterRestaurant` (ver la nota allí).
+  // Embudo de la web (WEB-01). Solo el primero: el quinto local de un
+  // grupo no es un alta nueva.
+  if (esElPrimero) await registrarEvento(EVENTOS.restauranteCreado, '/mi-cuenta/nuevo');
   if (esElPrimero) redirect(`/registro/listo?slug=${encodeURIComponent(slug)}&plan=${planCode}`);
   return { url: `${adminUrl(slug)}?welcome=1` };
 }

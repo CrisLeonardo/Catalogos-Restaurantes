@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { conEvento, EVENTOS } from '@/lib/analytics';
 import { LeoginMark } from '@/components/leogin-logo';
 import { SiteHeader, SiteFooter, SectionHead, contactHref } from '@/components/site-chrome';
 import { subdomainUrl, rootDomainForUrls, DEMO_SLUG } from '@/lib/tenant';
@@ -169,7 +170,7 @@ export default async function LeoginLanding() {
               </p>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
-                <Link href="/registro" className="lp-btn lp-btn-lg lp-btn-primary">
+                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'portada')}>
                   Crear mi restaurante gratis
                 </Link>
                 <a href={demoUrl} className="lp-btn lp-btn-lg lp-btn-soft">
@@ -474,7 +475,7 @@ export default async function LeoginLanding() {
 
                 <Link
                   href="/registro"
-                  className={`lp-btn ${p.accent ? 'lp-btn-primary' : 'lp-btn-soft'}`}
+                  {...conEvento(`lp-btn ${p.accent ? 'lp-btn-primary' : 'lp-btn-soft'}`, EVENTOS.clicCrear, `plan ${p.name}`)}
                   style={{ width: '100%' }}
                 >
                   {/* En los de pago lo que pasa es una prueba, no «gratis»
@@ -545,7 +546,7 @@ export default async function LeoginLanding() {
                 acompañemos en la configuración? Escríbenos por WhatsApp y lo vemos juntos.
               </p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 30 }}>
-                <Link href="/registro" className="lp-btn lp-btn-lg lp-btn-primary">
+                <Link href="/registro" {...conEvento('lp-btn lp-btn-lg lp-btn-primary', EVENTOS.clicCrear, 'cierre')}>
                   Crear mi restaurante gratis
                 </Link>
                 <a

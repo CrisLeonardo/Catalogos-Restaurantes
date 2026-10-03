@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { conEvento, EVENTOS } from '@/lib/analytics';
 import { SiteHeader, SiteFooter, SectionHead } from '@/components/site-chrome';
 import { PLANS, PUBLIC_PLANS, INCLUDED_MODULES, planPriceLabel, PLAN_ACCENT, PLAN_ACCENT_INK } from '@/lib/plans';
 import type { PlanPricing } from '@/lib/plans';
@@ -121,7 +122,7 @@ export default async function PlanesPage() {
           por pedido y sin cobros sorpresa.
         </p>
         <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/registro" className="lp-btn lp-btn-primary">
+          <Link href="/registro" {...conEvento('lp-btn lp-btn-primary', EVENTOS.clicCrear, 'planes arriba')}>
             Empieza gratis · sin tarjeta
           </Link>
           <a href="#comparativa" className="lp-btn lp-btn-soft">
@@ -218,7 +219,7 @@ export default async function PlanesPage() {
 
                 <Link
                   href="/registro"
-                  className={`lp-btn ${p.highlight ? '' : 'lp-btn-soft'}`}
+                  {...conEvento(`lp-btn ${p.highlight ? '' : 'lp-btn-soft'}`, EVENTOS.clicCrear, `planes ${p.name}`)}
                   style={{
                     width: '100%', marginTop: 'auto',
                     ...(p.highlight
@@ -379,7 +380,7 @@ export default async function PlanesPage() {
             queda en vivo el mismo día.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/registro" className="lp-btn lp-btn-primary">
+            <Link href="/registro" {...conEvento('lp-btn lp-btn-primary', EVENTOS.clicCrear, 'planes abajo')}>
               Crear mi restaurante gratis
             </Link>
             <a

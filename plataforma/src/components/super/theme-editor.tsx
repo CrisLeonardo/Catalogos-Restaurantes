@@ -342,6 +342,7 @@ export default function ThemeEditor({ restaurantId, config: initialConfig, conte
         <Toggle label="Íconos de categoría" value={config.showCategoryIcons} onChange={(v) => setC('showCategoryIcons', v)} />
         <Toggle label="Mostrar tags" value={config.showTags} onChange={(v) => setC('showTags', v)} />
         <Toggle label="Favoritos como tarjeta destacada (máx. 3)" value={config.featuredFavorites} onChange={(v) => setC('featuredFavorites', v)} />
+        <Toggle label="Sugerir acompañamientos («Acompáñalo con…»)" value={config.suggestPairings} onChange={(v) => setC('suggestPairings', v)} />
       </Section>
 
       {/* ── Pedidos / Moneda ── */}

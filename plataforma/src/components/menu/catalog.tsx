@@ -32,6 +32,7 @@ import { isOpenNow, nextOpenLabel, hasAnyHours, todayWindowLabel, type WeeklyHou
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
 import { isUnavailable } from '@/lib/product-availability';
+import { esDestacado } from '@/lib/menu-pairings';
 import type { Category, Product } from '@/types';
 import { suggestIcon } from '@/lib/category-icon';
 
@@ -69,15 +70,13 @@ function fold(s: string): string {
    Con config.featuredFavorites, los productos etiquetados como favorito/
    destacado se dibujan como tarjeta GRANDE de ancho completo (máx. 3 por
    vista, para que "destacado" siga significando algo). Las etiquetas son
-   texto libre del dueño → se aceptan las variantes usuales. */
-const FEATURED_TAG_KEYS = new Set([
-  'fav', 'favorito', 'favorita', 'favorite',
-  'destacado', 'destacada', 'estrella', 'star',
-]);
+   texto libre del dueño → se aceptan las variantes usuales (la lista vive
+   en lib/menu-pairings.ts: «Acompáñalo con…» también pone primero a los
+   favoritos). */
 const FEATURED_LIMIT = 3;
 
 function isFeaturedTag(p: ProdItem): boolean {
-  return (p.tags ?? []).some((t) => FEATURED_TAG_KEYS.has(fold(t.trim())));
+  return esDestacado(p.tags);
 }
 
 /** Formas donde una tarjeta destacada tiene sentido. En 'texto' no hay arte que

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
+import { conEvento, EVENTOS } from '@/lib/analytics';
 import LeoginLogo from '@/components/leogin-logo';
 import SiteMenu from '@/components/site-menu';
 import LeoginInstallBanner from '@/components/leogin-install-banner';
@@ -53,7 +54,7 @@ export function SiteHeader({ home = false }: { home?: boolean }) {
           <Link href="/login" className="lp-btn lp-btn-sm lp-btn-soft lp-nav-secondary" style={{ marginLeft: 8 }}>
             Acceder
           </Link>
-          <Link href="/registro" className="lp-btn lp-btn-sm lp-btn-primary" style={{ marginLeft: 6 }}>
+          <Link href="/registro" {...conEvento('lp-btn lp-btn-sm lp-btn-primary', EVENTOS.clicCrear, 'cabecera')} style={{ marginLeft: 6 }}>
             <span className="lp-cta-full">Crear mi restaurante</span>
             <span className="lp-cta-short">Crear cuenta</span>
           </Link>

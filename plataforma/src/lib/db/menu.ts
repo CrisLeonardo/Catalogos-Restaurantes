@@ -157,3 +157,39 @@ export function getWaiterCatalogCached(restaurantId: string): Promise<MenuData> 
     { revalidate: 60, tags: [`menu:${restaurantId}`] },
   )();
 }
+
+/**
+ * LO MÁS PEDIDO EN 30 DÍAS (auditoría 2026-10-02, CAT-09)
+ * ------------------------------------------------------------
+ * Ids de producto de más a menos unidades vendidas, para ofrecer «Lo más
+ * pedido» en el checkout cuando el carrito está vacío. Solo ids: el nombre
+ * y el precio salen de la carta pública (`getMenuDataCached`), así que
+ * aquí no viaja nada que el menú no enseñe ya. Una hora de caché: es una
+ * sugerencia, no un reporte.
+ */
+export function getTopSellingProductIdsCached(restaurantId: string): Promise<string[]> {
+  return unstable_cache(
+    async () => {
+      if (!/^[0-9a-f-]{36}$/i.test(restaurantId)) return [];
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const db = createServiceClient();
+      const { data, error } = await db
+        .from('order_items')
+        .select('product_id, quantity, order:orders!inner(restaurant_id, created_at, status)')
+        .eq('order.restaurant_id', restaurantId)
+        .gte('order.created_at', since)
+        .neq('order.status', 'CANCEL')
+        .not('product_id', 'is', null)
+        .limit(2000);
+      if (error || !data) return [];
+      const unidades = new Map<string, number>();
+      for (const row of data as { product_id: string | null; quantity: number }[]) {
+        if (!row.product_id) continue;
+        unidades.set(row.product_id, (unidades.get(row.product_id) ?? 0) + (Number(row.quantity) || 0));
+      }
+      return [...unidades.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    },
+    ['top-selling-products', restaurantId],
+    { revalidate: 3600 },
+  )();
+}

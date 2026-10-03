@@ -253,6 +253,9 @@ export interface ThemeConfig {
   productArt: ProductArt;       // auto = foto si existe, si no patrón
   showTags: boolean;
   featuredFavorites: boolean;   // productos con etiqueta "Favorito" como tarjeta grande (máx. 3)
+  /** «Acompáñalo con…»: en la ficha y en el carrito se ofrecen bebida,
+      acompañamiento o postre de la propia carta (lib/menu-pairings.ts). */
+  suggestPairings: boolean;
 
   // ── Pedidos / checkout ──
   orderTypes: OrderType[];
@@ -453,6 +456,7 @@ export const DEFAULT_CONFIG: ThemeConfig = {
   productArt: 'auto',
   showTags: true,
   featuredFavorites: false,
+  suggestPairings: true,
 
   orderTypes: ['dine_in', 'delivery', 'pickup'],
   deliveryFee: 0,

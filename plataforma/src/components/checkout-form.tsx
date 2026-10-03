@@ -24,6 +24,8 @@ import {
 import OrderSummary, { type AppliedCoupon } from '@/components/checkout/order-summary';
 import CheckoutSuccess from '@/components/checkout/checkout-success';
 import { PayOption, FormSection, CheckoutQueued } from '@/components/checkout/form-parts';
+import EmptyCart from '@/components/checkout/empty-cart';
+import type { Sugerencia } from '@/components/menu/pairings';
 
 const DeliveryMap = dynamic(() => import('./delivery-map'), {
   ssr: false,
@@ -56,6 +58,8 @@ interface Props {
   hubUrl?: string | null;
   /** Token que ese hub exige en POST /orders (migración 063). */
   hubToken?: string | null;
+  /** «Lo más pedido» para el carrito vacío (CAT-09). */
+  sugeridos?: Sugerencia[];
 }
 
 type Step = 'form' | 'success' | 'queued';
@@ -76,6 +80,7 @@ export default function CheckoutForm({
   encuestasActive = false,
   hubUrl = null,
   hubToken = null,
+  sugeridos = [],
 }: Props) {
   const config  = useThemeConfig();
   const content = useThemeContent();
@@ -595,15 +600,7 @@ export default function CheckoutForm({
 
   /* ── Carrito vacío ── */
   if (items.length === 0 && step !== 'success' && step !== 'queued') {
-    return (
-      <main className="themed-type" style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-        <div className="m-surface" style={{ borderRadius: 'var(--m-r-lg)', padding: 'var(--m-sp-6) var(--m-sp-5)', textAlign: 'center', maxWidth: 380, width: '100%' }}>
-          <Icon name="bag" size={44} strokeWidth={1.3} style={{ color: 'var(--u-text-4)', margin: '0 auto 16px' }} />
-          <h2 className="t-display" style={{ fontSize: 'var(--fs-h1)', marginBottom: 10 }}>{content.cart.empty}</h2>
-          <PrimaryButton href={tp('/')}>{content.cart.emptyCta}</PrimaryButton>
-        </div>
-      </main>
-    );
+    return <EmptyCart sugeridos={sugeridos} menuHref={tp('/')} />;
   }
 
   /* ── Pedido en cola (sin conexión) ── */

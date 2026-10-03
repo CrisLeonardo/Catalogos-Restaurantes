@@ -516,6 +516,12 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
                 Los productos con etiqueta «Favorito» o «Destacado» se muestran en grande, a todo lo ancho
                 (máximo 3), para guiar al cliente hacia tus platillos estrella.
               </Note>
+              <Toggle label="Sugerir acompañamientos («Acompáñalo con…»)" value={config.suggestPairings} onChange={(v) => setC('suggestPairings', v)} />
+              <Note>
+                Al abrir un platillo y en el carrito se ofrece una bebida, un acompañamiento o un postre de
+                tu carta, según el nombre de tus categorías (Bebidas, Café, Extras, Postres…). Solo lo que
+                está disponible y se agrega de un toque.
+              </Note>
             </Section>
 
             <Section title="Textos del menú">

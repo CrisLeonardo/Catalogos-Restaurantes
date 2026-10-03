@@ -34,6 +34,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { sendEmailVerification } from '@/lib/auth/email-verification';
 import { isSyntheticStaffEmail } from '@/lib/staff-email';
+import { registrarEvento } from '@/lib/analytics-server';
+import { EVENTOS } from '@/lib/analytics';
 
 export type SignupState = { error: string } | null;
 
@@ -168,6 +170,9 @@ export async function signupAccount(
       // entra con el correo y la contraseña que acaba de elegir.
     }
   }
+
+  // Embudo de la web (WEB-01): sale después de la respuesta, no la frena.
+  await registrarEvento(EVENTOS.cuentaCreada, '/registro');
 
   // Su casa. Ahí crea su restaurante, que es el siguiente paso real.
   redirect('/mi-cuenta/nuevo');

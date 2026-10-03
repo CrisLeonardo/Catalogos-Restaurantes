@@ -8,7 +8,7 @@
    (auditoría 2026-10-02, MEN-08 y CAT-06).
    ============================================================ */
 
-function fold(s: string): string {
+export function fold(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
@@ -29,7 +29,7 @@ export const CAT_ICON_MAP: [string, string[]][] = [
 
 /* Palabra completa (con su plural), no un trozo: con `includes`, el «te»
    de té casaba con «Platos fuerTEs» y la categoría salía con una taza. */
-function hasWord(text: string, kw: string): boolean {
+export function hasWord(text: string, kw: string): boolean {
   const k = fold(kw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(^|[^a-z0-9])${k}(s|es)?($|[^a-z0-9])`).test(text);
 }

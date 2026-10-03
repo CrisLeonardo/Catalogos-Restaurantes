@@ -15,6 +15,7 @@ import { useThemeConfig, useThemeContent, useText } from '@/lib/theme/context';
 import { formatPrice } from '@/lib/theme/resolve';
 import { DIETARY_TAG_MAP } from '@/lib/dietary-tags';
 import { useLocale, useLocalized } from '@/lib/locale/context';
+import { Acompanantes, type Sugerencia } from '@/components/menu/pairings';
 import type { CartItemOption, Product, ProductOptionGroup } from '@/types';
 
 type ProdItem = Pick<Product, 'id' | 'category_id' | 'name' | 'name_en' | 'description' | 'description_en' | 'price' | 'image_url' | 'icon' | 'tags' | 'dietary_tags' | 'options'>;
@@ -48,12 +49,14 @@ function initialVariants(groups: ProductOptionGroup[]): Record<string, string> {
 }
 
 export default function ProductSheet({
-  product, icon, ordersEnabled, onClose,
+  product, icon, ordersEnabled, onClose, acompanantes = [],
 }: {
   product: ProdItem;
   icon: string;
   ordersEnabled: boolean;
   onClose: () => void;
+  /** «Acompáñalo con…» (CAT-13): se suman al carrito al pulsar «Agregar». */
+  acompanantes?: Sugerencia[];
 }) {
   const config = useThemeConfig();
   const content = useThemeContent();
@@ -76,6 +79,9 @@ export default function ProductSheet({
       "Agregar" simplemente no hacía nada (solo bajaba de opacidad) y el
       comensal se quedaba tocándolo sin saber qué le faltaba. */
   const [missingGroupId, setMissingGroupId] = useState<string | null>(null);
+  /** Acompañantes marcados. No se agregan al tocarlos sino con el platillo:
+      cerrar la ficha sin pedir no deja una bebida suelta en el carrito. */
+  const [extras, setExtras] = useState<ReadonlySet<string>>(() => new Set());
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -133,6 +139,16 @@ export default function ProductSheet({
   }, [groups, selected, variantSelected]);
 
   const unitPrice = product.price + chosenOptions.reduce((s, o) => s + o.priceDelta, 0);
+  const elegidos = acompanantes.filter((a) => extras.has(a.id));
+  const extrasTotal = elegidos.reduce((s, a) => s + a.price, 0);
+
+  function toggleExtra(a: Sugerencia) {
+    setExtras((prev) => {
+      const next = new Set(prev);
+      if (next.has(a.id)) next.delete(a.id); else next.add(a.id);
+      return next;
+    });
+  }
   const firstMissing = groups.find(
     (g) => g.type === 'single' && g.required && (selected[g.id] ?? []).length === 0,
   ) ?? null;
@@ -155,6 +171,9 @@ export default function ProductSheet({
       },
       qty,
     );
+    for (const a of elegidos) {
+      addItem({ productId: a.id, name: a.name, price: a.price, image_url: a.image_url ?? null });
+    }
     onClose();
   }
 
@@ -367,6 +386,15 @@ export default function ProductSheet({
               </div>
             );
           })}
+
+          {ordersEnabled && (
+            <Acompanantes
+              items={acompanantes}
+              elegidos={extras}
+              onToggle={toggleExtra}
+              nota={{ es: 'Se suma a tu pedido', en: 'Added to your order' }}
+            />
+          )}
         </div>
 
         {/* Acción */}
@@ -375,7 +403,7 @@ export default function ProductSheet({
             <>
               <QtyStepper value={qty} size="lg" onMinus={() => setQty(Math.max(1, qty - 1))} onPlus={() => setQty(qty + 1)} />
               <PrimaryButton size="lg" full onClick={add} style={{ flex: 1, opacity: missingRequired ? 0.55 : 1 }}>
-                {content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty, config)}</span>
+                {content.product.add} · <span className="t-mono" style={{ fontWeight: 700, color: 'inherit' }}>{formatPrice(unitPrice * qty + extrasTotal, config)}</span>
               </PrimaryButton>
             </>
           ) : (
