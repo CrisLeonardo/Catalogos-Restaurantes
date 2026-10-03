@@ -56,13 +56,37 @@ export async function crossSlugCollision(
     : `La dirección "${slug}" ya la usa otra sucursal. Elige otra.`;
 }
 
-/** ¿El slug ya está tomado por un restaurante? */
+/** ¿El slug ya está tomado por un restaurante, o lo usó uno antes? (Para
+ *  un restaurante NUEVO: cualquier alias lo bloquea.) */
 export async function slugTaken(
   db: ReturnType<typeof createServiceClient>,
   slug: string,
 ): Promise<boolean> {
   const { data } = await db.from('restaurants').select('id').eq('slug', slug).maybeSingle();
-  return !!data;
+  if (data) return true;
+  return !!(await slugAliasOfOther(db, slug));
+}
+
+/**
+ * ¿Ese slug lo usó ANTES otro restaurante? Los QR de mesa llevan el slug
+ * (/m/<slug>/<mesa>, D-5) y el viejo queda apuntando a su restaurante en
+ * `restaurant_slug_aliases` (migración 134): dárselo a otro haría que esos
+ * QR impresos abrieran el menú equivocado. `ownId` deja pasar los slugs
+ * viejos del propio restaurante. Sin la migración la consulta falla y no
+ * bloquea nada (el disparador de la base es la otra guardia).
+ */
+export async function slugAliasOfOther(
+  db: ReturnType<typeof createServiceClient>,
+  slug: string,
+  ownId?: string,
+): Promise<string | null> {
+  const { data } = await db
+    .from('restaurant_slug_aliases')
+    .select('restaurant_id')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!data || data.restaurant_id === ownId) return null;
+  return `La dirección "${slug}" la usó otro restaurante y sus QR impresos siguen apuntando ahí. Elige otra.`;
 }
 
 /** Genera un slug libre a partir de una base (base, base-2, base-3…). */

@@ -242,7 +242,10 @@ export async function proxy(request: NextRequest) {
   }
 
   // 2b) Link estable de mesa/menú: solo aplica en el dominio raíz (sin slug,
-  // sin subdominio admin/central) y con forma /m/<uuid>(/resto). El resto
+  // sin subdominio admin/central) y con forma /m/<uuid>(/resto) o, desde la
+  // migración 134, /m/<slug>(/resto) — la dirección corta de los QR nuevos
+  // (D-5). El segmento se usa tal cual como prefijo (scope de la PWA, cookie
+  // del comensal, enlaces internos): cada QR vive bajo su propio prefijo. El resto
   // puede ser vacío (menú general), un número puro (mesa — semántica vieja
   // de ?mesa=N) o cualquier otro path interno (/checkout, /mis-pedidos,
   // /pedido/<token>, /auth/callback — navegación DENTRO del link estable,
@@ -251,13 +254,13 @@ export async function proxy(request: NextRequest) {
   let stableRewritePath: string | null = null;
   let stableMesa: string | null = null;
   if (!slug && !adminSub && !groupSub) {
-    const m = pathname.match(/^\/m\/([0-9a-fA-F-]{36})(\/.*)?$/);
+    const m = pathname.match(STABLE_LINK_RE);
     if (m) {
-      const [, restaurantId, rest = ""] = m;
-      const tenant = await resolveStableLinkTenant(restaurantId);
+      const [, ref, rest = ""] = m;
+      const tenant = await resolveStableLinkTenant(ref);
       if (tenant && tenant.status === "active") {
         slug = tenant.slug;
-        stableId = restaurantId;
+        stableId = ref;
         const mesaMatch = rest.match(/^\/(\d+)$/);
         if (rest === "" || mesaMatch) {
           stableRewritePath = "/";
@@ -280,7 +283,7 @@ export async function proxy(request: NextRequest) {
       // estable se quedaría con un manifest genérico "Leogin" en vez del
       // scope/nombre/ícono del restaurante.
       const refPath = safeUrlPathname(request.headers.get("referer"));
-      const refMatch = refPath?.match(/^\/m\/([0-9a-fA-F-]{36})/);
+      const refMatch = refPath?.match(STABLE_LINK_RE);
       if (refMatch) {
         const tenant = await resolveStableLinkTenant(refMatch[1]);
         if (tenant && tenant.status === "active") {
@@ -690,32 +693,54 @@ function safeUrlPathname(url: string | null): string | null {
   }
 }
 
+/** `/m/<uuid>` (QR impresos hasta la migración 134) o `/m/<slug>` (los de
+ *  ahora). El UUID va primero: también encaja en la forma de slug. */
+const STABLE_LINK_RE = /^\/m\/([0-9a-fA-F-]{36}|[a-z0-9][a-z0-9-]{1,62})(\/.*)?$/i;
+const UUID_RE = /^[0-9a-fA-F-]{36}$/;
+
 /**
- * Resuelve `restaurantId` → `{slug, status}` para el link estable de mesa
- * (`/m/<restaurantId>/...`). Consulta liviana vía REST directo a Supabase con
- * la anon key (misma política RLS que usa `getRestaurantSlugById` en
- * lib/db/restaurants.ts) — NO se reutiliza ese helper porque depende de
- * `next/headers` (vía lib/supabase/server.ts), que no está disponible en el
- * runtime de este proxy.
+ * Resuelve el segmento del link estable de mesa (`/m/<ref>/...`) →
+ * `{slug, status}`. `ref` es el id del restaurante (QR viejos) o un slug
+ * (QR nuevos, D-5): primero el slug ACTUAL y, si ya no es de nadie, los que
+ * un restaurante dejó de usar (`restaurant_slug_aliases`, migración 134) —
+ * así un QR impreso sigue abriendo su menú aunque el Super le cambie el slug.
+ *
+ * Consulta liviana vía REST directo a Supabase con la anon key (misma
+ * política RLS que usa `getRestaurantSlugById` en lib/db/restaurants.ts) —
+ * NO se reutiliza ese helper porque depende de `next/headers` (vía
+ * lib/supabase/server.ts), que no está disponible en el runtime de este proxy.
  */
 async function resolveStableLinkTenant(
-  restaurantId: string,
+  ref: string,
 ): Promise<{ slug: string; status: string } | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) return null;
 
+  const get = async <T,>(query: string): Promise<T[] | null> => {
+    const res = await fetch(`${supabaseUrl}/rest/v1/${query}`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+      cache: "no-store",
+    });
+    return res.ok ? ((await res.json()) as T[]) : null;
+  };
+
   try {
-    const res = await fetch(
-      `${supabaseUrl}/rest/v1/restaurants?id=eq.${restaurantId}&select=slug,status`,
-      {
-        headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
-        cache: "no-store",
-      },
+    if (UUID_RE.test(ref)) {
+      const rows = await get<{ slug: string; status: string }>(
+        `restaurants?id=eq.${ref}&select=slug,status`,
+      );
+      return rows?.[0] ?? null;
+    }
+    const slugRef = encodeURIComponent(ref.toLowerCase());
+    const rows = await get<{ slug: string; status: string }>(
+      `restaurants?slug=eq.${slugRef}&select=slug,status`,
     );
-    if (!res.ok) return null;
-    const rows = (await res.json()) as Array<{ slug: string; status: string }>;
-    return rows[0] ?? null;
+    if (rows?.[0]) return rows[0];
+    const alias = await get<{ restaurants: { slug: string; status: string } | null }>(
+      `restaurant_slug_aliases?slug=eq.${slugRef}&select=restaurants(slug,status)`,
+    );
+    return alias?.[0]?.restaurants ?? null;
   } catch {
     return null;
   }

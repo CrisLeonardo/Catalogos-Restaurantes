@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, 126 de 147 hallazgos hechos (los 6 P0 incluidos). Lo que queda espera una decisión tuya (⏸️: D-2…D-9), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo que se hace pantalla a pantalla (T-22, T-26, REN-05); ver la Bitácora al final.
+> **Estado:** al 2026-10-03, 127 de 147 hallazgos hechos (los 6 P0 incluidos). D-5 decidido y hecho; D-2 tiene maqueta esperando tu visto bueno (https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP). Lo demás espera una decisión tuya (⏸️: D-3, D-4, D-6…D-9), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo (T-22, T-26, REN-05); ver la Bitácora al final.
 
 ---
 
@@ -46,15 +46,15 @@
 | 5 | Panel · Menú | 12 | 12 | 0 |
 | 6 | Panel · Clientes | 6 | 6 | 0 |
 | 7 | Panel · Negocio | 6 | 5 | 1 |
-| 8 | Panel · Ajustes | 20 | 18 | 2 |
+| 8 | Panel · Ajustes | 20 | 19 | 1 |
 | 9 | Catálogo digital (lo que ve el comensal) | 14 | 11 | 1 |
 | 10 | Super Admin | 10 | 9 | 1 |
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
 | 12 | Web pública y marketing | 9 | 6 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 7 | 1 |
-| | **Total** | **147** | **126** | **12** |
+| | **Total** | **147** | **127** | **11** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 28 P1, 52 P2 y 40 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 28 P1, 53 P2 y 40 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -108,6 +108,7 @@ Estas cambian el trabajo; el resto se puede hacer sin preguntar.
   diseño (tarjeta de pedido más compacta, tablero en columnas en escritorio, mesas
   libres en rejilla en el teléfono)? Si es lo segundo, lo haría primero como
   maqueta para que la apruebes. (PED-02, PED-06, PED-09, PED-13)
+  🎨 **2026-10-03: «propón la maqueta primero».** Maqueta publicada: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP — antes/después de la tarjeta compacta (teléfono), el tablero en tres columnas (escritorio), dos opciones para las mesas libres en el teléfono (A rejilla · B plegadas; la A se parece a la tira del 09-09 que se rechazó) y tres arreglos de Tomar pedidos sin tocar tu diseño. Nada se construye hasta tu visto bueno.
 - **D-3 · Hoy, Pedidos y Negocio › Resumen enseñan las mismas cifras y gráficas.**
   Propuesta: **Hoy** = el pulso (avisos, cifras del día, lo que está pasando);
   **Pedidos** = solo operación, sin gráficas; **Negocio › Resumen** = semana/mes
@@ -119,6 +120,7 @@ Estas cambian el trabajo; el resto se puede hacer sin preguntar.
   restaurante (`/m/aaaaaaaa-aaaa-…/7`): el código sale más denso y la dirección
   es ilegible. Se puede pasar a `/m/<slug>/7` **manteniendo vivos los viejos**
   (los QR ya impresos siguen funcionando). ¿Lo hago? (AJU-06)
+  ✅ **Decidido 2026-10-03: sí.** Hecho, ver AJU-06.
 - **D-6 · WhatsApp (API de Meta).** La pantalla pide «Phone number ID» y «token»
   de Meta y, si el servidor no está configurado, le enseña al dueño un error
   técnico. ¿La escondemos hasta que esté lista para un restaurantero? (AJU-15)
@@ -461,6 +463,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   pedidos de hoy; «Mesa 9» dos veces (título y detalle); cuatro botones por
   tarjeta. Propuesta: un solo reloj con color por umbral, banda solo si pasa el
   doble del umbral, hora sola, «Recibo» y «Copia de comanda» en un «⋯».
+  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
 
 - [x] **PED-03** · P2 · S — **Dos formatos de número de pedido:** «H-7» y
   «ORD-2026-00057». En Cocina «#ORD-2026-00057» a tamaño grande se corta. Mostrar
@@ -479,6 +482,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **PED-06** · P2 · M · ⏸️ D-2 — **Escritorio: grupos apilados en una página de
   2.900 px.** A 1440 px caben tres columnas (Por enviar · En cocina · Listos) y se
   vería todo sin mover la página.
+  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
 
 - [x] **PED-07** · P2 · S — **«×» rojo de 22 px para anular un plato**, pegado al
   precio: fácil de tocar sin querer en hora pico. Pasarlo al «⋯» de la tarjeta o
@@ -499,6 +503,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **PED-09** · P1 · S · ⏸️ D-2 — **17 mesas libres como filas de 60 px a todo el
   ancho** en el teléfono: ~1.000 px de scroll vacío. En escritorio ya son una
   rejilla; en el teléfono, 4–5 por fila.
+  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
 
 - [x] **PED-10** · P2 · S — **Recortes en el teléfono:** la tercera cifra («Sin
   cobrar Q0.») queda cortada, y la pestaña «En qué va» también. Además dos filas
@@ -525,6 +530,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   **agotados salen primero** en la rejilla (Roll de Canela, Mocha Negra) — deberían
   ir al final; filtro «Por co…» cortado; «26 min · 3 pl…» truncado en la lista de
   escritorio.
+  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
 
 ---
 
@@ -688,8 +694,9 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   pegatinas).
   ✅ **Hecho 2026-10-02 (Fase 4).** Mesas del plano que se achican con el plano (38–68 px, crecen con el zoom) — ya no salen encimadas en el teléfono; «Descargar todos (PDF)»: hoja A4 con seis QR por página, nombre del restaurante, «Mesa N» y línea de corte (`lib/documents/table-qr-sheet.ts`, 405 KB para 20 mesas); se ven 8 QR con «Ver los 20 QR», y la URL larga dejó la tarjeta («Copiar enlace» la copia). La barra ya decía «Salón» (T-10). La página bajó de ~4.700 a 2.884 px en el teléfono.
 
-- [ ] **AJU-06** · P2 · M · ⏸️ D-5 — **QR de mesa con UUID** (`/m/aaaaaaaa-aaaa-…/7`):
+- [x] **AJU-06** · P2 · M · ⏸️ D-5 — **QR de mesa con UUID** (`/m/aaaaaaaa-aaaa-…/7`):
   código más denso (peor lectura impreso pequeño) y dirección ilegible.
+  ✅ **Hecho 2026-10-03 (D-5).** Los QR de mesa (tarjetas, PNG y el PDF de «Descargar todos») llevan ahora `/m/<slug>/<mesa>`: 33 módulos en vez de 37 (comparado contra el QR real del PDF). Los ya impresos con UUID siguen igual. El UUID se había elegido porque no cambia nunca; para no perder eso, la **migración 134** (`restaurant_slug_aliases` + disparador) guarda el slug viejo cuando el Super lo cambia, y el proxy lo resuelve: un QR con `/m/<slug-viejo>/7` sigue abriendo su restaurante. Y un slug que ya usó un restaurante no puede quedárselo otro (aviso en la app y disparador en la base), porque sus QR impresos abrirían el menú equivocado. Probado: slug, UUID, alias tras cambiar el slug (y vuelta), dirección inexistente → portada, navegar al checkout dentro del prefijo, y los disparadores en una transacción deshecha. **Migración 134 PENDIENTE en producción**: sin ella todo funciona igual que hoy salvo el alias (el código tolera que la tabla no exista).
 
 - [x] **AJU-07** · P2 · M — **Marketing — Código QR sin marca.** Solo el cuadro
   negro. Logo al centro, nombre del restaurante, «Escanea para ver el menú y
@@ -1079,3 +1086,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-03 | **Detalles P2/P3 del panel.** Transversal (T-04, T-19, T-20, T-21, T-24, T-25), armazón (N-06, N-07), Hoy (HOY-02, HOY-04), Pedidos/Cocina/Mesas (PED-03, 04, 05, 07, 08, 10, 12), Menú (MEN-04…MEN-11), Clientes (CLI-02…05), Negocio (NEG-03, 04, 06) y Ajustes (AJU-04, 08, 11, 14, 16, 17, 18). Piezas nuevas: `.tap44`, tokens de gráfica, `.adm-w-read/-overview`, `lib/order-number.ts`, `export-menu.tsx`. Parciales: NEG-05, PED-11. Verificado: `tsc`, `eslint`, 781 pruebas, build, capturas claro/oscuro de 20 pantallas. | `840a9bd` |
 | 2026-10-03 | **Detalles P2/P3 del menú público, Super, Mi cuenta, web y rendimiento.** CAT-03, 05, 06, 07, 08, 10; SUP-02, 03, 05, 06, 07, 08, 10; MIC-04, 05; WEB-04…09; REN-03, 07, 09, 10 y N-10 (sesión: reintento ante fallos de red y lectura del restaurante con llave de servicio si falla). Piezas nuevas: `lib/category-icon.ts`, `PLAN_POINTS`, `<Table data-stack>`. Pendientes con nota: CAT-09, REN-02, REN-06. Verificado: `tsc`, `eslint`, 788 pruebas (nuevas: lema, iconos), build, capturas del menú, la web, el Super y Mi cuenta, y 12 entradas seguidas al panel sin un salto. | `669bbdd` |
 | 2026-10-03 | **Cierre de lo que no depende de ti.** NEG-05 (tocar una barra dice su cifra, en todas las gráficas), PED-11 (rótulo de la cifra grande en la ficha del teléfono), REN-02 (fuera ~45 `router.refresh()` sobrantes, comprobado acción por acción), REN-04 (checkout partido y memorizado), REN-06 (`fmtCurrency`), T-23 (radios a tokens), 37 textos más a 11 px (T-21), y dos hallazgos nuevos arreglados: PED-14 («Mesa 4 · Mesa 4») y CAT-14 («Efectivo contra entrega» al recoger). Verificado: `tsc`, `eslint`, 793 pruebas, cuatro builds de producción, recorrido con Playwright (lectura de barras en panel/Super/Mi cuenta, insumo creado y borrado con una sola petición, checkout de punta a punta), capturas de 16 pantallas del panel y 4 del Super. Pedidos de prueba y cupón borrados; los 3 pedidos puestos en curso para ver Mesas, devueltos a su estado. Lo que queda (21) espera D-2…D-9, contenido tuyo o es continuo. | `a21f6af` |
+| 2026-10-03 | **D-5 hecho y maqueta de D-2.** AJU-06: QR de mesa con `/m/<slug>/<mesa>` (migración 134 con alias de slug para que un QR impreso sobreviva a un cambio de slug, y guardia para que nadie herede el slug de otro). Verificado: `tsc`, `eslint`, pruebas, build, recorrido con Playwright (slug, UUID, alias, inexistente, checkout, QR del PDF comparado píxel a píxel). D-2: maqueta publicada (https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP) con capturas reales del «antes» y la propuesta con los colores y letras del panel; pedidos de prueba devueltos a su estado. | (este commit) |

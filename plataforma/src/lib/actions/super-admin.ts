@@ -10,7 +10,7 @@ import { PRICING_SETTINGS_TAG } from '@/lib/db/billing';
 import { ACTIVATABLE_MODULES } from '@/lib/modules';
 import { withPlanFloor, type PlanCode } from '@/lib/plans';
 import { logChannelChanges } from '@/lib/db/channel-history';
-import { slugify, validateSlug, crossSlugCollision } from '@/lib/slug';
+import { slugify, validateSlug, crossSlugCollision, slugAliasOfOther } from '@/lib/slug';
 import type { ThemeConfig, ThemeContent, OrderType } from '@/lib/theme/defaults';
 
 export type SuperState = { error: string } | null;
@@ -36,6 +36,8 @@ export async function createRestaurant(
   if (slugError) return { error: slugError };
   const collision = await crossSlugCollision(db, slug, 'restaurants');
   if (collision) return { error: collision };
+  const usado = await slugAliasOfOther(db, slug);
+  if (usado) return { error: usado };
 
   const { data: restaurant, error: rErr } = await db
     .from('restaurants')
@@ -96,6 +98,8 @@ export async function updateRestaurantBasic(
   if (slugError) return { error: slugError };
   const collision = await crossSlugCollision(db, slug, 'restaurants');
   if (collision) return { error: collision };
+  const usado = await slugAliasOfOther(db, slug, id);
+  if (usado) return { error: usado };
 
   const { error } = await db
     .from('restaurants')

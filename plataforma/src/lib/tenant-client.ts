@@ -16,7 +16,8 @@ import { useEffect, useState } from 'react';
  */
 export function getStableLinkPrefix(): string | null {
   if (typeof window === 'undefined') return null;
-  const m = window.location.pathname.match(/^\/m\/[0-9a-fA-F-]{36}/);
+  // `/m/<uuid>` (QR viejos) o `/m/<slug>` (QR nuevos, migración 134).
+  const m = window.location.pathname.match(/^\/m\/(?:[0-9a-fA-F-]{36}|[a-z0-9][a-z0-9-]{1,62})(?=\/|$)/i);
   return m ? m[0] : null;
 }
 

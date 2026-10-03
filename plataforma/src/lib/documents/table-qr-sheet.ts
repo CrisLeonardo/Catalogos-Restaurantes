@@ -8,8 +8,8 @@
    línea punteada para recortar— listo para imprimir.
 
    Usa el mismo enlace ESTABLE de mesa que las tarjetas
-   (`stableTableUrl`), que sigue sirviendo aunque cambie el slug o
-   el dominio.
+   (`stableTableUrl`, /m/<slug>/<mesa>), que sigue sirviendo aunque
+   cambie el slug (migración 134).
    ============================================================ */
 
 import { createDoc, INK_RGB, MUTED_RGB } from '@/lib/documents/pdf';
@@ -17,18 +17,18 @@ import { qrPng } from '@/lib/documents/qr-art';
 import { stableTableUrl } from '@/lib/tenant';
 
 export async function downloadTableQrSheet(opts: {
-  restaurantId: string;
+  slug: string;
   restaurantName: string;
   tableCount: number;
 }): Promise<void> {
-  const { restaurantId, restaurantName, tableCount } = opts;
+  const { slug, restaurantName, tableCount } = opts;
   const tables = Array.from({ length: tableCount }, (_, i) => i + 1);
 
   // De a cuatro a la vez: veinte peticiones juntas al mismo endpoint no
   // ganan nada y en un teléfono con mala señal se atascan.
   const images: string[] = [];
   for (let i = 0; i < tables.length; i += 4) {
-    const batch = await Promise.all(tables.slice(i, i + 4).map((n) => qrPng(stableTableUrl(restaurantId, n))));
+    const batch = await Promise.all(tables.slice(i, i + 4).map((n) => qrPng(stableTableUrl(slug, n))));
     images.push(...batch);
   }
 

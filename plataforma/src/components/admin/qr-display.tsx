@@ -42,8 +42,8 @@ export default function QRDisplay({ restaurantName, slug, restaurantId, accent, 
   // Este link SÍ lleva el slug (a diferencia del de las mesas): no se
   // imprime, es el que la gente teclea, pega en redes o pone en su bio para
   // pedir en línea — ahí lo memorable importa más que la permanencia. Los QR
-  // de mesa siguen en /m/<id>/<mesa> (stableTableUrl, tables-panel.tsx)
-  // porque esos sí se imprimen y no se pueden reimprimir si cambia el slug.
+  // de mesa van a /m/<slug>/<mesa> (stableTableUrl, tables-panel.tsx), que
+  // sobrevive a un cambio de slug gracias a los alias de la migración 134.
   const menuUrl = subdomainUrl(slug);
 
   const qrSrc = `/api/qr?url=${encodeURIComponent(menuUrl)}${hasLogo ? '&ecc=H' : ''}`;

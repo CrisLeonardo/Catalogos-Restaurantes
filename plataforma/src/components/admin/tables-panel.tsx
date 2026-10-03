@@ -21,6 +21,8 @@ type Patch = Pick<ThemeConfig,
 
 interface Props {
   restaurantId: string;
+  /** Va en el QR de cada mesa: /m/<slug>/<mesa>. */
+  slug: string;
   menuUrl: string | null;
   config: Patch;
   /** Para la hoja de QR imprimible. */
@@ -37,14 +39,13 @@ function toggleIn<T>(arr: T[], val: T, on: boolean): T[] {
   return arr;
 }
 
-function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; restaurantId: string }) {
+function TableQRCard({ tableNumber, slug }: { tableNumber: number; slug: string }) {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const toast = useToastManager();
-  // Link ESTABLE (no la URL final del menú): sigue funcionando aunque el
-  // restaurante cambie de slug o la plataforma de dominio — ver
-  // src/app/m/[restaurantId]/[[...mesa]]/route.ts.
-  const tableUrl = stableTableUrl(restaurantId, tableNumber);
+  // Link ESTABLE corto (/m/<slug>/<mesa>, no la URL del subdominio): sigue
+  // funcionando aunque el restaurante cambie de slug — ver stableTableUrl.
+  const tableUrl = stableTableUrl(slug, tableNumber);
   const qrSrc = `/api/qr?url=${encodeURIComponent(tableUrl)}`;
 
   async function copyLink() {
@@ -148,7 +149,7 @@ function TableQRCard({ tableNumber, restaurantId }: { tableNumber: number; resta
   );
 }
 
-export default function TablesPanel({ restaurantId, menuUrl, config: initial, restaurantName }: Props) {
+export default function TablesPanel({ restaurantId, slug, menuUrl, config: initial, restaurantName }: Props) {
   const [patch, setPatch] = useState<Patch>(initial);
   const [showAllQr, setShowAllQr] = useState(false);
   const [sheetBusy, setSheetBusy] = useState(false);
@@ -162,7 +163,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial, re
     try {
       const { downloadTableQrSheet } = await import('@/lib/documents/table-qr-sheet');
       await downloadTableQrSheet({
-        restaurantId,
+        slug,
         restaurantName: restaurantName?.trim() || 'Tu restaurante',
         tableCount: initial.dineInTableCount,
       });
@@ -292,7 +293,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial, re
             gap: 10,
           }}>
             {Array.from({ length: showAllQr ? patch.dineInTableCount : Math.min(patch.dineInTableCount, QR_PREVIEW) }, (_, i) => i + 1).map((n) => (
-              <TableQRCard key={n} tableNumber={n} restaurantId={restaurantId} />
+              <TableQRCard key={n} tableNumber={n} slug={slug} />
             ))}
           </div>
           {patch.dineInTableCount > QR_PREVIEW && (
