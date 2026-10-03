@@ -552,7 +552,7 @@ const CONTENT_FIELDS: Record<keyof ThemeContent, [string, string][]> = {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="t-kicker" style={{ fontSize: 11 }}>{title}</div>
+      <div className="adm-label">{title}</div>
       {children}
     </Glass>
   );

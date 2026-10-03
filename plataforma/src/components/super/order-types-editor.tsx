@@ -41,7 +41,7 @@ export default function OrderTypesEditor({
 
   return (
     <Glass variant="quiet" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0 }}>
+      <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, margin: 0 }}>
         Tipos de pedido
       </p>
       <p style={{ fontSize: 11.5, color: 'var(--u-text-4)', margin: '-4px 0 0', lineHeight: 1.45 }}>

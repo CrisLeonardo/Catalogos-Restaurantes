@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { savePlatformSettings, type PlatformContactSettings, type PlatformSettingsState } from '@/lib/actions/super-admin';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 interface Props {
   settings: PlatformContactSettings;
@@ -29,7 +30,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
       <form action={action} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor="support_whatsapp" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <label htmlFor="support_whatsapp" style={{ ...FIELD_LABEL, marginBottom: 0 }}>
             Número de WhatsApp
           </label>
           <input
@@ -53,7 +54,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor="support_email" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <label htmlFor="support_email" style={{ ...FIELD_LABEL, marginBottom: 0 }}>
             Correo electrónico de soporte
           </label>
           <input
@@ -77,7 +78,7 @@ export default function PlatformSettingsForm({ settings }: Props) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor="payment_instructions" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <label htmlFor="payment_instructions" style={{ ...FIELD_LABEL, marginBottom: 0 }}>
             Cómo te pagan los restaurantes
           </label>
           <textarea

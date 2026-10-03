@@ -23,15 +23,11 @@ export default function FichaTabs({ restaurantId }: { restaurantId: string }) {
   const pathname = usePathname();
   const base = `/super/restaurantes/${restaurantId}`;
 
+  /* El control segmentado del panel (`.admin-tabs` + `.adm-tabs-page`),
+     como en Pedidos y en las pantallas con pestañas (T-07 / D-8): era una
+     fila subrayada en acento, otro estilo de pestaña más. */
   return (
-    <nav
-      aria-label="Secciones del restaurante"
-      style={{
-        display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2,
-        borderBottom: '1px solid var(--adm-border, var(--u-hair))',
-        scrollbarWidth: 'none',
-      }}
-    >
+    <nav aria-label="Secciones del restaurante" className="admin-tabs adm-tabs-page">
       {TABS.map((t) => {
         const href = t.seg ? `${base}/${t.seg}` : base;
         const active = t.seg
@@ -41,18 +37,9 @@ export default function FichaTabs({ restaurantId }: { restaurantId: string }) {
           <Link
             key={t.seg}
             href={href}
-            className="press"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '9px 14px', borderRadius: '10px 10px 0 0',
-              fontSize: 13, fontWeight: active ? 700 : 500,
-              color: active ? 'var(--brand-accent)' : 'var(--u-text-3)',
-              textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
-              borderBottom: active ? '2px solid var(--brand-accent)' : '2px solid transparent',
-              marginBottom: -3,
-              background: active ? 'color-mix(in srgb, var(--brand-accent) 7%, transparent)' : 'transparent',
-              transition: 'color 140ms, background 140ms',
-            }}
+            className="admin-tab press"
+            data-active={active ? '1' : '0'}
+            aria-current={active ? 'page' : undefined}
           >
             <Icon name={t.icon} size={15} />
             {t.label}

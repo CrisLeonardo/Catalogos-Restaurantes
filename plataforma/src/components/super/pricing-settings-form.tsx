@@ -14,12 +14,10 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/icons';
 import { savePricingSettings, type BillingState } from '@/lib/actions/billing';
 import type { PricingSettings } from '@/lib/db/billing';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
-  letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
-  display: 'flex', alignItems: 'center', gap: 6,
-};
+/* El rótulo de campo del panel (D-8), con sitio para un icono al lado. */
+const labelStyle: React.CSSProperties = { ...FIELD_LABEL, display: 'flex', alignItems: 'center', gap: 6 };
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
   borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',

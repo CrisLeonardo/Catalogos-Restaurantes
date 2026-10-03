@@ -168,8 +168,8 @@ function Legend({ color, label }: { color: string; label: string }) {
 function Kpi({ label, value, sub, growth }: { label: string; value: string; sub?: string; growth?: number | null }) {
   return (
     <Glass variant="quiet" style={{ padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <div className="t-kicker" style={{ fontSize: 11 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
+      <div className="adm-label">{label}</div>
+      <div className="t-mono" style={{ fontWeight: 600, fontSize: 24, color: 'var(--u-text)', lineHeight: 1 }}>{value}</div>
       {growth != null ? (
         <div style={{ fontSize: 11.5, fontWeight: 600, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
           {growth >= 0 ? '▲' : '▼'} {Math.abs(growth).toFixed(0)}% vs. mes previo
@@ -184,7 +184,7 @@ function Kpi({ label, value, sub, growth }: { label: string; value: string; sub?
 function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <div className="t-kicker" style={{ fontSize: 11 }}>{label}</div>
+      <div className="adm-label">{label}</div>
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 18, color: 'var(--u-text)' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>{sub}</div>}
     </div>
@@ -192,5 +192,5 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 const sectionTitle: React.CSSProperties = {
-  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 14, color: 'var(--u-text-2)',
+  fontWeight: 650, fontSize: 15.5, marginBottom: 14, color: 'var(--u-text-2)',
 };

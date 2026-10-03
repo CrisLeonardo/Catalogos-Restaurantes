@@ -25,6 +25,7 @@ import {
 } from '@/lib/actions/billing';
 import type { BillingConfig, Invoice } from '@/lib/db/billing';
 import { fechaCorta } from '@/lib/dates';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const CONCEPT_LABEL: Record<string, string> = {
   MONTHLY: 'Mensualidad', SETUP: 'Implementación', PRORATE: 'Prorrateo', OTHER: 'Otro',
@@ -40,10 +41,8 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
 const optionStyle: React.CSSProperties = { color: '#000', background: '#fff' };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
-  letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function todayYmd() { return new Date().toISOString().slice(0, 10); }
 function isOverdue(inv: Invoice) {
@@ -100,7 +99,7 @@ export default function BillingManager({
 
       {/* Acciones de cobro */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="t-kicker" style={{ fontSize: 11 }}>Generar cobros</div>
+        <div className="adm-label">Generar cobros</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <ActionButton action={generateMonthlyForRestaurant} hidden={{ restaurantId }} label="Mensualidad de este mes" onResult={setToast} />
           <ActionButton action={generateProrate} hidden={{ restaurantId }} label="Prorrateo (resto del mes)" onResult={setToast} />
@@ -116,7 +115,7 @@ export default function BillingManager({
       {/* Facturas */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div className="t-kicker" style={{ fontSize: 11 }}>Historial de cobros</div>
+          <div className="adm-label">Historial de cobros</div>
           {pendingTotal > 0 && (
             <div style={{ fontSize: 13, color: 'var(--c-warn)', fontWeight: 600 }}>
               Pendiente: {fmtMoney(pendingTotal, currency)}
@@ -162,7 +161,7 @@ function ConfigCard({
     <Glass variant="quiet" style={{ padding: 18 }}>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <div className="t-kicker" style={{ fontSize: 11 }}>Configuración del cobro</div>
+        <div className="adm-label">Configuración del cobro</div>
 
         {config?.suspended_for_nonpayment && (
           <SuspensionBanner restaurantId={restaurantId} onResult={onResult} />

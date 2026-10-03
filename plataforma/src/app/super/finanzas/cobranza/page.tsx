@@ -53,7 +53,7 @@ export default async function CobranzaPage() {
         <section>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
             <Icon name="alertCircle" size={16} style={{ color: 'var(--c-danger)' }} />
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--c-danger)', margin: 0 }}>
+            <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--c-danger)', margin: 0 }}>
               Con mora vencida y aún activos
             </h2>
             <Badge variant="danger">{needsSuspension.length}</Badge>
@@ -103,7 +103,7 @@ export default async function CobranzaPage() {
 
       {/* Tabla */}
       <section>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
+        <h2 style={{ fontWeight: 650, fontSize: 15.5, marginBottom: 12, color: 'var(--u-text)' }}>
           Restaurantes
         </h2>
         {/* `data-stack`: en el teléfono cada fila es una tarjeta con

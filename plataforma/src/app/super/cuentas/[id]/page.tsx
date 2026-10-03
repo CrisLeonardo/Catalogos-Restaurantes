@@ -192,7 +192,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2
       style={{
-        fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+        fontSize: 13, fontWeight: 600,
         color: 'var(--u-text-4)', margin: 0,
       }}
     >

@@ -11,7 +11,7 @@ import { Section } from '@/components/ui/section';
 import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
 import { ACTIVATABLE_MODULES, isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
-import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
+import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
 
@@ -140,11 +140,12 @@ export default async function AdminAjustesPage() {
       ? [{ href: '/admin/mi-pc', icon: 'monitor', label: 'La PC del local', desc: 'Imprime comandas sola y te cubre si se cae el internet', key: 'impresion', value: pcValue, tone: pcTone } as Row]
       : []),
     /* Mismo criterio que admin-nav.ts (N-02): Repartidores si se entrega a
-       domicilio; WhatsApp cuando la conexión ya está activa en Leogin. */
+       domicilio; WhatsApp solo para quien puede conectarlo (D-6, ver
+       lib/whatsapp/visible.ts). */
     ...(ordersEnabled && deliveryEnabled
       ? [{ href: '/admin/repartidores', icon: 'truck', label: 'Repartidores', desc: 'Quién lleva los pedidos a domicilio', key: 'repartidores' } as Row]
       : []),
-    ...(ordersEnabled && isTokenKeyConfigured()
+    ...(ordersEnabled && whatsappVisiblePara(profile.role)
       ? [{ href: '/admin/whatsapp', icon: 'whatsapp', label: 'WhatsApp', desc: 'Avisos a tus clientes de cómo va su pedido', key: 'whatsapp' } as Row]
       : []),
   ];

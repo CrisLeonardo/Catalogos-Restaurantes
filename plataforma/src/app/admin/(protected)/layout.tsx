@@ -23,7 +23,7 @@ import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
-import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
+import { whatsappVisiblePara } from '@/lib/whatsapp/visible';
 
 export default async function AdminProtectedLayout({
   children,
@@ -221,7 +221,7 @@ export default async function AdminProtectedLayout({
       planActual={planActual}
       dineInEnabled={dineInEnabled}
       deliveryEnabled={deliveryEnabled}
-      whatsappReady={isTokenKeyConfigured()}
+      whatsappReady={whatsappVisiblePara(profile.role)}
       ordersEnabled={m('orders')}
       analiticaEnabled={m('analitica')}
       inventarioEnabled={m('inventario')}

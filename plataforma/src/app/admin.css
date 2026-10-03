@@ -767,11 +767,10 @@
 
 /* Pedidos: board (flex: 1) + sidebar de gráfica (300 px fijo) */
 /* Pedidos › En vivo (PED-06, maqueta D-2). El tablero de pedidos ocupa todo
-   el ancho; la gráfica y «Lo que más sale» van DEBAJO (antes, una columna de
-   300 px a la derecha). En escritorio, una columna por etapa; más estrecho,
-   los grupos apilados y sin las etapas vacías. */
+   el ancho (las gráficas se fueron a Hoy y a Negocio, D-3). En escritorio,
+   una columna por etapa; más estrecho, los grupos apilados y sin las etapas
+   vacías. */
 .orders-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
-.orders-aside { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; align-items: start; }
 .orders-col { margin-bottom: 26px; }
 .orders-col[data-empty="1"] { display: none; }
 .orders-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
@@ -1273,7 +1272,7 @@
   border: 1px solid var(--u-hair-2); background: none; color: var(--u-text-2);
 }
 .salon-act[data-primary="1"] {
-  border-color: var(--brand-accent); background: var(--brand-accent);
+  border-color: var(--adm-accent-fill, var(--brand-accent)); background: var(--adm-accent-fill, var(--brand-accent));
   color: var(--brand-on-accent, #fff);
 }
 .salon-act:disabled { cursor: default; opacity: 0.55; }
@@ -2048,7 +2047,7 @@
 .sv-top-id { display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-width: 0; }
 .sv-top-mark {
   width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius-md);
-  background: var(--brand-accent); color: var(--brand-on-accent);
+  background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   display: grid; place-items: center; font-weight: 700; font-size: 15px;
   overflow: hidden;
 }
@@ -2324,7 +2323,7 @@
 }
 .sv-dish-q {
   position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px;
-  border-radius: var(--radius-full); background: var(--brand-accent); color: var(--brand-on-accent);
+  border-radius: var(--radius-full); background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600;
   display: grid; place-items: center;
 }
@@ -2482,10 +2481,10 @@
   display: flex; align-items: center; justify-content: center; gap: 10px;
   width: 100%; height: 54px; border: none; border-radius: var(--radius-lg);
   font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
-  background: var(--brand-accent); color: var(--brand-on-accent);
+  background: var(--adm-accent-fill, var(--brand-accent)); color: var(--brand-on-accent);
   transition: background 120ms var(--ease-out), opacity 120ms var(--ease-out);
 }
-.sv-cta:hover { background: var(--brand-accent-ink); }
+.sv-cta:hover { background: var(--adm-accent-fill-hover, var(--brand-accent-ink)); }
 .sv-cta:disabled { opacity: 0.55; cursor: default; }
 .sv-cta[data-tone="ok"] { background: var(--sv-ok-fill); color: var(--c-on-solid); }
 /* El hover oscurece un paso más. Antes iba a `--c-ok`, que es TINTA: en

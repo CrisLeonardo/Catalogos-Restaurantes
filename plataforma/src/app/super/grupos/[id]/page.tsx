@@ -17,7 +17,7 @@ export default async function GrupoDetailPage({ params }: { params: Promise<{ id
   const publicUrl = subdomainUrl(org.slug);
 
   const card: React.CSSProperties = { borderRadius: 'var(--radius-lg)', padding: 20 };
-  const sectionTitle: React.CSSProperties = { fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 };
+  const sectionTitle: React.CSSProperties = { fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 12 };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

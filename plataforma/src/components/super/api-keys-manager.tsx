@@ -10,15 +10,14 @@ import { Icon } from '@/components/icons';
 import { createApiKeyAction, revokeApiKeyAction, type ApiKeyCreateResult } from '@/lib/actions/api-keys';
 import type { ApiKeyRow } from '@/lib/api-keys';
 import { haceTiempo } from '@/lib/dates';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: 'color-mix(in srgb, var(--u-text) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--u-text) 12%, transparent)',
   borderRadius: 'var(--radius-md)', padding: '10px 12px', color: 'var(--u-text)', fontSize: 14, outline: 'none',
 };
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: 'var(--u-text-3)', fontWeight: 600,
-  letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 export default function ApiKeysManager({ initialKeys }: { initialKeys: ApiKeyRow[] }) {
   const [state, action, pending] = useActionState<ApiKeyCreateResult | null, FormData>(createApiKeyAction, null);

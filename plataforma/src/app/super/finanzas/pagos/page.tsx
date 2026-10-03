@@ -51,7 +51,7 @@ export default async function PagosPage() {
         return (
           <section key={month}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0, textTransform: 'capitalize' }}>
+              <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)', margin: 0, textTransform: 'capitalize' }}>
                 {monthTitle(month)}
               </h2>
               <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 13.5, color: 'var(--c-ok)' }}>

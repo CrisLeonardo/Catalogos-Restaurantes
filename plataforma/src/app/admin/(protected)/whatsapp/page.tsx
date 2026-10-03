@@ -5,6 +5,7 @@ import { getRestaurantBySlug } from '@/lib/db/restaurants';
 import { createServiceClient } from '@/lib/supabase/service';
 import { can } from '@/lib/permissions';
 import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
+import { WHATSAPP_PARA_DUENOS } from '@/lib/whatsapp/visible';
 import WhatsAppPanel, { type WhatsAppAccountView } from '@/components/admin/whatsapp-panel';
 import { panelLink } from '@/lib/panel-links-server';
 
@@ -25,6 +26,8 @@ export default async function AdminWhatsAppPage() {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
   if (!can(ctx.profile.role, ctx.profile.permissions, 'whatsapp')) redirect(await panelLink('/admin'));
+  // Hasta que haya alta guiada, solo el Super Admin conecta el número (D-6).
+  if (!WHATSAPP_PARA_DUENOS && ctx.profile.role !== 'SUPER_ADMIN') redirect(await panelLink('/admin/ajustes'));
 
   let restaurantId: string | null = null;
 

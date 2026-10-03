@@ -18,6 +18,7 @@ import {
 } from '@/lib/actions/memberships';
 import type { RestaurantUser } from '@/lib/db/super-admin';
 import type { MemberRole } from '@/lib/membership-roles';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
 const emptyMembership: MembershipState = null;
@@ -40,15 +41,8 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: 'var(--u-text-3)',
-  fontWeight: 500,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function genPassword(): string {
   // Sin caracteres ambiguos (0/O, 1/l) para dictar por teléfono.

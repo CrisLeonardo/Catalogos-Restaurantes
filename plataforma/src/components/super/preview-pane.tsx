@@ -110,7 +110,7 @@ export default function PreviewPane({ previewId, id }: { previewId: string; /** 
             boxShadow: enabled ? '0 0 8px rgba(74,222,128,0.8)' : 'none', flexShrink: 0,
           }}
         />
-        <span className="t-kicker" style={{ fontSize: 11, flex: 1 }}>
+        <span className="adm-label" style={{ flex: 1 }}>
           {enabled ? 'Vista previa en vivo' : 'Vista previa'}
         </span>
 

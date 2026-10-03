@@ -78,7 +78,7 @@ export default async function MetricasPage() {
       {/* Tabla completa */}
       {restaurants.length > 0 && (
         <section>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12, color: 'var(--u-text)' }}>
+          <h2 style={{ fontWeight: 650, fontSize: 15.5, marginBottom: 12, color: 'var(--u-text)' }}>
             Todos los restaurantes
           </h2>
           <Table data-stack="">

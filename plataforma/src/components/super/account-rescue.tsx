@@ -12,6 +12,7 @@ import { useActionState, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/icons';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 import {
   resetAccountPassword,
   changeAccountEmail,
@@ -318,15 +319,8 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11.5,
-  color: 'var(--u-text-3)',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 const notaStyle: React.CSSProperties = {
   fontSize: 12,

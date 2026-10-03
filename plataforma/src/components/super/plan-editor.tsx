@@ -150,7 +150,7 @@ export default function PlanEditor({
 
       {/* Plan selector */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 12 }}>
           Plan
         </p>
         {isLegacy && (
@@ -216,7 +216,7 @@ export default function PlanEditor({
 
       {/* Incluido en el plan */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 12 }}>
           Incluido en el plan
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -235,7 +235,7 @@ export default function PlanEditor({
 
       {/* Módulos gestionados por Leogin */}
       <Glass variant="quiet" style={{ padding: 16 }}>
-        <p style={{ fontSize: 12, color: 'var(--u-text-3)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+        <p style={{ fontSize: 13, color: 'var(--u-text-2)', fontWeight: 600, marginBottom: 6 }}>
           Módulos gestionados por Leogin
         </p>
         <p style={{ fontSize: 12, color: 'var(--u-text-4)', margin: '0 0 12px', lineHeight: 1.5, display: 'flex', gap: 7 }}>

@@ -67,45 +67,45 @@ export function StatCard({
   label: string;
   value: string | number;
   icon?: string;
-  /** Color del valor (ok/danger/warn/accent o css directo). */
+  /** Solo `warn` y `danger` tiñen la cifra; los demás se dejan por
+   *  compatibilidad y se pintan como el resto (D-8). */
   tone?: 'ok' | 'danger' | 'warn' | 'accent' | 'info';
   sub?: string;
   /** % de crecimiento vs. periodo previo (pinta ▲/▼). */
   growth?: number | null;
   href?: string;
 }) {
+  /* El mismo dibujo que <Stat> del panel (D-8, auditoría 2026-10-02): rótulo
+     en minúscula, cifra en la mono del panel y color SOLO cuando pide
+     atención (aviso, peligro). Antes: rótulo de cartel en mayúsculas y cifra
+     en Unbounded de colores — verde, naranja, azul — sin que el color
+     significara nada distinto de «otra tarjeta». */
   const color =
-    tone === 'ok' ? 'var(--c-ok)'
-    : tone === 'danger' ? 'var(--c-danger)'
+    tone === 'danger' ? 'var(--c-danger)'
     : tone === 'warn' ? 'var(--c-warn)'
-    : tone === 'accent' ? 'var(--brand-accent)'
-    : tone === 'info' ? 'var(--adm-info, #7dd3fc)'
     : 'var(--u-text)';
 
   const inner = (
     <Card
       variant={href ? 'interactive' : 'default'}
-      style={{ padding: '16px 16px 14px', display: 'flex', flexDirection: 'column', gap: 7, height: '100%', containerType: 'inline-size' }}
+      style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, height: '100%', containerType: 'inline-size' }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
         {icon && <Icon name={icon} size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
-        <span className="t-kicker" style={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <span style={{ fontSize: 13, color: 'var(--u-text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
       {/* La cifra se mide contra el ancho de SU tarjeta (`cqi`), no contra
-          la pantalla: con el separador de miles «Q1,495.00» a 26 px se salía
-          en el teléfono, y con seis tarjetas en fila a 1440 px se partía en
-          «Q1,495.0 / 0» (auditoría 2026-10-02, T-01). Sin `overflowWrap`:
-          un importe nunca se corta a la mitad. */}
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(16px, 11.5cqi, 26px)', lineHeight: 1, color, letterSpacing: '-0.02em', minWidth: 0, whiteSpace: 'nowrap' }}>
+          la pantalla: con el separador de miles «Q1,495.00» se salía en el
+          teléfono (auditoría 2026-10-02, T-01). Un importe nunca se corta. */}
+      <div className="t-mono" style={{ fontWeight: 600, fontSize: 'clamp(16px, 10.5cqi, 26px)', lineHeight: 1.1, color, letterSpacing: '-0.02em', minWidth: 0, whiteSpace: 'nowrap' }}>
         {value}
       </div>
       {growth != null ? (
-        <div style={{ fontSize: 11.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, color: growth >= 0 ? 'var(--c-ok)' : 'var(--c-danger)' }}>
-          <Icon name={growth >= 0 ? 'arrowUp' : 'arrowDown'} size={11} />
-          {Math.abs(growth).toFixed(0)}% vs. mes previo
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
+          {growth >= 0 ? '↑' : '↓'} {Math.abs(growth).toFixed(0)} % vs. mes previo
         </div>
       ) : sub ? (
-        <div style={{ fontSize: 11.5, color: 'var(--u-text-4)' }}>{sub}</div>
+        <div style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{sub}</div>
       ) : null}
     </Card>
   );
@@ -180,7 +180,7 @@ export function EmptyState({
       <span style={{ width: 46, height: 46, borderRadius: 'var(--radius-lg)', display: 'grid', placeItems: 'center', background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)' }}>
         <Icon name={icon} size={22} />
       </span>
-      <div style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--u-text)', fontFamily: 'var(--font-display)' }}>{title}</div>
+      <div style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)' }}>{title}</div>
       {body && <p className="t-mute" style={{ fontSize: 13.5, maxWidth: 420, lineHeight: 1.55 }}>{body}</p>}
       {action && <div style={{ marginTop: 8 }}>{action}</div>}
     </Card>

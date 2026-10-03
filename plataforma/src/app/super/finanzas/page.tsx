@@ -71,7 +71,7 @@ export default async function FinanzasResumenPage() {
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
           <Icon name="bellRing" size={16} style={{ color: 'var(--brand-accent-ink)' }} />
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--u-text)', margin: 0 }}>
+          <h2 style={{ fontWeight: 650, fontSize: 15.5, color: 'var(--u-text)', margin: 0 }}>
             Cuentas por cobrar
           </h2>
           {fin.receivables.length > 0 && <Badge variant={fin.overdueTotal > 0 ? 'danger' : 'warn'}>{fin.receivables.length}</Badge>}

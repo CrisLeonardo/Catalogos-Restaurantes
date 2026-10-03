@@ -14,7 +14,7 @@ const badgeVariants = cva(
         danger: 'bg-adm-danger/15 text-adm-danger',
         warn: 'bg-adm-warn/15 text-adm-warn',
         info: 'bg-adm-info/15 text-adm-info',
-        solid: 'bg-adm-accent-500 text-white',
+        solid: 'bg-adm-accent-fill text-white',
       },
     },
     defaultVariants: { variant: 'neutral' },

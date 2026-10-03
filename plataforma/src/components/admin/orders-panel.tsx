@@ -13,12 +13,11 @@ import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/d
 import { formatDocMoney, longDate } from '@/lib/documents/format';
 import type { TicketFormat } from '@/lib/escpos';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
 import { Stat, StatGroup, StatStrip } from '@/components/ui/stat';
-import type { OrderWithItems, OrderStats, DayPace } from '@/lib/db/orders';
+import type { OrderWithItems, OrderStats } from '@/lib/db/orders';
 import { TimesWidget, type TimesData } from '@/components/admin/times-widget';
-import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
+import ExportMenu from '@/components/admin/export-menu';
 import type { Order } from '@/types';
 
 /** Tipo de servicio tal como lo guarda la tabla `orders` (no confundir con el
@@ -34,7 +33,6 @@ interface Props {
   /** null cuando hoy no hubo pedidos cerrados suficientes para medir. */
   times?:         TimesData | null;
   /** Con qué comparar el día. null si no hay días iguales anteriores. */
-  pace?:          DayPace | null;
   currency:       PanelCurrency;
   timezone:       string;
   /** Umbrales del semáforo de cocina (Personalización → Cocina). */
@@ -90,7 +88,7 @@ const TYPE_FILTERS: { id: 'ALL' | ServiceType; label: string; icon: string }[] =
 ];
 
 function OrdersPanelInner({
-  activeOrders, closedToday, restaurantId, restaurantName, stats, times, pace, currency, timezone,
+  activeOrders, closedToday, restaurantId, restaurantName, stats, times, currency, timezone,
   kitchenYellowMin = 10, kitchenRedMin = 20,
   agentKitchen = false, agentReceipt = false,
   fallosDeImpresion = {},
@@ -356,22 +354,25 @@ function OrdersPanelInner({
     drivers, restaurantId,
   };
 
+  const enCocina = activeOrders.filter((o) => o.status === 'PREP').length;
+  const listos = activeOrders.filter((o) => o.status === 'READY' || o.status === 'TRANSIT').length;
+
   const countByType = (t: 'ALL' | ServiceType) =>
     t === 'ALL' ? activeOrders.length : activeOrders.filter((o) => o.order_type === t).length;
 
   return (
     <>
-      {/* KPIs — calculados en el servidor con la zona horaria del restaurante.
-          En el teléfono, las mismas cifras en una franja de una línea: en la
-          pantalla de operación lo primero son los pedidos (PED-01). */}
+      {/* Cifras de OPERACIÓN (D-3, auditoría 2026-10-02): cuántos van, dónde
+          están y cuánto se tarda. Lo que se vendió, el ticket y las gráficas
+          viven en Hoy y en Negocio › Resumen; aquí repetían esas pantallas.
+          En el teléfono, en una franja de una línea (PED-01). */}
       <StatStrip
         className="mb-4 md:hidden"
         items={[
-          { value: fmtMoney(stats.todaySales, currency), label: 'vendido hoy' },
-          { value: String(stats.todayOrders), label: stats.todayOrders === 1 ? 'pedido' : 'pedidos' },
+          { value: String(stats.todayOrders), label: stats.todayOrders === 1 ? 'pedido hoy' : 'pedidos hoy' },
           { value: String(activeOrders.length), label: 'en curso' },
-          { value: String(activeOrders.filter((o) => o.status === 'PREP').length), label: 'en cocina' },
-          { value: fmtMoney(stats.todayTicket, currency), label: 'ticket promedio' },
+          { value: String(enCocina), label: 'en cocina' },
+          { value: String(listos), label: listos === 1 ? 'listo sin entregar' : 'listos sin entregar', tone: listos > 0 ? 'warn' as const : undefined },
           ...(times
             ? [
                 { value: `${times.avgTotal} min`, label: 'a la mesa' },
@@ -381,15 +382,13 @@ function OrdersPanelInner({
         ]}
       />
       <StatGroup className="mb-4.5 max-md:hidden">
-        <Stat label={`Ventas hoy (${stats.todayOrders} ${stats.todayOrders === 1 ? 'pedido' : 'pedidos'})`} value={fmtMoney(stats.todaySales, currency)} />
-        <Stat label={`Pedidos hoy (${activeOrders.length} en curso)`} value={String(stats.todayOrders)} />
-        <Stat label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} />
-        <Stat label="En cocina (preparándose ahora)" value={String(activeOrders.filter((o) => o.status === 'PREP').length)} />
+        <Stat label="Pedidos hoy" value={String(stats.todayOrders)} />
+        <Stat label="En curso" value={String(activeOrders.length)} />
+        <Stat label="En cocina ahora" value={String(enCocina)} />
+        <Stat label="Listos sin entregar" value={String(listos)} />
       </StatGroup>
 
-      {/* Cuánto se está tardando hoy. Va justo debajo de las cifras del día
-          porque contesta la otra mitad de la misma pregunta: cuánto se vendió
-          y cuánto se hizo esperar a la gente por ello. */}
+      {/* Cuánto se está tardando hoy: la otra mitad de la operación. */}
       {times && (
         <div className="mb-4.5 max-md:hidden">
           <TimesWidget data={times} />
@@ -402,7 +401,8 @@ function OrdersPanelInner({
         <div style={{ minWidth: 0 }}>
           {/* Filtro por tipo de servicio: un local con mucho domicilio necesita
               poder mirar SOLO domicilio sin que el resto le estorbe. */}
-          <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', flex: 1, minWidth: 0 }}>
             {TYPE_FILTERS.map((f) => {
               const on = typeFilter === f.id;
               const n = countByType(f.id);
@@ -417,7 +417,7 @@ function OrdersPanelInner({
                     padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                     fontSize: 12.5, fontWeight: 600,
                     border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,
-                    background: on ? 'var(--adm-accent-500, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
+                    background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 5%, transparent)',
                     color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
                   }}
                 >
@@ -427,6 +427,14 @@ function OrdersPanelInner({
                 </button>
               );
             })}
+          </div>
+          {/* Los pedidos del día en Excel o PDF: un menú en la fila de filtros
+              (antes, dos botones debajo de las gráficas que ya no están). */}
+          <ExportMenu
+            onExcel={downloadExcel}
+            onPdf={downloadPdf}
+            busy={isExportingXls ? 'excel' : isExportingPdf ? 'pdf' : null}
+          />
           </div>
 
           {visibleActive.length === 0 ? (
@@ -512,44 +520,6 @@ function OrdersPanelInner({
           )}
         </div>
 
-        {/* Debajo del tablero: gráfica + top + exportar. Eran una columna de
-            300 px a la derecha que le quitaba sitio al tablero (PED-06); ahora
-            van lado a lado cuando caben, como en Hoy. */}
-        <aside style={{ width: '100%', minWidth: 0 }}>
-          {/* Las MISMAS dos piezas que pinta la portada Hoy. Antes esta
-              pantalla tenía sus propias copias, con el aspecto anterior al
-              rediseño. */}
-          <div className="orders-aside">
-            <SalesTrendWidget
-              series={stats.series}
-              totalLast14={stats.totalLast14}
-              todaySales={stats.todaySales}
-              pace={pace ?? null}
-              money={(n) => fmtMoney(n, currency)}
-            />
-            {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
-          </div>
-          <div className="mt-3 flex max-w-[400px] gap-2">
-            <Button
-              onClick={downloadExcel}
-              disabled={isExportingXls || isExportingPdf}
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-            >
-              {isExportingXls ? '…' : <><Icon name="download" size={13} /> Excel</>}
-            </Button>
-            <Button
-              onClick={downloadPdf}
-              disabled={isExportingXls || isExportingPdf}
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-            >
-              {isExportingPdf ? '…' : <><Icon name="download" size={13} /> PDF</>}
-            </Button>
-          </div>
-        </aside>
       </div>
     </>
   );

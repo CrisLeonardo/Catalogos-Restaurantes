@@ -82,7 +82,7 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
               style={{
                 padding: '10px 14px', minHeight: 40, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                 fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
-                background: activo ? 'var(--brand-accent)' : undefined,
+                background: activo ? 'var(--adm-accent-fill, var(--brand-accent))' : undefined,
                 color: activo ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
                 boxShadow: activo ? '0 4px 14px color-mix(in srgb, var(--brand-accent) 28%, transparent)' : undefined,
               }}

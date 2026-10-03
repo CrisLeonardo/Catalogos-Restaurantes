@@ -7,6 +7,7 @@ import {
   type SuperState,
 } from '@/lib/actions/super-admin';
 import type { Restaurant } from '@/types';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
 
@@ -21,15 +22,8 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11.5,
-  color: 'var(--u-text-3)',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 function Field({
   label,

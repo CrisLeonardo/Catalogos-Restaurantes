@@ -393,7 +393,7 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
           style={{
             display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 'var(--radius-full)', flexShrink: 0,
             fontSize: 13, fontWeight: 700,
-            background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
+            background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 8%, transparent)',
             color: on ? 'var(--brand-on-accent, #fff)' : 'var(--u-text-2)',
           }}
         >
@@ -411,7 +411,7 @@ function PasoChip({ n, titulo, detalle, on, hecho, onClick, ultimo }: {
           aria-hidden
           style={{
             flex: 1, height: 2, borderRadius: 'var(--radius-full)', minWidth: 20,
-            background: on ? 'var(--brand-accent)' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
+            background: on ? 'var(--adm-accent-fill, var(--brand-accent))' : 'color-mix(in srgb, var(--u-text) 12%, transparent)',
           }}
         />
       )}

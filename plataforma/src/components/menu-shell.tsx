@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { setScannedTable, isStandaloneLaunch } from '@/lib/table-session';
 import { CartProvider } from '@/lib/cart-context';
 import { ThemeProvider } from '@/lib/theme/context';
@@ -71,8 +71,21 @@ export default function MenuShell({ config, content, categories, products, resta
     }
   }, [initialMesa, restaurantId]);
 
+  /* QR de mesa → directo a la carta (auditoría 2026-10-02, D-7). El
+     comensal ya está sentado: la portada a pantalla completa le pedía un
+     toque más («Ver el menú») antes del primer platillo. Con mesa, el menú
+     se pinta como sin portada —y entonces la carta lleva arriba el nombre
+     del restaurante, que es lo que hace el catálogo cuando no hay portada—.
+     El enlace general y el de redes siguen abriendo en la portada. */
+  const cfg = useMemo(
+    () => (initialMesa && initialMesa > 0 && config.portadaVariant !== 'none'
+      ? { ...config, portadaVariant: 'none' as const }
+      : config),
+    [config, initialMesa],
+  );
+
   return (
-    <ThemeProvider config={config} content={content}>
+    <ThemeProvider config={cfg} content={content}>
       <LocaleProvider restaurantId={restaurantId} extraLanguages={menuLanguages}>
       <CartProvider restaurantId={restaurantId}>
         <OfflineSupport />
@@ -116,7 +129,7 @@ export default function MenuShell({ config, content, categories, products, resta
             <MenuClient categories={categories} products={products} ordersEnabled={ordersEnabled} restaurantId={restaurantId} timezone={timezone} llamadaMeseroEnabled={llamadaMeseroEnabled} initialMesa={initialMesa} loyaltyOn={loyaltyOn} rewardsCatalog={rewardsCatalog} googleAuthEnabled={googleAuthEnabled} whatsappNumber={whatsappNumber} restaurantLat={restaurantLat} restaurantLng={restaurantLng} deliveryRadiusKm={deliveryRadiusKm} />
           </div>
         </main>
-        <InstallBanner brandName={config.brandName} />
+        <InstallBanner brandName={cfg.brandName} />
       </CartProvider>
       </LocaleProvider>
     </ThemeProvider>

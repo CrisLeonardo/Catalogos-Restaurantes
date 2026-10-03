@@ -35,6 +35,8 @@
   --color-adm-accent-400: var(--adm-accent-400);
   --color-adm-accent-500: var(--adm-accent-500);
   --color-adm-accent-600: var(--adm-accent-600);
+  --color-adm-accent-fill: var(--adm-accent-fill);
+  --color-adm-accent-fill-hover: var(--adm-accent-fill-hover);
   --color-adm-accent-700: var(--adm-accent-700);
   --color-adm-accent-800: var(--adm-accent-800);
   --color-adm-accent-900: var(--adm-accent-900);
@@ -429,6 +431,13 @@ html[data-admin-area] {
   --adm-accent-400: #e58a5f;
   --adm-accent-500: #D97757;
   --adm-accent-600: #c2603f;
+  /* RELLENO con texto blanco encima (D-4, auditoría 2026-10-02). El coral
+     de arriba (#D97757) con blanco da 3.1:1 —no pasa—; #c2542f da 4.56:1 y
+     sobre el fondo oscuro sigue viéndose (4.3:1). El coral claro se queda
+     para lo que va SOBRE el fondo: textos, iconos, bordes. */
+  --adm-accent-fill: #c2542f;
+  --adm-accent-fill-hover: #a8461f;
+  --admin-panel-btn: #c2542f;
   --adm-accent-700: #a04a30;
   --adm-accent-800: #7c3a27;
   --adm-accent-900: #5c2c1f;
@@ -521,6 +530,8 @@ html[data-admin-area][data-scheme="light"] {
   --adm-accent-400: #d97757;
   --adm-accent-500: #c2542f;
   --adm-accent-600: #a8461f;
+  --adm-accent-fill: #c2542f;
+  --adm-accent-fill-hover: #a8461f;
   --adm-accent-700: #8a3818;
   --adm-accent-800: #6b2b13;
   --adm-accent-900: #4d1f0d;

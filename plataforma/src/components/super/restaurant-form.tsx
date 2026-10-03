@@ -5,6 +5,7 @@ import { Glass } from '@/components/glass';
 import PreviewPane, { useThemePreviewChannel } from '@/components/super/preview-pane';
 import { createRestaurant, type SuperState } from '@/lib/actions/super-admin';
 import { DEFAULT_CONFIG, DEFAULT_CONTENT } from '@/lib/theme/defaults';
+import { FIELD_LABEL } from '@/components/admin/field-label';
 
 const empty: SuperState = null;
 
@@ -29,15 +30,8 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 12,
-  color: 'var(--u-text-3)',
-  fontWeight: 500,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  marginBottom: 6,
-  display: 'block',
-};
+/* El rótulo de campo del panel (D-8): en minúscula, no en mayúsculas de cartel. */
+const labelStyle: React.CSSProperties = FIELD_LABEL;
 
 export default function RestaurantForm() {
   const [state, formAction, isPending] = useActionState(createRestaurant, empty);

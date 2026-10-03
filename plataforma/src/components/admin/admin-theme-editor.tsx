@@ -937,7 +937,7 @@ function Segmented({ label, hint, value, options, onChange }: { label: string; h
               aria-checked={on}
               onClick={() => onChange(val)}
               className="press"
-              style={{ padding: '9px 14px', minHeight: 38, borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--adm-border)'}`, background: on ? 'var(--adm-accent-500)' : 'transparent', color: on ? 'var(--c-on-solid)' : 'var(--u-text-2)', transition: 'all 150ms' }}
+              style={{ padding: '9px 14px', minHeight: 38, borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? 'transparent' : 'var(--adm-border)'}`, background: on ? 'var(--adm-accent-fill)' : 'transparent', color: on ? 'var(--c-on-solid)' : 'var(--u-text-2)', transition: 'all 150ms' }}
             >
               {lbl}
             </button>
