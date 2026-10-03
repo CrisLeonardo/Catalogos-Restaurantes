@@ -4,6 +4,7 @@ import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import type { OrderRating, RatingsSummary } from '@/lib/db/encuestas';
+import { useState } from 'react';
 
 interface Props {
   ratings: OrderRating[];
@@ -28,7 +29,7 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{label}</span>
       <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)' }}>
-        <div style={{ height: '100%', borderRadius: 99, background: 'var(--c-warn)', width: `${pct}%`, transition: 'width 400ms' }} />
+        <div style={{ height: '100%', borderRadius: 99, background: 'var(--chart-hi)', width: `${pct}%`, transition: 'width 400ms' }} />
       </div>
       <span style={{ fontSize: 11.5, color: 'var(--u-text-4)', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</span>
     </div>
@@ -36,6 +37,11 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
 }
 
 export default function EncuestasPanel({ ratings, summary }: Props) {
+  /* Cinco a la vista y «Ver todas»: antes la lista tenía su propio scroll
+     de 400 px dentro de la página — scroll dentro de scroll, que en el
+     teléfono atrapa el dedo (auditoría 2026-10-02, CLI-04). */
+  const [allReviews, setAllReviews] = useState(false);
+  const shownRatings = allReviews ? ratings : ratings.slice(0, 5);
   const avgDisplay = summary.average > 0 ? summary.average.toFixed(1) : '—';
   const avgMonthDisplay = summary.avgThisMonth > 0 ? summary.avgThisMonth.toFixed(1) : '—';
 
@@ -71,8 +77,8 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 400, overflowY: 'auto' }}>
-              {ratings.map((r) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {shownRatings.map((r) => (
                 <div key={r.id} style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -92,6 +98,16 @@ export default function EncuestasPanel({ ratings, summary }: Props) {
                   )}
                 </div>
               ))}
+              {ratings.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setAllReviews((v) => !v)}
+                  className="press"
+                  style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', color: 'var(--brand-accent-ink)', fontSize: 13, fontWeight: 600 }}
+                >
+                  {allReviews ? 'Ver menos' : `Ver todas (${ratings.length})`}
+                </button>
+              )}
             </div>
           )}
         </Card>

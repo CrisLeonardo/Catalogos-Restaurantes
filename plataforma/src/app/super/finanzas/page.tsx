@@ -104,8 +104,8 @@ export default async function FinanzasResumenPage() {
                       <Link href={`/super/restaurantes/${r.restaurantId}/cobro`} style={{ fontWeight: 700, fontSize: 14, color: 'var(--u-text)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {r.name}
                       </Link>
-                      {r.overdueTotal > 0 && <Badge variant="danger" style={{ fontSize: 10 }}>Vencido</Badge>}
-                      {r.status === 'suspended' && <Badge variant="neutral" style={{ fontSize: 10 }}>Suspendido</Badge>}
+                      {r.overdueTotal > 0 && <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>}
+                      {r.status === 'suspended' && <Badge variant="neutral" style={{ fontSize: 11 }}>Suspendido</Badge>}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 3 }}>
                       {r.invoices.length} {r.invoices.length === 1 ? 'cobro pendiente' : 'cobros pendientes'}

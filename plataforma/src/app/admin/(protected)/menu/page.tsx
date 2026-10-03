@@ -83,15 +83,11 @@ export default async function AdminMenuPage({
       {apagados.length > 0 && (
         <OffMenuWidget items={apagados.slice(0, 4)} total={apagados.length} />
       )}
-      {products.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <ProductosExportButton restaurantId={restaurantId} />
-        </div>
-      )}
       {/* La lista recibe la disponibilidad YA resuelta con la regla del menú:
           antes pintaba la columna cruda y enseñaba «Agotado» en platillos que
           el comensal estaba pidiendo (auditoría 2026-10-02, CAT-01). */}
       <CatalogPanel
+        exportSlot={<ProductosExportButton restaurantId={restaurantId} />}
         initialStatus={(await searchParams).filtro}
         restaurantId={restaurantId}
         categories={categories}

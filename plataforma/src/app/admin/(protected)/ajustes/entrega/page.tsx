@@ -45,7 +45,7 @@ export default async function AdminEntregaPage() {
   if (!restaurant) redirect('/admin/login');
 
   return (
-    <div className="anim-fade-up max-w-[720px]">
+    <div className="anim-fade-up adm-w-read">
       <p className="mb-5 text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         Marca dónde está tu local y hasta dónde repartes. El cliente pone su pin
         en el mapa al pagar, y el pedido se rechaza si cae fuera del radio.

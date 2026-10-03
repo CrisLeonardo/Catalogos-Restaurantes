@@ -4,6 +4,7 @@ import { Icon } from '@/components/icons';
 import { markPickedUp, markDelivered } from '@/lib/actions/drivers';
 import type { DriverOrder, ShiftSummary } from '@/lib/db/drivers';
 import { fmtMoney } from '@/lib/money';
+import { shortOrderNumber } from '@/lib/order-number';
 
 /* ============================================================
    Pantalla del repartidor (Fase 2)
@@ -47,7 +48,7 @@ export default function DriverBoard({
 
       {/* Cuadre del turno */}
       <div style={{ ...cardSt, background: 'color-mix(in srgb, var(--u-text) 4%, transparent)' }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--u-text-4)', marginBottom: 8 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--u-text-4)', marginBottom: 8 }}>
           Hoy
         </p>
         <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
@@ -84,7 +85,7 @@ export default function DriverBoard({
         return (
           <div key={o.id} style={cardSt}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <strong style={{ fontSize: 16 }}>{o.order_number}</strong>
+              <strong style={{ fontSize: 16 }}>{shortOrderNumber(o.order_number)}</strong>
               <span className={`chip ${enCamino ? 'chip-alt' : 'chip-ok'}`}>
                 {enCamino ? 'En camino' : 'Listo para salir'}
               </span>

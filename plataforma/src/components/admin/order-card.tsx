@@ -16,6 +16,7 @@ import {
 import { sourceBadge } from '@/lib/order-source';
 import { assignDriver } from '@/lib/actions/drivers';
 import { esHoy } from '@/lib/dates';
+import { shortOrderNumber } from '@/lib/order-number';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
 
@@ -119,7 +120,7 @@ function buildKitchenHtml(order: OrderWithItems, restaurantName: string, format:
 <body>
 <div class="header">
   <div class="kitchen-label">COCINA</div>
-  <div class="order-num">#${order.order_number}</div>
+  <div class="order-num">${shortOrderNumber(order.order_number)}</div>
   <div class="meta">${timeStr} · <span class="tag">${orderTypeLabel}</span></div>
 </div>
 <div class="meta"><strong>Cliente:</strong> ${order.customer_name}</div>
@@ -431,8 +432,8 @@ export default function OrderCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-            <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>
-              {order.order_number}
+            <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }} title={order.order_number}>
+              {shortOrderNumber(order.order_number)}
             </span>
             <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>
           </div>
@@ -454,6 +455,7 @@ export default function OrderCard({
                 <span style={{ opacity: 0.4 }}>·</span>
                 <a
                   href={`tel:${order.customer_phone}`}
+                  className="tap44"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'inherit', textDecoration: 'none' }}
                 >
                   <Icon name="phone" size={12} style={{ display: 'inline' }} /> {order.customer_phone}
@@ -486,7 +488,7 @@ export default function OrderCard({
               <input type="hidden" name="orderId" value={order.id} />
               <label
                 htmlFor={`drv-${order.id}`}
-                style={{ fontSize: 10, color: 'var(--u-text-4)', display: 'block', marginBottom: 4 }}
+                style={{ fontSize: 11, color: 'var(--u-text-4)', display: 'block', marginBottom: 4 }}
               >
                 Repartidor
               </label>
@@ -568,7 +570,7 @@ export default function OrderCard({
                     disabled={isPending}
                     title="Anular este plato"
                     aria-label={`Anular ${item.name_snapshot}`}
-                    className="press chip-danger order-void-x"
+                    className="press chip-danger order-void-x tap44"
                     style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderStyle: 'solid', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                   >
                     <Icon name="x" size={11} />

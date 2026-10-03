@@ -175,6 +175,20 @@ export default async function AdminAjustesPage() {
 
   const canEditIdiomas = allow('ajustes') && !!restaurant;
 
+  /* Cuántos platillos a la vista ya tienen su nombre en inglés, para la fila
+     «Menú también en inglés» (auditoría 2026-10-02, AJU-18). */
+  let translated: { done: number; total: number } | undefined;
+  if (canEditIdiomas && restaurantId) {
+    const db = createServiceClient();
+    const { data: prods } = await db
+      .from('products')
+      .select('name_en')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true);
+    const list = prods ?? [];
+    translated = { done: list.filter((p) => ((p.name_en as string | null) ?? '').trim() !== '').length, total: list.length };
+  }
+
   /* Sin una sola fila que enseñar. Pasa de verdad: a alguien del personal se
      le reparten permisos de operación (pedidos, mesas, cocina) y ninguno de
      ellos abre una pantalla de esta portada — y aun así el menú sigue
@@ -198,12 +212,16 @@ export default async function AdminAjustesPage() {
   }
 
   return (
-    <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
+    <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
       <p className="max-w-[52ch] text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         Todo lo que se configura una vez y se olvida, ordenado por tema.
       </p>
 
-      <div className="adm-settings-index grid items-start gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      {/* Columnas CSS, no rejilla: las secciones tienen alturas muy distintas
+          (7 filas, 4, 1, 4) y en tres columnas de rejilla quedaban dos
+          tercios de pantalla vacíos abajo. Con `columns` se reparten por
+          altura en dos (auditoría 2026-10-02, N-06). */}
+      <div className="adm-settings-index">
         {groups.map((g) => (
           <Section key={g.title} title={g.title}>
             <List>
@@ -230,7 +248,7 @@ export default async function AdminAjustesPage() {
                   <span className="grid size-7 shrink-0 place-items-center rounded-adm-md" style={{ background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: 'var(--u-text-2)' }}>
                     <Icon name="globe" size={16} />
                   </span>
-                  <MenuLanguagesEditor restaurant={restaurant} />
+                  <MenuLanguagesEditor restaurant={restaurant} translated={translated} />
                 </ListRow>
               )}
             </List>

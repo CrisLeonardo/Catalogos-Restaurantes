@@ -480,7 +480,7 @@ function InvoiceRow({ inv, currency, restaurantName }: { inv: Invoice; currency:
             : CONCEPT_LABEL[inv.concept]
         }
       />
-      <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: meta.bg, color: meta.color, letterSpacing: '0.05em' }}>
         {meta.label.toUpperCase()}
       </span>
       <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--u-text)', minWidth: 90, textAlign: 'right' }}>

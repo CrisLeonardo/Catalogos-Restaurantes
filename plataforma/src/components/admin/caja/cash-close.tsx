@@ -178,7 +178,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               más que hacer. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 13, color: 'var(--u-text-3)', marginTop: 2 }}>
             <span>{dateLabel}</span>
-            <span aria-hidden>·</span>
+            <span aria-hidden className="caja-sep-turno">·</span>
             <label htmlFor="caja-turno" className="sr-only">Nombre del turno</label>
             <input
               id="caja-turno"
@@ -187,7 +187,7 @@ export default function CashClose({ restaurantId, state, dateLabel, cashierName,
               list="caja-turnos"
               value={shift}
               onChange={(e) => setShift(e.target.value)}
-              placeholder="turno"
+              placeholder="turno (opcional)"
               size={Math.max(6, shift.length + 1)}
             />
             <datalist id="caja-turnos">

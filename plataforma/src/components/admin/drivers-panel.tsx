@@ -9,6 +9,7 @@ import { FIELD_LABEL } from '@/components/admin/field-label';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Select } from '@/components/ui/select';
 
 /* ============================================================
    /admin/repartidores — alta y baja de repartidores
@@ -56,7 +57,7 @@ export default function DriversPanel({
   const closeForm = () => { setShowForm(false); setEditing(null); };
 
   return (
-    <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="adm-w-read" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ fontSize: 13, color: 'var(--u-text-3)', margin: 0, flex: '1 1 260px', lineHeight: 1.5 }}>
           Quién lleva los pedidos a domicilio. Desde Pedidos les asignas cada
@@ -99,14 +100,20 @@ export default function DriversPanel({
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={labelSt} htmlFor="d-profile">Usuario del personal (opcional)</label>
-              <select id="d-profile" name="profile_id" style={inputSt}
-                defaultValue={editing?.profile_id ?? ''} key={`p-${editing?.id ?? 'new'}`}>
-                <option value="">Sin acceso a la app</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>{s.full_name ?? s.id}</option>
-                ))}
-              </select>
+              <p style={labelSt}>Usuario del personal (opcional)</p>
+              {/* El selector del panel y no el nativo del sistema (gris, con
+                  la letra del sistema operativo) — auditoría 2026-10-02, AJU-16. */}
+              <Select
+                key={`p-${editing?.id ?? 'new'}`}
+                name="profile_id"
+                aria-label="Usuario del personal"
+                defaultValue={editing?.profile_id ?? ''}
+                placeholder="Sin acceso a la app"
+                options={[
+                  { value: '', label: 'Sin acceso a la app' },
+                  ...staff.map((s) => ({ value: s.id, label: s.full_name ?? 'Sin nombre' })),
+                ]}
+              />
               <p style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 5 }}>
                 Para que vea sus entregas en el teléfono, el usuario necesita además
                 el permiso <strong>Reparto</strong> en Personal.

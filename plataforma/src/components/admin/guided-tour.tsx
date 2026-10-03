@@ -319,7 +319,7 @@ export default function GuidedTourHost() {
         </div>
 
         <div style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.07em',
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.07em',
           textTransform: 'uppercase', color: 'var(--brand-accent-ink, #6366f1)',
           marginBottom: 7,
         }}>

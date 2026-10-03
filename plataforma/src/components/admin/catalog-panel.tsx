@@ -71,9 +71,11 @@ interface Props {
   maxProducts?: number;
   /** Filtro de estado con el que abre (`?filtro=sin-foto` desde el aviso de Hoy). */
   initialStatus?: string;
+  /** «Exportar» (lo arma la página): va en la fila de herramientas (MEN-11). */
+  exportSlot?: React.ReactNode;
 }
 
-export default function CatalogPanel({ restaurantId, categories, products, maxProducts, initialStatus }: Props) {
+export default function CatalogPanel({ restaurantId, categories, products, maxProducts, initialStatus, exportSlot }: Props) {
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const [activeCat, setActiveCat] = useState<string>('todos');
@@ -177,6 +179,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             {products.length}/{maxProducts} productos
           </span>
         )}
+        {products.length > 0 && exportSlot && <div style={{ marginLeft: 'auto' }}>{exportSlot}</div>}
         {atProductLimit ? (
           <Link href="/admin/suscripcion" className="shrink-0">
             <Button variant="secondary" className="rounded-adm-full">
@@ -358,7 +361,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                   style={{ textAlign: 'right', opacity: apagado, transition: 'opacity 160ms' }}
                 >
                   {hasSizes && (
-                    <div style={{ fontSize: 9.5, color: 'var(--u-text-4)', fontWeight: 600, letterSpacing: '0.04em', marginBottom: 1 }}>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 600, letterSpacing: '0.04em', marginBottom: 1 }}>
                       DESDE
                     </div>
                   )}
@@ -366,7 +369,7 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     {fmtMoney(total)}
                   </div>
                   {hasCombo && total !== p.price && (
-                    <div style={{ fontSize: 9.5, color: 'var(--u-text-4)', marginTop: 1 }}>
+                    <div style={{ fontSize: 11, color: 'var(--u-text-4)', marginTop: 1 }}>
                       base {fmtMoney(p.price)}
                     </div>
                   )}
@@ -425,7 +428,7 @@ function RowBadge({ label, color, bg }: { label: string; color: string; bg: stri
   return (
     <span style={{
       display: 'inline-block', padding: '2px 7px', borderRadius: 99,
-      fontSize: 10, fontWeight: 600, background: bg, color,
+      fontSize: 11, fontWeight: 600, background: bg, color,
       letterSpacing: '0.02em', whiteSpace: 'nowrap',
     }}>
       {label}

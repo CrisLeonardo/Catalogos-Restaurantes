@@ -122,7 +122,7 @@ function KeyRow({ k }: { k: ApiKeyRow }) {
         </div>
       </div>
       {revoked ? (
-        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: '#94a3b8' }}>REVOCADA</span>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'color-mix(in srgb, var(--u-text) 8%, transparent)', color: '#94a3b8' }}>REVOCADA</span>
       ) : (
         <button
           type="button"

@@ -88,7 +88,7 @@ export function StatCard({
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
         {icon && <Icon name={icon} size={14} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />}
-        <span className="t-kicker" style={{ fontSize: 9.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <span className="t-kicker" style={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
       {/* La cifra se mide contra el ancho de SU tarjeta (`cqi`), no contra
           la pantalla: con el separador de miles «Q1,495.00» a 26 px se salía
@@ -213,21 +213,17 @@ export function IncomeChart({
             style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%' }}
           >
             {p.total > 0 && (
-              <span style={{ fontSize: 9, fontFamily: 'var(--ui-font-mono)', color: isLast ? 'var(--brand-accent)' : 'var(--u-text-4)', fontWeight: isLast ? 800 : 600, whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 11, fontFamily: 'var(--ui-font-mono)', color: isLast ? 'var(--brand-accent)' : 'var(--u-text-4)', fontWeight: isLast ? 800 : 600, whiteSpace: 'nowrap' }}>
                 {currencySymbol}{p.total >= 1000 ? `${(p.total / 1000).toFixed(p.total >= 10000 ? 0 : 1)}k` : p.total.toLocaleString('es-GT', { maximumFractionDigits: 0 })}
               </span>
             )}
             <div
               style={{
                 width: '70%', height: barH, borderRadius: '4px 4px 0 0',
-                background: isLast
-                  ? 'var(--brand-accent)'
-                  : p.total > 0
-                  ? 'color-mix(in srgb, var(--brand-accent) 45%, transparent)'
-                  : 'color-mix(in srgb, var(--u-text) 10%, transparent)',
+                background: isLast ? 'var(--chart-hi)' : p.total > 0 ? 'var(--chart-alt)' : 'var(--chart-empty)',
               }}
             />
-            <span style={{ fontSize: 9.5, color: isLast ? 'var(--u-text-2)' : 'var(--u-text-4)', fontWeight: isLast ? 700 : 500 }}>{label}</span>
+            <span style={{ fontSize: 11, color: isLast ? 'var(--u-text-2)' : 'var(--u-text-4)', fontWeight: isLast ? 700 : 500 }}>{label}</span>
           </div>
         );
       })}
@@ -251,11 +247,11 @@ export function ActivityChart({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 16, fontSize: 11.5, color: 'var(--u-text-3)', flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: 'color-mix(in srgb, var(--u-text) 18%, transparent)' }} />
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--chart-base)' }} />
           Visitas · {totalV.toLocaleString('es-GT')}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--brand-accent)' }} />
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--chart-hi)' }} />
           Pedidos · {totalO.toLocaleString('es-GT')}
         </span>
       </div>
@@ -266,12 +262,12 @@ export function ActivityChart({
             title={`${d.date}: ${d.visits} visitas · ${d.orders} pedidos`}
             style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 1, minWidth: 0, height: '100%' }}
           >
-            <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'color-mix(in srgb, var(--u-text) 18%, transparent)', borderRadius: '2px 2px 0 0' }} />
-            <div style={{ width: '42%', height: `${(d.orders / maxOrders) * 100}%`, minHeight: d.orders > 0 ? 3 : 1, background: 'var(--brand-accent)', borderRadius: '2px 2px 0 0' }} />
+            <div style={{ width: '42%', height: `${(d.visits / maxVisits) * 100}%`, minHeight: d.visits > 0 ? 3 : 1, background: 'var(--chart-base)', borderRadius: '2px 2px 0 0' }} />
+            <div style={{ width: '42%', height: `${(d.orders / maxOrders) * 100}%`, minHeight: d.orders > 0 ? 3 : 1, background: 'var(--chart-hi)', borderRadius: '2px 2px 0 0' }} />
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)' }}>
         <span>{series[0] ? diaMes(series[0].date) : null}</span>
         <span>hoy</span>
       </div>

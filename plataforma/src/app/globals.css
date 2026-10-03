@@ -246,6 +246,10 @@
 
   /* Tinta que va ENCIMA de cualquier relleno --c-*-solid. */
   --c-on-solid: #ffffff;
+  /* Rellenos para botones con texto blanco encima (≥ 5:1 en los dos
+     esquemas): los usa la pantalla de Cocina («Comenzar», «Marcar listo»). */
+  --c-ok-fill:   #15803d;
+  --c-info-fill: #1d4ed8;
 
   /* El acento del restaurante COMO TEXTO. En oscuro es el acento tal cual;
      en claro se oscurece (ver html[data-scheme="light"]) porque un acento
@@ -2382,3 +2386,13 @@ html[data-platform] .asphalt::after { display: none; }
    sitio en una tablet. Se decide por el PUNTERO y no por el ancho —una
    tablet de 1280 px sigue siendo un dedo. */
 
+/* Paleta de gráficas del panel (auditoría 2026-10-02, T-19). Había barras
+   naranja (Hoy), café (Encuestas), negras (Visitas) y gris con naranja pálido
+   (Super). Ahora todas dicen lo mismo con los mismos colores: el dato que
+   importa (hoy, el último mes, los pedidos) en acento; el resto, en gris. */
+html[data-admin-area] {
+  --chart-hi: var(--adm-accent-500);
+  --chart-base: color-mix(in srgb, var(--u-text) 15%, transparent);
+  --chart-alt: color-mix(in srgb, var(--adm-accent-500) 45%, transparent);
+  --chart-empty: color-mix(in srgb, var(--u-text) 8%, transparent);
+}

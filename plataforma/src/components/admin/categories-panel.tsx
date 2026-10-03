@@ -3,7 +3,7 @@
 /* CategoriesPanel — gestión de categorías estilo prototipo.
    Usada en /admin/categorias. */
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useOptimistic, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon, ICON_PATHS } from '@/components/icons';
 import { Card } from '@/components/ui/card';
@@ -41,8 +41,11 @@ function suggestIcon(name: string): string {
   return 'utensils';
 }
 
-function CatIconDisplay({ icon }: { icon: string | null }) {
-  if (!icon) return <Icon name="utensils" size={22} />;
+/* Sin icono elegido, el que sugiere el nombre (Café → taza, Dulce →
+   galleta) y no la misma mesa genérica en todas (auditoría 2026-10-02,
+   MEN-08). */
+function CatIconDisplay({ icon, name }: { icon: string | null; name: string }) {
+  if (!icon) return <Icon name={suggestIcon(name)} size={22} />;
   if (ICON_PATHS[icon]) return <Icon name={icon} size={22} />;
   return <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>;
 }
@@ -121,6 +124,19 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
 
   const count = (id: string) => products.filter((p) => p.category_id === id).length;
 
+  /* Subir/bajar al instante: antes cada flecha esperaba al servidor y a la
+     recarga para mover la tarjeta, y con dos toques seguidos el segundo
+     caía sobre el orden viejo. La tarjeta se mueve ya; el servidor confirma
+     por detrás y, al volver, `categories` trae el orden de verdad (MEN-08). */
+  const [lista, mover] = useOptimistic(categories, (state, { id, dir }: { id: string; dir: -1 | 1 }) => {
+    const i = state.findIndex((c) => c.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= state.length) return state;
+    const next = [...state];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+
   function onSaved() {
     setEditingId(null);
     setShowNew(false);
@@ -153,7 +169,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {categories.map((c, i) => (
+        {lista.map((c, i) => (
           <Card
             key={c.id}
             className="flex items-center gap-3 p-4"
@@ -162,23 +178,23 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
             {/* Reordenar ↑↓ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
               {i > 0 ? (
-                <form action={moveCategoryUp}>
+                <form action={async (fd) => { mover({ id: c.id, dir: -1 }); await moveCategoryUp(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
                   <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
-                  <button type="submit" className="press" style={reorderBtn} title="Subir">
+                  <button type="submit" className="press tap44" style={reorderBtn} title="Subir">
                     <Icon name="arrowUp" size={12} />
                   </button>
                 </form>
               ) : (
                 <div style={{ width: 26, height: 26 }} />
               )}
-              {i < categories.length - 1 ? (
-                <form action={moveCategoryDown}>
+              {i < lista.length - 1 ? (
+                <form action={async (fd) => { mover({ id: c.id, dir: 1 }); await moveCategoryDown(fd); }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="id"           value={c.id} />
                   <input type="hidden" name="sort_order"   value={String(c.sort_order)} />
-                  <button type="submit" className="press" style={reorderBtn} title="Bajar">
+                  <button type="submit" className="press tap44" style={reorderBtn} title="Bajar">
                     <Icon name="arrowDown" size={12} />
                   </button>
                 </form>
@@ -195,7 +211,7 @@ export default function CategoriesPanel({ restaurantId, categories, products }: 
                 display: 'grid', placeItems: 'center', color: 'var(--u-text-2)', flexShrink: 0,
               }}
             >
-              <CatIconDisplay icon={c.icon} />
+              <CatIconDisplay icon={c.icon} name={c.name} />
             </div>
 
             {/* Nombre + contador / formulario inline */}

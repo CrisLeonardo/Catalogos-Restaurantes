@@ -34,6 +34,7 @@ export default function SaveBar({
   label = 'Guardar',
   disabled = false,
   hint,
+  guardLeave = true,
 }: {
   dirty: boolean;
   pending?: boolean;
@@ -45,6 +46,9 @@ export default function SaveBar({
   disabled?: boolean;
   /** Texto en lugar de «Tienes cambios sin guardar» (p. ej. por qué no se puede guardar). */
   hint?: string;
+  /** Preguntar al salir con cambios. `false` cuando la barra sale sin que
+   *  se haya tocado nada (p. ej. para activar con los valores de muestra). */
+  guardLeave?: boolean;
 }) {
   const [justSaved, setJustSaved] = useState(false);
   useEffect(() => {
@@ -54,7 +58,7 @@ export default function SaveBar({
     return () => clearTimeout(t);
   }, [status]);
 
-  const leaveDialog = useLeaveGuard(dirty && !pending);
+  const leaveDialog = useLeaveGuard(guardLeave && dirty && !pending);
 
   const error = status && 'error' in status && !pending ? status.error : null;
   const visible = dirty || pending || justSaved || !!error;

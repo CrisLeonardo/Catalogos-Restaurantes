@@ -324,7 +324,7 @@ export default async function AdminHomePage() {
   }
 
   return (
-    <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
+    <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
 
       {/* Cabecera: el título y las dos únicas acciones que no están en el menú.
           El bloque del título lleva un mínimo (no min-w-0): sin él, flexbox
@@ -471,19 +471,24 @@ export default async function AdminHomePage() {
         <HouseWidget data={widgets.house} now={now} canSeeTables={allow('mesas')} />
       )}
 
-      {/* 6 · Cómo va el día — la misma pieza que usa Pedidos */}
-      {stats && stats.series.length > 0 && stats.totalLast14 > 0 && (
-        <SalesTrendWidget
-          series={stats.series}
-          totalLast14={stats.totalLast14}
-          todaySales={stats.todaySales}
-          pace={widgets?.pace ?? null}
-          money={fmt}
-        />
+      {/* 6 y 7 · Cómo va el día y lo que más sale, lado a lado cuando hay
+          sitio: a lo ancho, la cifra quedaba a la izquierda y las barras
+          (con tope de 340 px) a la derecha, con media tarjeta en blanco en
+          medio (auditoría 2026-10-02, HOY-04). Si solo hay una, ocupa todo. */}
+      {stats && ((stats.series.length > 0 && stats.totalLast14 > 0) || stats.topToday.length > 0) && (
+        <div className="grid items-start gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))' }}>
+          {stats.series.length > 0 && stats.totalLast14 > 0 && (
+            <SalesTrendWidget
+              series={stats.series}
+              totalLast14={stats.totalLast14}
+              todaySales={stats.todaySales}
+              pace={widgets?.pace ?? null}
+              money={fmt}
+            />
+          )}
+          {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
+        </div>
       )}
-
-      {/* 7 · Lo que más sale hoy */}
-      {stats && stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
 
       {/* 8 · Tu menú en línea */}
       {widgets?.online && <OnlineWidget data={widgets.online} showOrders={ordersEnabled} />}

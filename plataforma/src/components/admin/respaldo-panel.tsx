@@ -49,7 +49,7 @@ export default function RespaldoPanel({ restaurantId }: { restaurantId: string }
   }
 
   return (
-    <div className="flex max-w-[640px] flex-col gap-6">
+    <div className="adm-w-read flex flex-col gap-6">
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         Una copia completa de lo tuyo en un solo archivo de Excel, para guardarla
         donde quieras. Para los reportes del día a día están Catálogo, Clientes y

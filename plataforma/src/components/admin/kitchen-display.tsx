@@ -10,6 +10,7 @@ import { primeAudio, playKitchenSound, loadSoundSettings } from '@/lib/sounds';
 import { remainingQuantity, type OrderWithItems } from '@/lib/db/orders';
 import type { Order } from '@/types';
 import { etiquetaDeMesa } from '@/lib/mesa';
+import { shortOrderNumber } from '@/lib/order-number';
 
 interface Props {
   restaurantId: string;
@@ -34,17 +35,20 @@ const C_DARK = {
   text: '#f5f7fa',
   dim: '#9aa3ad',
   hair: 'color-mix(in srgb, var(--u-text) 9%, transparent)',
-  green: '#22c55e',
-  amber: '#f59e0b',
-  /* -400 y no -500: es TINTA sobre panel casi negro, y con #ef4444 el reloj
-     de un pedido atrasado —lo que más hay que leer de lejos— daba 4.3:1. */
-  red: '#f87171',
-  blue: '#3b82f6',
-  /* Rellenos de los botones grandes, que llevan texto BLANCO encima. Con
-     los tonos de tinta de arriba «Marcar listo» medía 2.3:1 (blanco sobre
-     #22c55e) y «Comenzar» 3.7:1; los -700 pasan de 5:1. */
-  fillGreen: '#15803d',
-  fillBlue: '#1d4ed8',
+  /* Los colores con SIGNIFICADO salen de los tokens semánticos del panel
+     (--c-ok, --c-warn, --c-danger, --c-info), que ya están afinados para leerse
+     sobre fondo oscuro y claro y cambian solos con el esquema (auditoría
+     2026-10-02, PED-08). Las superficies de arriba sí son propias: la cocina
+     va más oscura y con más contraste que el resto del panel, a propósito. */
+  green: 'var(--c-ok)',
+  amber: 'var(--c-warn)',
+  red: 'var(--c-danger)',
+  blue: 'var(--c-info)',
+  /* Rellenos de los botones grandes, que llevan texto BLANCO encima: tonos
+     -700 (--c-ok-fill / --c-info-fill), que pasan de 5:1. Con los -500
+     «Marcar listo» medía 2.3:1. */
+  fillGreen: 'var(--c-ok-fill)',
+  fillBlue: 'var(--c-info-fill)',
 };
 
 /* Tonos -700 a propósito: estos colores se usan como TINTA sobre panel blanco
@@ -58,12 +62,12 @@ const C_LIGHT = {
   text: '#14181f',
   dim: '#525c6b',
   hair: 'color-mix(in srgb, var(--u-text) 12%, transparent)',
-  green: '#15803d',
-  amber: '#b45309',
-  red: '#b91c1c',
-  blue: '#1d4ed8',
-  fillGreen: '#15803d',
-  fillBlue: '#1d4ed8',
+  green: 'var(--c-ok)',
+  amber: 'var(--c-warn)',
+  red: 'var(--c-danger)',
+  blue: 'var(--c-info)',
+  fillGreen: 'var(--c-ok-fill)',
+  fillBlue: 'var(--c-info-fill)',
 };
 
 type Palette = typeof C_DARK;
@@ -267,7 +271,7 @@ export default function KitchenDisplay({ restaurantId, initialOrders, yellowMin,
             <span style={{ color: C.dim, fontSize: 12, fontWeight: 600 }}>en cocina</span>
           </span>
           {nuevos > 0 && (
-            <span style={{ padding: '2px 8px', borderRadius: 999, background: `${C.blue}22`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
+            <span style={{ padding: '2px 8px', borderRadius: 999, background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 12, fontWeight: 800 }}>
               {nuevos} nuevo{nuevos !== 1 ? 's' : ''}
             </span>
           )}
@@ -340,7 +344,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
       background: C.panel,
       border: `1px solid ${C.hair}`,
       borderTop: `4px solid ${color}`,
-      boxShadow: urgente ? `0 0 0 1px ${color}55, 0 6px 24px ${color}22` : 'none',
+      boxShadow: urgente ? `0 0 0 1px color-mix(in srgb, ${color} 33%, transparent), 0 6px 24px color-mix(in srgb, ${color} 13%, transparent)` : 'none',
       display: 'flex', flexDirection: 'column',
       opacity: isPending ? 0.55 : 1,
       transition: 'opacity 150ms',
@@ -349,9 +353,9 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
       <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${C.hair}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em' }}>#{order.order_number}</span>
+            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em' }} title={order.order_number}>{shortOrderNumber(order.order_number)}</span>
             {isNew && (
-              <span style={{ padding: '2px 8px', borderRadius: 999, background: `${C.blue}22`, color: C.blue, fontSize: 11, fontWeight: 800, animation: 'kdsPulse 1.6s ease-in-out infinite' }}>
+              <span style={{ padding: '2px 8px', borderRadius: 999, background: `color-mix(in srgb, ${C.blue} 13%, transparent)`, color: C.blue, fontSize: 11, fontWeight: 800, animation: 'kdsPulse 1.6s ease-in-out infinite' }}>
                 NUEVO
               </span>
             )}
@@ -361,7 +365,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
           </div>
         </div>
         {/* Temporizador con semáforo */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999, background: `${color}1a`, color, fontWeight: 800 }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999, background: `color-mix(in srgb, ${color} 10%, transparent)`, color, fontWeight: 800 }}>
           <Icon name="clock" size={14} />
           <span style={{ fontFamily: 'var(--ui-font-mono, monospace)', fontSize: 15, minWidth: 44, textAlign: 'right' }}><Cronometro createdMs={createdMs} /></span>
         </div>
@@ -403,7 +407,7 @@ const KitchenCard = memo(function KitchenCard({ order, color, urgente, C, onRefr
         })}
 
         {order.notes && (
-          <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 8, background: `${C.amber}14`, border: `1px solid ${C.amber}40` }}>
+          <div style={{ marginTop: 2, padding: '8px 10px', borderRadius: 8, background: `color-mix(in srgb, ${C.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.amber} 25%, transparent)` }}>
             <div style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.05em', color: C.amber, textTransform: 'uppercase', marginBottom: 2 }}>Nota</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.35 }}>{order.notes}</div>
           </div>

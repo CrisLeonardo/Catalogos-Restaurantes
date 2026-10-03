@@ -54,22 +54,26 @@ export default function LoyaltyPanel({ restaurantId, settings, accounts, custome
         <Stat label="Recompensas activas" value={String(rewards.filter((r) => r.active).length)} />
       </StatGroup>
 
+      {/* Los campos de Configuración ya traen valores (1 punto por cada Q10…),
+          así que «configura las tasas» no se entendía: lo que falta es
+          GUARDARLAS, aunque sean esas (auditoría 2026-10-02, CLI-02). */}
       {!hasSettings && (
         <div className="note note-warn" style={{ fontSize: 13 }}>
-          Configura las tasas del programa para empezar a acumular puntos.
+          El programa todavía no está activo: revisa las tasas en Configuración y guárdalas
+          (aunque te sirvan las que vienen) para empezar a dar puntos.
         </div>
       )}
 
       <PageTabs tabs={[['miembros', 'Miembros'], ['recompensas', 'Recompensas'], ['config', 'Configuración']] as const} value={tab} onChange={setTab} />
 
-      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} />}
+      {tab === 'config' && <SettingsForm restaurantId={restaurantId} settings={settings} isNew={!hasSettings} />}
       {tab === 'miembros' && <MembersTab restaurantId={restaurantId} accounts={accounts} customers={customers} settings={settings} />}
       {tab === 'recompensas' && <RewardsTab restaurantId={restaurantId} rewards={rewards} products={products} />}
     </div>
   );
 }
 
-function SettingsForm({ restaurantId, settings }: { restaurantId: string; settings: LoyaltySettings }) {
+function SettingsForm({ restaurantId, settings, isNew }: { restaurantId: string; settings: LoyaltySettings; isNew: boolean }) {
   const router = useRouter();
   const [p, setP] = useState<LoyaltySettingsPatch>({
     earn_rate: settings.earn_rate,
@@ -116,11 +120,29 @@ function SettingsForm({ restaurantId, settings }: { restaurantId: string; settin
         los puntos exactos de cada producto en su ficha (Menú → editar producto → <em>Puntos de lealtad</em>).
         Los puntos se acumulan cuando el pedido se marca <strong>entregado</strong>.
       </p>
-      <p style={{ fontSize: 12, color: 'var(--u-text-3)', margin: 0, lineHeight: 1.5 }}>
-        La identidad de lealtad es siempre la <strong>cuenta de Google</strong> del comensal: los pedidos hechos <strong>sin sesión iniciada</strong> (invitados) no acumulan puntos automáticamente ni reciben los puntos de bienvenida, aunque sí quedan registrados como pedido normal. Si un invitado inicia sesión más tarde, sus pedidos anteriores no ganan puntos retroactivamente.
-      </p>
+      {/* Plegado: es la letra pequeña del programa, se lee una vez. */}
+      <details style={{ fontSize: 12.5, color: 'var(--u-text-3)', lineHeight: 1.5 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--u-text-2)', width: 'fit-content' }}>
+          ¿Quién acumula puntos?
+        </summary>
+        <p style={{ margin: '6px 0 0' }}>
+          Solo quien pide con su <strong>cuenta de Google</strong>. Los pedidos sin sesión (invitados)
+          quedan registrados como pedido normal, pero no suman puntos ni reciben los de bienvenida; y si
+          esa persona inicia sesión más tarde, sus pedidos anteriores no ganan puntos.
+        </p>
+      </details>
     </Card>
-    <SaveBar dirty={dirty} pending={isPending} status={status} onSave={save} />
+    {/* Recién creado el programa, los valores de muestra también hay que
+        guardarlos: la barra sale aunque no se haya tocado nada. */}
+    <SaveBar
+      dirty={dirty || (isNew && !status)}
+      pending={isPending}
+      status={status}
+      onSave={save}
+      label={isNew && !dirty ? 'Activar el programa' : 'Guardar'}
+      hint={isNew && !dirty ? 'El programa aún no está activo' : undefined}
+      guardLeave={dirty}
+    />
     </>
   );
 }

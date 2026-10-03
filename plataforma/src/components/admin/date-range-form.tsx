@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { Button } from '@/components/ui/button';
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -62,13 +63,11 @@ export default function DateRangeForm({ from, to, basePath = '/admin/finanzas' }
         <label htmlFor="rango-hasta" style={{ fontSize: 11.5, color: 'var(--u-text-4)', fontWeight: 600 }}>Hasta</label>
         <input id="rango-hasta" type="date" value={t} min={f} onChange={(e) => setT(e.target.value)} style={inputStyle} />
       </div>
-      <button
-        onClick={() => go(f, t)}
-        className="press"
-        style={{ padding: '10px 16px', minHeight: 40, borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'var(--u-text)', color: 'var(--brand-bg)' }}
-      >
+      {/* Neutro: en negro competía con el periodo elegido en naranja, dos
+          colores para el mismo control (NEG-03). */}
+      <Button type="button" variant="secondary" onClick={() => go(f, t)} className="min-h-10">
         Aplicar
-      </button>
+      </Button>
       <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
         {atajos.map((p) => {
           const { nf, nt } = rangeFor(p.d);

@@ -79,7 +79,7 @@ export default function SuperShell({ children }: { children: React.ReactNode }) 
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap' }}>
               Leogin
             </div>
-            <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3, color: 'var(--brand-accent-ink)' }}>
+            <div className="t-kicker" style={{ fontSize: 11, marginTop: 3, color: 'var(--brand-accent-ink)' }}>
               Super Admin
             </div>
           </div>

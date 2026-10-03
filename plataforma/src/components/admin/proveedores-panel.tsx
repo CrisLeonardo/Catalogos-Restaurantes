@@ -131,7 +131,7 @@ function SuppliersTab({ restaurantId, suppliers }: { restaurantId: string; suppl
             <tbody>
               {suppliers.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid var(--u-hair)', opacity: s.active ? 1 : 0.5 }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 500 }}>{s.name}{!s.active && <span style={{ fontSize: 10, color: 'var(--u-text-4)', marginLeft: 6 }}>inactivo</span>}</td>
+                  <td style={{ padding: '10px 12px', fontWeight: 500 }}>{s.name}{!s.active && <span style={{ fontSize: 11, color: 'var(--u-text-4)', marginLeft: 6 }}>inactivo</span>}</td>
                   <td className="hide-mobile" style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.contact_name || '—'}</td>
                   <td style={{ padding: '10px 12px', color: 'var(--u-text-3)' }}>{s.phone || '—'}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>

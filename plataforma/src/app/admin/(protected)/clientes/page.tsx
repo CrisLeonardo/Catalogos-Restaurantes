@@ -95,7 +95,7 @@ export default async function AdminClientesPage({
   const q = (sp.q ?? '').slice(0, 60);
   const sort = parseCustomerSort(sp.orden);
   const inactivos = sp.inactivos === '30';
-  const [{ customers, page, totalPages, total }, summary] = await Promise.all([
+  const [{ customers, page, totalPages }, summary] = await Promise.all([
     getCustomers(restaurantId, pageNum, undefined, { q, sort, inactiveDays: inactivos ? 30 : undefined }),
     getCustomersSummary(restaurantId),
   ]);
@@ -133,12 +133,6 @@ export default async function AdminClientesPage({
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {total > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <ClientesExportButton restaurantId={restaurantId} />
-        </div>
-      )}
-
       <Section title="Resumen">
         <StatGroup>
           <Stat label="Clientes registrados" value={String(summary.totalCustomers)} />
@@ -154,7 +148,9 @@ export default async function AdminClientesPage({
         )}
       </Section>
 
-      {summary.totalCustomers > 0 && <ClientesFiltros q={q} sort={sort} inactive={inactivos} />}
+      {summary.totalCustomers > 0 && (
+        <ClientesFiltros q={q} sort={sort} inactive={inactivos} exportSlot={<ClientesExportButton restaurantId={restaurantId} />} />
+      )}
 
       {customers.length === 0 && buscando ? (
         <Card className="flex flex-col items-center gap-3 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
@@ -256,7 +252,7 @@ export default async function AdminClientesPage({
                           </span>
                           <span
                             style={{
-                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                              fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
                               background: o.status === 'CANCEL' ? 'var(--c-danger-bg)' : 'color-mix(in srgb, var(--u-text) 6%, transparent)',
                               color: o.status === 'CANCEL' ? 'var(--c-danger)' : 'var(--u-text-3)',
                             }}

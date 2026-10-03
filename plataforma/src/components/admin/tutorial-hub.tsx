@@ -359,7 +359,7 @@ function TutorialSection({
             </span>
             {planLabel && (
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
                 background: `color-mix(in srgb, ${labelColor} 13%, transparent)`, color: labelColor ?? '#94a3b8',
                 border: `1px solid color-mix(in srgb, ${labelColor} 25%, transparent)`,
                 textTransform: 'uppercase', letterSpacing: '0.04em',

@@ -611,10 +611,10 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                 <tr key={d.id} style={{ borderBottom: '1px solid var(--u-hair)' }}>
                   <td style={{ padding: '10px 12px', fontFamily: 'var(--ui-font-mono)' }}>
                     {d.serie || '—'}{d.numero ? `-${d.numero}` : ''}
-                    {d.tipo === 'NCRE' && <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>nota de crédito</div>}
+                    {d.tipo === 'NCRE' && <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>nota de crédito</div>}
                     {/* Un registro interno no es una factura. Decirlo, siempre. */}
                     {!d.es_fiscal && (
-                      <div style={{ fontSize: 10, color: 'var(--c-warn)', fontWeight: 700 }}>SIN VALIDEZ FISCAL</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-warn)', fontWeight: 700 }}>SIN VALIDEZ FISCAL</div>
                     )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
@@ -626,7 +626,7 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                   <td style={{ padding: '10px 12px', fontFamily: 'var(--ui-font-mono)', whiteSpace: 'nowrap' }}>
                     {money(Number(d.monto_total))}
                     {Number(d.propina_excluida) > 0 && (
-                      <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>+{money(Number(d.propina_excluida))} propina</div>
+                      <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>+{money(Number(d.propina_excluida))} propina</div>
                     )}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
@@ -643,7 +643,7 @@ function DocumentsList({ restaurantId, settings, documents, onChange }: { restau
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--u-text-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
                     {new Date(d.created_at).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: '2-digit' })}
-                    {d.origen === 'CAJA' && <div style={{ fontSize: 10, color: 'var(--u-text-4)' }}>automática</div>}
+                    {d.origen === 'CAJA' && <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>automática</div>}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {(d.estado === 'ERROR' || d.estado === 'PENDIENTE') && (

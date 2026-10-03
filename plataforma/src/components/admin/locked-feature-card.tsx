@@ -165,7 +165,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
             {/* Premium chip */}
             <span style={{
               position: 'absolute', top: 8, right: 8,
-              fontSize: 8.5, fontWeight: 800, padding: '2px 7px', borderRadius: 99,
+              fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 99,
               background: 'rgba(var(--brand-accent-rgb,99,102,241),0.15)',
               color: 'var(--brand-accent-ink)', letterSpacing: '0.05em',
             }}>
@@ -267,7 +267,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                 padding: '12px 14px',
                 border: '1px solid var(--u-hair)', borderRadius: '12px 0 0 12px',
               }}>
-                <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--u-text-4)', textTransform: 'uppercase', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--u-text-4)', textTransform: 'uppercase', marginBottom: 8 }}>
                   Tu plan actual
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.4 }}>
@@ -284,7 +284,7 @@ export default function LockedFeatureSection({ restaurantName, planActual = 'BAS
                 border: '2px solid var(--brand-accent)', borderRadius: '0 12px 12px 0',
                 background: 'rgba(var(--brand-accent-rgb,99,102,241),0.05)',
               }}>
-                <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--brand-accent-ink)', textTransform: 'uppercase', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--brand-accent-ink)', textTransform: 'uppercase', marginBottom: 8 }}>
                   Premium
                 </div>
                 <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--u-text-2)', lineHeight: 1.4 }}>

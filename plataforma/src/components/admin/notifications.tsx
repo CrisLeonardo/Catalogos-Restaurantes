@@ -50,6 +50,7 @@ import {
 import type { Order } from '@/types';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
+import { shortOrderNumber } from '@/lib/order-number';
 
 /* ── Leogin Desktop (Tauri): notificaciones nativas ──────────────────────
    Dentro del webview de escritorio, Notification.requestPermission()/
@@ -330,7 +331,7 @@ export default function AdminNotifications({
             const typeLabel =
               order.order_type === 'DELIVERY' ? 'A domicilio'
               : order.order_type === 'DINE_IN' ? 'Comer aquí' : 'Para llevar';
-            const body = `${order.order_number} · ${order.customer_name} · ${typeLabel}`;
+            const body = `${shortOrderNumber(order.order_number)} · ${order.customer_name} · ${typeLabel}`;
             notifyUser('🛎 Nuevo pedido', body, { tag: order.id, url: panelHref(base, '/admin/pedidos'), vibrate: [200, 100, 200] });
           }
         })

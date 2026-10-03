@@ -46,6 +46,7 @@ import {
 import { getPendingNewOrders, type PendingNewOrder } from '@/lib/actions/orders';
 import type { Order } from '@/types';
 import { panelBaseFrom, panelHref, internalPanelPath } from '@/lib/panel-links';
+import { shortOrderNumber } from '@/lib/order-number';
 
 /** Pedidos ya descartados en esta pestaña — sobrevive a la navegación entre
     pantallas del panel (el shell se remonta) para que una tarjeta que ya
@@ -435,7 +436,7 @@ export default function NewOrdersAlert({
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--u-text)', lineHeight: 1.2 }}>
-              Pedido nuevo · {o.order_number}
+              Pedido nuevo · {shortOrderNumber(o.order_number)}
             </div>
             <div style={{
               fontSize: 11.5, color: 'var(--c-ok)', marginTop: 2,

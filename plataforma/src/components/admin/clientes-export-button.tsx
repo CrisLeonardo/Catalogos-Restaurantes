@@ -1,11 +1,11 @@
 'use client';
 
 import { useTransition } from 'react';
-import { Icon } from '@/components/icons';
 import { useToastManager } from '@/components/ui/toast';
 import { exportCustomersXlsx, getCustomersPdfData } from '@/lib/actions/customers';
 import { createDoc, drawPdfHeader, brandedAutoTable, finalizePdf } from '@/lib/documents/pdf';
 import { formatDocMoney, longDate } from '@/lib/documents/format';
+import ExportMenu from '@/components/admin/export-menu';
 
 export default function ClientesExportButton({ restaurantId }: { restaurantId: string }) {
   const [pendingXlsx, startXlsx] = useTransition();
@@ -69,20 +69,11 @@ export default function ClientesExportButton({ restaurantId }: { restaurantId: s
     });
   }
 
-  const btnStyle = (pending: boolean): React.CSSProperties => ({
-    padding: '8px 14px', borderRadius: 10, border: 'none',
-    fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)',
-    cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.7 : 1,
-  });
-
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button onClick={downloadXlsx} disabled={pendingXlsx} className="press glass-quiet" style={btnStyle(pendingXlsx)}>
-        {pendingXlsx ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> Excel</>}
-      </button>
-      <button onClick={downloadPdf} disabled={pendingPdf} className="press glass-quiet" style={btnStyle(pendingPdf)}>
-        {pendingPdf ? '…' : <><Icon name="download" size={13} style={{ display: 'inline', verticalAlign: '-2px' }} /> PDF</>}
-      </button>
-    </div>
+    <ExportMenu
+      onExcel={downloadXlsx}
+      onPdf={downloadPdf}
+      busy={pendingXlsx ? 'excel' : pendingPdf ? 'pdf' : null}
+    />
   );
 }

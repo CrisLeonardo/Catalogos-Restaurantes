@@ -342,7 +342,9 @@ export default function AdminShell({
     '/admin/menu/productos/new': 'Nuevo platillo',
     '/admin/menu/productos': 'Platillo',
     '/admin/menu': 'Platillos',
-    '/admin/perfil': 'Perfil',
+    // El mismo nombre que en Ajustes (AJU-04): eran «Perfil» aquí y
+    // «Perfil del negocio» en la lista.
+    '/admin/perfil': 'Perfil del negocio',
     '/admin/ajustes/restaurante': 'Horarios',
     '/admin/ajustes/entrega': 'Zona de entrega',
     '/admin/ajustes/pedidos': 'Pedidos y cobro',
@@ -597,7 +599,7 @@ export default function AdminShell({
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14.5, color: 'var(--u-text)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{restaurantName}</div>
-                <div className="t-kicker" style={{ fontSize: 9.5, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
+                <div className="t-kicker" style={{ fontSize: 11, marginTop: 3 }}>Panel{zone ? ` · ${zone}` : ''}</div>
               </div>
             </>
           );

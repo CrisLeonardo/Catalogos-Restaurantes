@@ -43,12 +43,32 @@ interface ProductFormProps {
 const emptyState: ProductState = null;
 
 /** Etiquetas rápidas — el resto se agrega como texto libre. */
+const moneyPrefix: React.CSSProperties = {
+  position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
+  fontSize: 14, color: 'var(--u-text-3)', pointerEvents: 'none',
+};
+
 const PRESET_TAGS = [
   { id: 'hot',  label: 'Picante',   icon: 'flame'   },
   { id: 'new',  label: 'Nuevo',     icon: 'sparkle' },
   { id: 'fav',  label: 'Favorito',  icon: 'star'    },
   { id: 'veg',  label: 'Vegano',    icon: 'leaf'    },
 ] as const;
+
+const foldTag = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+/** Si el texto es el nombre de una etiqueta sugerida, su id («Nuevo» → 'new'). */
+function presetIdFor(text: string): string | null {
+  const f = foldTag(text);
+  return PRESET_TAGS.find((p) => foldTag(p.label) === f || p.id === f)?.id ?? null;
+}
+function normalizeTags(list: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of list) {
+    const t = presetIdFor(raw) ?? raw;
+    if (t && !out.some((x) => foldTag(x) === foldTag(t))) out.push(t);
+  }
+  return out;
+}
 
 /** Ícono del patrón de marca cuando el platillo no tiene foto. */
 const PRODUCT_ICONS = [
@@ -140,7 +160,11 @@ export default function ProductForm({ restaurantId, categories, product, default
   const [priceVal, setPriceVal] = useState<string>(product?.price != null ? String(product.price) : '');
   const [costVal, setCostVal] = useState<string>(product?.cost != null ? String(product.cost) : '');
   const [loyaltyPtsVal, setLoyaltyPtsVal] = useState<string>(product?.loyalty_points != null ? String(product.loyalty_points) : '');
-  const [tags, setTags] = useState<string[]>(product?.tags ?? []);
+  /* «Nuevo» escrito a mano y la sugerida «Nuevo» eran dos etiquetas
+     distintas y salían las dos (auditoría 2026-10-02, MEN-06). Lo que
+     coincide con una sugerida —sin tildes ni mayúsculas— se guarda como la
+     sugerida, también lo que ya venía guardado así. */
+  const [tags, setTags] = useState<string[]>(() => normalizeTags(product?.tags ?? []));
   const [customTagInput, setCustomTagInput] = useState('');
   const [icon, setIcon] = useState<string>(product?.icon ?? '');
   const [iconSearch, setIconSearch] = useState('');
@@ -149,8 +173,8 @@ export default function ProductForm({ restaurantId, categories, product, default
     setTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
   function addCustomTag() {
-    const t = customTagInput.trim();
-    if (!t || tags.includes(t)) { setCustomTagInput(''); return; }
+    const t = presetIdFor(customTagInput.trim()) ?? customTagInput.trim();
+    if (!t || tags.some((x) => foldTag(x) === foldTag(t))) { setCustomTagInput(''); return; }
     setTags((prev) => [...prev, t]);
     setCustomTagInput('');
   }
@@ -218,18 +242,22 @@ export default function ProductForm({ restaurantId, categories, product, default
                 </div>
                 <div>
                   <label htmlFor="price" style={labelStyle}>Precio *</label>
-                  <input
-                    id="price"
-                    name="price"
-                    type="number" inputMode="decimal"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={priceVal}
-                    onChange={(e) => setPriceVal(e.target.value)}
-                    placeholder="0.00"
-                    style={inputStyle}
-                  />
+                  {/* Con la «Q» dentro: un número suelto no dice que es dinero (MEN-05). */}
+                  <div style={{ position: 'relative' }}>
+                    <span aria-hidden style={moneyPrefix}>Q</span>
+                    <input
+                      id="price"
+                      name="price"
+                      type="number" inputMode="decimal"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={priceVal}
+                      onChange={(e) => setPriceVal(e.target.value)}
+                      placeholder="0.00"
+                      style={{ ...inputStyle, paddingLeft: 30 }}
+                    />
+                  </div>
                 </div>
               </div>
               <div>
@@ -400,8 +428,10 @@ export default function ProductForm({ restaurantId, categories, product, default
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label htmlFor="cost" style={labelStyle}>
-                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 10, fontWeight: 400 }}>desde receta</span>}
+                  Costo{hasRecipe && <span style={{ color: 'var(--brand-accent-ink)', marginLeft: 6, fontSize: 11, fontWeight: 400 }}>desde receta</span>}
                 </label>
+                <div style={{ position: 'relative' }}>
+                <span aria-hidden style={moneyPrefix}>Q</span>
                 <input
                   id="cost"
                   name="cost"
@@ -412,9 +442,10 @@ export default function ProductForm({ restaurantId, categories, product, default
                   onChange={hasRecipe ? undefined : (e) => setCostVal(e.target.value)}
                   readOnly={hasRecipe}
                   placeholder="0.00"
-                  style={{ ...inputStyle, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
+                  style={{ ...inputStyle, paddingLeft: 30, opacity: hasRecipe ? 0.65 : 1, cursor: hasRecipe ? 'not-allowed' : 'text' }}
                   title={hasRecipe ? 'Calculado automáticamente desde la receta' : undefined}
                 />
+                </div>
               </div>
               <div>
                 <label htmlFor="loyalty_points" style={labelStyle}>Puntos de lealtad</label>
@@ -561,7 +592,7 @@ export default function ProductForm({ restaurantId, categories, product, default
                     }}
                   >
                     <Icon name={opt.id} size={18} />
-                    <span style={{ fontSize: 9.5, fontWeight: 600 }}>{opt.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.label}</span>
                   </button>
                 );
               })}

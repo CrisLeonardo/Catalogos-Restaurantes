@@ -79,6 +79,7 @@ import type { TableSeating } from '@/lib/db/table-sessions';
 import type { FloorPlan } from '@/lib/theme/defaults';
 import type { Category, OrderStatus, Product } from '@/types';
 import { assetSrc } from '@/lib/asset-image';
+import { shortOrderNumber } from '@/lib/order-number';
 
 /* ── Borrador del pedido en curso ──────────────────────────────
    El carrito vive en memoria: sin esto, salir de la pantalla a media
@@ -1039,7 +1040,7 @@ export default function ServicioPanel({
   const subSel = sel.kind === 'mesa' && mesaSel
     ? `${subtituloDeMesa(mesaSel)}${mesaSel.mesero ? ` · ${mesaSel.mesero}` : ''}`
     : sel.kind === 'llevar' ? 'Mostrador · no ocupa mesa'
-    : pedidoSel ? `${pedidoSel.order_number} · mostrador` : '';
+    : pedidoSel ? `${shortOrderNumber(pedidoSel.order_number)} · mostrador` : '';
 
   const nivelesPlano = useMemo(() => nivelesConMesas(floorPlan), [floorPlan]);
   const nivelActivo = nivel ?? nivelesPlano[0]?.id ?? '';
@@ -1266,7 +1267,7 @@ export default function ServicioPanel({
                         <span className="sv-mesa-n"><Icon name="bag" size={17} /></span>
                         <span className="sv-mesa-id">
                           <span className="sv-mesa-title">{o.customer_name}</span>
-                          <span className="sv-mesa-sub">{o.order_number}</span>
+                          <span className="sv-mesa-sub">{shortOrderNumber(o.order_number)}</span>
                         </span>
                         <span className="sv-mesa-right">
                           <span className="sv-mesa-total">{redondear(Number(o.total ?? 0))}</span>

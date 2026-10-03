@@ -184,7 +184,7 @@ export default function PlanEditor({
                   <span style={{
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: '#fbbf24', color: '#1a1a1a',
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.05em',
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
                     padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
                   }}>
                     NO PUBLICADO
@@ -193,7 +193,7 @@ export default function PlanEditor({
                   <span style={{
                     position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
                     background: 'var(--brand-accent)', color: '#fff',
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.05em',
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
                     padding: '2px 6px', borderRadius: 99, whiteSpace: 'nowrap',
                   }}>
                     {meta.badge}
@@ -205,7 +205,7 @@ export default function PlanEditor({
                 <div style={{ fontWeight: 700, fontSize: 14, color: active ? 'var(--u-text)' : 'var(--u-text-2)', marginBottom: 1 }}>
                   {meta.price}
                 </div>
-                <div style={{ fontSize: 9, color: 'var(--u-text-4)' }}>
+                <div style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
                   {meta.sub}
                 </div>
               </button>

@@ -42,7 +42,7 @@ export default async function FichaLayout({
             <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{row.slug}</span>
             <StatusChip status={row.status} />
             <PlanChip plan={row.plan_actual} />
-            {onTrial && <Badge variant="info" style={{ fontSize: 10 }}>Prueba · {trialDaysLeft(billing)}d</Badge>}
+            {onTrial && <Badge variant="info" style={{ fontSize: 11 }}>Prueba · {trialDaysLeft(billing)}d</Badge>}
           </span>
         }
         actions={

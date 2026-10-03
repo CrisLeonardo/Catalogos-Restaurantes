@@ -93,10 +93,10 @@ export function PrinterPicker({
 
   const options = [
     { value: '', label: '— No imprimir aquí —' },
-    { value: 'preview:', label: 'Simulador en pantalla (preview:)' },
+    { value: 'preview:', label: 'Simulador en pantalla (para probar)' },
     ...printers.flatMap((p) => [
       { value: p.target, label: `${p.name} (térmica)` },
-      { value: `doc:${p.name}`, label: `${p.name} · documento (impresora normal · pruebas)` },
+      { value: `doc:${p.name}`, label: `${p.name} · en hoja normal (para probar)` },
     ]),
     { value: MANUAL, label: 'Otra · destino manual (tcp://…)' },
   ];
@@ -415,7 +415,7 @@ export default function PrintAgentSettings() {
       const res = await sendTestPrint({ role, target });
       setMsg(res.error
         ? `Error: ${res.error}`
-        : `✓ Prueba encolada (${role === 'kitchen' ? 'cocina' : 'caja'}). El agente la imprimirá en segundos.`
+        : `✓ Prueba enviada (${role === 'kitchen' ? 'cocina' : 'caja'}). La PC principal la imprimirá en segundos.`
       );
     } catch (e) {
       setMsg(friendlyError(e));
@@ -462,7 +462,7 @@ export default function PrintAgentSettings() {
               Pausar pedidos en línea si el local pierde internet
             </div>
             <p style={{ fontSize: 12, color: 'var(--u-text-3)', lineHeight: 1.55, margin: '5px 0 0' }}>
-              Si el agente lleva más de 5 minutos sin conexión, los pedidos del menú en línea se
+              Si la PC principal lleva más de 5 minutos sin conexión, los pedidos del menú en línea se
               pausan con un aviso amable (nadie pide a un local que no puede ver su pedido) y se
               reanudan solos al reconectar. Los pedidos del mesero y del modo emergencia no se
               afectan. <strong style={{ color: 'var(--u-text-2)' }}>Requiere que la PC principal esté
@@ -507,8 +507,8 @@ export default function PrintAgentSettings() {
               fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-warn-bg)',
               border: '1px solid var(--c-warn-line)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
             }}>
-              El agente aún no ha reportado impresoras. Asegúrate de que esté corriendo en la PC del
-              local y pulsa «Actualizar». También puedes probar con el simulador en pantalla.
+              La PC principal todavía no ha enviado su lista de impresoras. Revisa que Leogin esté
+              abierto en ella y pulsa «Actualizar». Mientras, puedes probar con el simulador en pantalla.
             </div>
           )}
 
@@ -516,9 +516,11 @@ export default function PrintAgentSettings() {
             fontSize: 11.5, color: 'var(--u-text-4)', background: 'var(--c-info-bg)',
             border: '1px solid var(--c-info-line)', borderRadius: 8, padding: '7px 10px', lineHeight: 1.55,
           }}>
-            ¿Aún sin impresora térmica? Elige la opción <strong style={{ color: 'var(--u-text-2)' }}>«documento»</strong>
-            {' '}de tu impresora normal: imprime el ticket en una hoja para que pruebes todo el flujo. O usa
-            {' '}<strong style={{ color: 'var(--u-text-2)' }}>«preview:»</strong> para verlo en pantalla.
+            {/* Sin «documento» ni «preview:», que eran nombres internos de las
+                opciones (auditoría 2026-10-02, AJU-11). */}
+            ¿Aún sin impresora térmica? Elige tu impresora normal con <strong style={{ color: 'var(--u-text-2)' }}>«en hoja normal»</strong>:
+            {' '}imprime el ticket en una hoja para que pruebes todo el flujo. O elige el
+            {' '}<strong style={{ color: 'var(--u-text-2)' }}>simulador en pantalla</strong> para verlo sin imprimir.
           </div>
 
           <PrinterPicker

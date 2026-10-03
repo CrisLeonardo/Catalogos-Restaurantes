@@ -76,7 +76,7 @@ export default async function PagosPage() {
                       {conMesesLegibles(p.description ?? CONCEPT_LABEL[p.concept])} · {fechaCorta(p.paidAt)}{p.method ? ` · ${p.method}` : ''}
                     </div>
                   </div>
-                  <Badge variant="neutral" style={{ fontSize: 10 }}>{CONCEPT_LABEL[p.concept]}</Badge>
+                  <Badge variant="neutral" style={{ fontSize: 11 }}>{CONCEPT_LABEL[p.concept]}</Badge>
                   <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 14, color: 'var(--u-text)', whiteSpace: 'nowrap' }}>
                     {fmtMoney(p.amount, p.currency)}
                   </span>

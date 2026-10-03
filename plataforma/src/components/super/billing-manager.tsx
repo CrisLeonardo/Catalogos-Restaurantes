@@ -100,7 +100,7 @@ export default function BillingManager({
 
       {/* Acciones de cobro */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Generar cobros</div>
+        <div className="t-kicker" style={{ fontSize: 11 }}>Generar cobros</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <ActionButton action={generateMonthlyForRestaurant} hidden={{ restaurantId }} label="Mensualidad de este mes" onResult={setToast} />
           <ActionButton action={generateProrate} hidden={{ restaurantId }} label="Prorrateo (resto del mes)" onResult={setToast} />
@@ -116,7 +116,7 @@ export default function BillingManager({
       {/* Facturas */}
       <Glass variant="quiet" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div className="t-kicker" style={{ fontSize: 9.5 }}>Historial de cobros</div>
+          <div className="t-kicker" style={{ fontSize: 11 }}>Historial de cobros</div>
           {pendingTotal > 0 && (
             <div style={{ fontSize: 13, color: 'var(--c-warn)', fontWeight: 600 }}>
               Pendiente: {fmtMoney(pendingTotal, currency)}
@@ -162,7 +162,7 @@ function ConfigCard({
     <Glass variant="quiet" style={{ padding: 18 }}>
       <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <div className="t-kicker" style={{ fontSize: 9.5 }}>Configuración del cobro</div>
+        <div className="t-kicker" style={{ fontSize: 11 }}>Configuración del cobro</div>
 
         {config?.suspended_for_nonpayment && (
           <SuspensionBanner restaurantId={restaurantId} onResult={onResult} />
@@ -383,11 +383,11 @@ function InvoiceRow({
           {inv.description ?? CONCEPT_LABEL[inv.concept]}
         </span>
         <span style={{
-          fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
           background: 'color-mix(in srgb, var(--u-text) 6%, transparent)', color: 'var(--u-text-3)', letterSpacing: '0.05em',
         }}>{CONCEPT_LABEL[inv.concept]}</span>
         <span style={{
-          fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
           background: overdue ? 'var(--c-danger-bg)' : meta.bg,
           color: overdue ? 'var(--c-danger)' : meta.color, letterSpacing: '0.05em',
         }}>{overdue ? 'VENCIDO' : meta.label.toUpperCase()}</span>

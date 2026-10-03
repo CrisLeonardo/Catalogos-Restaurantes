@@ -41,7 +41,7 @@ export default async function AdminPedidosAjustesPage() {
   const resolved = resolveTheme((themeRow as ThemeRow) ?? null);
 
   return (
-    <div className="anim-fade-up max-w-[720px]">
+    <div className="anim-fade-up adm-w-read">
       <OrdersCurrencyEditor
         restaurantId={restaurantId}
         config={{

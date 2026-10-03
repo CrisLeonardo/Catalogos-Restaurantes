@@ -34,7 +34,7 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
     <div style={{ marginTop: 8, padding: '10px 12px', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)', borderRadius: 10, fontSize: 11.5 }}>
       {billetes.length > 0 && (
         <div style={{ marginBottom: monedas.length > 0 ? 6 : 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
             Billetes
           </span>
           {billetes.map(d => (
@@ -47,7 +47,7 @@ function DenomBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
       )}
       {monedas.length > 0 && (
         <div>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--u-text-4)' }}>
             Monedas
           </span>
           {monedas.map(d => (
@@ -100,7 +100,7 @@ function CashCountCard({
             </span>
             {entry.shift_label && (
               <span style={{
-                fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
+                fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
                 background: 'color-mix(in srgb, var(--u-text) 7%, transparent)', color: 'var(--u-text-3)',
                 letterSpacing: '0.04em',
               }}>
@@ -118,7 +118,7 @@ function CashCountCard({
           <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 14, color: diffColor }}>
             {diff >= 0 ? '+' : ''}{money(diff)}
           </div>
-          <div style={{ fontSize: 10, color: diffColor, opacity: 0.8 }}>{diffLabel}</div>
+          <div style={{ fontSize: 11, color: diffColor, opacity: 0.8 }}>{diffLabel}</div>
         </div>
       </div>
 
@@ -218,7 +218,7 @@ export default function CashHistoryPanel({
   return (
     <div className="glass" style={{ borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
-        <div className="adm-label">Cortes recientes</div>
+        <div className="adm-label adm-label-caps" style={{ color: 'var(--u-text-3)' }}>Cortes recientes</div>
         {history.length > 0 && <CashHistoryExportButton restaurantId={restaurantId} />}
       </div>
       {history.length === 0 ? (

@@ -148,8 +148,12 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
 
   return (
     <div style={{ padding: '12px 16px', borderBottom: last ? 'none' : '1px solid var(--u-hair)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Con `wrap` y un mínimo para el nombre: en el teléfono los cinco
+          controles (− 26 + ⏱ ⚙) se comían el renglón y el nombre del
+          platillo quedaba cortado detrás. Ahora, si no caben, bajan al
+          renglón siguiente (auditoría 2026-10-02, MEN-10). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px 12px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--u-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {product.name}
           </div>
@@ -162,7 +166,7 @@ function Row({ product, restaurantId, last, onChanged }: { product: Product; res
         </div>
 
         {tracked ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
             <Stepper onClick={() => quick(-1)} disabled={pending || stock <= 0} icon="minus" label="Restar uno" />
             <span style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 700, fontSize: 17, minWidth: 34, textAlign: 'center', color: isOut ? 'var(--c-danger)' : 'var(--u-text)' }}>
               {stock}

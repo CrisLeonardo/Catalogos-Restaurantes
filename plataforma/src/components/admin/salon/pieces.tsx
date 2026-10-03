@@ -522,7 +522,7 @@ function MeseroMark({ mark }: { mark: { iniciales: string; tono: string } }) {
       style={{
         display: 'grid', placeItems: 'center', flexShrink: 0,
         width: 18, height: 18, borderRadius: 6,
-        fontSize: 9.5, fontWeight: 700, letterSpacing: '0.02em',
+        fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
         color: '#fff', background: mark.tono,
       }}
     >

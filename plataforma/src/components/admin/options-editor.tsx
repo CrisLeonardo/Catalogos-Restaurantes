@@ -370,11 +370,12 @@ export default function OptionsEditor({
           type="button"
           onClick={() => onChange([...groups, emptyGroup('combo')])}
           className="press"
+          /* Igual que los otros dos: tenía fondo verde, borde naranja
+             punteado y texto rojo, tres colores para un botón más (MEN-07). */
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px',
-            borderRadius: 10, border: '1px dashed var(--brand-accent, #22c55e)',
-            background: 'var(--c-ok-bg)', color: 'var(--brand-accent-ink, #22c55e)',
-            cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+            borderRadius: 10, border: '1px solid var(--u-hair-2)', background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+            color: 'var(--u-text-2)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
           }}
         >
           <Icon name="plus" size={13} /> Combo (componentes incluidos)

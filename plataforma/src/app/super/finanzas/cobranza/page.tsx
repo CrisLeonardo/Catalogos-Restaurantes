@@ -145,7 +145,7 @@ export default async function CobranzaPage() {
                   </TableCell>
                   <TableCell>
                     {trial ? (
-                      <Badge variant="info" style={{ fontSize: 10 }}>Prueba · {trialDaysLeft(r.config)}d</Badge>
+                      <Badge variant="info" style={{ fontSize: 11 }}>Prueba · {trialDaysLeft(r.config)}d</Badge>
                     ) : (
                       <MonthBadge
                         hasOverdue={r.hasOverdue}
@@ -184,10 +184,10 @@ export default async function CobranzaPage() {
 function MonthBadge({ hasOverdue, status, hasMonthly, configured }: {
   hasOverdue: boolean; status: string | null; hasMonthly: boolean; configured: boolean;
 }) {
-  if (hasOverdue) return <Badge variant="danger" style={{ fontSize: 10 }}>Vencido</Badge>;
-  if (status === 'PAID') return <Badge variant="ok" style={{ fontSize: 10 }}>Pagado</Badge>;
-  if (status === 'PENDING') return <Badge variant="warn" style={{ fontSize: 10 }}>Pendiente</Badge>;
+  if (hasOverdue) return <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>;
+  if (status === 'PAID') return <Badge variant="ok" style={{ fontSize: 11 }}>Pagado</Badge>;
+  if (status === 'PENDING') return <Badge variant="warn" style={{ fontSize: 11 }}>Pendiente</Badge>;
   if (!configured) return <span style={{ color: 'var(--u-text-4)' }}>—</span>;
-  if (!hasMonthly) return <Badge variant="neutral" style={{ fontSize: 10 }}>Sin generar</Badge>;
+  if (!hasMonthly) return <Badge variant="neutral" style={{ fontSize: 11 }}>Sin generar</Badge>;
   return <span style={{ color: 'var(--u-text-4)' }}>—</span>;
 }

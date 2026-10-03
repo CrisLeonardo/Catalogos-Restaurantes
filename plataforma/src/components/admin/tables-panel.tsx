@@ -200,7 +200,7 @@ export default function TablesPanel({ restaurantId, menuUrl, config: initial, re
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 760 }}>
+    <div className="adm-w-read" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* ── Configuración ── */}
       <Card className="flex flex-col gap-3.5 p-4.5">

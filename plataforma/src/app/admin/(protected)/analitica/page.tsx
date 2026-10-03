@@ -91,11 +91,13 @@ export default async function AdminAnaliticaPage({
 
       <Section title="Resumen del rango">
         <StatGroup>
-          <Stat label={`Pedidos válidos (${a.totalOrders} con cancelados)`} value={String(a.validOrders)} />
-          <Stat label={`Cancelación (${a.cancelled})`} value={`${a.cancelRate.toFixed(0)}%`} />
+          {/* Sin paréntesis en los rótulos: el dato de apoyo va debajo de la
+              cifra (auditoría 2026-10-02, NEG-03). */}
+          <Stat label="Pedidos válidos" value={String(a.validOrders)} sub={`de ${a.totalOrders} en total`} />
+          <Stat label="Cancelados" value={`${a.cancelRate.toFixed(0)}%`} sub={a.cancelled === 1 ? '1 pedido' : `${a.cancelled} pedidos`} />
           <Stat label="Prep. promedio" value={a.prepSamples > 0 ? fmtMin(a.avgPrepMin) : 'Sin datos aún'} />
           <Stat label="Entrega promedio" value={a.deliverySamples > 0 ? fmtMin(a.avgDeliveryMin) : 'Sin datos aún'} />
-          <Stat label={a.busiestWeekday ? `Franja pico (día fuerte: ${a.busiestWeekday})` : 'Franja pico'} value={a.peakLabel ?? '–'} />
+          <Stat label="Hora pico" value={a.peakLabel ?? '–'} sub={a.busiestWeekday ? `Día más fuerte: ${a.busiestWeekday}` : undefined} />
         </StatGroup>
       </Section>
 
@@ -118,14 +120,14 @@ export default async function AdminAnaliticaPage({
               <div style={{ display: 'grid', gridTemplateColumns: `34px repeat(24, 1fr)`, gap: 3, alignItems: 'center' }}>
                 <span />
                 {HOURS.map((h) => (
-                  <span key={h} style={{ fontSize: 7.5, color: 'var(--u-text-4)', textAlign: 'center' }}>
+                  <span key={h} style={{ fontSize: 11, color: 'var(--u-text-4)', textAlign: 'center' }}>
                     {h % 3 === 0 ? h : ''}
                   </span>
                 ))}
               </div>
               {WEEKDAYS.map((wd, day) => (
                 <div key={day} style={{ display: 'grid', gridTemplateColumns: `34px repeat(24, 1fr)`, gap: 3, alignItems: 'center' }}>
-                  <span style={{ fontSize: 9.5, color: 'var(--u-text-3)' }}>{wd}</span>
+                  <span style={{ fontSize: 11, color: 'var(--u-text-3)' }}>{wd}</span>
                   {HOURS.map((h) => {
                     const c = heatLookup.get(`${day}-${h}`) ?? 0;
                     const intensity = c === 0 ? 0 : 0.18 + (c / a.heatMax) * 0.82;

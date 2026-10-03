@@ -140,8 +140,8 @@ export default function RestaurantsDirectory({ rows, planOrder }: { rows: Direct
                     <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--u-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {r.name}
                     </span>
-                    {r.hasOverdue && <Badge variant="danger" style={{ fontSize: 10 }}>Vencido</Badge>}
-                    {r.onTrial && <Badge variant="info" style={{ fontSize: 10 }}>Prueba · {r.trialDays}d</Badge>}
+                    {r.hasOverdue && <Badge variant="danger" style={{ fontSize: 11 }}>Vencido</Badge>}
+                    {r.onTrial && <Badge variant="info" style={{ fontSize: 11 }}>Prueba · {r.trialDays}d</Badge>}
                   </div>
                   <div style={{ display: 'flex', gap: 12, marginTop: 3, fontSize: 11.5, color: 'var(--u-text-4)', flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: 'var(--ui-font-mono)' }}>{r.slug}</span>

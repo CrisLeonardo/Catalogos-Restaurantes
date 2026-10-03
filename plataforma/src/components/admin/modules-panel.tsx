@@ -43,6 +43,7 @@ import {
   MODULE_GROUPS,
   isModuleActive,
   showsInPanel,
+  moduleBadge,
   type ActivatableModuleKey,
   type ModuleMeta,
   type ModulesMap,
@@ -105,7 +106,7 @@ const BADGE_COLOR: Record<string, string> = { POPULAR: 'chip-warn', NUEVO: 'chip
 
 function Badge({ label }: { label: string }) {
   return (
-    <span className={`chip ${BADGE_COLOR[label] ?? 'chip-neutral'}`} style={{ fontSize: 9.5, padding: '1px 7px' }}>
+    <span className={`chip ${BADGE_COLOR[label] ?? 'chip-neutral'}`} style={{ fontSize: 11, padding: '1px 7px' }}>
       {label}
     </span>
   );
@@ -130,11 +131,12 @@ function RowIcon({ name, on }: { name: string; on?: boolean }) {
 }
 
 /** Título de fila con su chip opcional. */
-function RowTitle({ label, badge }: { label: string; badge?: string }) {
+function RowTitle({ label, badge, extra }: { label: string; badge?: string; extra?: string }) {
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       {label}
       {badge && <Badge label={badge} />}
+      {extra && <span className="chip chip-ok" style={{ fontSize: 11, padding: '1px 7px' }}>{extra}</span>}
     </span>
   );
 }
@@ -255,7 +257,10 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       <ListRow key={m.key}>
         <RowIcon name={m.icon} on={on} />
         <ListText
-          title={<RowTitle label={m.label} badge={m.badge} />}
+          /* «Activado para tu restaurante» iba en verde metido en medio de
+             la descripción; ahora es una etiqueta junto al nombre
+             (auditoría 2026-10-02, AJU-14). */
+          title={<RowTitle label={m.label} badge={moduleBadge(m)} extra={byException ? 'Activado para ti' : undefined} />}
           desc={
             <>
               {m.description}
@@ -263,15 +268,9 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
               {on && m.href && (
                 <>
                   {' '}
-                  <Link href={m.href} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+                  <Link href={m.href} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
                     Abrir {m.navLabel ?? m.label} →
                   </Link>
-                </>
-              )}
-              {byException && (
-                <>
-                  {' '}
-                  <span style={{ color: 'var(--c-ok)' }}>Activado para tu restaurante.</span>
                 </>
               )}
             </>
@@ -294,12 +293,12 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       <ListRow key={m.key}>
         <RowIcon name={m.icon} on={active} />
         <ListText
-          title={<RowTitle label={m.label} badge={m.badge} />}
+          title={<RowTitle label={m.label} badge={moduleBadge(m)} />}
           desc={
             <>
               {m.description}{' '}
               {active && m.href ? (
-                <Link href={m.href} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+                <Link href={m.href} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
                   Abrir {m.navLabel ?? m.label} →
                 </Link>
               ) : (
@@ -324,7 +323,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
   }
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-6">
+    <div className="adm-w-read flex flex-col gap-6">
       <p className="text-[14px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         Enciende solo lo que usa tu restaurante. Lo que apagues desaparece de tu
         panel y puedes volver a encenderlo cuando quieras.
@@ -372,7 +371,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
                       {on && m.configHref && (
                         <>
                           {' '}
-                          <Link href={m.configHref} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+                          <Link href={m.configHref} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
                             Configurar →
                           </Link>
                         </>
@@ -466,7 +465,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
           </List>
           <SectionNote>
             Esto es lo que tu plan {PLANS[currentPlan].name} todavía no incluye.{' '}
-            <Link href={panelHref(base, "/admin/suscripcion")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+            <Link href={panelHref(base, "/admin/suscripcion")} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
               Ver la comparativa →
             </Link>
           </SectionNote>
@@ -476,7 +475,7 @@ export default function ModulesPanel({ restaurantId, modules, settings, orderTyp
       <p className="px-4 text-[12.5px] leading-snug" style={{ color: 'var(--u-text-3)' }}>
         ¿Tienes varias sucursales? Se unen en un panel de grupo con métricas
         consolidadas.{' '}
-        <Link href={panelHref(base, "/admin/ayuda")} className="font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
+        <Link href={panelHref(base, "/admin/ayuda")} className="tap44 font-semibold no-underline" style={{ color: 'var(--brand-accent-ink)' }}>
           Hablar con Leogin →
         </Link>
       </p>

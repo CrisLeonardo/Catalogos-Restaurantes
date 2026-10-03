@@ -73,7 +73,7 @@ export default async function AdminNegocioPage() {
   const soldTop = orderStats?.topToday ?? [];
 
   return (
-    <div className="anim-fade-up flex max-w-[1040px] flex-col gap-6">
+    <div className="anim-fade-up adm-w-overview flex flex-col gap-6">
 
       {/* 1 · Los números de hoy. El dinero va primero porque es la pregunta
              que trae al dueño a esta pantalla; el tráfico cierra la fila. */}
@@ -105,15 +105,13 @@ export default async function AdminNegocioPage() {
                     style={{
                       height: `${Math.max((day.total / maxSales) * 100, day.total > 0 ? 6 : 2)}%`,
                       minHeight: 2,
-                      background: day.isToday
-                        ? 'var(--adm-accent-500)'
-                        : 'color-mix(in srgb, var(--u-text) 18%, transparent)',
+                      background: day.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
                       transition: 'height 400ms var(--ease-entry)',
                     }}
                     title={`${day.label}: ${money(day.total)}`}
                   />
                   <span
-                    className="t-mono text-[9px]"
+                    className="t-mono text-[11px]"
                     style={{ color: day.isToday ? 'var(--u-text)' : 'var(--u-text-4)' }}
                   >
                     {day.label}
@@ -162,15 +160,13 @@ export default async function AdminNegocioPage() {
                   style={{
                     height: `${Math.max((day.visits / maxVisits) * 100, day.visits > 0 ? 6 : 2)}%`,
                     minHeight: 2,
-                    background: day.isToday
-                      ? 'var(--u-text)'
-                      : 'color-mix(in srgb, var(--u-text) 14%, transparent)',
+                    background: day.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
                     transition: 'height 400ms var(--ease-entry)',
                   }}
                   title={`${day.label}: ${day.visits} visitas`}
                 />
                 <span
-                  className="t-mono text-[9px]"
+                  className="t-mono text-[11px]"
                   style={{ color: day.isToday ? 'var(--u-text)' : 'var(--u-text-4)' }}
                 >
                   {day.label}

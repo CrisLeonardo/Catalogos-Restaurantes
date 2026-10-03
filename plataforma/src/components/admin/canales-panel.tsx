@@ -192,7 +192,7 @@ export default function CanalesPanel({
                     <td style={{ padding: '10px 12px' }}>
                       {m.product_name}
                       {!m.product_available && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--u-text-4)' }}>agotado</span>
+                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--u-text-4)' }}>agotado</span>
                       )}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>

@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
    historial con una entrada por letra. Cambiar la búsqueda o el
    orden vuelve a la página 1 y cierra el cliente abierto.
    ============================================================ */
-export default function ClientesFiltros({ q, sort, inactive = false }: { q: string; sort: CustomerSort; inactive?: boolean }) {
+export default function ClientesFiltros({ q, sort, inactive = false, exportSlot }: { q: string; sort: CustomerSort; inactive?: boolean; exportSlot?: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -83,6 +83,7 @@ export default function ClientesFiltros({ q, sort, inactive = false }: { q: stri
           onValueChange={(v) => go({ orden: v as CustomerSort })}
         />
       </div>
+      {exportSlot}
     </div>
   );
 }

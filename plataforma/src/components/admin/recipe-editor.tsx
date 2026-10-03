@@ -145,7 +145,7 @@ export default function RecipeEditor({ productId, restaurantId, ingredients, ini
             borderBottom: '1px solid var(--u-hair)',
           }}>
             {['Insumo', 'Cantidad', 'Costo', ''].map((h) => (
-              <span key={h} style={{ fontSize: 10, color: 'var(--u-text-4)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h}</span>
+              <span key={h} style={{ fontSize: 11, color: 'var(--u-text-4)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h}</span>
             ))}
           </div>
 

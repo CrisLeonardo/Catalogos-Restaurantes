@@ -95,9 +95,7 @@ export function SalesTrendWidget({
                   className="block min-w-[4px] flex-1 rounded-t-[3px]"
                   style={{
                     height: `${Math.max(d.total > 0 ? 6 : 2, (d.total / max) * 100)}%`,
-                    background: d.isToday
-                      ? 'var(--adm-accent-500)'
-                      : 'color-mix(in srgb, var(--u-text) 13%, transparent)',
+                    background: d.isToday ? 'var(--chart-hi)' : 'var(--chart-base)',
                   }}
                 />
               ))}

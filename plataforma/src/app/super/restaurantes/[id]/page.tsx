@@ -123,7 +123,7 @@ export default async function FichaResumenPage({
       {/* Actividad 30 días */}
       {(metrics.visits30 > 0 || metrics.orders30 > 0) && (
         <Card style={{ padding: '18px 20px' }}>
-          <div className="t-kicker" style={{ fontSize: 9.5, marginBottom: 12 }}>Actividad · 30 días</div>
+          <div className="t-kicker" style={{ fontSize: 11, marginBottom: 12 }}>Actividad · 30 días</div>
           <ActivityChart series={metrics.series} height={110} />
         </Card>
       )}

@@ -7,11 +7,6 @@ import { can } from '@/lib/permissions';
 import DateRangeForm from '@/components/admin/date-range-form';
 import ExportReportButton from '@/components/admin/export-report-button';
 import { fmtMoney } from '@/lib/money';
-/* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
-   que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
-   Ver components/admin/panel-link.tsx. */
-import Link from '@/components/admin/panel-link';
-import { Icon } from '@/components/icons';
 import { Card } from '@/components/ui/card';
 import { Section } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
@@ -158,7 +153,7 @@ export default async function AdminFinanzasPage({
             );
           })}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--u-text-4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--u-text-4)' }}>
           <span>{report.series[0]?.label}</span>
           <span>{report.series[report.series.length - 1]?.label}</span>
         </div>
@@ -179,33 +174,6 @@ export default async function AdminFinanzasPage({
         )}
       </div>
 
-      {/* El arqueo se mudó a su propia pestaña: aquí queda el camino. */}
-      <Link
-        href="/admin/caja"
-        className="press"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-          border: '1px solid var(--u-hair)', borderRadius: 14, textDecoration: 'none',
-          background: 'var(--adm-card, transparent)',
-        }}
-      >
-        <span style={{
-          display: 'grid', placeItems: 'center', width: 30, height: 30, borderRadius: 9, flexShrink: 0,
-          background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)', color: 'var(--brand-accent-ink)',
-        }}>
-          <Icon name="banknote" size={16} />
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 500, color: 'var(--u-text)' }}>
-            Cerrar la caja del día
-          </span>
-          <span style={{ display: 'block', fontSize: 13, color: 'var(--u-text-3)', marginTop: 1, lineHeight: 1.35 }}>
-            Contar el efectivo, anotar lo que salió de la caja y repartir las propinas
-          </span>
-        </span>
-        <span style={{ fontSize: 13, color: 'var(--u-text-3)', flexShrink: 0 }}>Negocio › Caja</span>
-        <Icon name="chevronRight" size={17} style={{ color: 'var(--u-text-4)', flexShrink: 0 }} />
-      </Link>
     </div>
   );
 }
@@ -242,7 +210,7 @@ function ProductTable({ title, rows, colA, colB }: { title: string; rows: { name
         <div style={{ fontSize: 13, color: 'var(--u-text-4)' }}>Sin datos en el rango.</div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 9.5, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 90px', gap: 8, fontSize: 11, color: 'var(--u-text-4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span>Producto</span><span style={{ textAlign: 'right' }}>{colA}</span><span style={{ textAlign: 'right' }}>{colB}</span>
           </div>
           {rows.map((r, i) => (

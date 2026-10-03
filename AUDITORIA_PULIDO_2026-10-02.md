@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** Fases 1 a 4 hechas y la 6 casi entera el 2026-10-02 (53 de 145 hallazgos, incluidos los 6 P0). Lo que queda: la Fase 5 (necesita D-2), WEB-01/02/03 y CAT-13 (necesitan contenido o una cuenta tuya) y lo continuo; ver la Bitácora al final.
+> **Estado:** al 2026-10-03, 92 de 145 hallazgos hechos (los 6 P0 incluidos). Lo que queda espera una decisión tuya (⏸️), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo (T-22/T-23/T-26); ver la Bitácora al final.
 
 ---
 
@@ -39,22 +39,22 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 16 | 0 |
-| 2 | Panel · Armazón y navegación | 10 | 7 | 1 |
-| 3 | Panel · Hoy | 5 | 2 | 1 |
-| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 1 | 4 |
-| 5 | Panel · Menú | 12 | 4 | 0 |
-| 6 | Panel · Clientes | 6 | 2 | 0 |
-| 7 | Panel · Negocio | 6 | 1 | 1 |
-| 8 | Panel · Ajustes | 20 | 11 | 2 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 22 | 0 |
+| 2 | Panel · Armazón y navegación | 10 | 9 | 1 |
+| 3 | Panel · Hoy | 5 | 4 | 1 |
+| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 8 | 4 |
+| 5 | Panel · Menú | 12 | 12 | 0 |
+| 6 | Panel · Clientes | 6 | 6 | 0 |
+| 7 | Panel · Negocio | 6 | 4 | 1 |
+| 8 | Panel · Ajustes | 20 | 18 | 2 |
 | 9 | Catálogo digital (lo que ve el comensal) | 13 | 4 | 1 |
 | 10 | Super Admin | 10 | 2 | 1 |
 | 11 | Mi cuenta (grupo) | 5 | 3 | 0 |
 | 12 | Web pública y marketing | 9 | 0 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 0 | 1 |
-| | **Total** | **145** | **53** | **12** |
+| | **Total** | **145** | **92** | **12** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 14 P2 y 5 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 38 P2 y 20 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -294,18 +294,21 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   entrega). Quedarse con cuatro semánticos: info · aviso · peligro · éxito.
   ✅ **Hecho 2026-10-02 (Fase 3).** Avisos con las clases `.note-info/-warn/-danger/-ok`: Encuestas (morado → info), WhatsApp sin conexión (rojo → info: no es un error del dueño), Zona de entrega (gris → info), Lealtad (warn).
 
-- [ ] **T-19** · P3 · S — **Gráficas de colores distintos:** barras naranja (Hoy),
+- [x] **T-19** · P3 · S — **Gráficas de colores distintos:** barras naranja (Hoy),
   café oscuro (Encuestas), negras (Visitas), gris+naranja y naranja pálido (Super).
   Paleta de gráficas en tokens.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Tokens de gráfica `--chart-hi/-base/-alt/-empty` (acento para el dato que importa, gris para el resto) en Hoy, Pedidos, Métricas (ventas y visitas), Encuestas y las gráficas del Super.
 
-- [ ] **T-20** · P2 · S — **Blancos táctiles pequeños.** «×» para anular una línea
+- [x] **T-20** · P2 · S — **Blancos táctiles pequeños.** «×» para anular una línea
   de pedido: 22 px y rojo, pegado al precio; flechas de Categorías: 26 px; «quitar
   mesa» del plano: 24 px; enlaces «Configurar →»/«Abrir X →» de Funciones: 17 px
   de alto; teléfonos del pedido: 18 px. Mínimo 44 px de área en el teléfono.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Clase `.tap44`: área de toque de 44 × 44 sin cambiar el dibujo (solo con dedo, `pointer: coarse`) en la «×» de anular plato, las flechas de Categorías, la «×» de quitar mesa del plano, «Abrir … →»/«Configurar →» de Funciones y el teléfono del pedido.
 
-- [ ] **T-21** · P2 · S — **Texto de menos de 11 px:** nombres del selector de
+- [x] **T-21** · P2 · S — **Texto de menos de 11 px:** nombres del selector de
   iconos (9,5), encabezados de tabla de Finanzas (9,5), ejes de gráficas (7,5–9),
   insignias «NUEVO/POPULAR/VENCIDO/PAGADO» (9,5), URL bajo cada QR (9,5).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** 63 textos de 7,5–10 px subidos a 11 px en panel y Super (insignias, encabezados de tabla, ejes de gráficas, rótulos); también las etiquetas de días de Métricas. Se dejan los tamaños de los PDF (son puntos de imprenta) y el «MESA» decorativo de la ficha del plano.
 
 ### Escala visual
 
@@ -317,23 +320,26 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **T-23** · P3 · M — **Radios sin escala:** 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
   18 px. Ya existen `--radius-md/lg/xl/2xl`; usarlos.
 
-- [ ] **T-24** · P2 · S — **Ancho de contenido distinto por pantalla:** Hoy y
+- [x] **T-24** · P2 · S — **Ancho de contenido distinto por pantalla:** Hoy y
   Ajustes ~1.040 px, Pedidos/Menú/Mesas a todo el ancho, Super con rejillas que
   llenan dos tercios. Dos anchos: «lectura» (formularios, ajustes) y «tablero»
   (operación).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Dos anchos: `.adm-w-read` (720 px: Perfil, Horarios, Zona de entrega, Pedidos y cobro, Funciones, Copia de datos, Repartidores, WhatsApp, Salón) y `.adm-w-overview` (1.040 px: Hoy, Ajustes, Métricas). Operación sigue a todo lo ancho; Código QR alineado a la izquierda como las demás.
 
-- [ ] **T-25** · P3 · S — **Emojis junto a iconos de línea** (alérgenos 🥕🌶🥚 en la
+- [x] **T-25** · P3 · S — **Emojis junto a iconos de línea** (alérgenos 🥕🌶🥚 en la
   ficha y en el menú). Opcional: iconos propios o dejarlos (se reconocen bien).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Se dejan los emojis de alérgenos: se reconocen de un vistazo y un icono propio por alérgeno no mejoraría la lectura. Decisión tomada, sin cambio.
 
 - [ ] **T-26** · P2 · L — **Componentes base que casi no se usan**: `Input` (2
   usos), `Tabs`, `Sheet`, `Skeleton`, `Textarea`, `Tooltip` (0) — mientras 4.700
   `style={{…}}` reimplementan lo mismo a mano. Es la raíz de T-05…T-12: cada
   pantalla dibuja sus propias piezas.
 
-- [ ] **T-04** · P2 · S — **Aviso «Pedido nuevo» tapa el contenido.** En el
+- [x] **T-04** · P2 · S — **Aviso «Pedido nuevo» tapa el contenido.** En el
   teléfono queda fijo sobre los últimos ~90 px de cualquier pantalla (campos,
   interruptores, «Guardar»). Dar ese espacio al contenido mientras está visible o
   plegarlo a una píldora tras unos segundos.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Con una tarjeta de «Pedido nuevo» flotando, el contenido gana su alto en el acolchado de abajo (se puede bajar a ver lo que tapaba) y la barra de guardar se sube encima de la tarjeta (`:has(.adm-float-stack)` en admin.css).
 
 ---
 
@@ -374,13 +380,15 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Dónde: `ajustes/page.tsx:102`, `modules-panel.tsx:227`, `suscripcion/page.tsx:180`.
   ✅ **Hecho 2026-10-02 (Fase 1).** Ajustes cuenta igual que Funciones («8 activas»); Suscripción dice «7 funciones incluidas» (lo que trae el plan, que es otra pregunta).
 
-- [ ] **N-06** · P2 · S — **Ajustes en escritorio desbalanceado:** tres columnas de
+- [x] **N-06** · P2 · S — **Ajustes en escritorio desbalanceado:** tres columnas de
   alturas muy distintas («Tu restaurante» 7 filas, «Servicio» 2, «El equipo» 1) y
   «Tu cuenta» debajo de la primera — dos tercios de la pantalla vacíos abajo.
   Dos columnas equilibradas.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Portada de Ajustes en dos columnas CSS que se reparten por altura (`columns: 2 320px`): ya no quedan dos tercios vacíos abajo.
 
-- [ ] **N-07** · P3 · S — **Insignias «NUEVO»/«POPULAR» permanentes** en Funciones
+- [x] **N-07** · P3 · S — **Insignias «NUEVO»/«POPULAR» permanentes** en Funciones
   (Reservaciones, Encuestas y Cupones son de julio). Atarlas a una fecha de alta.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «NUEVO» caduca a los 60 días de la fecha de alta (`since` en `lib/modules.ts`, `moduleBadge`); Reservaciones, Lista de espera, Encuestas y Cupones ya no lo llevan. «POPULAR» se queda.
 
 - [x] **N-08** · P1 · S — **Error de React al abrir Facturación y Canales.**
   Cargando `/admin/facturacion` (FEL apagado) o `/admin/canales` directamente, la
@@ -414,15 +422,17 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   Dónde: `app/admin/(protected)/page.tsx:369-380`.
   ✅ **Hecho 2026-10-02 (Fase 1).** En el teléfono, dos renglones (canal + estado + total arriba, cliente y tiempo abajo); desde `sm`, la fila de siempre. Visto con 8 pedidos activos.
 
-- [ ] **HOY-02** · P2 · S — **«Hoy» dos veces** (barra + encabezado). Ver T-10.
+- [x] **HOY-02** · P2 · S — **«Hoy» dos veces** (barra + encabezado). Ver T-10.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto con T-10 (Fase 3): la cabecera dice la fecha y el local, no «Hoy» otra vez.
 
 - [x] **HOY-03** · P2 · S — **«Resumen del día» con hueco** (T-06) **y sin
   comparación.** Un «+12 % vs. el viernes pasado» bajo cada cifra es lo que hace
   útil la portada (y lo que el dueño mira cada día).
   ✅ **Hecho 2026-10-02 (Fase 6).** El hueco se fue con T-06. La comparación sube a donde se mira: bajo «Ventas», «↑ 12 % vs. un viernes normal» (lo que un día igual llevaba a esta hora, promedio de las cuatro semanas anteriores; con menos de dos días de referencia no se dice nada). `Stat` admite ahora una línea `sub`.
 
-- [ ] **HOY-04** · P2 · S — **«Cómo va el día» en escritorio:** el total abajo a la
+- [x] **HOY-04** · P2 · S — **«Cómo va el día» en escritorio:** el total abajo a la
   izquierda y las barras apretadas en el tercio derecho; mucho blanco.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Cómo va el día» y «Lo que más sale hoy» lado a lado cuando hay sitio (rejilla de 380 px mínimo); si solo hay una, ocupa todo.
 
 - [ ] **HOY-05** · P1 · M · ⏸️ D-3 — **Las mismas cifras en tres pantallas** (Hoy,
   Pedidos › En vivo, Negocio › Resumen): Ventas/Pedidos/Ticket + «14 días» + «Lo
@@ -449,32 +459,37 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   tarjeta. Propuesta: un solo reloj con color por umbral, banda solo si pasa el
   doble del umbral, hora sola, «Recibo» y «Copia de comanda» en un «⋯».
 
-- [ ] **PED-03** · P2 · S — **Dos formatos de número de pedido:** «H-7» y
+- [x] **PED-03** · P2 · S — **Dos formatos de número de pedido:** «H-7» y
   «ORD-2026-00057». En Cocina «#ORD-2026-00057» a tamaño grande se corta. Mostrar
   la forma corta en todas partes («#57»).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** `lib/order-number.ts` (con pruebas): «#57» en vez de «ORD-2026-00057» en la tarjeta de pedido, Cocina, aviso de pedido nuevo, repartidor, mesero, Servicio, notificación y la comanda impresa (navegador y térmica). El recibo, el historial del cliente y Facturación conservan el número completo.
 
-- [ ] **PED-04** · P3 · S — **Encabezados de grupo en Anton MAYÚSCULAS** («POR
+- [x] **PED-04** · P3 · S — **Encabezados de grupo en Anton MAYÚSCULAS** («POR
   ENVIAR A COCINA», «LISTOS PARA ENTREGAR») — el único sitio del panel con ese
   estilo junto con Categorías. Ver T-10.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto en la Fase 3 (encabezados de grupo sin Anton).
 
-- [ ] **PED-05** · P3 · S — **Filtros en dos líneas** en el teléfono (Todos / En
+- [x] **PED-05** · P3 · S — **Filtros en dos líneas** en el teléfono (Todos / En
   local / Para llevar / Domicilio): una sola fila con scroll.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto en la Fase 4: una fila que se desplaza.
 
 - [ ] **PED-06** · P2 · M · ⏸️ D-2 — **Escritorio: grupos apilados en una página de
   2.900 px.** A 1440 px caben tres columnas (Por enviar · En cocina · Listos) y se
   vería todo sin mover la página.
 
-- [ ] **PED-07** · P2 · S — **«×» rojo de 22 px para anular un plato**, pegado al
+- [x] **PED-07** · P2 · S — **«×» rojo de 22 px para anular un plato**, pegado al
   precio: fácil de tocar sin querer en hora pico. Pasarlo al «⋯» de la tarjeta o
   pedir confirmación en el sitio.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Sin cambio de lugar: la «×» ya abre el diálogo de anulación con motivo y PIN (no anula al tocar), así que un toque sin querer no hace nada. Con T-20 se toca mejor a propósito.
 
 ### Cocina
 
-- [ ] **PED-08** · P3 · S — **Colores fuera de la paleta** (azul «Comenzar», verde
+- [x] **PED-08** · P3 · S — **Colores fuera de la paleta** (azul «Comenzar», verde
   «Marcar listo»; 25 colores hex fijos en `kitchen-display.tsx`). En cocina el
   código de color tiene sentido, pero que salga de los tokens semánticos
   (`--c-ok`, `--c-info`…) para que el modo claro/oscuro y el contraste queden
   garantizados.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Cocina toma verde/ámbar/rojo/azul de los tokens semánticos (`--c-ok/-warn/-danger/-info`) y los rellenos de botón con texto blanco de `--c-ok-fill`/`--c-info-fill` (≥ 5:1); las transparencias pasan a `color-mix`. Las superficies oscuras propias de la cocina se mantienen a propósito.
 
 ### Mesas
 
@@ -482,15 +497,18 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   ancho** en el teléfono: ~1.000 px de scroll vacío. En escritorio ya son una
   rejilla; en el teléfono, 4–5 por fila.
 
-- [ ] **PED-10** · P2 · S — **Recortes en el teléfono:** la tercera cifra («Sin
+- [x] **PED-10** · P2 · S — **Recortes en el teléfono:** la tercera cifra («Sin
   cobrar Q0.») queda cortada, y la pestaña «En qué va» también. Además dos filas
   de pestañas + botón antes de la primera mesa.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Sin tocar el diseño de Mesas (D-2): la tira de cifras, que se desplaza, se desvanece en el borde derecho en el teléfono para que se vea que hay más. «En qué va» ya cabía.
 
 - [ ] **PED-11** · P3 · S — **Dos relojes en la ficha** («Lista 8 min» y «11 min»):
   en el teléfono no dice qué es cada uno (en escritorio sí: «en esta etapa»).
+  🔄 **Parcial 2026-10-03:** el código ya rotula la cifra grande («en esta etapa», M-21); falta verlo con mesas ocupadas en el teléfono.
 
-- [ ] **PED-12** · P3 · S — **Texto de explicación permanente** («Las mesas se
+- [x] **PED-12** · P3 · S — **Texto de explicación permanente** («Las mesas se
   ordenan por urgencia, no por número…»): a la ayuda o a un «?».
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** La explicación del orden pasó a un desplegable «¿En qué orden van las mesas?».
 
 ### Tomar pedidos
 
@@ -519,30 +537,38 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   hoy» (apagado = Agotado, se ve pero no se pide) y «Mostrar en el menú».
   ✅ **Hecho 2026-10-02 (Fase 1).** «Hay existencias / Agotado» («Se ve en el menú pero no se puede pedir. Vuelve solo en 12 h.») y «Mostrar en el menú / Oculto del menú». En la lista, «Disponible / Agotado» en vez de «Activo», y el aviso del deshacer ya no dice que se oculta.
 
-- [ ] **MEN-04** · P2 · S — **«Eliminar» rojo arriba junto al título.** Bajarlo a
+- [x] **MEN-04** · P2 · S — **«Eliminar» rojo arriba junto al título.** Bajarlo a
   una «zona de peligro» al final del formulario.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Eliminar» salió de junto al título: va al final, en una tarjeta aparte «Eliminar este platillo» con su explicación. El título ya no se corta a 200 px.
 
-- [ ] **MEN-05** · P3 · S — **El precio no lleva «Q»** dentro del campo; teclado
+- [x] **MEN-05** · P3 · S — **El precio no lleva «Q»** dentro del campo; teclado
   numérico decimal en el teléfono.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Q» dentro de los campos de precio y costo (el teclado decimal ya estaba).
 
-- [ ] **MEN-06** · P3 · S — **Etiquetas duplicables:** «Nuevo» de las sugeridas y
+- [x] **MEN-06** · P3 · S — **Etiquetas duplicables:** «Nuevo» de las sugeridas y
   «Nuevo ×» personalizada a la vez.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Lo escrito que coincide con una etiqueta sugerida (sin tildes ni mayúsculas) se guarda como la sugerida, también lo ya guardado así: no más «Nuevo» y «Nuevo ×» a la vez.
 
-- [ ] **MEN-07** · P3 · S — **Botón «Combo (componentes incluidos)»** con fondo
+- [x] **MEN-07** · P3 · S — **Botón «Combo (componentes incluidos)»** con fondo
   verde, borde naranja punteado y texto rojo.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Combo (componentes incluidos)» con el mismo estilo que los otros dos botones.
 
-- [ ] **MEN-08** · P2 · M — **Categorías:** todas con el mismo icono genérico (una
+- [x] **MEN-08** · P2 · M — **Categorías:** todas con el mismo icono genérico (una
   mesa), encabezado Anton «CATEGORÍAS DEL MENÚ», flechas de 26 px, y cada flecha
   es un viaje al servidor con recarga. Propuesta: arrastrar para ordenar (o
   flechas optimistas), y el icono solo si la categoría tiene uno.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Subir/bajar categorías al instante (`useOptimistic`); sin icono elegido, el que sugiere el nombre (Café → taza, Dulce → galleta) en vez de la misma mesa. El encabezado Anton ya se había ido (T-10) y las flechas tienen área de toque (T-20).
 
-- [ ] **MEN-09** · P3 · S — **Ingredientes:** dos botones para lo mismo y «food cost».
+- [x] **MEN-09** · P3 · S — **Ingredientes:** dos botones para lo mismo y «food cost».
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto con T-09 (un solo «+ Nuevo insumo») y T-14 (sin «food cost»).
 
-- [ ] **MEN-10** · P2 · S — **Inventario en el teléfono:** el nombre del platillo se
+- [x] **MEN-10** · P2 · S — **Inventario en el teléfono:** el nombre del platillo se
   corta detrás de los controles (− 26 + ⏱ ⚙); cifras 2+1 (T-06).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** La fila de Inventario se parte en dos renglones cuando los controles no caben: el nombre del platillo ya no se corta.
 
-- [ ] **MEN-11** · P3 · S — **Excel/PDF en una fila propia** sobre la lista
+- [x] **MEN-11** · P3 · S — **Excel/PDF en una fila propia** sobre la lista
   (Platillos, Clientes). Un botón «Exportar» junto a la acción principal.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** `components/admin/export-menu.tsx`: un solo «Exportar» con menú (Excel / PDF) en la fila de herramientas de Platillos y de Clientes, en vez de una fila propia.
 
 - [x] **MEN-12** · P2 · S — **Marketing — platillos sin foto.** Sin foto la carta
   pierde pedidos. Contador «4 platillos sin foto» con acceso directo (en Hoy ›
@@ -558,21 +584,25 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   teléfono, orden por gasto/última visita, y «3 pedidos · Q88.50».
   ✅ **Hecho 2026-10-02 (Fase 4).** Buscador por nombre o teléfono y orden (Última visita · Más gasto · Más pedidos · Nombre) en la URL (`?q=&orden=`), porque la lista se pagina en el servidor; abrir un cliente o pasar de página conserva la búsqueda. En el teléfono, cada fila dice «3 pedidos · Q88.50 · último 22 sep» en vez de dos números sueltos. `lib/customer-sort.ts` aparte para no meter el cliente de Supabase con service role en el navegador. Probado: «kiosko» y «5550» (teléfono) encuentran a quien deben.
 
-- [ ] **CLI-02** · P2 · S — **Lealtad:** el aviso «Configura las tasas del programa
+- [x] **CLI-02** · P2 · S — **Lealtad:** el aviso «Configura las tasas del programa
   para empezar» aparece aunque los campos ya muestran 1/10/100 (no se sabe si está
   activo o no); dobles espacios alrededor de «Recompensas» en el interruptor; dos
   párrafos largos de letra pequeña; guardar pequeño a la izquierda (T-08).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** El aviso dice lo que falta («todavía no está activo: guarda las tasas, aunque te sirvan las que vienen») y la barra de guardar sale aunque no se toque nada («Activar el programa», sin pedir confirmación al salir). La letra pequeña de quién acumula puntos va plegada. Los dobles espacios y el guardar pequeño ya se arreglaron en la Fase 3.
 
-- [ ] **CLI-03** · P2 · S — **Cupones:** el formulario «Crear cupón» está siempre
+- [x] **CLI-03** · P2 · S — **Cupones:** el formulario «Crear cupón» está siempre
   abierto aunque arriba hay «+ Nuevo cupón» (T-09).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto con T-09 (Fase 3).
 
-- [ ] **CLI-04** · P2 · S — **Encuestas:** las reseñas tienen scroll propio dentro
+- [x] **CLI-04** · P2 · S — **Encuestas:** las reseñas tienen scroll propio dentro
   de la tarjeta (scroll dentro de scroll en el teléfono); barras café oscuro;
   aviso morado (T-18, T-19).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Sin scroll dentro de la tarjeta: cinco reseñas y «Ver todas (N)». Las barras y el aviso ya se arreglaron (T-18, T-19).
 
-- [ ] **CLI-05** · P3 · S — **Reservaciones / Lista de espera:** «Nueva
+- [x] **CLI-05** · P3 · S — **Reservaciones / Lista de espera:** «Nueva
   reservación» y «Agregar grupo» son pestañas, no botones (T-09); estados vacíos
   distintos entre las dos.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto con T-09 y T-17.
 
 - [x] **CLI-06** · P3 · M — **Marketing — volver a traer clientes.** Hoy solo se
   exportan. Ideas: «Escribir por WhatsApp» desde la fila (wa.me), y un filtro «no
@@ -592,19 +622,23 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 - [ ] **NEG-02** · P2 · M · ⏸️ D-3 — **Resumen repite Hoy.** Proponer periodo
   (semana/mes) y comparación con el periodo anterior.
 
-- [ ] **NEG-03** · P3 · S — **Analítica:** rótulos con paréntesis («Pedidos válidos
+- [x] **NEG-03** · P3 · S — **Analítica:** rótulos con paréntesis («Pedidos válidos
   (31 con cancelados)», «Franja pico (día fuerte: Vie)»); «Aplicar» negro y el
   periodo elegido naranja (dos colores para el mismo control).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Rótulos sin paréntesis («Pedidos válidos» con «de 31 en total» debajo, «Cancelados», «Hora pico» con «Día más fuerte: vie»); «Aplicar» en botón neutro, así el único color es el periodo elegido.
 
-- [ ] **NEG-04** · P2 · S — **Caja en el teléfono:** el paso 3 «Propinas» se corta
+- [x] **NEG-04** · P2 · S — **Caja en el teléfono:** el paso 3 «Propinas» se corta
   por la derecha; el campo «turno» metido en la línea de la fecha parece roto;
   hueco vacío antes de «Cortes recientes»; «GASTOS DE HOY» vs «Cortes recientes».
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** En el teléfono el turno baja a su propio renglón («turno (opcional)») y los tres pasos caben enteros sin las rayitas entre ellos; «Cortes recientes» con el mismo rótulo que «Gastos de hoy». El hueco antes de «Cortes recientes» es el sitio del botón «Siguiente» fijo abajo.
 
 - [ ] **NEG-05** · P3 · S — **Gráficas sin valores**: ni eje ni cifra al tocar una
   barra; ejes a 7,5–9 px.
+  🔄 **Parcial 2026-10-03:** ejes y rótulos a 11 px (T-21) y colores comunes (T-19). Falta enseñar el valor al tocar una barra en el teléfono.
 
-- [ ] **NEG-06** · P2 · S — **«Cerrar la caja del día»** aparece al final de
+- [x] **NEG-06** · P2 · S — **«Cerrar la caja del día»** aparece al final de
   Finanzas como enlace a Caja, que ya es una pestaña al lado: sobra.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Fuera el enlace «Cerrar la caja del día» al final de Finanzas: Caja es la pestaña de al lado.
 
 ---
 
@@ -629,10 +663,11 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   operación?) → «Guardar horario»; ayuda con «badge» y «checkout».
   ✅ **Hecho 2026-10-02 (Fase 1).** Botón «Guardar horario»; ayuda sin «badge» ni «checkout».
 
-- [ ] **AJU-04** · P2 · S — **Perfil: una tarjeta por campo** (6 tarjetas para 6
+- [x] **AJU-04** · P2 · S — **Perfil: una tarjeta por campo** (6 tarjetas para 6
   campos); el ejemplo de WhatsApp es una lista de formatos que se corta; la
   pantalla se llama «Perfil» en la barra, «Información» en el encabezado y «Perfil
   del negocio» en Ajustes.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto en la Fase 3 (una tarjeta, ejemplo de WhatsApp corto) y la barra ahora dice «Perfil del negocio», como en Ajustes.
 
 - [x] **AJU-05** · P1 · M — **Salón:** la barra dice «Ajustes»; en el teléfono las
   mesas del plano **salen encimadas** (1–5 superpuestas, con sus «×» chocando):
@@ -651,10 +686,11 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   pedir», y cartel/tarjeta de mesa para imprimir (A6, pegatina, PNG para redes).
   ✅ **Hecho 2026-10-02 (Fase 6).** El QR general lleva tu logo al centro (QR con corrección alta `ecc=H`) y la pantalla ofrece «Tarjeta para redes (PNG)» 1080×1350 —nombre, QR, «Escanea para ver el menú y pedir» y el enlace— y «Cartel para imprimir (PDF, A6)» en hoja A5 con línea de corte (`lib/documents/qr-art.ts`, que también usan los QR de mesa). Fondo claro y acento solo como detalle, por D-4. Verificado sin logo (en local ningún restaurante tiene y el proxy de logos solo acepta HTTPS); si el logo no carga, el recuadro se oculta.
 
-- [ ] **AJU-08** · P2 · S — **Zona de entrega** con el mapa apagado es un
+- [x] **AJU-08** · P2 · S — **Zona de entrega** con el mapa apagado es un
   interruptor y un botón enorme «Guardar ubicación y radio»; el icono del aviso
   queda en su propia línea. Ver N-03.
   🔄 **Parcial 2026-10-02:** ahora tiene las zonas debajo del mapa. Quedan los dos botones grandes de guardar (va con T-08) y el icono del aviso en su propia línea.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto: barra de guardado única (T-08) y aviso con el icono en línea (T-18).
 
 - [x] **AJU-09** · P2 · S — **Pedidos y cobro: «Formato de números» pide escribir
   «es-GT».** Selector con ejemplo («Guatemala — Q1,234.50»).
@@ -668,9 +704,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   datos (vende mucho más la plantilla).
   ✅ **Hecho 2026-10-02 (Fase 4).** Galería en dos columnas en el teléfono con la miniatura reducida y recortada en cuadrado (sin la descripción), las miniaturas con el nombre del restaurante (también en Mi cuenta › Nuevo restaurante, con el nombre que se va escribiendo) y un botón flotante «Ver cómo queda» que baja a la vista previa (y «Ver» dentro de la barra de guardar). La pantalla pasó de ~12.800 a 3.712 px en el teléfono.
 
-- [ ] **AJU-11** · P2 · S — **La PC del local:** «hace 2004 h» (T-02); los dos
+- [x] **AJU-11** · P2 · S — **La PC del local:** «hace 2004 h» (T-02); los dos
   enlaces del final llevan títulos de 22 px en Unbounded, más grandes que los
   títulos de la pantalla; jerga («agente», «preview:», ««documento»»).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «hace 2004 h» y los títulos grandes ya estaban (T-02, T-10). Fuera la jerga: «agente» → «la PC principal», «preview:» → «Simulador en pantalla (para probar)», «documento» → «en hoja normal (para probar)».
 
 - [x] **AJU-12** · **P1** · M — **Personal:** la bitácora enseña claves crudas
   (T-15) y ~50 filas sin «ver más»; «Últimos accesos» repite «Cuenta sin nombre»
@@ -687,24 +724,28 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   🔄 **Parcial 2026-10-02:** dinero, fechas («1 nov 2026», «Vence el 1 sept 2026»), «Mensualidad septiembre de 2026» y plurales, hechos. Falta lo de pagar con cobros vencidos y las filas del historial en el teléfono.
   ✅ **Hecho 2026-10-02 (Fase 2).** Con cobros pendientes: bloque «Cómo pagar» con las instrucciones que Leogin escribe en Super › Configuración › Soporte (nueva clave `payment_instructions` en `platform_settings`, sin migración) y botón «Enviar comprobante de pago» por WhatsApp con el monto y el restaurante ya escritos. Historial en dos renglones en el teléfono; «1 nov 2026». Visto con instrucciones de prueba (luego borradas).
 
-- [ ] **AJU-14** · P2 · S — **Funciones:** conteos que no cuadran (N-05),
+- [x] **AJU-14** · P2 · S — **Funciones:** conteos que no cuadran (N-05),
   insignias caducas (N-07), enlaces de 17 px, «Activado para tu restaurante» en
   verde metido en medio de una descripción.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «Activado para ti» como etiqueta junto al nombre, no en verde dentro de la descripción. Conteos, insignias y enlaces ya estaban (N-05, N-07, T-20).
 
 - [ ] **AJU-15** · P1 · S · ⏸️ D-6 — **WhatsApp:** le enseña al dueño «Detalle
   técnico: falta WHATSAPP_TOKEN_KEY» y un formulario de la API de Meta que no
   puede funcionar sin esa configuración del servidor.
   🔄 **Parcial 2026-10-02:** sin la clave del servidor ya no se enseña el formulario de Meta ni el «Detalle técnico»; el aviso dice que se escriba a soporte. Esconder la pantalla entera sigue pendiente de D-6.
 
-- [ ] **AJU-16** · P2 · S — **Repartidores:** barra «Panel», selector nativo del
+- [x] **AJU-16** · P2 · S — **Repartidores:** barra «Panel», selector nativo del
   sistema, formulario siempre abierto. Ver N-02/N-03.
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Selector del panel en vez del nativo para «Usuario del personal»; barra y formulario ya estaban (T-10, T-09).
 
-- [ ] **AJU-17** · P3 · S — **Copia de tus datos:** bien resuelta. Solo el título
+- [x] **AJU-17** · P3 · S — **Copia de tus datos:** bien resuelta. Solo el título
   cortado en el teléfono (T-10).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto con T-10 («Copia de datos»).
 
-- [ ] **AJU-18** · P2 · S — **Interruptor «Menú también en inglés» suelto en la
+- [x] **AJU-18** · P2 · S — **Interruptor «Menú también en inglés» suelto en la
   portada de Ajustes** (bien que sea un interruptor, pero sin decir cuántos
   platillos están traducidos: «3 de 10 platillos traducidos»).
+  ✅ **Hecho 2026-10-03 (detalles P2/P3).** «1 de 6» junto al interruptor de «Menú también en inglés» (platillos a la vista con nombre en inglés), en ámbar si está encendido y faltan.
 
 - [x] **AJU-19** · **P1** · S — **La tarifa normal de envío no se podía configurar.**
   (Encontrado al reescribir la ayuda.) `deliveryFee` existía en el tema con 0 por
@@ -987,3 +1028,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-02 | **Fase 3 — piezas comunes.** T-07, T-08, T-10, T-11, T-12, T-16, T-17, T-18 hechos; T-05 y T-09 parciales. Piezas nuevas: `ui/confirm-dialog.tsx`, `admin/save-bar.tsx`, `admin/page-tabs.tsx`, `admin/field-label.ts`, `useValueDirty`. De paso: interruptor de Lealtad con la frase partida, enlace de Repartidores que abría huecos, «Q1,495.0 / 0» partido en el Inicio del Super. Verificado: `tsc`, `eslint`, 774 pruebas, build de producción, capturas claro/oscuro de 23 pantallas del panel y 8 del Super, guardar/salir y borrar probados en vivo; base local devuelta a su estado. | `70fa42c` |
 | 2026-10-02 | **Fase 4 — pantallas largas y buscadores.** MEN-01 (buscador y filtros en Platillos), CLI-01 (buscar y ordenar Clientes en el servidor), AJU-10 (Personalizar de ~12.800 a 3.712 px en el teléfono, miniaturas con tu nombre, «Ver cómo queda»), AJU-05 (mesas del plano sin encimarse, PDF con todos los QR), N-02 (Repartidores y WhatsApp con sitio en Ajustes), PED-01 (cifras en una franja en el teléfono). Piezas nuevas: `.adm-search`, `StatStrip`, `lib/customer-sort.ts`, `lib/documents/table-qr-sheet.ts`, `aria-label` en `Select`. Tablero recontado desde las casillas (la Fase 3 no había sumado). Verificado: `tsc`, `eslint`, 774 pruebas, build, capturas claro/oscuro, buscadores probados en vivo y el PDF generado y revisado (4 hojas, 405 KB). | `434c942` |
 | 2026-10-02 | **Fase 6 (lo que no depende de ti) + cierre de T-09.** CAT-12 (404 con salida), CAT-11 (schema.org en el menú + `es_GT`), MEN-12 (aviso de platillos sin foto en Hoy), CLI-06 (WhatsApp desde la ficha y «Sin pedir hace +30 días»), AJU-07 (QR con logo, tarjeta para redes y cartel A6), HOY-03 (comparación bajo «Ventas»), T-09 (Reservaciones y Lista de espera sin pestaña de crear). Pendientes por necesitar algo tuyo: WEB-01 (elegir analítica y crear la cuenta), WEB-02/03 (testimonios y capturas con permiso), CAT-13 (qué sugerir). Verificado: `tsc`, `eslint`, pruebas (nuevas: datos estructurados e inyección), build, recorrido con Playwright (404, JSON-LD, filtros, WhatsApp, descargas del QR revisadas a ojo). | `fba2fcf` |
+| 2026-10-03 | **Detalles P2/P3 del panel.** Transversal (T-04, T-19, T-20, T-21, T-24, T-25), armazón (N-06, N-07), Hoy (HOY-02, HOY-04), Pedidos/Cocina/Mesas (PED-03, 04, 05, 07, 08, 10, 12), Menú (MEN-04…MEN-11), Clientes (CLI-02…05), Negocio (NEG-03, 04, 06) y Ajustes (AJU-04, 08, 11, 14, 16, 17, 18). Piezas nuevas: `.tap44`, tokens de gráfica, `.adm-w-read/-overview`, `lib/order-number.ts`, `export-menu.tsx`. Parciales: NEG-05, PED-11. Verificado: `tsc`, `eslint`, 781 pruebas, build, capturas claro/oscuro de 20 pantallas. | ver commit |

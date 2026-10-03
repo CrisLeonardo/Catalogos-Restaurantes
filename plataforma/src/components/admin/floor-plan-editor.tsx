@@ -630,6 +630,7 @@ export default function FloorPlanEditor({
                   <span style={{ fontSize: small ? 16 : 20, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
                   <span
                     role="button"
+                    className="tap44"
                     aria-label={`Quitar mesa ${tb.n}`}
                     tabIndex={0}
                     onPointerDown={(e) => e.stopPropagation()}

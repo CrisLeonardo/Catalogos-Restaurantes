@@ -66,6 +66,7 @@ import { remainingQuantity, type OrderWithItems, type TableOccupancy, type Table
 import type { TableSeating } from '@/lib/db/table-sessions';
 import { updateSeating } from '@/lib/actions/table-sessions';
 import type { PanelCurrency } from '@/components/admin/order-card';
+import { shortOrderNumber } from '@/lib/order-number';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -1359,7 +1360,7 @@ export default function WaiterPanel({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{order.order_number}</span>
+                        <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }}>{shortOrderNumber(order.order_number)}</span>
                         <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL_SHORT[order.status]}</span>
                         {clk && now != null && (
                           <span className={`chip ${clockChipClass(elapsedMs / 60000, clk)}`} title={clk.label}>

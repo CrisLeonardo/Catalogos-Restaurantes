@@ -51,7 +51,7 @@ export default function WhatsAppPanel({
   };
 
   return (
-    <div style={{ maxWidth: 620 }}>
+    <div className="adm-w-read">
       {/* El título lo pone la barra («WhatsApp»); aquí se repetía (T-10). */}
       <p style={{ fontSize: 13, color: 'var(--u-text-3)', marginBottom: 20 }}>
         Conecta el número de tu negocio para avisarle a cada cliente cómo va su

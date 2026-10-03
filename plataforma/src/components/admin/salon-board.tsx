@@ -679,11 +679,18 @@ export default function SalonBoard({
         </div>
       )}
 
+      {/* La explicación, plegada: leída una vez sobra, y fija ocupaba sitio
+          en cada visita (auditoría 2026-10-02, PED-12). */}
       {view !== 'plano' && filtro === 'todas' && (
-        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
-          Las mesas se ordenan por urgencia, no por número. Una mesa libre no dice nada: solo se pinta la que
-          necesita a alguien ahora.
-        </p>
+        <details className="salon-help" style={{ fontSize: 12.5, color: 'var(--u-text-4)', lineHeight: 1.5, padding: '0 2px' }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--u-text-3)', fontWeight: 600, width: 'fit-content' }}>
+            ¿En qué orden van las mesas?
+          </summary>
+          <p style={{ margin: '6px 0 0' }}>
+            Por urgencia, no por número. Una mesa libre no dice nada: solo se pinta la que
+            necesita a alguien ahora.
+          </p>
+        </details>
       )}
     </div>
   );

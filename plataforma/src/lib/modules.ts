@@ -65,8 +65,11 @@ export interface ModuleMeta {
   navSection: 'Operación' | 'Negocio';
   /** Grupo del panel de módulos. */
   group: ModuleGroup;
-  /** Chip visual en la tarjeta. */
+  /** Chip visual en la tarjeta. «NUEVO» solo se enseña los primeros
+   *  `NEW_BADGE_DAYS` días desde `since` (ver `moduleBadge`). */
   badge?: 'POPULAR' | 'NUEVO';
+  /** Fecha de alta de la función ("YYYY-MM-DD"), para que «NUEVO» caduque. */
+  since?: string;
   /** Visibilidad inicial cuando el restaurante aún no lo ha tocado. */
   defaultOn?: boolean;
   /** Necesita configuración de Leogin: solo se activa gestionado (no self-service). */
@@ -87,6 +90,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
     navSection: 'Operación',
     group: 'atencion',
     badge: 'NUEVO',
+    since: '2026-06-23',
   },
   {
     key: 'lista_espera',
@@ -98,6 +102,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
     navSection: 'Operación',
     group: 'atencion',
     badge: 'NUEVO',
+    since: '2026-07-22',
   },
   {
     key: 'llamada_mesero',
@@ -120,6 +125,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
     navSection: 'Negocio',
     group: 'atencion',
     badge: 'NUEVO',
+    since: '2026-06-23',
   },
 
   /* ── Crecimiento y fidelidad ──────────────────────────── */
@@ -133,6 +139,7 @@ export const ACTIVATABLE_MODULES: ModuleMeta[] = [
     navSection: 'Negocio',
     group: 'crecimiento',
     badge: 'NUEVO',
+    since: '2026-06-23',
   },
   {
     key: 'loyalty',
@@ -278,4 +285,16 @@ export function showsInPanel(
   key: ActivatableModuleKey,
 ): boolean {
   return isManaged(modules, key);
+}
+
+/* «NUEVO» caduca (auditoría 2026-10-02, N-07): en octubre seguían marcadas
+   como nuevas Reservaciones, Encuestas y Cupones, que son de junio. Una
+   insignia que nunca se va deja de decir nada. «POPULAR» no caduca. */
+export const NEW_BADGE_DAYS = 60;
+
+export function moduleBadge(m: { badge?: 'POPULAR' | 'NUEVO'; since?: string }, now: number = Date.now()): 'POPULAR' | 'NUEVO' | undefined {
+  if (m.badge !== 'NUEVO') return m.badge;
+  if (!m.since) return undefined;
+  const t = Date.parse(m.since + 'T00:00:00Z');
+  return Number.isFinite(t) && now - t <= NEW_BADGE_DAYS * 86_400_000 ? 'NUEVO' : undefined;
 }
