@@ -435,28 +435,38 @@ function OrdersPanelInner({
               No hay pedidos en curso{typeFilter !== 'ALL' ? ' de este tipo' : ''}.
             </Card>
           ) : (
-            STAGES.map((stage) => {
-              const orders = visibleActive.filter((o) => stage.statuses.includes(o.status));
-              if (orders.length === 0) return null;
-              return (
-                <section key={stage.id} style={{ marginBottom: 26 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                    {/* Encabezado de grupo como el resto del panel, no en letra de
-                        cartel en mayúsculas (auditoría 2026-10-02, PED-04/T-10). */}
-                    <h2 style={{ fontSize: 15.5, fontWeight: 650, color: 'var(--u-text)', margin: 0 }}>
-                      {stage.title}
-                      <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
-                        {orders.length}
-                      </span>
-                    </h2>
-                    <span className="adm-label">{stage.hint}</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12 }}>
-                    {orders.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
-                  </div>
-                </section>
-              );
-            })
+            /* El tablero (PED-06, maqueta D-2): en escritorio, una columna por
+               etapa —Por enviar · En cocina · Listos— y el turno entero a la
+               vista sin bajar; antes eran grupos apilados en una página de
+               2.900 px. En el teléfono y la tablet, los grupos uno debajo de
+               otro, como siempre (el corte vive en admin.css). */
+            <div className="orders-board">
+              {STAGES.map((stage) => {
+                const orders = visibleActive.filter((o) => stage.statuses.includes(o.status));
+                return (
+                  <section key={stage.id} className="orders-col" data-empty={orders.length === 0 ? '1' : '0'}>
+                    <div className="orders-col-head">
+                      {/* Encabezado de grupo como el resto del panel, no en letra de
+                          cartel en mayúsculas (auditoría 2026-10-02, PED-04/T-10). */}
+                      <h2 style={{ fontSize: 15.5, fontWeight: 650, color: 'var(--u-text)', margin: 0 }}>
+                        {stage.title}
+                        <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--u-text-3)', fontFamily: 'var(--ui-font-mono)' }}>
+                          {orders.length}
+                        </span>
+                      </h2>
+                      <span className="adm-label">{stage.hint}</span>
+                    </div>
+                    {orders.length === 0
+                      ? <div className="orders-col-empty">Nada por aquí</div>
+                      : (
+                        <div className="orders-col-cards">
+                          {orders.map((order) => <OrderCard key={order.id} order={order} {...cardProps} />)}
+                        </div>
+                      )}
+                  </section>
+                );
+              })}
+            </div>
           )}
 
           {servedOpen.length > 0 && (
@@ -502,12 +512,14 @@ function OrdersPanelInner({
           )}
         </div>
 
-        {/* Right: gráfica + top + export */}
+        {/* Debajo del tablero: gráfica + top + exportar. Eran una columna de
+            300 px a la derecha que le quitaba sitio al tablero (PED-06); ahora
+            van lado a lado cuando caben, como en Hoy. */}
         <aside style={{ width: '100%', minWidth: 0 }}>
           {/* Las MISMAS dos piezas que pinta la portada Hoy. Antes esta
               pantalla tenía sus propias copias, con el aspecto anterior al
               rediseño. */}
-          <div className="mb-3 flex flex-col gap-3">
+          <div className="orders-aside">
             <SalesTrendWidget
               series={stats.series}
               totalLast14={stats.totalLast14}
@@ -517,7 +529,7 @@ function OrdersPanelInner({
             />
             {stats.topToday.length > 0 && <TopTodayWidget items={stats.topToday} />}
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex max-w-[400px] gap-2">
             <Button
               onClick={downloadExcel}
               disabled={isExportingXls || isExportingPdf}

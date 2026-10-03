@@ -23,7 +23,7 @@
    la cuenta al lado, el mesero entra en el ciclo de la mesa.
    ============================================================ */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 /* `Link` es aqui `PanelLink`: traduce las rutas del panel al origen desde el
    que se sirve la pagina. Lo que no es del panel pasa de largo sin tocarse.
    Ver components/admin/panel-link.tsx. */
@@ -31,7 +31,7 @@ import Link from '@/components/admin/panel-link';
 import { Icon, type IconName } from '@/components/icons';
 import { FIXTURE_META, fixtureLabel } from '@/components/admin/salon/fixtures';
 import { TableCard, TableRow, TablePin, type SalonTable } from '@/components/admin/salon/pieces';
-import { TONE_LABEL, TONE_ORDER } from '@/lib/table-state';
+import { TONE_LABEL, TONE_ORDER, tableTone } from '@/lib/table-state';
 import type { FloorPlan } from '@/lib/theme/defaults';
 
 /** Las tres formas de mirar el mismo salón. */
@@ -222,16 +222,37 @@ export default function SalonCanvas({
           {cambio && <BotonReordenar onClick={reordenar} />}
           {view === 'fichas' ? (
             <div className="salon-grid">
-              {vistas.map((t) => (
-                <TableCard
-                  key={t.n}
-                  t={t}
-                  onOpen={() => onOpen(t.n)}
-                  onAction={() => onAction(t)}
-                  disabled={disabled(t)}
-                  busy={busyTable === t.n}
-                />
-              ))}
+              {vistas.map((t, i) => {
+                const libre = tableTone(t.state) === 'libre';
+                /* En el teléfono las libres van en rejilla de cinco (PED-09,
+                   opción A de la maqueta D-2): diecisiete renglones de 60 px
+                   para enseñar un número eran ~1.000 px de scroll vacío. Las
+                   libres ya vienen al final (orden por urgencia); el rótulo
+                   va delante de la primera y en PC no se pinta. */
+                const primeraLibre = libre && (i === 0 || tableTone(vistas[i - 1].state) !== 'libre');
+                return (
+                  <Fragment key={t.n}>
+                    {primeraLibre && (
+                      <div className="salon-libres-head">
+                        <span>
+                          Libres{' '}
+                          <span className="t-mono" style={{ color: 'var(--u-text-4)', fontWeight: 500 }}>
+                            {vistas.length - i}
+                          </span>
+                        </span>
+                        <span style={{ fontSize: 12.5, fontWeight: 400, color: 'var(--u-text-3)' }}>Toca una para sentar</span>
+                      </div>
+                    )}
+                    <TableCard
+                      t={t}
+                      onOpen={() => onOpen(t.n)}
+                      onAction={() => onAction(t)}
+                      disabled={disabled(t)}
+                      busy={busyTable === t.n}
+                    />
+                  </Fragment>
+                );
+              })}
             </div>
           ) : (
             <div

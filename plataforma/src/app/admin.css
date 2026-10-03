@@ -766,7 +766,32 @@
 .btn-tinted.chip-solid:disabled { opacity: 0.55; }
 
 /* Pedidos: board (flex: 1) + sidebar de gráfica (300 px fijo) */
-.orders-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+/* Pedidos › En vivo (PED-06, maqueta D-2). El tablero de pedidos ocupa todo
+   el ancho; la gráfica y «Lo que más sale» van DEBAJO (antes, una columna de
+   300 px a la derecha). En escritorio, una columna por etapa; más estrecho,
+   los grupos apilados y sin las etapas vacías. */
+.orders-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.orders-aside { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; align-items: start; }
+.orders-col { margin-bottom: 26px; }
+.orders-col[data-empty="1"] { display: none; }
+.orders-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.orders-col-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.orders-col-empty { display: none; }
+@media (min-width: 1280px) {
+  .orders-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; margin-bottom: 26px; }
+  .orders-col, .orders-col[data-empty="1"] {
+    display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 12px;
+    border-radius: var(--radius-xl); background: color-mix(in srgb, var(--u-text) 3.5%, transparent);
+  }
+  /* En una columna de ~370 px el título y su pista no caben en un renglón:
+     la pista baja debajo del título. */
+  .orders-col-head { margin: 0; padding: 2px 4px; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .orders-col-cards { display: flex; flex-direction: column; gap: 10px; }
+  .orders-col-empty {
+    display: block; padding: 28px 12px; text-align: center; font-size: 13.5px; color: var(--u-text-4);
+    border: 1px dashed var(--u-hair-2); border-radius: var(--radius-lg);
+  }
+}
 /* ── Ergonomía móvil/tablet (lanzamiento 2026-06) ─────────────── */
 .super-nav-scroll::-webkit-scrollbar { display: none; }
 
@@ -782,7 +807,6 @@
   .floor-edit-canvas { --floor-token: 56px; }
   .floor-map-vp { --floor-pin: 58px; }}
 
-@media (max-width: 1100px) { .orders-grid { grid-template-columns: 1fr; }}
 
 /* Sección que rompe el max-width del layout (centrado de 800px) */
 .bleed { width: 100vw; margin-left: calc(50% - 50vw); padding: 0 20px; }
@@ -1144,15 +1168,40 @@
      en dos columnas de 46%. */
   .salon-top { flex-direction: column; gap: 10px; }
   .salon-summary { width: 100%; flex-basis: auto; }
-  .salon-summary > div { flex: 0 0 46%; min-width: 0; padding: 11px 14px; }
-  .salon-summary-value { font-size: 20px; }
   .salon-seg { display: flex; width: 100%; }
   /* 44 y no 38: este bloque va DESPUÉS de la regla de `pointer: coarse`,
      y a igual especificidad gana el último. Con 38 aquí, el teléfono
      —que también es puntero grueso— perdía los 44 px que esa regla le
      acababa de dar. Los dos sitios dicen lo mismo a propósito. */
   .salon-seg > button { flex: 1; min-height: 44px; }
-  .salon-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }}
+  /* Las mesas libres en rejilla de cinco (PED-09, opción A de la maqueta
+     D-2): las fichas ocupadas a todo el ancho, cada libre en su celda, con
+     solo el número (el nombre y las sillas no caben en 60 px; el lector de
+     pantalla los sigue diciendo). */
+  .salon-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 8px; }
+  .salon-grid > :not(.salon-hueco) { grid-column: 1 / -1; }
+  .salon-grid > .salon-hueco { min-height: 56px; padding: 0; justify-content: center; align-items: center; }
+  .salon-grid > .salon-hueco > :not(.t-mono) { display: none; }
+  .salon-grid > .salon-hueco > .t-mono { font-size: 18px !important; }
+  .salon-libres-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin-top: 8px; font-size: 15px; font-weight: 600; color: var(--u-text);
+  }
+  /* La tira de cifras, a UNA línea como en En vivo (maqueta D-2): cifra y
+     rótulo en el mismo renglón. Las que filtran siguen siendo botones. */
+  .salon-summary > div,
+  .salon-summary > button {
+    flex: 0 0 auto; min-width: 0; display: flex; align-items: baseline; gap: 6px;
+    padding: 0 14px; height: 50px; align-items: center;
+  }
+  .salon-summary-value { order: -1; margin-top: 0; font-size: 17px; }
+  .salon-summary-label { font-size: 13px; }
+  .salon-summary > div > div:nth-child(3),
+  .salon-summary > button > div:nth-child(3) { display: none; }
+}
+/* Fuera del teléfono el rótulo de libres no existe: ahí las libres son
+   celdas de la misma rejilla que las ocupadas. */
+@media (min-width: 768px) { .salon-libres-head { display: none; } }
 
 /* ── Ficha de mesa ────────────────────────────────────────────
    Tres estados y nada más: te necesita (lo único con color), en
@@ -1905,6 +1954,13 @@
 }
 .sv-hs::-webkit-scrollbar { display: none; }
 .sv-hs > * { flex-shrink: 0; scroll-snap-align: start; }
+/* Los filtros del salón se desvanecen en el borde: «Falta…» se cortaba seco
+   y no se sabía que había más (PED-13, maqueta D-2). */
+.sv-hs-fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  padding-right: 24px;
+}
 
 /* Lo que se desplaza en vertical: sin barra visible, pero con inercia. */
 .sv-vs {
@@ -2129,6 +2185,11 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sv-mesa-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sv-mesa-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sv-mesa-row + .sv-mesa-row { margin-top: 3px; }
+.sv-mesa-row > :first-child { flex: 1; min-width: 0; }
+.sv-mesa-row > :not(:first-child) { flex-shrink: 0; }
+.sv-mesa-row .sv-mesa-sub { margin-top: 0; }
 .sv-mesa-total { font-family: var(--ui-font-mono); font-size: 13px; font-weight: 600; }
 
 /* ── La mesa, en rejilla (móvil y vista de fichas) ──────────── */

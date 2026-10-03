@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** al 2026-10-03, 127 de 147 hallazgos hechos (los 6 P0 incluidos). D-5 decidido y hecho; D-2 tiene maqueta esperando tu visto bueno (https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP). Lo demás espera una decisión tuya (⏸️: D-3, D-4, D-6…D-9), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo (T-22, T-26, REN-05); ver la Bitácora al final.
+> **Estado:** al 2026-10-03, 131 de 147 hallazgos hechos (los 6 P0 incluidos). D-2 y D-5 decididos y hechos. Lo que queda espera una decisión tuya (⏸️: D-3, D-4, D-6…D-9), contenido tuyo (WEB-01/02/03, CAT-13) o es trabajo continuo (T-22, T-26, REN-05); ver la Bitácora al final.
 
 ---
 
@@ -42,7 +42,7 @@
 | 1 | Transversal — sistema de diseño y textos | 26 | 23 | 0 |
 | 2 | Panel · Armazón y navegación | 10 | 10 | 1 |
 | 3 | Panel · Hoy | 5 | 4 | 1 |
-| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 14 | 10 | 4 |
+| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 14 | 14 | 0 |
 | 5 | Panel · Menú | 12 | 12 | 0 |
 | 6 | Panel · Clientes | 6 | 6 | 0 |
 | 7 | Panel · Negocio | 6 | 5 | 1 |
@@ -52,9 +52,9 @@
 | 11 | Mi cuenta (grupo) | 5 | 5 | 0 |
 | 12 | Web pública y marketing | 9 | 6 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 7 | 1 |
-| | **Total** | **147** | **127** | **11** |
+| | **Total** | **147** | **131** | **7** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 28 P1, 53 P2 y 40 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 62 · **P3** 45. Hechos: los **6 P0**, 30 P1, 55 P2 y 40 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -109,6 +109,7 @@ Estas cambian el trabajo; el resto se puede hacer sin preguntar.
   libres en rejilla en el teléfono)? Si es lo segundo, lo haría primero como
   maqueta para que la apruebes. (PED-02, PED-06, PED-09, PED-13)
   🎨 **2026-10-03: «propón la maqueta primero».** Maqueta publicada: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP — antes/después de la tarjeta compacta (teléfono), el tablero en tres columnas (escritorio), dos opciones para las mesas libres en el teléfono (A rejilla · B plegadas; la A se parece a la tira del 09-09 que se rechazó) y tres arreglos de Tomar pedidos sin tocar tu diseño. Nada se construye hasta tu visto bueno.
+  ✅ **Decidido 2026-10-03: sí a todo; en Mesas, la opción A.** Construido: PED-02, PED-06, PED-09, PED-13.
 - **D-3 · Hoy, Pedidos y Negocio › Resumen enseñan las mismas cifras y gráficas.**
   Propuesta: **Hoy** = el pulso (avisos, cifras del día, lo que está pasando);
   **Pedidos** = solo operación, sin gráficas; **Negocio › Resumen** = semana/mes
@@ -212,6 +213,7 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   color; (e) franja con scroll horizontal (Mesas). Todo a `<Stat>/<StatGroup>`
   (`components/ui/stat.tsx`).
   🔄 **Parcial 2026-10-02 (Fase 3):** Lealtad, Proveedores y Cupones ya usan `<StatGroup>/<Stat>` (Cupones solo si hay cupones). Quedan el Super (D-8) y la franja de Mesas (D-2).
+  🔄 **2026-10-03:** la franja de Mesas, a una línea en el teléfono (D-2). Solo queda el Super (D-8).
 
 - [x] **T-06** · P1 · S — **Tres cifras en rejilla de dos = hueco.** En Hoy
   («Resumen del día»), Pedidos («Tiempos de hoy»), Inventario, Lista de espera,
@@ -456,14 +458,14 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   una línea (o plegables).
   ✅ **Hecho 2026-10-02 (Fase 4).** En el teléfono las cifras del día y los tiempos van en UNA franja que se desplaza de lado (`StatStrip`: «Q138.00 vendido hoy · 2 pedidos · 2 en curso · 1 en cocina…»); en escritorio, igual que antes. No cambia QUÉ cifras se enseñan (eso es D-3). Los filtros por tipo de servicio también quedaron en una fila.
 
-- [ ] **PED-02** · P1 · M · ⏸️ D-2 — **Tarjeta de pedido sobrecargada (~450 px en el
+- [x] **PED-02** · P1 · M · ⏸️ D-2 — **Tarjeta de pedido sobrecargada (~450 px en el
   teléfono).** El tiempo sale tres veces (encabezado del grupo, chip «38 min» y
   banda «38 min esperando.»); todo en rojo (borde, chip, banda) aunque solo sea un
   aviso → fatiga de alarma; «Entró: 02 oct 2026, 11:06 a. m.» con fecha completa en
   pedidos de hoy; «Mesa 9» dos veces (título y detalle); cuatro botones por
   tarjeta. Propuesta: un solo reloj con color por umbral, banda solo si pasa el
   doble del umbral, hora sola, «Recibo» y «Copia de comanda» en un «⋯».
-  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
+  ✅ **Hecho 2026-10-03 (D-2, como la maqueta).** La tarjeta pasa de ~410 a **238 px** en el teléfono: título con «#55» y UN reloj en el mismo renglón (verde a tiempo, ámbar al aviso, rojo al límite); los datos en un renglón a todo el ancho y separados por espacio («En local  QR en mesa  entró a las 09:56»), con la dirección solo si dice algo que el nombre no; sin el chip de estado donde el grupo ya lo dice; la banda y el borde rojos solo al **doble** del límite («Lleva 31 min listo sin entregar: el doble de lo normal»); un botón principal de 44 px y «⋯» con Recibo, Copia de comanda y Anular pedido. Repartidor, mapa, pago, notas, cupón y estaciones que no imprimieron siguen igual. Probado en claro y oscuro, con el menú abierto.
 
 - [x] **PED-03** · P2 · S — **Dos formatos de número de pedido:** «H-7» y
   «ORD-2026-00057». En Cocina «#ORD-2026-00057» a tamaño grande se corta. Mostrar
@@ -479,10 +481,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   local / Para llevar / Domicilio): una sola fila con scroll.
   ✅ **Hecho 2026-10-03 (detalles P2/P3).** Resuelto en la Fase 4: una fila que se desplaza.
 
-- [ ] **PED-06** · P2 · M · ⏸️ D-2 — **Escritorio: grupos apilados en una página de
+- [x] **PED-06** · P2 · M · ⏸️ D-2 — **Escritorio: grupos apilados en una página de
   2.900 px.** A 1440 px caben tres columnas (Por enviar · En cocina · Listos) y se
   vería todo sin mover la página.
-  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
+  ✅ **Hecho 2026-10-03 (D-2).** Desde 1.280 px, tablero en tres columnas con la pista bajo cada título y «Nada por aquí» en la vacía; «Cómo va el día» y «Lo que más sale hoy» bajan debajo, lado a lado (antes, una columna de 300 px a la derecha). Más estrecho, los grupos apilados como siempre. Visto a 1.440, 1.280 y 1.180.
 
 - [x] **PED-07** · P2 · S — **«×» rojo de 22 px para anular un plato**, pegado al
   precio: fácil de tocar sin querer en hora pico. Pasarlo al «⋯» de la tarjeta o
@@ -500,10 +502,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ### Mesas
 
-- [ ] **PED-09** · P1 · S · ⏸️ D-2 — **17 mesas libres como filas de 60 px a todo el
+- [x] **PED-09** · P1 · S · ⏸️ D-2 — **17 mesas libres como filas de 60 px a todo el
   ancho** en el teléfono: ~1.000 px de scroll vacío. En escritorio ya son una
   rejilla; en el teléfono, 4–5 por fila.
-  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
+  ✅ **Hecho 2026-10-03 (D-2, opción A).** En el teléfono las libres van en rejilla de cinco (celdas de 66 × 56 con el número) bajo «Libres 17 · Toca una para sentar»; las ocupadas siguen a todo el ancho. 17 libres = 4 filas. Y la tira de cifras de Mesas pasa a una línea (cifra y rótulo juntos), como en En vivo; las que filtran siguen filtrando.
 
 - [x] **PED-10** · P2 · S — **Recortes en el teléfono:** la tercera cifra («Sin
   cobrar Q0.») queda cortada, y la pestaña «En qué va» también. Además dos filas
@@ -526,11 +528,11 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ### Tomar pedidos
 
-- [ ] **PED-13** · P2 · S · ⏸️ D-2 — Detalles sin tocar el diseño: los platillos
+- [x] **PED-13** · P2 · S · ⏸️ D-2 — Detalles sin tocar el diseño: los platillos
   **agotados salen primero** en la rejilla (Roll de Canela, Mocha Negra) — deberían
   ir al final; filtro «Por co…» cortado; «26 min · 3 pl…» truncado en la lista de
   escritorio.
-  🎨 **Maqueta 2026-10-03** esperando tu visto bueno: https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP
+  ✅ **Hecho 2026-10-03 (D-2, sin tocar tu diseño).** La carta pone lo agotado al final también sin buscar (probado marcando «Negra Brava» agotada desde Platillos: salió la última; devuelta después). Los filtros del salón se desvanecen en el borde. Cada fila del riel en dos renglones: nombre y estado arriba, «14 min · 2 platos» y el total abajo.
 
 ---
 
@@ -1065,7 +1067,7 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
    (diálogos), T-09, T-17, T-18. Aquí es donde se nota la «armonía».
 4. ✅ **Fase 4 — Pantallas largas y buscadores. HECHA 2026-10-02.** MEN-01, CLI-01, AJU-10,
    AJU-05, AJU-12, N-02/N-03, PED-01.
-5. **Fase 5 — Servicio (con tu visto bueno, D-2).** PED-02, PED-06, PED-09, PED-13.
+5. ✅ **Fase 5 — Servicio. HECHA 2026-10-03** (maqueta aprobada, D-2). PED-02, PED-06, PED-09, PED-13.
 6. 🔄 **Fase 6 — Marketing y extras. Casi entera 2026-10-02** (faltan WEB-01/02/03 y CAT-13). WEB-01 (medir primero), WEB-02, WEB-03,
    CAT-11, CAT-12, CAT-13, AJU-07, MEN-12, HOY-03, CLI-06.
 7. **Continuo.** T-22/T-26 (escala tipográfica y componentes) pantalla a
@@ -1087,3 +1089,4 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-03 | **Detalles P2/P3 del menú público, Super, Mi cuenta, web y rendimiento.** CAT-03, 05, 06, 07, 08, 10; SUP-02, 03, 05, 06, 07, 08, 10; MIC-04, 05; WEB-04…09; REN-03, 07, 09, 10 y N-10 (sesión: reintento ante fallos de red y lectura del restaurante con llave de servicio si falla). Piezas nuevas: `lib/category-icon.ts`, `PLAN_POINTS`, `<Table data-stack>`. Pendientes con nota: CAT-09, REN-02, REN-06. Verificado: `tsc`, `eslint`, 788 pruebas (nuevas: lema, iconos), build, capturas del menú, la web, el Super y Mi cuenta, y 12 entradas seguidas al panel sin un salto. | `669bbdd` |
 | 2026-10-03 | **Cierre de lo que no depende de ti.** NEG-05 (tocar una barra dice su cifra, en todas las gráficas), PED-11 (rótulo de la cifra grande en la ficha del teléfono), REN-02 (fuera ~45 `router.refresh()` sobrantes, comprobado acción por acción), REN-04 (checkout partido y memorizado), REN-06 (`fmtCurrency`), T-23 (radios a tokens), 37 textos más a 11 px (T-21), y dos hallazgos nuevos arreglados: PED-14 («Mesa 4 · Mesa 4») y CAT-14 («Efectivo contra entrega» al recoger). Verificado: `tsc`, `eslint`, 793 pruebas, cuatro builds de producción, recorrido con Playwright (lectura de barras en panel/Super/Mi cuenta, insumo creado y borrado con una sola petición, checkout de punta a punta), capturas de 16 pantallas del panel y 4 del Super. Pedidos de prueba y cupón borrados; los 3 pedidos puestos en curso para ver Mesas, devueltos a su estado. Lo que queda (21) espera D-2…D-9, contenido tuyo o es continuo. | `a21f6af` |
 | 2026-10-03 | **D-5 hecho y maqueta de D-2.** AJU-06: QR de mesa con `/m/<slug>/<mesa>` (migración 134 con alias de slug para que un QR impreso sobreviva a un cambio de slug, y guardia para que nadie herede el slug de otro). Verificado: `tsc`, `eslint`, pruebas, build, recorrido con Playwright (slug, UUID, alias, inexistente, checkout, QR del PDF comparado píxel a píxel). D-2: maqueta publicada (https://claude.ai/artifact/JMFGLY23GhsNgDrU5KfvJP) con capturas reales del «antes» y la propuesta con los colores y letras del panel; pedidos de prueba devueltos a su estado. | `e050b0e` |
+| 2026-10-03 | **D-2 construido (maqueta aprobada; Mesas opción A).** PED-02 (tarjeta de pedido compacta, 410 → 238 px, reloj único, alarma al doble, «⋯»), PED-06 (tablero en tres columnas desde 1.280 px, gráfica y top debajo), PED-09 (libres en rejilla de cinco en el teléfono + tira de cifras de Mesas a una línea), PED-13 (agotados al final sin buscar, filtros desvanecidos, fila del riel en dos renglones). Verificado: `tsc`, `eslint`, pruebas, build, capturas en teléfono, 1.180, 1.280 y 1.440, claro y oscuro, el «⋯» abierto y un agotado de verdad en la carta; pedidos y plato de prueba devueltos a su estado. | (este commit) |

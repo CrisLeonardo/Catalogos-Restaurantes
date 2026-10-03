@@ -17,6 +17,9 @@ import { sourceBadge } from '@/lib/order-source';
 import { assignDriver } from '@/lib/actions/drivers';
 import { esHoy } from '@/lib/dates';
 import { shortOrderNumber } from '@/lib/order-number';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { fmtCurrency, type PanelCurrency } from '@/lib/money';
 
 const OrderLocationMap = dynamic(() => import('./order-location-map'), { ssr: false });
@@ -394,11 +397,28 @@ export default function OrderCard({
   const clock = stageClock(order, kitchenYellowMin, kitchenRedMin);
   const elapsedMs = clock && now != null ? now - new Date(clock.since).getTime() : 0;
   const elapsedMin = elapsedMs / 60000;
-  const clockClass = clock && now != null ? clockChipClass(elapsedMin, clock) : 'chip-neutral';
-  const isLate = clock != null && now != null && elapsedMin >= clock.redMin;
+  /* UN solo reloj, con color por umbral (PED-02, maqueta D-2): verde a
+     tiempo, ámbar al pasar el aviso, rojo al pasar el límite. Antes el
+     tiempo salía tres veces (encabezado del grupo, chip y banda) y todo se
+     teñía de rojo aunque fuera un aviso: fatiga de alarma. */
+  const clockClass = clock && now != null
+    ? (elapsedMin < clock.yellowMin ? 'chip-ok' : clockChipClass(elapsedMin, clock))
+    : 'chip-neutral';
+  /* La alarma de verdad —banda y borde rojos— solo al DOBLE del límite. */
+  const isAlarm = clock != null && now != null && elapsedMin >= clock.redMin * 2;
 
   const origin = originLabel(order);
   const type = typeLabel(order);
+  /* El estado lo dice el grupo en el que está la tarjeta («Por enviar a
+     cocina», «En cocina», «Listos»): repetido en un chip era ruido. Se
+     queda donde el grupo no lo dice: en camino, servido, cerrado. */
+  const showStatus = !['NEW', 'PREP', 'READY'].includes(order.status);
+  /* En un pedido de mesa sin nombre, nombre y dirección son los dos
+     «Mesa 4»: se dice una vez. */
+  const showAddress = !!order.address && (order.order_type === 'DELIVERY' || order.address !== order.customer_name);
+  const entro = esHoy(order.created_at, ticketFormat.timezone)
+    ? `entró a las ${ticketTime(order.created_at, ticketFormat)}`
+    : `entró el ${ticketDateTime(order.created_at, ticketFormat)}`;
 
   return (
     <div
@@ -410,38 +430,50 @@ export default function OrderCard({
         border: '1px solid var(--adm-border, var(--u-hair))',
         // Un pedido que se pasó del tiempo se ve distinto DESDE LEJOS: el borde
         // completo se tiñe. En una barra llena, nadie lee un chip pequeño.
-        boxShadow: isLate ? '0 0 0 1.5px var(--c-danger-line)' : 'var(--adm-shadow-xs, none)',
-        padding: '16px 18px',
-        display: 'flex', flexDirection: 'column', gap: 12,
+        boxShadow: isAlarm ? '0 0 0 1.5px var(--c-danger-line)' : 'var(--adm-shadow-xs, none)',
+        padding: 14,
+        display: 'flex', flexDirection: 'column', gap: 10,
         opacity: isTerminal ? 0.72 : 1,
         transition: 'opacity 200ms, box-shadow 200ms',
       }}
     >
       {/* Encabezado */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-            <span className="t-mono" style={{ fontSize: 12, color: 'var(--u-text-3)' }} title={order.order_number}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--u-text)', margin: 0, lineHeight: 1.2 }}>
+              {order.customer_name}
+            </h3>
+            <span className="t-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--u-text-4)' }} title={order.order_number}>
               {shortOrderNumber(order.order_number)}
             </span>
-            <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>
+            {showStatus && <span className={`chip ${STATUS_CHIP[order.status]}`}>{STATUS_LABEL[order.status]}</span>}
+            {/* Cronómetro de la etapa actual: en el renglón del título, así
+                los datos de abajo usan todo el ancho de la tarjeta. */}
+            {clock && (
+              <span
+                className={`chip ${clockClass}`}
+                title={`${clock.label} desde ${ticketTime(clock.since, ticketFormat)}`}
+                style={{ flexShrink: 0, marginLeft: 'auto', alignSelf: 'center', fontVariantNumeric: 'tabular-nums' }}
+              >
+                <Icon name="clock" size={11} />
+                {now == null ? '—' : fmtElapsed(elapsedMs)}
+              </span>
+            )}
           </div>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--u-text)', marginTop: 4 }}>
-            {order.customer_name}
-          </h3>
-          <p style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {/* Separados por espacio y no por «·»: si el renglón se parte, no
+              queda un punto colgando al final (cada dato ya lleva icono). */}
+          <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', marginTop: 4, display: 'flex', alignItems: 'center', columnGap: 12, rowGap: 2, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name={type.icon} size={12} style={{ display: 'inline' }} />
               {type.text}
             </span>
-            <span style={{ opacity: 0.4 }}>·</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name={origin.icon} size={12} style={{ display: 'inline' }} />
               {origin.text}
             </span>
             {order.customer_phone && order.customer_phone !== '00000000' && (
               <>
-                <span style={{ opacity: 0.4 }}>·</span>
                 <a
                   href={`tel:${order.customer_phone}`}
                   className="tap44"
@@ -451,8 +483,9 @@ export default function OrderCard({
                 </a>
               </>
             )}
+            <span style={{ whiteSpace: 'nowrap' }}>{entro}</span>
           </p>
-          {order.address && (
+          {showAddress && (
             <p style={{ fontSize: 12, color: 'var(--u-text-2)', marginTop: 3, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
               <Icon name={order.order_type === 'DELIVERY' ? 'mapPin' : 'grid'} size={12} style={{ display: 'inline', flexShrink: 0, marginTop: 2 }} />
               <span>{order.address}{order.delivery_zone ? ` · ${order.delivery_zone}` : ''}</span>
@@ -502,35 +535,24 @@ export default function OrderCard({
           )}
         </div>
 
-        {/* Cronómetro de la etapa actual */}
-        {clock && (
-          <span
-            className={`chip ${clockClass}`}
-            title={`${clock.label} desde ${ticketTime(clock.since, ticketFormat)}`}
-            style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}
-          >
-            <Icon name="clock" size={11} />
-            {now == null ? '—' : fmtElapsed(elapsedMs)}
-          </span>
-        )}
       </div>
 
-      {clock && now != null && elapsedMin >= clock.yellowMin && (
-        <div className={`note ${elapsedMin >= clock.redMin ? 'note-danger' : 'note-warn'}`}>
+      {clock && isAlarm && (
+        <div className="note note-danger">
           <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{fmtElapsed(elapsedMs)} {clock.label}.</span>
+          <span>Lleva {fmtElapsed(elapsedMs)} {clock.label}: el doble de lo normal.</span>
         </div>
       )}
 
       {/* Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid var(--u-hair)', paddingTop: 8 }}>
         {order.items.map((item) => {
           const remaining = remainingQuantity(item, order.voids ?? []);
           const voidedQty = item.quantity - remaining;
           const unitPrice = item.quantity > 0 ? Number(item.subtotal) / item.quantity : 0;
           return (
             <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: 13, color: 'var(--u-text-2)', minWidth: 0 }}>
+              <span style={{ fontSize: 14, color: 'var(--u-text-2)', minWidth: 0 }}>
                 {remaining}× {item.name_snapshot}
                 {voidedQty > 0 && (
                   <span style={{ display: 'block', fontSize: 11, color: 'var(--c-danger)', marginTop: 1, fontWeight: 600 }}>
@@ -549,7 +571,7 @@ export default function OrderCard({
                 )}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text)' }}>
+                <span className="t-mono" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--u-text)' }}>
                   {money(unitPrice * remaining, currency)}
                 </span>
                 {!isTerminal && remaining > 0 && (
@@ -607,14 +629,14 @@ export default function OrderCard({
           </div>
         )}
         <div style={{ borderTop: '1px solid var(--u-hair)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, color: 'var(--u-text-2)' }}>Total</span>
+          <span style={{ fontSize: 14, color: 'var(--u-text-3)' }}>Total</span>
           <div style={{ textAlign: 'right' }}>
             {(Number(order.discount) > 0 || Number(order.loyalty_discount) > 0) && (
               <div style={{ fontSize: 11.5, color: 'var(--u-text-4)', textDecoration: 'line-through', marginBottom: 1 }}>
                 {money(Number(order.total) + Number(order.discount) + Number(order.loyalty_discount), currency)}
               </div>
             )}
-            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--u-text)' }}>
+            <span className="t-mono" style={{ fontSize: 16, fontWeight: 700, color: 'var(--u-text)' }}>
               {money(Number(order.total), currency)}
             </span>
           </div>
@@ -662,15 +684,6 @@ export default function OrderCard({
         </div>
       )}
 
-      {/* Hora de entrada — SIEMPRE en la hora del restaurante, no la del navegador.
-          Lo de hoy, solo con la hora: «02 oct 2026, 11:06 a. m.» en cada
-          tarjeta del día era ruido (auditoría 2026-10-02, T-02). */}
-      <p style={{ fontSize: 11, color: 'var(--u-text-4)' }}>
-        {esHoy(order.created_at, ticketFormat.timezone)
-          ? `Entró a las ${ticketTime(order.created_at, ticketFormat)}`
-          : `Entró: ${ticketDateTime(order.created_at, ticketFormat)}`}
-      </p>
-
       {actionError && (
         <div className="note note-danger">
           <Icon name="alertCircle" size={14} style={{ flexShrink: 0, marginTop: 1 }} /> {actionError}
@@ -682,18 +695,20 @@ export default function OrderCard({
         </div>
       )}
 
-      {/* Acciones */}
+      {/* Acciones (PED-02): UN botón principal —lo que toca ahora— y «⋯» con
+          lo que se usa de vez en cuando (recibo, copia de comanda) y anular,
+          que es destructivo y no debe estar a un dedo del principal. */}
       {!isTerminal && (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           {next && (
             <button
               onClick={handleAdvance}
               disabled={isPending}
               className="press btn-accent"
               style={{
-                flex: 1, padding: '11px 12px',
+                flex: 1, minHeight: 44, padding: '0 12px',
                 borderRadius: 'var(--radius-lg)',
-                fontWeight: 700, fontSize: 13,
+                fontWeight: 700, fontSize: 14,
                 cursor: isPending ? 'not-allowed' : 'pointer',
                 border: 'none',
                 opacity: isPending ? 0.7 : 1,
@@ -702,14 +717,35 @@ export default function OrderCard({
               {isPending ? '…' : nextLabel(order.status, order.order_type)}
             </button>
           )}
-          <button
-            onClick={() => setVoidTarget('order')}
-            disabled={isPending}
-            className="press btn-tinted chip-danger"
-            style={{ padding: '11px 14px', fontSize: 13 }}
-          >
-            Anular
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={`Más acciones del pedido ${shortOrderNumber(order.order_number)}`}
+              className="press"
+              disabled={isPending}
+              style={{
+                width: 44, height: 44, flexShrink: 0, borderRadius: 'var(--radius-lg)',
+                display: 'grid', placeItems: 'center', cursor: 'pointer',
+                background: 'color-mix(in srgb, var(--u-text) 4%, transparent)',
+                border: '1px solid var(--u-hair)', color: 'var(--u-text)',
+              }}
+            >
+              <Icon name="more" size={18} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handlePrintReceipt} disabled={printing !== null} className="min-h-11">
+                <Icon name="print" size={15} /> {printing === 'receipt' ? 'Enviando…' : 'Recibo'}
+              </DropdownMenuItem>
+              {agentKitchen && (
+                <DropdownMenuItem onClick={() => handleReprintKitchen()} disabled={printing !== null} className="min-h-11">
+                  <Icon name="print" size={15} /> {printing === 'kitchen' ? 'Enviando…' : 'Copia de comanda'}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setVoidTarget('order')} variant="destructive" className="min-h-11">
+                <Icon name="x" size={15} /> Anular pedido
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 
@@ -749,8 +785,8 @@ export default function OrderCard({
         </div>
       )}
 
-      {/* Impresión — separada de las acciones de estado para que nadie
-          confunda "imprimir" con "avanzar el pedido". */}
+      {/* Impresión de un pedido ya cerrado (en uno vivo va en el «⋯»). */}
+      {isTerminal && (
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <button
           type="button"
@@ -792,6 +828,7 @@ export default function OrderCard({
           </button>
         )}
       </div>
+      )}
 
       {voidTarget && (
         <VoidOrderDialog

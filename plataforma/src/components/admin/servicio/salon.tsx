@@ -58,15 +58,21 @@ export function SalonRiel({ mesas, sel, onPick, money, estrecho }: SalonProps & 
           onClick={() => onPick(m.n)}
         >
           <span className="sv-mesa-n">{m.n}</span>
+          {/* Dos renglones (PED-13, maqueta D-2): arriba el nombre y el
+              estado; abajo «3 min · 3 platos» y el total. Antes el total y
+              el chip se apilaban a la derecha y le comían el ancho al
+              subtítulo, que salía «3 min · 3 pl…». */}
           <span className="sv-mesa-id">
-            <span className="sv-mesa-title">{m.etiqueta}</span>
-            <span className="sv-mesa-sub">{subtituloDeMesa(m, estrecho)}</span>
-          </span>
-          <span className="sv-mesa-right">
-            {m.total > 0 && <span className="sv-mesa-total">{money(m.total)}</span>}
-            {m.atencion
-              ? <ChipMano atencion={m.atencion} corto />
-              : (!estrecho && m.estado !== 'libre' && <ChipEstado estado={m.estado} />)}
+            <span className="sv-mesa-row">
+              <span className="sv-mesa-title">{m.etiqueta}</span>
+              {m.atencion
+                ? <ChipMano atencion={m.atencion} corto />
+                : (!estrecho && m.estado !== 'libre' && <ChipEstado estado={m.estado} />)}
+            </span>
+            <span className="sv-mesa-row">
+              <span className="sv-mesa-sub">{subtituloDeMesa(m, estrecho)}</span>
+              {m.total > 0 && <span className="sv-mesa-total">{money(m.total)}</span>}
+            </span>
           </span>
         </button>
       ))}

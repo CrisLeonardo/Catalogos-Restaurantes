@@ -1215,7 +1215,7 @@ export default function ServicioPanel({
                 )}
               </div>
 
-              <div className="sv-hs">
+              <div className="sv-hs sv-hs-fade">
                 {FILTROS.map((f) => (
                   <Pill key={f} on={filtro === f} onClick={() => setFiltro(f)}>{f}</Pill>
                 ))}
