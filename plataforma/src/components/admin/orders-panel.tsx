@@ -14,7 +14,7 @@ import type { TicketFormat } from '@/lib/escpos';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToastManager } from '@/components/ui/toast';
-import { Stat, StatGroup } from '@/components/ui/stat';
+import { Stat, StatGroup, StatStrip } from '@/components/ui/stat';
 import type { OrderWithItems, OrderStats, DayPace } from '@/lib/db/orders';
 import { TimesWidget, type TimesData } from '@/components/admin/times-widget';
 import { SalesTrendWidget, TopTodayWidget } from '@/components/admin/sales-widgets';
@@ -368,8 +368,26 @@ function OrdersPanelInner({
 
   return (
     <>
-      {/* KPIs — calculados en el servidor con la zona horaria del restaurante */}
-      <StatGroup className="mb-4.5">
+      {/* KPIs — calculados en el servidor con la zona horaria del restaurante.
+          En el teléfono, las mismas cifras en una franja de una línea: en la
+          pantalla de operación lo primero son los pedidos (PED-01). */}
+      <StatStrip
+        className="mb-4 md:hidden"
+        items={[
+          { value: fmtMoney(stats.todaySales, currency), label: 'vendido hoy' },
+          { value: String(stats.todayOrders), label: stats.todayOrders === 1 ? 'pedido' : 'pedidos' },
+          { value: String(activeOrders.length), label: 'en curso' },
+          { value: String(activeOrders.filter((o) => o.status === 'PREP').length), label: 'en cocina' },
+          { value: fmtMoney(stats.todayTicket, currency), label: 'ticket promedio' },
+          ...(times
+            ? [
+                { value: `${times.avgTotal} min`, label: 'a la mesa' },
+                ...(times.slow > 0 ? [{ value: String(times.slow), label: 'pasaron de 30 min', tone: 'warn' as const }] : []),
+              ]
+            : []),
+        ]}
+      />
+      <StatGroup className="mb-4.5 max-md:hidden">
         <Stat label={`Ventas hoy (${stats.todayOrders} ${stats.todayOrders === 1 ? 'pedido' : 'pedidos'})`} value={fmtMoney(stats.todaySales, currency)} />
         <Stat label={`Pedidos hoy (${activeOrders.length} en curso)`} value={String(stats.todayOrders)} />
         <Stat label="Ticket promedio hoy" value={fmtMoney(stats.todayTicket, currency)} />
@@ -380,7 +398,7 @@ function OrdersPanelInner({
           porque contesta la otra mitad de la misma pregunta: cuánto se vendió
           y cuánto se hizo esperar a la gente por ello. */}
       {times && (
-        <div className="mb-4.5">
+        <div className="mb-4.5 max-md:hidden">
           <TimesWidget data={times} />
         </div>
       )}
@@ -391,7 +409,7 @@ function OrdersPanelInner({
         <div style={{ minWidth: 0 }}>
           {/* Filtro por tipo de servicio: un local con mucho domicilio necesita
               poder mirar SOLO domicilio sin que el resto le estorbe. */}
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', marginBottom: 16 }}>
             {TYPE_FILTERS.map((f) => {
               const on = typeFilter === f.id;
               const n = countByType(f.id);
@@ -402,7 +420,7 @@ function OrdersPanelInner({
                   onClick={() => setTypeFilter(f.id)}
                   className="press"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap',
                     padding: '7px 13px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                     fontSize: 12.5, fontWeight: 600,
                     border: `1px solid ${on ? 'transparent' : 'var(--u-hair)'}`,

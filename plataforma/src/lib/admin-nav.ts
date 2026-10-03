@@ -71,6 +71,10 @@ export interface NavContext {
   encuestasActive: boolean;
   cuponesActive: boolean;
   dineInEnabled: boolean;
+  /** «A domicilio» activo: da sitio a Repartidores. */
+  deliveryEnabled?: boolean;
+  /** La conexión con WhatsApp está activa en Leogin (hay clave del servidor). */
+  whatsappReady?: boolean;
   planActual?: string | null;
   /** El dueño (o super admin) puede ver Personal. */
   showStaff: boolean;
@@ -201,6 +205,17 @@ export function buildNav(ctx: NavContext): NavGroup[] {
               { href: '/admin/ajustes/entrega', label: 'Zona de entrega', key: 'ajustes' },
               { href: '/admin/ajustes/pedidos', label: 'Pedidos y cobro', key: 'ajustes' },
             ]
+          : []),
+        /* Repartidores y WhatsApp eran pantallas huérfanas: en ningún menú,
+           sin «volver» y con la barra diciendo «Panel» (auditoría
+           2026-10-02, N-02). Repartidores, si se entrega a domicilio;
+           WhatsApp, solo cuando la conexión ya está activa en Leogin —
+           antes no hay nada que configurar y la fila sería un callejón. */
+        ...(on(!!ctx.ordersEnabled && !!ctx.deliveryEnabled)
+          ? [{ href: '/admin/repartidores', label: 'Repartidores', key: 'repartidores' }]
+          : []),
+        ...(on(!!ctx.ordersEnabled && !!ctx.whatsappReady)
+          ? [{ href: '/admin/whatsapp', label: 'WhatsApp', key: 'whatsapp' }]
           : []),
         { href: '/admin/personalizacion', label: 'Personalizar el sitio', key: 'personalizar' },
         { href: '/admin/qr', label: 'Código QR', key: 'qr' },

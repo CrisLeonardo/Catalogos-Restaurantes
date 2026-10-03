@@ -81,7 +81,7 @@ function useEnabledPref(): [boolean, (v: boolean) => void] {
   return [enabled, setEnabled];
 }
 
-export default function PreviewPane({ previewId }: { previewId: string }) {
+export default function PreviewPane({ previewId, id }: { previewId: string; /** Ancla para saltar a la vista previa. */ id?: string }) {
   const [enabled, setEnabledPersist] = useEnabledPref();
   const [wide, setWide] = useState(false);
 
@@ -99,7 +99,7 @@ export default function PreviewPane({ previewId }: { previewId: string }) {
   }
 
   return (
-    <aside className="preview-pane">
+    <aside className="preview-pane" id={id}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span

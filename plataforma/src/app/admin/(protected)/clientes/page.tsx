@@ -15,6 +15,8 @@ import { Section, SectionNote } from '@/components/ui/section';
 import { Stat, StatGroup } from '@/components/ui/stat';
 import { EmptyState } from '@/components/ui/empty-state';
 import ClientesExportButton from '@/components/admin/clientes-export-button';
+import ClientesFiltros from '@/components/admin/clientes-filtros';
+import { parseCustomerSort } from '@/lib/customer-sort';
 import type { Customer, Order } from '@/types';
 
 export const metadata = { title: 'Clientes – Panel admin' };
@@ -61,7 +63,7 @@ const STATUS_ES: Record<string, string> = {
 export default async function AdminClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; page?: string }>;
+  searchParams: Promise<{ c?: string; page?: string; q?: string; orden?: string }>;
 }) {
   const ctx = await getAdminContext();
   if (!ctx) redirect('/admin/login');
@@ -86,8 +88,10 @@ export default async function AdminClientesPage({
 
   const sp = await searchParams;
   const pageNum = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+  const q = (sp.q ?? '').slice(0, 60);
+  const sort = parseCustomerSort(sp.orden);
   const [{ customers, page, totalPages, total }, summary] = await Promise.all([
-    getCustomers(restaurantId, pageNum),
+    getCustomers(restaurantId, pageNum, undefined, { q, sort }),
     getCustomersSummary(restaurantId),
   ]);
   const selected = sp.c ? customers.find((c) => c.id === sp.c) ?? null : null;
@@ -108,7 +112,18 @@ export default async function AdminClientesPage({
     ? Math.round((recurrent / summary.buyersCount) * 100)
     : null;
   const { avgTicketRecurrent, avgTicketOneTime } = summary;
-  const pageHref = (p: number) => `/admin/clientes?page=${p}`;
+  /* Los enlaces conservan la búsqueda y el orden: abrir un cliente o pasar
+     de página no debe tirar lo que se escribió en el buscador. */
+  const href = (extra: Record<string, string | number | undefined>) => {
+    const p = new URLSearchParams();
+    if (q) p.set('q', q);
+    if (sort !== 'recientes') p.set('orden', sort);
+    for (const [k, v] of Object.entries(extra)) if (v !== undefined && v !== '') p.set(k, String(v));
+    const s = p.toString();
+    return s ? `/admin/clientes?${s}` : '/admin/clientes';
+  };
+  const pageHref = (p: number) => href({ page: p });
+  const buscando = q.trim() !== '';
 
   return (
     <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -120,7 +135,7 @@ export default async function AdminClientesPage({
 
       <Section title="Resumen">
         <StatGroup>
-          <Stat label="Clientes registrados" value={String(total)} />
+          <Stat label="Clientes registrados" value={String(summary.totalCustomers)} />
           <Stat label="Recurrentes (2+ pedidos)" value={String(recurrent)} />
           {vuelvenPct !== null && <Stat label="De los que piden, vuelven" value={`${vuelvenPct}%`} />}
           <Stat label="Total histórico" value={fmtQ(totalSpent)} />
@@ -133,7 +148,16 @@ export default async function AdminClientesPage({
         )}
       </Section>
 
-      {customers.length === 0 ? (
+      {summary.totalCustomers > 0 && <ClientesFiltros q={q} sort={sort} />}
+
+      {customers.length === 0 && buscando ? (
+        <Card className="flex flex-col items-center gap-3 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
+          Ningún cliente coincide con «{q.trim()}».
+          <Button render={<Link href={href({ q: undefined })} />} variant="secondary" size="sm" className="rounded-adm-full">
+            Ver todos
+          </Button>
+        </Card>
+      ) : customers.length === 0 ? (
         <EmptyState
           icon="users"
           title="Aún no tienes clientes"
@@ -154,7 +178,8 @@ export default async function AdminClientesPage({
             return (
               <div key={c.id} style={{ borderBottom: i < customers.length - 1 ? '1px solid var(--u-hair)' : 'none' }}>
                 <Link
-                  href={isSel ? '/admin/clientes' : `/admin/clientes?c=${c.id}`}
+                  href={isSel ? href({ page: page > 1 ? page : undefined }) : href({ page: page > 1 ? page : undefined, c: c.id })}
+                  scroll={false}
                   className="customers-row press"
                   style={{
                     padding: '13px 18px', textDecoration: 'none',
@@ -166,6 +191,13 @@ export default async function AdminClientesPage({
                       {c.name}
                     </div>
                     <div className="t-mono" style={{ fontSize: 11.5, color: 'var(--u-text-4)', marginTop: 2 }}>{c.phone}</div>
+                    {/* En el teléfono las columnas se esconden y quedaban dos
+                        números sueltos («1  Q88.50»): aquí van con su palabra
+                        (auditoría 2026-10-02, CLI-01). */}
+                    <div className="customers-meta" style={{ fontSize: 12, color: 'var(--u-text-3)', marginTop: 4 }}>
+                      {c.total_orders === 1 ? '1 pedido' : `${c.total_orders} pedidos`} · {fmtQ(Number(c.total_spent))}
+                      {c.last_order_at ? ` · último ${fmtDate(c.last_order_at, timezone)}` : ''}
+                    </div>
                   </div>
                   <div className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text)' }}>{c.total_orders}</div>
                   <div className="t-mono" style={{ fontSize: 13.5, color: 'var(--u-text)' }}>{fmtQ(Number(c.total_spent))}</div>

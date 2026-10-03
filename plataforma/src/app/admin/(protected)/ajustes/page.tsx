@@ -11,6 +11,7 @@ import { Section } from '@/components/ui/section';
 import MenuLanguagesEditor from '@/components/admin/menu-languages-editor';
 import type { Restaurant } from '@/types';
 import { ACTIVATABLE_MODULES, isModuleActive, type ModulesMap, type ModuleSettings } from '@/lib/modules';
+import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
 
 export const metadata = { title: 'Ajustes – Panel admin' };
 
@@ -59,11 +60,13 @@ export default async function AdminAjustesPage() {
   const slug = (await headers()).get('x-tenant-slug');
   let restaurant: Restaurant | null = ctx.restaurant ?? null;
   let dineInEnabled = false;
+  let deliveryEnabled = false;
   if (slug) {
     const data = await getRestaurantBySlug(slug);
     if (data) {
       restaurant = data.restaurant;
       dineInEnabled = data.resolved.config.orderTypes.includes('dine_in');
+      deliveryEnabled = data.resolved.config.orderTypes.includes('delivery');
     }
   }
 
@@ -135,6 +138,14 @@ export default async function AdminAjustesPage() {
       : []),
     ...(ordersEnabled
       ? [{ href: '/admin/mi-pc', icon: 'monitor', label: 'La PC del local', desc: 'Imprime comandas sola y te cubre si se cae el internet', key: 'impresion', value: pcValue, tone: pcTone } as Row]
+      : []),
+    /* Mismo criterio que admin-nav.ts (N-02): Repartidores si se entrega a
+       domicilio; WhatsApp cuando la conexión ya está activa en Leogin. */
+    ...(ordersEnabled && deliveryEnabled
+      ? [{ href: '/admin/repartidores', icon: 'truck', label: 'Repartidores', desc: 'Quién lleva los pedidos a domicilio', key: 'repartidores' } as Row]
+      : []),
+    ...(ordersEnabled && isTokenKeyConfigured()
+      ? [{ href: '/admin/whatsapp', icon: 'whatsapp', label: 'WhatsApp', desc: 'Avisos a tus clientes de cómo va su pedido', key: 'whatsapp' } as Row]
       : []),
   ];
 

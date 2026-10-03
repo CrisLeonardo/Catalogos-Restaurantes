@@ -19,7 +19,7 @@
 > se ve bien. Las auditorías anteriores (QA visual 09-22, velocidad 09-25) **no
 > se repiten**: lo que de ellas sigue abierto está en la sección de rendimiento.
 >
-> **Estado:** Fases 1 y 2 hechas el 2026-10-02 (32 hallazgos, incluidos los 6 P0). Lo demás sigue pendiente; ver la Bitácora al final.
+> **Estado:** Fases 1 a 4 hechas el 2026-10-02 (46 de 145 hallazgos, incluidos los 6 P0). Lo que queda: la Fase 5 (necesita D-2), la 6 (marketing) y lo continuo; ver la Bitácora al final.
 
 ---
 
@@ -39,22 +39,22 @@
 
 | # | Sección | Hallazgos | Hechos | ⏸️ Decisión |
 |---|---------|----------:|-------:|-----------:|
-| 1 | Transversal — sistema de diseño y textos | 26 | 7 | 0 |
-| 2 | Panel · Armazón y navegación | 10 | 6 | 1 |
+| 1 | Transversal — sistema de diseño y textos | 26 | 15 | 0 |
+| 2 | Panel · Armazón y navegación | 10 | 7 | 1 |
 | 3 | Panel · Hoy | 5 | 1 | 1 |
-| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 0 | 4 |
-| 5 | Panel · Menú | 12 | 2 | 0 |
-| 6 | Panel · Clientes | 6 | 0 | 0 |
+| 4 | Panel · Pedidos (En vivo, Cocina, Mesas, Tomar pedidos) | 13 | 1 | 4 |
+| 5 | Panel · Menú | 12 | 3 | 0 |
+| 6 | Panel · Clientes | 6 | 1 | 0 |
 | 7 | Panel · Negocio | 6 | 1 | 1 |
-| 8 | Panel · Ajustes | 20 | 8 | 2 |
+| 8 | Panel · Ajustes | 20 | 10 | 2 |
 | 9 | Catálogo digital (lo que ve el comensal) | 13 | 2 | 1 |
 | 10 | Super Admin | 10 | 2 | 1 |
 | 11 | Mi cuenta (grupo) | 5 | 3 | 0 |
 | 12 | Web pública y marketing | 9 | 0 | 0 |
 | 13 | Rendimiento y salud del código | 10 | 0 | 1 |
-| | **Total** | **145** | **32** | **12** |
+| | **Total** | **145** | **46** | **12** |
 
-Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 19 P1, 4 P2 y 3 P3.
+Por prioridad: **P0** 6 · **P1** 34 · **P2** 61 · **P3** 44. Hechos: los **6 P0**, 28 P1, 8 P2 y 4 P3.
 
 *(Se actualiza a mano al marcar.)*
 
@@ -347,11 +347,12 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   tutorial nombra una pantalla que no está en el menú.
   ✅ **Hecho 2026-10-02 (Fase 2).** `lib/tutorial/content.ts` reescrito sección por sección contra `admin-nav.ts` y las pantallas: los seis destinos, rutas reales (Ajustes → Horarios, Menú → Platillos…), flechas ↑↓ en vez de arrastrar, agotado por 12 h, lealtad con premios (sin «canjear puntos al pagar», que ya no existe), caja, salón, tomar pedidos, lista de espera; «Plan Popular» → «Plan Estándar». Tours: el paso de la pausa buscaba el interruptor en Perfil (ahora va a Horarios) y los de catálogo/categorías hablaban de arrastrar.
 
-- [ ] **N-02** · P1 · S — **Pantallas huérfanas.** Repartidores y WhatsApp no están
+- [x] **N-02** · P1 · S — **Pantallas huérfanas.** Repartidores y WhatsApp no están
   en ningún menú, su barra dice «Panel» y no tienen «volver». Repartidores además
   guarda las **zonas y tarifas de envío**. Darles sitio: Repartidores en Pedidos
   (o Ajustes › Zona de entrega) y WhatsApp en Ajustes.
   🔄 **Parcial 2026-10-02:** las zonas salieron de Repartidores (N-03). Repartidores y WhatsApp siguen sin sitio en el menú.
+  ✅ **Hecho 2026-10-02 (Fase 4).** Repartidores y WhatsApp en Ajustes › Servicio y en el menú (`admin-nav.ts`, con la prueba que compara menú y portada): Repartidores si se entrega a domicilio; WhatsApp solo cuando la conexión ya está activa en Leogin (si no, sería un callejón; la decisión de fondo sigue en D-6). Con sitio en el grupo, las dos ganan su «‹ Ajustes».
 
 - [x] **N-03** · P1 · M — **La entrega a domicilio se configura en dos sitios.**
   El radio en el mapa vive en Ajustes › Zona de entrega; las zonas por nombre y su
@@ -431,11 +432,12 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ### En vivo
 
-- [ ] **PED-01** · **P1** · S — **Siete cifras antes del primer pedido** en el
+- [x] **PED-01** · **P1** · S — **Siete cifras antes del primer pedido** en el
   teléfono (~640 px de scroll): «Ventas hoy», «Pedidos hoy (8 en curso)», «Ticket
   promedio hoy», «En cocina (preparándose ahora)», y tres de «Tiempos de hoy». En
   la pantalla de operación lo primero son los pedidos: cifras en una franja de
   una línea (o plegables).
+  ✅ **Hecho 2026-10-02 (Fase 4).** En el teléfono las cifras del día y los tiempos van en UNA franja que se desplaza de lado (`StatStrip`: «Q138.00 vendido hoy · 2 pedidos · 2 en curso · 1 en cocina…»); en escritorio, igual que antes. No cambia QUÉ cifras se enseñan (eso es D-3). Los filtros por tipo de servicio también quedaron en una fila.
 
 - [ ] **PED-02** · P1 · M · ⏸️ D-2 — **Tarjeta de pedido sobrecargada (~450 px en el
   teléfono).** El tiempo sale tres veces (encabezado del grupo, chip «38 min» y
@@ -499,9 +501,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ## 5 · Panel · Menú
 
-- [ ] **MEN-01** · **P1** · S — **Sin buscador en Platillos.** El plan Básico admite
+- [x] **MEN-01** · **P1** · S — **Sin buscador en Platillos.** El plan Básico admite
   150 platillos; encontrar uno es hacer scroll. Buscador + filtro por categoría
   (que ya existe) + «sin foto» / «agotados».
+  ✅ **Hecho 2026-10-02 (Fase 4).** Buscador en Platillos (sin tildes ni mayúsculas, en nombre, descripción y etiquetas) que se combina con la categoría, y filtros rápidos «Agotados», «Sin foto» y «Ocultos» con su cuenta, que solo salen si hay algo que filtrar. «3 platillos de 42 · Quitar filtros» y estado vacío del filtro con salida. De paso, los precios de la lista con `fmtMoney` (aún iban con `Q{toFixed(2)}`). Probado en vivo: «canela» → Roll de Canela; «zzzz» → aviso y «Quitar filtros».
 
 - [x] **MEN-02** · **P1** · S — **Ficha del platillo en el teléfono: lo básico va
   cuarto.** Primero salen Foto, Ícono del patrón y Disponible; nombre y precio
@@ -547,9 +550,10 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
 
 ## 6 · Panel · Clientes
 
-- [ ] **CLI-01** · **P1** · S — **Clientes sin buscador ni orden, y con cifras sin
+- [x] **CLI-01** · **P1** · S — **Clientes sin buscador ni orden, y con cifras sin
   rótulo** («0  Q0.00», «1  Q88.50»: ¿pedidos? ¿gasto?). Buscador por nombre o
   teléfono, orden por gasto/última visita, y «3 pedidos · Q88.50».
+  ✅ **Hecho 2026-10-02 (Fase 4).** Buscador por nombre o teléfono y orden (Última visita · Más gasto · Más pedidos · Nombre) en la URL (`?q=&orden=`), porque la lista se pagina en el servidor; abrir un cliente o pasar de página conserva la búsqueda. En el teléfono, cada fila dice «3 pedidos · Q88.50 · último 22 sep» en vez de dos números sueltos. `lib/customer-sort.ts` aparte para no meter el cliente de Supabase con service role en el navegador. Probado: «kiosko» y «5550» (teléfono) encuentran a quien deben.
 
 - [ ] **CLI-02** · P2 · S — **Lealtad:** el aviso «Configura las tasas del programa
   para empezar» aparece aunque los campos ya muestran 1/10/100 (no se sabe si está
@@ -626,13 +630,14 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   pantalla se llama «Perfil» en la barra, «Información» en el encabezado y «Perfil
   del negocio» en Ajustes.
 
-- [ ] **AJU-05** · P1 · M — **Salón:** la barra dice «Ajustes»; en el teléfono las
+- [x] **AJU-05** · P1 · M — **Salón:** la barra dice «Ajustes»; en el teléfono las
   mesas del plano **salen encimadas** (1–5 superpuestas, con sus «×» chocando):
   están a 15 % del ancho una de otra (~44 px) y cada una mide ~60 px — el tamaño de
   la mesa no se ajusta al ancho del plano (en escritorio se ven bien); 20 QR a tamaño
   completo uno tras otro → página de 4.700 px en el teléfono, y **no hay
   «Descargar todos»** (PDF listo para imprimir, uno por mesa o en hoja de
   pegatinas).
+  ✅ **Hecho 2026-10-02 (Fase 4).** Mesas del plano que se achican con el plano (38–68 px, crecen con el zoom) — ya no salen encimadas en el teléfono; «Descargar todos (PDF)»: hoja A4 con seis QR por página, nombre del restaurante, «Mesa N» y línea de corte (`lib/documents/table-qr-sheet.ts`, 405 KB para 20 mesas); se ven 8 QR con «Ver los 20 QR», y la URL larga dejó la tarjeta («Copiar enlace» la copia). La barra ya decía «Salón» (T-10). La página bajó de ~4.700 a 2.884 px en el teléfono.
 
 - [ ] **AJU-06** · P2 · M · ⏸️ D-5 — **QR de mesa con UUID** (`/m/aaaaaaaa-aaaa-…/7`):
   código más denso (peor lectura impreso pequeño) y dirección ilegible.
@@ -650,12 +655,13 @@ Lo que aparece en muchas pantallas a la vez. Arreglarlo una vez arregla todas.
   «es-GT».** Selector con ejemplo («Guatemala — Q1,234.50»).
   ✅ **Hecho 2026-10-02 (Fase 2).** Selector por país (Guatemala, México, El Salvador…) con el ejemplo «Así se ven tus precios: 1,234.50»; un código raro ya guardado se conserva.
 
-- [ ] **AJU-10** · **P1** · M — **Personalizar el sitio mide 12.800 px en el
+- [x] **AJU-10** · **P1** · M — **Personalizar el sitio mide 12.800 px en el
   teléfono.** 22 plantillas a alto completo (cada vista previa ~60 % vacía), y la
   vista previa del sitio al fondo de todo. Las miniaturas dicen «Tu Restaurante» /
   «TU RESTO» en vez de tu nombre y tu logo. Propuesta: rejilla de 2 columnas con
   miniaturas recortadas, botón flotante «Ver cómo queda», y miniaturas con tus
   datos (vende mucho más la plantilla).
+  ✅ **Hecho 2026-10-02 (Fase 4).** Galería en dos columnas en el teléfono con la miniatura reducida y recortada en cuadrado (sin la descripción), las miniaturas con el nombre del restaurante (también en Mi cuenta › Nuevo restaurante, con el nombre que se va escribiendo) y un botón flotante «Ver cómo queda» que baja a la vista previa (y «Ver» dentro de la barra de guardar). La pantalla pasó de ~12.800 a 3.712 px en el teléfono.
 
 - [ ] **AJU-11** · P2 · S — **La PC del local:** «hace 2004 h» (T-02); los dos
   enlaces del final llevan títulos de 22 px en Unbounded, más grandes que los
@@ -951,10 +957,10 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
    SUP-04, NEG-01, MEN-02, MEN-03, N-08, T-06, T-02.
 2. ✅ **Fase 2 — Textos y claves. HECHA 2026-10-02.** T-13 (según D-1), T-15, AJU-12, AJU-13,
    T-03, T-14, N-01 (ayuda), N-04.
-3. **Fase 3 — Piezas comunes, 2–3 días.** T-08 (guardar), T-12 (fichas
+3. ✅ **Fase 3 — Piezas comunes. HECHA 2026-10-02** (T-05 y T-09 parciales). T-08 (guardar), T-12 (fichas
    blancas), T-05 (cifras), T-07 (pestañas), T-10/T-11 (títulos y rótulos), T-16
    (diálogos), T-09, T-17, T-18. Aquí es donde se nota la «armonía».
-4. **Fase 4 — Pantallas largas y buscadores, 2 días.** MEN-01, CLI-01, AJU-10,
+4. ✅ **Fase 4 — Pantallas largas y buscadores. HECHA 2026-10-02.** MEN-01, CLI-01, AJU-10,
    AJU-05, AJU-12, N-02/N-03, PED-01.
 5. **Fase 5 — Servicio (con tu visto bueno, D-2).** PED-02, PED-06, PED-09, PED-13.
 6. **Fase 6 — Marketing y extras.** WEB-01 (medir primero), WEB-02, WEB-03,
@@ -971,4 +977,5 @@ Por orden de impacto ÷ riesgo. Cada fase cierra con capturas antes/después.
 | 2026-10-02 | Auditoría inicial: barrido de ~330 capturas, lectura de código, este archivo. | — |
 | 2026-10-02 | **Fase 1** (decisión D-1: «tú»). 21 hallazgos: CAT-01, MIC-01, AJU-01/02/03, T-01, T-02, T-03, T-06, HOY-01, MIC-02/03, CAT-02, N-05, N-08, N-09, SUP-01, SUP-04, NEG-01, MEN-02, MEN-03. Verificado: `tsc` y `eslint` limpios, 768 pruebas (19 nuevas: `money`, `dates`, `product-availability`), dos builds de producción y barrido de capturas de cada pantalla tocada a 390 y 1440 px con pedidos activos y un platillo sin existencias; pedido real de prueba de CAT-01 (luego borrado). Al verificar salieron y se arreglaron dos cosas que el propio cambio había causado (ficha del platillo a 809 px en el teléfono; «Q2,794.…» cortado en la fila de 6 cifras). Base local devuelta a su estado. | `8c0bf81` (rama `auditoria-pulido-2026-10-02`) |
 | 2026-10-02 | **Fase 2.** T-13, T-14, T-15, AJU-12, AJU-13, N-01 (ayuda y tours reescritos), N-03, N-04, AJU-09, y dos hallazgos nuevos arreglados: AJU-19 (tarifa de envío sin pantalla) y AJU-20 (guardar te mandaba a Perfil). Parciales: AJU-15, N-02, AJU-08. Verificado: `tsc` y `eslint` limpios, 774 pruebas (nuevas: bitácora en palabras, textos viejos del tema), build de producción, capturas de las 13 pantallas tocadas y guardado real en Horarios. | `352e973` |
-| 2026-10-02 | **Fase 3 — piezas comunes.** T-07, T-08, T-10, T-11, T-12, T-16, T-17, T-18 hechos; T-05 y T-09 parciales. Piezas nuevas: `ui/confirm-dialog.tsx`, `admin/save-bar.tsx`, `admin/page-tabs.tsx`, `admin/field-label.ts`, `useValueDirty`. De paso: interruptor de Lealtad con la frase partida, enlace de Repartidores que abría huecos, «Q1,495.0 / 0» partido en el Inicio del Super. Verificado: `tsc`, `eslint`, 774 pruebas, build de producción, capturas claro/oscuro de 23 pantallas del panel y 8 del Super, guardar/salir y borrar probados en vivo; base local devuelta a su estado. | ver commit de la fase 3 |
+| 2026-10-02 | **Fase 3 — piezas comunes.** T-07, T-08, T-10, T-11, T-12, T-16, T-17, T-18 hechos; T-05 y T-09 parciales. Piezas nuevas: `ui/confirm-dialog.tsx`, `admin/save-bar.tsx`, `admin/page-tabs.tsx`, `admin/field-label.ts`, `useValueDirty`. De paso: interruptor de Lealtad con la frase partida, enlace de Repartidores que abría huecos, «Q1,495.0 / 0» partido en el Inicio del Super. Verificado: `tsc`, `eslint`, 774 pruebas, build de producción, capturas claro/oscuro de 23 pantallas del panel y 8 del Super, guardar/salir y borrar probados en vivo; base local devuelta a su estado. | `70fa42c` |
+| 2026-10-02 | **Fase 4 — pantallas largas y buscadores.** MEN-01 (buscador y filtros en Platillos), CLI-01 (buscar y ordenar Clientes en el servidor), AJU-10 (Personalizar de ~12.800 a 3.712 px en el teléfono, miniaturas con tu nombre, «Ver cómo queda»), AJU-05 (mesas del plano sin encimarse, PDF con todos los QR), N-02 (Repartidores y WhatsApp con sitio en Ajustes), PED-01 (cifras en una franja en el teléfono). Piezas nuevas: `.adm-search`, `StatStrip`, `lib/customer-sort.ts`, `lib/documents/table-qr-sheet.ts`, `aria-label` en `Select`. Tablero recontado desde las casillas (la Fase 3 no había sumado). Verificado: `tsc`, `eslint`, 774 pruebas, build, capturas claro/oscuro, buscadores probados en vivo y el PDF generado y revisado (4 hojas, 405 KB). | ver commit de la fase 4 |

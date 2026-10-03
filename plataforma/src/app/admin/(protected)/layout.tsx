@@ -23,6 +23,7 @@ import { getMyMemberships } from '@/lib/db/membership';
 import { emailEnabled } from '@/lib/email';
 import type { Restaurant } from '@/types';
 import { panelLink } from '@/lib/panel-links-server';
+import { isTokenKeyConfigured } from '@/lib/whatsapp/crypto';
 
 export default async function AdminProtectedLayout({
   children,
@@ -112,6 +113,7 @@ export default async function AdminProtectedLayout({
   // configurar cantidad de mesas y preferencias, aunque su plan no incluya
   // el panel de mesero completo (ver mesas/page.tsx).
   let dineInEnabled = false;
+  let deliveryEnabled = false;
 
   // A partir de aquí solo se arma lo que se PINTA: el candado de arriba ya
   // decidió que esta sesión puede estar en este subdominio.
@@ -122,6 +124,7 @@ export default async function AdminProtectedLayout({
     logoBg = tenantData.resolved.config.colorBg ?? null;
     zone = tenantData.resolved.config.zone ?? '';
     dineInEnabled = tenantData.resolved.config.orderTypes.includes('dine_in');
+    deliveryEnabled = tenantData.resolved.config.orderTypes.includes('delivery');
   } else {
     // Sin subdominio de restaurante: quien tiene varios va a Mi cuenta a
     // elegir, el resto se queda con el suyo (Leogin Desktop arranca así).
@@ -217,6 +220,8 @@ export default async function AdminProtectedLayout({
       restaurantId={currentRestaurant?.id ?? null}
       planActual={planActual}
       dineInEnabled={dineInEnabled}
+      deliveryEnabled={deliveryEnabled}
+      whatsappReady={isTokenKeyConfigured()}
       ordersEnabled={m('orders')}
       analiticaEnabled={m('analitica')}
       inventarioEnabled={m('inventario')}

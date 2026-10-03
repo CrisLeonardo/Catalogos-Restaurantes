@@ -366,6 +366,7 @@ export default function NuevoRestaurante({
           initialStructure={chosenTemplate?.structure ?? 'clasico'}
           appliedId={templateId}
           onApply={(tpl) => setTemplateId(tpl.id)}
+          brandName={name}
         />
       </div>
 

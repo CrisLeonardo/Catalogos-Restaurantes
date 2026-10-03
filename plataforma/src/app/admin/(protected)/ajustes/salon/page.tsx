@@ -38,6 +38,7 @@ export default async function AjustesSalonPage() {
     <TablesPanel
       restaurantId={restaurantId}
       menuUrl={menuUrl}
+      restaurantName={config.brandName}
       config={{
         orderTypes: config.orderTypes,
         dineInTableCount: config.dineInTableCount,

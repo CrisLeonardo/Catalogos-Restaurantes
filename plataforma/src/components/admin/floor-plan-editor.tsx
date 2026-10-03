@@ -598,6 +598,13 @@ export default function FloorPlanEditor({
               const dragging = dragN === tb.n;
               const sx = tb.x * VIRT_W * t.s + t.x;
               const sy = tb.y * VIRT_H * t.s + t.y;
+              /* La mesa se achica con el plano: en el teléfono el plano mide
+                 ~360 px y dos mesas separadas un 15 % quedan a ~54 px, pero
+                 cada una medía 56 — salían encimadas, con sus «×» chocando
+                 (auditoría 2026-10-02, AJU-05). Entre 38 px y el tope de
+                 siempre (`--floor-token`); al hacer zoom vuelve a crecer. */
+              const tok = Math.round(Math.max(38, Math.min(68, 130 * t.s)));
+              const small = tok < 52;
               return (
                 <div
                   key={tb.n}
@@ -606,7 +613,7 @@ export default function FloorPlanEditor({
                     position: 'absolute',
                     left: sx,
                     top: sy,
-                    width: 'var(--floor-token, 68px)', height: 'var(--floor-token, 68px)',
+                    width: `min(${tok}px, var(--floor-token, 68px))`, height: `min(${tok}px, var(--floor-token, 68px))`,
                     transform: `translate(-50%, -50%) scale(${dragging ? 1.12 : 1})`,
                     transition: dragging ? 'none' : 'transform 120ms',
                     borderRadius: tb.shape === 'square' ? 14 : 99,
@@ -619,8 +626,8 @@ export default function FloorPlanEditor({
                     zIndex: dragging ? 5 : 1,
                   }}
                 >
-                  <span style={{ fontSize: 8.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mesa</span>
-                  <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
+                  {!small && <span style={{ fontSize: 8.5, color: 'var(--u-text-4)', fontWeight: 600, pointerEvents: 'none', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mesa</span>}
+                  <span style={{ fontSize: small ? 16 : 20, fontWeight: 800, lineHeight: 1, pointerEvents: 'none' }}>{tb.n}</span>
                   <span
                     role="button"
                     aria-label={`Quitar mesa ${tb.n}`}
@@ -628,9 +635,9 @@ export default function FloorPlanEditor({
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); unplaceTable(tb.n); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') unplaceTable(tb.n); }}
-                    style={{ position: 'absolute', top: -9, right: -9, width: 24, height: 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
+                    style={{ position: 'absolute', top: small ? -6 : -9, right: small ? -6 : -9, width: small ? 20 : 24, height: small ? 20 : 24, borderRadius: 99, background: 'var(--brand-bg)', border: '1px solid var(--u-hair-2)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--u-text)' }}
                   >
-                    <Icon name="x" size={12} />
+                    <Icon name="x" size={small ? 10 : 12} />
                   </span>
                 </div>
               );

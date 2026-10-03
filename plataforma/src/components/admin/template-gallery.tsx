@@ -51,8 +51,12 @@ function approxFont(family: string, bold = false): React.CSSProperties {
 /* ── Miniatura: portada + catálogo pintados con la config ──
    Exportada: la reutiliza owner-templates.tsx para las plantillas propias
    del restaurante (misma forma BuiltinTemplate → mismo mini-preview). */
-export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
+export function Thumb({ tpl, name }: { tpl: BuiltinTemplate; /** Nombre del restaurante en la miniatura. */ name?: string }) {
   const c: ThemeConfig = { ...DEFAULT_CONFIG, ...tpl.config };
+  /* Con el nombre del restaurante, no «Tu Restaurante»: una plantilla se
+     elige mucho mejor viéndola con lo tuyo (auditoría 2026-10-02, AJU-10). */
+  const nombre = name?.trim() || 'Tu Restaurante';
+  const corto = name?.trim() || 'Tu Resto';
   const light = c.scheme === 'light';
   const hair = light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)';
   const tileBg = light ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.07)';
@@ -284,8 +288,8 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
       {/* Portada */}
       {c.portadaVariant === 'spotlight' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 0 4px', position: 'relative' }}>
-          <div style={{ width: 20, height: 20, borderRadius: '28%', background: tileBg, border: `1px solid ${hair}`, display: 'grid', placeItems: 'center', fontSize: 9, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>T</div>
-          <div style={{ fontSize: 11, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>Tu Restaurante</div>
+          <div style={{ width: 20, height: 20, borderRadius: '28%', background: tileBg, border: `1px solid ${hair}`, display: 'grid', placeItems: 'center', fontSize: 9, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>{nombre.charAt(0).toUpperCase()}</div>
+          <div style={{ fontSize: 11, color: c.colorText, maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...approxFont(c.fontDisplay, true) }}>{nombre}</div>
           <div style={{ fontSize: 6.5, color: text2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>Sabor que enamora</div>
           <div style={{ ...cta(), marginTop: 2 }}>Ver el menú</div>
         </div>
@@ -293,7 +297,7 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
       {c.portadaVariant === 'poster' && (
         <div style={{ padding: '4px 2px 2px', position: 'relative' }}>
           <div style={{ fontSize: 5, letterSpacing: '0.28em', color: text2, textTransform: 'uppercase', ...approxFont(c.fontPoster) }}>EST · 2024</div>
-          <div style={{ fontSize: 20, lineHeight: 0.9, color: c.colorText, textTransform: 'uppercase', marginTop: 2, ...approxFont(c.fontPoster, true) }}>Tu Resto</div>
+          <div style={{ fontSize: 20, lineHeight: 0.9, color: c.colorText, textTransform: 'uppercase', marginTop: 2, maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...approxFont(c.fontPoster, true) }}>{corto}</div>
           <div style={{ ...cta(), width: '58%', margin: '5px 0 0' }}>Ver el menú</div>
         </div>
       )}
@@ -301,7 +305,7 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '3px 0 1px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <div style={{ width: 13, height: 13, borderRadius: '28%', background: tileBg, border: `1px solid ${hair}` }} />
-            <div style={{ fontSize: 8.5, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>Tu Restaurante</div>
+            <div style={{ fontSize: 8.5, color: c.colorText, minWidth: 0, maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...approxFont(c.fontDisplay, true) }}>{nombre}</div>
           </div>
           {[0, 1].map((i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: tileBg, border: `1px solid ${hair}`, borderRadius: r(7), padding: '3.5px 5px' }}>
@@ -316,7 +320,7 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
           <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(130% 80% at 50% 18%, ${rgbaOf(c.colorAccent, 0.62)}, transparent 68%), linear-gradient(180deg, ${c.colorBg2}, ${c.colorBg})` }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0.16) 58%, transparent)' }} />
           <div style={{ position: 'absolute', left: 8, right: 8, bottom: wide ? 4 : 6 }}>
-            <div style={{ fontSize: wide ? 12 : 15, lineHeight: 0.95, color: '#fff', ...approxFont(c.fontDisplay, true) }}>Tu Resto</div>
+            <div style={{ fontSize: wide ? 12 : 15, lineHeight: 0.95, color: '#fff', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...approxFont(c.fontDisplay, true) }}>{corto}</div>
             <div style={{ ...cta(), width: wide ? '40%' : '48%', margin: wide ? '3px 0 0' : '5px 0 0' }}>Ver el menú</div>
           </div>
         </div>
@@ -325,7 +329,7 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
         <div style={{ width: wide ? '58%' : '80%', margin: wide ? '1px auto 0' : '3px auto 0', background: tileBg, border: `1px solid ${hair}`, borderRadius: 2, padding: wide ? '5px 7px' : '7px 8px', textAlign: 'center', position: 'relative' }}>
           <div style={{ fontSize: 4.5, letterSpacing: '0.2em', color: text2, textTransform: 'uppercase', fontFamily: 'ui-monospace, monospace' }}>EST · 2024</div>
           <div style={{ borderTop: `1px dashed ${rgbaOf(c.colorText, 0.3)}`, margin: wide ? '3px 0' : '5px 0' }} />
-          <div style={{ fontSize: 10.5, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>Tu Resto</div>
+          <div style={{ fontSize: 10.5, color: c.colorText, maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...approxFont(c.fontDisplay, true) }}>{corto}</div>
           <div style={{ borderTop: `1px dashed ${rgbaOf(c.colorText, 0.3)}`, margin: wide ? '3px 0' : '5px 0' }} />
           <div style={{ ...cta(), width: '90%' }}>Ver el menú</div>
         </div>
@@ -333,7 +337,7 @@ export function Thumb({ tpl }: { tpl: BuiltinTemplate }) {
       {c.portadaVariant === 'directo' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 0 0' }}>
           <div style={{ width: 15, height: 15, borderRadius: '28%', background: tileBg, border: `1px solid ${hair}`, flexShrink: 0 }} />
-          <div style={{ fontSize: 9, color: c.colorText, ...approxFont(c.fontDisplay, true) }}>Tu Restaurante</div>
+          <div style={{ fontSize: 9, color: c.colorText, minWidth: 0, maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...approxFont(c.fontDisplay, true) }}>{nombre}</div>
         </div>
       )}
 
@@ -409,6 +413,7 @@ export default function TemplateGallery({
   mode = 'apply',
   initialStructure = 'clasico',
   compact = false,
+  brandName,
 }: {
   /** Se llama con la plantilla elegida; el editor hace el merge y avisa. */
   onApply: (tpl: BuiltinTemplate) => void;
@@ -425,6 +430,8 @@ export default function TemplateGallery({
    * distancia — la queja no era que faltaran estilos, era llegar al final.
    */
   compact?: boolean;
+  /** Nombre del restaurante para las miniaturas (si no, «Tu Restaurante»). */
+  brandName?: string;
 }) {
   const [structureId, setStructureId] = useState<StructureId>(initialStructure);
   const [tone, setTone] = useState<Mode>('Todas');
@@ -501,7 +508,11 @@ export default function TemplateGallery({
             cual el mock (dibujado en píxeles fijos) cabe entero. Con 148, en
             una columna de ancho intermedio salían tres tarjetas por fila y la
             miniatura recortaba la última fila de platillos contra el borde. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
+        {/* En el teléfono: dos por fila, la miniatura reducida y recortada por
+            abajo (donde la vista previa era ~60 % vacía) y sin la descripción.
+            Antes eran 22 tarjetas a lo ancho y la pantalla medía 12.800 px
+            (auditoría 2026-10-02, AJU-10). Ver `.tpl-grid` en globals.css. */}
+        <div className="tpl-grid">
           {visible.map((tpl) => {
             const applied = appliedId === tpl.id;
             return (
@@ -523,7 +534,9 @@ export default function TemplateGallery({
                   transition: 'border-color 150ms, background 150ms',
                 }}
               >
-                <Thumb tpl={tpl} />
+                <div className="tpl-thumb-box">
+                  <div className="tpl-thumb-inner"><Thumb tpl={tpl} name={brandName} /></div>
+                </div>
                 <div style={{ padding: '0 3px 3px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--u-text)', flex: 1, minWidth: 0 }}>{tpl.name}</span>
@@ -542,7 +555,7 @@ export default function TemplateGallery({
                       </span>
                     )}
                   </div>
-                  <p style={{ fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.4, marginTop: 3 }}>{tpl.desc}</p>
+                  <p className="tpl-desc" style={{ fontSize: 10.5, color: 'var(--u-text-4)', lineHeight: 1.4, marginTop: 3 }}>{tpl.desc}</p>
                 </div>
               </button>
             );

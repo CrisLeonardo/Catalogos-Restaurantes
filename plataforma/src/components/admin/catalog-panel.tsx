@@ -23,6 +23,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useToastManager } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { isOutOfStock } from '@/lib/product-availability';
+import { normalizar } from '@/lib/servicio/comanda';
+import { fmtMoney } from '@/lib/money';
 import type { Category, Product } from '@/types';
 import { usePathname as useRutaNavegador } from 'next/navigation';
 import { panelBaseFrom, panelHref } from '@/lib/panel-links';
@@ -44,6 +46,21 @@ function pickIcon(icon: string | null | undefined): string {
   return icon?.trim() || 'utensils';
 }
 
+/* Filtros rápidos de estado. «Agotados» usa la disponibilidad ya resuelta
+   que trae la página (la misma regla del menú del comensal) o la falta de
+   existencias; «Ocultos» son los apagados en «Mostrar en el menú». */
+type StatusFilter = 'todos' | 'agotados' | 'sin-foto' | 'ocultos';
+const STATUS_TEST: Record<Exclude<StatusFilter, 'todos'>, (p: Product) => boolean> = {
+  agotados: (p) => p.is_active && (!p.is_available || isOutOfStock(p)),
+  'sin-foto': (p) => !p.image_url,
+  ocultos: (p) => !p.is_active,
+};
+const STATUS_FILTERS: { key: Exclude<StatusFilter, 'todos'>; label: string }[] = [
+  { key: 'agotados', label: 'Agotados' },
+  { key: 'sin-foto', label: 'Sin foto' },
+  { key: 'ocultos', label: 'Ocultos' },
+];
+
 /* ── CatalogPanel ─────────────────────────────────────────── */
 
 interface Props {
@@ -58,6 +75,8 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
   /* Prefijo del origen unico ('' en el subdominio de hoy). Ver lib/panel-links.ts. */
   const base = panelBaseFrom(useRutaNavegador());
   const [activeCat, setActiveCat] = useState<string>('todos');
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('todos');
   const { add: toast } = useToastManager();
   const [, startAvail] = useTransition();
 
@@ -98,9 +117,26 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
   const nearProductLimit = maxProducts != null && !atProductLimit && products.length >= maxProducts * 0.8;
 
   const catIconMap = new Map(categories.map((c) => [c.id, pickIcon(c.icon)]));
-  const list = products.filter(
-    (p) => activeCat === 'todos' || p.category_id === activeCat,
-  );
+
+  /* Buscador y filtros rápidos (auditoría 2026-10-02, MEN-01). El plan
+     Básico admite 150 platillos y encontrar uno era hacer scroll. Se busca
+     sin tildes ni mayúsculas en nombre, descripción y etiquetas, y se combina
+     con la categoría. Los filtros de estado solo salen si hay algo que
+     filtrar: «Agotados 0» no ayuda a nadie. */
+  const q = normalizar(query.trim());
+  const counts = {
+    agotados: products.filter((p) => STATUS_TEST.agotados(p)).length,
+    'sin-foto': products.filter((p) => STATUS_TEST['sin-foto'](p)).length,
+    ocultos: products.filter((p) => STATUS_TEST.ocultos(p)).length,
+  };
+  const list = products.filter((p) => {
+    if (activeCat !== 'todos' && p.category_id !== activeCat) return false;
+    if (status !== 'todos' && !STATUS_TEST[status](p)) return false;
+    if (!q) return true;
+    return normalizar([p.name, p.description ?? '', ...(p.tags ?? [])].join(' ')).includes(q);
+  });
+  const filtering = q !== '' || status !== 'todos' || activeCat !== 'todos';
+  const clearFilters = () => { setQuery(''); setStatus('todos'); setActiveCat('todos'); };
 
   // El editor de platillo vive en su propia página (product-form.tsx); si hay
   // un filtro de categoría activo, se preselecciona ahí mismo por query param.
@@ -110,24 +146,22 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Chips + botón nuevo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', flex: 1 }}>
-          {[{ id: 'todos', name: 'Todas' }, ...categories].map((c) => {
-            const on = c.id === activeCat;
-            return (
-              <Button
-                key={c.id}
-                variant={on ? 'primary' : 'secondary'}
-                size="sm"
-                className="shrink-0 rounded-adm-full"
-                onClick={() => setActiveCat(c.id)}
-              >
-                {c.name}
-              </Button>
-            );
-          })}
-        </div>
+      {/* Buscador + botón nuevo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {products.length > 0 && (
+          <label className="adm-search" style={{ flex: '1 1 160px' }}>
+            <Icon name="search" size={16} aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar platillo"
+              aria-label="Buscar platillo"
+              autoComplete="off"
+              enterKeyHint="search"
+            />
+          </label>
+        )}
         {maxProducts != null && (
           <span
             className="shrink-0"
@@ -146,13 +180,61 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
             </Button>
           </Link>
         ) : (
-          <Link href={newProductHref} className="shrink-0">
+          <Link href={newProductHref} className="shrink-0" style={{ marginLeft: 'auto' }}>
             <Button data-tour-step="catalogo-nuevo" className="rounded-adm-full">
               <Icon name="plus" size={15} /> Nuevo platillo
             </Button>
           </Link>
         )}
       </div>
+
+      {/* Categorías y estados: una sola fila que se desplaza */}
+      {products.length > 0 && (
+        <div className="u-noscroll" style={{ display: 'flex', gap: 7, overflowX: 'auto', alignItems: 'center' }}>
+          {[{ id: 'todos', name: 'Todas' }, ...categories].map((c) => {
+            const on = c.id === activeCat;
+            return (
+              <Button
+                key={c.id}
+                variant={on ? 'primary' : 'secondary'}
+                size="sm"
+                className="shrink-0 rounded-adm-full"
+                onClick={() => setActiveCat(c.id)}
+              >
+                {c.name}
+              </Button>
+            );
+          })}
+          {STATUS_FILTERS.some((f) => counts[f.key] > 0) && (
+            <span aria-hidden style={{ width: 1, alignSelf: 'stretch', margin: '4px 2px', background: 'var(--u-hair-2)', flexShrink: 0 }} />
+          )}
+          {STATUS_FILTERS.filter((f) => counts[f.key] > 0 || status === f.key).map((f) => {
+            const on = status === f.key;
+            return (
+              <Button
+                key={f.key}
+                variant={on ? 'primary' : 'outline'}
+                size="sm"
+                className="shrink-0 rounded-adm-full"
+                aria-pressed={on}
+                onClick={() => setStatus(on ? 'todos' : f.key)}
+              >
+                {f.label} <span className="t-mono" style={{ opacity: 0.75 }}>{counts[f.key]}</span>
+              </Button>
+            );
+          })}
+        </div>
+      )}
+
+      {filtering && list.length > 0 && (
+        <p style={{ fontSize: 12.5, color: 'var(--u-text-3)', margin: '-4px 0 0' }}>
+          {list.length === 1 ? '1 platillo' : `${list.length} platillos`} de {products.length}
+          {' · '}
+          <button type="button" onClick={clearFilters} className="press" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--brand-accent-ink)', fontWeight: 600, cursor: 'pointer', font: 'inherit' }}>
+            Quitar filtros
+          </button>
+        </p>
+      )}
 
       {/* Tabla */}
       {list.length === 0 ? (
@@ -172,9 +254,12 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
           />
         ) : (
           // Vacío por el filtro, no por falta de datos: aquí la salida es
-          // cambiar de categoría, no crear un platillo.
-          <Card className="p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
-            No hay platillos en esta categoría.
+          // quitar el filtro, no crear un platillo.
+          <Card className="flex flex-col items-center gap-3 p-10 text-center" style={{ color: 'var(--u-text-3)', fontSize: 14 }}>
+            {q ? `Ningún platillo coincide con «${query.trim()}».` : 'No hay platillos con este filtro.'}
+            <Button type="button" variant="secondary" size="sm" className="rounded-adm-full" onClick={clearFilters}>
+              Quitar filtros
+            </Button>
           </Card>
         )
       ) : (
@@ -274,11 +359,11 @@ export default function CatalogPanel({ restaurantId, categories, products, maxPr
                     </div>
                   )}
                   <div style={{ fontFamily: 'var(--ui-font-mono)', fontWeight: 600, fontSize: 14, color: 'var(--u-text)' }}>
-                    Q{total.toFixed(2)}
+                    {fmtMoney(total)}
                   </div>
                   {hasCombo && total !== p.price && (
                     <div style={{ fontSize: 9.5, color: 'var(--u-text-4)', marginTop: 1 }}>
-                      base Q{p.price.toFixed(2)}
+                      base {fmtMoney(p.price)}
                     </div>
                   )}
                 </div>

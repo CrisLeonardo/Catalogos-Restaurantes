@@ -216,7 +216,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             {/* Abre en la estructura que el menú ya está usando: si este
                 restaurante lleva meses con la carta en acordeón, empezar en
                 "Clásico" le enseñaría 22 diseños que no son el suyo. */}
-            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} />
+            <TemplateGallery onApply={applyBuiltinTemplate} appliedId={appliedTpl} initialStructure={structureOfConfig(initialConfig)} brandName={config.brandName} />
             {appliedTpl && (
               <div
                 role="status"
@@ -678,6 +678,13 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             nada, y en esta pantalla —donde todo se ve en vivo en la vista
             previa— la pregunta real es justamente "¿esto ya está publicado?". */}
         {leaveDialog}
+        {/* Sin cambios pendientes, el hueco de abajo lo ocupa «Ver cómo
+            queda»; con cambios, la barra de guardar (que trae su «Ver»). */}
+        {!(dirty || isPending || msg) && (
+          <a href="#vista-previa" className="preview-jump press">
+            <Icon name="eye" size={15} /> Ver cómo queda
+          </a>
+        )}
         {(dirty || isPending || msg) && (
           <div className="adm-savebar" style={{ marginTop: 14 }}>
             <span
@@ -695,6 +702,15 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
             >
               Ver sitio ↗
             </a>
+            {/* En el teléfono «Ver sitio ↗» no cabe: este «Ver» baja a la
+                vista previa de la misma página. */}
+            <a
+              href="#vista-previa"
+              className="press preview-jump-inline"
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--u-text-2)', textDecoration: 'none', padding: '11px 14px', borderRadius: 'var(--radius-full)', border: '1px solid var(--u-hair-2)' }}
+            >
+              Ver
+            </a>
             <button
               onClick={save}
               disabled={isPending}
@@ -709,7 +725,7 @@ export default function AdminThemeEditor({ restaurantId, config: initialConfig, 
       </div>
 
       {/* ── Panel de vista previa ── */}
-      <PreviewPane previewId={restaurantId} />
+      <PreviewPane previewId={restaurantId} id="vista-previa" />
     </div>
   );
 }

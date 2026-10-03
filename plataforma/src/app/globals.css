@@ -1665,6 +1665,50 @@ html[data-canvas="movil"] .m-grid[data-cols="3"] {
      abajo. Centrado, el mismo gesto se lee como un salto. */
   .menu-sheet.anim-slide-up { animation-name: pop-in; }
 }
+/* Galería de plantillas (Personalizar y Mi cuenta › Nuevo restaurante).
+   La miniatura se dibuja en píxeles fijos y necesita ~176 px de ancho; en el
+   teléfono, con dos por fila, se dibuja a ese ancho y se reduce con
+   `--tpl-s`. La caja la recorta en cuadrado: la parte de abajo de la
+   miniatura era casi todo fondo (auditoría 2026-10-02, AJU-10). */
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.tpl-thumb-box {
+  --tpl-s: 1;
+  position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden;
+  border-radius: 12px; border: 1px solid var(--u-hair);
+}
+.tpl-thumb-inner {
+  position: absolute; top: 0; left: 0;
+  width: calc(100% / var(--tpl-s)); transform: scale(var(--tpl-s)); transform-origin: 0 0;
+}
+.tpl-thumb-inner > div { border: 0 !important; border-radius: 0 !important; }
+@media (max-width: 560px) {
+  .tpl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tpl-thumb-box { --tpl-s: 0.8; }
+  .tpl-desc { display: none; }
+}
+
+/* «Ver cómo queda»: debajo de 1180 px la vista previa del sitio queda al
+   final de la página, debajo de todo el editor. Este botón flota abajo y
+   lleva hasta ella (AJU-10). */
+.preview-jump { display: none; }
+@media (max-width: 1179px) {
+  .preview-jump {
+    display: inline-flex; align-items: center; gap: 7px;
+    position: sticky; bottom: calc(var(--adm-nav-h, 0px) + 12px + env(safe-area-inset-bottom, 0px));
+    /* A la derecha y no al centro: en el teléfono el «+» de Tomar pedido
+       sobresale de la barra justo en el centro. */
+    align-self: flex-end; z-index: 9; margin-top: 14px;
+    padding: 10px 16px; border-radius: 999px;
+    background: var(--adm-overlay, var(--adm-card)); color: var(--u-text);
+    border: 1px solid var(--adm-border-2, var(--u-hair-2));
+    box-shadow: var(--adm-shadow-lg, 0 10px 30px rgba(0,0,0,.18));
+    font-size: 13.5px; font-weight: 600; text-decoration: none;
+  }
+  #vista-previa { scroll-margin-top: 110px; }
+}
+.preview-jump-inline { display: none; }
+@media (max-width: 820px) { .preview-jump-inline { display: inline-flex; align-items: center; } }
+
 .preview-pane { display: flex; flex-direction: column; gap: 10px; }
 
 @media (min-width: 1180px) {

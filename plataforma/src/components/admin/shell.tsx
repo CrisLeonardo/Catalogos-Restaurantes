@@ -98,6 +98,9 @@ interface Props {
   /** "Comer en local" activo — da acceso a Mesas aunque el plan no incluya
    * el panel de mesero completo (ver layout.tsx y mesas/page.tsx). */
   dineInEnabled?: boolean;
+  /** «A domicilio» activo y conexión de WhatsApp lista: ver lib/admin-nav.ts (N-02). */
+  deliveryEnabled?: boolean;
+  whatsappReady?: boolean;
   /** Modo vista previa (Super Admin): nav sin navegar, sin cerrar sesión. */
   preview?: boolean;
   /** Sesión iniciada por PIN — cambia "Salir" por "Cambiar de usuario". */
@@ -121,7 +124,7 @@ export default function AdminShell({
   reservacionesActive = false, listaEsperaActive = false, encuestasActive = false, cuponesActive = false,
   llamadaMeseroActive = false,
   logoUrl, logoBg, zone, role, permissions, userName, canManageStaff, hasMultipleRestaurants = false,
-  planActual, dineInEnabled = false, preview = false,
+  planActual, dineInEnabled = false, deliveryEnabled = false, whatsappReady = false, preview = false,
   isOperatorSession = false, children,
 }: Props) {
   const realPathname = usePathname();
@@ -261,7 +264,7 @@ export default function AdminShell({
     ordersEnabled, analiticaEnabled, inventarioEnabled, ingredientesEnabled,
     personalEnabled, finanzasEnabled, felActive, proveedoresActive, loyaltyActive,
     reservacionesActive, listaEsperaActive, encuestasActive, cuponesActive,
-    dineInEnabled, planActual, showStaff, preview,
+    dineInEnabled, deliveryEnabled, whatsappReady, planActual, showStaff, preview,
   });
   const activeGroup = findGroup(groups, pathname);
 

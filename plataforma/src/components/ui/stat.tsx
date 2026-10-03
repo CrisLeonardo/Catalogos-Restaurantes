@@ -96,4 +96,39 @@ function Stat({
   );
 }
 
-export { Stat, StatGroup };
+/* ============================================================
+   FRANJA DE CIFRAS (auditoría 2026-10-02, PED-01)
+   ------------------------------------------------------------
+   En una pantalla de OPERACIÓN (Pedidos) lo primero son los pedidos.
+   Cuatro cifras en rejilla de dos más tres de «Tiempos de hoy» eran
+   ~640 px de scroll en el teléfono antes de ver el primero. Aquí van
+   las mismas cifras en UNA línea que se desplaza de lado: el número en
+   la mono del panel y una palabra al lado.
+   ============================================================ */
+type StripItem = { value: React.ReactNode; label: string; tone?: StatTone };
+
+function StatStrip({ items, className }: { items: StripItem[]; className?: string }) {
+  return (
+    <div
+      data-slot="stat-strip"
+      className={cn(
+        'u-noscroll flex items-baseline gap-x-4 overflow-x-auto whitespace-nowrap rounded-adm-xl border border-adm-border bg-adm-card px-4 py-2.5 shadow-adm-sm',
+        className
+      )}
+    >
+      {items.map((it, i) => (
+        <span key={i} className="inline-flex shrink-0 items-baseline gap-1.5">
+          <span
+            className="t-mono text-[16px] font-semibold text-adm-text"
+            style={it.tone ? { color: TONE_COLOR[it.tone] } : undefined}
+          >
+            {it.value}
+          </span>
+          <span className="text-[12.5px] text-adm-text-3">{it.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export { Stat, StatGroup, StatStrip };
