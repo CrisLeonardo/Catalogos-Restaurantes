@@ -94,7 +94,10 @@ function Stat({
       >
         {value}
       </div>
-      {sub && <div className="mt-1 truncate text-[12px] leading-snug text-adm-text-3">{sub}</div>}
+      {/* Hasta dos renglones: la comparación de Negocio › Resumen
+          («↑ 46 % vs. los 7 días anteriores») no cabía en una cifra de media
+          pantalla del teléfono y se cortaba a la mitad de la frase. */}
+      {sub && <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-adm-text-3">{sub}</div>}
     </div>
   );
 }

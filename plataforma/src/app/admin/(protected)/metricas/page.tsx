@@ -96,6 +96,11 @@ export default async function AdminNegocioPage({
 
   // Lo que dice cada barra al tocarla (NEG-05).
   const dia = (date: string) => (date === hoy ? 'hoy' : diaSemana(date));
+  // «Do», «Lu»… como los de la gráfica de visitas, que va debajo.
+  const diaCorto = (date: string) => {
+    const d = diaSemana(date).slice(0, 2);
+    return d.charAt(0).toUpperCase() + d.slice(1);
+  };
   const salesTip = (d?: DayRevenue) => (d
     ? `${dia(d.date)} · ${money(d.revenue)} · ${d.orders} ${d.orders === 1 ? 'pedido' : 'pedidos'}`
     : undefined);
@@ -170,7 +175,7 @@ export default async function AdminNegocioPage({
                         className="t-mono text-[11px]"
                         style={{ color: d.date === hoy ? 'var(--u-text)' : 'var(--u-text-4)' }}
                       >
-                        {diaSemana(d.date).slice(0, 3)}
+                        {diaCorto(d.date)}
                       </span>
                     )}
                   </div>

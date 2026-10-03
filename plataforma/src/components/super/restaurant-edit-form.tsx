@@ -74,7 +74,7 @@ export default function RestaurantEditForm({
           <Field
             label="Slug"
             hint={
-              <>URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong> — cambiarlo rompe los QR ya impresos.</>
+              <>URL: <strong style={{ color: 'var(--u-text-3)' }}>{restaurant.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'leogin.online'}</strong> — si lo cambias, esta dirección y el QR general cambian; los QR de mesa ya impresos siguen funcionando.</>
             }
           >
             <input name="slug" type="text" required defaultValue={restaurant.slug} style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 14 }} />

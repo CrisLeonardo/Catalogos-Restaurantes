@@ -17,21 +17,25 @@ export default function ExportMenu({
   onExcel,
   onPdf,
   busy,
+  compact = false,
 }: {
   onExcel: () => void;
   onPdf: () => void;
   /** Cuál se está generando, para decirlo en el botón. */
   busy: null | 'excel' | 'pdf';
+  /** En el teléfono, solo el icono: en Pedidos comparte fila con los
+   *  filtros y la palabra se comía dos de ellos. */
+  compact?: boolean;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={cn(buttonVariants({ variant: 'secondary' }), 'shrink-0 rounded-adm-full')}
+        className={cn(buttonVariants({ variant: 'secondary' }), 'shrink-0 rounded-adm-full', compact && 'max-md:size-10 max-md:px-0')}
         disabled={busy !== null}
         aria-label="Exportar"
       >
         <Icon name="download" size={15} />
-        {busy ? 'Generando…' : 'Exportar'}
+        <span className={compact ? 'max-md:sr-only' : undefined}>{busy ? 'Generando…' : 'Exportar'}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={onExcel} className="min-h-11">

@@ -434,6 +434,7 @@ function OrdersPanelInner({
             onExcel={downloadExcel}
             onPdf={downloadPdf}
             busy={isExportingXls ? 'excel' : isExportingPdf ? 'pdf' : null}
+            compact
           />
           </div>
 

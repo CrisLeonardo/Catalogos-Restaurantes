@@ -101,7 +101,7 @@ export default async function SuperHomePage() {
 
       {/* KPIs principales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 10 }}>
-        <StatCard label="Ingreso mensual (MRR)" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/finanzas" />
+        <StatCard label="Ingreso mensual" value={fmtMoney(stats.mrr, stats.currency)} icon="wallet" tone="accent" href="/super/finanzas" sub="lo que se factura al mes" />
         <StatCard label="Cobrado este mes" value={fmtMoney(stats.collectedThisMonth, stats.currency)} icon="checkCircle" tone="ok" href="/super/finanzas" />
         {/* Con todo lo pendiente ya vencido, «Pendiente de cobro» y «Pagos
             vencidos» decían lo mismo: el primero dice ahora de cuántos
